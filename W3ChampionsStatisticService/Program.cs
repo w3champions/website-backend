@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
-namespace W3ChampionsStatistikService
+namespace W3ChampionsStatisticService
 {
     public class Program
     {

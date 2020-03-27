@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace W3ChampionsStatistikService
+namespace W3ChampionsStatisticService
 {
     public class Startup
     {

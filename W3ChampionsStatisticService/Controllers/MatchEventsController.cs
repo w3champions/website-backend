@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 
-namespace W3ChampionsStatistikService.Controllers
+namespace W3ChampionsStatisticService.Controllers
 {
     [ApiController]
     [Route("api/matchevents")]
