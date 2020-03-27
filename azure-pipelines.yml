@@ -42,7 +42,7 @@ steps:
 - task: Docker@2
   inputs:
     containerRegistry: 'official-docker-modmoto'
-    repository: 'modmoto/led-wall'
+    repository: 'modmoto/w3champions-statistic-service'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
     buildContext: '.'
@@ -50,10 +50,15 @@ steps:
       $(BuildVersioning)
       $(IsLatest)
 
-
 - task: CopyFiles@2
   inputs:
     Contents: 'test.env'
     TargetFolder: '$(build.artifactstagingdirectory)'
     OverWrite: true
     flattenFolders: true
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
