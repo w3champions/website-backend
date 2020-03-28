@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 
@@ -121,7 +120,5 @@ namespace W3ChampionsStatisticService.MatchEvents
     {
         public string type { get; set; }
         public Data data { get; set; }
-        public Guid Id { get; set; }
-        public DateTimeOffset CreatedDate { get; set; }
     }
 }

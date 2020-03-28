@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,8 +26,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(_dbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            await handler.Insert(new List<MatchFinishedEvent>());
-            var events = await eventRepository.LoadAsync();
+            var lastId = await handler.Insert(new List<MatchFinishedEvent>());
+            var events = await eventRepository.LoadAsync(lastId);
 
             Assert.IsEmpty(events);
         }
@@ -43,8 +42,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             var events = await eventRepository.LoadAsync();
 
             Assert.AreEqual("test", events.Single().type);
-            Assert.IsNotNull(events.Single().Id);
-            Assert.IsNotNull(events.Single().CreatedDate);
         }
 
         [Test]
@@ -53,12 +50,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(_dbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
+            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
             await Task.Delay(1000);
-            var now = DateTimeOffset.UtcNow;
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
 
-            var events = await eventRepository.LoadAsync(now);
+            var events = await eventRepository.LoadAsync(lastId);
 
             Assert.AreEqual("test2", events.Single().type);
         }
@@ -69,12 +65,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(_dbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
+            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test3"} });
 
-            var events = await eventRepository.LoadAsync(null, 1);
+            var events = await eventRepository.LoadAsync(lastId, 1);
 
-            Assert.AreEqual("test", events.Single().type);
+            Assert.AreEqual("test2", events.Single().type);
         }
     }
 }

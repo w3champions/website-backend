@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 
@@ -14,14 +13,8 @@ namespace W3ChampionsStatisticService.MatchEvents
             _repository = repository;
         }
 
-        public Task Insert(IList<MatchFinishedEvent> events)
+        public Task<string> Insert(IList<MatchFinishedEvent> events)
         {
-            foreach (var matchFinishedEvent in events)
-            {
-                matchFinishedEvent.Id = Guid.NewGuid();
-                matchFinishedEvent.CreatedDate = DateTimeOffset.UtcNow;
-            }
-
             return _repository.InsertAsync(events);
         }
     }
