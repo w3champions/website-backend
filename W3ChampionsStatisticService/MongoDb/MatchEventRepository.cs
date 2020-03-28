@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -26,14 +27,15 @@ namespace W3ChampionsStatisticService.MongoDb
             await mongoCollection.InsertManyAsync(events);
         }
 
-        public async Task<IList<MatchFinishedEvent>> Load()
+        public async Task<IList<MatchFinishedEvent>> Load(DateTimeOffset? now = null, int pageSize = 100)
         {
+            now ??= DateTimeOffset.MinValue;
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<MatchFinishedEvent>(_matchfinishedevents);
 
             var events = await mongoCollection
-                .Find(ev => true)
+                .Find(ev => ev.CreatedDate > now)
                 .SortBy(s => s.CreatedDate)
                 .ToListAsync();
 
