@@ -12,6 +12,8 @@ ProjectSection(SolutionItems) = preProject
 	.gitignore = .gitignore
 EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WC3ChampionsStatisticService.UnitTests", "WC3ChampionsStatisticService.UnitTests\WC3ChampionsStatisticService.UnitTests.csproj", "{861D57A0-C360-406B-B5E2-B6B86C103BED}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,5 +24,9 @@ Global
 		{7D9D3DC6-13DB-4B6E-974A-89050D12D2EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D9D3DC6-13DB-4B6E-974A-89050D12D2EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7D9D3DC6-13DB-4B6E-974A-89050D12D2EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{861D57A0-C360-406B-B5E2-B6B86C103BED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{861D57A0-C360-406B-B5E2-B6B86C103BED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{861D57A0-C360-406B-B5E2-B6B86C103BED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{861D57A0-C360-406B-B5E2-B6B86C103BED}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

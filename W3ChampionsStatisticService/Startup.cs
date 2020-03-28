@@ -1,9 +1,11 @@
-using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.MongoDb;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService
 {
@@ -22,6 +24,9 @@ namespace W3ChampionsStatisticService
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString");
 
             services.AddSingleton(new DbConnctionInfo(mongoConnectionString?.Replace("'", "")));
+
+            services.AddTransient<IMatchEventRepository, MatchEventRepository>();
+            services.AddTransient<InsertMatchEventsCommandHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
