@@ -4,13 +4,13 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches
 {
-    public class InsertMatchCommandHandler
+    public class PopulateMatchReadModelHandler : IReadModelHandler
     {
         private readonly IMatchEventRepository _eventRepository;
         private readonly IMatchRepository _matchRepository;
         private readonly IVersionRepository _versionRepository;
 
-        public InsertMatchCommandHandler(
+        public PopulateMatchReadModelHandler(
             IMatchEventRepository eventRepository,
             IMatchRepository matchRepository,
             IVersionRepository versionRepository)
@@ -22,13 +22,13 @@ namespace W3ChampionsStatisticService.Matches
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<InsertMatchCommandHandler>();
+            var lastVersion = await _versionRepository.GetLastVersion<PopulateMatchReadModelHandler>();
             var nextEvents = await _eventRepository.Load(lastVersion);
 
             var matchups = nextEvents.Select(e => new Matchup(e)).ToList();
 
             await _matchRepository.Upsert(matchups);
-            await _versionRepository.SaveLastVersion<InsertMatchCommandHandler>("tbd");
+            await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>("tbd");
         }
     }
 }

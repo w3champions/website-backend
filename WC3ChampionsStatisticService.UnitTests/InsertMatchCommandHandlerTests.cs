@@ -24,7 +24,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchRepository = new MatchRepository();
             var versionRepository = new VersionRepository();
 
-            var insertMatchCommandHandler = new InsertMatchCommandHandler(
+            var insertMatchCommandHandler = new PopulateMatchReadModelHandler(
                 mock.Object,
                 matchRepository,
                 versionRepository);

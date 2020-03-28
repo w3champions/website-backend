@@ -31,7 +31,9 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchRepository, MatchRepository>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
-            services.AddTransient<InsertMatchCommandHandler>();
+            services.AddTransient<PopulateMatchReadModelHandler>();
+
+            services.AddSingleton<IHostedService, ReadModelPopulateService<PopulateMatchReadModelHandler>>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
