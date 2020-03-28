@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         public Task<string> Insert(IList<MatchFinishedEvent> events)
         {
-            return _repository.InsertAsync(events);
+            return _repository.Insert(events);
         }
     }
 }

@@ -1,33 +1,23 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Driver;
 using NUnit.Framework;
-using W3ChampionsStatisticService;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.MongoDb;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
-    public class MatchCommandHandlerTests
+    [TestFixture]
+    public class MatchCommandHandlerTests : IntegrationTestBase
     {
-        private readonly DbConnctionInfo _dbConnctionInfo = new DbConnctionInfo("mongodb://176.28.16.249:3510/");
-
-        [SetUp]
-        public async Task Setup()
-        {
-            var client = new MongoClient(_dbConnctionInfo.ConnectionString);
-            await client.DropDatabaseAsync("W3Champions-Statistic-Service");
-        }
-
         [Test]
         public async Task InsertEmptyListAndRead()
         {
-            var eventRepository = new MatchEventRepository(_dbConnctionInfo);
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             var lastId = await handler.Insert(new List<MatchFinishedEvent>());
-            var events = await eventRepository.LoadAsync(lastId);
+            var events = await eventRepository.Load(lastId);
 
             Assert.IsEmpty(events);
         }
@@ -35,11 +25,11 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertAndRead()
         {
-            var eventRepository = new MatchEventRepository(_dbConnctionInfo);
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
-            var events = await eventRepository.LoadAsync();
+            var events = await eventRepository.Load();
 
             Assert.AreEqual("test", events.Single().type);
         }
@@ -47,14 +37,14 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertAndRead_TimeOffset()
         {
-            var eventRepository = new MatchEventRepository(_dbConnctionInfo);
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
             await Task.Delay(1000);
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
 
-            var events = await eventRepository.LoadAsync(lastId);
+            var events = await eventRepository.Load(lastId);
 
             Assert.AreEqual("test2", events.Single().type);
         }
@@ -62,14 +52,14 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertAndRead_Limit()
         {
-            var eventRepository = new MatchEventRepository(_dbConnctionInfo);
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test3"} });
 
-            var events = await eventRepository.LoadAsync(lastId, 1);
+            var events = await eventRepository.Load(lastId, 1);
 
             Assert.AreEqual("test2", events.Single().type);
         }

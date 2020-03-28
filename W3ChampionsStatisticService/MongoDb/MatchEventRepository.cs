@@ -9,8 +9,6 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.MongoDb
 {
-
-
     public class MatchFinishedEventDto
     {
         public MatchFinishedEvent MatchFinishedEvent { get; set; }
@@ -34,7 +32,7 @@ namespace W3ChampionsStatisticService.MongoDb
             _connectionInfo = connectionInfo;
         }
 
-        public async Task<string> InsertAsync(IList<MatchFinishedEvent> events)
+        public async Task<string> Insert(IList<MatchFinishedEvent> events)
         {
             if (!events.Any()) return ObjectId.Empty.ToString();
             var database = CreateClient();
@@ -45,7 +43,7 @@ namespace W3ChampionsStatisticService.MongoDb
             return matchFinishedEventDtos.Last().Id.ToString();
         }
 
-        public async Task<IList<MatchFinishedEvent>> LoadAsync(string lastObjectId = null, int pageSize = 100)
+        public async Task<IList<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
         {
             lastObjectId ??= ObjectId.Empty.ToString();
             var database = CreateClient();
