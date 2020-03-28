@@ -62,5 +62,19 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual("test2", events.Single().type);
         }
+
+        [Test]
+        public async Task InsertAndRead_Limit()
+        {
+            var eventRepository = new MatchEventRepository(_dbConnctionInfo);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
+
+            var events = await eventRepository.Load(null, 1);
+
+            Assert.AreEqual("test", events.Single().type);
+        }
     }
 }

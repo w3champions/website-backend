@@ -37,6 +37,7 @@ namespace W3ChampionsStatisticService.MongoDb
             var events = await mongoCollection
                 .Find(ev => ev.CreatedDate > now)
                 .SortBy(s => s.CreatedDate)
+                .Limit(pageSize)
                 .ToListAsync();
 
             return events;
