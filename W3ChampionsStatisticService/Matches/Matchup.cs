@@ -34,9 +34,9 @@ namespace W3ChampionsStatisticService.Matches
             return team;
         }
 
-        private static IEnumerable<Player> CreatePlayerArray(IEnumerable<PlayerRaw> winners)
+        private static IEnumerable<Player> CreatePlayerArray(IEnumerable<PlayerRaw> players)
         {
-            return winners.Select(w => new Player(0, 0, 0, 0, w.battleTag.Split("#")[0], w.battleTag.Split("#")[1]));
+            return players.Select(w => new Player(0, 0, 0, 0, w.battleTag.Split("#")[0], w.battleTag.Split("#")[1]));
         }
     }
 }

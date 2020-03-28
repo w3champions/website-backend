@@ -17,8 +17,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertMatches()
         {
-            var fixture = new Fixture();
-            var fakeEvent = fixture.Build<MatchFinishedEvent>().Create();
+            var fakeEvent = MakeFakeDto();
             var mock = new Mock<IMatchEventRepository>();
             mock.Setup(m => m.Load(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent });
 
@@ -34,18 +33,17 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task MapMatch_Players()
+        public void MapMatch_Players()
         {
-            var fixture = new Fixture{ RepeatCount = 9 };
-            var fakeEvent = fixture.Build<MatchFinishedEvent>().Create();
+            var fakeEvent = MakeFakeDto();
 
             var name1 = "peter#123";
             var name2 = "wolf#456";
 
             fakeEvent.data.players.First().battleTag = name1;
-            fakeEvent.data.players.First().won = true;
+            fakeEvent.data.players.First().won = false;
             fakeEvent.data.players.Last().battleTag = name2;
-            fakeEvent.data.players.Last().won = false;
+            fakeEvent.data.players.Last().won = true;
 
             var matchup = new Matchup(fakeEvent);
 
@@ -57,16 +55,31 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task MapMatch_Map()
+        public void MapMatch_Map()
         {
-            var fixture = new Fixture();
-            var fakeEvent = fixture.Build<MatchFinishedEvent>().Create();
+            var fakeEvent = MakeFakeDto();
 
             fakeEvent.data.mapInfo.name = "Maps/frozenthrone/(4)twistedmeadows.w3x";
 
             var matchup = new Matchup(fakeEvent);
 
             Assert.AreEqual("twistedmeadows", matchup.Map);
+        }
+
+        private static MatchFinishedEvent MakeFakeDto()
+        {
+            var fixture = new Fixture {RepeatCount = 2};
+            var fakeEvent = fixture.Build<MatchFinishedEvent>().Create();
+
+            var name1 = "peter#123";
+            var name2 = "wolf#456";
+
+            fakeEvent.data.players.First().battleTag = name1;
+            fakeEvent.data.players.First().won = true;
+            fakeEvent.data.players.Last().battleTag = name2;
+            fakeEvent.data.players.Last().won = false;
+
+            return fakeEvent;
         }
     }
 }
