@@ -33,6 +33,7 @@ namespace W3ChampionsStatisticService.MongoDb
         {
             _connectionInfo = connectionInfo;
         }
+
         public async Task<string> InsertAsync(IList<MatchFinishedEvent> events)
         {
             if (!events.Any()) return ObjectId.Empty.ToString();

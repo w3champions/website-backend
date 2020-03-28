@@ -93,8 +93,6 @@ namespace W3ChampionsStatisticService.MatchEvents
         public int elapsedGameTimeSeconds { get; set; }
         public string elapsedSec { get; set; }
         public string name { get; set; }
-        public string mapTitle { get; set; }
-        public string mapDescription { get; set; }
         public string mapFile { get; set; }
         public bool isReplay { get; set; }
         public string replayFile { get; set; }
