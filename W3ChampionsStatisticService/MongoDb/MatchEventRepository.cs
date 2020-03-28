@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.MatchEvents;
@@ -9,22 +10,23 @@ namespace W3ChampionsStatisticService.MongoDb
     public class MatchEventRepository : IMatchEventRepository
     {
         private readonly DbConnctionInfo _connectionInfo;
-        private string databaseName = "test";
+        private string databaseName = "W3Champions-Statistic-Service";
         private string _matchfinishedevents = "MatchFinishedEvents";
 
         public MatchEventRepository(DbConnctionInfo connectionInfo)
         {
             _connectionInfo = connectionInfo;
         }
-        public async Task Insert(IEnumerable<MatchFinishedEvent> events)
+        public async Task Insert(IList<MatchFinishedEvent> events)
         {
+            if (!events.Any()) return;
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<MatchFinishedEvent>(_matchfinishedevents);
             await mongoCollection.InsertManyAsync(events);
         }
 
-        public async Task<IEnumerable<MatchFinishedEvent>> Load()
+        public async Task<IList<MatchFinishedEvent>> Load()
         {
             var database = CreateClient();
 

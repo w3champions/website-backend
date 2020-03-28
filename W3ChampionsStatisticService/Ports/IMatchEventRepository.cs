@@ -6,7 +6,7 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IMatchEventRepository
     {
-        Task Insert(IEnumerable<MatchFinishedEvent> events);
-        Task<IEnumerable<MatchFinishedEvent>> Load();
+        Task Insert(IList<MatchFinishedEvent> events);
+        Task<IList<MatchFinishedEvent>> Load();
     }
 }
