@@ -22,7 +22,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             mock.Setup(m => m.Load(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent });
 
             var matchRepository = new MatchRepository();
-            var versionRepository = new VersionRepository();
+            var versionRepository = new VersionRepository(DbConnctionInfo);
 
             var insertMatchCommandHandler = new PopulateMatchReadModelHandler(
                 mock.Object,

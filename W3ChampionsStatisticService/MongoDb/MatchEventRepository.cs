@@ -9,18 +9,6 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.MongoDb
 {
-    public class MatchFinishedEventDto
-    {
-        public MatchFinishedEvent MatchFinishedEvent { get; set; }
-
-        [BsonId]
-        public ObjectId Id { get; set; }
-
-        public MatchFinishedEventDto(MatchFinishedEvent matchFinishedEvent)
-        {
-            MatchFinishedEvent = matchFinishedEvent;
-        }
-    }
     public class MatchEventRepository : IMatchEventRepository
     {
         private readonly DbConnctionInfo _connectionInfo;
@@ -65,6 +53,19 @@ namespace W3ChampionsStatisticService.MongoDb
             var client = new MongoClient(_connectionInfo.ConnectionString);
             var database = client.GetDatabase(databaseName);
             return database;
+        }
+    }
+
+    public class MatchFinishedEventDto
+    {
+        public MatchFinishedEvent MatchFinishedEvent { get; set; }
+
+        [BsonId]
+        public ObjectId Id { get; set; }
+
+        public MatchFinishedEventDto(MatchFinishedEvent matchFinishedEvent)
+        {
+            MatchFinishedEvent = matchFinishedEvent;
         }
     }
 }
