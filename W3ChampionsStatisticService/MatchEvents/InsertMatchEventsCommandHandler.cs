@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.MatchEvents
                 matchFinishedEvent.CreatedDate = DateTimeOffset.UtcNow;
             }
 
-            return _repository.Insert(events);
+            return _repository.InsertAsync(events);
         }
     }
 }

@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.MongoDb
         {
             _connectionInfo = connectionInfo;
         }
-        public async Task Insert(IList<MatchFinishedEvent> events)
+        public async Task InsertAsync(IList<MatchFinishedEvent> events)
         {
             if (!events.Any()) return;
             var database = CreateClient();
@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.MongoDb
             await mongoCollection.InsertManyAsync(events);
         }
 
-        public async Task<IList<MatchFinishedEvent>> Load(DateTimeOffset? now = null, int pageSize = 100)
+        public async Task<IList<MatchFinishedEvent>> LoadAsync(DateTimeOffset? now = null, int pageSize = 100)
         {
             now ??= DateTimeOffset.MinValue;
             var database = CreateClient();

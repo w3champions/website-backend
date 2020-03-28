@@ -28,7 +28,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             await handler.Insert(new List<MatchFinishedEvent>());
-            var events = await eventRepository.Load();
+            var events = await eventRepository.LoadAsync();
 
             Assert.IsEmpty(events);
         }
@@ -40,7 +40,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
-            var events = await eventRepository.Load();
+            var events = await eventRepository.LoadAsync();
 
             Assert.AreEqual("test", events.Single().type);
             Assert.IsNotNull(events.Single().Id);
@@ -58,7 +58,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var now = DateTimeOffset.UtcNow;
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
 
-            var events = await eventRepository.Load(now);
+            var events = await eventRepository.LoadAsync(now);
 
             Assert.AreEqual("test2", events.Single().type);
         }
@@ -72,7 +72,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
 
-            var events = await eventRepository.Load(null, 1);
+            var events = await eventRepository.LoadAsync(null, 1);
 
             Assert.AreEqual("test", events.Single().type);
         }
