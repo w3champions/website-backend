@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService
@@ -61,7 +62,8 @@ namespace W3ChampionsStatisticService
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e);
+                        var logger = scope.ServiceProvider.GetService<ILogger<ReadModelPopulateService<T>>>();
+                        logger.LogError(e, "Some Readmodelhandler is dying");
                     }
 
                     await Task.Delay(5000, stoppingToken);
