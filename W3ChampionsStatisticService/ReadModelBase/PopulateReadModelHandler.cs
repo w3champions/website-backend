@@ -24,12 +24,15 @@ namespace W3ChampionsStatisticService.ReadModelBase
         public async Task Update()
         {
             var lastVersion = await _versionRepository.GetLastVersion<PopulateMatchReadModelHandler>();
-            var nextEvents = await _eventRepository.Load(lastVersion);
-            if (!nextEvents.Any()) return;
+            var nextEvents = await _eventRepository.Load(lastVersion, 3);
 
-            await _innerHandler.Update(nextEvents);
-
-            await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(nextEvents.Last().Id.ToString());
+            while (nextEvents.Any())
+            {
+                await _innerHandler.Update(nextEvents);
+                var newLastVersion = nextEvents.Last().Id.ToString();
+                await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(newLastVersion);
+                nextEvents = await _eventRepository.Load(newLastVersion);
+            }
         }
     }
 }
