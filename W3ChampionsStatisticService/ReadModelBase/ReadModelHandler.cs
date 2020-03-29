@@ -1,17 +1,16 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public class PopulateReadModelHandler<T> where T : IReadModelHandler
+    public class ReadModelHandler<T> where T : IReadModelHandler
     {
         private readonly IMatchEventRepository _eventRepository;
         private readonly IVersionRepository _versionRepository;
         private readonly T _innerHandler;
 
-        public PopulateReadModelHandler(
+        public ReadModelHandler(
             IMatchEventRepository eventRepository,
             IVersionRepository versionRepository,
             T innerHandler)
@@ -23,7 +22,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<PopulateMatchReadModelHandler>();
+            var lastVersion = await _versionRepository.GetLastVersion<T>();
             var nextEvents = await _eventRepository.Load(lastVersion, 1000);
 
             while (nextEvents.Any())
@@ -31,7 +30,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 foreach (var nextEvent in nextEvents)
                 {
                     await _innerHandler.Update(nextEvent);
-                    await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(nextEvent.Id.ToString());
+                    await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString());
                 }
 
                 nextEvents = await _eventRepository.Load(nextEvents.Last().Id.ToString());

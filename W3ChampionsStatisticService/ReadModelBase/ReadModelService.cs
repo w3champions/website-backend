@@ -5,18 +5,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService
+namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public class ReadModelPopulateService<T> : IHostedService where T : IReadModelHandler
+    public class ReadModelService<T> : IHostedService where T : IReadModelHandler
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        public ReadModelPopulateService(IServiceScopeFactory serviceScopeFactory)
+        public ReadModelService(IServiceScopeFactory serviceScopeFactory)
         {
             _serviceScopeFactory = serviceScopeFactory;
         }
@@ -58,12 +57,12 @@ namespace W3ChampionsStatisticService
                 {
                     try
                     {
-                        var service = scope.ServiceProvider.GetService<PopulateReadModelHandler<T>>();
+                        var service = scope.ServiceProvider.GetService<ReadModelHandler<T>>();
                         await service.Update();
                     }
                     catch (Exception e)
                     {
-                        var logger = scope.ServiceProvider.GetService<ILogger<ReadModelPopulateService<T>>>();
+                        var logger = scope.ServiceProvider.GetService<ILogger<ReadModelService<T>>>();
                         logger.LogError(e, "Some Readmodelhandler is dying");
                     }
 

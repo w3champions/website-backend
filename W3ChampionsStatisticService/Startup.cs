@@ -61,8 +61,8 @@ namespace W3ChampionsStatisticService
         public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
         {
             services.AddTransient<T>();
-            services.AddTransient<PopulateReadModelHandler<T>>();
-            services.AddSingleton<IHostedService, ReadModelPopulateService<T>>();
+            services.AddTransient<ReadModelHandler<T>>();
+            services.AddSingleton<IHostedService, ReadModelService<T>>();
             return services;
         }
     }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using W3ChampionsStatisticService.Players;
 
 namespace W3ChampionsStatisticService.Ports
@@ -7,5 +8,6 @@ namespace W3ChampionsStatisticService.Ports
     {
         Task Upsert(Player player);
         Task<Player> Load(string battleTag);
+        Task<List<Player>> Load(string lastObjectId = null, int pageSize = 100);
     }
 }

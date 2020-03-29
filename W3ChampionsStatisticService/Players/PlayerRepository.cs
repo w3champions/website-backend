@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -26,6 +27,11 @@ namespace W3ChampionsStatisticService.Players
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<Player>(nameof(Player));
             return (await mongoCollection.FindAsync(p => p.BattleTag == battleTag)).FirstOrDefault();
+        }
+
+        public Task<List<Player>> Load(string lastObjectId = null, int pageSize = 100)
+        {
+            return Task.FromResult(new List<Player>());
         }
     }
 }
