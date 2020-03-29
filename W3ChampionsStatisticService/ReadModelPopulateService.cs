@@ -2,7 +2,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService

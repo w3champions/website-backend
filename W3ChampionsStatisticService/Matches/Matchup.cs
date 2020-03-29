@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.MongoDb;
 

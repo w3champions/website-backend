@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
-using InsertManyOptions = MongoDB.Driver.InsertManyOptions;
-using UpdateOptions = MongoDB.Driver.UpdateOptions;
 
 namespace W3ChampionsStatisticService.MongoDb
 {
