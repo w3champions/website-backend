@@ -33,7 +33,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update();
 
-            mockMatchRepo.Verify(m => m.Upsert(It.Is<List<Matchup>>(ma => ma.Single().Map == "twistedmeadows")), Times.Once);
+            mockMatchRepo.Verify(m => m.Insert(It.Is<List<Matchup>>(ma => ma.Single().Map == "twistedmeadows")), Times.Once);
         }
 
         [Test]

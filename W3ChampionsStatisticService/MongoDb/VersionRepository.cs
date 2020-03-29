@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.MongoDb
 {
     public class VersionRepository : MongoDbRepositoryBase,  IVersionRepository
     {
-        private readonly string _collection = "MatchFinishedEvents";
+        private readonly string _collection = "HandlerVersions";
 
         public VersionRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
         {
@@ -17,7 +17,10 @@ namespace W3ChampionsStatisticService.MongoDb
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
-            var version = (await mongoCollection.FindAsync(c => c.HandlerName == nameof(T))).FirstOrDefaultAsync()?.Result?.LastVersion;
+            var version = (await mongoCollection.FindAsync(c => c.HandlerName == HandlerName<T>()))
+                .FirstOrDefaultAsync()?
+                .Result?
+                .LastVersion;
             return version ?? ObjectId.Empty.ToString();
         }
 
@@ -25,11 +28,16 @@ namespace W3ChampionsStatisticService.MongoDb
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
-            var newVersion = new VersionDto {HandlerName = nameof(T), LastVersion = lastVersion};
+            var newVersion = new VersionDto {HandlerName = HandlerName<T>(), LastVersion = lastVersion};
             await mongoCollection.ReplaceOneAsync(
-                new BsonDocument("_id", nameof(T)),
+                new BsonDocument("_id", HandlerName<T>()),
                 options: new ReplaceOptions { IsUpsert = true },
                 replacement: newVersion);
+        }
+
+        private static string HandlerName<T>()
+        {
+            return typeof(T).Name;
         }
     }
 

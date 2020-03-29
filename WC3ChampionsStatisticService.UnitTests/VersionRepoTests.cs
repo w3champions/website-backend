@@ -19,6 +19,21 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task LoadAndSaveTwoVersions()
+        {
+            var versionRepository = new VersionRepository(DbConnctionInfo);
+
+            await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
+            await versionRepository.SaveLastVersion<VersionRepoTest>("456");
+
+            var version1 = await versionRepository.GetLastVersion<IntegrationTestBase>();
+            var version2 = await versionRepository.GetLastVersion<VersionRepoTest>();
+
+            Assert.AreEqual("123", version1);
+            Assert.AreEqual("456", version2);
+        }
+
+        [Test]
         public async Task SaveTwice()
         {
             var versionRepository = new VersionRepository(DbConnctionInfo);

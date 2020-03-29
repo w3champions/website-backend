@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.Matches
         public async Task Update(List<MatchFinishedEvent> nextEvents)
         {
             var matchups = nextEvents.Select(e => new Matchup(e)).ToList();
-            await _matchRepository.Upsert(matchups);
+            await _matchRepository.Insert(matchups);
         }
     }
 }

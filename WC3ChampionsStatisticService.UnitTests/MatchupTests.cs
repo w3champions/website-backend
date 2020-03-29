@@ -17,10 +17,11 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 
-            await matchRepository.Upsert(new List<Matchup> {new Matchup(matchFinishedEvent)});
+            await matchRepository.Insert(new List<Matchup> {new Matchup(matchFinishedEvent)});
+            await matchRepository.Insert(new List<Matchup> {new Matchup(matchFinishedEvent)});
             var matches = await matchRepository.Load(ObjectId.Empty.ToString());
 
-            Assert.IsNotNull(matches);
+            Assert.AreEqual(2, matches.Count);
         }
     }
 }
