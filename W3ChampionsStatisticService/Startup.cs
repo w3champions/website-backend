@@ -32,9 +32,8 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchRepository, MatchRepository>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
-            services.AddTransient<PopulateMatchReadModelHandler>();
 
-            services.AddSingleton<IHostedService, ReadModelPopulateService<PopulateReadModelHandlerBase<PopulateMatchReadModelHandler>>>();
+            services.AddReadModelService<PopulateMatchReadModelHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -47,6 +46,17 @@ namespace W3ChampionsStatisticService
             app.UseHttpsRedirection();
             app.UseRouting();
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        }
+    }
+
+    public static class ReadModelExtensions
+    {
+        public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
+        {
+            services.AddTransient<T>();
+            services.AddTransient<PopulateReadModelHandler<T>>();
+            services.AddSingleton<IHostedService, ReadModelPopulateService<T>>();
+            return services;
         }
     }
 }

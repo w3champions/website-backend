@@ -4,13 +4,13 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public class PopulateReadModelHandlerBase<T> : IPopulateReadModelHandlerBase where T : IReadModelHandler
+    public class PopulateReadModelHandler<T> where T : IReadModelHandler
     {
         private readonly IMatchEventRepository _eventRepository;
         private readonly IVersionRepository _versionRepository;
         private readonly T _innerHandler;
 
-        public PopulateReadModelHandlerBase(
+        public PopulateReadModelHandler(
             IMatchEventRepository eventRepository,
             IVersionRepository versionRepository,
             T innerHandler)

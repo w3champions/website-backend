@@ -4,11 +4,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService
 {
-    public class ReadModelPopulateService<T> : IHostedService where T : IPopulateReadModelHandlerBase
+    public class ReadModelPopulateService<T> : IHostedService where T : IReadModelHandler
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
@@ -57,7 +58,7 @@ namespace W3ChampionsStatisticService
                 {
                     try
                     {
-                        var service = scope.ServiceProvider.GetService<T>();
+                        var service = scope.ServiceProvider.GetService<PopulateReadModelHandler<T>>();
                         await service.Update();
                     }
                     catch (Exception e)
