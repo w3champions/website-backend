@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
@@ -35,7 +34,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update();
 
-            mockMatchRepo.Verify(m => m.Insert(It.Is<List<Matchup>>(ma => ma.Single().Map == "Twisted Meadows")), Times.Once);
+            mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "Twisted Meadows")), Times.Once);
         }
     }
 }

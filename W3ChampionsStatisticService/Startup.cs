@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.MongoDb;
+using W3ChampionsStatisticService.Players;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -39,6 +40,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
             services.AddReadModelService<PopulateMatchReadModelHandler>();
+            services.AddReadModelService<PopulatePlayerModelHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

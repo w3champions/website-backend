@@ -11,12 +11,12 @@ namespace W3ChampionsStatisticService.MongoDb
         {
         }
 
-        public async Task Insert(List<Matchup> matchups)
+        public async Task Insert(Matchup matchup)
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<Matchup>(nameof(Matchup));
 
-            await mongoCollection.InsertManyAsync(matchups);
+            await mongoCollection.InsertOneAsync(matchup);
         }
 
         public Task<List<Matchup>> Load(string lastObjectId = null, int pageSize = 100)

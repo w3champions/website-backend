@@ -28,10 +28,13 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
             while (nextEvents.Any())
             {
-                await _innerHandler.Update(nextEvents);
-                var newLastVersion = nextEvents.Last().Id.ToString();
-                await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(newLastVersion);
-                nextEvents = await _eventRepository.Load(newLastVersion);
+                foreach (var nextEvent in nextEvents)
+                {
+                    await _innerHandler.Update(nextEvent);
+                    await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(nextEvent.Id.ToString());
+                }
+
+                nextEvents = await _eventRepository.Load(nextEvents.Last().Id.ToString());
             }
         }
     }

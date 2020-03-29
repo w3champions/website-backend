@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -19,8 +18,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 
-            await matchRepository.Insert(new List<Matchup> {new Matchup(matchFinishedEvent)});
-            await matchRepository.Insert(new List<Matchup> {new Matchup(matchFinishedEvent)});
+            await matchRepository.Insert(new Matchup(matchFinishedEvent));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent));
             var matches = await matchRepository.Load(ObjectId.Empty.ToString());
 
             Assert.AreEqual(2, matches.Count);

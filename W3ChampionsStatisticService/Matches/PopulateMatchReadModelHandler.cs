@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
@@ -17,10 +15,9 @@ namespace W3ChampionsStatisticService.Matches
             _matchRepository = matchRepository;
         }
 
-        public async Task Update(List<MatchFinishedEvent> nextEvents)
+        public async Task Update(MatchFinishedEvent nextEvent)
         {
-            var matchups = nextEvents.Select(e => new Matchup(e)).ToList();
-            await _matchRepository.Insert(matchups);
+            await _matchRepository.Insert(new Matchup(nextEvent));
         }
     }
 }
