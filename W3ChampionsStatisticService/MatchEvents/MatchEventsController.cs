@@ -16,8 +16,12 @@ namespace W3ChampionsStatisticService.MatchEvents
         }
 
         [HttpPost]
-        public async Task<IActionResult> PushEvents(IList<MatchFinishedEvent> events)
+        public async Task<IActionResult> PushEvents(
+            string authorization,
+            [FromBody] IList<MatchFinishedEvent> events
+            )
         {
+            if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE") return Unauthorized("Sorry H4ckerb0i");
             await _handler.Insert(events);
             return Ok();
         }

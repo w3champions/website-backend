@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -11,6 +10,10 @@ namespace W3ChampionsStatisticService.MongoDb
     public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
     {
         private readonly string _matches = "Matches";
+
+        public MatchRepository(DbConnctionInfo connctionInfo) : base(connctionInfo)
+        {
+        }
 
         public async Task Upsert(List<Matchup> matchups)
         {
@@ -24,10 +27,6 @@ namespace W3ChampionsStatisticService.MongoDb
                     options: new ReplaceOptions { IsUpsert = true },
                     replacement: matchup);
             }
-        }
-
-        public MatchRepository(DbConnctionInfo connctionInfo) : base(connctionInfo)
-        {
         }
 
         public Task<List<Matchup>> Load(string lastObjectId = null, int pageSize = 100)

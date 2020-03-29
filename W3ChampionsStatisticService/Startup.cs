@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.HttpSys;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,7 @@ namespace W3ChampionsStatisticService
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString");
 
             services.AddSingleton(new DbConnctionInfo(mongoConnectionString?.Replace("'", "")));
