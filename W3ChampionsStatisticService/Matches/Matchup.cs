@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.MongoDb;
 
 namespace W3ChampionsStatisticService.Matches
 {
-    public class Matchup
+    public class Matchup : Identifiable
     {
         public string Map { get; set; }
         public TimeSpan Duration { get; set; }

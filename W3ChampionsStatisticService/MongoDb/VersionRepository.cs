@@ -5,15 +5,12 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.MongoDb
 {
-    public class VersionRepository : IVersionRepository
+    public class VersionRepository : MongoDbRepositoryBase,  IVersionRepository
     {
-        private readonly DbConnctionInfo _connectionInfo;
-        private readonly string _databaseName = "W3Champions-Statistic-Service";
         private readonly string _collection = "MatchFinishedEvents";
 
-        public VersionRepository(DbConnctionInfo connectionInfo)
+        public VersionRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
         {
-            _connectionInfo = connectionInfo;
         }
 
         public async Task<string> GetLastVersion<T>()
@@ -31,15 +28,8 @@ namespace W3ChampionsStatisticService.MongoDb
             var newVersion = new VersionDto {HandlerName = nameof(T), LastVersion = lastVersion};
             await mongoCollection.ReplaceOneAsync(
                 new BsonDocument("_id", nameof(T)),
-                options: new UpdateOptions { IsUpsert = true },
+                options: new ReplaceOptions { IsUpsert = true },
                 replacement: newVersion);
-        }
-
-        private IMongoDatabase CreateClient()
-        {
-            var client = new MongoClient(_connectionInfo.ConnectionString);
-            var database = client.GetDatabase(_databaseName);
-            return database;
         }
     }
 

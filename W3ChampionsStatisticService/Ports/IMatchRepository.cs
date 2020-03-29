@@ -6,6 +6,6 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IMatchRepository
     {
-        Task Upsert(IList<Matchup> matchups);
+        Task<string> Upsert(List<Matchup> matchups);
     }
 }

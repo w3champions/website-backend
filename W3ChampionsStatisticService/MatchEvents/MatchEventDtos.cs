@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.MongoDb;
 
 namespace W3ChampionsStatisticService.MatchEvents
 {
@@ -93,7 +96,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public long id { get; set; }
     }
 
-    public class MatchFinishedEvent
+    public class MatchFinishedEvent : Identifiable
     {
         public string type { get; set; }
         public Data data { get; set; }

@@ -3,10 +3,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService
 {
-    public class ReadModelPopulateService<T> : IHostedService where T : IReadModelHandler
+    public class ReadModelPopulateService<T> : IHostedService where T : IPopulateReadModelHandlerBase
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
@@ -55,7 +56,7 @@ namespace W3ChampionsStatisticService
                 {
                     var service = scope.ServiceProvider.GetService<T>();
                     await service.Update();
-                    await Task.Delay(5000);
+                    await Task.Delay(5000, stoppingToken);
                 }
             }
             while (!stoppingToken.IsCancellationRequested);
