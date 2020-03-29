@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,8 +54,16 @@ namespace W3ChampionsStatisticService
             {
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    var service = scope.ServiceProvider.GetService<T>();
-                    await service.Update();
+                    try
+                    {
+                        var service = scope.ServiceProvider.GetService<T>();
+                        await service.Update();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+
                     await Task.Delay(5000, stoppingToken);
                 }
             }
