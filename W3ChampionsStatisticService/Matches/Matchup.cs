@@ -19,7 +19,10 @@ namespace W3ChampionsStatisticService.Matches
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {
             var data = matchFinishedEvent.data;
-            Map = data.mapInfo.name.Split("/").Last().Replace(".w3x", "").Substring(3);
+            Map = data.mapInfo.name;
+            Duration = TimeSpan.FromSeconds(data.mapInfo.elapsedGameTimeTotalSeconds);
+
+
 
             var winners = data.players.Where(p => p.won);
             var loosers = data.players.Where(p => !p.won);

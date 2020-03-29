@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
         public async Task Update()
         {
             var lastVersion = await _versionRepository.GetLastVersion<PopulateMatchReadModelHandler>();
-            var nextEvents = await _eventRepository.Load(lastVersion, 3);
+            var nextEvents = await _eventRepository.Load(lastVersion, 1000);
 
             while (nextEvents.Any())
             {

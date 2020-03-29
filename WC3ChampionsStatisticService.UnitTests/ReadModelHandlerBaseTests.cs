@@ -18,9 +18,11 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
-            fakeEvent.data.mapInfo.name = "Maps/frozenthrone/(4)twistedmeadows.w3x";
+            fakeEvent.data.mapInfo.name = "Twisted Meadows";
             var mockEvents = new Mock<IMatchEventRepository>();
-            mockEvents.Setup(m => m.Load(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent });
+            mockEvents.SetupSequence(m => m.Load(It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
+                .ReturnsAsync(new List<MatchFinishedEvent>());
 
             var mockMatchRepo = new Mock<IMatchRepository>();
 
@@ -33,41 +35,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update();
 
-            mockMatchRepo.Verify(m => m.Insert(It.Is<List<Matchup>>(ma => ma.Single().Map == "twistedmeadows")), Times.Once);
-        }
-
-        [Test]
-        public void MapMatch_Players()
-        {
-            var fakeEvent = TestDtoHelper.CreateFakeEvent();
-
-            var name1 = "peter#123";
-            var name2 = "wolf#456";
-
-            fakeEvent.data.players.First().battleTag = name1;
-            fakeEvent.data.players.First().won = false;
-            fakeEvent.data.players.Last().battleTag = name2;
-            fakeEvent.data.players.Last().won = true;
-
-            var matchup = new Matchup(fakeEvent);
-
-            Assert.AreEqual("123", matchup.Teams.First().Players.First().BattleTag);
-            Assert.AreEqual("peter", matchup.Teams.First().Players.First().Name);
-
-            Assert.AreEqual("456", matchup.Teams.Last().Players.First().BattleTag);
-            Assert.AreEqual("wolf", matchup.Teams.Last().Players.First().Name);
-        }
-
-        [Test]
-        public void MapMatch_Map()
-        {
-            var fakeEvent = TestDtoHelper.CreateFakeEvent();
-
-            fakeEvent.data.mapInfo.name = "Maps/frozenthrone/(4)twistedmeadows.w3x";
-
-            var matchup = new Matchup(fakeEvent);
-
-            Assert.AreEqual("twistedmeadows", matchup.Map);
+            mockMatchRepo.Verify(m => m.Insert(It.Is<List<Matchup>>(ma => ma.Single().Map == "Twisted Meadows")), Times.Once);
         }
     }
 }

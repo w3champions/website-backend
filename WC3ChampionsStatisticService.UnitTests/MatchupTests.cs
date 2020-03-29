@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using NUnit.Framework;
@@ -22,6 +23,40 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matches = await matchRepository.Load(ObjectId.Empty.ToString());
 
             Assert.AreEqual(2, matches.Count);
+        }
+
+        [Test]
+        public void MapMatch_Players()
+        {
+            var fakeEvent = TestDtoHelper.CreateFakeEvent();
+
+            var name1 = "peter#123";
+            var name2 = "wolf#456";
+
+            fakeEvent.data.players.First().battleTag = name1;
+            fakeEvent.data.players.First().won = false;
+            fakeEvent.data.players.Last().battleTag = name2;
+            fakeEvent.data.players.Last().won = true;
+
+            var matchup = new Matchup(fakeEvent);
+
+            Assert.AreEqual("123", matchup.Teams.First().Players.First().BattleTag);
+            Assert.AreEqual("peter", matchup.Teams.First().Players.First().Name);
+
+            Assert.AreEqual("456", matchup.Teams.Last().Players.First().BattleTag);
+            Assert.AreEqual("wolf", matchup.Teams.Last().Players.First().Name);
+        }
+
+        [Test]
+        public void MapMatch_Map()
+        {
+            var fakeEvent = TestDtoHelper.CreateFakeEvent();
+
+            fakeEvent.data.mapInfo.name = "Twisted Meadows";
+
+            var matchup = new Matchup(fakeEvent);
+
+            Assert.AreEqual("Twisted Meadows", matchup.Map);
         }
     }
 }
