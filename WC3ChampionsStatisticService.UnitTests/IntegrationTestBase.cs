@@ -7,7 +7,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 {
     public class IntegrationTestBase
     {
-        protected readonly DbConnctionInfo DbConnctionInfo = new DbConnctionInfo("mongodb://176.28.16.249:3510/");
+        protected readonly DbConnctionInfo DbConnctionInfo = new DbConnctionInfo("mongodb://176.28.16.249:3512/");
 
         [SetUp]
         public async Task Setup()
