@@ -1,20 +1,14 @@
 ﻿using System.Linq;
-using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Players
 {
-    public class Player
+    public class Player : Identifiable
     {
-        [BsonId]
         public string BattleTag { get; set; }
-        public RaceStats RaceStats { get; set; } = new RaceStats();
-        public GameModeStats GameModeStats { get; set; } = new GameModeStats();
-
-        public Player(string battleTag)
-        {
-            BattleTag = battleTag;
-        }
+        public RaceStats RaceStats { get; set; }
+        public GameModeStats GameModeStats { get; set; }
 
         public void RecordWin(Race race, GameMode mode, bool won)
         {

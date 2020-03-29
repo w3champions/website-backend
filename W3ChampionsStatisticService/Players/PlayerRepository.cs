@@ -26,12 +26,13 @@ namespace W3ChampionsStatisticService.Players
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<Player>(nameof(Player));
-            return (await mongoCollection.FindAsync(p => p.BattleTag == battleTag)).FirstOrDefault();
+            var elements = await mongoCollection.FindAsync(p => p.BattleTag == battleTag);
+            return elements.FirstOrDefault();
         }
 
-        public Task<List<Player>> Load(string lastObjectId = null, int pageSize = 100)
+        public Task<List<Player>> LoadRange(string lastObjectId = null, int pageSize = 100)
         {
-            return Task.FromResult(new List<Player>());
+            return Load<Player>(lastObjectId, pageSize);
         }
     }
 }

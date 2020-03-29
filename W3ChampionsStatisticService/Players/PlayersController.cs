@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Players
         [HttpGet]
         public async Task<IActionResult> GetMatches(string lastObjectId = null, int pageSize = 100)
         {
-            var matches = await _playerRepository.Load(lastObjectId, pageSize);
+            var matches = await _playerRepository.LoadRange(lastObjectId, pageSize);
             return Ok(matches);
         }
     }
