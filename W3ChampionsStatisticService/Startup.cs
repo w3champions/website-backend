@@ -6,7 +6,6 @@ using Microsoft.Extensions.Hosting;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
-using W3ChampionsStatisticService.MongoDb;
 using W3ChampionsStatisticService.Players;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -34,6 +33,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<IAdminRepository, AdminRepository>();
+            services.AddTransient<IPlayerRepository, PlayerRepository>();
 
             services.AddTransient<AdminCommandHandler>();
 

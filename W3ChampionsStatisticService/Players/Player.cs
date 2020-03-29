@@ -1,12 +1,20 @@
-﻿using W3ChampionsStatisticService.MatchEvents;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.MatchEvents;
 
 namespace W3ChampionsStatisticService.Players
 {
     public class Player
     {
-        public Player(MatchFinishedEvent matchFinishedEvent)
+        [BsonId]
+        public string BattleTag { get; set; }
+
+        public Player(string battleTag)
         {
-            
+            BattleTag = battleTag;
+        }
+
+        public void UpdateProgress(MatchFinishedEvent nextEvent)
+        {
         }
     }
 }

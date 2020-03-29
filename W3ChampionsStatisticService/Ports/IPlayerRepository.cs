@@ -5,6 +5,7 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IPlayerRepository
     {
-        Task Insert(Player matchups);
+        Task Upsert(Player player);
+        Task<Player> Load(string battleTag);
     }
 }

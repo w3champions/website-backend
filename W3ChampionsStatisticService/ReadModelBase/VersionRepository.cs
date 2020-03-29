@@ -3,7 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.MongoDb
+namespace W3ChampionsStatisticService.ReadModelBase
 {
     public class VersionRepository : MongoDbRepositoryBase,  IVersionRepository
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.MatchEvents;
-using W3ChampionsStatisticService.MongoDb;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Matches
 {

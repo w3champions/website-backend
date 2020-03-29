@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.MongoDb;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

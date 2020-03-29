@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.MongoDb
+namespace W3ChampionsStatisticService.MatchEvents
 {
     public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
     {

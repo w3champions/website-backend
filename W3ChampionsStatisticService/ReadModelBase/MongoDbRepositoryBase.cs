@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace W3ChampionsStatisticService.MongoDb
+namespace W3ChampionsStatisticService.ReadModelBase
 {
     public class MongoDbRepositoryBase
     {

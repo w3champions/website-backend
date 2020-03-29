@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using W3ChampionsStatisticService.MongoDb;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.MatchEvents
 {

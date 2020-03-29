@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.MongoDb;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
