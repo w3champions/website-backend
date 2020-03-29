@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.MongoDb
     {
         private readonly string _matches = "Matches";
 
-        public async Task<string> Upsert(List<Matchup> matchups)
+        public async Task Upsert(List<Matchup> matchups)
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<Matchup>(_matches);
@@ -24,8 +24,6 @@ namespace W3ChampionsStatisticService.MongoDb
                     options: new ReplaceOptions { IsUpsert = true },
                     replacement: matchup);
             }
-
-            return matchups.Last().Id.ToString();
         }
 
         public MatchRepository(DbConnctionInfo connctionInfo) : base(connctionInfo)

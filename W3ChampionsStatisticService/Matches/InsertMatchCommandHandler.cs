@@ -17,11 +17,10 @@ namespace W3ChampionsStatisticService.Matches
             _matchRepository = matchRepository;
         }
 
-        public async Task<string> Update(List<MatchFinishedEvent> nextEvents)
+        public async Task Update(List<MatchFinishedEvent> nextEvents)
         {
             var matchups = nextEvents.Select(e => new Matchup(e)).ToList();
-            var lastVersion = await _matchRepository.Upsert(matchups);
-            return lastVersion;
+            await _matchRepository.Upsert(matchups);
         }
     }
 }

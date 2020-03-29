@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 
@@ -24,10 +25,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
             var lastVersion = await _versionRepository.GetLastVersion<PopulateMatchReadModelHandler>();
             var nextEvents = await _eventRepository.Load(lastVersion);
+            if (!nextEvents.Any()) return;
 
-            var newLastVersion = await _innerHandler.Update(nextEvents);
+            await _innerHandler.Update(nextEvents);
 
-            await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(newLastVersion);
+            await _versionRepository.SaveLastVersion<PopulateMatchReadModelHandler>(nextEvents.Last().Id.ToString());
         }
     }
 }

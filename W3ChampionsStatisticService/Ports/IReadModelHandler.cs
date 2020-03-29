@@ -6,6 +6,6 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IReadModelHandler
     {
-        Task<string> Update(List<MatchFinishedEvent> nextEvents);
+        Task Update(List<MatchFinishedEvent> nextEvents);
     }
 }

@@ -23,8 +23,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             mockEvents.Setup(m => m.Load(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent });
 
             var mockMatchRepo = new Mock<IMatchRepository>();
-            var newversion = "newVersion";
-            mockMatchRepo.Setup(m => m.Upsert(It.IsAny<List<Matchup>>())).ReturnsAsync(newversion);
 
             var versionRepository = new Mock<IVersionRepository>();
 
@@ -35,7 +33,6 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update();
 
-            versionRepository.Verify(m => m.SaveLastVersion<PopulateMatchReadModelHandler>(newversion));
             mockMatchRepo.Verify(m => m.Upsert(It.Is<List<Matchup>>(ma => ma.Single().Map == "twistedmeadows")), Times.Once);
         }
 
