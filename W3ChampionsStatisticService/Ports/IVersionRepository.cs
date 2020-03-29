@@ -6,5 +6,6 @@ namespace W3ChampionsStatisticService.Ports
     {
         Task<string> GetLastVersion<T>();
         Task SaveLastVersion<T>(string lastVersion);
+        Task ResetVersion(string readModelType);
     }
 }

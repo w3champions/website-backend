@@ -22,12 +22,12 @@ namespace W3ChampionsStatisticService.MongoDb
             return database;
         }
 
-        protected async Task<List<T>> Load<T>(string collectionName, string lastObjectId, int pageSize) where T : Identifiable
+        protected async Task<List<T>> Load<T>(string lastObjectId, int pageSize) where T : Identifiable
         {
             lastObjectId ??= ObjectId.Empty.ToString();
             var database = CreateClient();
 
-            var mongoCollection = database.GetCollection<T>(collectionName);
+            var mongoCollection = database.GetCollection<T>(typeof(T).Name);
             var filterBuilder = Builders<T>.Filter;
             var filter = filterBuilder.Gt(x => x.Id, ObjectId.Parse(lastObjectId));
 

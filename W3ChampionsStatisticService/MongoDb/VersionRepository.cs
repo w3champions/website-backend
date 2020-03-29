@@ -35,6 +35,17 @@ namespace W3ChampionsStatisticService.MongoDb
                 replacement: newVersion);
         }
 
+        public async Task ResetVersion(string readModelType)
+        {
+            var database = CreateClient();
+            var mongoCollection = database.GetCollection<VersionDto>(_collection);
+            var newVersion = new VersionDto {HandlerName = readModelType, LastVersion = ObjectId.Empty.ToString()};
+            await mongoCollection.ReplaceOneAsync(
+                new BsonDocument("_id", readModelType),
+                options: new ReplaceOptions { IsUpsert = true },
+                replacement: newVersion);
+        }
+
         private static string HandlerName<T>()
         {
             return typeof(T).Name;

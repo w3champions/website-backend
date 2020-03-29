@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.MongoDb;
@@ -31,6 +32,9 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
+            services.AddTransient<IAdminRepository, AdminRepository>();
+
+            services.AddTransient<AdminCommandHandler>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
