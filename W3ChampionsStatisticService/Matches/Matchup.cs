@@ -11,9 +11,7 @@ namespace W3ChampionsStatisticService.Matches
         public string Map { get; set; }
         public TimeSpan Duration { get; set; }
         public DateTimeOffset StartTime { get; set; }
-
         public GameMode GameMode { get; set; }
-
         public IList<Team> Teams { get; set; } = new List<Team>();
 
         public Matchup(MatchFinishedEvent matchFinishedEvent)
@@ -21,8 +19,6 @@ namespace W3ChampionsStatisticService.Matches
             var data = matchFinishedEvent.data;
             Map = data.mapInfo.name;
             Duration = TimeSpan.FromSeconds(data.mapInfo.elapsedGameTimeTotalSeconds);
-
-
 
             var winners = data.players.Where(p => p.won);
             var loosers = data.players.Where(p => !p.won);
@@ -40,7 +36,10 @@ namespace W3ChampionsStatisticService.Matches
 
         private static IEnumerable<Player> CreatePlayerArray(IEnumerable<PlayerRaw> players)
         {
-            return players.Select(w => new Player(0, 0, 0, 0, w.battleTag.Split("#")[0], w.battleTag.Split("#")[1]));
+            return players.Select(w => new Player {
+                Name = w.battleTag.Split("#")[0],
+                BattleTag = w.battleTag.Split("#")[1]
+            });
         }
     }
 }

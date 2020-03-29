@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -51,12 +52,35 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_Map()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-
             fakeEvent.data.mapInfo.name = "Twisted Meadows";
-
             var matchup = new Matchup(fakeEvent);
-
             Assert.AreEqual("Twisted Meadows", matchup.Map);
         }
+
+        [Test]
+        public void MapMatch_TimeSpan()
+        {
+            var fakeEvent = TestDtoHelper.CreateFakeEvent();
+            fakeEvent.data.mapInfo.elapsedGameTimeTotalSeconds = 600;
+            var matchup = new Matchup(fakeEvent);
+            Assert.AreEqual(new TimeSpan(0, 0, 600), matchup.Duration);
+        }
+
+        // [Test]
+        // public void MapMatch_StartTime()
+        // {
+        //     var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        //     var matchup = new Matchup(fakeEvent);
+        //     Assert.IsNotNull(matchup.StartTime);
+        // }
+        //
+        // [Test]
+        // public void MapMatch_GameMode()
+        // {
+        //     var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        //     fakeEvent.data.mapInfo.elapsedGameTimeTotalSeconds = 600;
+        //     var matchup = new Matchup(fakeEvent);
+        //     Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
+        // }
     }
 }
