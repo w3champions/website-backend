@@ -6,7 +6,7 @@ namespace W3ChampionsStatisticService.Admin
 {
     public class AdminRepository : MongoDbRepositoryBase, IAdminRepository
     {
-        public AdminRepository(DbConnctionInfo connctionInfo) : base(connctionInfo)
+        public AdminRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
         {
         }
 

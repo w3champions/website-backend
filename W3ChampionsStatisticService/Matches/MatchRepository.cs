@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.Matches
 {
     public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
     {
-        public MatchRepository(DbConnctionInfo connctionInfo) : base(connctionInfo)
+        public MatchRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
         {
         }
 

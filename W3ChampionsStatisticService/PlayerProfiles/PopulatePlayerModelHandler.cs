@@ -3,7 +3,7 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.Players
+namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PopulatePlayerModelHandler : IReadModelHandler
     {

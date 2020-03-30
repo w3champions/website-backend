@@ -6,7 +6,8 @@ using Microsoft.Extensions.Hosting;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
-using W3ChampionsStatisticService.Players;
+using W3ChampionsStatisticService.PlayerOverviews;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -41,6 +42,7 @@ namespace W3ChampionsStatisticService
 
             services.AddReadModelService<PopulateMatchReadModelHandler>();
             services.AddReadModelService<PopulatePlayerModelHandler>();
+            services.AddReadModelService<PopulatePlayOverviewHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

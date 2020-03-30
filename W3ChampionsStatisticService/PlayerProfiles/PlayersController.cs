@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.Players
+namespace W3ChampionsStatisticService.PlayerProfiles
 {
     [ApiController]
     [Route("api/players")]

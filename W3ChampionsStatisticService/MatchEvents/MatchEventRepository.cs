@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.MatchEvents
             return await Load<MatchFinishedEvent>(lastObjectId, pageSize);
         }
 
-        public MatchEventRepository(DbConnctionInfo connctionInfo) : base(connctionInfo)
+        public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
         {
         }
     }
