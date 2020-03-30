@@ -4,11 +4,11 @@ using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.Players
 {
-    public class Player
+    public class PlayerProfile
     {
-        public static Player Create(string battleTag)
+        public static PlayerProfile Create(string battleTag)
         {
-            return new Player
+            return new PlayerProfile
             {
                 BattleTag = battleTag,
                 RaceStats = new RaceStats

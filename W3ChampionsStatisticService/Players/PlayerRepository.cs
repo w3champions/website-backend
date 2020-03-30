@@ -11,15 +11,15 @@ namespace W3ChampionsStatisticService.Players
         {
         }
 
-        public async Task UpsertPlayer(Player player)
+        public async Task UpsertPlayer(PlayerProfile playerProfile)
         {
-            await Upsert(player, p => p.BattleTag == player.BattleTag);
+            await Upsert(playerProfile, p => p.BattleTag == playerProfile.BattleTag);
         }
 
-        public async Task<Player> Load(string battleTag)
+        public async Task<PlayerProfile> Load(string battleTag)
         {
             var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<Player>(nameof(Player));
+            var mongoCollection = mongoDatabase.GetCollection<PlayerProfile>(nameof(PlayerProfile));
             var elements = await mongoCollection.FindAsync(p => p.BattleTag == battleTag);
             return elements.FirstOrDefault();
         }
