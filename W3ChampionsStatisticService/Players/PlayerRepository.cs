@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -12,14 +11,9 @@ namespace W3ChampionsStatisticService.Players
         {
         }
 
-        public async Task Upsert(Player player)
+        public async Task UpsertPlayer(Player player)
         {
-            var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<Player>(nameof(Player));
-            await mongoCollection.ReplaceOneAsync(
-                p => player.BattleTag == p.BattleTag,
-                options: new ReplaceOptions { IsUpsert = true },
-                replacement: player);
+            await Upsert(player, p => p.BattleTag == player.BattleTag);
         }
 
         public async Task<Player> Load(string battleTag)
@@ -28,11 +22,6 @@ namespace W3ChampionsStatisticService.Players
             var mongoCollection = mongoDatabase.GetCollection<Player>(nameof(Player));
             var elements = await mongoCollection.FindAsync(p => p.BattleTag == battleTag);
             return elements.FirstOrDefault();
-        }
-
-        public Task<List<Player>> LoadRange(string lastObjectId = null, int pageSize = 100)
-        {
-            return Load<Player>(lastObjectId, pageSize);
         }
     }
 }

@@ -1,11 +1,35 @@
 ﻿using System.Linq;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Players
 {
-    public class Player : Identifiable
+    public class Player
     {
+        public static Player Create(string battleTag)
+        {
+            return new Player
+            {
+                BattleTag = battleTag,
+                RaceStats = new RaceStats
+                {
+                    new RaceStat(Race.HU),
+                    new RaceStat(Race.OC),
+                    new RaceStat(Race.UD),
+                    new RaceStat(Race.NE),
+                    new RaceStat(Race.RnD)
+                },
+                GameModeStats = new GameModeStats
+                {
+                    new GameModeStat(GameMode.GM_1v1),
+                    new GameModeStat(GameMode.GM_2v2),
+                    new GameModeStat(GameMode.GM_4v4),
+                    new GameModeStat(GameMode.FFA)
+                }
+            };
+        }
+
+        [BsonId]
         public string BattleTag { get; set; }
         public RaceStats RaceStats { get; set; }
         public GameModeStats GameModeStats { get; set; }

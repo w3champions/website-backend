@@ -13,8 +13,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = PlayerFactory.Create("peter#123");
-            await playerRepository.Upsert(player);
+            var player = Player.Create("peter#123");
+            await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.Load(player.BattleTag);
 
             Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
@@ -25,17 +25,34 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = PlayerFactory.Create("peter#123");
+            var player = Player.Create("peter#123");
             player.RecordWin(Race.HU, GameMode.GM_1v1, true);
-            await playerRepository.Upsert(player);
+            await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.Load(player.BattleTag);
             playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, false);
-            await playerRepository.Upsert(playerLoaded);
+            await playerRepository.UpsertPlayer(playerLoaded);
 
             var playerLoadedAgain = await playerRepository.Load(player.BattleTag);
 
             Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
             Assert.AreEqual(player.BattleTag, playerLoadedAgain.BattleTag);
+        }
+
+        [Test]
+        public async Task PlayerIdMappedRight()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player1 = Player.Create("peter#123");
+            var player2 = Player.Create("wolf#456");
+
+            await playerRepository.UpsertPlayer(player1);
+            await playerRepository.UpsertPlayer(player2);
+
+            var playerLoaded = await playerRepository.Load(player2.BattleTag);
+
+            Assert.IsNotNull(playerLoaded);
+            Assert.AreEqual(player2.BattleTag, playerLoaded.BattleTag);
         }
     }
 }

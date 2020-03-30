@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public abstract class Identifiable
+    public abstract class Versionable
     {
         [BsonId]
         public ObjectId Id { get; set; }

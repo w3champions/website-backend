@@ -20,9 +20,9 @@ namespace W3ChampionsStatisticService.Players
         {
             foreach (var playerRaw in nextEvent.data.players)
             {
-                var player = await _playerRepository.Load(playerRaw.battleTag) ?? PlayerFactory.Create(playerRaw.battleTag);
+                var player = await _playerRepository.Load(playerRaw.battleTag) ?? Player.Create(playerRaw.battleTag);
                 player.RecordWin((Race) playerRaw.raceId, GameMode.GM_1v1, playerRaw.won);
-                await _playerRepository.Upsert(player);
+                await _playerRepository.UpsertPlayer(player);
             }
         }
     }

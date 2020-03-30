@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -22,7 +24,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return database;
         }
 
-        protected async Task<List<T>> Load<T>(string lastObjectId, int pageSize) where T : Identifiable
+        protected async Task<List<T>> Load<T>(string lastObjectId, int pageSize) where T : Versionable
         {
             lastObjectId ??= ObjectId.Empty.ToString();
             var database = CreateClient();
@@ -37,6 +39,16 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 .ToListAsync();
 
             return events;
+        }
+
+        protected async Task Upsert<T>(T insertObject, Expression<Func<T, bool>> identityQuerry)
+        {
+            var mongoDatabase = CreateClient();
+            var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+            await mongoCollection.FindOneAndReplaceAsync(
+                identityQuerry,
+                insertObject,
+                new FindOneAndReplaceOptions<T> {IsUpsert = true});
         }
     }
 }

@@ -94,7 +94,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public long id { get; set; }
     }
 
-    public class MatchFinishedEvent : Identifiable
+    public class MatchFinishedEvent : Versionable
     {
         public string type { get; set; }
         public Data data { get; set; }

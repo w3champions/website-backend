@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Matches
 {
-    public class Matchup : Identifiable
+    public class Matchup : Versionable
     {
         public string Map { get; set; }
         public TimeSpan Duration { get; set; }

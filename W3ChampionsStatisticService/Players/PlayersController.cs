@@ -15,10 +15,10 @@ namespace W3ChampionsStatisticService.Players
             _playerRepository = playerRepository;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetMatches(string lastObjectId = null, int pageSize = 100)
+        [HttpGet("{battleTag}")]
+        public async Task<IActionResult> GetMatches([FromRoute] string battleTag)
         {
-            var matches = await _playerRepository.LoadRange(lastObjectId, pageSize);
+            var matches = await _playerRepository.Load(battleTag);
             return Ok(matches);
         }
     }
