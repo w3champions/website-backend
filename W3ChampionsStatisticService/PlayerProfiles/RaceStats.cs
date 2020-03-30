@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace W3ChampionsStatisticService.Players
+namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class RaceStats : List<RaceStat>
     {

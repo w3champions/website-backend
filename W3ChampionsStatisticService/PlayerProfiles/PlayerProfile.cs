@@ -1,8 +1,7 @@
 ﻿using System.Linq;
-using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
 
-namespace W3ChampionsStatisticService.Players
+namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerProfile
     {
@@ -10,7 +9,9 @@ namespace W3ChampionsStatisticService.Players
         {
             return new PlayerProfile
             {
-                BattleTag = battleTag,
+                Id = battleTag,
+                Name = battleTag.Split("#")[0],
+                BattleTag = battleTag.Split("#")[1],
                 RaceStats = new RaceStats
                 {
                     new RaceStat(Race.HU),
@@ -29,8 +30,9 @@ namespace W3ChampionsStatisticService.Players
             };
         }
 
-        [BsonId]
+        public string Id { get; set; }
         public string BattleTag { get; set; }
+        public string Name { get; set; }
         public RaceStats RaceStats { get; set; }
         public GameModeStats GameModeStats { get; set; }
 

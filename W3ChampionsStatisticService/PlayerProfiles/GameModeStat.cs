@@ -1,6 +1,6 @@
 ﻿using W3ChampionsStatisticService.Matches;
 
-namespace W3ChampionsStatisticService.Players
+namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class GameModeStat
     {

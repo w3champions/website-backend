@@ -1,6 +1,6 @@
 ﻿namespace W3ChampionsStatisticService.Matches
 {
-    public class PlayerOverview
+    public class PlayerOverviewMatches
     {
         public int Wins { get; set; }
         public int Losses { get; set; }

@@ -12,9 +12,9 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private readonly DbConnctionInfo _connectionInfo;
         private readonly string _databaseName = "W3Champions-Statistic-Service";
 
-        public MongoDbRepositoryBase(DbConnctionInfo connctionInfo)
+        public MongoDbRepositoryBase(DbConnctionInfo connectionInfo)
         {
-            _connectionInfo = connctionInfo;
+            _connectionInfo = connectionInfo;
         }
 
         protected IMongoDatabase CreateClient()
