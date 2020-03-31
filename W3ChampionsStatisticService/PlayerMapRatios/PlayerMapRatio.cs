@@ -13,7 +13,7 @@ namespace W3ChampionsStatisticService.PlayerMapRatios
             };
         }
 
-        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.CreateRaceBased();
+        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.CreateMapBased();
         public string Id { get; set; }
 
         public void AddMapWin(bool won, Race myRace, string mapName)

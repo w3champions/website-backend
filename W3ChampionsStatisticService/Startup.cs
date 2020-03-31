@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PlayerMapAndRaceRatios;
 using W3ChampionsStatisticService.PlayerOverviews;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerRaceLossRatios;
@@ -44,6 +45,7 @@ namespace W3ChampionsStatisticService
             services.AddReadModelService<PopulatePlayerModelHandler>();
             services.AddReadModelService<PopulatePlayOverviewHandler>();
             services.AddReadModelService<PopulatePlayerRaceLossRatioHandler>();
+            services.AddReadModelService<PopulatePlayerMapAndRaceRatioRatioHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

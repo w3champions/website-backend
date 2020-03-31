@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.PlayerMapAndRaceRatios;
 using W3ChampionsStatisticService.PlayerMapRatios;
 using W3ChampionsStatisticService.PlayerOverviews;
 using W3ChampionsStatisticService.PlayerRaceLossRatios;
@@ -51,6 +52,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task UpsertMapStat(PlayerMapRatio playerMapRatio)
         {
             return Upsert(playerMapRatio, p => p.Id == playerMapRatio.Id);
+        }
+
+        public Task<PlayerMapAndRaceRatio> LoadMapAndRaceStat(string battleTag)
+        {
+            return LoadFirst<PlayerMapAndRaceRatio>(p => p.Id == battleTag);
+        }
+
+        public Task UpsertMapAndRaceStat(PlayerMapAndRaceRatio playerMapAndRaceRatio)
+        {
+            return Upsert(playerMapAndRaceRatio, p => p.Id == playerMapAndRaceRatio.Id);
         }
     }
 }
