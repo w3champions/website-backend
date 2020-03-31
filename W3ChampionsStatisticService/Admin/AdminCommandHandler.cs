@@ -6,20 +6,17 @@ namespace W3ChampionsStatisticService.Admin
     public class AdminCommandHandler
     {
         private readonly IVersionRepository _versionRepository;
-        private readonly IAdminRepository _adminRepository;
 
         public AdminCommandHandler(
-            IVersionRepository versionRepository,
-            IAdminRepository adminRepository)
+            IVersionRepository versionRepository
+            )
         {
             _versionRepository = versionRepository;
-            _adminRepository = adminRepository;
         }
 
-        public async Task ResetReadModel(string readModelType, string readModelHandler)
+        public async Task ResetReadModel(string readModelHandler)
         {
             await _versionRepository.ResetVersion(readModelHandler);
-            await _adminRepository.Reset(readModelType);
         }
     }
 }

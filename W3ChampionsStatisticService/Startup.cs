@@ -33,7 +33,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
-            services.AddTransient<IAdminRepository, AdminRepository>();
             services.AddTransient<IPlayerRepository, PlayerRepository>();
 
             services.AddTransient<AdminCommandHandler>();

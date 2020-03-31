@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -11,17 +13,25 @@ namespace W3ChampionsStatisticService.Matches
         {
         }
 
-        public async Task Insert(Matchup matchup)
+        public Task Insert(Matchup matchup)
         {
-            var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<Matchup>(nameof(Matchup));
-
-            await mongoCollection.InsertOneAsync(matchup);
+            return Upsert(matchup, m => m.Id == matchup.Id);
         }
 
-        public Task<List<Matchup>> Load(string lastObjectId = null, int pageSize = 100)
+        public async Task<List<Matchup>> Load(DateTimeOffset since = default, int pageSize = 100)
         {
-            return Load<Matchup>(lastObjectId, pageSize);
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
+            var filterBuilder = Builders<Matchup>.Filter;
+            var filter = filterBuilder.Gt(x => x.StartTime, since);
+
+            var events = await mongoCollection.Find(filter)
+                .SortBy(s => s.StartTime)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            return events;
         }
     }
 }

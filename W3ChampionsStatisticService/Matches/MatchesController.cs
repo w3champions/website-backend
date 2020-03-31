@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 
@@ -16,7 +17,7 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMatches(string lastObjectId = null, int pageSize = 100)
+        public async Task<IActionResult> GetMatches(DateTimeOffset lastObjectId = default, int pageSize = 100)
         {
             var matches = await _matchRepository.Load(lastObjectId, pageSize);
             return Ok(matches);
