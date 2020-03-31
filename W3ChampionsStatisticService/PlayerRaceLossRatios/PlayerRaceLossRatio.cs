@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.PlayerRaceLossRatios
             };
         }
 
-        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.Create();
+        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.CreateRaceBased();
         public string Id { get; set; }
 
         public void AddRaceWin(bool won, Race myRace, Race enemyRace)

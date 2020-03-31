@@ -1,12 +1,13 @@
 using System.Threading.Tasks;
 using NUnit.Framework;
+using W3ChampionsStatisticService.PlayerMapRatios;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerRaceLossRatios;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class PlayerRaceLossStatsTests : IntegrationTestBase
+    public class PlayerStatsTests : IntegrationTestBase
     {
         [Test]
         public async Task LoadAndSave()
@@ -21,7 +22,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task MapWins()
+        public async Task RaceWins()
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
@@ -40,6 +41,39 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.OC.ToString()].Losses);
             Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.NE.ToString()][Race.OC.ToString()].Wins);
             Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.NE.ToString()][Race.OC.ToString()].Losses);
+        }
+
+        [Test]
+        public async Task LoadAndSaveMap()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player = PlayerMapRatio.Create("peter#123");
+            await playerRepository.UpsertMapStat(player);
+            var playerLoaded = await playerRepository.LoadMapStat(player.Id);
+
+            Assert.AreEqual(player.Id, playerLoaded.Id);
+        }
+
+        [Test]
+        public async Task MapWins()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player = PlayerMapRatio.Create("peter#123");
+            player.AddMapWin(true, Race.HU, "TM");
+            player.AddMapWin(true, Race.HU, "EI");
+            player.AddMapWin(true, Race.HU, "TM");
+            player.AddMapWin(false, Race.NE, "EI");
+
+            await playerRepository.UpsertMapStat(player);
+            var playerLoaded = await playerRepository.LoadMapStat(player.Id);
+
+            Assert.AreEqual(2, playerLoaded.RaceWinRatio[Race.HU.ToString()]["TM"].Wins);
+            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()]["TM"].Losses);
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()]["EI"].Wins);
+            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()]["EI"].Losses);
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.NE.ToString()]["EI"].Losses);
         }
     }
 }

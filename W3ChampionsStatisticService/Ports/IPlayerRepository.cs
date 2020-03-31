@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.PlayerMapRatios;
 using W3ChampionsStatisticService.PlayerOverviews;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerRaceLossRatios;
@@ -13,5 +14,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<PlayerOverview> LoadOverview(string battleTag);
         Task<PlayerRaceLossRatio> LoadRaceStat(string battleTag);
         Task UpsertRaceStat(PlayerRaceLossRatio playerRaceLossRatio);
+        Task<PlayerMapRatio> LoadMapStat(string battleTag);
+        Task UpsertMapStat(PlayerMapRatio playerMapRatio);
     }
 }
