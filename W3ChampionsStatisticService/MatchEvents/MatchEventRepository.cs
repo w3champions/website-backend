@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
         {
-            return await Load<MatchFinishedEvent>(lastObjectId, pageSize);
+            return await LoadSince<MatchFinishedEvent>(lastObjectId, pageSize);
         }
 
         public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)

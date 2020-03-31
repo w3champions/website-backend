@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
-using MongoDB.Driver;
 using W3ChampionsStatisticService.PlayerOverviews;
+using W3ChampionsStatisticService.PlayerRaceLossRatios;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -22,20 +22,24 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             await Upsert(playerOverview, p => p.Id == playerOverview.Id);
         }
 
-        public async Task<PlayerProfile> Load(string battleTag)
+        public Task<PlayerProfile> Load(string battleTag)
         {
-            var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<PlayerProfile>(nameof(PlayerProfile));
-            var elements = await mongoCollection.FindAsync(p => p.Id == battleTag);
-            return elements.FirstOrDefault();
+            return LoadFirst<PlayerProfile>(p => p.Id == battleTag);
         }
 
-        public async Task<PlayerOverview> LoadOverview(string battleTag)
+        public Task<PlayerOverview> LoadOverview(string battleTag)
         {
-            var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<PlayerOverview>(nameof(PlayerOverview));
-            var elements = await mongoCollection.FindAsync(p => p.Id == battleTag);
-            return elements.FirstOrDefault();
+            return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
+        }
+
+        public Task<PlayerRaceLossRatio> LoadRaceStat(string battleTag)
+        {
+             return LoadFirst<PlayerRaceLossRatio>(p => p.Id == battleTag);
+        }
+
+        public Task UpsertRaceStat(PlayerRaceLossRatio playerRaceLossRatio)
+        {
+            return Upsert(playerRaceLossRatio, p => p.Id == playerRaceLossRatio.Id);
         }
     }
 }
