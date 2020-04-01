@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerOverviews
