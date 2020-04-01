@@ -23,8 +23,8 @@ namespace W3ChampionsStatisticService.Matches
             GameMode = (GameMode) matchFinishedEvent.match.gameMode;
 
             StartTime = DateTimeOffset.Now;
-            EndTime =  DateTimeOffset.FromUnixTimeSeconds(matchFinishedEvent.match.endTime);
-            StartTime =  DateTimeOffset.FromUnixTimeSeconds(matchFinishedEvent.match.startTime);
+            EndTime =  DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.endTime);
+            StartTime =  DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.startTime);
             Duration = EndTime - StartTime;
 
             var winners = data.players.Where(p => p.won);

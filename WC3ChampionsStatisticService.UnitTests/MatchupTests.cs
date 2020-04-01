@@ -73,10 +73,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_TimeSpan()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.match.startTime = 600;
-            fakeEvent.match.endTime = 1200;
+            fakeEvent.match.startTime = 1585692028740;
+            fakeEvent.match.endTime = 1585692047363;
             var matchup = new Matchup(fakeEvent);
-            Assert.AreEqual(new TimeSpan(0, 0, 600), matchup.Duration);
+            Assert.AreEqual(0, matchup.Duration.Minutes);
+            Assert.AreEqual(18, matchup.Duration.Seconds);
+            Assert.AreEqual(623, matchup.Duration.Milliseconds);
         }
 
         [Test]
@@ -84,6 +86,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
             var matchup = new Matchup(fakeEvent);
+            fakeEvent.match.startTime = 1585692028740;
+            fakeEvent.match.endTime = 1585692047363;
             Assert.IsNotNull(matchup.StartTime);
             Assert.IsNotNull(matchup.EndTime);
         }
