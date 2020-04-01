@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            var dataPlayers = nextEvent.data.players;
+            var dataPlayers = nextEvent.match.players;
             if (dataPlayers.Count == 2)
             {
                 var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].battleTag)
@@ -27,13 +27,13 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                          ?? MapAndRaceRatio.Create(dataPlayers[1].battleTag);
 
                 p1.AddMapWin(dataPlayers[0].won,
-                    (Race) dataPlayers[0].raceId,
-                    (Race) dataPlayers[1].raceId,
-                    nextEvent.data.mapInfo.name);
+                    (Race) dataPlayers[0].race,
+                    (Race) dataPlayers[1].race,
+                    nextEvent.match.map);
                 p2.AddMapWin(dataPlayers[1].won,
-                    (Race) dataPlayers[1].raceId,
-                    (Race) dataPlayers[0].raceId,
-                    nextEvent.data.mapInfo.name);
+                    (Race) dataPlayers[1].race,
+                    (Race) dataPlayers[0].race,
+                    nextEvent.match.map);
 
                 await _playerRepository.UpsertMapAndRaceStat(p1);
                 await _playerRepository.UpsertMapAndRaceStat(p2);

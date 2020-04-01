@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.PlayerOverviews
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            foreach (var playerRaw in nextEvent.data.players)
+            foreach (var playerRaw in nextEvent.match.players)
             {
                 var player = await _playerRepository.LoadOverview(playerRaw.battleTag) ?? new PlayerOverview(playerRaw.battleTag);
                 player.RecordWin(playerRaw.won);

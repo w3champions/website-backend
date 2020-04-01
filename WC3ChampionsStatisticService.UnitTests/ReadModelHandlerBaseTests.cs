@@ -17,7 +17,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
-            fakeEvent.data.mapInfo.name = "Twisted Meadows";
+            fakeEvent.result.mapInfo.name = "Twisted Meadows";
             var mockEvents = new Mock<IMatchEventRepository>();
             mockEvents.SetupSequence(m => m.Load(It.IsAny<string>(), It.IsAny<int>()))
                 .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
