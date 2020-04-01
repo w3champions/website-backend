@@ -16,7 +16,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}")]
-        public async Task<IActionResult> GetMatches([FromRoute] string battleTag)
+        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
             var matches = await _playerRepository.Load(battleTag);
             return Ok(matches);
