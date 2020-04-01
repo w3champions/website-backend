@@ -5,7 +5,6 @@ using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
-using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

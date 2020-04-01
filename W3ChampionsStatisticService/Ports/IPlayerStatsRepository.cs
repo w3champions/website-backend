@@ -1,6 +1,4 @@
 ﻿using System.Threading.Tasks;
-using W3ChampionsStatisticService.PlayerOverviews;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
