@@ -15,10 +15,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var name1 = "peter#123";
             var name2 = "wolf#456";
 
-            fakeEvent.data.players.First().battleTag = name1;
-            fakeEvent.data.players.First().won = true;
-            fakeEvent.data.players.Last().battleTag = name2;
-            fakeEvent.data.players.Last().won = false;
+            fakeEvent.match.players.First().battleTag = name1;
+            fakeEvent.match.players.First().won = true;
+            fakeEvent.match.players.Last().battleTag = name2;
+            fakeEvent.match.players.Last().won = false;
 
             return fakeEvent;
         }

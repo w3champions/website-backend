@@ -18,12 +18,12 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            foreach (var playerRaw in nextEvent.data.players)
+            foreach (var playerRaw in nextEvent.match.players)
             {
                 var player = await _playerRepository.LoadMapStat(playerRaw.battleTag)
                              ?? RaceOnMapRatio.Create(playerRaw.battleTag);
 
-                player.AddMapWin(playerRaw.won, (Race) playerRaw.raceId, nextEvent.data.mapInfo.name);
+                player.AddMapWin(playerRaw.won, (Race) playerRaw.race, nextEvent.match.map);
 
                 await _playerRepository.UpsertMapStat(player);
             }

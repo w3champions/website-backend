@@ -46,10 +46,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var name1 = "peter#123";
             var name2 = "wolf#456";
 
-            fakeEvent.data.players.First().battleTag = name1;
-            fakeEvent.data.players.First().won = false;
-            fakeEvent.data.players.Last().battleTag = name2;
-            fakeEvent.data.players.Last().won = true;
+            fakeEvent.match.players.First().battleTag = name1;
+            fakeEvent.match.players.First().won = false;
+            fakeEvent.match.players.Last().battleTag = name2;
+            fakeEvent.match.players.Last().won = true;
 
             var matchup = new Matchup(fakeEvent);
 
@@ -64,7 +64,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_Map()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.data.mapInfo.name = "Twisted Meadows";
+            fakeEvent.result.mapInfo.name = "Twisted Meadows";
             var matchup = new Matchup(fakeEvent);
             Assert.AreEqual("Twisted Meadows", matchup.Map);
         }
@@ -73,26 +73,28 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_TimeSpan()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.data.mapInfo.elapsedGameTimeTotalSeconds = 600;
+            fakeEvent.match.startTime = 600;
+            fakeEvent.match.endTime = 1200;
             var matchup = new Matchup(fakeEvent);
             Assert.AreEqual(new TimeSpan(0, 0, 600), matchup.Duration);
         }
 
-        // [Test]
-        // public void MapMatch_StartTime()
-        // {
-        //     var fakeEvent = TestDtoHelper.CreateFakeEvent();
-        //     var matchup = new Matchup(fakeEvent);
-        //     Assert.IsNotNull(matchup.StartTime);
-        // }
-        //
-        // [Test]
-        // public void MapMatch_GameMode()
-        // {
-        //     var fakeEvent = TestDtoHelper.CreateFakeEvent();
-        //     fakeEvent.data.mapInfo.elapsedGameTimeTotalSeconds = 600;
-        //     var matchup = new Matchup(fakeEvent);
-        //     Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
-        // }
+        [Test]
+        public void MapMatch_StartTime()
+        {
+            var fakeEvent = TestDtoHelper.CreateFakeEvent();
+            var matchup = new Matchup(fakeEvent);
+            Assert.IsNotNull(matchup.StartTime);
+            Assert.IsNotNull(matchup.EndTime);
+        }
+
+        [Test]
+        public void MapMatch_GameMode()
+        {
+            var fakeEvent = TestDtoHelper.CreateFakeEvent();
+            fakeEvent.match.gameMode = 1;
+            var matchup = new Matchup(fakeEvent);
+            Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
+        }
     }
 }

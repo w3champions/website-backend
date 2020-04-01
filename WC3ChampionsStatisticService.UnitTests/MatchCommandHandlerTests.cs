@@ -27,10 +27,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test"}}});
             var events = await eventRepository.Load();
 
-            Assert.AreEqual("test", events.Single().type);
+            Assert.AreEqual("test", events.Single().match.map);
         }
 
         [Test]
@@ -39,13 +39,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
+            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test"}} });
             await Task.Delay(1000);
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test2"}} });
 
             var events = await eventRepository.Load(lastId);
 
-            Assert.AreEqual("test2", events.Single().type);
+            Assert.AreEqual("test2", events.Single().match.map);
         }
 
         [Test]
@@ -54,13 +54,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test"} });
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test2"} });
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { type = "test3"} });
+            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test2"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test3"}} });
 
             var events = await eventRepository.Load(lastId, 1);
 
-            Assert.AreEqual("test2", events.Single().type);
+            Assert.AreEqual("test2", events.Single().match.map);
         }
     }
 }
