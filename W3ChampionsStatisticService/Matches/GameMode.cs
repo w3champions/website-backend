@@ -2,7 +2,7 @@
 {
     public enum GameMode
     {
-        Undefined,
+        Undefined = 0,
         GM_1v1 = 1,
         GM_2v2 = 2,
         GM_4v4 = 3,
