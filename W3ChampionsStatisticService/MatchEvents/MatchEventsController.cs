@@ -25,10 +25,10 @@ namespace W3ChampionsStatisticService.MatchEvents
             [FromBody] IList<MatchFinishedEvent> events
             )
         {
+            _logger.LogInformation($"Entered with {JsonConvert.SerializeObject(events)}");
             if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE") return Unauthorized("Sorry H4ckerb0i");
             await _handler.Insert(events);
             _logger.LogInformation($"Inserted {events.Count}");
-            _logger.LogInformation($"Body: {JsonConvert.SerializeObject(events)}");
             return Ok();
         }
     }
