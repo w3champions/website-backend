@@ -4,11 +4,11 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches
 {
-    public class PopulateMatchReadModelHandler : IReadModelHandler
+    public class MatchReadModelHandler : IReadModelHandler
     {
         private readonly IMatchRepository _matchRepository;
 
-        public PopulateMatchReadModelHandler(
+        public MatchReadModelHandler(
             IMatchRepository matchRepository
             )
         {

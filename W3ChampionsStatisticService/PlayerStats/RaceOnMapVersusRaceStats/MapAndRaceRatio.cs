@@ -1,20 +1,19 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerRaceLossRatios;
 
-namespace W3ChampionsStatisticService.PlayerMapAndRaceRatios
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
-    public class PlayerMapAndRaceRatio
+    public class MapAndRaceRatio
     {
-        public static PlayerMapAndRaceRatio Create(string battleTag)
+        public static MapAndRaceRatio Create(string battleTag)
         {
-            return new PlayerMapAndRaceRatio
+            return new MapAndRaceRatio
             {
                 Id = battleTag
             };
         }
 
-        public RaceWinAndMapRatio RaceWinRatio { get; set; } = RaceWinAndMapRatio.Create();
+        public RaceOnMapVersusRaceRatio RaceWinRatio { get; set; } = RaceOnMapVersusRaceRatio.Create();
         public string Id { get; set; }
 
         public void AddMapWin(bool won, Race myRace, Race enemyRace, string mapName)

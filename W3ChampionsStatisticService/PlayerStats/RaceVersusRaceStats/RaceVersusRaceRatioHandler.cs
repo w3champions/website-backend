@@ -3,14 +3,14 @@ using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.PlayerRaceLossRatios
+namespace W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats
 {
-    public class PopulatePlayerRaceLossRatioHandler : IReadModelHandler
+    public class RaceVersusRaceRatioHandler : IReadModelHandler
     {
-        private readonly IPlayerRepository _playerRepository;
+        private readonly IPlayerStatsRepository _playerRepository;
 
-        public PopulatePlayerRaceLossRatioHandler(
-            IPlayerRepository playerRepository
+        public RaceVersusRaceRatioHandler(
+            IPlayerStatsRepository playerRepository
             )
         {
             _playerRepository = playerRepository;

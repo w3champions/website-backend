@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles;
 
-namespace W3ChampionsStatisticService.PlayerRaceLossRatios
+namespace W3ChampionsStatisticService.PlayerStats
 {
     public class RaceWinRatio : Dictionary<string, Dictionary<string, WinLoss>>
     {

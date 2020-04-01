@@ -1,9 +1,11 @@
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.PlayerMapAndRaceRatios;
-using W3ChampionsStatisticService.PlayerMapRatios;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerRaceLossRatios;
+using W3ChampionsStatisticService.PlayerStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
+using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
+using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -13,7 +15,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
             var player = PlayerRaceLossRatio.Create("peter#123");
             await playerRepository.UpsertRaceStat(player);
@@ -25,7 +27,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task RaceWins()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
             var player = PlayerRaceLossRatio.Create("peter#123");
             player.AddRaceWin(true, Race.HU, Race.UD);
@@ -47,9 +49,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSaveMap()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
-            var player = PlayerMapRatio.Create("peter#123");
+            var player = RaceOnMapRatio.Create("peter#123");
             await playerRepository.UpsertMapStat(player);
             var playerLoaded = await playerRepository.LoadMapStat(player.Id);
 
@@ -59,9 +61,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task MapWins()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
-            var player = PlayerMapRatio.Create("peter#123");
+            var player = RaceOnMapRatio.Create("peter#123");
             player.AddMapWin(true, Race.HU, "TM");
             player.AddMapWin(true, Race.HU, "EI");
             player.AddMapWin(true, Race.HU, "TM");
@@ -80,9 +82,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSaveMapAndRace()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
-            var player = PlayerMapAndRaceRatio.Create("peter#123");
+            var player = MapAndRaceRatio.Create("peter#123");
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
 
@@ -92,9 +94,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task MapWinsAndRace()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
-            var player = PlayerMapAndRaceRatio.Create("peter#123");
+            var player = MapAndRaceRatio.Create("peter#123");
             player.AddMapWin(true, Race.HU, Race.UD, "TM");
             player.AddMapWin(true, Race.HU, Race.OC, "EI");
             player.AddMapWin(false, Race.HU, Race.UD, "TM");

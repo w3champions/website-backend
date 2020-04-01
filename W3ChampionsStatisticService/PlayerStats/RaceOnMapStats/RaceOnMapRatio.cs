@@ -1,13 +1,12 @@
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerRaceLossRatios;
 
-namespace W3ChampionsStatisticService.PlayerMapRatios
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
 {
-    public class PlayerMapRatio
+    public class RaceOnMapRatio
     {
-        public static PlayerMapRatio Create(string battleTag)
+        public static RaceOnMapRatio Create(string battleTag)
         {
-            return new PlayerMapRatio
+            return new RaceOnMapRatio
             {
                 Id = battleTag
             };

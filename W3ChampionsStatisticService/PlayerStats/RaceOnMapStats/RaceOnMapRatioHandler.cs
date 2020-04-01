@@ -3,14 +3,14 @@ using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.PlayerMapRatios
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
 {
-    public class PopulatePlayerMapRatioHandler : IReadModelHandler
+    public class RaceOnMapRatioHandler : IReadModelHandler
     {
-        private readonly IPlayerRepository _playerRepository;
+        private readonly IPlayerStatsRepository _playerRepository;
 
-        public PopulatePlayerMapRatioHandler(
-            IPlayerRepository playerRepository
+        public RaceOnMapRatioHandler(
+            IPlayerStatsRepository playerRepository
             )
         {
             _playerRepository = playerRepository;
@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.PlayerMapRatios
             foreach (var playerRaw in nextEvent.data.players)
             {
                 var player = await _playerRepository.LoadMapStat(playerRaw.battleTag)
-                             ?? PlayerMapRatio.Create(playerRaw.battleTag);
+                             ?? RaceOnMapRatio.Create(playerRaw.battleTag);
 
                 player.AddMapWin(playerRaw.won, (Race) playerRaw.raceId, nextEvent.data.mapInfo.name);
 

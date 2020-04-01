@@ -4,11 +4,11 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerOverviews
 {
-    public class PopulatePlayOverviewHandler : IReadModelHandler
+    public class PlayOverviewHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public PopulatePlayOverviewHandler(
+        public PlayOverviewHandler(
             IPlayerRepository playerRepository
             )
         {

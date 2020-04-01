@@ -5,11 +5,11 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class PopulatePlayerModelHandler : IReadModelHandler
+    public class PlayerModelHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public PopulatePlayerModelHandler(
+        public PlayerModelHandler(
             IPlayerRepository playerRepository
             )
         {

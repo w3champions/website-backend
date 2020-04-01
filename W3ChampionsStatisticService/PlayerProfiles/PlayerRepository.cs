@@ -1,8 +1,5 @@
 ﻿using System.Threading.Tasks;
-using W3ChampionsStatisticService.PlayerMapAndRaceRatios;
-using W3ChampionsStatisticService.PlayerMapRatios;
 using W3ChampionsStatisticService.PlayerOverviews;
-using W3ChampionsStatisticService.PlayerRaceLossRatios;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -32,36 +29,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
             return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
-        }
-
-        public Task<PlayerRaceLossRatio> LoadRaceStat(string battleTag)
-        {
-             return LoadFirst<PlayerRaceLossRatio>(p => p.Id == battleTag);
-        }
-
-        public Task UpsertRaceStat(PlayerRaceLossRatio playerRaceLossRatio)
-        {
-            return Upsert(playerRaceLossRatio, p => p.Id == playerRaceLossRatio.Id);
-        }
-
-        public Task<PlayerMapRatio> LoadMapStat(string battleTag)
-        {
-            return LoadFirst<PlayerMapRatio>(p => p.Id == battleTag);
-        }
-
-        public Task UpsertMapStat(PlayerMapRatio playerMapRatio)
-        {
-            return Upsert(playerMapRatio, p => p.Id == playerMapRatio.Id);
-        }
-
-        public Task<PlayerMapAndRaceRatio> LoadMapAndRaceStat(string battleTag)
-        {
-            return LoadFirst<PlayerMapAndRaceRatio>(p => p.Id == battleTag);
-        }
-
-        public Task UpsertMapAndRaceStat(PlayerMapAndRaceRatio playerMapAndRaceRatio)
-        {
-            return Upsert(playerMapAndRaceRatio, p => p.Id == playerMapAndRaceRatio.Id);
         }
     }
 }
