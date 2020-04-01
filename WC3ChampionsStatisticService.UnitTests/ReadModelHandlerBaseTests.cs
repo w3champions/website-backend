@@ -27,10 +27,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var versionRepository = new Mock<IVersionRepository>();
 
-            var handler = new ReadModelHandler<PopulateMatchReadModelHandler>(
+            var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
                 versionRepository.Object,
-                new PopulateMatchReadModelHandler(mockMatchRepo.Object));
+                new MatchReadModelHandler(mockMatchRepo.Object));
 
             await handler.Update();
 

@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.MatchEvents;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Matches
 {
-    public class Matchup : Versionable
+    public class Matchup
     {
         public string Map { get; set; }
+        public string Id { get; set; }
         public TimeSpan Duration { get; set; }
         public DateTimeOffset StartTime { get; set; }
         public GameMode GameMode { get; set; }
@@ -18,6 +18,9 @@ namespace W3ChampionsStatisticService.Matches
         {
             var data = matchFinishedEvent.data;
             Map = data.mapInfo.name;
+            Id = data.gameId;
+
+            StartTime = DateTimeOffset.Now;
             Duration = TimeSpan.FromSeconds(data.mapInfo.elapsedGameTimeTotalSeconds);
 
             var winners = data.players.Where(p => p.won);

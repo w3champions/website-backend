@@ -16,12 +16,11 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpPut("reset")]
         public async Task<IActionResult> GetMatches(
-            string readModelType,
             string readModelHandler,
             string authorization)
         {
             if (authorization != "C6ACB38C-3334-4196-8ECD-207A93600EB1") return Unauthorized("Sorry H4ckerb0i");
-            await _adminCommandHandler.ResetReadModel(readModelType, readModelHandler);
+            await _adminCommandHandler.ResetReadModel(readModelHandler);
             return Ok();
         }
     }

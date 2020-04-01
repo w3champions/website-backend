@@ -24,7 +24,15 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return database;
         }
 
-        protected async Task<List<T>> Load<T>(string lastObjectId, int pageSize) where T : Versionable
+        protected async Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
+        {
+            var mongoDatabase = CreateClient();
+            var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+            var elements = await mongoCollection.FindAsync(expression);
+            return elements.FirstOrDefault();
+        }
+
+        protected async Task<List<T>> LoadSince<T>(string lastObjectId, int pageSize) where T : Versionable
         {
             lastObjectId ??= ObjectId.Empty.ToString();
             var database = CreateClient();

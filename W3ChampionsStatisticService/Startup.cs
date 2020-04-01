@@ -8,6 +8,10 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerOverviews;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
+using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -33,16 +37,21 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
-            services.AddTransient<IAdminRepository, AdminRepository>();
             services.AddTransient<IPlayerRepository, PlayerRepository>();
+            services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 
             services.AddTransient<AdminCommandHandler>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
-            services.AddReadModelService<PopulateMatchReadModelHandler>();
-            services.AddReadModelService<PopulatePlayerModelHandler>();
-            services.AddReadModelService<PopulatePlayOverviewHandler>();
+            services.AddReadModelService<MatchReadModelHandler>();
+
+            services.AddReadModelService<PlayerModelHandler>();
+            services.AddReadModelService<PlayOverviewHandler>();
+
+            services.AddReadModelService<RaceVersusRaceRatioHandler>();
+            services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
+            services.AddReadModelService<RaceOnMapRatioHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
