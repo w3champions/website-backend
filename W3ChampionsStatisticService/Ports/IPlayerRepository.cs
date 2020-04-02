@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using W3ChampionsStatisticService.PlayerOverviews;
 using W3ChampionsStatisticService.PlayerProfiles;
 
@@ -10,5 +11,6 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertPlayer(PlayerOverview playerOverview);
         Task<PlayerProfile> Load(string battleTag);
         Task<PlayerOverview> LoadOverview(string battleTag);
+        Task<List<PlayerOverview>> LoadOverviewSince(int mmr, int count);
     }
 }

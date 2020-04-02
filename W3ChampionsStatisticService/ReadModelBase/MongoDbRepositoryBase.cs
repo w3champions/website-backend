@@ -38,10 +38,8 @@ namespace W3ChampionsStatisticService.ReadModelBase
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<T>(typeof(T).Name);
-            var filterBuilder = Builders<T>.Filter;
-            var filter = filterBuilder.Gt(x => x.Id, ObjectId.Parse(lastObjectId));
 
-            var events = await mongoCollection.Find(filter)
+            var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
                 .SortBy(s => s.Id)
                 .Limit(pageSize)
                 .ToListAsync();

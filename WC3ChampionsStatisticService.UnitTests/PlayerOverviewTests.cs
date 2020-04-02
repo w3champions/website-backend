@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.PlayerOverviews;
@@ -18,6 +19,25 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
+        }
+
+        [Test]
+        public async Task LoadAndSaveSince()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player1 = new PlayerOverview("peter#123");
+            player1.MMR = 15;
+            var player2 = new PlayerOverview("peter#1234");
+            player1.MMR = 17;
+            var player3 = new PlayerOverview("peter#12345");
+            player1.MMR = 19;
+            await playerRepository.UpsertPlayer(player1);
+            await playerRepository.UpsertPlayer(player2);
+            await playerRepository.UpsertPlayer(player3);
+            var playerLoaded = await playerRepository.LoadOverviewSince(15, 1);
+
+            Assert.AreEqual(player2.Id, playerLoaded.Single().Id);
         }
 
         [Test]
