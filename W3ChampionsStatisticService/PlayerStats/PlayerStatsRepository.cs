@@ -29,14 +29,14 @@ namespace W3ChampionsStatisticService.PlayerStats
             return Upsert(raceOnMapRatio, p => p.Id == raceOnMapRatio.Id);
         }
 
-        public Task<MapAndRaceRatio> LoadMapAndRaceStat(string battleTag)
+        public Task<RaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag)
         {
-            return LoadFirst<MapAndRaceRatio>(p => p.Id == battleTag);
+            return LoadFirst<RaceOnMapVersusRaceRatio>(p => p.Id == battleTag);
         }
 
-        public Task UpsertMapAndRaceStat(MapAndRaceRatio mapAndRaceRatio)
+        public Task UpsertMapAndRaceStat(RaceOnMapVersusRaceRatio raceOnMapVersusRaceRatio)
         {
-            return Upsert(mapAndRaceRatio, p => p.Id == mapAndRaceRatio.Id);
+            return Upsert(raceOnMapVersusRaceRatio, p => p.Id == raceOnMapVersusRaceRatio.Id);
         }
 
         public PlayerStatsRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)

@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertRaceStat(RaceVersusRaceRatio raceVersusRaceRatio);
         Task<RaceOnMapRatio> LoadMapStat(string battleTag);
         Task UpsertMapStat(RaceOnMapRatio raceOnMapRatio);
-        Task<MapAndRaceRatio> LoadMapAndRaceStat(string battleTag);
-        Task UpsertMapAndRaceStat(MapAndRaceRatio mapAndRaceRatio);
+        Task<RaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag);
+        Task UpsertMapAndRaceStat(RaceOnMapVersusRaceRatio raceOnMapVersusRaceRatio);
     }
 }

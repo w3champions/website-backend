@@ -3,19 +3,35 @@ using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
-    public class RaceOnMapVersusRaceRatio : Dictionary<string, Dictionary<string, Dictionary<string, WinLoss>>>
+    public class RaceOnMapVersusRaceRatio
     {
-        public static RaceOnMapVersusRaceRatio Create()
+        public static RaceOnMapVersusRaceRatio Create(string battleTag)
         {
-            var ratio = new RaceOnMapVersusRaceRatio
+            return new RaceOnMapVersusRaceRatio
             {
-                { Race.RnD.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
-                { Race.HU.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
-                { Race.OC.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
-                { Race.NE.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
-                { Race.UD.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
+                Id = battleTag
             };
-            return ratio;
+        }
+
+        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.Create();
+        public string Id { get; set; }
+
+        public void AddMapWin(bool won, Race myRace, Race enemyRace, string mapName)
+        {
+            var winLosses = RaceWinRatio[myRace.ToString()];
+            if (!winLosses.ContainsKey(mapName))
+            {
+                winLosses[mapName] = new Dictionary<string, WinLoss>
+                {
+                    { Race.RnD.ToString(), new WinLoss() },
+                    { Race.HU.ToString(), new WinLoss() },
+                    { Race.OC.ToString(), new WinLoss() },
+                    { Race.NE.ToString(), new WinLoss() },
+                    { Race.UD.ToString(), new WinLoss() }
+                };
+            }
+
+            winLosses[mapName][enemyRace.ToString()].RecordWin(won);
         }
     }
 }

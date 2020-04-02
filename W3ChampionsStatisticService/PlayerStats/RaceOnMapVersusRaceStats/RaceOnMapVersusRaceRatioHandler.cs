@@ -22,9 +22,9 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             if (dataPlayers.Count == 2)
             {
                 var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].battleTag)
-                         ?? MapAndRaceRatio.Create (dataPlayers[0].battleTag);
+                         ?? RaceOnMapVersusRaceRatio.Create (dataPlayers[0].battleTag);
                 var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag)
-                         ?? MapAndRaceRatio.Create(dataPlayers[1].battleTag);
+                         ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag);
 
                 p1.AddMapWin(dataPlayers[0].won,
                     (Race) dataPlayers[0].race,
