@@ -30,8 +30,8 @@ namespace W3ChampionsStatisticService.Matches
             var winners = data.players.Where(p => p.won);
             var loosers = data.players.Where(p => !p.won);
 
-            Teams.Add(CreateTeam(loosers));
             Teams.Add(CreateTeam(winners));
+            Teams.Add(CreateTeam(loosers));
         }
 
         private static Team CreateTeam(IEnumerable<PlayerMMrChange> loosers)
@@ -45,7 +45,9 @@ namespace W3ChampionsStatisticService.Matches
         {
             return players.Select(w => new PlayerOverviewMatches {
                 Name = w.battleTag.Split("#")[0],
-                BattleTag = w.battleTag.Split("#")[1]
+                BattleTag = w.battleTag.Split("#")[1],
+                CurrentMmr = (int) w.updatedMmr.rating,
+                OldMmr = (int) w.mmr.rating,
             });
         }
     }

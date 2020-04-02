@@ -1,43 +1,12 @@
-using System;
 using System.Linq;
-using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class MatchupRepoTests : IntegrationTestBase
+    public class MatchupTests
     {
-        [Test]
-        public async Task LoadAndSave()
-        {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
-
-            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
-
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
-            var matches = await matchRepository.Load();
-
-            Assert.AreEqual(2, matches.Count);
-        }
-
-        [Test]
-        public async Task Upsert()
-        {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
-
-            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
-
-            await matchRepository.Insert(new Matchup(matchFinishedEvent));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent));
-            var matches = await matchRepository.Load();
-
-            Assert.AreEqual(1, matches.Count);
-        }
-
         [Test]
         public void MapMatch_Players()
         {
@@ -79,6 +48,25 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(0, matchup.Duration.Minutes);
             Assert.AreEqual(18, matchup.Duration.Seconds);
             Assert.AreEqual(623, matchup.Duration.Milliseconds);
+        }
+
+        [Test]
+        public void MapMatch_MMr()
+        {  var fakeEvent = TestDtoHelper.CreateFakeEvent();
+            fakeEvent.match.players[0].won = true;
+            fakeEvent.match.players[0].mmr.rating = 1437.0358093886573;
+            fakeEvent.match.players[0].updatedMmr.rating = 1453.5974731933813;
+
+            fakeEvent.match.players[1].won = false;
+            fakeEvent.match.players[1].mmr.rating = 1453.5974731933813;
+            fakeEvent.match.players[1].updatedMmr.rating = 1437.0358093886573;
+            var matchup = new Matchup(fakeEvent);
+            Assert.AreEqual(16, matchup.Teams[0].Players[0].MmrGain);
+            Assert.AreEqual(1453, matchup.Teams[0].Players[0].CurrentMmr);
+            Assert.AreEqual(1437, matchup.Teams[0].Players[0].OldMmr);
+            Assert.AreEqual(-16, matchup.Teams[1].Players[0].MmrGain);
+            Assert.AreEqual(1437, matchup.Teams[1].Players[0].CurrentMmr);
+            Assert.AreEqual(1453, matchup.Teams[1].Players[0].OldMmr);
         }
 
         [Test]
