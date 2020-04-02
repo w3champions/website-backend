@@ -24,6 +24,22 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task RaceWinsRnd()
+        {
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+
+            var player = PlayerRaceLossRatio.Create("peter#123");
+            player.AddRaceWin(true, Race.RnD, Race.UD);
+            player.AddRaceWin(false, Race.HU, Race.RnD);
+
+            await playerRepository.UpsertRaceStat(player);
+            var playerLoaded = await playerRepository.LoadRaceStat(player.Id);
+
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.RnD.ToString()][Race.UD.ToString()].Wins);
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.RnD.ToString()].Losses);
+        }
+
+        [Test]
         public async Task RaceWins()
         {
             var playerRepository = new PlayerStatsRepository(DbConnctionInfo);

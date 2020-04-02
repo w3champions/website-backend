@@ -11,6 +11,7 @@ namespace W3ChampionsStatisticService.PlayerStats
             {
                 { Race.HU.ToString(), new Dictionary<string, WinLoss>
                 {
+                    { Race.RnD.ToString(), new WinLoss() },
                     { Race.HU.ToString(), new WinLoss() },
                     { Race.OC.ToString(), new WinLoss() },
                     { Race.NE.ToString(), new WinLoss() },
@@ -18,6 +19,7 @@ namespace W3ChampionsStatisticService.PlayerStats
                 }},
                 { Race.OC.ToString(), new Dictionary<string, WinLoss>
                 {
+                    { Race.RnD.ToString(), new WinLoss() },
                     { Race.HU.ToString(), new WinLoss() },
                     { Race.OC.ToString(), new WinLoss() },
                     { Race.NE.ToString(), new WinLoss() },
@@ -25,6 +27,7 @@ namespace W3ChampionsStatisticService.PlayerStats
                 }},
                 { Race.NE.ToString(), new Dictionary<string, WinLoss>
                 {
+                    { Race.RnD.ToString(), new WinLoss() },
                     { Race.HU.ToString(), new WinLoss() },
                     { Race.OC.ToString(), new WinLoss() },
                     { Race.NE.ToString(), new WinLoss() },
@@ -32,6 +35,7 @@ namespace W3ChampionsStatisticService.PlayerStats
                 }},
                 { Race.UD.ToString(), new Dictionary<string, WinLoss>
                 {
+                    { Race.RnD.ToString(), new WinLoss() },
                     { Race.HU.ToString(), new WinLoss() },
                     { Race.OC.ToString(), new WinLoss() },
                     { Race.NE.ToString(), new WinLoss() },
@@ -45,6 +49,7 @@ namespace W3ChampionsStatisticService.PlayerStats
         {
             var ratio = new RaceWinRatio
             {
+                { Race.RnD.ToString(), new Dictionary<string, WinLoss>() },
                 { Race.HU.ToString(), new Dictionary<string, WinLoss>() },
                 { Race.OC.ToString(), new Dictionary<string, WinLoss>() },
                 { Race.NE.ToString(), new Dictionary<string, WinLoss>() },

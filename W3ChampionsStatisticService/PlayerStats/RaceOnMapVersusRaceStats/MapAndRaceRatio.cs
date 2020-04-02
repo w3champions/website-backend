@@ -23,6 +23,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             {
                 winLosses[mapName] = new Dictionary<string, WinLoss>
                 {
+                    { Race.RnD.ToString(), new WinLoss() },
                     { Race.HU.ToString(), new WinLoss() },
                     { Race.OC.ToString(), new WinLoss() },
                     { Race.NE.ToString(), new WinLoss() },
