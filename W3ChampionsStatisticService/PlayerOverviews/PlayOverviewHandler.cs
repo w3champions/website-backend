@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.PlayerOverviews
             foreach (var playerRaw in nextEvent.match.players)
             {
                 var player = await _playerRepository.LoadOverview(playerRaw.battleTag) ?? new PlayerOverview(playerRaw.battleTag);
-                player.RecordWin(playerRaw.won);
+                player.RecordWin(playerRaw.won, (int) playerRaw.updatedMmr.rating);
                 await _playerRepository.UpsertPlayer(player);
             }
         }

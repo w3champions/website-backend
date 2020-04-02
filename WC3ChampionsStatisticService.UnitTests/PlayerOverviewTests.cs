@@ -24,9 +24,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void UpdateOverview()
         {
             var player = new PlayerOverview("peter#123");
-            player.RecordWin(true);
-            player.RecordWin(false);
-            player.RecordWin(false);
+            player.RecordWin(true, 1230);
+            player.RecordWin(false, 1240);
+            player.RecordWin(false, 1250);
 
             Assert.AreEqual(3, player.Games);
             Assert.AreEqual(1, player.TotalWins);
@@ -34,7 +34,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("123", player.BattleTag);
             Assert.AreEqual("peter", player.Name);
             Assert.AreEqual("peter#123", player.Id);
-            Assert.AreEqual(0, player.MMR);
+            Assert.AreEqual(1250, player.MMR);
         }
     }
 }

@@ -18,9 +18,10 @@ namespace W3ChampionsStatisticService.PlayerOverviews
         public double Winrate => TotalWins / (double)(TotalWins + TotalLosses);
         public int MMR { get; set; }
 
-        public void RecordWin(bool playerRawWon)
+        public void RecordWin(bool won, int newMmr)
         {
-            if (playerRawWon)
+            MMR = newMmr;
+            if (won)
             {
                 TotalWins++;
             }
