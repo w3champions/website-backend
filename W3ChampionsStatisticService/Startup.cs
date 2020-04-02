@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerOverviews;
@@ -39,8 +38,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<IPlayerRepository, PlayerRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
-
-            services.AddTransient<AdminCommandHandler>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 

@@ -33,13 +33,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
         }
 
-        public async Task<List<PlayerOverview>> LoadOverviewSince(int mmr, int count)
+        public async Task<List<PlayerOverview>> LoadOverviewSince(int mmr, int count, int gateWay)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<PlayerOverview>(nameof(PlayerOverview));
 
-            var playerOverviews = await mongoCollection.Find(m => m.MMR < mmr)
+            var playerOverviews = await mongoCollection.Find(m => m.MMR < mmr && m.GateWay == gateWay)
                 .SortBy(s => s.MMR)
                 .Limit(count)
                 .ToListAsync();

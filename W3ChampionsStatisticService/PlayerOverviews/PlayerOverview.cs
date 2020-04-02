@@ -2,9 +2,10 @@ namespace W3ChampionsStatisticService.PlayerOverviews
 {
     public class PlayerOverview
     {
-        public PlayerOverview(string battleTag)
+        public PlayerOverview(string battleTag, int gateWay)
         {
             Id = battleTag;
+            GateWay = gateWay;
             Name = battleTag.Split("#")[0];
             BattleTag = battleTag.Split("#")[1];
         }
@@ -17,6 +18,7 @@ namespace W3ChampionsStatisticService.PlayerOverviews
         public int Games => TotalLosses + TotalWins;
         public double Winrate => TotalWins / (double)(TotalWins + TotalLosses);
         public int MMR { get; set; }
+        public int GateWay { get; set; }
 
         public void RecordWin(bool won, int newMmr)
         {

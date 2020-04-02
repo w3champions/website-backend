@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerOverviews
@@ -18,7 +19,8 @@ namespace W3ChampionsStatisticService.PlayerOverviews
         {
             foreach (var playerRaw in nextEvent.match.players)
             {
-                var player = await _playerRepository.LoadOverview(playerRaw.battleTag) ?? new PlayerOverview(playerRaw.battleTag);
+                var player = await _playerRepository.LoadOverview(playerRaw.battleTag)
+                             ?? new PlayerOverview(playerRaw.battleTag, nextEvent.match.gateway);
                 player.RecordWin(playerRaw.won, (int) playerRaw.updatedMmr.rating);
                 await _playerRepository.UpsertPlayer(player);
             }

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.PlayerProfiles
+namespace W3ChampionsStatisticService.PlayerOverviews
 {
     [ApiController]
     [Route("api/ladder")]
@@ -15,10 +15,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _playerRepository = playerRepository;
         }
 
-        [HttpGet()]
-        public async Task<IActionResult> GetLadder(int mmr, int count)
+        [HttpGet]
+        public async Task<IActionResult> GetLadder(int mmr, int count, int gateWay)
         {
-            var matches = await _playerRepository.LoadOverviewSince(mmr, count);
+            var matches = await _playerRepository.LoadOverviewSince(mmr, count, gateWay);
             return Ok(matches);
         }
     }

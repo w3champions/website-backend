@@ -11,6 +11,6 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertPlayer(PlayerOverview playerOverview);
         Task<PlayerProfile> Load(string battleTag);
         Task<PlayerOverview> LoadOverview(string battleTag);
-        Task<List<PlayerOverview>> LoadOverviewSince(int mmr, int count);
+        Task<List<PlayerOverview>> LoadOverviewSince(int mmr, int count, int gateWay);
     }
 }
