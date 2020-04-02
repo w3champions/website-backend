@@ -15,6 +15,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var name1 = "peter#123";
             var name2 = "wolf#456";
 
+            fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
+
             fakeEvent.match.players.First().battleTag = name1;
             fakeEvent.match.players.First().won = true;
             fakeEvent.match.players.Last().battleTag = name2;

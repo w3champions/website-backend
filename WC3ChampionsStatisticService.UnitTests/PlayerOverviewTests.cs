@@ -14,11 +14,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = new PlayerOverview("peter#123", 1);
+            var player = new PlayerOverview("peter#123", 20);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
+            Assert.AreEqual(20, playerLoaded.GateWay);
         }
 
         [Test]

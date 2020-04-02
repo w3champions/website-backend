@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Matches
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {
             var data = matchFinishedEvent.match;
-            Map = matchFinishedEvent.result.mapInfo.name;
+            Map = matchFinishedEvent.match.map.Split("/")[3].Replace(".w3x", "").Substring(3);
             Id = data.id;
 
             GameMode = (GameMode) matchFinishedEvent.match.gameMode;

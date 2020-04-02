@@ -33,9 +33,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_Map()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.result.mapInfo.name = "Twisted Meadows";
+            fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
             var matchup = new Matchup(fakeEvent);
-            Assert.AreEqual("Twisted Meadows", matchup.Map);
+            Assert.AreEqual("amazonia", matchup.Map);
         }
 
         [Test]

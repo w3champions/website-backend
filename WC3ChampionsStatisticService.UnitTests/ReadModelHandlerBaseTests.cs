@@ -17,7 +17,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
-            fakeEvent.result.mapInfo.name = "Twisted Meadows";
+            fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";;
             var mockEvents = new Mock<IMatchEventRepository>();
             mockEvents.SetupSequence(m => m.Load(It.IsAny<string>(), It.IsAny<int>()))
                 .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
@@ -34,7 +34,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update();
 
-            mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "Twisted Meadows")), Times.Once);
+            mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), Times.Once);
         }
     }
 }
