@@ -26,16 +26,17 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
             var player = PlayerProfile.Create("peter#123");
-            player.RecordWin(Race.HU, GameMode.GM_1v1, true);
+            player.RecordWin(Race.HU, GameMode.GM_1v1, true, 123);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.Load(player.Id);
-            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, false);
+            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, false, 234);
             await playerRepository.UpsertPlayer(playerLoaded);
 
             var playerLoadedAgain = await playerRepository.Load(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(player.Id, playerLoadedAgain.Id);
+            Assert.AreEqual(234, playerLoadedAgain.MMR);
         }
 
         [Test]
