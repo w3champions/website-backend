@@ -9,6 +9,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
         {
             var ratio = new RaceOnMapVersusRaceRatio
             {
+                { Race.RnD.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
                 { Race.HU.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
                 { Race.OC.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },
                 { Race.NE.ToString(), new Dictionary<string, Dictionary<string, WinLoss>>() },

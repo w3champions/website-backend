@@ -95,6 +95,20 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task MapWinsRnd()
+        {
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+
+            var player = RaceOnMapRatio.Create("peter#123");
+            player.AddMapWin(true, Race.RnD, "TM");
+
+            await playerRepository.UpsertMapStat(player);
+            var playerLoaded = await playerRepository.LoadMapStat(player.Id);
+
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.RnD.ToString()]["TM"].Wins);
+        }
+
+        [Test]
         public async Task LoadAndSaveMapAndRace()
         {
             var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
@@ -122,6 +136,22 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()]["TM"][Race.UD.ToString()].Wins);
             Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()]["TM"][Race.UD.ToString()].Losses);
             Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()]["EI"][Race.OC.ToString()].Wins);
+        }
+
+        [Test]
+        public async Task MapWinsAndRaceRnd()
+        {
+            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+
+            var player = MapAndRaceRatio.Create("peter#123");
+            player.AddMapWin(true, Race.RnD, Race.UD, "TM");
+            player.AddMapWin(false, Race.HU, Race.RnD, "EI");
+
+            await playerRepository.UpsertMapAndRaceStat(player);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
+
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.RnD.ToString()]["TM"][Race.UD.ToString()].Wins);
+            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()]["EI"][Race.RnD.ToString()].Losses);
         }
     }
 }

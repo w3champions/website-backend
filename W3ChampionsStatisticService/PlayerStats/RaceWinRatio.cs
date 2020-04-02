@@ -9,7 +9,15 @@ namespace W3ChampionsStatisticService.PlayerStats
         {
             var ratio = new RaceWinRatio
             {
-                { Race.HU.ToString(), new Dictionary<string, WinLoss>
+                { Race.RnD.ToString(), new Dictionary<string, WinLoss>
+                {
+                    { Race.RnD.ToString(), new WinLoss() },
+                    { Race.HU.ToString(), new WinLoss() },
+                    { Race.OC.ToString(), new WinLoss() },
+                    { Race.NE.ToString(), new WinLoss() },
+                    { Race.UD.ToString(), new WinLoss() }
+                }}
+                ,{ Race.HU.ToString(), new Dictionary<string, WinLoss>
                 {
                     { Race.RnD.ToString(), new WinLoss() },
                     { Race.HU.ToString(), new WinLoss() },
