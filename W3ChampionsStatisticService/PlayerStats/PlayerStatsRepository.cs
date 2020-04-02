@@ -9,14 +9,14 @@ namespace W3ChampionsStatisticService.PlayerStats
 {
     public class PlayerStatsRepository : MongoDbRepositoryBase, IPlayerStatsRepository
     {
-        public Task<PlayerRaceLossRatio> LoadRaceStat(string battleTag)
+        public Task<RaceVersusRaceRatio> LoadRaceStat(string battleTag)
         {
-            return LoadFirst<PlayerRaceLossRatio>(p => p.Id == battleTag);
+            return LoadFirst<RaceVersusRaceRatio>(p => p.Id == battleTag);
         }
 
-        public Task UpsertRaceStat(PlayerRaceLossRatio playerRaceLossRatio)
+        public Task UpsertRaceStat(RaceVersusRaceRatio raceVersusRaceRatio)
         {
-            return Upsert(playerRaceLossRatio, p => p.Id == playerRaceLossRatio.Id);
+            return Upsert(raceVersusRaceRatio, p => p.Id == raceVersusRaceRatio.Id);
         }
 
         public Task<RaceOnMapRatio> LoadMapStat(string battleTag)

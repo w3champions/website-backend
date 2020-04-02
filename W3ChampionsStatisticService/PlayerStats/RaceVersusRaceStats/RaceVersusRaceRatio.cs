@@ -2,11 +2,11 @@ using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats
 {
-    public class PlayerRaceLossRatio
+    public class RaceVersusRaceRatio
     {
-        public static PlayerRaceLossRatio Create(string battleTag)
+        public static RaceVersusRaceRatio Create(string battleTag)
         {
-            return new PlayerRaceLossRatio
+            return new RaceVersusRaceRatio
             {
                 Id = battleTag
             };

@@ -46,9 +46,9 @@ namespace W3ChampionsStatisticService
             services.AddReadModelService<PlayerModelHandler>();
             services.AddReadModelService<PlayOverviewHandler>();
 
-            services.AddReadModelService<RaceVersusRaceRatioHandler>();
-            services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
             services.AddReadModelService<RaceOnMapRatioHandler>();
+            services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
+            services.AddReadModelService<RaceVersusRaceRatioHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

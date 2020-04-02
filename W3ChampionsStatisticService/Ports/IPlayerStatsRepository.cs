@@ -7,8 +7,8 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IPlayerStatsRepository
     {
-        Task<PlayerRaceLossRatio> LoadRaceStat(string battleTag);
-        Task UpsertRaceStat(PlayerRaceLossRatio playerRaceLossRatio);
+        Task<RaceVersusRaceRatio> LoadRaceStat(string battleTag);
+        Task UpsertRaceStat(RaceVersusRaceRatio raceVersusRaceRatio);
         Task<RaceOnMapRatio> LoadMapStat(string battleTag);
         Task UpsertMapStat(RaceOnMapRatio raceOnMapRatio);
         Task<MapAndRaceRatio> LoadMapAndRaceStat(string battleTag);
