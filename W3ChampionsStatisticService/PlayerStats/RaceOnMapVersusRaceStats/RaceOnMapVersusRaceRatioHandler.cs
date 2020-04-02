@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
@@ -29,11 +30,11 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                 p1.AddMapWin(dataPlayers[0].won,
                     (Race) dataPlayers[0].race,
                     (Race) dataPlayers[1].race,
-                    nextEvent.match.map);
+                    new MapName(nextEvent.match.map).Name);
                 p2.AddMapWin(dataPlayers[1].won,
                     (Race) dataPlayers[1].race,
                     (Race) dataPlayers[0].race,
-                    nextEvent.match.map);
+                    new MapName(nextEvent.match.map).Name);
 
                 await _playerRepository.UpsertMapAndRaceStat(p1);
                 await _playerRepository.UpsertMapAndRaceStat(p2);

@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
@@ -23,7 +25,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
                 var player = await _playerRepository.LoadMapStat(playerRaw.battleTag)
                              ?? RaceOnMapRatio.Create(playerRaw.battleTag);
 
-                player.AddMapWin(playerRaw.won, (Race) playerRaw.race, nextEvent.match.map);
+                player.AddMapWin(playerRaw.won, (Race) playerRaw.race, new MapName(nextEvent.match.map).Name);
 
                 await _playerRepository.UpsertMapStat(player);
             }

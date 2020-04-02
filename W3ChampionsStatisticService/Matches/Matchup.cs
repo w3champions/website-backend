@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -18,7 +19,7 @@ namespace W3ChampionsStatisticService.Matches
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {
             var data = matchFinishedEvent.match;
-            Map = matchFinishedEvent.match.map.Split("/")[3].Replace(".w3x", "").Substring(3);
+            Map = new MapName(matchFinishedEvent.match.map).Name;
             Id = data.id;
 
             GameMode = (GameMode) matchFinishedEvent.match.gameMode;
