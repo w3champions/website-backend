@@ -39,6 +39,15 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public void MapMatch_Map_Shorter()
+        {
+            var fakeEvent = TestDtoHelper.CreateFakeEvent();
+            fakeEvent.match.map = "Maps/frozenthrone/(2)terenasstand_lv.w3x";
+            var matchup = new Matchup(fakeEvent);
+            Assert.AreEqual("terenasstand_lv", matchup.Map);
+        }
+
+        [Test]
         public void MapMatch_TimeSpan()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();

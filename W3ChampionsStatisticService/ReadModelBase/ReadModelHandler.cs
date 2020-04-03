@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase
@@ -28,7 +29,8 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<T>();
+            // var lastVersion = await _versionRepository.GetLastVersion<T>();
+            var lastVersion = ObjectId.Empty.ToString();
             var nextEvents = await _eventRepository.Load(lastVersion, 1000);
 
             while (nextEvents.Any())
