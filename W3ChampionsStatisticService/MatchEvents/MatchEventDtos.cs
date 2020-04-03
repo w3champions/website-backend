@@ -11,13 +11,6 @@ namespace W3ChampionsStatisticService.MatchEvents
         public double vol { get; set; }
     }
 
-    public class UpdatedMmr
-    {
-        public double rating { get; set; }
-        public double rd { get; set; }
-        public double vol { get; set; }
-    }
-
     public class PlayerMMrChange
     {
         public string battleTag { get; set; }
@@ -25,7 +18,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public int race { get; set; }
         public Mmr mmr { get; set; }
         public bool won { get; set; }
-        public UpdatedMmr updatedMmr { get; set; }
+        public Mmr updatedMmr { get; set; }
     }
 
 
