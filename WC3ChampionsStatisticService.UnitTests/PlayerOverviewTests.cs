@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.PlayerOverviews;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -36,9 +36,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player1);
             await playerRepository.UpsertPlayer(player2);
             await playerRepository.UpsertPlayer(player3);
-            var playerLoaded = await playerRepository.LoadOverviewSince(15, 1, 1);
+            var playerLoaded = await playerRepository.LoadOverviewSince(1, 1, 1);
 
             Assert.AreEqual(player2.Id, playerLoaded.Single().Id);
+            Assert.AreEqual(player2.MMR, playerLoaded.Single().MMR);
         }
 
         [Test]

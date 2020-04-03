@@ -18,15 +18,14 @@ namespace W3ChampionsStatisticService.Matches
             return Upsert(matchup, m => m.Id == matchup.Id);
         }
 
-        public async Task<List<Matchup>> Load(DateTimeOffset since = default, int pageSize = 100)
+        public async Task<List<Matchup>> Load(int offset = default, int pageSize = 100)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
-            var filterBuilder = Builders<Matchup>.Filter;
-            var filter = filterBuilder.Gt(x => x.StartTime, since);
 
-            var events = await mongoCollection.Find(filter)
+            var events = await mongoCollection.Find(x => true)
+                .Skip(offset)
                 .SortBy(s => s.StartTime)
                 .Limit(pageSize)
                 .ToListAsync();
