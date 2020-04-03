@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.MatchEvents
@@ -131,8 +132,9 @@ namespace W3ChampionsStatisticService.MatchEvents
         public long id { get; set; }
     }
 
-    public class MatchFinishedEvent : Versionable
+    public class MatchFinishedEvent
     {
+        public ObjectId Id { get; set; }
         public Match match { get; set; }
         public Result result { get; set; }
     }
