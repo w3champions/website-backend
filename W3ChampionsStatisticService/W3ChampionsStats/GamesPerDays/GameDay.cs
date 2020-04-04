@@ -1,6 +1,6 @@
 using System;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay
+namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 {
     public class GameDay
     {

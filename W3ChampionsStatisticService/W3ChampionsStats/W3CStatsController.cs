@@ -28,5 +28,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             var stats = await _w3StatsRepo.LoadGamesPerDay();
             return Ok(stats);
         }
+
+        [HttpGet("games-lengths")]
+        public async Task<IActionResult> GetGameLengths()
+        {
+            var stats = await _w3StatsRepo.LoadGameLengths();
+            return Ok(stats);
+        }
     }
 }

@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 {
     public class Wc3Stats
     {
-        public string Id => "W3Stats";
+        public string Id => nameof(Wc3Stats);
 
         public List<W3StatsPerMode> StatsPerModes { get; set; } = new List<W3StatsPerMode>
         {

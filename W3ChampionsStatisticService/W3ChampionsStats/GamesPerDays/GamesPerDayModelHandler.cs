@@ -2,7 +2,7 @@
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay
+namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 {
     public class GamesPerDayModelHandler : IReadModelHandler
     {

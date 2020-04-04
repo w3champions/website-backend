@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay;
-using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
+using W3ChampionsStatisticService.W3ChampionsStats;
+using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

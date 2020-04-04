@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.MatchEvents;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay
+namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 {
     public class GamesPerDay
     {
@@ -21,6 +21,6 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay
         }
 
         public List<GameDay> GameDays { get; set; } = new List<GameDay>();
-        public string Id { get; set; } = "GamesPerDayStats";
+        public string Id { get; set; } = nameof(GamesPerDay);
     }
 }
