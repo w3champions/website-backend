@@ -13,6 +13,7 @@ using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService
 {
@@ -33,14 +34,16 @@ namespace W3ChampionsStatisticService
             });
 
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
-            services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey.Replace("'", ""));
+
+            services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
             services.AddControllers();
 
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
 
             services.AddSingleton(new DbConnctionInfo(mongoConnectionString.Replace("'", "")));
-
+            services.AddSingleton(typeof(TrackingService));
+            
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
