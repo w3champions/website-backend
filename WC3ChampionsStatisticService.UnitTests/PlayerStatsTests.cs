@@ -29,8 +29,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
             var player = RaceVersusRaceRatio.Create("peter#123");
-            player.AddRaceWin(true, Race.RnD, Race.UD);
-            player.AddRaceWin(false, Race.HU, Race.RnD);
+            player.AddRaceWin(Race.RnD, Race.UD, true);
+            player.AddRaceWin(Race.HU, Race.RnD, false);
 
             await playerRepository.UpsertRaceStat(player);
             var playerLoaded = await playerRepository.LoadRaceStat(player.Id);
@@ -46,10 +46,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
             var player = RaceVersusRaceRatio.Create("peter#123");
-            player.AddRaceWin(true, Race.HU, Race.UD);
-            player.AddRaceWin(true, Race.HU, Race.UD);
-            player.AddRaceWin(true, Race.HU, Race.OC);
-            player.AddRaceWin(false, Race.NE, Race.OC);
+            player.AddRaceWin(Race.HU, Race.UD, true);
+            player.AddRaceWin(Race.HU, Race.UD, true);
+            player.AddRaceWin(Race.HU, Race.OC, true);
+            player.AddRaceWin(Race.NE, Race.OC, false);
 
             await playerRepository.UpsertRaceStat(player);
             var playerLoaded = await playerRepository.LoadRaceStat(player.Id);

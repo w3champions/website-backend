@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats
         public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.Create();
         public string Id { get; set; }
 
-        public void AddRaceWin(bool won, Race myRace, Race enemyRace)
+        public void AddRaceWin(Race myRace, Race enemyRace, bool won)
         {
             RaceWinRatio.RecordWin(myRace, enemyRace, won);
         }

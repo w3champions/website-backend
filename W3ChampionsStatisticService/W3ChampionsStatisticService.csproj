@@ -9,5 +9,10 @@
       <PackageReference Include="MongoDB.Driver" Version="2.10.2" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="W3ChampionsStats\ActivePlayers" />
+      <Folder Include="W3ChampionsStats\GamesPerDay" />
+    </ItemGroup>
+
 
 </Project>

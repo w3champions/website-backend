@@ -14,6 +14,8 @@ using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.W3ChampionsStats;
+using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService
 {
@@ -28,10 +30,7 @@ namespace W3ChampionsStatisticService
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors(c =>
-            {
-                c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin());
-            });
+            services.AddCors();
 
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
@@ -48,6 +47,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<IPlayerRepository, PlayerRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
+            services.AddTransient<IW3StatsRepo, W3StatsRepo>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
@@ -59,15 +59,11 @@ namespace W3ChampionsStatisticService
             services.AddReadModelService<RaceOnMapRatioHandler>();
             services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
             services.AddReadModelService<RaceVersusRaceRatioHandler>();
+            services.AddReadModelService<Wc3StatsModelHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
             app.UseCors(options =>
             {
                 options.AllowAnyOrigin();
