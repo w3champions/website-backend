@@ -27,14 +27,12 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                 var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag)
                          ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag);
 
-                p1.AddMapWin(dataPlayers[0].won,
-                    (Race) dataPlayers[0].race,
+                p1.AddMapWin((Race) dataPlayers[0].race,
                     (Race) dataPlayers[1].race,
-                    new MapName(nextEvent.match.map).Name);
-                p2.AddMapWin(dataPlayers[1].won,
-                    (Race) dataPlayers[1].race,
+                    new MapName(nextEvent.match.map).Name, dataPlayers[0].won);
+                p2.AddMapWin((Race) dataPlayers[1].race,
                     (Race) dataPlayers[0].race,
-                    new MapName(nextEvent.match.map).Name);
+                    new MapName(nextEvent.match.map).Name, dataPlayers[1].won);
 
                 await _playerRepository.UpsertMapAndRaceStat(p1);
                 await _playerRepository.UpsertMapAndRaceStat(p2);
