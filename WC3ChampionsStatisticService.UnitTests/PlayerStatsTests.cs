@@ -153,7 +153,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
 
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, "TM").Wins);
-            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "TM").Losses);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "EI").Losses);
         }
     }
 }
