@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
                 var player = await _playerRepository.LoadMapStat(playerRaw.battleTag)
                              ?? RaceOnMapRatio.Create(playerRaw.battleTag);
 
-                player.AddMapWin(playerRaw.won, (Race) playerRaw.race, new MapName(nextEvent.match.map).Name);
+                player.AddMapWin((Race) playerRaw.race, new MapName(nextEvent.match.map).Name, playerRaw.won);
 
                 await _playerRepository.UpsertMapStat(player);
             }

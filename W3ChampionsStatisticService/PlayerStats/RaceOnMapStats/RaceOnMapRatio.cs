@@ -12,18 +12,12 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapStats
             };
         }
 
-        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.CreateMapBased();
+        public MapWinRatio RaceWinRatio { get; set; } = MapWinRatio.Create();
         public string Id { get; set; }
 
-        public void AddMapWin(bool won, Race myRace, string mapName)
+        public void AddMapWin(Race myRace, string map, bool won)
         {
-            var winLosses = RaceWinRatio[myRace.ToString()];
-            if (!winLosses.ContainsKey(mapName))
-            {
-                winLosses[mapName] = new WinLoss();
-            }
-
-            winLosses[mapName].RecordWin(won);
+            RaceWinRatio.RecordWin(myRace, map, won);
         }
     }
 }

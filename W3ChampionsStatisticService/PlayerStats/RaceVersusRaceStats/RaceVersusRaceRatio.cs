@@ -12,12 +12,12 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats
             };
         }
 
-        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.CreateRaceBased();
+        public RaceWinRatio RaceWinRatio { get; set; } = RaceWinRatio.Create();
         public string Id { get; set; }
 
         public void AddRaceWin(bool won, Race myRace, Race enemyRace)
         {
-            RaceWinRatio[myRace.ToString()][enemyRace.ToString()].RecordWin(won);
+            RaceWinRatio.RecordWin(myRace, enemyRace, won);
         }
     }
 }

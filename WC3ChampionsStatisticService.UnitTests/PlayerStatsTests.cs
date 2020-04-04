@@ -35,8 +35,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertRaceStat(player);
             var playerLoaded = await playerRepository.LoadRaceStat(player.Id);
 
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.RnD.ToString()][Race.UD.ToString()].Wins);
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.RnD.ToString()].Losses);
+
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD).Wins);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD).Losses);
         }
 
         [Test]
@@ -53,12 +54,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertRaceStat(player);
             var playerLoaded = await playerRepository.LoadRaceStat(player.Id);
 
-            Assert.AreEqual(2, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.UD.ToString()].Wins);
-            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.UD.ToString()].Losses);
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.OC.ToString()].Wins);
-            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()][Race.OC.ToString()].Losses);
-            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.NE.ToString()][Race.OC.ToString()].Wins);
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.NE.ToString()][Race.OC.ToString()].Losses);
+            Assert.AreEqual(2, playerLoaded.GetWinLoss(Race.HU, Race.UD).Wins);
+            Assert.AreEqual(0, playerLoaded.GetWinLoss(Race.HU, Race.UD).Losses);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.OC).Wins);
+            Assert.AreEqual(0, playerLoaded.GetWinLoss(Race.HU, Race.OC).Losses);
+            Assert.AreEqual(0, playerLoaded.GetWinLoss(Race.NE, Race.OC).Wins);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.NE, Race.OC).Losses);
         }
 
         [Test]
@@ -79,19 +80,19 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
             var player = RaceOnMapRatio.Create("peter#123");
-            player.AddMapWin(true, Race.HU, "TM");
-            player.AddMapWin(true, Race.HU, "EI");
-            player.AddMapWin(true, Race.HU, "TM");
-            player.AddMapWin(false, Race.NE, "EI");
+            player.AddMapWin(Race.HU, "TM", true);
+            player.AddMapWin(Race.HU, "EI", true);
+            player.AddMapWin(Race.HU, "TM", true);
+            player.AddMapWin(Race.NE, "EI", false);
 
             await playerRepository.UpsertMapStat(player);
             var playerLoaded = await playerRepository.LoadMapStat(player.Id);
 
-            Assert.AreEqual(2, playerLoaded.RaceWinRatio[Race.HU.ToString()]["TM"].Wins);
-            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()]["TM"].Losses);
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.HU.ToString()]["EI"].Wins);
-            Assert.AreEqual(0, playerLoaded.RaceWinRatio[Race.HU.ToString()]["EI"].Losses);
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.NE.ToString()]["EI"].Losses);
+            Assert.AreEqual(2, playerLoaded.GetWinLoss(Race.HU, "TM").Wins);
+            Assert.AreEqual(0, playerLoaded.GetWinLoss(Race.HU, "TM").Losses);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, "EI").Wins);
+            Assert.AreEqual(0, playerLoaded.GetWinLoss(Race.HU, "EI").Losses);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.NE, "EI").Losses);
         }
 
         [Test]
@@ -100,12 +101,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
 
             var player = RaceOnMapRatio.Create("peter#123");
-            player.AddMapWin(true, Race.RnD, "TM");
+            player.AddMapWin(Race.RnD, "TM", true);
 
             await playerRepository.UpsertMapStat(player);
             var playerLoaded = await playerRepository.LoadMapStat(player.Id);
 
-            Assert.AreEqual(1, playerLoaded.RaceWinRatio[Race.RnD.ToString()]["TM"].Wins);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, "TM").Wins);
         }
 
         [Test]

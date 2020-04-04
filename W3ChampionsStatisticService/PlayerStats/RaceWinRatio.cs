@@ -1,69 +1,29 @@
 using System.Collections.Generic;
+using System.Linq;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
 
 namespace W3ChampionsStatisticService.PlayerStats
 {
-    public class RaceWinRatio : Dictionary<string, Dictionary<string, WinLoss>>
+    public class RaceWinRatio : List<RaceWinLossRation>
     {
-        public static RaceWinRatio CreateRaceBased()
+        public static RaceWinRatio Create()
         {
             var ratio = new RaceWinRatio
             {
-                { Race.RnD.ToString(), new Dictionary<string, WinLoss>
-                {
-                    { Race.RnD.ToString(), new WinLoss() },
-                    { Race.HU.ToString(), new WinLoss() },
-                    { Race.OC.ToString(), new WinLoss() },
-                    { Race.NE.ToString(), new WinLoss() },
-                    { Race.UD.ToString(), new WinLoss() }
-                }}
-                ,{ Race.HU.ToString(), new Dictionary<string, WinLoss>
-                {
-                    { Race.RnD.ToString(), new WinLoss() },
-                    { Race.HU.ToString(), new WinLoss() },
-                    { Race.OC.ToString(), new WinLoss() },
-                    { Race.NE.ToString(), new WinLoss() },
-                    { Race.UD.ToString(), new WinLoss() }
-                }},
-                { Race.OC.ToString(), new Dictionary<string, WinLoss>
-                {
-                    { Race.RnD.ToString(), new WinLoss() },
-                    { Race.HU.ToString(), new WinLoss() },
-                    { Race.OC.ToString(), new WinLoss() },
-                    { Race.NE.ToString(), new WinLoss() },
-                    { Race.UD.ToString(), new WinLoss() }
-                }},
-                { Race.NE.ToString(), new Dictionary<string, WinLoss>
-                {
-                    { Race.RnD.ToString(), new WinLoss() },
-                    { Race.HU.ToString(), new WinLoss() },
-                    { Race.OC.ToString(), new WinLoss() },
-                    { Race.NE.ToString(), new WinLoss() },
-                    { Race.UD.ToString(), new WinLoss() }
-                }},
-                { Race.UD.ToString(), new Dictionary<string, WinLoss>
-                {
-                    { Race.RnD.ToString(), new WinLoss() },
-                    { Race.HU.ToString(), new WinLoss() },
-                    { Race.OC.ToString(), new WinLoss() },
-                    { Race.NE.ToString(), new WinLoss() },
-                    { Race.UD.ToString(), new WinLoss() }
-                }}
+                RaceWinLossRation.Create(Race.RnD),
+                RaceWinLossRation.Create(Race.HU),
+                RaceWinLossRation.Create(Race.OC),
+                RaceWinLossRation.Create(Race.UD),
+                RaceWinLossRation.Create(Race.NE)
+
             };
             return ratio;
         }
 
-        public static RaceWinRatio CreateMapBased()
+        public void RecordWin(Race myRace, Race enemyRace, bool won)
         {
-            var ratio = new RaceWinRatio
-            {
-                { Race.RnD.ToString(), new Dictionary<string, WinLoss>() },
-                { Race.HU.ToString(), new Dictionary<string, WinLoss>() },
-                { Race.OC.ToString(), new Dictionary<string, WinLoss>() },
-                { Race.NE.ToString(), new Dictionary<string, WinLoss>() },
-                { Race.UD.ToString(), new Dictionary<string, WinLoss>() },
-            };
-            return ratio;
+            this.Single(r => r.Race == myRace).WinLosses.Single(r => r.Race == enemyRace).RecordWin(won);
         }
     }
 }
