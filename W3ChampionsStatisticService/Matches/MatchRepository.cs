@@ -17,7 +17,10 @@ namespace W3ChampionsStatisticService.Matches
             return Upsert(matchup, m => m.Id == matchup.Id);
         }
 
-        public async Task<List<Matchup>> Load(int offset = default, int pageSize = 100, int gateWay = 10)
+        public async Task<List<Matchup>> Load(
+            int offset = default,
+            int pageSize = 100,
+            int gateWay = 10)
         {
             var database = CreateClient();
 

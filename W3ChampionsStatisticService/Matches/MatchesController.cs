@@ -16,9 +16,12 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMatches(int offset = default, int pageSize = 100)
+        public async Task<IActionResult> GetMatches(
+            int offset = default,
+            int pageSize = 100,
+            int gateWay = 10)
         {
-            var matches = await _matchRepository.Load(offset, pageSize);
+            var matches = await _matchRepository.Load(offset, pageSize, gateWay);
             return Ok(matches);
         }
     }
