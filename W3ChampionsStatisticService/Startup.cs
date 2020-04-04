@@ -27,10 +27,11 @@ namespace W3ChampionsStatisticService
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors(c => {
-                c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin());  
+            services.AddCors(c =>
+            {
+                c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin());
             });
-            
+
             services.AddControllers();
 
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString");
@@ -60,12 +61,14 @@ namespace W3ChampionsStatisticService
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseCors(options => {
-                    options.AllowAnyOrigin();
-                    options.AllowAnyHeader();
-                    options.AllowAnyMethod();
-                });
             }
+
+            app.UseCors(options =>
+            {
+                options.AllowAnyOrigin();
+                options.AllowAnyHeader();
+                options.AllowAnyMethod();
+            });
 
             app.UseRouting();
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
