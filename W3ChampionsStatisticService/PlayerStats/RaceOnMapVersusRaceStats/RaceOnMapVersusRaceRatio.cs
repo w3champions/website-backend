@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats

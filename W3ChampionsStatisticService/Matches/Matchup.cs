@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.MatchEvents;
-using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.Matches
 {

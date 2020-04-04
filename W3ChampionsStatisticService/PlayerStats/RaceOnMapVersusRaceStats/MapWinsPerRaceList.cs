@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {

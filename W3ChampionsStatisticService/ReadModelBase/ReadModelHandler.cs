@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using MongoDB.Bson;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase
