@@ -14,4 +14,4 @@ FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
 WORKDIR /app
 COPY --from=build-env /app/out .
 
-ENTRYPOINT dotnet W3ChampionsStatisticService.dll mongoConnectionString=$MONGO_CONNECTION_STRING $TEST_ENV
+ENTRYPOINT dotnet W3ChampionsStatisticService.dll mongoConnectionString=$MONGO_CONNECTION_STRING appInsights=$APP_INSIGHTS $TEST_ENV
