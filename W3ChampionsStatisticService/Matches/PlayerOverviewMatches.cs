@@ -9,5 +9,6 @@
         public string BattleTag { get; set; }
         public string Name { get; set; }
         public int MmrGain => CurrentMmr - OldMmr;
+        public double Winrate => Wins / (double)(Wins + Losses);
     }
 }
