@@ -15,10 +15,17 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             _w3StatsRepo = w3StatsRepo;
         }
 
-        [HttpGet]
+        [HttpGet("map-race-wins")]
         public async Task<IActionResult> GetRaceVersusRaceStat()
         {
             var stats = await _w3StatsRepo.Load();
+            return Ok(stats);
+        }
+
+        [HttpGet("games-per-day")]
+        public async Task<IActionResult> GetGamesPerDay()
+        {
+            var stats = await _w3StatsRepo.LoadGamesPerDay();
             return Ok(stats);
         }
     }

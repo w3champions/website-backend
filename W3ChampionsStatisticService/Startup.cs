@@ -15,6 +15,7 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats;
+using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService
@@ -60,6 +61,7 @@ namespace W3ChampionsStatisticService
             services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
             services.AddReadModelService<RaceVersusRaceRatioHandler>();
             services.AddReadModelService<Wc3StatsModelHandler>();
+            services.AddReadModelService<GamesPerDayModelHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

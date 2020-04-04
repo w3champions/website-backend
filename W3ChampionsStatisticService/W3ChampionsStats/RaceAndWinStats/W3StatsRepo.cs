@@ -19,5 +19,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
+
+        public Task<GamesPerDay.GamesPerDay> LoadGamesPerDay()
+        {
+            return LoadFirst<GamesPerDay.GamesPerDay>(s => s.Id == "GamesPerDayStats");
+        }
+
+        public Task Save(GamesPerDay.GamesPerDay stat)
+        {
+            return Upsert(stat, s => s.Id == stat.Id);
+        }
     }
 }
