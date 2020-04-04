@@ -32,21 +32,6 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements.FirstOrDefault();
         }
 
-        protected async Task<List<T>> LoadSince<T>(string lastObjectId, int pageSize) where T : Versionable
-        {
-            lastObjectId ??= ObjectId.Empty.ToString();
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<T>(typeof(T).Name);
-
-            var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
-                .SortBy(s => s.Id)
-                .Limit(pageSize)
-                .ToListAsync();
-
-            return events;
-        }
-
         protected async Task Upsert<T>(T insertObject, Expression<Func<T, bool>> identityQuerry)
         {
             var mongoDatabase = CreateClient();

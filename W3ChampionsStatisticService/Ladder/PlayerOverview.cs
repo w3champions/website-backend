@@ -1,4 +1,4 @@
-namespace W3ChampionsStatisticService.PlayerOverviews
+namespace W3ChampionsStatisticService.Ladder
 {
     public class PlayerOverview
     {

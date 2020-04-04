@@ -2,7 +2,7 @@
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.PlayerOverviews
+namespace W3ChampionsStatisticService.Ladder
 {
     public class PlayOverviewHandler : IReadModelHandler
     {

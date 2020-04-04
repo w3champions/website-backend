@@ -17,9 +17,9 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMatches(DateTimeOffset lastObjectId = default, int pageSize = 100)
+        public async Task<IActionResult> GetMatches(int offset = default, int pageSize = 100)
         {
-            var matches = await _matchRepository.Load(lastObjectId, pageSize);
+            var matches = await _matchRepository.Load(offset, pageSize);
             return Ok(matches);
         }
     }

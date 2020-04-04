@@ -1,16 +1,10 @@
 ﻿using System.Collections.Generic;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.MatchEvents
 {
     public class Mmr
-    {
-        public double rating { get; set; }
-        public double rd { get; set; }
-        public double vol { get; set; }
-    }
-
-    public class UpdatedMmr
     {
         public double rating { get; set; }
         public double rd { get; set; }
@@ -24,7 +18,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public int race { get; set; }
         public Mmr mmr { get; set; }
         public bool won { get; set; }
-        public UpdatedMmr updatedMmr { get; set; }
+        public Mmr updatedMmr { get; set; }
     }
 
 
@@ -131,8 +125,9 @@ namespace W3ChampionsStatisticService.MatchEvents
         public long id { get; set; }
     }
 
-    public class MatchFinishedEvent : Versionable
+    public class MatchFinishedEvent
     {
+        public ObjectId Id { get; set; }
         public Match match { get; set; }
         public Result result { get; set; }
     }

@@ -15,12 +15,14 @@ namespace W3ChampionsStatisticService.Matches
         public DateTimeOffset EndTime { get; set; }
         public GameMode GameMode { get; set; }
         public IList<Team> Teams { get; set; } = new List<Team>();
+        public int GateWay { get; set; }
 
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {
-            var data = matchFinishedEvent.match;
+            var match = matchFinishedEvent.match;
             Map = new MapName(matchFinishedEvent.match.map).Name;
-            Id = data.id;
+            Id = match.id;
+            GateWay = match.gateway;
 
             GameMode = (GameMode) matchFinishedEvent.match.gameMode;
 
@@ -29,8 +31,8 @@ namespace W3ChampionsStatisticService.Matches
             StartTime =  DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.startTime);
             Duration = EndTime - StartTime;
 
-            var winners = data.players.Where(p => p.won);
-            var loosers = data.players.Where(p => !p.won);
+            var winners = match.players.Where(p => p.won);
+            var loosers = match.players.Where(p => !p.won);
 
             Teams.Add(CreateTeam(winners));
             Teams.Add(CreateTeam(loosers));
