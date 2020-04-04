@@ -1,4 +1,6 @@
-﻿namespace W3ChampionsStatisticService.Matches
+﻿using W3ChampionsStatisticService.PlayerStats;
+
+namespace W3ChampionsStatisticService.Matches
 {
     public class PlayerOverviewMatches
     {
@@ -9,6 +11,6 @@
         public string BattleTag { get; set; }
         public string Name { get; set; }
         public int MmrGain => CurrentMmr - OldMmr;
-        public double Winrate => Wins / (double)(Wins + Losses);
+        public double Winrate => new WinRate(Wins, Losses).Rate;
     }
 }

@@ -1,3 +1,5 @@
+using W3ChampionsStatisticService.PlayerStats;
+
 namespace W3ChampionsStatisticService.Ladder
 {
     public class PlayerOverview
@@ -16,7 +18,7 @@ namespace W3ChampionsStatisticService.Ladder
         public int TotalLosses { get; set; }
         public int TotalWins { get; set; }
         public int Games => TotalLosses + TotalWins;
-        public double Winrate => TotalWins / (double)(TotalWins + TotalLosses);
+        public double Winrate => new WinRate(TotalWins, TotalLosses).Rate;
         public int MMR { get; set; }
         public int GateWay { get; set; }
 

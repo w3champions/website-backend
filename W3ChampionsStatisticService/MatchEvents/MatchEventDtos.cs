@@ -20,7 +20,6 @@ namespace W3ChampionsStatisticService.MatchEvents
         public Mmr updatedMmr { get; set; }
     }
 
-
     public class PlayerBlizzard
     {
         public int id { get; set; }
