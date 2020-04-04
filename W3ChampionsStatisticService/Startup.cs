@@ -33,7 +33,7 @@ namespace W3ChampionsStatisticService
             });
 
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
-            services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey.Replace("'", ""));
+            services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
             services.AddControllers();
 
