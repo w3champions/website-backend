@@ -27,6 +27,7 @@ namespace W3ChampionsStatisticService
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddCors();
             services.AddControllers();
 
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString");
@@ -56,6 +57,11 @@ namespace W3ChampionsStatisticService
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseCors(options => {
+                    options.AllowAnyOrigin();
+                    options.AllowAnyHeader();
+                    options.AllowAnyMethod();
+                });
             }
 
             app.UseRouting();
