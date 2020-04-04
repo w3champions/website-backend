@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
     {
         public string Id => "W3Stats";
 
-        public List<W3StatsPerMode> Type { get; set; } = new List<W3StatsPerMode>
+        public List<W3StatsPerMode> StatsPerModes { get; set; } = new List<W3StatsPerMode>
         {
             W3StatsPerMode.Create(GameMode.GM_1v1),
             W3StatsPerMode.Create(GameMode.GM_2v2),
@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
             var players = nextEvent.match.players;
             var gameMode = (GameMode) nextEvent.match.gameMode;
 
-            var w3StatsPerMode = Type.Single(m => m.GameMode == gameMode);
+            var w3StatsPerMode = StatsPerModes.Single(m => m.GameMode == gameMode);
             w3StatsPerMode.AddWin(players, nextEvent.match.map);
         }
     }
