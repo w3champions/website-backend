@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 

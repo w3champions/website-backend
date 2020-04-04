@@ -13,10 +13,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDay
             var today = GameDays.SingleOrDefault(g => g.Date == endTime);
             if (today == null)
             {
-                GameDays.Add(GameDay.Create(endTime));
+                GameDays.Add(GameDay.Create(endTime.Date));
             }
             
-            var todayNew = GameDays.Single(g => g.Date == DateTimeOffset.Now.Date);
+            var todayNew = GameDays.Single(g => g.Date == endTime);
             todayNew.AddGame();
         }
 
