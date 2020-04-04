@@ -34,9 +34,9 @@ namespace W3ChampionsStatisticService
 
             services.AddControllers();
 
-            var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString");
+            var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongoConnectionString='mongodb://176.28.16.249:3510";
 
-            services.AddSingleton(new DbConnctionInfo(mongoConnectionString?.Replace("'", "")));
+            services.AddSingleton(new DbConnctionInfo(mongoConnectionString.Replace("'", "")));
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
