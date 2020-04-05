@@ -21,7 +21,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
         public void AddPlayer(string player)
         {
             if (!Players.Contains(player))
+            {
                 Players.Add(player);
+            }
         }
     }
 }
