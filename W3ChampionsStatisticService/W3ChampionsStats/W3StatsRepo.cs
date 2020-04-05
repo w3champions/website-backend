@@ -57,7 +57,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public async Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset @from, DateTimeOffset to)
+        public async Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<PlayersOnGameDay>(nameof(PlayersOnGameDay));
