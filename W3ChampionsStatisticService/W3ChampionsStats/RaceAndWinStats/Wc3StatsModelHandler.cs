@@ -27,8 +27,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
                 stat.Apply("Overall", (Race) players[0].race, (Race) players[1].race, players[0].won);
                 stat.Apply("Overall", (Race) players[1].race, (Race) players[0].race, players[1].won);
 
-                stat.Apply(nextEvent.match.map, (Race) players[0].race, (Race) players[1].race, players[0].won);
-                stat.Apply(nextEvent.match.map, (Race) players[1].race, (Race) players[0].race, players[1].won);
+                stat.Apply(new MapName(nextEvent.match.map).Name, (Race) players[0].race, (Race) players[1].race, players[0].won);
+                stat.Apply(new MapName(nextEvent.match.map).Name, (Race) players[1].race, (Race) players[0].race, players[1].won);
 
                 await _w3Stats.Save(stat);
             }

@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
@@ -21,7 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
             }
 
             var statsForSure = StatsPerModes.Single(s => s.MapName == mapName);
-            statsForSure.Ratio.AddRaceWin(homeRace, enemyRas, won);
+            statsForSure.Ratio.RecordWin(homeRace, enemyRas, won);
         }
     }
 }
