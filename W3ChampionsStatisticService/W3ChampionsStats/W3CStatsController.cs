@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         public async Task<IActionResult> GetRaceVersusRaceStat()
         {
             var stats = await _w3StatsRepo.Load();
-            return Ok(stats);
+            return Ok(stats.StatsPerModes);
         }
 
         [HttpGet("games-per-day")]

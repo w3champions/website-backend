@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 {
@@ -9,21 +10,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
     {
         public string Id => nameof(Wc3Stats);
 
-        public List<W3StatsPerMode> StatsPerModes { get; set; } = new List<W3StatsPerMode>
-        {
-            W3StatsPerMode.Create(GameMode.GM_1v1),
-            W3StatsPerMode.Create(GameMode.GM_2v2),
-            W3StatsPerMode.Create(GameMode.GM_4v4),
-            W3StatsPerMode.Create(GameMode.FFA),
-        };
+        public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();
 
-        public void Apply(MatchFinishedEvent nextEvent)
+        public void Apply(string mapName, Race homeRace, Race enemyRas, bool won)
         {
-            var players = nextEvent.match.players;
-            var gameMode = (GameMode) nextEvent.match.gameMode;
+            var stats = StatsPerModes.SingleOrDefault(s => s.MapName == mapName);
+            if (stats == null)
+            {
+                StatsPerModes.Add(MapToRaceVsRaceRatio.Create(mapName));
+            }
 
-            var w3StatsPerMode = StatsPerModes.Single(m => m.GameMode == gameMode);
-            w3StatsPerMode.AddWin(players, nextEvent.match.map);
+            var statsForSure = StatsPerModes.Single(s => s.MapName == mapName);
+            statsForSure.Ratio.AddRaceWin(homeRace, enemyRas, won);
         }
     }
 }

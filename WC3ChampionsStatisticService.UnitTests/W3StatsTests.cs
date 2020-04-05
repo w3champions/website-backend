@@ -30,7 +30,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task GameLengtStatsBelow30s()
+        public void GameLengtStatsBelow30s()
         {
             var gameLengthStats = GameLengthStats.Create();
             gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(0, 0, 20));
@@ -40,7 +40,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task GameLengtStatsLongetThan1hour()
+        public void GameLengtStatsLongetThan1hour()
         {
             var gameLengthStats = GameLengthStats.Create();
             gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(1, 5, 20));
