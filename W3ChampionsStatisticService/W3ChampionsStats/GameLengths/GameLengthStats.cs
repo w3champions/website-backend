@@ -49,7 +49,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
         private static List<GameLength> CreateLengths()
         {
             var lengths = new List<GameLength>();
-            for (var i = 1; i <= 120; i++)
+            for (var i = 0; i <= 120; i++)
             {
                 lengths.Add(new GameLength {passedTimeInSeconds = i * 30});
             }

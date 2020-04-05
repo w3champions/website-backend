@@ -2,8 +2,10 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
+using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -29,6 +31,26 @@ namespace WC3ChampionsStatisticService.UnitTests
             gamesReloaded.Apply(fakeEvent.match);
 
             Assert.AreEqual(2, gamesReloaded.GameDays.Single().GamesPlayed);
+        }
+
+        [Test]
+        public async Task GameLengtStatsBelow30s()
+        {
+            var gameLengthStats = GameLengthStats.Create();
+            gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(0, 0, 20));
+
+            Assert.AreEqual(1, gameLengthStats.GameLengths[0].Lengths[0].Games);
+            Assert.AreEqual(0, gameLengthStats.GameLengths[0].Lengths[1].Games);
+        }
+
+        [Test]
+        public async Task GameLengtStatsLongetThan1hour()
+        {
+            var gameLengthStats = GameLengthStats.Create();
+            gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(1, 5, 20));
+
+            Assert.AreEqual(1, gameLengthStats.GameLengths[0].Lengths[120].Games);
+            Assert.AreEqual(3600, gameLengthStats.GameLengths[0].Lengths[120].passedTimeInSeconds);
         }
 
         [Test]
