@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
-using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
 {
