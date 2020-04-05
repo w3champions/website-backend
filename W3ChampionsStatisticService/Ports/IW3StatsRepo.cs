@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
@@ -17,5 +18,6 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(GameLengthStats stat);
         Task<PlayersOnGameDay> LoadPlayersPerDay(DateTime date);
         Task Save(PlayersOnGameDay stat);
+        Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset @from, DateTimeOffset to);
     }
 }

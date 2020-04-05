@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
@@ -53,6 +55,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         public Task Save(PlayersOnGameDay stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
+        }
+
+        public async Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset @from, DateTimeOffset to)
+        {
+            var mongoDatabase = CreateClient();
+            var mongoCollection = mongoDatabase.GetCollection<PlayersOnGameDay>(nameof(PlayersOnGameDay));
+
+            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
+                .SortByDescending(s => s.Date)
+                .ToListAsync();
+
+            return stats;
         }
     }
 }
