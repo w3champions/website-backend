@@ -20,17 +20,14 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.endTime = 1585701559200;
 
-            var gamesPerDay = new GamesPerDay();
-            gamesPerDay.Apply(fakeEvent.match);
-
             var w3StatsRepo = new W3StatsRepo(DbConnctionInfo);
-            await w3StatsRepo.Save(gamesPerDay);
+            var gamesPerDay = new GamesPerDayModelHandler(w3StatsRepo);
+            await gamesPerDay.Update(fakeEvent);
+            await gamesPerDay.Update(fakeEvent);
 
-            var gamesReloaded = await w3StatsRepo.LoadGamesPerDay();
+            var gamesReloaded = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1));
 
-            gamesReloaded.Apply(fakeEvent.match);
-
-            Assert.AreEqual(2, gamesReloaded.GameDays.Single().GamesPlayed);
+            Assert.AreEqual(2, gamesReloaded.GamesPlayed);
         }
 
         [Test]

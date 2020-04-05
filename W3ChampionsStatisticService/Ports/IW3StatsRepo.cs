@@ -12,12 +12,13 @@ namespace W3ChampionsStatisticService.Ports
     {
         Task<Wc3Stats> Load();
         Task Save(Wc3Stats stat);
-        Task<GamesPerDay> LoadGamesPerDay();
-        Task Save(GamesPerDay stat);
+        Task<GameDay> LoadGamesPerDay(DateTime date);
+        Task Save(GameDay stat);
         Task<GameLengthStats> LoadGameLengths();
         Task Save(GameLengthStats stat);
         Task<PlayersOnGameDay> LoadPlayersPerDay(DateTime date);
         Task Save(PlayersOnGameDay stat);
-        Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset @from, DateTimeOffset to);
+        Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
+        Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
     }
 }

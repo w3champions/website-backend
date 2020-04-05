@@ -27,12 +27,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<GamesPerDay> LoadGamesPerDay()
+        public Task<GameDay> LoadGamesPerDay(DateTime date)
         {
-            return LoadFirst<GamesPerDay>(s => s.Id == nameof(GamesPerDay));
+            return LoadFirst<GameDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
         }
 
-        public Task Save(GamesPerDay stat)
+        public Task Save(GameDay stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
@@ -61,6 +61,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<PlayersOnGameDay>(nameof(PlayersOnGameDay));
+
+            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
+                .SortByDescending(s => s.Date)
+                .ToListAsync();
+
+            return stats;
+        }
+
+        public async Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset @from, DateTimeOffset to)
+        {
+            var mongoDatabase = CreateClient();
+            var mongoCollection = mongoDatabase.GetCollection<GameDay>(nameof(GameDay));
 
             var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
                 .SortByDescending(s => s.Date)

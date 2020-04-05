@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
+using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
 {
@@ -26,10 +27,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         }
 
         [HttpGet("games-per-day")]
-        public async Task<IActionResult> GetGamesPerDay()
+        public async Task<IActionResult> GetGamesPerDay(DateTimeOffset from = default, DateTimeOffset to = default)
         {
-            var stats = await _w3StatsRepo.LoadGamesPerDay();
-            return Ok(stats);
+            from = from != default ? from : DateTimeOffset.MinValue;
+            to = to != default ? to : DateTimeOffset.MaxValue;
+            var gameDays = await _w3StatsRepo.LoadGamesPerDayBetween(from, to);
+            return Ok(gameDays);
         }
 
         [HttpGet("games-lengths")]

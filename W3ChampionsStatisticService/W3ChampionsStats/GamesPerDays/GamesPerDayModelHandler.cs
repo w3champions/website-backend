@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
 
@@ -17,8 +19,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            var stat = await _w3Stats.LoadGamesPerDay() ?? new GamesPerDay();
-            stat.Apply(nextEvent.match);
+            var match = nextEvent.match;
+            var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime).Date;
+
+            var stat = await _w3Stats.LoadGamesPerDay(endTime) ?? GameDay.Create(endTime);
+
+            stat.AddGame();
+
             await _w3Stats.Save(stat);
         }
     }
