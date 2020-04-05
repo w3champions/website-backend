@@ -1,6 +1,8 @@
+using System;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
@@ -39,6 +41,16 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         }
 
         public Task Save(GameLengthStats stat)
+        {
+            return Upsert(stat, s => s.Id == stat.Id);
+        }
+
+        public Task<PlayersOnGameDay> LoadPlayersPerDay(DateTime date)
+        {
+            return LoadFirst<PlayersOnGameDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
+        }
+
+        public Task Save(PlayersOnGameDay stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
