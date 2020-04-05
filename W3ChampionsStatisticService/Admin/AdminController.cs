@@ -22,8 +22,8 @@ namespace W3ChampionsStatisticService.Admin
             _trackingService = trackingService;
         }
 
-        [HttpPut("resetAll")]
-        public async Task<IActionResult> GetLadder(string authorization)
+        [HttpPut("reset-all")]
+        public async Task<IActionResult> ResetAllReadModels(string authorization)
         {
             if (authorization != "ABD123F1-4AF5-4C55-B8D6-DCF7B5595991")
             {
