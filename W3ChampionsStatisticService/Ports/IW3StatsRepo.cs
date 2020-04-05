@@ -1,4 +1,6 @@
+using System;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
@@ -13,5 +15,7 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(GamesPerDay stat);
         Task<GameLengthStats> LoadGameLengths();
         Task Save(GameLengthStats stat);
+        Task<PlayersOnGameDay> LoadPlayersPerDay(DateTime date);
+        Task Save(PlayersOnGameDay stat);
     }
 }

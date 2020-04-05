@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
         {
             return new GameDay
             {
-                Date = endTime
+                Date = endTime.Date
             };
         }
 
