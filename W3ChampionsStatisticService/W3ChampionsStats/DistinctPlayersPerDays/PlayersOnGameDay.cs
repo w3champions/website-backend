@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
 {
@@ -7,6 +8,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
     {
         public DateTimeOffset Date { get; set; }
         public long DistinctPlayers => Players.Count;
+        [JsonIgnore]
         public List<string> Players { get; set; } = new List<string>();
         public string Id => Date.Date.ToString("yyyy-MM-dd");
 
