@@ -12,10 +12,15 @@ namespace W3ChampionsStatisticService.MatchEvents
     {
         public async Task Insert(List<MatchFinishedEvent> events)
         {
+            await InsertPadEvents(events);
+        }
+
+        private async Task InsertPadEvents<T>(List<T> events) where T : PadEvent
+        {
             if (!events.Any()) return;
             var database = CreateClient();
 
-            var mongoCollection = database.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent));
+            var mongoCollection = database.GetCollection<T>(typeof(T).Name);
             await mongoCollection.InsertManyAsync(events);
         }
 
@@ -36,11 +41,17 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         public async Task Insert(List<MatchStartedEvent> events)
         {
-            if (!events.Any()) return;
-            var database = CreateClient();
+            await InsertPadEvents(events);
+        }
 
-            var mongoCollection = database.GetCollection<MatchStartedEvent>(nameof(MatchFinishedEvent));
-            await mongoCollection.InsertManyAsync(events);
+        public async Task Insert(List<LeagueConstellationChangedEvent> events)
+        {
+            await InsertPadEvents(events);
+        }
+
+        public async Task Insert(List<RankingChangedEvent> events)
+        {
+            await InsertPadEvents(events);
         }
 
         public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)

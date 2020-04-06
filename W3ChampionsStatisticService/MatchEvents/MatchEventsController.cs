@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.MatchEvents
             _trackingService = trackingService;
         }
 
-        [HttpPost("matchevents")]
+        [HttpPost("match-finished-events")]
         public async Task<IActionResult> PushEvents(
             string authorization,
             [FromBody] List<MatchFinishedEvent> events
@@ -51,6 +51,36 @@ namespace W3ChampionsStatisticService.MatchEvents
             return Ok();
         }
 
+        [HttpPost("league-constellation-changed-events")]
+        public async Task<IActionResult> PushLeagueChange(
+            string authorization,
+            [FromBody] List<LeagueConstellationChangedEvent> events
+        )
+        {
+            if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE")
+            {
+                _trackingService.TrackUnauthorizedRequest(authorization, this);
+                return Unauthorized("Sorry H4ckerb0i");
+            }
 
+            await _handler.Insert(events);
+            return Ok();
+        }
+
+        [HttpPost("ranking-changed-events")]
+        public async Task<IActionResult> DivisionLeagueChanged(
+            string authorization,
+            [FromBody] List<RankingChangedEvent> events
+        )
+        {
+            if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE")
+            {
+                _trackingService.TrackUnauthorizedRequest(authorization, this);
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            await _handler.Insert(events);
+            return Ok();
+        }
     }
 }

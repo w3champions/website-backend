@@ -22,5 +22,15 @@ namespace W3ChampionsStatisticService.MatchEvents
         {
             return _repository.Insert(events);
         }
+
+        public Task Insert(List<LeagueConstellationChangedEvent> events)
+        {
+            return _repository.Insert(events);
+        }
+
+        public Task Insert(List<RankingChangedEvent> events)
+        {
+            return _repository.Insert(events);
+        }
     }
 }

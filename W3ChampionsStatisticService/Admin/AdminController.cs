@@ -35,7 +35,12 @@ namespace W3ChampionsStatisticService.Admin
             var database = client.GetDatabase(_databaseName);
             var listCollections = (await database.ListCollections().ToListAsync());
             var collectionNames = listCollections.Select(c => c.Values.First().ToString());
-            var allCollectionsExceptEvents = collectionNames.Where(c => c != nameof(MatchFinishedEvent));
+            var allCollectionsExceptEvents = collectionNames.Where(c =>
+                c != nameof(MatchFinishedEvent)
+                && c != nameof(MatchStartedEvent)
+                && c != nameof(LeagueConstellationChangedEvent)
+                && c != nameof(RankingChangedEvent)
+                );
 
             foreach (var collection in allCollectionsExceptEvents)
             {
