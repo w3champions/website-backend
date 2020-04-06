@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.MatchEvents
             _trackingService = trackingService;
         }
 
-        [HttpPost("match-finished-events")]
+        [HttpPost("matchEvents")]
         public async Task<IActionResult> PushEvents(
             string authorization,
             [FromBody] List<MatchFinishedEvent> events
