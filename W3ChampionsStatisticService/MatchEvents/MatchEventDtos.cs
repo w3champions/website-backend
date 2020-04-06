@@ -132,6 +132,7 @@ namespace W3ChampionsStatisticService.MatchEvents
 
     public class MatchStartedEvent : PadEvent
     {
+        public Match match { get; set; }
     }
 
     public class PadEvent
