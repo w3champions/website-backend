@@ -46,12 +46,18 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         public async Task Insert(List<LeagueConstellationChangedEvent> events)
         {
-            await InsertPadEvents(events);
+            foreach (var ev in events)
+            {
+                await Upsert(ev, r => r.id == ev.id);
+            }
         }
 
         public async Task Insert(List<RankingChangedEvent> events)
         {
-            await InsertPadEvents(events);
+            foreach (var ev in events)
+            {
+                await Upsert(ev, r => r.id == ev.id);
+            }
         }
 
         public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
