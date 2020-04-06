@@ -1,4 +1,5 @@
 ﻿using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PlayerStats;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -12,9 +13,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public GameMode Mode { set; get; }
         public int Wins { set; get; }
         public int Losses { set; get; }
+        public int MMR { set; get; }
+        public double Winrate => new WinRate(Wins, Losses).Rate;
 
-        public void Update(bool won)
+        public void Update(bool won, int mmr)
         {
+            MMR = mmr;
             if (won)
             {
                 Wins++;

@@ -21,5 +21,12 @@ namespace W3ChampionsStatisticService.Ladder
             var matches = await _playerRepository.LoadOverviewSince(offset, pageSize, gateWay);
             return Ok(matches);
         }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchPlayer(string searchFor, int gateWay = 20)
+        {
+            var players = await _playerRepository.LoadOverviewLike(searchFor, gateWay);
+            return Ok(players);
+        }
     }
 }

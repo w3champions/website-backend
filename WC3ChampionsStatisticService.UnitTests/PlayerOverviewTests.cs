@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Ladder;
@@ -19,6 +20,40 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(20, playerLoaded.GateWay);
+        }
+
+
+        [Test]
+        public async Task LoadAndSearch()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player = new PlayerOverview("peter#123", 20);
+            await playerRepository.UpsertPlayer(player);
+            var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", 20)).Single();
+
+            Assert.AreEqual(player.Id, playerLoaded.Id);
+            Assert.AreEqual(20, playerLoaded.GateWay);
+        }
+
+        [Test]
+        public async Task LoadAndSearch_EmptyString()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player = new PlayerOverview("peter#123", 20);
+            await playerRepository.UpsertPlayer(player);
+            Assert.IsEmpty(await playerRepository.LoadOverviewLike("", 20));
+        }
+
+        [Test]
+        public async Task LoadAndSearch_NulLString()
+        {
+            var playerRepository = new PlayerRepository(DbConnctionInfo);
+
+            var player = new PlayerOverview("peter#123", 20);
+            await playerRepository.UpsertPlayer(player);
+            Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, 20));
         }
 
         [Test]

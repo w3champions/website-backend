@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using W3ChampionsStatisticService.MatchEvents;
 
 namespace W3ChampionsStatisticService.Matches
@@ -9,7 +10,10 @@ namespace W3ChampionsStatisticService.Matches
     {
         public string Map { get; set; }
         public long Id { get; set; }
+        [JsonIgnore]
         public TimeSpan Duration { get; set; }
+
+        public long DurationInSeconds => (long) Duration.TotalSeconds;
         public DateTimeOffset StartTime { get; set; }
         public DateTimeOffset EndTime { get; set; }
         public GameMode GameMode { get; set; }

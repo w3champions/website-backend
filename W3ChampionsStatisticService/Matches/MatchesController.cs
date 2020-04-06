@@ -17,11 +17,22 @@ namespace W3ChampionsStatisticService.Matches
 
         [HttpGet]
         public async Task<IActionResult> GetMatches(
-            int offset = default,
+            int offset = 0,
             int pageSize = 100,
             int gateWay = 10)
         {
             var matches = await _matchRepository.Load(offset, pageSize, gateWay);
+            return Ok(matches);
+        }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> GetMatchesPerPlayer(
+            string playerId,
+            int offset = 0,
+            int pageSize = 100,
+            int gateWay = 10)
+        {
+            var matches = await _matchRepository.LoadFor(playerId, gateWay, pageSize, offset);
             return Ok(matches);
         }
     }

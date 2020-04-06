@@ -36,13 +36,26 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<List<PlayerOverview>> LoadOverviewSince(int offset, int pageSize, int gateWay)
         {
             var database = CreateClient();
-
             var mongoCollection = database.GetCollection<PlayerOverview>(nameof(PlayerOverview));
 
             var playerOverviews = await mongoCollection.Find(m => m.GateWay == gateWay)
                 .SortByDescending(s => s.MMR)
                 .Skip(offset)
                 .Limit(pageSize)
+                .ToListAsync();
+
+            return playerOverviews;
+        }
+
+        public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, int gateWay)
+        {
+            if (string.IsNullOrEmpty(searchFor)) return new List<PlayerOverview>();
+            var database = CreateClient();
+            var mongoCollection = database.GetCollection<PlayerOverview>(nameof(PlayerOverview));
+
+            var playerOverviews = await mongoCollection
+                .Find(m => m.GateWay == gateWay && m.Id.ToLower().Contains(searchFor.ToLower()))
+                .Limit(5)
                 .ToListAsync();
 
             return playerOverviews;

@@ -47,19 +47,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             from = from != default ? from : DateTimeOffset.MinValue;
             to = to != default ? to : DateTimeOffset.MaxValue;
             var stats = await _w3StatsRepo.LoadPlayersPerDayBetween(from, to);
-            return Ok(stats.Select(s => new PlayersPerDayDto(s)));
-        }
-    }
-
-    public class PlayersPerDayDto
-    {
-        public DateTimeOffset Date { get; }
-        public long DistinctPlayers { get; }
-
-        public PlayersPerDayDto(PlayersOnGameDay playersOnGameDay)
-        {
-            Date = playersOnGameDay.Date;
-            DistinctPlayers = playersOnGameDay.DistinctPlayers;
+            return Ok(stats);
         }
     }
 }

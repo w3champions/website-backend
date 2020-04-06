@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
 using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.MatchEvents
