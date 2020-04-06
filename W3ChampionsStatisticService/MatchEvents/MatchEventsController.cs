@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.Services;
 namespace W3ChampionsStatisticService.MatchEvents
 {
     [ApiController]
-    [Route("api/matchevents")]
+    [Route("api")]
     public class MatchEventsController : ControllerBase
     {
         private readonly InsertMatchEventsCommandHandler _handler;
@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.MatchEvents
             _trackingService = trackingService;
         }
 
-        [HttpPost]
+        [HttpPost("matchevents")]
         public async Task<IActionResult> PushEvents(
             string authorization,
             [FromBody] List<MatchFinishedEvent> events
@@ -35,7 +35,7 @@ namespace W3ChampionsStatisticService.MatchEvents
             return Ok();
         }
 
-        [HttpPost]
+        [HttpPost("match-started-events")]
         public async Task<IActionResult> PushEvents(
             string authorization,
             [FromBody] List<MatchStartedEvent> events
