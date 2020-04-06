@@ -40,11 +40,22 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test"}} });
+            var generateNewId = ObjectId.GenerateNewId();
+            await handler.Insert(new List<MatchFinishedEvent>
+            {
+                new MatchFinishedEvent
+                {
+                    Id = generateNewId,
+                    match = new Match
+                    {
+                        map = "test"
+                    }
+                }
+            });
             await Task.Delay(1000);
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test2"}} });
 
-            var events = await eventRepository.Load(lastId);
+            var events = await eventRepository.Load(generateNewId.ToString());
 
             Assert.AreEqual("test2", events.Single().match.map);
         }
@@ -55,11 +66,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            var lastId = await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test"}} });
+            var generateNewId = ObjectId.GenerateNewId();
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent {
+                Id = generateNewId, match = new Match { map = "test"}} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test2"}} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test3"}} });
 
-            var events = await eventRepository.Load(lastId, 1);
+            var events = await eventRepository.Load(generateNewId.ToString(), 1);
 
             Assert.AreEqual("test2", events.Single().match.map);
         }
