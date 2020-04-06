@@ -69,7 +69,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return stats;
         }
 
-        public async Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset @from, DateTimeOffset to)
+        public async Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to)
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<GameDay>(nameof(GameDay));
