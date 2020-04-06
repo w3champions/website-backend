@@ -6,10 +6,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class GameModeStats : List<GameModeStat>
     {
-        public void RecordGame(GameMode mode, bool won)
+        public void RecordGame(GameMode mode, bool won, int mmr)
         {
             var gameModeStat = this.Single(s => s.Mode == mode);
-            gameModeStat.Update(won);
+            gameModeStat.Update(won, mmr);
         }
     }
 }

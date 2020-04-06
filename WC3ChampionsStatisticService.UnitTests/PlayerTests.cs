@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
@@ -36,7 +37,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(player.Id, playerLoadedAgain.Id);
-            Assert.AreEqual(234, playerLoadedAgain.MMR);
+            Assert.AreEqual(234, playerLoadedAgain.GameModeStats.First().MMR);
         }
 
         [Test]

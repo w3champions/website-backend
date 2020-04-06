@@ -35,12 +35,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public string Name { get; set; }
         public RaceStats RaceStats { get; set; }
         public GameModeStats GameModeStats { get; set; }
-        public int MMR { get; set; }
 
         public void RecordWin(Race race, GameMode mode, bool won, int updatedMmrRating)
         {
-            MMR = updatedMmrRating;
-            GameModeStats.RecordGame(mode, won);
+            GameModeStats.RecordGame(mode, won, updatedMmrRating);
             RaceStats.RecordGame(race, won);
         }
 
