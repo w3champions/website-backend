@@ -123,10 +123,19 @@ namespace W3ChampionsStatisticService.MatchEvents
         public long id { get; set; }
     }
 
-    public class MatchFinishedEvent
+    public class MatchFinishedEvent : PadEvent
     {
-        public ObjectId Id { get; set; }
         public Match match { get; set; }
         public Result result { get; set; }
+    }
+
+
+    public class MatchStartedEvent : PadEvent
+    {
+    }
+
+    public class PadEvent
+    {
+        public ObjectId Id { get; set; }
     }
 }

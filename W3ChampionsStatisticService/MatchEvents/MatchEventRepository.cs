@@ -10,20 +10,17 @@ namespace W3ChampionsStatisticService.MatchEvents
 {
     public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
     {
-        public async Task<string> Insert(IList<MatchFinishedEvent> events)
+        public async Task Insert(List<MatchFinishedEvent> events)
         {
-            if (!events.Any()) return ObjectId.Empty.ToString();
+            if (!events.Any()) return;
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent));
             await mongoCollection.InsertManyAsync(events);
-            var insert = events.Last().Id.ToString();
-            return insert;
         }
 
         public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
         {
-
             lastObjectId ??= ObjectId.Empty.ToString();
             var database = CreateClient();
 
@@ -35,6 +32,15 @@ namespace W3ChampionsStatisticService.MatchEvents
                 .ToListAsync();
 
             return events;
+        }
+
+        public async Task Insert(List<MatchStartedEvent> events)
+        {
+            if (!events.Any()) return;
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<MatchStartedEvent>(nameof(MatchFinishedEvent));
+            await mongoCollection.InsertManyAsync(events);
         }
 
         public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.MatchEvents;
 
@@ -15,8 +16,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(DbConnctionInfo);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            var lastId = await handler.Insert(new List<MatchFinishedEvent>());
-            var events = await eventRepository.Load(lastId);
+            await handler.Insert(new List<MatchFinishedEvent>());
+            var events = await eventRepository.Load(ObjectId.Empty.ToString());
 
             Assert.IsEmpty(events);
         }
