@@ -19,10 +19,19 @@ namespace W3ChampionsStatisticService.MatchEvents
         }
 
         [HttpPost("matchEvents")]
-        public async Task<IActionResult> PushEvents(
+        public async Task<IActionResult> PushEventsOld(
             string authorization,
             [FromBody] List<MatchFinishedEvent> events
             )
+        {
+            return await PushEvents(authorization, events);
+        }
+
+        [HttpPost("match-finished-events")]
+        public async Task<IActionResult> PushEvents(
+            string authorization,
+            [FromBody] List<MatchFinishedEvent> events
+        )
         {
             if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE")
             {
