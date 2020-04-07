@@ -33,25 +33,12 @@ namespace W3ChampionsStatisticService.Matches
                 .Find(m => m.GateWay == gateWay && m.Teams
                                .Any(t => t.Players
                                    .Any(p => p.Name == name && p.BattleTag == battleTag)))
-                .SortBy(s => s.StartTime)
+                .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
 
             return events;
-        }
-
-        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId)
-        {
-            return LoadFirst<PlayerWinLoss>(p => p.Id == playerId);
-        }
-
-        public async Task Save(List<PlayerWinLoss> winrate)
-        {
-            foreach (var newWinrate in winrate)
-            {
-                await Upsert(newWinrate, p => p.Id == newWinrate.Id);
-            }
         }
 
         public async Task<List<Matchup>> Load(
@@ -64,7 +51,7 @@ namespace W3ChampionsStatisticService.Matches
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
             var events = await mongoCollection.Find(m => m.GateWay == gateWay)
-                .SortBy(s => s.StartTime)
+                .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();

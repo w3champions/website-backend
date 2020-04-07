@@ -15,8 +15,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1, TestDtoHelper.FakeWinrates(matchFinishedEvent1)));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2, TestDtoHelper.FakeWinrates(matchFinishedEvent2)));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
             var matches = await matchRepository.Load();
 
             Assert.AreEqual(2, matches.Count);
@@ -31,8 +31,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.players[1].battleTag = "Peter#123";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1, TestDtoHelper.FakeWinrates(matchFinishedEvent1)));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2, TestDtoHelper.FakeWinrates(matchFinishedEvent2)));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
 
             var matches = await matchRepository.LoadFor("Peter#123");
 
@@ -48,8 +48,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.players[1].battleTag = "Peter#123";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1, TestDtoHelper.FakeWinrates(matchFinishedEvent1)));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2, TestDtoHelper.FakeWinrates(matchFinishedEvent2)));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
 
             var matches = await matchRepository.LoadFor("Peter123");
 
@@ -63,8 +63,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent, TestDtoHelper.FakeWinrates(matchFinishedEvent)));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent, TestDtoHelper.FakeWinrates(matchFinishedEvent)));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent));
             var matches = await matchRepository.Load();
 
             Assert.AreEqual(1, matches.Count);

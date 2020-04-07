@@ -66,6 +66,7 @@ namespace W3ChampionsStatisticService
             services.AddReadModelService<GamesPerDayModelHandler>();
             services.AddReadModelService<GameLengthsModelHandler>();
             services.AddReadModelService<DistinctPlayersPerDayHandler>();
+            services.AddReadModelService<PlayerWinrateHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

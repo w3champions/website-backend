@@ -23,6 +23,19 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             await Upsert(playerOverview, p => p.Id == playerOverview.Id);
         }
 
+        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId)
+        {
+            return LoadFirst<PlayerWinLoss>(p => p.Id == playerId);
+        }
+
+        public async Task Save(List<PlayerWinLoss> winrate)
+        {
+            foreach (var newWinrate in winrate)
+            {
+                await Upsert(newWinrate, p => p.Id == newWinrate.Id);
+            }
+        }
+
         public Task<PlayerProfile> Load(string battleTag)
         {
             return LoadFirst<PlayerProfile>(p => p.Id == battleTag);
