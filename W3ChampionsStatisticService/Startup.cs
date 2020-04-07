@@ -36,6 +36,7 @@ namespace W3ChampionsStatisticService
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
+            services.AddCors();
             services.AddControllers();
 
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
