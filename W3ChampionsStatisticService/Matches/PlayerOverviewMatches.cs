@@ -12,5 +12,6 @@ namespace W3ChampionsStatisticService.Matches
         public string Name { get; set; }
         public int MmrGain => CurrentMmr - OldMmr;
         public double Winrate => new WinRate(Wins, Losses).Rate;
+        public bool Won { get; set; }
     }
 }

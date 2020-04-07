@@ -55,6 +55,7 @@ namespace W3ChampionsStatisticService.Matches
                 BattleTag = w.battleTag.Split("#")[1],
                 CurrentMmr = (int) w.updatedMmr.rating,
                 OldMmr = (int) w.mmr.rating,
+                Won = w.won,
             });
         }
     }
