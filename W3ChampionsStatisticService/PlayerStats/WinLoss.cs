@@ -15,6 +15,7 @@ namespace W3ChampionsStatisticService.PlayerStats
         }
         public int Wins { get; set; }
         public int Losses { get; set; }
+        public int Games => Wins + Losses;
         public double Winrate => new WinRate(Wins, Losses).Rate;
     }
 }
