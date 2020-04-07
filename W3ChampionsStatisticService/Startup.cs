@@ -71,6 +71,8 @@ namespace W3ChampionsStatisticService
         {
             app.UseRouting();
 
+            app.UseHttpsRedirection();
+
             app.UseCors(options =>
             {
                 options.AllowAnyOrigin();
