@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public int gateway { get; set; }
         [BsonId]
         public int league { get; set; }
-        public Rank ranks { get; set; }
+        public Rank[] ranks { get; set; }
     }
 
     public class Rank
