@@ -33,12 +33,11 @@ namespace W3ChampionsStatisticService
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors();
-
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
             
             services.AddControllers();
+            services.AddCors();
 
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
             services.AddSingleton(new DbConnctionInfo(mongoConnectionString.Replace("'", "")));
