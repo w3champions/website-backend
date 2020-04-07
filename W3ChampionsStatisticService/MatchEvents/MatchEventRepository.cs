@@ -10,6 +10,10 @@ namespace W3ChampionsStatisticService.MatchEvents
 {
     public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
     {
+        public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        {
+        }
+
         public async Task Insert(List<MatchFinishedEvent> events)
         {
             await InsertPadEvents(events);
@@ -48,7 +52,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         {
             foreach (var ev in events)
             {
-                await Upsert(ev, r => r.id == ev.id);
+                await Upsert(ev, r => r.gateway == ev.gateway);
             }
         }
 
@@ -56,12 +60,18 @@ namespace W3ChampionsStatisticService.MatchEvents
         {
             foreach (var ev in events)
             {
-                await Upsert(ev, r => r.id == ev.id);
+                await Upsert(ev, r => r.league == ev.league);
             }
         }
 
-        public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public Task<List<LeagueConstellationChangedEvent>> LoadLeagues()
         {
+            return LoadAll<LeagueConstellationChangedEvent>();
+        }
+
+        public Task<List<RankingChangedEvent>> LoadRanks()
+        {
+            return LoadAll<RankingChangedEvent>();
         }
     }
 }

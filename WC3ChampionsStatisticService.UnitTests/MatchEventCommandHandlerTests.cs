@@ -8,8 +8,51 @@ using W3ChampionsStatisticService.MatchEvents;
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class MatchCommandHandlerTests : IntegrationTestBase
+    public class MatchEventCommandHandlerTests : IntegrationTestBase
     {
+        [Test]
+        public async Task InsertNewLeague()
+        {
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var ev1 = TestDtoHelper.CreateFakeLeague();
+            var ev2 = TestDtoHelper.CreateFakeLeague();
+            ev1.gateway = 10;
+            ev2.gateway = 20;
+            var events = new List<LeagueConstellationChangedEvent> {ev1, ev2};
+
+            await eventRepository.Insert(events);
+            await eventRepository.Insert(events);
+
+            var leagues = await eventRepository.LoadLeagues();
+            Assert.AreEqual(2, leagues.Count);
+            Assert.AreEqual(10, leagues[0].gateway);
+            Assert.AreEqual(20, leagues[1].gateway);
+        }
+
+        [Test]
+        public async Task InsertNewRanking()
+        {
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var ev1 = TestDtoHelper.CreateFakeRankingUpdate();
+            var ev2 = TestDtoHelper.CreateFakeRankingUpdate();
+            ev1.gateway = 20;
+            ev1.league = 2;
+            ev2.gateway = 20;
+            ev2.league = 3;
+            var events = new List<RankingChangedEvent> {ev1, ev2};
+
+            await eventRepository.Insert(events);
+            await eventRepository.Insert(events);
+
+            var loadedRanks = await eventRepository.LoadRanks();
+            Assert.AreEqual(2, loadedRanks.Count);
+
+            Assert.AreEqual(20, loadedRanks[0].gateway);
+            Assert.AreEqual(20, loadedRanks[1].gateway);
+            Assert.AreEqual(2, loadedRanks[0].league);
+            Assert.AreEqual(3, loadedRanks[1].league);
+        }
+
         [Test]
         public async Task InsertEmptyListAndRead()
         {
