@@ -35,7 +35,7 @@ namespace W3ChampionsStatisticService
         {
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
-            
+
             services.AddControllers();
 
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
@@ -70,8 +70,6 @@ namespace W3ChampionsStatisticService
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseRouting();
-
-            app.UseHttpsRedirection();
 
             app.UseCors(options =>
             {
