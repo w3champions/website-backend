@@ -41,6 +41,19 @@ namespace W3ChampionsStatisticService.Matches
             return events;
         }
 
+        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId)
+        {
+            return LoadFirst<PlayerWinLoss>(p => p.Id == playerId);
+        }
+
+        public async Task Save(List<PlayerWinLoss> winrate)
+        {
+            foreach (var newWinrate in winrate)
+            {
+                await Upsert(newWinrate, p => p.Id == newWinrate.Id);
+            }
+        }
+
         public async Task<List<Matchup>> Load(
             int offset = 0,
             int pageSize = 100,

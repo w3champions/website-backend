@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -20,7 +22,7 @@ namespace W3ChampionsStatisticService.Matches
         public IList<Team> Teams { get; set; } = new List<Team>();
         public int GateWay { get; set; }
 
-        public Matchup(MatchFinishedEvent matchFinishedEvent)
+        public Matchup(MatchFinishedEvent matchFinishedEvent, List<PlayerWinLoss> newWinrates)
         {
             var match = matchFinishedEvent.match;
             Map = new MapName(matchFinishedEvent.match.map).Name;
@@ -37,18 +39,20 @@ namespace W3ChampionsStatisticService.Matches
             var winners = match.players.Where(p => p.won);
             var loosers = match.players.Where(p => !p.won);
 
-            Teams.Add(CreateTeam(winners));
-            Teams.Add(CreateTeam(loosers));
+            Teams.Add(CreateTeam(winners, newWinrates));
+            Teams.Add(CreateTeam(loosers, newWinrates));
         }
 
-        private static Team CreateTeam(IEnumerable<PlayerMMrChange> loosers)
+        private static Team CreateTeam(IEnumerable<PlayerMMrChange> loosers, List<PlayerWinLoss> newWinrates)
         {
             var team = new Team();
-            team.Players.AddRange(CreatePlayerArray(loosers));
+            team.Players.AddRange(CreatePlayerArray(loosers, newWinrates));
             return team;
         }
 
-        private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(IEnumerable<PlayerMMrChange> players)
+        private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(
+            IEnumerable<PlayerMMrChange> players,
+            List<PlayerWinLoss> newWinrates)
         {
             return players.Select(w => new PlayerOverviewMatches {
                 Name = w.battleTag.Split("#")[0],
@@ -56,6 +60,9 @@ namespace W3ChampionsStatisticService.Matches
                 CurrentMmr = (int) w.updatedMmr.rating,
                 OldMmr = (int) w.mmr.rating,
                 Won = w.won,
+                Wins = newWinrates.Single(r => r.Id == w.battleTag).Stats.Wins,
+                Losses = newWinrates.Single(r => r.Id == w.battleTag).Stats.Losses,
+                Race = (Race) w.race
             });
         }
     }

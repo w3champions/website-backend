@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
 using AutoFixture;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -33,6 +35,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             var fakeEvent = fixture.Build<LeagueConstellationChangedEvent>().Create();
 
             return fakeEvent;
+        }
+
+
+        public static List<PlayerWinLoss> FakeWinrates(MatchFinishedEvent fakeEvent)
+        {
+            return fakeEvent.match.players.Select(p => PlayerWinLoss.Create(p.battleTag)).ToList();
         }
 
         public static RankingChangedEvent CreateFakeRankingUpdate()

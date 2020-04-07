@@ -20,7 +20,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.players.Last().battleTag = name2;
             fakeEvent.match.players.Last().won = true;
 
-            var matchup = new Matchup(fakeEvent);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
 
             Assert.AreEqual("456", matchup.Teams.First().Players.First().BattleTag);
             Assert.AreEqual("wolf", matchup.Teams.First().Players.First().Name);
@@ -34,7 +34,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
-            var matchup = new Matchup(fakeEvent);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
             Assert.AreEqual("amazonia", matchup.Map);
         }
 
@@ -43,8 +43,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
             fakeEvent.match.map = "Maps/frozenthrone/(2)terenasstand_lv.w3x";
-            var matchup = new Matchup(fakeEvent);
-            Assert.AreEqual("terenasstand_lv", matchup.Map);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
+            Assert.AreEqual("terenasstand", matchup.Map);
         }
 
         [Test]
@@ -53,7 +53,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
             fakeEvent.match.startTime = 1585692028740;
             fakeEvent.match.endTime = 1585692047363;
-            var matchup = new Matchup(fakeEvent);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
             Assert.AreEqual(0, matchup.Duration.Minutes);
             Assert.AreEqual(18, matchup.Duration.Seconds);
             Assert.AreEqual(623, matchup.Duration.Milliseconds);
@@ -69,7 +69,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.players[1].won = false;
             fakeEvent.match.players[1].mmr.rating = 1453.5974731933813;
             fakeEvent.match.players[1].updatedMmr.rating = 1437.0358093886573;
-            var matchup = new Matchup(fakeEvent);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
             Assert.AreEqual(16, matchup.Teams[0].Players[0].MmrGain);
             Assert.AreEqual(1453, matchup.Teams[0].Players[0].CurrentMmr);
             Assert.AreEqual(1437, matchup.Teams[0].Players[0].OldMmr);
@@ -82,7 +82,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_StartTime()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            var matchup = new Matchup(fakeEvent);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
             fakeEvent.match.startTime = 1585692028740;
             fakeEvent.match.endTime = 1585692047363;
             Assert.IsNotNull(matchup.StartTime);
@@ -94,7 +94,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
             fakeEvent.match.gameMode = 1;
-            var matchup = new Matchup(fakeEvent);
+            var matchup = new Matchup(fakeEvent, TestDtoHelper.FakeWinrates(fakeEvent));
             Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
         }
     }
