@@ -71,6 +71,8 @@ namespace W3ChampionsStatisticService
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseRouting();
+
             app.UseCors(options =>
             {
                 options.AllowAnyOrigin();
@@ -78,7 +80,6 @@ namespace W3ChampionsStatisticService
                 options.AllowAnyMethod();
             });
 
-            app.UseRouting();
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         }
     }
