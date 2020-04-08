@@ -53,23 +53,24 @@ namespace W3ChampionsStatisticService
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
-            // services.AddReadModelService<MatchReadModelHandler>();
-            //
-            // services.AddReadModelService<PlayerModelHandler>();
-            // services.AddReadModelService<PlayOverviewHandler>();
-            //
-            // services.AddReadModelService<RaceOnMapRatioHandler>();
-            // services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
-            // services.AddReadModelService<RaceVersusRaceRatioHandler>();
-            // services.AddReadModelService<Wc3StatsModelHandler>();
-            // services.AddReadModelService<GamesPerDayModelHandler>();
-            // services.AddReadModelService<GameLengthsModelHandler>();
-            // services.AddReadModelService<DistinctPlayersPerDayHandler>();
-            // services.AddReadModelService<PlayerWinrateHandler>();
+            services.AddReadModelService<MatchReadModelHandler>();
+
+            services.AddReadModelService<PlayerModelHandler>();
+            services.AddReadModelService<PlayOverviewHandler>();
+
+            services.AddReadModelService<RaceOnMapRatioHandler>();
+            services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
+            services.AddReadModelService<RaceVersusRaceRatioHandler>();
+            services.AddReadModelService<Wc3StatsModelHandler>();
+            services.AddReadModelService<GamesPerDayModelHandler>();
+            services.AddReadModelService<GameLengthsModelHandler>();
+            services.AddReadModelService<DistinctPlayersPerDayHandler>();
+            services.AddReadModelService<PlayerWinrateHandler>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            // without that, nginx forwarding in docker wont work
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
