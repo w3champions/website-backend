@@ -39,6 +39,7 @@ namespace W3ChampionsStatisticService
 
             services.AddControllers();
 
+            var doRunAsyncHandler = _configuration.GetValue<string>("startHandlers");
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
             services.AddSingleton(new DbConnctionInfo(mongoConnectionString.Replace("'", "")));
             
@@ -53,19 +54,22 @@ namespace W3ChampionsStatisticService
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
-            services.AddReadModelService<MatchReadModelHandler>();
+            if (doRunAsyncHandler == "true")
+            {
+                services.AddReadModelService<MatchReadModelHandler>();
 
-            services.AddReadModelService<PlayerModelHandler>();
-            services.AddReadModelService<PlayOverviewHandler>();
+                services.AddReadModelService<PlayerModelHandler>();
+                services.AddReadModelService<PlayOverviewHandler>();
 
-            services.AddReadModelService<RaceOnMapRatioHandler>();
-            services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
-            services.AddReadModelService<RaceVersusRaceRatioHandler>();
-            services.AddReadModelService<Wc3StatsModelHandler>();
-            services.AddReadModelService<GamesPerDayModelHandler>();
-            services.AddReadModelService<GameLengthsModelHandler>();
-            services.AddReadModelService<DistinctPlayersPerDayHandler>();
-            services.AddReadModelService<PlayerWinrateHandler>();
+                services.AddReadModelService<RaceOnMapRatioHandler>();
+                services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
+                services.AddReadModelService<RaceVersusRaceRatioHandler>();
+                services.AddReadModelService<Wc3StatsModelHandler>();
+                services.AddReadModelService<GamesPerDayModelHandler>();
+                services.AddReadModelService<GameLengthsModelHandler>();
+                services.AddReadModelService<DistinctPlayersPerDayHandler>();
+                services.AddReadModelService<PlayerWinrateHandler>();
+            }
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
