@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Services;
@@ -40,6 +41,23 @@ namespace W3ChampionsStatisticService.MatchEvents
             }
 
             await _handler.Insert(events);
+            return Ok();
+        }
+
+        [HttpPost("match-finished-events-raw")]
+        public async Task<IActionResult> PushRawEvents(
+            string authorization,
+            [FromBody] List<Match> events
+        )
+        {
+            if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE")
+            {
+                _trackingService.TrackUnauthorizedRequest(authorization, this);
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            var matchFinishedEvents = events.Select(e => new MatchFinishedEvent { match = e}).ToList();
+            await _handler.Insert(matchFinishedEvents);
             return Ok();
         }
 
