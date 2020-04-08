@@ -37,8 +37,8 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 {
                     try
                     {
-                        // Skip the event types 1 annd 0 for now until i get the fix
-                        if (nextEvent.match.state == 2)
+                        // Skip the cancel events for now
+                        if (nextEvent.match.state != 3)
                         {
                             await _innerHandler.Update(nextEvent);
                         }
