@@ -19,15 +19,6 @@ namespace W3ChampionsStatisticService.MatchEvents
             _trackingService = trackingService;
         }
 
-        [HttpPost("matchEvents")]
-        public async Task<IActionResult> PushEventsOld(
-            string authorization,
-            [FromBody] List<MatchFinishedEvent> events
-            )
-        {
-            return await PushEvents(authorization, events);
-        }
-
         [HttpPost("match-finished-events")]
         public async Task<IActionResult> PushEvents(
             string authorization,
