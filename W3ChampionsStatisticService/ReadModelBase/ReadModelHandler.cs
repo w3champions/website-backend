@@ -37,7 +37,12 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 {
                     try
                     {
-                        await _innerHandler.Update(nextEvent);
+                        // Skip the event types 1 annd 0 for now until i get the fix
+                        if (nextEvent.match.state == 2)
+                        {
+                            await _innerHandler.Update(nextEvent);
+                        }
+
                         await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString());
                     }
                     catch (Exception e)
