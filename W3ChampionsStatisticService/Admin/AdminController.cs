@@ -49,5 +49,11 @@ namespace W3ChampionsStatisticService.Admin
 
             return Ok();
         }
+
+        [HttpGet("health-check")]
+        public IActionResult HealtCheck()
+        {
+            return Ok();
+        }
     }
 }
