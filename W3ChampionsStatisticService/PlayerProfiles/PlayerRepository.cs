@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ladder;
@@ -38,12 +39,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerProfile> Load(string battleTag)
         {
-            return LoadFirst<PlayerProfile>(p => p.Id == battleTag);
+            return LoadFirst<PlayerProfile>(p => string.Equals(p.Id, battleTag, StringComparison.CurrentCultureIgnoreCase));
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
-            return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
+            return LoadFirst<PlayerOverview>(p => string.Equals(p.Id, battleTag, StringComparison.CurrentCultureIgnoreCase));
         }
 
         public async Task<List<PlayerOverview>> LoadOverviewSince(int offset, int pageSize, int gateWay)
