@@ -1,18 +1,24 @@
-
 using Microsoft.ApplicationInsights;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using Microsoft.Extensions.Logging;
 
 namespace W3ChampionsStatisticService.Services
 {
     public class TrackingService
     {
         private TelemetryClient _telemetry;
-        public TrackingService(TelemetryClient telemetry)
+        private readonly ILogger<TrackingService> _logger;
+
+        public TrackingService(
+            TelemetryClient telemetry,
+            ILogger<TrackingService> logger)
         {
             _telemetry = telemetry;
+            _logger = logger;
         }
+
         public void TrackUnauthorizedRequest(string authorization, ControllerBase controller)
         {
             try
@@ -33,6 +39,12 @@ namespace W3ChampionsStatisticService.Services
             {
                 _telemetry.TrackException(ex);
             }
+        }
+
+        public void TrackException(Exception ex)
+        {
+            _logger.LogError(ex, "Some Readmodelhandler is dying");
+            _telemetry.TrackException(ex);
         }
     }
 }

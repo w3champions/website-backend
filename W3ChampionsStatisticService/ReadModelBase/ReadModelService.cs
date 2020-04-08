@@ -3,8 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
@@ -62,8 +62,8 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     }
                     catch (Exception e)
                     {
-                        var logger = scope.ServiceProvider.GetService<ILogger<ReadModelService<T>>>();
-                        logger.LogError(e, "Some Readmodelhandler is dying");
+                        var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
+                        telemetryClient.TrackException(e);
                     }
 
                     await Task.Delay(5000, stoppingToken);
