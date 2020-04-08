@@ -13,6 +13,7 @@ namespace W3ChampionsStatisticService.MatchEvents
     public class PlayerMMrChange
     {
         public string battleTag { get; set; }
+        public string id { get; set; }
         public string inviteName { get; set; }
         public int race { get; set; }
         public Mmr mmr { get; set; }
