@@ -39,12 +39,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerProfile> Load(string battleTag)
         {
-            return LoadFirst<PlayerProfile>(p => string.Equals(p.Id, battleTag, StringComparison.CurrentCultureIgnoreCase));
+            return LoadFirst<PlayerProfile>(p => p.Id == battleTag);
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
-            return LoadFirst<PlayerOverview>(p => string.Equals(p.Id, battleTag, StringComparison.CurrentCultureIgnoreCase));
+            return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
         }
 
         public async Task<List<PlayerOverview>> LoadOverviewSince(int offset, int pageSize, int gateWay)
