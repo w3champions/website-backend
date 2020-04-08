@@ -45,6 +45,7 @@ namespace W3ChampionsStatisticService.MatchEvents
     {
         public string host { get; set; }
         public long id { get; set; }
+        public long state { get; set; }
         public long startTime { get; set; }
         public List<PlayerMMrChange> players { get; set; }
         public string map { get; set; }
