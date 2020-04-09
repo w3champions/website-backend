@@ -25,7 +25,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var leagues = await eventRepository.LoadLeagues();
             Assert.AreEqual(2, leagues.Count);
+            Assert.AreEqual(10, leagues[0].id);
             Assert.AreEqual(10, leagues[0].gateway);
+            Assert.AreEqual(20, leagues[1].id);
             Assert.AreEqual(20, leagues[1].gateway);
         }
 
@@ -51,6 +53,30 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(20, loadedRanks[1].gateway);
             Assert.AreEqual(2, loadedRanks[0].league);
             Assert.AreEqual(3, loadedRanks[1].league);
+        }
+
+        [Test]
+        public async Task InsertNewRanking_DuplicateBug()
+        {
+            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var ev1 = TestDtoHelper.CreateFakeRankingUpdate();
+            var ev2 = TestDtoHelper.CreateFakeRankingUpdate();
+            ev1.gateway = 20;
+            ev1.league = 2;
+            ev2.gateway = 10;
+            ev2.league = 2;
+            var events = new List<RankingChangedEvent> {ev1, ev2};
+
+            await eventRepository.Insert(events);
+            await eventRepository.Insert(events);
+
+            var loadedRanks = await eventRepository.LoadRanks();
+            Assert.AreEqual(2, loadedRanks.Count);
+
+            Assert.AreEqual(20, loadedRanks[0].gateway);
+            Assert.AreEqual(10, loadedRanks[1].gateway);
+            Assert.AreEqual(2, loadedRanks[0].league);
+            Assert.AreEqual(2, loadedRanks[1].league);
         }
 
         [Test]

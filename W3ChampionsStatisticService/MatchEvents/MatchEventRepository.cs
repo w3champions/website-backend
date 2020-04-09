@@ -60,7 +60,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         {
             foreach (var ev in events)
             {
-                await Upsert(ev, r => r.league == ev.league);
+                await Upsert(ev, r => r.id == ev.id);
             }
         }
 
