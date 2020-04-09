@@ -25,9 +25,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var leagues = await eventRepository.LoadLeagues();
             Assert.AreEqual(2, leagues.Count);
-            Assert.AreEqual(10, leagues[0].id);
+            Assert.AreEqual("10", leagues[0].Id);
             Assert.AreEqual(10, leagues[0].gateway);
-            Assert.AreEqual(20, leagues[1].id);
+            Assert.AreEqual("20", leagues[1].Id);
             Assert.AreEqual(20, leagues[1].gateway);
         }
 

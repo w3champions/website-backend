@@ -1,6 +1,8 @@
-﻿namespace W3ChampionsStatisticService.Ladder
+﻿using W3ChampionsStatisticService.ReadModelBase;
+
+namespace W3ChampionsStatisticService.Ladder
 {
-    public class Rank
+    public class Rank : IIdentifiable
     {
         public Rank(int gateway, int league, int rankNumber, double rankingPoints, string playerId)
         {
