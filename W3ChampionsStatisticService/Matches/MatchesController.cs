@@ -29,10 +29,9 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<IActionResult> GetMatchesPerPlayer(
             string playerId,
             int offset = 0,
-            int pageSize = 100,
-            int gateWay = 10)
+            int pageSize = 100)
         {
-            var matches = await _matchRepository.LoadFor(playerId, gateWay, pageSize, offset);
+            var matches = await _matchRepository.LoadFor(playerId, pageSize, offset);
             return Ok(matches);
         }
     }
