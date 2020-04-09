@@ -26,7 +26,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
 
             foreach (var player in match.players)
             {
-                stat.AddPlayer(player.battleTag);
+                stat.AddPlayer(player.id);
             }
 
             await _w3Stats.Save(stat);

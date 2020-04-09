@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         private async Task<PlayerWinLoss> LoadAndApply(PlayerMMrChange p)
         {
-            var playerWinLoss = await _playerRepository.LoadPlayerWinrate(p.battleTag);
+            var playerWinLoss = await _playerRepository.LoadPlayerWinrate(p.id);
             var loadPlayerWinrate = playerWinLoss ?? PlayerWinLoss.Create(p.id);
             return loadPlayerWinrate.Apply(p.won);
         }
