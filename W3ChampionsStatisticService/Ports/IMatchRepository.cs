@@ -6,8 +6,9 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IMatchRepository
     {
-        Task<List<Matchup>> Load(int offset = 0, int pageSize = 100, int gateWay = 10);
+        Task<List<Matchup>> Load(int offset = 0, int pageSize = 50, int gateWay = 10);
         Task Insert(Matchup matchup);
-        Task<List<Matchup>> LoadFor(string playerId, int pageSize = 100, int offset = 0);
+        Task<List<Matchup>> LoadFor(string playerId, int pageSize = 50, int offset = 0);
+        Task<long> Count();
     }
 }
