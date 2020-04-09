@@ -33,7 +33,8 @@ namespace W3ChampionsStatisticService.Matches
             int pageSize = 100)
         {
             var matches = await _matchRepository.LoadFor(playerId, pageSize, offset);
-            return Ok(matches);
+            var count = await _matchRepository.CountFor(playerId);
+            return Ok(new { matches, count });
         }
     }
 }

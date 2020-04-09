@@ -41,6 +41,14 @@ namespace W3ChampionsStatisticService.Matches
             return CreateCollection<Matchup>().CountDocumentsAsync(x => true);
         }
 
+        public Task<long> CountFor(string playerId)
+        {
+            return CreateCollection<Matchup>().CountDocumentsAsync(m =>
+                m.Teams
+                    .Any(t => t.Players
+                    .Any(p => p.Id.Equals(playerId))));
+        }
+
         public async Task<List<Matchup>> Load(
             int offset = 0,
             int pageSize = 50,
