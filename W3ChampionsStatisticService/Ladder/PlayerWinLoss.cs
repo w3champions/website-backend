@@ -1,8 +1,9 @@
 using W3ChampionsStatisticService.PlayerStats;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
 {
-    public class PlayerWinLoss
+    public class PlayerWinLoss : IIdentifiable
     {
         public string Id { get; set; }
         public WinLoss Stats { get; set; } = new WinLoss();
