@@ -54,6 +54,7 @@ namespace W3ChampionsStatisticService.Matches
             return players.Select(w => new PlayerOverviewMatches {
                 Name = w.battleTag.Split("#")[0],
                 BattleTag = w.battleTag.Split("#")[1],
+                Id = w.id,
                 CurrentMmr = (int) w.updatedMmr.rating,
                 OldMmr = (int) w.mmr.rating,
                 Won = w.won,

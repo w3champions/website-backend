@@ -9,6 +9,7 @@ namespace W3ChampionsStatisticService.Matches
         public int CurrentMmr { get; set; }
         public string BattleTag { get; set; }
         public string Name { get; set; }
+        public string Id { get; set; }
         public int MmrGain => CurrentMmr - OldMmr;
         public bool Won { get; set; }
     }
