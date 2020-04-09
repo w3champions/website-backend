@@ -4,12 +4,12 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class PlayerOverview
     {
-        public PlayerOverview(string battleTag, int gateWay)
+        public PlayerOverview(string id, string nameTag, int gateWay)
         {
-            Id = battleTag;
+            Id = id;
             GateWay = gateWay;
-            Name = battleTag.Split("#")[0];
-            BattleTag = battleTag.Split("#")[1];
+            Name = nameTag.Split("#")[0];
+            BattleTag = nameTag.Split("#")[1];
         }
 
         public string Id { get; set; }

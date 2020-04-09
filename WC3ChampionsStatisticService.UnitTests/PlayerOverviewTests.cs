@@ -14,7 +14,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = new PlayerOverview("peter#123", 20);
+            var player = new PlayerOverview("peter#123@10", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
@@ -28,7 +28,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = new PlayerOverview("peter#123", 20);
+            var player = new PlayerOverview("peter#123@20", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", 20)).Single();
 
@@ -41,7 +41,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = new PlayerOverview("peter#123", 20);
+            var player = new PlayerOverview("peter#123@20", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike("", 20));
         }
@@ -51,7 +51,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player = new PlayerOverview("peter#123", 20);
+            var player = new PlayerOverview("peter#123@20", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, 20));
         }
@@ -61,13 +61,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var player1 = new PlayerOverview("peter#123", 1);
+            var player1 = new PlayerOverview("peter#123@10", "peter#123", 1);
             player1.MMR = 15;
-            var player2 = new PlayerOverview("peter#1234", 1);
+            var player2 = new PlayerOverview("peter#1234@10", "peter#1234", 1);
             player2.MMR = 17;
-            var player3 = new PlayerOverview("peter#12345", 1);
+            var player3 = new PlayerOverview("peter#12345@10", "peter#12345", 1);
             player3.MMR = 19;
-            var player4 = new PlayerOverview("peter#123456", 1);
+            var player4 = new PlayerOverview("peter#123456@10", "peter#123456", 1);
             player4.MMR = 20;
             await playerRepository.UpsertPlayer(player1);
             await playerRepository.UpsertPlayer(player2);
@@ -85,7 +85,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void UpdateOverview()
         {
-            var player = new PlayerOverview("peter#123", 1);
+            var player = new PlayerOverview("peter#123@10", "peter#123", 1);
             player.RecordWin(true, 1230);
             player.RecordWin(false, 1240);
             player.RecordWin(false, 1250);
@@ -95,7 +95,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(2, player.TotalLosses);
             Assert.AreEqual("123", player.BattleTag);
             Assert.AreEqual("peter", player.Name);
-            Assert.AreEqual("peter#123", player.Id);
+            Assert.AreEqual("peter#123@10", player.Id);
             Assert.AreEqual(1250, player.MMR);
         }
     }

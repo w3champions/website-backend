@@ -21,13 +21,13 @@ namespace W3ChampionsStatisticService.Ladder
             var result = await ranks
                 .Aggregate()
                 .Match(rank => rank.League == leagueId && rank.Gateway == gateWay)
-                .SortByDescending(rank => rank.RankNumber)
+                .SortBy(rank => rank.RankNumber)
                 .Lookup<Rank, PlayerOverview, RankWithProfile>(players,
                     rank => rank.PlayerId,
                     player => player.Id,
                     rank => rank.Players)
                 .ToListAsync();
-            return result;
+            return result.Where(r => r.Player != null).ToList();
         }
 
         public async Task Insert(List<Rank> events)

@@ -16,14 +16,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(DbConnctionInfo);
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123")};
+            var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123@10")};
             await rankRepository.Insert(ranks);
-            var player = new PlayerOverview("peter#123", 10);
+            var player = new PlayerOverview("peter#123@10", "peter#123", 10);
             player.RecordWin(true, 1234);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 10);
 
-            Assert.AreEqual("peter#123", playerLoaded[0].Players.First().Id);
+            Assert.AreEqual("peter#123@10", playerLoaded[0].Players.First().Id);
             Assert.AreEqual(1, playerLoaded[0].Players.First().TotalWins);
             Assert.AreEqual(0, playerLoaded[0].Players.First().TotalLosses);
         }
@@ -34,9 +34,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(DbConnctionInfo);
             var playerRepository = new PlayerRepository(DbConnctionInfo);
 
-            var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123")};
+            var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10")};
             await rankRepository.Insert(ranks);
-            var player = new PlayerOverview("peter#123", 20);
+            var player = new PlayerOverview("peter#123@10", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 10);
 
