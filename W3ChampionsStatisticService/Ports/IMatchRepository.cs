@@ -10,5 +10,6 @@ namespace W3ChampionsStatisticService.Ports
         Task Insert(Matchup matchup);
         Task<List<Matchup>> LoadFor(string playerId, int pageSize = 50, int offset = 0);
         Task<long> Count();
+        Task<long> CountFor(string playerId);
     }
 }

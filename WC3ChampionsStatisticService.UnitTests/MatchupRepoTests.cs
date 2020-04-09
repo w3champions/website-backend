@@ -74,5 +74,31 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, matches.Count);
         }
+
+        [Test]
+        public async Task CountFor()
+        {
+            var matchRepository = new MatchRepository(DbConnctionInfo);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.players[0].id = "peter#123@10";
+            matchFinishedEvent1.match.players[1].id = "wolf#456@10";
+
+            matchFinishedEvent2.match.players[0].id = "wolf#456@10";
+            matchFinishedEvent2.match.players[1].id = "peter#123@10";
+
+            matchFinishedEvent3.match.players[0].id = "notFound";
+            matchFinishedEvent3.match.players[1].id = "notFound2";
+
+            var matchup = new Matchup(matchFinishedEvent1);
+            await matchRepository.Insert(matchup);
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            var count = await matchRepository.CountFor(matchup.Teams[0].Players[0].Id);
+
+            Assert.AreEqual(2, count);
+        }
     }
 }
