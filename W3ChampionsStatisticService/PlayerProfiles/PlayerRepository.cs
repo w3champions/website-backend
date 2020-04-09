@@ -66,8 +66,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var database = CreateClient();
             var mongoCollection = database.GetCollection<PlayerOverview>(nameof(PlayerOverview));
 
+            var lower = searchFor.ToLower();
             var playerOverviews = await mongoCollection
-                .Find(m => m.GateWay == gateWay && m.Id.ToLower().Contains(searchFor.ToLower()))
+                .Find(m => m.GateWay == gateWay && m.Id.Contains(lower))
                 .Limit(5)
                 .ToListAsync();
 
