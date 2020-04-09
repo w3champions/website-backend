@@ -18,11 +18,12 @@ namespace W3ChampionsStatisticService.Matches
         [HttpGet]
         public async Task<IActionResult> GetMatches(
             int offset = 0,
-            int pageSize = 100,
+            int pageSize = 50,
             int gateWay = 10)
         {
             var matches = await _matchRepository.Load(offset, pageSize, gateWay);
-            return Ok(matches);
+            var count = await _matchRepository.Count();
+            return Ok(new { matches, count });
         }
 
         [HttpGet("search")]
