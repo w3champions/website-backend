@@ -64,11 +64,6 @@ namespace W3ChampionsStatisticService.MatchEvents
             }
         }
 
-        public Task<RankingChangedEvent> LoadRank(int ladderId, int gateWay)
-        {
-            return LoadFirst<RankingChangedEvent>(r => r.gateway == gateWay && r.league == ladderId);
-        }
-
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagues()
         {
             return LoadAll<LeagueConstellationChangedEvent>();

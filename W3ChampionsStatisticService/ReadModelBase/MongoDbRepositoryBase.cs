@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements;
         }
 
-        private IMongoCollection<T> CreateCollection<T>()
+        protected IMongoCollection<T> CreateCollection<T>()
         {
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);

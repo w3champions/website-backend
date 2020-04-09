@@ -28,9 +28,10 @@ namespace W3ChampionsStatisticService.MatchEvents
             return _repository.Insert(events);
         }
 
-        public Task Insert(List<RankingChangedEvent> events)
+        public async Task Insert(List<RankingChangedEvent> events)
         {
-            return _repository.Insert(events);
+            await _repository.Insert(events);
+
         }
     }
 }

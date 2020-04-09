@@ -5,11 +5,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerProfile
     {
-        public static PlayerProfile Create(string battleTag)
+        public static PlayerProfile Create(string id, string battleTag)
         {
             return new PlayerProfile
             {
-                Id = battleTag,
+                Id = id,
                 Name = battleTag.Split("#")[0],
                 BattleTag = battleTag.Split("#")[1],
                 RaceStats = new RaceStats

@@ -49,10 +49,13 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<IPlayerRepository, PlayerRepository>();
+            services.AddTransient<IRankeRepository, RankRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
+
+            services.AddUnversionesReadModelService<RankHandler>();
 
             if (doRunAsyncHandler == "true")
             {
@@ -96,7 +99,14 @@ namespace W3ChampionsStatisticService
         {
             services.AddTransient<T>();
             services.AddTransient<ReadModelHandler<T>>();
-            services.AddSingleton<IHostedService, ReadModelService<T>>();
+            services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
+            return services;
+        }
+
+        public static IServiceCollection AddUnversionesReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
+        {
+            services.AddTransient<T>();
+            services.AddSingleton<IHostedService, AsyncServiceBase<T>>();
             return services;
         }
     }

@@ -2,6 +2,7 @@
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -20,7 +21,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             foreach (var playerRaw in nextEvent.match.players)
             {
-                var player = await _playerRepository.Load(playerRaw.battleTag) ?? PlayerProfile.Create(playerRaw.battleTag);
+                var player = await _playerRepository.Load(playerRaw.battleTag)
+                             ?? PlayerProfile.Create(playerRaw.id, playerRaw.battleTag);
                 player.RecordWin(
                     (Race) playerRaw.race,
                     (GameMode) nextEvent.match.gameMode,

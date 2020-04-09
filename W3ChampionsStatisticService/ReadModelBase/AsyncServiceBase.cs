@@ -3,19 +3,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public class ReadModelService<T> : IHostedService where T : IReadModelHandler
+    public class AsyncServiceBase<T> : IHostedService where T : IAsyncUpdatable
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
+        protected readonly IServiceScopeFactory _serviceScopeFactory;
 
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
-        public ReadModelService(IServiceScopeFactory serviceScopeFactory)
+        public AsyncServiceBase(IServiceScopeFactory serviceScopeFactory)
         {
             _serviceScopeFactory = serviceScopeFactory;
         }
@@ -30,6 +29,29 @@ namespace W3ChampionsStatisticService.ReadModelBase
             }
 
             return Task.CompletedTask;
+        }
+
+        private async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            do
+            {
+                using (var scope = _serviceScopeFactory.CreateScope())
+                {
+                    try
+                    {
+                        var service = scope.ServiceProvider.GetService<T>();
+                        await service.Update();
+                    }
+                    catch (Exception e)
+                    {
+                        var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
+                        telemetryClient.TrackException(e);
+                    }
+
+                    await Task.Delay(5000, stoppingToken);
+                }
+            }
+            while (!stoppingToken.IsCancellationRequested);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -47,29 +69,6 @@ namespace W3ChampionsStatisticService.ReadModelBase
             {
                 await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
             }
-        }
-
-        private async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            do
-            {
-                using (var scope = _serviceScopeFactory.CreateScope())
-                {
-                    try
-                    {
-                        var service = scope.ServiceProvider.GetService<ReadModelHandler<T>>();
-                        await service.Update();
-                    }
-                    catch (Exception e)
-                    {
-                        var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
-                        telemetryClient.TrackException(e);
-                    }
-
-                    await Task.Delay(5000, stoppingToken);
-                }
-            }
-            while (!stoppingToken.IsCancellationRequested);
         }
     }
 }
