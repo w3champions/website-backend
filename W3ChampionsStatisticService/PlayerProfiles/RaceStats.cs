@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public void RecordGame(Race race, in bool won)
         {
             var gameModeStat = this.Single(s => s.Race == race);
-            gameModeStat.Update(won);
+            gameModeStat.RecordWin(won);
         }
     }
 }
