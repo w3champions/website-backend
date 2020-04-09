@@ -55,8 +55,6 @@ namespace W3ChampionsStatisticService
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
-            services.AddUnversionesReadModelService<RankHandler>();
-
             if (doRunAsyncHandler == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
@@ -72,6 +70,8 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<GameLengthsModelHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
+
+                services.AddUnversionesReadModelService<RankHandler>();
             }
         }
 
