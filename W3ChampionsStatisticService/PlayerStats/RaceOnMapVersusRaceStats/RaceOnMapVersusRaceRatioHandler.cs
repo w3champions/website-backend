@@ -23,10 +23,10 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             var dataPlayers = nextEvent.match.players;
             if (dataPlayers.Count == 2)
             {
-                var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].battleTag)
-                         ?? RaceOnMapVersusRaceRatio.Create (dataPlayers[0].battleTag);
-                var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag)
-                         ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag);
+                var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].id)
+                         ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[0].id);
+                var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].id)
+                         ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[1].id);
 
                 p1.AddMapWin((Race) dataPlayers[0].race,
                     (Race) dataPlayers[1].race,
