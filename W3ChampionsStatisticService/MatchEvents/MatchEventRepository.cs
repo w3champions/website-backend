@@ -48,20 +48,14 @@ namespace W3ChampionsStatisticService.MatchEvents
             await InsertPadEvents(events);
         }
 
-        public async Task Insert(List<LeagueConstellationChangedEvent> events)
+        public Task Insert(List<LeagueConstellationChangedEvent> events)
         {
-            foreach (var ev in events)
-            {
-                await Upsert(ev, r => r.gateway == ev.gateway);
-            }
+            return UpsertMany(events);
         }
 
-        public async Task Insert(List<RankingChangedEvent> events)
+        public Task Insert(List<RankingChangedEvent> events)
         {
-            foreach (var ev in events)
-            {
-                await Upsert(ev, r => r.id == ev.id);
-            }
+            return UpsertMany(events);
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagues()

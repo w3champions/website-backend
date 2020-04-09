@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace W3ChampionsStatisticService.ReadModelBase
@@ -53,5 +55,20 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 insertObject,
                 new FindOneAndReplaceOptions<T> {IsUpsert = true});
         }
+
+        protected Task UpsertMany<T>(List<T> insertObject) where T : IIdentifiable
+        {
+            var collection = CreateCollection<T>();
+            var bulkOps = insertObject
+                .Select(record => new ReplaceOneModel<T>(Builders<T>.Filter
+                .Where(x => x.Id == record.Id), record) {IsUpsert = true})
+                .Cast<WriteModel<T>>().ToList();
+            return collection.BulkWriteAsync(bulkOps);
+        }
+    }
+
+    public interface IIdentifiable
+    {
+        public string Id { get; }
     }
 }

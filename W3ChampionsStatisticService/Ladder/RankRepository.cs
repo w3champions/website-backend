@@ -30,12 +30,9 @@ namespace W3ChampionsStatisticService.Ladder
             return result.Where(r => r.Player != null).ToList();
         }
 
-        public async Task Insert(List<Rank> events)
+        public Task Insert(List<Rank> events)
         {
-            foreach (var ev in events)
-            {
-                await Upsert(ev, r => r.Id == ev.Id);
-            }
+            return UpsertMany(events);
         }
     }
 

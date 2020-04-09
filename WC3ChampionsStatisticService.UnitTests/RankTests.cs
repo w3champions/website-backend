@@ -21,8 +21,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = new PlayerOverview("peter#123@10", "peter#123", 10);
             player.RecordWin(true, 1234);
             await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayer(player);
             var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 10);
 
+            Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual("peter#123@10", playerLoaded[0].Players.First().Id);
             Assert.AreEqual(1, playerLoaded[0].Players.First().TotalWins);
             Assert.AreEqual(0, playerLoaded[0].Players.First().TotalLosses);

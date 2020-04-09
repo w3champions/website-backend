@@ -1,8 +1,10 @@
-﻿namespace W3ChampionsStatisticService.MatchEvents
+﻿using W3ChampionsStatisticService.ReadModelBase;
+
+namespace W3ChampionsStatisticService.MatchEvents
 {
-    public class LeagueConstellationChangedEvent
+    public class LeagueConstellationChangedEvent : IIdentifiable
     {
-        public int id => gateway;
+        public string Id => gateway.ToString();
         public int gateway { get; set; }
         public League[] leagues { get; set; }
     }
@@ -15,10 +17,10 @@
         public int maxParticipantCount { get; set; }
     }
 
-    public class RankingChangedEvent
+    public class RankingChangedEvent : IIdentifiable
     {
         public int gateway { get; set; }
-        public string id => $"{league}@{gateway}";
+        public string Id => $"{league}@{gateway}";
         public int league { get; set; }
         public RankRaw[] ranks { get; set; }
     }
