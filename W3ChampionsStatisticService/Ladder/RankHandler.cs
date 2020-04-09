@@ -24,7 +24,6 @@ namespace W3ChampionsStatisticService.Ladder
                     new Rank(x.gateway, x.league, i, r.rp, r.id))).ToList();
 
             await _matchEventRepository.Insert(ranks);
-
         }
     }
 }
