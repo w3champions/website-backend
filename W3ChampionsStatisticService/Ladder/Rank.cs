@@ -4,7 +4,7 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class Rank : IIdentifiable
     {
-        public Rank(int gateway, int league, int rankNumber, double rankingPoints, string playerId)
+        public Rank(int gateway, int league, int rankNumber, int rankingPoints, string playerId)
         {
             Gateway = gateway;
             League = league;
@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Ladder
         public string Id => $"{RankNumber}@{League}@{Gateway}";
         public int League { get; set; }
         public int RankNumber { get; set; }
-        public double RankingPoints { get; }
+        public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
     }
 }

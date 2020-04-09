@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.Ladder
         public string Id { get; set; }
         public int League { get; set; }
         public int RankNumber { get; set; }
-        public double RankingPoints { get; }
+        public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
         [JsonIgnore]
         public List<PlayerOverview> Players { get; set; }
