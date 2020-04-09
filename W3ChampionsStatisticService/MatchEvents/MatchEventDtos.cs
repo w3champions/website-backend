@@ -8,6 +8,8 @@ namespace W3ChampionsStatisticService.MatchEvents
         public double rating { get; set; }
         public double rd { get; set; }
         public double vol { get; set; }
+        public double rp { get; set; }
+        public double updatedRp { get; set; }
     }
 
     public class PlayerMMrChange
