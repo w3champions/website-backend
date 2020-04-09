@@ -7,12 +7,15 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class RankHandler : IAsyncUpdatable
     {
+        private readonly IRankeRepository _rankeRepository;
         private readonly IMatchEventRepository _matchEventRepository;
 
         public RankHandler(
+            IRankeRepository rankeRepository,
             IMatchEventRepository matchEventRepository
             )
         {
+            _rankeRepository = rankeRepository;
             _matchEventRepository = matchEventRepository;
         }
 
@@ -23,7 +26,7 @@ namespace W3ChampionsStatisticService.Ladder
                 x.ranks.Select((r, i) =>
                     new Rank(x.gateway, x.league, i, r.rp, r.id))).ToList();
 
-            await _matchEventRepository.Insert(ranks);
+            await _rankeRepository.Insert(ranks);
         }
     }
 }

@@ -49,10 +49,13 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<IPlayerRepository, PlayerRepository>();
+            services.AddTransient<IRankeRepository, RankRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
+
+            services.AddUnversionesReadModelService<RankHandler>();
 
             if (doRunAsyncHandler == "true")
             {
@@ -69,8 +72,6 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<GameLengthsModelHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
-
-                services.AddUnversionesReadModelService<RankHandler>();
             }
         }
 
