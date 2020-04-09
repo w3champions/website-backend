@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public double rd { get; set; }
         public double vol { get; set; }
         public double rp { get; set; }
-        public double rpGain { get; set; }
+        public double updatedRp { get; set; }
     }
 
     public class PlayerMMrChange
