@@ -20,10 +20,10 @@
         public int gateway { get; set; }
         public string id => $"{league}@{gateway}";
         public int league { get; set; }
-        public Rank[] ranks { get; set; }
+        public RankRaw[] ranks { get; set; }
     }
 
-    public class Rank
+    public class RankRaw
     {
         public string id { get; set; }
         public double rp { get; set; }

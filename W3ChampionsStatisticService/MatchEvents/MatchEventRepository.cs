@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -67,6 +68,14 @@ namespace W3ChampionsStatisticService.MatchEvents
         public Task<RankingChangedEvent> LoadRank(int ladderId, int gateWay)
         {
             return LoadFirst<RankingChangedEvent>(r => r.gateway == gateWay && r.league == ladderId);
+        }
+
+        public async Task Insert(List<Rank> events)
+        {
+            foreach (var ev in events)
+            {
+                await Upsert(ev, r => r.Id == ev.Id);
+            }
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagues()

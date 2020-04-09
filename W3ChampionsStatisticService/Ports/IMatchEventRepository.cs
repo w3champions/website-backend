@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.MatchEvents;
 
 namespace W3ChampionsStatisticService.Ports
@@ -12,5 +13,6 @@ namespace W3ChampionsStatisticService.Ports
         Task Insert(List<LeagueConstellationChangedEvent> events);
         Task Insert(List<RankingChangedEvent> events);
         Task<RankingChangedEvent> LoadRank(int ladderId, int gateWay);
+        Task Insert(List<Rank> events);
     }
 }
