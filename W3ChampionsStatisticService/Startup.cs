@@ -55,7 +55,6 @@ namespace W3ChampionsStatisticService
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
-            services.AddUnversionesReadModelService<RankHandler>();
             if (doRunAsyncHandler == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
