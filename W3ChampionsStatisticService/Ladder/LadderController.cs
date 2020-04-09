@@ -10,13 +10,16 @@ namespace W3ChampionsStatisticService.Ladder
     {
         private readonly IPlayerRepository _playerRepository;
         private readonly IRankeRepository _rankeRepository;
+        private readonly IMatchEventRepository _matchEventRepository;
 
         public LadderController(
             IPlayerRepository playerRepository,
-            IRankeRepository rankeRepository)
+            IRankeRepository rankeRepository,
+            IMatchEventRepository matchEventRepository)
         {
             _playerRepository = playerRepository;
             _rankeRepository = rankeRepository;
+            _matchEventRepository = matchEventRepository;
         }
 
         [HttpGet("search")]
@@ -26,7 +29,7 @@ namespace W3ChampionsStatisticService.Ladder
             return Ok(players);
         }
 
-        [HttpGet("{ladderId}")]
+        [HttpGet("{leagueId}")]
         public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int gateWay = 20)
         {
             var playersInLadder = await _rankeRepository.LoadPlayerOfLeague(leagueId, gateWay);
@@ -36,6 +39,13 @@ namespace W3ChampionsStatisticService.Ladder
             }
 
             return Ok(playersInLadder);
+        }
+
+        [HttpGet("league-constellation")]
+        public async Task<IActionResult> GetLeagueConstellation()
+        {
+            var leagues = await _matchEventRepository.LoadLeagueConstellation();
+            return Ok(leagues);
         }
     }
 }
