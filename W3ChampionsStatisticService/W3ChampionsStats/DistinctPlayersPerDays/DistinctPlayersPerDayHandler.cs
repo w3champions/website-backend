@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
 {

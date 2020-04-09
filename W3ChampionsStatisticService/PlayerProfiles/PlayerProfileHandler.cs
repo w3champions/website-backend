@@ -2,6 +2,7 @@
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {

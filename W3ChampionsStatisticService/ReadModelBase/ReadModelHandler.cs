@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public class ReadModelHandler<T> where T : IReadModelHandler
+    public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
     {
         private readonly IMatchEventRepository _eventRepository;
         private readonly IVersionRepository _versionRepository;
