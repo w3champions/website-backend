@@ -8,31 +8,28 @@ namespace W3ChampionsStatisticService.Ladder
     [Route("api/ladder")]
     public class LadderController : ControllerBase
     {
-        private readonly IPlayerRepository _playerRepository;
-        private readonly IRankeRepository _rankeRepository;
+        private readonly IRankRepository _rankRepository;
         private readonly IMatchEventRepository _matchEventRepository;
 
         public LadderController(
-            IPlayerRepository playerRepository,
-            IRankeRepository rankeRepository,
+            IRankRepository rankRepository,
             IMatchEventRepository matchEventRepository)
         {
-            _playerRepository = playerRepository;
-            _rankeRepository = rankeRepository;
+            _rankRepository = rankRepository;
             _matchEventRepository = matchEventRepository;
         }
 
         [HttpGet("search")]
         public async Task<IActionResult> SearchPlayer(string searchFor, int gateWay = 20)
         {
-            var players = await _playerRepository.LoadOverviewLike(searchFor, gateWay);
+            var players = await _rankRepository.LoadPlayerOfLeagueLike(searchFor, gateWay);
             return Ok(players);
         }
 
         [HttpGet("{leagueId}")]
         public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int gateWay = 20)
         {
-            var playersInLadder = await _rankeRepository.LoadPlayerOfLeague(leagueId, gateWay);
+            var playersInLadder = await _rankRepository.LoadPlayerOfLeague(leagueId, gateWay);
             if (playersInLadder == null)
             {
                 return NoContent();
