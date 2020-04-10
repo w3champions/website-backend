@@ -5,7 +5,8 @@
         RnD = 0,
         HU = 1, 
         OC = 2,
+        NE = 4,
         UD = 8,
-        NE = 4
+        Total = 16
     }
 }

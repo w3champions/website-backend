@@ -14,20 +14,31 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                 WinLossesPerMapAndRace.Create(Race.HU),
                 WinLossesPerMapAndRace.Create(Race.OC),
                 WinLossesPerMapAndRace.Create(Race.UD),
-                WinLossesPerMapAndRace.Create(Race.NE)
+                WinLossesPerMapAndRace.Create(Race.NE),
+                WinLossesPerMapAndRace.Create(Race.Total)
             };
         }
 
         public void AddWin(Race myRace, Race enemyRace, string mapName, in bool won)
         {
-            var race = this.Single(r => r.Race == myRace);
+            var raceResult = this.Single(r => r.Race == myRace);
+            var totalReslt = this.Single(r => r.Race == Race.Total);
+            var mapOfRace = WinLossesPerMap(mapName, raceResult);
+            var mapOfTotal = WinLossesPerMap(mapName, totalReslt);
+            mapOfRace.RecordWin(enemyRace, won);
+            mapOfTotal.RecordWin(enemyRace, won);
+        }
+
+        private static WinLossesPerMap WinLossesPerMap(string mapName, WinLossesPerMapAndRace race)
+        {
             var map = race.WinLossesOnMap.SingleOrDefault(m => m.Map == mapName);
             if (map == null)
             {
-                race.WinLossesOnMap.Add(WinLossesPerMap.Create(mapName));
+                race.WinLossesOnMap.Add(RaceOnMapVersusRaceStats.WinLossesPerMap.Create(mapName));
             }
+
             var map2 = race.WinLossesOnMap.Single(m => m.Map == mapName);
-            map2.RecordWin(enemyRace, won);
+            return map2;
         }
     }
 }
