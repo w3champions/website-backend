@@ -68,9 +68,17 @@ namespace W3ChampionsStatisticService.MatchEvents
             return LoadAll<RankingChangedEvent>();
         }
 
-        public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
+        public async Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
         {
-            return LoadAll<LeagueConstellationChangedEvent>();
+            var loadLeagueConstellation = await LoadAll<LeagueConstellationChangedEvent>();
+
+            foreach (var leagueConstellationChangedEvent in loadLeagueConstellation)
+            {
+                leagueConstellationChangedEvent.leagues =
+                    leagueConstellationChangedEvent.leagues.OrderBy(l => l.order).ToArray();
+            }
+
+            return loadLeagueConstellation;
         }
     }
 }

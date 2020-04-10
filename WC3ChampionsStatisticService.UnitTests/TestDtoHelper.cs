@@ -37,12 +37,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             return fakeEvent;
         }
 
-
-        public static List<PlayerWinLoss> FakeWinrates(MatchFinishedEvent fakeEvent)
-        {
-            return fakeEvent.match.players.Select(p => PlayerWinLoss.Create(p.battleTag)).ToList();
-        }
-
         public static RankingChangedEvent CreateFakeRankingUpdate()
         {
             var fixture = new Fixture {RepeatCount = 2};
