@@ -145,20 +145,5 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual("test2", events.Single().match.map);
         }
-
-        [Test]
-        public async Task ReadOrderedLeagues()
-        {
-            var eventRepository = new MatchEventRepository(MongoClient);
-            var leagueConstellationChangedEvent = TestDtoHelper.CreateFakeLeague();
-            leagueConstellationChangedEvent.leagues[0].order = 1;
-            leagueConstellationChangedEvent.leagues[1].order = 2;
-            await eventRepository.Insert(new List<LeagueConstellationChangedEvent> { leagueConstellationChangedEvent });
-
-            var res = (await eventRepository.LoadLeagueConstellation()).ToList();
-
-            Assert.AreEqual(1, res[0].leagues[0].order);
-            Assert.AreEqual(2, res[0].leagues[1].order);
-        }
     }
 }
