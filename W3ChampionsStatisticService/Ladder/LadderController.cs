@@ -43,11 +43,6 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task<IActionResult> GetLeagueConstellation()
         {
             var leagues = await _matchEventRepository.LoadLeagueConstellation();
-            foreach (var leagueConstellationChangedEvent in leagues)
-            {
-                leagueConstellationChangedEvent.leagues =
-                    leagueConstellationChangedEvent.leagues.OrderBy(l => l.order).ToArray();
-            }
             return Ok(leagues);
         }
     }
