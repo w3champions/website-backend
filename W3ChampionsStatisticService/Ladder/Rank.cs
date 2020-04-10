@@ -1,4 +1,7 @@
-﻿using W3ChampionsStatisticService.ReadModelBase;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -19,5 +22,8 @@ namespace W3ChampionsStatisticService.Ladder
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
+        [JsonIgnore]
+        public List<PlayerOverview> Players { get; set; }
+        public PlayerOverview Player => Players.SingleOrDefault();
     }
 }
