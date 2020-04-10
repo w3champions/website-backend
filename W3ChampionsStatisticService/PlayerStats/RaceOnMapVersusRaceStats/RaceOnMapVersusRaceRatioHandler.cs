@@ -30,10 +30,21 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 
                 p1.AddMapWin((Race) dataPlayers[0].race,
                     (Race) dataPlayers[1].race,
-                    new MapName(nextEvent.match.map).Name, dataPlayers[0].won);
+                    "Overall",
+                    dataPlayers[0].won);
                 p2.AddMapWin((Race) dataPlayers[1].race,
                     (Race) dataPlayers[0].race,
-                    new MapName(nextEvent.match.map).Name, dataPlayers[1].won);
+                    "Overall",
+                    dataPlayers[1].won);
+
+                p1.AddMapWin((Race) dataPlayers[0].race,
+                    (Race) dataPlayers[1].race,
+                    new MapName(nextEvent.match.map).Name,
+                    dataPlayers[0].won);
+                p2.AddMapWin((Race) dataPlayers[1].race,
+                    (Race) dataPlayers[0].race,
+                    new MapName(nextEvent.match.map).Name,
+                    dataPlayers[1].won);
 
                 await _playerRepository.UpsertMapAndRaceStat(p1);
                 await _playerRepository.UpsertMapAndRaceStat(p2);
