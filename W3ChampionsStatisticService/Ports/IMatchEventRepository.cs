@@ -12,5 +12,6 @@ namespace W3ChampionsStatisticService.Ports
         Task Insert(List<LeagueConstellationChangedEvent> events);
         Task Insert(List<RankingChangedEvent> events);
         Task<List<RankingChangedEvent>> LoadRanks();
+        Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation();
     }
 }
