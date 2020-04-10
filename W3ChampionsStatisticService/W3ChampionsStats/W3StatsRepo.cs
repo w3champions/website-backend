@@ -13,7 +13,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 {
     public class W3StatsRepo : MongoDbRepositoryBase, IW3StatsRepo
     {
-        public W3StatsRepo(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public W3StatsRepo(MongoClient mongoClient) : base(mongoClient)
         {
         }
 

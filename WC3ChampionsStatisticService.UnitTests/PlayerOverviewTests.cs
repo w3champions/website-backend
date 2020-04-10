@@ -12,7 +12,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = new PlayerOverview("peter#123@10", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
@@ -26,7 +26,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSearch()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = new PlayerOverview("peter#123@20", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
@@ -39,7 +39,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSearch_EmptyString()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = new PlayerOverview("peter#123@20", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
@@ -49,7 +49,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSearch_NulLString()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = new PlayerOverview("peter#123@20", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);

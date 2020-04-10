@@ -14,7 +14,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceVersusRaceRatio.Create("peter#123");
             await playerRepository.UpsertRaceStat(player);
@@ -26,7 +26,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task RaceWinsRnd()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceVersusRaceRatio.Create("peter#123");
             player.AddRaceWin(Race.RnD, Race.UD, true);
@@ -43,7 +43,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task RaceWins()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceVersusRaceRatio.Create("peter#123");
             player.AddRaceWin(Race.HU, Race.UD, true);
@@ -65,7 +65,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSaveMap()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceOnMapRatio.Create("peter#123");
             await playerRepository.UpsertMapStat(player);
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task MapWins()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceOnMapRatio.Create("peter#123");
             player.AddMapWin(Race.HU, "TM", true);
@@ -98,7 +98,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task MapWinsRnd()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceOnMapRatio.Create("peter#123");
             player.AddMapWin(Race.RnD, "TM", true);
@@ -112,7 +112,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSaveMapAndRace()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceOnMapVersusRaceRatio.Create("peter#123");
             await playerRepository.UpsertMapAndRaceStat(player);
@@ -124,7 +124,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task MapWinsAndRace()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceOnMapVersusRaceRatio.Create("peter#123");
             player.AddMapWin(Race.HU, Race.UD, "TM", true);
@@ -143,7 +143,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task MapWinsAndRaceRnd()
         {
-            var playerRepository = new PlayerStatsRepository(DbConnctionInfo);
+            var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = RaceOnMapVersusRaceRatio.Create("peter#123");
             player.AddMapWin(Race.RnD, Race.UD, "TM", true);

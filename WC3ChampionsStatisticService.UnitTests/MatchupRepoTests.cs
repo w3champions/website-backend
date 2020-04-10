@@ -10,7 +10,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
+            var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
@@ -25,7 +25,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSearch()
         {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
+            var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
@@ -47,7 +47,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSearch_InvalidString()
         {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
+            var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
@@ -64,7 +64,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task Upsert()
         {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
+            var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 
@@ -78,7 +78,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task CountFor()
         {
-            var matchRepository = new MatchRepository(DbConnctionInfo);
+            var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();

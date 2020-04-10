@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using MongoDB.Driver;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
@@ -39,7 +40,7 @@ namespace W3ChampionsStatisticService.PlayerStats
             return Upsert(raceOnMapVersusRaceRatio, p => p.Id == raceOnMapVersusRaceRatio.Id);
         }
 
-        public PlayerStatsRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public PlayerStatsRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
     }

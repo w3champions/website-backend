@@ -9,18 +9,17 @@ namespace W3ChampionsStatisticService.ReadModelBase
 {
     public class MongoDbRepositoryBase
     {
-        private readonly DbConnctionInfo _connectionInfo;
+        private readonly MongoClient _mongoClient;
         private readonly string _databaseName = "W3Champions-Statistic-Service";
 
-        public MongoDbRepositoryBase(DbConnctionInfo connectionInfo)
+        public MongoDbRepositoryBase(MongoClient mongoClient)
         {
-            _connectionInfo = connectionInfo;
+            _mongoClient = mongoClient;
         }
 
         protected IMongoDatabase CreateClient()
         {
-            var client = new MongoClient(_connectionInfo.ConnectionString);
-            var database = client.GetDatabase(_databaseName);
+            var database = _mongoClient.GetDatabase(_databaseName);
             return database;
         }
 

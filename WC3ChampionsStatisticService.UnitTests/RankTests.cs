@@ -13,8 +13,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var rankRepository = new RankRepository(DbConnctionInfo);
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123@10")};
             await rankRepository.Insert(ranks);
@@ -36,8 +36,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave_NotFound()
         {
-            var rankRepository = new RankRepository(DbConnctionInfo);
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10")};
             await rankRepository.Insert(ranks);

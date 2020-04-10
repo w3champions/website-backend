@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.MatchEvents
 {
     public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
     {
-        public MatchEventRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public MatchEventRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
 

@@ -12,13 +12,13 @@ namespace W3ChampionsStatisticService.Admin
     [Route("api/admin")]
     public class AdminController : ControllerBase
     {
-        private readonly DbConnctionInfo _connectionInfo;
+        private readonly MongoClient _mongoClient;
         private readonly TrackingService _trackingService;
         private readonly string _databaseName = "W3Champions-Statistic-Service";
 
-        public AdminController(DbConnctionInfo connectionInfo, TrackingService trackingService)
+        public AdminController(MongoClient mongoClient, TrackingService trackingService)
         {
-            _connectionInfo = connectionInfo;
+            _mongoClient = mongoClient;
             _trackingService = trackingService;
         }
 
@@ -31,8 +31,7 @@ namespace W3ChampionsStatisticService.Admin
                 return Unauthorized("Sorry H4ckerb0i");
             }
             
-            var client = new MongoClient(_connectionInfo.ConnectionString);
-            var database = client.GetDatabase(_databaseName);
+            var database = _mongoClient.GetDatabase(_databaseName);
             var listCollections = (await database.ListCollections().ToListAsync());
             var collectionNames = listCollections.Select(c => c.Values.First().ToString());
             var allCollectionsExceptEvents = collectionNames.Where(c =>

@@ -12,7 +12,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerProfile.Create("peter#123@10", "peter#123");
             await playerRepository.UpsertPlayer(player);
@@ -24,7 +24,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task PlayerMapping()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerProfile.Create("peter#123@10", "peter#123");
             player.RecordWin(Race.HU, GameMode.GM_1v1, true, 123);
@@ -43,7 +43,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task PlayerIdMappedRight()
         {
-            var playerRepository = new PlayerRepository(DbConnctionInfo);
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player1 = PlayerProfile.Create("peter#123@10", "peter#123");
             var player2 = PlayerProfile.Create("peter#123@10", "wolf#456");

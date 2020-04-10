@@ -13,7 +13,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertNewLeague()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var ev1 = TestDtoHelper.CreateFakeLeague();
             var ev2 = TestDtoHelper.CreateFakeLeague();
             ev1.gateway = 10;
@@ -34,7 +34,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertNewRanking()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var ev1 = TestDtoHelper.CreateFakeRankingUpdate();
             var ev2 = TestDtoHelper.CreateFakeRankingUpdate();
             ev1.gateway = 20;
@@ -58,7 +58,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertNewRanking_DuplicateBug()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var ev1 = TestDtoHelper.CreateFakeRankingUpdate();
             var ev2 = TestDtoHelper.CreateFakeRankingUpdate();
             ev1.gateway = 20;
@@ -82,7 +82,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertEmptyListAndRead()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             await handler.Insert(new List<MatchFinishedEvent>());
@@ -94,7 +94,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertAndRead()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test"}}});
@@ -106,7 +106,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertAndRead_TimeOffset()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             var generateNewId = ObjectId.GenerateNewId();
@@ -132,7 +132,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InsertAndRead_Limit()
         {
-            var eventRepository = new MatchEventRepository(DbConnctionInfo);
+            var eventRepository = new MatchEventRepository(MongoClient);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
             var generateNewId = ObjectId.GenerateNewId();
