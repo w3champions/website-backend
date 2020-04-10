@@ -19,7 +19,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.endTime = 1585701559200;
 
-            var w3StatsRepo = new W3StatsRepo(DbConnctionInfo);
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
             var gamesPerDay = new GamesPerDayModelHandler(w3StatsRepo);
             await gamesPerDay.Update(fakeEvent);
             await gamesPerDay.Update(fakeEvent);
@@ -60,7 +60,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             gamesPerDay1.AddPlayer("wolf");
             gamesPerDay2.AddPlayer("peter");
 
-            var w3StatsRepo = new W3StatsRepo(DbConnctionInfo);
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
             await w3StatsRepo.Save(gamesPerDay1);
             await w3StatsRepo.Save(gamesPerDay2);
 

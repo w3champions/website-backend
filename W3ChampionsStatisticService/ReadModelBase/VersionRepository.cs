@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
     {
         private readonly string _collection = "HandlerVersions";
 
-        public VersionRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public VersionRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
 

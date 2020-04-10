@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MongoDB.Driver;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
@@ -41,7 +42,7 @@ namespace W3ChampionsStatisticService
 
             var doRunAsyncHandler = _configuration.GetValue<string>("startHandlers");
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
-            services.AddSingleton(new DbConnctionInfo(mongoConnectionString.Replace("'", "")));
+            services.AddSingleton(new MongoClient(mongoConnectionString.Replace("'", "")));
             
             services.AddSingleton(typeof(TrackingService));
             

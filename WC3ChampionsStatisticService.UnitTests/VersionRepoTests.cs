@@ -10,7 +10,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var versionRepository = new VersionRepository(DbConnctionInfo);
+            var versionRepository = new VersionRepository(MongoClient);
 
             await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
@@ -21,7 +21,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSaveTwoVersions()
         {
-            var versionRepository = new VersionRepository(DbConnctionInfo);
+            var versionRepository = new VersionRepository(MongoClient);
 
             await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
             await versionRepository.SaveLastVersion<VersionRepoTest>("456");
@@ -36,7 +36,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task SaveTwice()
         {
-            var versionRepository = new VersionRepository(DbConnctionInfo);
+            var versionRepository = new VersionRepository(MongoClient);
 
             await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
             await versionRepository.SaveLastVersion<IntegrationTestBase>("1234");
@@ -48,7 +48,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadEmpty()
         {
-            var versionRepository = new VersionRepository(DbConnctionInfo);
+            var versionRepository = new VersionRepository(MongoClient);
 
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
 

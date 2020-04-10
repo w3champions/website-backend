@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
-        public PlayerRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
 

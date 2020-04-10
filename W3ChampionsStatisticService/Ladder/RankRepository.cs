@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class RankRepository : MongoDbRepositoryBase, IRankeRepository
     {
-        public RankRepository(DbConnctionInfo connectionInfo) : base(connectionInfo)
+        public RankRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
 
