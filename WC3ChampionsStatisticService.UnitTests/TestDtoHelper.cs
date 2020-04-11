@@ -20,6 +20,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
             fakeEvent.match.gateway = 10;
+            fakeEvent.match.gameMode = 1;
 
             fakeEvent.match.players.First().battleTag = name1;
             fakeEvent.match.players.First().won = true;
