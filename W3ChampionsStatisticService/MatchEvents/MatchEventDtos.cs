@@ -21,6 +21,15 @@ namespace W3ChampionsStatisticService.MatchEvents
         public Mmr mmr { get; set; }
         public bool won { get; set; }
         public Mmr updatedMmr { get; set; }
+        public Ranking ranking { get; set; }
+        public Ranking updatedRanking { get; set; }
+    }
+
+    public class Ranking
+    {
+        public int leagueOrder { get; set; }
+        public double rp { get; set; }
+        public int rank { get; set; }
     }
 
     public class PlayerBlizzard
