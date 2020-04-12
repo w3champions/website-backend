@@ -1,4 +1,5 @@
 using W3ChampionsStatisticService.PlayerStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.Ladder
 {

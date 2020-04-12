@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using System.Linq;
 using AutoFixture;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.MatchEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
