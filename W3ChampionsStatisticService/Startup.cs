@@ -10,9 +10,7 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
-using W3ChampionsStatisticService.PlayerStats.RaceOnMapStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
-using W3ChampionsStatisticService.PlayerStats.RaceVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Services;
@@ -63,9 +61,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerModelHandler>();
                 services.AddReadModelService<PlayOverviewHandler>();
 
-                services.AddReadModelService<RaceOnMapRatioHandler>();
                 services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
-                services.AddReadModelService<RaceVersusRaceRatioHandler>();
                 services.AddReadModelService<Wc3StatsModelHandler>();
                 services.AddReadModelService<GamesPerDayModelHandler>();
                 services.AddReadModelService<GameLengthsModelHandler>();

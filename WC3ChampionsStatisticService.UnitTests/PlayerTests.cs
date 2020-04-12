@@ -56,5 +56,29 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.IsNotNull(playerLoaded);
             Assert.AreEqual(player2.Id, playerLoaded.Id);
         }
+
+        [Test]
+        public async Task PlayerMultipleWinRecords()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var handler = new PlayerModelHandler(playerRepository);
+
+            var ev = TestDtoHelper.CreateFakeEvent();
+            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].race = 1;
+            ev.match.players[1].race = 2;
+            ev.match.players[0].battleTag = "PEteR#123";
+
+            for (int i = 0; i < 100; i++)
+            {
+                await handler.Update(ev);
+            }
+
+            var playerLoaded = await playerRepository.Load("peter#123@10");
+
+            Assert.AreEqual(100, playerLoaded.TotalWins);
+            Assert.AreEqual(100, playerLoaded.GameModeStats[0].Wins);
+            Assert.AreEqual(100, playerLoaded.RaceStats[0].Wins);
+        }
     }
 }

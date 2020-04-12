@@ -1,4 +1,4 @@
-namespace W3ChampionsStatisticService.PlayerStats
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
     public class WinLoss
     {

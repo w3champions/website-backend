@@ -15,20 +15,6 @@ namespace W3ChampionsStatisticService.PlayerStats
             _playerRepository = playerRepository;
         }
 
-        [HttpGet("{battleTag}/race-versus-race")]
-        public async Task<IActionResult> GetRaceVersusRaceStat([FromRoute] string battleTag)
-        {
-            var matches = await _playerRepository.LoadRaceStat(battleTag);
-            return Ok(matches);
-        }
-
-        [HttpGet("{battleTag}/race-on-map")]
-        public async Task<IActionResult> GetRaceOnMapStat([FromRoute] string battleTag)
-        {
-            var matches = await _playerRepository.LoadMapStat(battleTag);
-            return Ok(matches);
-        }
-
         [HttpGet("{battleTag}/race-on-map-versus-race")]
         public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag)
         {

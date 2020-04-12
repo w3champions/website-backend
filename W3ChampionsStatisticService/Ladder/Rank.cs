@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         public int Gateway { get; set; }
-        public string Id => $"{RankNumber}@{League}@{Gateway}";
+        public string Id => PlayerId;
         public int League { get; set; }
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }

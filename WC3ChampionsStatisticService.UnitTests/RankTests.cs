@@ -47,5 +47,23 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.IsEmpty(playerLoaded);
         }
+
+        [Test]
+        public async Task LoadAndSave_NotDuplicatingWhenGoingUp()
+        {
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var ranks1 = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10")};
+            var ranks2 = new List<Rank> { new Rank(20, 1, 8, 1456, "peter#123@10")};
+            await rankRepository.Insert(ranks1);
+            await rankRepository.Insert(ranks2);
+            var player = new PlayerOverview("peter#123@10", "peter#123", 20);
+            await playerRepository.UpsertPlayer(player);
+            var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 20);
+
+            Assert.AreEqual(1, playerLoaded.Count);
+            Assert.AreEqual(8, playerLoaded[0].RankNumber);
+        }
     }
 }
