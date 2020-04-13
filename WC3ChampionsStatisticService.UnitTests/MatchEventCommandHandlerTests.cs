@@ -221,5 +221,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("test", events[0].match.map);
             Assert.AreEqual("test2", events[1].match.map);
         }
+
+        [Test]
+        public async Task StartupExtensions_CallingExtensionsTwiceDoesNotthrow()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddMongoDbSetup(MongoClient);
+            serviceCollection.AddMongoDbSetup(MongoClient);
+        }
     }
 }
