@@ -145,5 +145,33 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual("test2", events.Single().match.map);
         }
+
+        [Test]
+        public async Task InsertAndRead_DuplicatePostIgnoresNewEvents()
+        {
+            var eventRepository = new MatchEventRepository(MongoClient);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test2"}} });
+
+            var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
+
+            Assert.AreEqual("test", events.Single().match.map);
+        }
+
+        [Test]
+        public async Task InsertAndRead_DuplicatePostIgnoresNewEventsThatAreCompletelyEqual()
+        {
+            var eventRepository = new MatchEventRepository(MongoClient);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+
+            var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
+
+            Assert.AreEqual("test", events.Single().match.map);
+        }
     }
 }

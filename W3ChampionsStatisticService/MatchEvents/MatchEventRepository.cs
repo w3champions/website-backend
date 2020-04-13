@@ -16,7 +16,8 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         public async Task Insert(List<MatchFinishedEvent> events)
         {
-            await InsertPadEvents(events);
+            var collection = CreateCollection<MatchFinishedEvent>();
+            await collection.UpdateManyAsync(null, ev => ev);
         }
 
         private async Task InsertPadEvents<T>(List<T> events) where T : PadEvent
