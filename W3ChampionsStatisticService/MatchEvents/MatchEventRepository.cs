@@ -14,10 +14,9 @@ namespace W3ChampionsStatisticService.MatchEvents
         {
         }
 
-        public async Task Insert(List<MatchFinishedEvent> events)
+        public Task Insert(List<MatchFinishedEvent> events)
         {
-            var collection = CreateCollection<MatchFinishedEvent>();
-            await collection.UpdateManyAsync(null, ev => ev);
+            return InsertPadEvents(events);
         }
 
         private async Task InsertPadEvents<T>(List<T> events) where T : PadEvent
@@ -26,7 +25,13 @@ namespace W3ChampionsStatisticService.MatchEvents
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<T>(typeof(T).Name);
-            await mongoCollection.InsertManyAsync(events);
+            try
+            {
+                await mongoCollection.InsertManyAsync(events, new InsertManyOptions { IsOrdered = false });
+            }
+            catch (MongoBulkWriteException)
+            {
+            }
         }
 
         public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
