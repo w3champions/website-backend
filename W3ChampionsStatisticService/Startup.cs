@@ -107,12 +107,20 @@ namespace W3ChampionsStatisticService
             this IServiceCollection services,
             IMongoClient mongoClient)
         {
-            var keys = Builders<MatchFinishedEvent>.IndexKeys.Ascending("match.id");
-            var indexOptions = new CreateIndexOptions { Unique = true };
-            var model = new CreateIndexModel<MatchFinishedEvent>(keys, indexOptions);
             var db = mongoClient.GetDatabase("W3Champions-Statistic-Service");
-            db.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent)).Indexes.CreateOne(model);
+            db.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent))
+                .Indexes.CreateOne(CreateIndexModel<MatchFinishedEvent>());
+            db.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent))
+                .Indexes.CreateOne(CreateIndexModel<MatchStartedEvent>());
             return services;
+        }
+
+        private static CreateIndexModel<T> CreateIndexModel<T>()
+        {
+            var keys = Builders<T>.IndexKeys.Ascending("match.id");
+            var indexOptions = new CreateIndexOptions {Unique = true};
+            var model = new CreateIndexModel<T>(keys, indexOptions);
+            return model;
         }
 
         public static IServiceCollection AddUnversionesReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
