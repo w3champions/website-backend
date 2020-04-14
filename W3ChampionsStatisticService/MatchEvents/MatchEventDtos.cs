@@ -56,7 +56,7 @@ namespace W3ChampionsStatisticService.MatchEvents
     public class Match
     {
         public string host { get; set; }
-        public string id { get; set; }
+        public dynamic id { get; set; }
         public long state { get; set; }
         public long startTime { get; set; }
         public List<PlayerMMrChange> players { get; set; }
