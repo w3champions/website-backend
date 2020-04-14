@@ -119,14 +119,14 @@ namespace WC3ChampionsStatisticService.UnitTests
                     Id = generateNewId,
                     match = new Match
                     {
-                        id = 12,
+                        id = "12",
                         map = "test"
                     }
                 }
             });
             await Task.Delay(1000);
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match =
-                new Match { id = 13, map = "test2"}} });
+                new Match { id = "13", map = "test2"}} });
 
             var events = await eventRepository.Load(generateNewId.ToString());
 
@@ -141,12 +141,12 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var generateNewId = ObjectId.GenerateNewId();
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent {
-                Id = generateNewId, match = new Match { id = 11, map = "test"}} });
+                Id = generateNewId, match = new Match { id = "11", map = "test"}} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent {
-                match = new Match { id = 12, map = "test2"}} });
+                match = new Match { id = "12", map = "test2"}} });
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent
             {
-                match = new Match { id = 13,  map = "test3"}
+                match = new Match { id = "13",  map = "test3"}
             } });
 
             var events = await eventRepository.Load(generateNewId.ToString(), 1);
@@ -160,8 +160,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(MongoClient);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test2"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = "123", map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = "123", map = "test2"}} });
 
             var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
 
@@ -174,8 +174,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var eventRepository = new MatchEventRepository(MongoClient);
             var handler = new InsertMatchEventsCommandHandler(eventRepository);
 
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = "123", map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = "123", map = "test"}} });
 
             var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
 
@@ -190,9 +190,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvents = new List<MatchFinishedEvent>
             {
-                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
-                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
-                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = "123", map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = "123", map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = "123", map = "test"}},
             };
             await handler.Insert(matchFinishedEvents);
 
@@ -209,10 +209,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvents = new List<MatchFinishedEvent>
             {
-                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
-                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
-                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
-                new MatchFinishedEvent { match = new Match { id = 1234, map = "test2"}},
+                new MatchFinishedEvent { match = new Match { id = "123", map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = "123", map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = "123", map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = "1234", map = "test2"}},
             };
             await handler.Insert(matchFinishedEvents);
 
@@ -223,7 +223,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task StartupExtensions_CallingExtensionsTwiceDoesNotthrow()
+        public void StartupExtensions_CallingExtensionsTwiceDoesNotthrow()
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddMongoDbSetup(MongoClient);

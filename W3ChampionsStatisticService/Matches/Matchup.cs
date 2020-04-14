@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.Matches
     public class Matchup
     {
         public string Map { get; set; }
-        public long Id { get; set; }
+        public string Id { get; set; }
         [JsonIgnore]
         public TimeSpan Duration { get; set; }
 
