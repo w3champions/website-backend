@@ -33,5 +33,10 @@ namespace W3ChampionsStatisticService.MatchEvents
             await _repository.Insert(events);
 
         }
+
+        public async Task Insert(List<MatchCancelledEvent> events)
+        {
+            await _repository.Insert(events);
+        }
     }
 }

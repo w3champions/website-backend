@@ -86,5 +86,10 @@ namespace W3ChampionsStatisticService.MatchEvents
 
             return loadLeagueConstellation;
         }
+
+        public Task Insert(List<MatchCancelledEvent> events)
+        {
+            return InsertPadEvents(events);
+        }
     }
 }
