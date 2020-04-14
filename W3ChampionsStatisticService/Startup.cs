@@ -43,7 +43,7 @@ namespace W3ChampionsStatisticService
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
-            // services.AddMongoDbSetup(mongoClient);
+            services.AddMongoDbSetup(mongoClient);
 
             services.AddSingleton(typeof(TrackingService));
             
