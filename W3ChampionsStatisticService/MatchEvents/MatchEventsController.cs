@@ -35,7 +35,7 @@ namespace W3ChampionsStatisticService.MatchEvents
             return Ok();
         }
 
-        [HttpPost("match-cancelled-events")]
+        [HttpPost("match-canceled-events")]
         public async Task<IActionResult> PushCancelledEvents(
             string authorization,
             [FromBody] List<MatchCancelledEvent> events
