@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using NUnit.Framework;
+using W3ChampionsStatisticService;
 using W3ChampionsStatisticService.MatchEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -117,12 +119,14 @@ namespace WC3ChampionsStatisticService.UnitTests
                     Id = generateNewId,
                     match = new Match
                     {
+                        id = 12,
                         map = "test"
                     }
                 }
             });
             await Task.Delay(1000);
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test2"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match =
+                new Match { id = 13, map = "test2"}} });
 
             var events = await eventRepository.Load(generateNewId.ToString());
 
@@ -137,13 +141,93 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var generateNewId = ObjectId.GenerateNewId();
             await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent {
-                Id = generateNewId, match = new Match { map = "test"}} });
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test2"}} });
-            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { map = "test3"}} });
+                Id = generateNewId, match = new Match { id = 11, map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent {
+                match = new Match { id = 12, map = "test2"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent
+            {
+                match = new Match { id = 13,  map = "test3"}
+            } });
 
             var events = await eventRepository.Load(generateNewId.ToString(), 1);
 
             Assert.AreEqual("test2", events.Single().match.map);
+        }
+
+        [Test]
+        public async Task InsertAndRead_DuplicatePostIgnoresNewEvents()
+        {
+            var eventRepository = new MatchEventRepository(MongoClient);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test2"}} });
+
+            var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
+
+            Assert.AreEqual("test", events.Single().match.map);
+        }
+
+        [Test]
+        public async Task InsertAndRead_DuplicatePostIgnoresNewEventsThatAreCompletelyEqual()
+        {
+            var eventRepository = new MatchEventRepository(MongoClient);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+            await handler.Insert(new List<MatchFinishedEvent> { new MatchFinishedEvent { match = new Match { id = 123, map = "test"}} });
+
+            var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
+
+            Assert.AreEqual("test", events.Single().match.map);
+        }
+
+        [Test]
+        public async Task InsertAndRead_DuplicateInOneGo()
+        {
+            var eventRepository = new MatchEventRepository(MongoClient);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            var matchFinishedEvents = new List<MatchFinishedEvent>
+            {
+                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+            };
+            await handler.Insert(matchFinishedEvents);
+
+            var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
+
+            Assert.AreEqual("test", events.Single().match.map);
+        }
+
+        [Test]
+        public async Task InsertAndRead_ContinueToInsertAfterError()
+        {
+            var eventRepository = new MatchEventRepository(MongoClient);
+            var handler = new InsertMatchEventsCommandHandler(eventRepository);
+
+            var matchFinishedEvents = new List<MatchFinishedEvent>
+            {
+                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = 123, map = "test"}},
+                new MatchFinishedEvent { match = new Match { id = 1234, map = "test2"}},
+            };
+            await handler.Insert(matchFinishedEvents);
+
+            var events = await eventRepository.Load(ObjectId.Empty.ToString(), 10);
+
+            Assert.AreEqual("test", events[0].match.map);
+            Assert.AreEqual("test2", events[1].match.map);
+        }
+
+        [Test]
+        public async Task StartupExtensions_CallingExtensionsTwiceDoesNotthrow()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddMongoDbSetup(MongoClient);
+            serviceCollection.AddMongoDbSetup(MongoClient);
         }
     }
 }

@@ -40,8 +40,11 @@ namespace W3ChampionsStatisticService
 
             var doRunAsyncHandler = _configuration.GetValue<string>("startHandlers");
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
-            services.AddSingleton(new MongoClient(mongoConnectionString.Replace("'", "")));
-            
+            var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
+            services.AddSingleton(mongoClient);
+
+            services.AddMongoDbSetup(mongoClient);
+
             services.AddSingleton(typeof(TrackingService));
             
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
@@ -97,6 +100,18 @@ namespace W3ChampionsStatisticService
             services.AddTransient<T>();
             services.AddTransient<ReadModelHandler<T>>();
             services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
+            return services;
+        }
+
+        public static IServiceCollection AddMongoDbSetup(
+            this IServiceCollection services,
+            IMongoClient mongoClient)
+        {
+            var keys = Builders<MatchFinishedEvent>.IndexKeys.Ascending("match.id");
+            var indexOptions = new CreateIndexOptions { Unique = true };
+            var model = new CreateIndexModel<MatchFinishedEvent>(keys, indexOptions);
+            var db = mongoClient.GetDatabase("W3Champions-Statistic-Service");
+            db.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent)).Indexes.CreateOne(model);
             return services;
         }
 
