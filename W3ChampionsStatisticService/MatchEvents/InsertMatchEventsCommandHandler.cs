@@ -34,7 +34,7 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         }
 
-        public async Task Insert(List<MatchCancelledEvent> events)
+        public async Task Insert(List<MatchCanceledEvent> events)
         {
             await _repository.Insert(events);
         }

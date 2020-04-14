@@ -149,7 +149,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         public Match match { get; set; }
     }
 
-    public class MatchCancelledEvent : PadEvent
+    public class MatchCanceledEvent : PadEvent
     {
         public Match match { get; set; }
     }

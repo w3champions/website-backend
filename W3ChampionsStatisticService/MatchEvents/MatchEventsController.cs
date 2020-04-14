@@ -38,7 +38,7 @@ namespace W3ChampionsStatisticService.MatchEvents
         [HttpPost("match-canceled-events")]
         public async Task<IActionResult> PushCancelledEvents(
             string authorization,
-            [FromBody] List<MatchCancelledEvent> events
+            [FromBody] List<MatchCanceledEvent> events
         )
         {
             if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE")
