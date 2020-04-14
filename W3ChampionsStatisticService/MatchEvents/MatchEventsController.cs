@@ -35,6 +35,22 @@ namespace W3ChampionsStatisticService.MatchEvents
             return Ok();
         }
 
+        [HttpPost("match-canceled-events")]
+        public async Task<IActionResult> PushCancelledEvents(
+            string authorization,
+            [FromBody] List<MatchCanceledEvent> events
+        )
+        {
+            if (authorization != "D920618D-2296-4631-A6E4-333CCCDC04DE")
+            {
+                _trackingService.TrackUnauthorizedRequest(authorization, this);
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            await _handler.Insert(events);
+            return Ok();
+        }
+
         [HttpPost("match-finished-events-raw")]
         public async Task<IActionResult> PushRawEvents(
             string authorization,
