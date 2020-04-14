@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.Ladder
             var events = await _matchEventRepository.LoadRanks();
             var ranks = events.SelectMany(x =>
                 x.ranks.Select((r, i) =>
-                    new Rank(x.gateway, x.league, i + 1, (int) r.rp, r.id))).ToList();
+                    new Rank(x.gateway, x.league, i + 1, (int) r.rp, r.tagId))).ToList();
 
             await _rankRepository.Insert(ranks);
         }

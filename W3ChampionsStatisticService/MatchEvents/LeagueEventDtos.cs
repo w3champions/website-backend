@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.MatchEvents
 
     public class RankRaw
     {
-        public string id { get; set; }
+        public string tagId { get; set; }
         public double rp { get; set; }
     }
 }
