@@ -16,11 +16,6 @@ namespace W3ChampionsStatisticService.MatchEvents
 
         public Task Insert(List<MatchFinishedEvent> events)
         {
-            foreach (var padEvent in events)
-            {
-                padEvent.match.id = padEvent.match.id.ToString();
-            }
-
             return InsertPadEvents(events);
         }
 
