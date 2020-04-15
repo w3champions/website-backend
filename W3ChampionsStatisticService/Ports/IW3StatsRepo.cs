@@ -20,5 +20,7 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(PlayersOnGameDay stat);
         Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
         Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
+        Task<HourOfPlay> LoadHourOfPlay();
+        Task Save(HourOfPlay stat);
     }
 }
