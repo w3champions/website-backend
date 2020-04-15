@@ -10,30 +10,30 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
     {
         public void Apply(GameMode gameMode, DateTimeOffset day)
         {
-            var gameLengthPerMode = PlayTimes.SingleOrDefault(m => m.GameMode == gameMode
+            var gameLengthPerMode = PlayTimesPerMode.SingleOrDefault(m => m.GameMode == gameMode
                                                           && m.Day == day.Date);
 
             if (gameLengthPerMode == null)
             {
-                PlayTimes.Remove(PlayTimes[0]);
-                PlayTimes.Remove(PlayTimes[1]);
-                PlayTimes.Remove(PlayTimes[2]);
-                PlayTimes.Remove(PlayTimes[3]);
+                PlayTimesPerMode.Remove(PlayTimesPerMode[0]);
+                PlayTimesPerMode.Remove(PlayTimesPerMode[1]);
+                PlayTimesPerMode.Remove(PlayTimesPerMode[2]);
+                PlayTimesPerMode.Remove(PlayTimesPerMode[3]);
 
-                AddDay(PlayTimes, GameMode.GM_1v1, 0);
-                AddDay(PlayTimes, GameMode.GM_2v2, 0);
-                AddDay(PlayTimes, GameMode.GM_4v4, 0);
-                AddDay(PlayTimes, GameMode.FFA, 0);
+                AddDay(PlayTimesPerMode, GameMode.GM_1v1, 0);
+                AddDay(PlayTimesPerMode, GameMode.GM_2v2, 0);
+                AddDay(PlayTimesPerMode, GameMode.GM_4v4, 0);
+                AddDay(PlayTimesPerMode, GameMode.FFA, 0);
             }
 
-            gameLengthPerMode = PlayTimes.Single(m => m.GameMode == gameMode
+            gameLengthPerMode = PlayTimesPerMode.Single(m => m.GameMode == gameMode
                                                           && m.Day == day.Date);
 
             gameLengthPerMode.Record(day);
         }
 
         [JsonIgnore]
-        public List<HourOfPlayPerMode> PlayTimes { get; set; } = new List<HourOfPlayPerMode>();
+        public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
 
         public string Id { get; set; } = nameof(HourOfPlayStats);
 
@@ -41,7 +41,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         {
             return new HourOfPlayStats
             {
-                PlayTimes = Create14DaysOfPlaytime()
+                PlayTimesPerMode = Create14DaysOfPlaytime()
             };
         }
 
@@ -64,7 +64,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             hours.Add(new HourOfPlayPerMode
             {
                 GameMode = gameMode,
-                PlayTime = CreateLengths(),
+                PlayTimePerHour = CreateLengths(),
                 Day = DateTime.Today.AddDays(-i)
             });
         }
