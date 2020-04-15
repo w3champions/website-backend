@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -26,6 +27,25 @@ namespace W3ChampionsStatisticService.Authorization
             var readAsStringAsync = await res.Content.ReadAsStringAsync();
             var token = JsonConvert.DeserializeObject<BlizzardToken>(readAsStringAsync);
             return Ok(token);
+        }
+
+
+        [HttpGet("battleTag")]
+        public async Task<IActionResult> ResetAllReadModels([FromQuery] string bearer)
+        {
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("https://eu.battle.net/oauth/userinfo");
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+
+            var res = await httpClient.GetAsync("");
+            if (!res.IsSuccessStatusCode)
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            var readAsStringAsync = await res.Content.ReadAsStringAsync();
+            var userInfo = JsonConvert.DeserializeObject<BlizzardUserInfo>(readAsStringAsync);
+            return Ok(userInfo);
         }
     }
 }
