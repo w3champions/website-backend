@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService;
-using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PadEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

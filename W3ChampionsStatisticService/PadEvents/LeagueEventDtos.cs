@@ -1,6 +1,6 @@
 ﻿using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.MatchEvents
+namespace W3ChampionsStatisticService.PadEvents
 {
     public class LeagueConstellationChangedEvent : IIdentifiable
     {

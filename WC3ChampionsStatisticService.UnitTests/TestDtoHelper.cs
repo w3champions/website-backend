@@ -1,7 +1,7 @@
 using System.Linq;
 using AutoFixture;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PadEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

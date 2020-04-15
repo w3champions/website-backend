@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Admin

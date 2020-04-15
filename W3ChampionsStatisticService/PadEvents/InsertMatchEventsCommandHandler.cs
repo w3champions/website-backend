@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.MatchEvents
+namespace W3ChampionsStatisticService.PadEvents
 {
     public class InsertMatchEventsCommandHandler
     {
