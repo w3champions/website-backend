@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 return Unauthorized("Sorry H4ckerb0i");
             }
 
-            var setting = await _personalSettingsRepository.Load(userInfo.battletag) ?? new PersonalSetting();
+            var setting = await _personalSettingsRepository.Load(userInfo.battletag) ?? new PersonalSetting(userInfo.battletag);
             setting.ProfileMessage = command.Message;
             await _personalSettingsRepository.Save(setting);
 
