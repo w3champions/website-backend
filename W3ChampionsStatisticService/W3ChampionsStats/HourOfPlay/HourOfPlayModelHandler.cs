@@ -5,7 +5,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
+namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
     public class HourOfPlayModelHandler : IReadModelHandler
     {
@@ -20,9 +20,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlay.Create();
+            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStats.Create();
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
-            stat.AddGame((GameMode) nextEvent.match.gameMode, startTime);
+            stat.Apply((GameMode) nextEvent.match.gameMode, startTime);
             await _w3Stats.Save(stat);
         }
     }

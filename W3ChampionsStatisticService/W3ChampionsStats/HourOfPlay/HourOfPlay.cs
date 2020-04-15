@@ -1,8 +1,6 @@
 using System;
-using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
+namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
     public class HourOfPlay
     {

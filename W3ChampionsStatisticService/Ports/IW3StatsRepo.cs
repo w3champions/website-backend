@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
+using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService.Ports
@@ -20,7 +21,7 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(PlayersOnGameDay stat);
         Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
         Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
-        Task<HourOfPlay> LoadHourOfPlay();
-        Task Save(HourOfPlay stat);
+        Task<HourOfPlayStats> LoadHourOfPlay();
+        Task Save(HourOfPlayStats stat);
     }
 }

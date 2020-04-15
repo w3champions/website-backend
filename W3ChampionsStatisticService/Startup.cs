@@ -18,6 +18,7 @@ using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
+using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService
@@ -70,6 +71,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<GameLengthsModelHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
+                services.AddReadModelService<HourOfPlayModelHandler>();
 
                 services.AddUnversionesReadModelService<RankHandler>();
             }
