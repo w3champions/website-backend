@@ -73,7 +73,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         {
             var lengths = new List<HourOfPlay>();
             var now = DateTimeOffset.UtcNow;
-            for (var i = 0; i <= 96; i++) // every 15 minutes
+            for (var i = 0; i < 96; i++) // every 15 minutes
             {
                 lengths.Add(new HourOfPlay { Time = now.AddMinutes(i * 15)});
             }
