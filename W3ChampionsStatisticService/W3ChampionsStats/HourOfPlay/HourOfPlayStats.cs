@@ -8,8 +8,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
     public class HourOfPlayStats
     {
-        public void Apply(GameMode gameMode, DateTimeOffset day)
+        public void Apply(GameMode gameMode, DateTimeOffset day, DateTime time = default)
         {
+            time = time == default ? DateTime.UtcNow.Date : time;
+
             var gameLengthPerMode = PlayTimesPerMode.SingleOrDefault(m => m.GameMode == gameMode
                                                           && m.Day == day.Date);
 
@@ -20,10 +22,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 PlayTimesPerMode.Remove(PlayTimesPerMode[2]);
                 PlayTimesPerMode.Remove(PlayTimesPerMode[3]);
 
-                AddDay(PlayTimesPerMode, GameMode.GM_1v1, 0);
-                AddDay(PlayTimesPerMode, GameMode.GM_2v2, 0);
-                AddDay(PlayTimesPerMode, GameMode.GM_4v4, 0);
-                AddDay(PlayTimesPerMode, GameMode.FFA, 0);
+                AddDay(PlayTimesPerMode, GameMode.GM_1v1, 0, time);
+                AddDay(PlayTimesPerMode, GameMode.GM_2v2, 0, time);
+                AddDay(PlayTimesPerMode, GameMode.GM_4v4, 0, time);
+                AddDay(PlayTimesPerMode, GameMode.FFA, 0, time);
             }
 
             gameLengthPerMode = PlayTimesPerMode.Single(m => m.GameMode == gameMode
@@ -37,42 +39,43 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 
         public string Id { get; set; } = nameof(HourOfPlayStats);
 
-        public static HourOfPlayStats Create()
+        public static HourOfPlayStats Create(DateTime time = default)
         {
+            time = time == default ? DateTime.UtcNow.Date : time;
             return new HourOfPlayStats
             {
-                PlayTimesPerMode = Create14DaysOfPlaytime()
+                PlayTimesPerMode = Create14DaysOfPlaytime(time)
             };
         }
 
-        private static List<HourOfPlayPerMode> Create14DaysOfPlaytime()
+        private static List<HourOfPlayPerMode> Create14DaysOfPlaytime(DateTime time)
         {
             var hours = new List<HourOfPlayPerMode>();
             for (int i = 0; i < 14; i++)
             {
-                AddDay(hours, GameMode.GM_1v1, i);
-                AddDay(hours, GameMode.GM_2v2, i);
-                AddDay(hours, GameMode.GM_4v4, i);
-                AddDay(hours, GameMode.FFA, i);
+                AddDay(hours, GameMode.GM_1v1, i, time);
+                AddDay(hours, GameMode.GM_2v2, i, time);
+                AddDay(hours, GameMode.GM_4v4, i, time);
+                AddDay(hours, GameMode.FFA, i, time);
             }
 
             return hours;
         }
 
-        private static void AddDay(List<HourOfPlayPerMode> hours, GameMode gameMode, int i)
+        private static void AddDay(List<HourOfPlayPerMode> hours, GameMode gameMode, int i, DateTime time)
         {
             hours.Add(new HourOfPlayPerMode
             {
                 GameMode = gameMode,
                 PlayTimePerHour = CreateLengths(),
-                Day = DateTime.Today.AddDays(-i)
+                Day = time.AddDays(-i)
             });
         }
 
         private static List<HourOfPlay> CreateLengths()
         {
             var lengths = new List<HourOfPlay>();
-            var now = DateTimeOffset.UtcNow;
+            var now = DateTimeOffset.UtcNow.Date;
             for (var i = 0; i < 96; i++) // every 15 minutes
             {
                 lengths.Add(new HourOfPlay { Time = now.AddMinutes(i * 15)});
