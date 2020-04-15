@@ -39,6 +39,7 @@ namespace W3ChampionsStatisticService.Admin
                 && c != nameof(MatchStartedEvent)
                 && c != nameof(LeagueConstellationChangedEvent)
                 && c != nameof(RankingChangedEvent)
+                && c != nameof(PersonalSettings)
                 );
 
             foreach (var collection in allCollectionsExceptEvents)

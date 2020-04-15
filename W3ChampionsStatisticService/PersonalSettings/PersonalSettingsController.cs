@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             _personalSettingsRepository = personalSettingsRepository;
         }
 
-        [HttpPut("{battleTag}")]
+        [HttpGet("{battleTag}")]
         public async Task<IActionResult> ResetAllReadModels(string battleTag)
         {
             var setting = await _personalSettingsRepository.Load(battleTag);
@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 return Unauthorized("Sorry H4ckerb0i");
             }
 
-            var setting = await _personalSettingsRepository.Load(userInfo.battletag);
+            var setting = await _personalSettingsRepository.Load(userInfo.battletag) ?? new PersonalSetting();
             setting.ProfileMessage = command.Message;
             await _personalSettingsRepository.Save(setting);
 
