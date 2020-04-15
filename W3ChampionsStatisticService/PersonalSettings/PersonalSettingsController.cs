@@ -19,6 +19,13 @@ namespace W3ChampionsStatisticService.PersonalSettings
             _personalSettingsRepository = personalSettingsRepository;
         }
 
+        [HttpPut("{battleTag}")]
+        public async Task<IActionResult> ResetAllReadModels(string battleTag)
+        {
+            var setting = await _personalSettingsRepository.Load(battleTag);
+            return Ok(setting);
+        }
+
         [HttpPut("profile-message")]
         public async Task<IActionResult> ResetAllReadModels(
             [FromQuery] string authentication,
