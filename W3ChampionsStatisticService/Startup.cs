@@ -5,9 +5,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
@@ -54,6 +56,8 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IRankRepository, RankRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
+            services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
+            services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
 
             services.AddTransient<InsertMatchEventsCommandHandler>();
 
