@@ -9,6 +9,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
     {
         public GameMode GameMode { get; set; }
         public List<HourOfPlay> PlayTime { get; set; }
+        public DateTime Day { get; set; }
 
         public void Record(DateTimeOffset time)
         {

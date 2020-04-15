@@ -1,48 +1,72 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
     public class HourOfPlayStats
-    {public void Apply(GameMode gameMode, DateTimeOffset duration)
+    {
+        public void Apply(GameMode gameMode, DateTimeOffset day)
         {
-            var gameLengthPerMode = GameLengths.Single(m => m.GameMode == gameMode);
-            gameLengthPerMode.Record(duration);
+            var gameLengthPerMode = PlayTimes.SingleOrDefault(m => m.GameMode == gameMode
+                                                          && m.Day == day.Date);
+
+            if (gameLengthPerMode == null)
+            {
+                PlayTimes.Remove(PlayTimes[0]);
+                PlayTimes.Remove(PlayTimes[1]);
+                PlayTimes.Remove(PlayTimes[2]);
+                PlayTimes.Remove(PlayTimes[3]);
+
+                AddDay(PlayTimes, GameMode.GM_1v1, 0);
+                AddDay(PlayTimes, GameMode.GM_2v2, 0);
+                AddDay(PlayTimes, GameMode.GM_4v4, 0);
+                AddDay(PlayTimes, GameMode.FFA, 0);
+            }
+
+            gameLengthPerMode = PlayTimes.Single(m => m.GameMode == gameMode
+                                                          && m.Day == day.Date);
+
+            gameLengthPerMode.Record(day);
         }
 
-        public List<HourOfPlayPerMode> GameLengths { get; set; } = new List<HourOfPlayPerMode>();
+        [JsonIgnore]
+        public List<HourOfPlayPerMode> PlayTimes { get; set; } = new List<HourOfPlayPerMode>();
+
         public string Id { get; set; } = nameof(HourOfPlayStats);
 
         public static HourOfPlayStats Create()
         {
             return new HourOfPlayStats
             {
-                GameLengths = new List<HourOfPlayPerMode>
-                {
-                    new HourOfPlayPerMode
-                    {
-                        GameMode = GameMode.GM_1v1,
-                        PlayTime = CreateLengths()
-                    },
-                    new HourOfPlayPerMode
-                    {
-                        GameMode = GameMode.GM_2v2,
-                        PlayTime = CreateLengths()
-                    },
-                    new HourOfPlayPerMode
-                    {
-                        GameMode = GameMode.GM_4v4,
-                        PlayTime = CreateLengths()
-                    },
-                    new HourOfPlayPerMode
-                    {
-                        GameMode = GameMode.FFA,
-                        PlayTime = CreateLengths()
-                    }
-                }
+                PlayTimes = Create14DaysOfPlaytime()
             };
+        }
+
+        private static List<HourOfPlayPerMode> Create14DaysOfPlaytime()
+        {
+            var hours = new List<HourOfPlayPerMode>();
+            for (int i = 0; i < 14; i++)
+            {
+                AddDay(hours, GameMode.GM_1v1, i);
+                AddDay(hours, GameMode.GM_2v2, i);
+                AddDay(hours, GameMode.GM_4v4, i);
+                AddDay(hours, GameMode.FFA, i);
+            }
+
+            return hours;
+        }
+
+        private static void AddDay(List<HourOfPlayPerMode> hours, GameMode gameMode, int i)
+        {
+            hours.Add(new HourOfPlayPerMode
+            {
+                GameMode = gameMode,
+                PlayTime = CreateLengths(),
+                Day = DateTime.Today.AddDays(-i)
+            });
         }
 
         private static List<HourOfPlay> CreateLengths()
