@@ -14,26 +14,6 @@ namespace W3ChampionsStatisticService.PadEvents
         {
         }
 
-        public Task Insert(List<MatchFinishedEvent> events)
-        {
-            return InsertPadEvents(events);
-        }
-
-        private async Task InsertPadEvents<T>(List<T> events) where T : PadEvent
-        {
-            if (!events.Any()) return;
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<T>(typeof(T).Name);
-            try
-            {
-                await mongoCollection.InsertManyAsync(events, new InsertManyOptions { IsOrdered = false });
-            }
-            catch (MongoBulkWriteException)
-            {
-            }
-        }
-
         public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
         {
             lastObjectId ??= ObjectId.Empty.ToString();
@@ -47,21 +27,6 @@ namespace W3ChampionsStatisticService.PadEvents
                 .ToListAsync();
 
             return events;
-        }
-
-        public async Task Insert(List<MatchStartedEvent> events)
-        {
-            await InsertPadEvents(events);
-        }
-
-        public Task Insert(List<LeagueConstellationChangedEvent> events)
-        {
-            return UpsertMany(events);
-        }
-
-        public Task Insert(List<RankingChangedEvent> events)
-        {
-            return UpsertMany(events);
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagues()
@@ -85,11 +50,6 @@ namespace W3ChampionsStatisticService.PadEvents
             }
 
             return loadLeagueConstellation;
-        }
-
-        public Task Insert(List<MatchCanceledEvent> events)
-        {
-            return InsertPadEvents(events);
         }
     }
 }

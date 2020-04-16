@@ -2,7 +2,8 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Admin
@@ -37,8 +38,10 @@ namespace W3ChampionsStatisticService.Admin
             var allCollectionsExceptEvents = collectionNames.Where(c =>
                 c != nameof(MatchFinishedEvent)
                 && c != nameof(MatchStartedEvent)
+                && c != nameof(MatchCanceledEvent)
                 && c != nameof(LeagueConstellationChangedEvent)
                 && c != nameof(RankingChangedEvent)
+                && c != nameof(PersonalSetting)
                 );
 
             foreach (var collection in allCollectionsExceptEvents)
