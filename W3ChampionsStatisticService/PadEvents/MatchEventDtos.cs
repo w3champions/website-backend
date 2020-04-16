@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
+    [BsonIgnoreExtraElements]
     public class Mmr
     {
         public double rating { get; set; }
@@ -10,8 +12,11 @@ namespace W3ChampionsStatisticService.PadEvents
         public double vol { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
+    [BsonNoId]
     public class PlayerMMrChange
     {
+        [BsonElement("id")]
         public string id { get; set; }
         public string battleTag { get; set; }
         public int race { get; set; }
@@ -23,6 +28,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public Ranking updatedRanking { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class Ranking
     {
         public double rp { get; set; }
@@ -31,6 +37,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int leagueOrder { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class PlayerBlizzard
     {
         public int id { get; set; }
@@ -51,6 +58,8 @@ namespace W3ChampionsStatisticService.PadEvents
         public ResourceScore resourceScore { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
+    [BsonNoId]
     public class Match
     {
         public int state { get; set; }
@@ -58,13 +67,15 @@ namespace W3ChampionsStatisticService.PadEvents
         public int gameMode { get; set; }
         public int gateway { get; set; }
         public string host { get; set; }
+        [BsonElement("id")]
         public string id { get; set; }
-        public string mapId { get; set; }
+        public int mapId { get; set; }
         public string map { get; set; }
         public List<PlayerMMrChange> players { get; set; }
         public long endTime { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class OverallScore
     {
         public int UNIT_SCORE { get; set; }
@@ -73,6 +84,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int TOTAL_SCORE { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class UnitScore
     {
         public int UNITS_PRODUCED { get; set; }
@@ -82,12 +94,14 @@ namespace W3ChampionsStatisticService.PadEvents
         public int LARGEST_ARMY { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class Hero
     {
         public string icon { get; set; }
         public int level { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class HeroScore
     {
         public int HEROES_KILLED { get; set; }
@@ -97,6 +111,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int STRONGER_HEROES { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class ResourceScore
     {
         public int GOLD_COLLECTED { get; set; }
@@ -107,6 +122,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int GOLD_UPKEEP_LOST { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class MapInfo
     {
         public int elapsedGameTimeTotalSeconds { get; set; }
@@ -124,6 +140,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public string gameType { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class Result
     {
         public bool localPlayerWon { get; set; }
@@ -136,23 +153,26 @@ namespace W3ChampionsStatisticService.PadEvents
         public long id { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class MatchFinishedEvent : PadEvent
     {
         public Match match { get; set; }
         public Result result { get; set; }
     }
 
-
+    [BsonIgnoreExtraElements]
     public class MatchStartedEvent : PadEvent
     {
         public Match match { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class MatchCanceledEvent : PadEvent
     {
         public Match match { get; set; }
     }
 
+    [BsonIgnoreExtraElements]
     public class PadEvent
     {
         public ObjectId Id { get; set; }
