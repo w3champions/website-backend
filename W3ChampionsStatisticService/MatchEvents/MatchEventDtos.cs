@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.MatchEvents
 {

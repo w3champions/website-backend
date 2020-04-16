@@ -1,6 +1,5 @@
 using System.Linq;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace WC3ChampionsStatisticService.UnitTests
