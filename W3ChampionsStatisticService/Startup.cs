@@ -82,9 +82,7 @@ namespace W3ChampionsStatisticService
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
-
             app.UseRouting();
-
             app.UseCors(o => o
                 .AllowAnyOrigin()
                 .AllowAnyHeader()
