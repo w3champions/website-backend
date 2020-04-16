@@ -54,6 +54,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
     public class Match
     {
+    
         public string host { get; set; }
         public string id { get; set; }
         public long state { get; set; }
