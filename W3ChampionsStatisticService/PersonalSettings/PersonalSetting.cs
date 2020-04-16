@@ -8,6 +8,7 @@
         }
 
         public string ProfileMessage { get; set; }
+        public string HomePage { get; set; }
         public string ProfilePicture { get; set; }
         public string Id { get; set; }
     }

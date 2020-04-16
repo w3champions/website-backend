@@ -27,9 +27,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         [HttpPut("profile-message")]
-        public async Task<IActionResult> ResetAllReadModels(
+        public async Task<IActionResult> SetProfileMessage(
             [FromQuery] string authentication,
-            [FromBody] ProfileMessageCommand command)
+            [FromBody] ProfileCommand command)
         {
             var userInfo = await _authenticationService.GetUser(authentication);
             if (userInfo == null)
@@ -38,16 +38,34 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var setting = await _personalSettingsRepository.Load(userInfo.battletag) ?? new PersonalSetting(userInfo.battletag);
-            setting.ProfileMessage = command.Message;
+            setting.ProfileMessage = command.Value;
+            await _personalSettingsRepository.Save(setting);
+
+            return Ok();
+        }
+
+        [HttpPut("home-page")]
+        public async Task<IActionResult> SetHomePage(
+            [FromQuery] string authentication,
+            [FromBody] ProfileCommand command)
+        {
+            var userInfo = await _authenticationService.GetUser(authentication);
+            if (userInfo == null)
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            var setting = await _personalSettingsRepository.Load(userInfo.battletag) ?? new PersonalSetting(userInfo.battletag);
+            setting.HomePage = command.Value;
             await _personalSettingsRepository.Save(setting);
 
             return Ok();
         }
 
         [HttpPut("profile-picture")]
-        public async Task<IActionResult> ResetAllReadModels(
+        public async Task<IActionResult> SetProfilePicture(
             [FromQuery] string authentication,
-            [FromBody] ProfilePictureCommand command)
+            [FromBody] ProfileCommand command)
         {
             var userInfo = await _authenticationService.GetUser(authentication);
             if (userInfo == null)
@@ -56,7 +74,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var setting = await _personalSettingsRepository.Load(userInfo.battletag);
-            setting.ProfilePicture = command.Picture;
+            setting.ProfilePicture = command.Value;
             await _personalSettingsRepository.Save(setting);
 
             return Ok();
