@@ -8,18 +8,16 @@ namespace W3ChampionsStatisticService.PadEvents
         public double rating { get; set; }
         public double rd { get; set; }
         public double vol { get; set; }
-        public double rp { get; set; }
-        public double updatedRp { get; set; }
     }
 
     public class PlayerMMrChange
     {
-        public string battleTag { get; set; }
         public string id { get; set; }
-        public string inviteName { get; set; }
+        public string battleTag { get; set; }
         public int race { get; set; }
-        public Mmr mmr { get; set; }
+
         public bool won { get; set; }
+        public Mmr mmr { get; set; }
         public Mmr updatedMmr { get; set; }
         public Ranking ranking { get; set; }
         public Ranking updatedRanking { get; set; }
@@ -27,9 +25,10 @@ namespace W3ChampionsStatisticService.PadEvents
 
     public class Ranking
     {
-        public int leagueOrder { get; set; }
         public double rp { get; set; }
         public int rank { get; set; }
+        public int leagueId { get; set; }
+        public int leagueOrder { get; set; }
     }
 
     public class PlayerBlizzard
@@ -54,15 +53,15 @@ namespace W3ChampionsStatisticService.PadEvents
 
     public class Match
     {
-    
-        public string host { get; set; }
-        public string id { get; set; }
-        public long state { get; set; }
+        public int state { get; set; }
         public long startTime { get; set; }
-        public List<PlayerMMrChange> players { get; set; }
-        public string map { get; set; }
         public int gameMode { get; set; }
         public int gateway { get; set; }
+        public string host { get; set; }
+        public string id { get; set; }
+        public string mapId { get; set; }
+        public string map { get; set; }
+        public List<PlayerMMrChange> players { get; set; }
         public long endTime { get; set; }
     }
 
