@@ -45,8 +45,6 @@ namespace W3ChampionsStatisticService
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
-            services.AddMongoDbSetup(mongoClient);
-
             services.AddSingleton(typeof(TrackingService));
             
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
@@ -58,8 +56,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
-
-            services.AddTransient<InsertMatchEventsCommandHandler>();
 
             if (doRunAsyncHandler == "true")
             {
@@ -86,9 +82,7 @@ namespace W3ChampionsStatisticService
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
-
             app.UseRouting();
-
             app.UseCors(o => o
                 .AllowAnyOrigin()
                 .AllowAnyHeader()
@@ -105,26 +99,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<ReadModelHandler<T>>();
             services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
             return services;
-        }
-
-        public static IServiceCollection AddMongoDbSetup(
-            this IServiceCollection services,
-            IMongoClient mongoClient)
-        {
-            var db = mongoClient.GetDatabase("W3Champions-Statistic-Service");
-            db.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent))
-                .Indexes.CreateOne(CreateIndexModel<MatchFinishedEvent>());
-            db.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent))
-                .Indexes.CreateOne(CreateIndexModel<MatchStartedEvent>());
-            return services;
-        }
-
-        private static CreateIndexModel<T> CreateIndexModel<T>()
-        {
-            var keys = Builders<T>.IndexKeys.Ascending("match.id");
-            var indexOptions = new CreateIndexOptions {Unique = true};
-            var model = new CreateIndexModel<T>(keys, indexOptions);
-            return model;
         }
 
         public static IServiceCollection AddUnversionesReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
