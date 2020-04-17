@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using W3ChampionsStatisticService.MatchEvents;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Matches

@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
+using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
@@ -79,6 +80,16 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
                 .ToListAsync();
 
             return stats;
+        }
+
+        public Task<HourOfPlayStats> LoadHourOfPlay()
+        {
+            return LoadFirst<HourOfPlayStats>(s => s.Id == nameof(HourOfPlayStats));
+        }
+
+        public Task Save(HourOfPlayStats stat)
+        {
+            return Upsert(stat, s => s.Id == stat.Id);
         }
     }
 }

@@ -6,7 +6,7 @@ using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.MatchEvents
+namespace W3ChampionsStatisticService.PadEvents
 {
     public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
     {
