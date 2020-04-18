@@ -39,7 +39,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var dateTime = new DateTime(2020, 10, 16);
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(15), dateTime.AddDays(15));
+            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(1), dateTime.AddDays(1));
 
             Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
         }

@@ -22,10 +22,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 PlayTimesPerMode.Remove(PlayTimesPerMode.Last());
                 PlayTimesPerMode.Remove(PlayTimesPerMode.Last());
 
-                AddDay(PlayTimesPerMode, GameMode.GM_1v1, 0, now);
-                AddDay(PlayTimesPerMode, GameMode.GM_2v2, 0, now);
-                AddDay(PlayTimesPerMode, GameMode.GM_4v4, 0, now);
+                PlayTimesPerMode.Reverse();
                 AddDay(PlayTimesPerMode, GameMode.FFA, 0, now);
+                AddDay(PlayTimesPerMode, GameMode.GM_4v4, 0, now);
+                AddDay(PlayTimesPerMode, GameMode.GM_2v2, 0, now);
+                AddDay(PlayTimesPerMode, GameMode.GM_1v1, 0, now);
+                PlayTimesPerMode.Reverse();
             }
 
             gameLengthPerMode = PlayTimesPerMode.Single(m => m.GameMode == gameMode
