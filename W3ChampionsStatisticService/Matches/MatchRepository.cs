@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.Matches
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
             var events = await mongoCollection
-                .Find(m =>m.Teams
+                .Find(m => m.Teams
                            .Any(t => t.Players
                                .Any(p => p.Id.Equals(playerId))))
                 .SortByDescending(s => s.StartTime)
@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.Matches
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                 m.Teams
                     .Any(t => t.Players
-                    .Any(p => p.Id.Equals(playerId))));
+                        .Any(p => p.Id.Equals(playerId))));
         }
 
         public async Task<List<Matchup>> Load(
