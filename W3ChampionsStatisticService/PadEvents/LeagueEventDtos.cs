@@ -1,5 +1,4 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents
 {

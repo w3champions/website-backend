@@ -12,31 +12,58 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         {
             now = now == default ? DateTime.UtcNow.Date : now;
 
-            var gameLengthPerMode = PlayTimesPerMode.SingleOrDefault(m => m.GameMode == gameMode
+            var gameLengthPerMode = PlayTimesPerModeTwoWeeks.SingleOrDefault(m => m.GameMode == gameMode
                                                           && m.Day.Date == timeOfGame.Date);
 
             if (gameLengthPerMode == null)
             {
-                PlayTimesPerMode.Remove(PlayTimesPerMode.Last());
-                PlayTimesPerMode.Remove(PlayTimesPerMode.Last());
-                PlayTimesPerMode.Remove(PlayTimesPerMode.Last());
-                PlayTimesPerMode.Remove(PlayTimesPerMode.Last());
+                PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
+                PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
+                PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
+                PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
 
-                PlayTimesPerMode.Reverse();
-                AddDay(PlayTimesPerMode, GameMode.FFA, 0, now);
-                AddDay(PlayTimesPerMode, GameMode.GM_4v4, 0, now);
-                AddDay(PlayTimesPerMode, GameMode.GM_2v2, 0, now);
-                AddDay(PlayTimesPerMode, GameMode.GM_1v1, 0, now);
-                PlayTimesPerMode.Reverse();
+                PlayTimesPerModeTwoWeeks.Reverse();
+                AddDay(PlayTimesPerModeTwoWeeks, GameMode.FFA, 0, now);
+                AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_4v4, 0, now);
+                AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_2v2, 0, now);
+                AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_1v1, 0, now);
+                PlayTimesPerModeTwoWeeks.Reverse();
             }
 
-            gameLengthPerMode = PlayTimesPerMode.Single(m => m.GameMode == gameMode
+            gameLengthPerMode = PlayTimesPerModeTwoWeeks.Single(m => m.GameMode == gameMode
                                                           && m.Day.Date == timeOfGame.Date);
 
             gameLengthPerMode.Record(timeOfGame);
+            PlayTimesPerMode = CalculateAverage(PlayTimesPerModeTwoWeeks);
+        }
+
+        private List<HourOfPlayPerMode> CalculateAverage(List<HourOfPlayPerMode> playTimesPerModeTwoWeeks)
+        {
+            var groupBy = playTimesPerModeTwoWeeks.GroupBy(f => f.GameMode);
+            return groupBy.Select(f => CreateThing(f)).ToList();
+        }
+
+        private HourOfPlayPerMode CreateThing(IGrouping<GameMode,HourOfPlayPerMode> hourOfPlayPerModes)
+        {
+            var hourOfPlaysPerDay = hourOfPlayPerModes
+                .SelectMany(h => h.PlayTimePerHour)
+                .GroupBy(d => d.Time.TimeOfDay)
+                .ToList();
+            var hourOfPlays = hourOfPlaysPerDay.Select(f => new HourOfPlay
+            {
+                Time = new DateTime(2000, 1, 1, f.Key.Hours, f.Key.Hours, f.Key.Hours),
+                Games = f.Sum(r => r.Games)
+            }).ToList();
+            return new HourOfPlayPerMode
+            {
+                PlayTimePerHour = hourOfPlays,
+                GameMode = hourOfPlayPerModes.First().GameMode,
+                Day = hourOfPlayPerModes.First().Day
+            };
         }
 
         [JsonIgnore]
+        public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
         public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
 
         public string Id { get; set; } = nameof(HourOfPlayStats);
@@ -44,9 +71,17 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         public static HourOfPlayStats Create(DateTime time = default)
         {
             time = time == default ? DateTime.UtcNow.Date : time;
+
+            var average = new List<HourOfPlayPerMode>();
+            AddDay(average, GameMode.GM_1v1, 0, time);
+            AddDay(average, GameMode.GM_2v2, 0, time);
+            AddDay(average, GameMode.GM_4v4, 0, time);
+            AddDay(average, GameMode.FFA, 0, time);
+
             return new HourOfPlayStats
             {
-                PlayTimesPerMode = Create14DaysOfPlaytime(time)
+                PlayTimesPerModeTwoWeeks = Create14DaysOfPlaytime(time),
+                PlayTimesPerMode = average
             };
         }
 
