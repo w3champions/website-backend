@@ -18,7 +18,11 @@ namespace W3ChampionsStatisticService.Matches
             return Upsert(matchup, m => m.Id == matchup.Id);
         }
 
-        public async Task<List<Matchup>> LoadFor(string playerId, int pageSize = 50, int offset = 0)
+        public async Task<List<Matchup>> LoadFor(
+            string playerId,
+            string opponentId = null,
+            int pageSize = 50,
+            int offset = 0)
         {
             var database = CreateClient();
 
@@ -41,7 +45,9 @@ namespace W3ChampionsStatisticService.Matches
             return CreateCollection<Matchup>().CountDocumentsAsync(x => true);
         }
 
-        public Task<long> CountFor(string playerId)
+        public Task<long> CountFor(
+            string playerId,
+            string opponentId = null)
         {
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                 m.Teams
