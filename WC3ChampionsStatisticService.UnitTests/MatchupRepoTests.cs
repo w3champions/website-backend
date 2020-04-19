@@ -123,7 +123,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, count);
             Assert.AreEqual("peter#123@10", matches.Single().Teams.First().Players.Single().Id);
-            Assert.AreEqual("wolf#456@10", matches.Single().Teams.First().Players.Single().Id);
+            Assert.AreEqual("wolf#456@10", matches.Single().Teams.Last().Players.Single().Id);
         }
     }
 }
