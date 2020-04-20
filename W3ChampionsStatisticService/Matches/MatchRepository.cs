@@ -18,22 +18,36 @@ namespace W3ChampionsStatisticService.Matches
             return Upsert(matchup, m => m.Id == matchup.Id);
         }
 
-        public async Task<List<Matchup>> LoadFor(string playerId, int pageSize = 50, int offset = 0)
+        public async Task<List<Matchup>> LoadFor(
+            string playerId,
+            string opponentId = null,
+            int pageSize = 50,
+            int offset = 0)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
-            var events = await mongoCollection
-                .Find(m =>m.Teams
-                           .Any(t => t.Players
-                               .Any(p => p.Id.Equals(playerId))))
+            if (string.IsNullOrEmpty(opponentId))
+            {
+                return await mongoCollection
+                    .Find(m => m.Teams
+                        .Any(t => t.Players
+                            .Any(p => p.Id.Equals(playerId))))
+                    .SortByDescending(s => s.StartTime)
+                    .Skip(offset)
+                    .Limit(pageSize)
+                    .ToListAsync();
+            }
+
+            return await mongoCollection
+                .Find(m =>
+                    (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
+                    || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
-
-            return events;
         }
 
         public Task<long> Count()
@@ -41,12 +55,22 @@ namespace W3ChampionsStatisticService.Matches
             return CreateCollection<Matchup>().CountDocumentsAsync(x => true);
         }
 
-        public Task<long> CountFor(string playerId)
+        public Task<long> CountFor(
+            string playerId,
+            string opponentId = null)
         {
-            return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                m.Teams
-                    .Any(t => t.Players
-                    .Any(p => p.Id.Equals(playerId))));
+            var mongoCollection = CreateCollection<Matchup>();
+            if (string.IsNullOrEmpty(opponentId))
+            {
+                return mongoCollection.CountDocumentsAsync(m =>
+                    m.Teams
+                        .Any(t => t.Players
+                            .Any(p => p.Id.Equals(playerId))));
+            }
+
+            return mongoCollection.CountDocumentsAsync(m =>
+                (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
+                || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId));
         }
 
         public async Task<List<Matchup>> Load(

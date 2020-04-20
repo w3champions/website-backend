@@ -29,11 +29,12 @@ namespace W3ChampionsStatisticService.Matches
         [HttpGet("search")]
         public async Task<IActionResult> GetMatchesPerPlayer(
             string playerId,
+            string opponentId = null,
             int offset = 0,
             int pageSize = 100)
         {
-            var matches = await _matchRepository.LoadFor(playerId, pageSize, offset);
-            var count = await _matchRepository.CountFor(playerId);
+            var matches = await _matchRepository.LoadFor(playerId, opponentId, pageSize, offset);
+            var count = await _matchRepository.CountFor(playerId, opponentId);
             return Ok(new { matches, count });
         }
     }
