@@ -32,10 +32,10 @@ namespace W3ChampionsStatisticService.Matches
             if (string.IsNullOrEmpty(opponentId))
             {
                 return await mongoCollection
-                    .Find(m =>  m.GameMode == gameMode
-                                && m.Teams
-                                    .Any(t => t.Players
-                                        .Any(p => p.Id.Equals(playerId))))
+                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                               && m.Teams
+                                   .Any(t => t.Players
+                                       .Any(p => p.Id.Equals(playerId))))
                     .SortByDescending(s => s.StartTime)
                     .Skip(offset)
                     .Limit(pageSize)
@@ -69,7 +69,7 @@ namespace W3ChampionsStatisticService.Matches
             if (string.IsNullOrEmpty(opponentId))
             {
                 return mongoCollection.CountDocumentsAsync(m =>
-                    m.GameMode == gameMode &&
+                    (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                     m.Teams
                         .Any(t => t.Players
                             .Any(p => p.Id.Equals(playerId))));
