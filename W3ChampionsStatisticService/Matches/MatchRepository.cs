@@ -32,7 +32,8 @@ namespace W3ChampionsStatisticService.Matches
             if (string.IsNullOrEmpty(opponentId))
             {
                 return await mongoCollection
-                    .Find(m => m.Teams
+                    .Find(m => m.GameMode < gameMode
+                               && m.Teams
                         .Any(t => t.Players
                             .Any(p => p.Id.Equals(playerId))))
                     .SortByDescending(s => s.StartTime)
@@ -42,9 +43,12 @@ namespace W3ChampionsStatisticService.Matches
             }
 
             return await mongoCollection
-                .Find(m =>
-                    (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
-                    || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId))
+                .Find(m => m.GameMode < gameMode &&
+                             (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId)
+                          || (m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
+                          || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId)
+                          || (m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId)
+                             )
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -65,14 +69,19 @@ namespace W3ChampionsStatisticService.Matches
             if (string.IsNullOrEmpty(opponentId))
             {
                 return mongoCollection.CountDocumentsAsync(m =>
+                    m.GameMode < gameMode &&
                     m.Teams
                         .Any(t => t.Players
                             .Any(p => p.Id.Equals(playerId))));
             }
 
             return mongoCollection.CountDocumentsAsync(m =>
-                (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
-                || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId));
+                m.GameMode < gameMode &&
+                (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId)
+                || (m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
+                || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId)
+                || (m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId)
+                );
         }
 
         public async Task<List<Matchup>> Load(
