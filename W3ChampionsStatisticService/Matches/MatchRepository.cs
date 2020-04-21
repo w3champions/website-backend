@@ -42,6 +42,7 @@ namespace W3ChampionsStatisticService.Matches
                     .ToListAsync();
             }
 
+            // this is fing hacky, fix when there is a good idea
             return await mongoCollection
                 .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                             (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
@@ -83,6 +84,7 @@ namespace W3ChampionsStatisticService.Matches
                             .Any(p => p.Id.Equals(playerId))));
             }
 
+            // this is fing hacky, fix when there is a good idea
             return mongoCollection.CountDocumentsAsync(m =>
                 (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                 (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
