@@ -46,6 +46,16 @@ namespace W3ChampionsStatisticService.Matches
                 .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                             (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
                             || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+
+                            || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                            || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+                            || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                            || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+
+                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                            || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                            || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[1].Id == opponentId
                              ))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
@@ -77,6 +87,16 @@ namespace W3ChampionsStatisticService.Matches
                 (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                 (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
                 || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+
+                || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+                || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+
+                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[1].Id == opponentId
                 ));
         }
 
