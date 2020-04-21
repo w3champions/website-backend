@@ -36,6 +36,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public RaceStats RaceStats { get; set; }
         public GameModeStats GameModeStats { get; set; }
 
+        public long GetWinsPerRace(Race race)
+        {
+            var raceStat = RaceStats.Single(r => r.Race == race);
+            return raceStat.Wins;
+        }
+
         public void RecordWin(Race race, GameMode mode, bool won, int updatedMmrRating)
         {
             GameModeStats.RecordGame(mode, won, updatedMmrRating);

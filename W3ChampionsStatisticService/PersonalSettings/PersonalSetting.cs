@@ -1,4 +1,7 @@
-﻿namespace W3ChampionsStatisticService.PersonalSettings
+﻿using System.Collections.Generic;
+using W3ChampionsStatisticService.PlayerProfiles;
+
+namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting
     {
@@ -9,7 +12,42 @@
 
         public string ProfileMessage { get; set; }
         public string HomePage { get; set; }
-        public string ProfilePicture { get; set; }
+        public ProfilePicture ProfilePicture { get; set; }
         public string Id { get; set; }
+
+        public bool SetProfilePicture(PlayerProfile player, Race race, long pictureId)
+        {
+            var winsPerRace = player.GetWinsPerRace(race);
+            if (winsPerRace >= PictureRange[pictureId])
+            {
+                ProfilePicture = new ProfilePicture(race, pictureId);
+                return true;
+            }
+
+            return false;
+        }
+
+        private Dictionary<long, long> PictureRange = new Dictionary<long, long>
+        {
+            {0, 0},
+            {1, 5},
+            {2, 20},
+            {3, 75},
+            {4, 200},
+            {5, 500},
+            {6, 1000},
+        };
+    }
+
+    public class ProfilePicture
+    {
+        public Race Race { get; }
+        public long PictureId { get; }
+
+        public ProfilePicture(Race race, long pictureId)
+        {
+            Race = race;
+            PictureId = pictureId;
+        }
     }
 }
