@@ -21,6 +21,7 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<List<Matchup>> LoadFor(
             string playerId,
             string opponentId = null,
+            GameMode gameMode = GameMode.Undefined,
             int pageSize = 50,
             int offset = 0)
         {
@@ -57,7 +58,8 @@ namespace W3ChampionsStatisticService.Matches
 
         public Task<long> CountFor(
             string playerId,
-            string opponentId = null)
+            string opponentId = null,
+            GameMode gameMode = GameMode.Undefined)
         {
             var mongoCollection = CreateCollection<Matchup>();
             if (string.IsNullOrEmpty(opponentId))
