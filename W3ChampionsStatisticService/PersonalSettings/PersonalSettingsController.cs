@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Authorization;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
@@ -10,13 +11,16 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
+        private readonly IPlayerRepository _playerRepository;
 
         public PersonalSettingsController(
             IBlizzardAuthenticationService authenticationService,
-            IPersonalSettingsRepository personalSettingsRepository)
+            IPersonalSettingsRepository personalSettingsRepository,
+            IPlayerRepository playerRepository)
         {
             _authenticationService = authenticationService;
             _personalSettingsRepository = personalSettingsRepository;
+            _playerRepository = playerRepository;
         }
 
         [HttpGet("{battleTag}")]
@@ -65,7 +69,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [HttpPut("profile-picture")]
         public async Task<IActionResult> SetProfilePicture(
             [FromQuery] string authentication,
-            [FromBody] ProfileCommand command)
+            [FromBody] SetPictureCommand command)
         {
             var userInfo = await _authenticationService.GetUser(authentication);
             if (userInfo == null)
@@ -73,8 +77,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 return Unauthorized("Sorry H4ckerb0i");
             }
 
+            var player = await _playerRepository.Load($"{userInfo.battletag}@{command.GateWay}");
             var setting = await _personalSettingsRepository.Load(userInfo.battletag);
-            setting.ProfilePicture = command.Value;
+            var result = setting.SetProfilePicture(player, command.Race, command.PictureId);
+            if (!result) return BadRequest();
+
             await _personalSettingsRepository.Save(setting);
 
             return Ok();
