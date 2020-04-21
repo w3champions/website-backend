@@ -130,16 +130,39 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task SearchForGameMode2v2_NotFound()
         {
             var matchRepository = new MatchRepository(MongoClient);
-
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-
             matchFinishedEvent1.match.gameMode = 1;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-
             var matches = await matchRepository.Load(GameMode.GM_2v2);
 
             Assert.AreEqual(0, matches.Count);
+        }
+
+        [Test]
+        public async Task SearchForGameMode2v2_Found()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent1.match.gameMode = 2;
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            var matches = await matchRepository.Load(GameMode.GM_2v2);
+
+            Assert.AreEqual(1, matches.Count);
+        }
+
+        [Test]
+        public async Task SearchForGameMode2v2_LoadDefault()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent1.match.gameMode = 2;
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            var matches = await matchRepository.Load();
+
+            Assert.AreEqual(1, matches.Count);
         }
     }
 }
