@@ -127,6 +127,82 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task SearchForPlayerAndOpponent_2v2_SameTeam()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.players[0].id = "peter#123@10";
+            matchFinishedEvent1.match.players[1].id = "wolf#456@10";
+            matchFinishedEvent1.match.players[2].id = "LostTeam1#456@10";
+            matchFinishedEvent1.match.players[3].id = "LostTeam2#456@10";
+
+            matchFinishedEvent2.match.players[0].id = "peter#123@10";
+            matchFinishedEvent2.match.players[1].id = "ANDERER#456@10";
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            var matches = await matchRepository.LoadFor("peter#123@10", "wolf#456@10");
+            var count = await matchRepository.CountFor("peter#123@10", "wolf#456@10");
+
+            Assert.AreEqual(0, count);
+        }
+
+        [Test]
+        public async Task SearchForPlayerAndOpponent_2v2()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.players[0].id = "peter#123@10";
+            matchFinishedEvent1.match.players[1].id = "LostTeam1#456@10";
+            matchFinishedEvent1.match.players[2].id = "wolf#456@10";
+            matchFinishedEvent1.match.players[3].id = "LostTeam2#456@10";
+
+            matchFinishedEvent2.match.players[0].id = "peter#123@10";
+            matchFinishedEvent2.match.players[1].id = "ANDERER#456@10";
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            var matches = await matchRepository.LoadFor("peter#123@10", "wolf#456@10");
+            var count = await matchRepository.CountFor("peter#123@10", "wolf#456@10");
+
+            Assert.AreEqual(1, count);
+            Assert.AreEqual("peter#123@10", matches.Single().Teams[0].Players[0].Id);
+            Assert.AreEqual("wolf#456@10", matches.Single().Teams[1].Players[0].Id);
+        }
+
+        [Test]
+        public async Task SearchForPlayerAndOpponent_2v2And1V1()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.players[0].id = "peter#123@10";
+            matchFinishedEvent1.match.players[1].id = "LostTeam1#456@10";
+            matchFinishedEvent1.match.players[2].id = "wolf#456@10";
+            matchFinishedEvent1.match.players[3].id = "LostTeam2#456@10";
+
+            matchFinishedEvent2.match.players[0].id = "peter#123@10";
+            matchFinishedEvent2.match.players[1].id = "wolf#456@10";
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            var matches = await matchRepository.LoadFor("peter#123@10", "wolf#456@10");
+            var count = await matchRepository.CountFor("peter#123@10", "wolf#456@10");
+
+            Assert.AreEqual(2, count);
+            Assert.AreEqual("peter#123@10", matches[0].Teams[0].Players[0].Id);
+            Assert.AreEqual("peter#123@10", matches[1].Teams[0].Players[0].Id);
+        }
+
+        [Test]
         public async Task SearchForGameMode2v2_NotFound()
         {
             var matchRepository = new MatchRepository(MongoClient);
