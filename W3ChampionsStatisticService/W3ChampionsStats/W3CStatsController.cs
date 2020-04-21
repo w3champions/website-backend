@@ -39,6 +39,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Ok(stats);
         }
 
+        [HttpGet("play-hours")]
+        public async Task<IActionResult> GetPlayHours()
+        {
+            var stats = await _w3StatsRepo.LoadHourOfPlay();
+            return Ok(stats);
+        }
+
         [HttpGet("distinct-players-per-day")]
         public async Task<IActionResult> DistinctPlayersPerDay(DateTimeOffset from = default, DateTimeOffset to = default)
         {
