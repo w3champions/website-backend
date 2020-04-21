@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.Matches
             string playerId,
             string opponentId = null,
             GameMode gameMode = GameMode.Undefined,
-            int pageSize = 50,
+            int pageSize = 100,
             int offset = 0)
         {
             var database = CreateClient();
@@ -105,7 +105,7 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<List<Matchup>> Load(
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
-            int pageSize = 50,
+            int pageSize = 100,
             int gateWay = 10)
         {
             var database = CreateClient();
