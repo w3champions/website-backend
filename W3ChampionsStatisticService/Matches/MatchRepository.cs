@@ -21,7 +21,8 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<List<Matchup>> LoadFor(
             string playerId,
             string opponentId = null,
-            int pageSize = 50,
+            GameMode gameMode = GameMode.Undefined,
+            int pageSize = 100,
             int offset = 0)
         {
             var database = CreateClient();
@@ -31,19 +32,32 @@ namespace W3ChampionsStatisticService.Matches
             if (string.IsNullOrEmpty(opponentId))
             {
                 return await mongoCollection
-                    .Find(m => m.Teams
-                        .Any(t => t.Players
-                            .Any(p => p.Id.Equals(playerId))))
+                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                               && m.Teams
+                                   .Any(t => t.Players
+                                       .Any(p => p.Id.Equals(playerId))))
                     .SortByDescending(s => s.StartTime)
                     .Skip(offset)
                     .Limit(pageSize)
                     .ToListAsync();
             }
 
+            // this is fing hacky, fix when there is a good idea
             return await mongoCollection
-                .Find(m =>
-                    (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
-                    || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId))
+                .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
+                            (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+
+                            || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                            || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+                            || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                            || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+
+                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                            || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                            || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                             ))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -57,32 +71,49 @@ namespace W3ChampionsStatisticService.Matches
 
         public Task<long> CountFor(
             string playerId,
-            string opponentId = null)
+            string opponentId = null,
+            GameMode gameMode = GameMode.Undefined)
         {
             var mongoCollection = CreateCollection<Matchup>();
             if (string.IsNullOrEmpty(opponentId))
             {
                 return mongoCollection.CountDocumentsAsync(m =>
+                    (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                     m.Teams
                         .Any(t => t.Players
                             .Any(p => p.Id.Equals(playerId))));
             }
 
+            // this is fing hacky, fix when there is a good idea
             return mongoCollection.CountDocumentsAsync(m =>
-                (m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId)
-                || (m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId));
+                (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
+                (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+
+                || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+                || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId
+                || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+
+                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                ));
         }
 
         public async Task<List<Matchup>> Load(
+            GameMode gameMode = GameMode.Undefined,
             int offset = 0,
-            int pageSize = 50,
+            int pageSize = 100,
             int gateWay = 10)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
-            var events = await mongoCollection.Find(m => m.GateWay == gateWay)
+            var events = await mongoCollection.Find(m => m.GateWay == gateWay
+                                                         && (gameMode == GameMode.Undefined || m.GameMode == gameMode))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
