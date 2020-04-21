@@ -125,5 +125,21 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("peter#123@10", matches.Single().Teams.First().Players.Single().Id);
             Assert.AreEqual("wolf#456@10", matches.Single().Teams.Last().Players.Single().Id);
         }
+
+        [Test]
+        public async Task SearchForGameMode2v2_NotFound()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.gameMode = 1;
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+
+            var matches = await matchRepository.Load(GameMode.GM_2v2);
+
+            Assert.AreEqual(0, matches.Count);
+        }
     }
 }
