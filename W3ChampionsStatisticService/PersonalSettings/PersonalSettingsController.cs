@@ -26,7 +26,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> ResetAllReadModels(string battleTag)
         {
-            var setting = await _personalSettingsRepository.Load(battleTag);
+            var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
             return Ok(setting);
         }
 
