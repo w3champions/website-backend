@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return false;
         }
 
-        private Dictionary<long, long> PictureRange = new Dictionary<long, long>
+        private Dictionary<long, long> PictureRange => new Dictionary<long, long>
         {
             {0, 0},
             {1, 5},
