@@ -26,7 +26,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> ResetAllReadModels(string battleTag)
         {
-            var setting = await _personalSettingsRepository.Load(battleTag);
+            var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
             return Ok(setting);
         }
 
@@ -78,7 +78,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var player = await _playerRepository.Load($"{userInfo.battletag}@{command.GateWay}");
-            var setting = await _personalSettingsRepository.Load(userInfo.battletag);
+            if (player == null) return BadRequest();
+
+            var setting = await _personalSettingsRepository.Load(userInfo.battletag) ?? new PersonalSetting(userInfo.battletag);
+
             var result = setting.SetProfilePicture(player, command.Race, command.PictureId);
             if (!result) return BadRequest();
 
