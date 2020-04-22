@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public string ProfileMessage { get; set; }
         public string HomePage { get; set; }
-        public ProfilePicture ProfilePicture { get; set; }
+        public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }
 
         public bool SetProfilePicture(PlayerProfile player, Race race, long pictureId)
@@ -37,17 +37,5 @@ namespace W3ChampionsStatisticService.PersonalSettings
             {5, 500},
             {6, 1000},
         };
-    }
-
-    public class ProfilePicture
-    {
-        public Race Race { get; }
-        public long PictureId { get; }
-
-        public ProfilePicture(Race race, long pictureId)
-        {
-            Race = race;
-            PictureId = pictureId;
-        }
     }
 }
