@@ -50,6 +50,21 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public void SetProfilePicture_AllowedPictures()
+        {
+            var personalSetting = new PersonalSetting("peter#123");
+
+            var player = PlayerProfile.Create("peter#123@10", "peter#123");
+            for (int i = 0; i < 20; i++)
+            {
+                player.RecordWin(Race.HU, GameMode.GM_1v1, true, 1000);
+            }
+
+            personalSetting.Players = new List<PlayerProfile> { player };
+            Assert.AreEqual(2, personalSetting.PickablePicture[Race.HU]);
+        }
+
+        [Test]
         public async Task RepoLoadWithJoin()
         {
             var playerRepository = new PlayerRepository(MongoClient);

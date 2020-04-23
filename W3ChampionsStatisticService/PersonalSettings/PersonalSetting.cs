@@ -35,6 +35,20 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return false;
         }
 
+        public Dictionary<Race, long> PickablePicture => new Dictionary<Race, long>
+        {
+            { Race.HU, GetMaxOf(Player.GetWinsPerRace(Race.HU)) },
+            { Race.OC, GetMaxOf(Player.GetWinsPerRace(Race.OC)) },
+            { Race.NE, GetMaxOf(Player.GetWinsPerRace(Race.NE)) },
+            { Race.UD, GetMaxOf(Player.GetWinsPerRace(Race.UD)) },
+            { Race.RnD, GetMaxOf(Player.GetWinsPerRace(Race.RnD)) },
+        };
+
+        private long GetMaxOf(long getWinsPerRace)
+        {
+            return PictureRange.Where(r => r.Value <= getWinsPerRace).Max(r => r.Key);
+        }
+
         private Dictionary<long, long> PictureRange => new Dictionary<long, long>
         {
             {0, 0},
