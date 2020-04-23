@@ -36,7 +36,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return false;
         }
 
-        public List<RaceToMaxPicture> PickablePicture => new List<RaceToMaxPicture>
+        public List<RaceToMaxPicture> PickablePictures => new List<RaceToMaxPicture>
         {
             new RaceToMaxPicture(Race.HU, GetMaxOf(Player.GetWinsPerRace(Race.HU)) ),
             new RaceToMaxPicture(Race.OC, GetMaxOf(Player.GetWinsPerRace(Race.OC)) ),

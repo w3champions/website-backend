@@ -62,7 +62,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             personalSetting.Players = new List<PlayerProfile> { player };
-            Assert.AreEqual(2, personalSetting.PickablePicture.Single(r => r.Race == Race.HU).Max);
+            Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.Race == Race.HU).Max);
         }
 
         [Test]
