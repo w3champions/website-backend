@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PersonalSettings
@@ -16,9 +17,19 @@ namespace W3ChampionsStatisticService.PersonalSettings
         {
         }
 
-        public Task<PersonalSetting> Load(string battletag)
+        public async Task<PersonalSetting> Load(string battletag)
         {
-            return LoadFirst<PersonalSetting>(p => p.Id == battletag);
+            var settings = CreateCollection<PersonalSetting>();
+            var players = CreateCollection<PlayerProfile>();
+            var result = await settings
+                .Aggregate()
+                .Match(p => p.Id == battletag)
+                .Lookup<PersonalSetting, PlayerProfile, PersonalSetting>(players,
+                    rank => rank.Id,
+                    player => player.Id,
+                    rank => rank.Players)
+                .FirstOrDefaultAsync();
+            return result;
         }
 
         public Task Save(PersonalSetting setting)
