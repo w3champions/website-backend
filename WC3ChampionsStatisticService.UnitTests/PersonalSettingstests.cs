@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
@@ -7,7 +8,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class PersonalSettingstests
+    public class PersonalSettingstests : IntegrationTestBase
     {
         [Test]
         public void SetProfilePicture()
@@ -19,7 +20,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             {
                 player.RecordWin(Race.HU, GameMode.GM_1v1, true, 1000);
             }
-            var profilePicture = personalSetting.SetProfilePicture(player, Race.HU, 2);
+
+            personalSetting.Players = new List<PlayerProfile> {player };
+            var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
 
             Assert.IsTrue(profilePicture);
             Assert.AreEqual(Race.HU, personalSetting.ProfilePicture.Race);
@@ -36,12 +39,55 @@ namespace WC3ChampionsStatisticService.UnitTests
             {
                 player.RecordWin(Race.HU, GameMode.GM_1v1, true, 1000);
             }
-            personalSetting.SetProfilePicture(player, Race.HU, 1);
-            var profilePicture = personalSetting.SetProfilePicture(player, Race.HU, 2);
+
+            personalSetting.Players = new List<PlayerProfile> {player };
+            personalSetting.SetProfilePicture(Race.HU, 1);
+            var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
 
             Assert.IsFalse(profilePicture);
             Assert.AreEqual(Race.HU, personalSetting.ProfilePicture.Race);
             Assert.AreEqual(1, personalSetting.ProfilePicture.PictureId);
+        }
+
+        [Test]
+        public async Task RepoLoadWithJoin()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var settingsRepo = new PersonalSettingsRepository(MongoClient);
+
+
+            var personalSetting = new PersonalSetting("peter#123@10");
+
+            var player = PlayerProfile.Create("peter#123@10", "peter#123");
+            for (int i = 0; i < 20; i++)
+            {
+                player.RecordWin(Race.HU, GameMode.GM_1v1, true, 1000);
+            }
+
+            await playerRepository.UpsertPlayer(player);
+            await settingsRepo.Save(personalSetting);
+
+            var loaded = await settingsRepo.Load("peter#123@10");
+
+            Assert.AreEqual(20, loaded.Player.GetWinsPerRace(Race.HU));
+        }
+
+        [Test]
+        public async Task RepoLoadWithJoin_NotFoundPlayer()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var settingsRepo = new PersonalSettingsRepository(MongoClient);
+
+            var personalSetting = new PersonalSetting("peter#123@10");
+
+            var player = PlayerProfile.Create("ANDERER#123@10", "peter#123");
+
+            await playerRepository.UpsertPlayer(player);
+            await settingsRepo.Save(personalSetting);
+
+            var loaded = await settingsRepo.Load("peter#123@10");
+
+            Assert.AreEqual(0, loaded.Player.GetWinsPerRace(Race.HU));
         }
     }
 }

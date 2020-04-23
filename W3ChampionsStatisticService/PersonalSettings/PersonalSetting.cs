@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PersonalSettings
@@ -11,13 +14,18 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         public string ProfileMessage { get; set; }
+        [BsonIgnore]
+        [JsonIgnore]
+        public PlayerProfile Player => Players?.SingleOrDefault() ?? PlayerProfile.Create(Id, Id.Split("@")[0]);
+        [JsonIgnore]
+        public List<PlayerProfile> Players { get; set; }
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }
 
-        public bool SetProfilePicture(PlayerProfile player, Race race, long pictureId)
+        public bool SetProfilePicture(Race race, long pictureId)
         {
-            var winsPerRace = player.GetWinsPerRace(race);
+            var winsPerRace = Player.GetWinsPerRace(race);
             if (winsPerRace >= PictureRange[pictureId])
             {
                 ProfilePicture = new ProfilePicture(race, pictureId);
