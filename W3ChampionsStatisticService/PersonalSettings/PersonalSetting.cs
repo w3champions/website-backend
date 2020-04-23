@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
@@ -35,13 +36,13 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return false;
         }
 
-        public Dictionary<Race, long> PickablePicture => new Dictionary<Race, long>
+        public List<RaceToMaxPicture> PickablePicture => new List<RaceToMaxPicture>
         {
-            { Race.HU, GetMaxOf(Player.GetWinsPerRace(Race.HU)) },
-            { Race.OC, GetMaxOf(Player.GetWinsPerRace(Race.OC)) },
-            { Race.NE, GetMaxOf(Player.GetWinsPerRace(Race.NE)) },
-            { Race.UD, GetMaxOf(Player.GetWinsPerRace(Race.UD)) },
-            { Race.RnD, GetMaxOf(Player.GetWinsPerRace(Race.RnD)) },
+            new RaceToMaxPicture(Race.HU, GetMaxOf(Player.GetWinsPerRace(Race.HU)) ),
+            new RaceToMaxPicture(Race.OC, GetMaxOf(Player.GetWinsPerRace(Race.OC)) ),
+            new RaceToMaxPicture(Race.NE, GetMaxOf(Player.GetWinsPerRace(Race.NE)) ),
+            new RaceToMaxPicture(Race.UD, GetMaxOf(Player.GetWinsPerRace(Race.UD)) ),
+            new RaceToMaxPicture(Race.RnD, GetMaxOf(Player.GetWinsPerRace(Race.RnD)) )
         };
 
         private long GetMaxOf(long getWinsPerRace)
@@ -63,5 +64,17 @@ namespace W3ChampionsStatisticService.PersonalSettings
             {9, 900},
             {10, 1200},
         };
+    }
+
+    public class RaceToMaxPicture
+    {
+        public Race Race { get; }
+        public long Max { get; }
+
+        public RaceToMaxPicture(Race race, long max)
+        {
+            Race = race;
+            Max = max;
+        }
     }
 }

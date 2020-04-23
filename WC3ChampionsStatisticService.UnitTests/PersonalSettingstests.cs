@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
@@ -61,7 +62,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             personalSetting.Players = new List<PlayerProfile> { player };
-            Assert.AreEqual(2, personalSetting.PickablePicture[Race.HU]);
+            Assert.AreEqual(2, personalSetting.PickablePicture.Single(r => r.Race == Race.HU).Max);
         }
 
         [Test]
