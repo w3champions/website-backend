@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public bool SetProfilePicture(Race race, long pictureId)
         {
             var winsPerRace = Player.GetWinsPerRace(race);
-            if (winsPerRace >= PictureRange[pictureId])
+            if (winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == pictureId)?.NeededWins)
             {
                 ProfilePicture = new ProfilePicture(race, pictureId);
                 return true;
@@ -47,23 +47,36 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         private long GetMaxOf(long getWinsPerRace)
         {
-            return PictureRange.Where(r => r.Value <= getWinsPerRace).Max(r => r.Key);
+            return PictureRange.Where(r => r.NeededWins <= getWinsPerRace).Max(r => r.PictureId);
         }
 
-        private Dictionary<long, long> PictureRange => new Dictionary<long, long>
+        [BsonIgnore]
+        public List<WinsToPictureId> PictureRange => new List<WinsToPictureId>
         {
-            {0, 0},
-            {1, 5},
-            {2, 20},
-            {3, 50},
-            {4, 120},
-            {5, 200},
-            {6, 300},
-            {7, 450},
-            {8, 600},
-            {9, 900},
-            {10, 1200},
+            new WinsToPictureId(0, 0),
+            new WinsToPictureId(1, 5),
+            new WinsToPictureId(2, 20),
+            new WinsToPictureId(3, 50),
+            new WinsToPictureId(4, 120),
+            new WinsToPictureId(5, 200),
+            new WinsToPictureId(6, 300),
+            new WinsToPictureId(7, 450),
+            new WinsToPictureId(8, 600),
+            new WinsToPictureId(9, 900),
+            new WinsToPictureId(10, 1200)
         };
+    }
+
+    public class WinsToPictureId
+    {
+        public int PictureId { get; }
+        public int NeededWins { get; }
+
+        public WinsToPictureId(int pictureId, int neededWins)
+        {
+            PictureId = pictureId;
+            NeededWins = neededWins;
+        }
     }
 
     public class RaceToMaxPicture
