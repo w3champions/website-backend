@@ -18,15 +18,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
-            var matches = await _playerRepository.Load(battleTag);
-            return Ok(matches);
+            var player = await _playerRepository.Load(battleTag) ?? PlayerProfile.Default();
+            return Ok(player);
         }
 
         [HttpGet("{battleTag}/winrate")]
         public async Task<IActionResult> GetPlayerWinrate([FromRoute] string battleTag)
         {
-            var matches = await _playerRepository.LoadPlayerWinrate(battleTag);
-            return Ok(matches);
+            var wins = await _playerRepository.LoadPlayerWinrate(battleTag);
+            return Ok(wins);
         }
     }
 }
