@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Authorization;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PersonalSettings
@@ -11,19 +13,27 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
+        private readonly IPlayerRepository _playerRepository;
 
         public PersonalSettingsController(
             IBlizzardAuthenticationService authenticationService,
-            IPersonalSettingsRepository personalSettingsRepository)
+            IPersonalSettingsRepository personalSettingsRepository,
+            IPlayerRepository playerRepository)
         {
             _authenticationService = authenticationService;
             _personalSettingsRepository = personalSettingsRepository;
+            _playerRepository = playerRepository;
         }
 
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> GetPersonalSetting(string battleTag)
         {
-            var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
+            var setting = await _personalSettingsRepository.Load(battleTag);
+            if (setting == null)
+            {
+                var player = await _playerRepository.Load(battleTag);
+                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerProfile> { player }});
+            }
             return Ok(setting);
         }
 
