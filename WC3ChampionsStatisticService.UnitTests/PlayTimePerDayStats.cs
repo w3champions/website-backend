@@ -56,6 +56,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             hourOfPlayStats.Apply(GameMode.GM_1v1,  dateTime.AddDays(-2), dateTime);
 
             Assert.AreEqual(3, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
+            Assert.AreEqual(15, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
+            Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
+
         }
 
         [Test]

@@ -51,7 +51,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 .ToList();
             var hourOfPlays = hourOfPlaysPerDay.Select(f => new HourOfPlay
             {
-                Time = new DateTime(2000, 1, 1, f.Key.Hours, f.Key.Hours, f.Key.Hours),
+                Time = new DateTimeOffset(new DateTime(2000, 1, 1, f.Key.Hours, f.Key.Minutes, 0)),
                 Games = f.Sum(r => r.Games)
             }).ToList();
             return new HourOfPlayPerMode
