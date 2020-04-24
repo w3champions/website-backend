@@ -62,7 +62,6 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             };
         }
 
-        [JsonIgnore]
         public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
         public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
 

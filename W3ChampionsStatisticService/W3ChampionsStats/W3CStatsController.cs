@@ -43,7 +43,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         public async Task<IActionResult> GetPlayHours()
         {
             var stats = await _w3StatsRepo.LoadHourOfPlay();
-            return Ok(stats);
+            return Ok(stats.PlayTimesPerMode);
         }
 
         [HttpGet("distinct-players-per-day")]
