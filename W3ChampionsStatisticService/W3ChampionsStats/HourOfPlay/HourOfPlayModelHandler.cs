@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         {
             var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStats.Create();
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
-            stat.Apply((GameMode) nextEvent.match.gameMode, startTime.DateTime);
+            stat.Apply((GameMode) nextEvent.match.gameMode, startTime);
             await _w3Stats.Save(stat);
         }
     }

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -79,6 +80,11 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task CountFor()
         {
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine($"https://www.test.w3champions.com:{i}/login");
+            }
+
             var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();

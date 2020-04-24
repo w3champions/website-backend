@@ -1,18 +1,20 @@
 using System;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class PlayTimePerDayStats
+    public class PlayTimePerDayStats : IntegrationTestBase
     {
 
         [Test]
         public void PlayTimesPerDay()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
@@ -24,7 +26,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDayOneHourOff()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddHours(-1), dateTime);
@@ -35,7 +37,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDayOneDayAfterInterval()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(1), dateTime.AddDays(1));
@@ -46,7 +48,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDay_Average()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
@@ -54,6 +56,26 @@ namespace WC3ChampionsStatisticService.UnitTests
             hourOfPlayStats.Apply(GameMode.GM_1v1,  dateTime.AddDays(-2), dateTime);
 
             Assert.AreEqual(3, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
+        }
+
+        [Test]
+        public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
+        {
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
+            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
+            await w3StatsRepo.Save(hourOfPlayStats);
+            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay();
+
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Minutes);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Hours);
+
+            Assert.AreEqual(15, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Hours);
+
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Minutes);
+            Assert.AreEqual(1, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
         }
     }
 }
