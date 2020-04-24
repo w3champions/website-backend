@@ -14,7 +14,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDay()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
@@ -26,7 +26,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDayOneHourOff()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddHours(-1), dateTime);
@@ -37,7 +37,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDayOneDayAfterInterval()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(1), dateTime.AddDays(1));
@@ -48,7 +48,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void PlayTimesPerDay_Average()
         {
-            var dateTime = new DateTime(2020, 10, 16);
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
             var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
@@ -61,7 +61,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
         {
-            var hourOfPlayStats = HourOfPlayStats.Create(new DateTime(2020, 10, 16));
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
+            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
             await w3StatsRepo.Save(hourOfPlayStats);

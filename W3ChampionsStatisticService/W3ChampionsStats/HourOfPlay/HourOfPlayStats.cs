@@ -8,9 +8,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
     public class HourOfPlayStats
     {
-        public void Apply(GameMode gameMode, DateTime timeOfGame, DateTime now = default)
+        public void Apply(GameMode gameMode, DateTimeOffset timeOfGame, DateTimeOffset now = default)
         {
-            now = now == default ? DateTime.UtcNow.Date : now;
+            now = now == default ? DateTimeOffset.UtcNow.Date : now.Date;
 
             var gameLengthPerMode = PlayTimesPerModeTwoWeeks.SingleOrDefault(m => m.GameMode == gameMode
                                                           && m.Day.Date == timeOfGame.Date);
@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 
         public string Id { get; set; } = nameof(HourOfPlayStats);
 
-        public static HourOfPlayStats Create(DateTime time = default)
+        public static HourOfPlayStats Create(DateTimeOffset time = default)
         {
             time = time == default ? DateTime.UtcNow.Date : time;
 
@@ -84,7 +84,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             };
         }
 
-        private static List<HourOfPlayPerMode> Create14DaysOfPlaytime(DateTime time)
+        private static List<HourOfPlayPerMode> Create14DaysOfPlaytime(DateTimeOffset time)
         {
             var hours = new List<HourOfPlayPerMode>();
             for (int i = 0; i < 14; i++)
@@ -98,7 +98,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             return hours;
         }
 
-        private static void AddDay(List<HourOfPlayPerMode> hours, GameMode gameMode, int i, DateTime time)
+        private static void AddDay(List<HourOfPlayPerMode> hours, GameMode gameMode, int i, DateTimeOffset time)
         {
             hours.Add(new HourOfPlayPerMode
             {
@@ -108,7 +108,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             });
         }
 
-        private static List<HourOfPlay> CreateLengths(DateTime day)
+        private static List<HourOfPlay> CreateLengths(DateTimeOffset day)
         {
             var lengths = new List<HourOfPlay>();
             for (var i = 0; i < 96; i++) // every 15 minutes

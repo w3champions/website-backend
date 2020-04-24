@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
     {
         public long Games { get; set; }
         [JsonIgnore]
-        public DateTime Time { get; set; }
+        public DateTimeOffset Time { get; set; }
 
         [BsonIgnore]
         public int Minutes => Time.Minute;
