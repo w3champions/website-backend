@@ -1,12 +1,14 @@
 using System;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class PlayTimePerDayStats
+    public class PlayTimePerDayStats : IntegrationTestBase
     {
 
         [Test]
@@ -54,6 +56,25 @@ namespace WC3ChampionsStatisticService.UnitTests
             hourOfPlayStats.Apply(GameMode.GM_1v1,  dateTime.AddDays(-2), dateTime);
 
             Assert.AreEqual(3, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
+        }
+
+        [Test]
+        public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
+        {
+            var hourOfPlayStats = HourOfPlayStats.Create(new DateTime(2020, 10, 16));
+
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
+            await w3StatsRepo.Save(hourOfPlayStats);
+            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay();
+
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Minutes);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Hours);
+
+            Assert.AreEqual(15, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Hours);
+
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Minutes);
+            Assert.AreEqual(1, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
         }
     }
 }
