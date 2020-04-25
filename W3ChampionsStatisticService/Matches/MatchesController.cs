@@ -28,6 +28,13 @@ namespace W3ChampionsStatisticService.Matches
             return Ok(new { matches, count });
         }
 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetMatches(string id)
+        {
+            var match = await _matchRepository.LoadDetails(id);
+            return Ok(match);
+        }
+
         [HttpGet("search")]
         public async Task<IActionResult> GetMatchesPerPlayer(
             string playerId,
