@@ -21,6 +21,5 @@ namespace W3ChampionsStatisticService.Matches
             var matchup = new Matchup(nextEvent);
             await _matchRepository.Insert(matchup);
         }
-
     }
 }

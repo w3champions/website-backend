@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -78,47 +79,79 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonIgnoreExtraElements]
     public class OverallScore
     {
+        [JsonPropertyName("unitScore")]
         public int UNIT_SCORE { get; set; }
+        [JsonPropertyName("heroScore")]
         public int HERO_SCORE { get; set; }
+        [JsonPropertyName("resourceScore")]
         public int RESOURCE_SCORE { get; set; }
+        [JsonPropertyName("totalScore")]
         public int TOTAL_SCORE { get; set; }
     }
 
     [BsonIgnoreExtraElements]
     public class UnitScore
     {
+        [JsonPropertyName("unitsProduced")]
         public int UNITS_PRODUCED { get; set; }
+        [JsonPropertyName("unitsKilled")]
         public int UNITS_KILLED { get; set; }
+        [JsonPropertyName("structuresProduced")]
         public int STRUCTURES_PRODUCED { get; set; }
+        [JsonPropertyName("structuresKilled")]
         public int STRUCTURES_RAZED { get; set; }
+        [JsonPropertyName("largestArmy")]
         public int LARGEST_ARMY { get; set; }
     }
 
     [BsonIgnoreExtraElements]
     public class Hero
     {
-        public string icon { get; set; }
+        private string _icon;
+
+        public string icon
+        {
+            get
+            {
+                var strings = _icon.Replace(".blp", "").Split("-");
+                if (strings.Length < 2) return _icon;
+                return strings[2];
+            }
+            set => _icon = value;
+        }
+
         public int level { get; set; }
     }
 
     [BsonIgnoreExtraElements]
     public class HeroScore
     {
+        [JsonPropertyName("heroesKilled")]
         public int HEROES_KILLED { get; set; }
+        [JsonPropertyName("itemsObtained")]
         public int ITEMS_OBTAINED { get; set; }
+        [JsonPropertyName("mercsHired")]
         public int MERCS_HIRED { get; set; }
+        [JsonPropertyName("expGained")]
         public int EXP_GAINED { get; set; }
+        [JsonPropertyName("strongerHeroes")]
         public int STRONGER_HEROES { get; set; }
     }
 
     [BsonIgnoreExtraElements]
     public class ResourceScore
     {
+        [JsonPropertyName("goldCollected")]
         public int GOLD_COLLECTED { get; set; }
+        [JsonPropertyName("lumberCollected")]
         public int LUMBER_COLLECTED { get; set; }
+        [JsonPropertyName("resourcesReceived")]
         public int RESOURCES_RECVD { get; set; }
+        [JsonPropertyName("ressourcesSent")]
         public int RESOURCES_SENT { get; set; }
+        [JsonPropertyName("techPercentage")]
         public int TECH_PERCENTAGE { get; set; }
+        [JsonPropertyName("goldUpkeepLost")]
         public int GOLD_UPKEEP_LOST { get; set; }
     }
 

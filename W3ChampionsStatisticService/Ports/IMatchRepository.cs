@@ -23,5 +23,13 @@ namespace W3ChampionsStatisticService.Ports
             string playerId,
             string opponentId = null,
             GameMode gameMode = GameMode.Undefined);
+
+        Task<MatchupDetail> LoadDetails(string id);
+    }
+
+    public class MatchupDetail
+    {
+        public Matchup Match { get; set; }
+        public List<PlayerScore> PlayerScores { get; set; }
     }
 }
