@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.FileSystemGlobbing.Internal.PathSegments;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
