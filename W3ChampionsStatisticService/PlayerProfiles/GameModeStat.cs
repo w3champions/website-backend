@@ -12,11 +12,23 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public GameMode Mode { set; get; }
         public int MMR { set; get; }
+        public int RankingPoints { get; set; }
+        public int Rank { get; set; }
+        public int LeagueId { get; set; }
+        public int LeagueOrder { get; set; }
 
-        public void Update(bool won, int mmr)
+        public void Update(bool won)
+        {
+            RecordWin(won);
+        }
+
+        public void Update(in int mmr, in int rankingPoints, in int rank, in int leagueId, in int leagueOrder)
         {
             MMR = mmr;
-            RecordWin(won);
+            RankingPoints = rankingPoints;
+            Rank = rank;
+            LeagueId = leagueId;
+            LeagueOrder = leagueOrder;
         }
     }
 }

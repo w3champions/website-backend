@@ -42,9 +42,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return raceStat.Wins;
         }
 
-        public void RecordWin(Race race, GameMode mode, bool won, int updatedMmrRating)
+        public void RecordWin(Race race, GameMode mode, bool won)
         {
-            GameModeStats.RecordGame(mode, won, updatedMmrRating);
+            GameModeStats.RecordGame(mode, won);
             RaceStats.RecordGame(race, won);
         }
 
@@ -55,6 +55,17 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public static PlayerProfile Default()
         {
             return Create("UnknownPlayer#2@20", "UnknownPlayer#2");
+        }
+
+        public void UpdateRank(
+            GameMode mode,
+            int mmr,
+            int rankingPoints,
+            int rank,
+            int leagueId,
+            int leagueOrder)
+        {
+            GameModeStats.RecordRanking(mode, mmr, rankingPoints, rank, leagueId, leagueOrder);
         }
     }
 }
