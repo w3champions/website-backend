@@ -26,8 +26,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 player.RecordWin(
                     (Race) playerRaw.race,
                     (GameMode) nextEvent.match.gameMode,
-                    playerRaw.won,
-                    (int) playerRaw.updatedMmr.rating);
+                    playerRaw.won);
+                player.UpdateRank(
+                    (GameMode) nextEvent.match.gameMode,
+                    (int) playerRaw.updatedMmr.rating,
+                    (int) playerRaw.updatedRanking.rp,
+                    playerRaw.updatedRanking.rank,
+                    playerRaw.updatedRanking.leagueId,
+                    playerRaw.updatedRanking.leagueOrder);
                 await _playerRepository.UpsertPlayer(player);
             }
         }
