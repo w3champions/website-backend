@@ -113,7 +113,7 @@ namespace W3ChampionsStatisticService.PadEvents
         {
             get
             {
-                var strings = _icon.Replace(".blp", "").Split("-");
+                var strings = _icon.Replace(".blp", "").Replace(".png", "").Split("-");
                 if (strings.Length < 2) return _icon;
                 return strings[2];
             }
