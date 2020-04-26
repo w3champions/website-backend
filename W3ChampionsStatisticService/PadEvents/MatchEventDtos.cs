@@ -96,9 +96,9 @@ namespace W3ChampionsStatisticService.PadEvents
         public int UNITS_PRODUCED { get; set; }
         [JsonPropertyName("unitsKilled")]
         public int UNITS_KILLED { get; set; }
-        [JsonPropertyName("structuresProduced")]
+        [JsonIgnore]
         public int STRUCTURES_PRODUCED { get; set; }
-        [JsonPropertyName("structuresKilled")]
+        [JsonIgnore]
         public int STRUCTURES_RAZED { get; set; }
         [JsonPropertyName("largestArmy")]
         public int LARGEST_ARMY { get; set; }
@@ -134,7 +134,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int MERCS_HIRED { get; set; }
         [JsonPropertyName("expGained")]
         public int EXP_GAINED { get; set; }
-        [JsonPropertyName("strongerHeroes")]
+        [JsonIgnore]
         public int STRONGER_HEROES { get; set; }
     }
 
@@ -145,11 +145,11 @@ namespace W3ChampionsStatisticService.PadEvents
         public int GOLD_COLLECTED { get; set; }
         [JsonPropertyName("lumberCollected")]
         public int LUMBER_COLLECTED { get; set; }
-        [JsonPropertyName("resourcesReceived")]
+        [JsonIgnore]
         public int RESOURCES_RECVD { get; set; }
-        [JsonPropertyName("ressourcesSent")]
+        [JsonIgnore]
         public int RESOURCES_SENT { get; set; }
-        [JsonPropertyName("techPercentage")]
+        [JsonIgnore]
         public int TECH_PERCENTAGE { get; set; }
         [JsonPropertyName("goldUpkeepLost")]
         public int GOLD_UPKEEP_LOST { get; set; }

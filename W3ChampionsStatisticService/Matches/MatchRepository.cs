@@ -119,7 +119,6 @@ namespace W3ChampionsStatisticService.Matches
         {
             return new PlayerScore(
                 playerBlizzard.battleTag,
-                playerBlizzard.overallScore,
                 playerBlizzard.unitScore,
                 playerBlizzard.heroes,
                 playerBlizzard.heroScore,
