@@ -16,6 +16,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int Rank { get; set; }
         public int LeagueId { get; set; }
         public int LeagueOrder { get; set; }
+        public int RankingPointsProgress { get; set; }
 
         public void Update(bool won)
         {
