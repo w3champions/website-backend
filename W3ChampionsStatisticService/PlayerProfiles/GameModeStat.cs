@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                     RankingPoints = RankingPoints - RankProgressionStart.RankingPoints,
                     LeagueId = LeagueId - RankProgressionStart.LeagueId,
                     LeagueOrder = LeagueOrder - RankProgressionStart.LeagueOrder,
-                    Rank = Rank - RankProgressionStart.Rank
+                    Rank = RankProgressionStart.Rank - Rank
                 };
             }
         }
@@ -55,6 +55,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         private bool LastGameWasBefore8Hours()
         {
+            if (RankProgressionStart == null) return true;
             return RankProgressionStart.Date < DateTimeOffset.UtcNow - TimeSpan.FromHours(8);
         }
 

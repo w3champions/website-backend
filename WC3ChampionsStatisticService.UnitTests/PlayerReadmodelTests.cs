@@ -21,7 +21,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(20, player.GameModeStats[0].RankingPointsProgress.RankingPoints);
             Assert.AreEqual(10, player.GameModeStats[0].RankingPointsProgress.MMR);
-            Assert.AreEqual(2, player.GameModeStats[0].RankingPointsProgress.Rank);
+            Assert.AreEqual(-2, player.GameModeStats[0].RankingPointsProgress.Rank);
             Assert.AreEqual(6, player.GameModeStats[0].RankingPointsProgress.LeagueId);
             Assert.AreEqual(7, player.GameModeStats[0].RankingPointsProgress.LeagueOrder);
         }
