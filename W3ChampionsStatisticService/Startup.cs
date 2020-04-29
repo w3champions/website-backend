@@ -72,6 +72,8 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
                 services.AddReadModelService<HourOfPlayModelHandler>();
+
+                services.AddUnversionesReadModelService<RankHandler>();
             }
         }
 

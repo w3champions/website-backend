@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -26,6 +26,14 @@ namespace WC3ChampionsStatisticService.UnitTests
                 (Expression<Func<MatchFinishedEvent, bool>>) (ev => ev.match.id == newEvent.match.id),
                 newEvent,
                 new FindOneAndReplaceOptions<MatchFinishedEvent> {IsUpsert = true});
+        }
+
+        protected async Task InsertRankChangedEvent(RankingChangedEvent newEvent)
+        {
+            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
+            var mongoDatabase = database;
+            var mongoCollection = mongoDatabase.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
+            await mongoCollection.InsertOneAsync(newEvent);
         }
     }
 }

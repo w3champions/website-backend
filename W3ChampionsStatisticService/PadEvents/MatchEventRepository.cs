@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -29,22 +28,24 @@ namespace W3ChampionsStatisticService.PadEvents
             return events;
         }
 
-        public Task<List<RankingChangedEvent>> LoadRanks()
+        public async Task<List<RankingChangedEvent>> LoadLatestRanks(int pageSize = 1000)
         {
-            return LoadAll<RankingChangedEvent>();
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
+
+            var events = await mongoCollection.Find(m => true)
+                .SortBy(s => s.id)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            return events;
         }
 
-        public async Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
+        public async Task DeleteRankEvent(ObjectId id)
         {
-            var loadLeagueConstellation = await LoadAll<LeagueConstellationChangedEvent>();
-
-            foreach (var leagueConstellationChangedEvent in loadLeagueConstellation)
-            {
-                leagueConstellationChangedEvent.leagues =
-                    leagueConstellationChangedEvent.leagues.OrderBy(l => l.order).ToArray();
-            }
-
-            return loadLeagueConstellation;
+            var mongoCollection = CreateCollection<RankingChangedEvent>();
+            await mongoCollection.DeleteOneAsync(e => e.id == id);
         }
     }
 }
