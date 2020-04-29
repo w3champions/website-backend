@@ -99,5 +99,19 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(0, player.GameModeStats[0].RankingPointsProgress.RankingPoints);
         }
+
+        [Test]
+        [TestCase(1, 1, 0)]
+        [TestCase(0, 0, 0)]
+        [TestCase(3, 2, 1)]
+        [TestCase(7, 2, 5)]
+        public void GameModeStat_LatestDivision(int league, int order, int division)
+        {
+            var gameModeStat = new GameModeStat(GameMode.GM_1v1);
+
+            gameModeStat.Update(0, 0, 0, league, order);
+
+            Assert.AreEqual(division, gameModeStat.Division);
+        }
     }
 }

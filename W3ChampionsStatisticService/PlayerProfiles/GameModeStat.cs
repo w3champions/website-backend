@@ -17,19 +17,27 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int RankingPoints { get; set; }
         public int Rank { get; set; }
         public int LeagueId { get; set; }
+        public int Division => CalculateDivision(LeagueId);
+
+        private int CalculateDivision(int leagueId)
+        {
+            if (leagueId == 0 || leagueId == 1) return 0;
+            return (leagueId - 2) % 6;
+        }
+
         public int LeagueOrder { get; set; }
         public RankProgression RankingPointsProgress
         {
             get
             {
                 if (LastGameWasBefore8Hours()) return new RankProgression();
-                return new RankProgression
-                {
+                return new RankProgression  {
                     MMR = MMR - RankProgressionStart.MMR,
                     RankingPoints = RankingPoints - RankProgressionStart.RankingPoints,
                     LeagueId = LeagueId - RankProgressionStart.LeagueId,
                     LeagueOrder = LeagueOrder - RankProgressionStart.LeagueOrder,
-                    Rank = RankProgressionStart.Rank - Rank
+                    Rank = RankProgressionStart.Rank - Rank,
+                    Division = CalculateDivision(LeagueId) - CalculateDivision(RankProgressionStart.LeagueId)
                 };
             }
         }
@@ -61,31 +69,5 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         [JsonIgnore]
         public RankProgression RankProgressionStart { get; set; }
-    }
-
-    public class RankProgression
-    {
-        public static RankProgression Create(in int mmr, in int rankingPoints, int rank, in int leagueId,
-            in int leagueOrder)
-        {
-            return new RankProgression
-            {
-                Date = DateTimeOffset.UtcNow,
-                RankingPoints = rankingPoints,
-                MMR = mmr,
-                LeagueId = leagueId,
-                LeagueOrder = leagueOrder,
-                Rank = rank
-            };
-        }
-
-        public int Rank { get; set; }
-
-        [JsonIgnore]
-        public DateTimeOffset Date { get; set; }
-        public double RankingPoints { get; set; }
-        public double MMR { get; set; }
-        public int LeagueId { get; set; }
-        public int LeagueOrder { get; set; }
     }
 }
