@@ -72,6 +72,8 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
                 services.AddReadModelService<HourOfPlayModelHandler>();
+
+                services.AddUnversionedReadModelService<RankHandler>();
             }
         }
 
@@ -101,7 +103,7 @@ namespace W3ChampionsStatisticService
             return services;
         }
 
-        public static IServiceCollection AddUnversionesReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
+        public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
         {
             services.AddTransient<T>();
             services.AddSingleton<IHostedService, AsyncServiceBase<T>>();

@@ -54,21 +54,5 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             return fakeEvent;
         }
-
-        public static LeagueConstellationChangedEvent CreateFakeLeague()
-        {
-            var fixture = new Fixture {RepeatCount = 2};
-            var fakeEvent = fixture.Build<LeagueConstellationChangedEvent>().Create();
-
-            return fakeEvent;
-        }
-
-        public static RankingChangedEvent CreateFakeRankingUpdate()
-        {
-            var fixture = new Fixture {RepeatCount = 2};
-            var fakeEvent = fixture.Build<RankingChangedEvent>().Create();
-
-            return fakeEvent;
-        }
     }
 }
