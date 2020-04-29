@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.Json.Serialization;
-using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
