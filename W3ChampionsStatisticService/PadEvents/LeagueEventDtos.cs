@@ -1,10 +1,12 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
     [BsonIgnoreExtraElements]
     public class LeagueConstellationChangedEvent
     {
+        public ObjectId id { get; set; }
         public int gateway { get; set; }
         public League[] leagues { get; set; }
     }
@@ -23,6 +25,7 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonIgnoreExtraElements]
     public class RankingChangedEvent
     {
+        public ObjectId id { get; set; }
         public int gateway { get; set; }
         public int league { get; set; }
         public RankRaw[] ranks { get; set; }

@@ -41,7 +41,7 @@ namespace W3ChampionsStatisticService.Ladder
         [HttpGet("league-constellation")]
         public async Task<IActionResult> GetLeagueConstellation()
         {
-            var leagues = await _matchEventRepository.LoadLeagueConstellation();
+            var leagues = await _rankRepository.LoadLeagueConstellation();
             return Ok(leagues);
         }
     }

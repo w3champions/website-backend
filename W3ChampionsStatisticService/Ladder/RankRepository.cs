@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -24,6 +25,16 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var search = searchFor.ToLower();
             return JoinWith(rank => rank.PlayerId.Contains(search) && rank.Gateway == gateWay);
+        }
+
+        public async Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
+        {
+            var mongoCollection = CreateCollection<LeagueConstellationChangedEvent>();
+            var us = await mongoCollection.Find(l => l.gateway == 10).SortByDescending(s => s.id)
+                .FirstOrDefaultAsync();
+            var eu = await mongoCollection.Find(l => l.gateway == 20).SortByDescending(s => s.id)
+                .FirstOrDefaultAsync();
+            return new List<LeagueConstellationChangedEvent> { us, eu };
         }
 
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)
