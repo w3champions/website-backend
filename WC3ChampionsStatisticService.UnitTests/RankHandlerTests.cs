@@ -22,9 +22,9 @@ namespace WC3ChampionsStatisticService.UnitTests
                 league = 1,
                 ranks = new []
                 {
-                    new RankRaw { rp = 1200, tagId = "tag#1@10"},
+                    new RankRaw { rp = 1500, tagId = "tag#1@10"},
                     new RankRaw { rp = 1300, tagId = "tag#2@10"},
-                    new RankRaw { rp = 1500, tagId = "tag#3@10"},
+                    new RankRaw { rp = 1100, tagId = "tag#3@10"},
                 }
             };
 
@@ -52,6 +52,49 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(3, ranksParsed1.Count);
             Assert.AreEqual(2, ranksParsed2.Count);
             Assert.AreEqual(0, ranksInPipe.Count);
+        }
+
+        [Test]
+        public async Task LatestRankIsAlwaysShown()
+        {
+            var rankRepository = new RankRepository(MongoClient);
+
+            var rankingChangedEvent1 = new RankingChangedEvent
+            {
+                gateway = 10,
+                league = 1,
+                ranks = new []
+                {
+                    new RankRaw { rp = 1500, tagId = "tag#1@10"},
+                    new RankRaw { rp = 1300, tagId = "tag#2@10"},
+                    new RankRaw { rp = 1100, tagId = "tag#3@10"},
+                }
+            };
+
+            var rankingChangedEvent2 = new RankingChangedEvent
+            {
+                gateway = 10,
+                league = 1,
+                ranks = new []
+                {
+                    new RankRaw { rp = 1500, tagId = "tag#2@10"},
+                    new RankRaw { rp = 1300, tagId = "tag#1@10"},
+                    new RankRaw { rp = 1100, tagId = "tag#3@10"},
+                }
+            };
+
+            await InsertRankChangedEvent(rankingChangedEvent1);
+            await InsertRankChangedEvent(rankingChangedEvent2);
+
+            var rankHandler = new RankHandler(rankRepository, new MatchEventRepository(MongoClient));
+
+            await rankHandler.Update();
+
+            var ranksParsed1 = await rankRepository.LoadPlayerOfLeague(1, 10);
+            Assert.AreEqual(3, ranksParsed1.Count);
+            Assert.AreEqual("tag#2@10", ranksParsed1[0].Id);
+            Assert.AreEqual("tag#1@10", ranksParsed1[1].Id);
+            Assert.AreEqual("tag#3@10", ranksParsed1[2].Id);
         }
     }
 }

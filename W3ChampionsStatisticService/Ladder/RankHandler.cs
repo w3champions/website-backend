@@ -25,7 +25,9 @@ namespace W3ChampionsStatisticService.Ladder
 
             foreach (var changedEvent in events)
             {
-                var ranks = changedEvent.ranks.Select((r, i) =>
+                var ranks = changedEvent.ranks
+                    .OrderByDescending(r => r.rp)
+                    .Select((r, i) =>
                     new Rank(changedEvent.gateway, changedEvent.league, i + 1, (int) r.rp, r.tagId)).ToList();
 
                 await _rankRepository.Insert(ranks);
