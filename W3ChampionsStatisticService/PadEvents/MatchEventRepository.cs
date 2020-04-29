@@ -29,11 +29,6 @@ namespace W3ChampionsStatisticService.PadEvents
             return events;
         }
 
-        public Task<List<LeagueConstellationChangedEvent>> LoadLeagues()
-        {
-            return LoadAll<LeagueConstellationChangedEvent>();
-        }
-
         public Task<List<RankingChangedEvent>> LoadRanks()
         {
             return LoadAll<RankingChangedEvent>();
