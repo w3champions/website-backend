@@ -28,6 +28,17 @@ namespace W3ChampionsStatisticService.PadEvents
             return events;
         }
 
+        public async Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent)
+        {
+            matchFinishedEvent.WasFromSync = true;
+            var mongoCollection = CreateCollection<MatchFinishedEvent>();
+            var foundEvent = await mongoCollection.Find(e => e.match.id.Equals(matchFinishedEvent.match.id)).FirstOrDefaultAsync();
+            if (foundEvent == null)
+            {
+                await mongoCollection.InsertOneAsync(matchFinishedEvent);
+            }
+        }
+
         public async Task<List<RankingChangedEvent>> LoadLatestRanks(int pageSize = 1000)
         {
             var database = CreateClient();
