@@ -57,6 +57,9 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
+            services.AddTransient<PadServiceRepo>();
+
+            services.AddUnversionedReadModelService<PadSyncHandler>();
 
             if (doRunAsyncHandler == "true")
             {
@@ -74,6 +77,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<HourOfPlayModelHandler>();
 
                 services.AddUnversionedReadModelService<RankHandler>();
+                services.AddUnversionedReadModelService<PadSyncHandler>();
             }
         }
 
