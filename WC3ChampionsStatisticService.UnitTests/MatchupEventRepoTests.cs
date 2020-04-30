@@ -23,6 +23,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var events = await matchEventRepository.Load();
 
             Assert.AreEqual(1, events.Count);
+            Assert.AreEqual(false, events[0].WasFromSync);
         }
 
         [Test]
@@ -44,6 +45,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var events = await matchEventRepository.Load();
 
             Assert.AreEqual(2, events.Count);
+            Assert.AreEqual(false, events[0].WasFromSync);
+            Assert.AreEqual(true, events[1].WasFromSync);
         }
 
     }
