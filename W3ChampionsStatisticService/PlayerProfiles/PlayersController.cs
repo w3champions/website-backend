@@ -23,8 +23,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var player = await _playerRepository.Load(battleTag) ?? PlayerProfile.Default();
             var loadPlayerOfLeagueLike = await _rankRepository.LoadPlayerOfLeague(battleTag);
+            var leagues = await _rankRepository.LoadLeagueConstellation();
+            var gw = int.Parse(battleTag.Split("@")[1]);
+            var constellationOfGw = leagues.Single(l => l.gateway == gw);
+            var league = constellationOfGw.leagues.Single(l => l.id == loadPlayerOfLeagueLike.League);
+
             player.GameModeStats[0].Rank = loadPlayerOfLeagueLike.RankNumber;
             player.GameModeStats[0].LeagueId = loadPlayerOfLeagueLike.League;
+            player.GameModeStats[0].LeagueOrder = league.order;
+            player.GameModeStats[0].Division = league.order % ((constellationOfGw.leagues.Length - 2) / 5);
+
             return Ok(player);
         }
 
