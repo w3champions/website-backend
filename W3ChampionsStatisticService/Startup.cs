@@ -42,6 +42,7 @@ namespace W3ChampionsStatisticService
             services.AddControllers();
 
             var doRunAsyncHandler = _configuration.GetValue<string>("startHandlers");
+            var doPadSyncHandler = _configuration.GetValue<string>("startPadSync");
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
@@ -59,6 +60,12 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<PadServiceRepo>();
 
+
+            if (doPadSyncHandler == "true")
+            {
+                services.AddUnversionedReadModelService<PadSyncHandler>();
+            }
+
             if (doRunAsyncHandler == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
@@ -75,7 +82,6 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<HourOfPlayModelHandler>();
 
                 services.AddUnversionedReadModelService<RankHandler>();
-                services.AddUnversionedReadModelService<PadSyncHandler>();
             }
         }
 
