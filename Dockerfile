@@ -18,4 +18,4 @@ COPY --from=build-env /app/out .
 ENV ASPNETCORE_URLS http://*:80
 EXPOSE 80
 
-ENTRYPOINT dotnet W3ChampionsStatisticService.dll startHandlers=$START_HANDLERS mongoConnectionString=$MONGO_CONNECTION_STRING appInsights=$APP_INSIGHTS $TEST_ENV
+ENTRYPOINT dotnet W3ChampionsStatisticService.dll startPadSync=$START_PAD_SYNC startHandlers=$START_HANDLERS mongoConnectionString=$MONGO_CONNECTION_STRING appInsights=$APP_INSIGHTS $TEST_ENV
