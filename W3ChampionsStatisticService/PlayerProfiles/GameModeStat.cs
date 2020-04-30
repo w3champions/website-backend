@@ -17,15 +17,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int RankingPoints { get; set; }
         public int Rank { get; set; }
         public int LeagueId { get; set; }
-        public int Division => CalculateDivision(LeagueId);
-
-        private int CalculateDivision(int leagueId)
-        {
-            if (leagueId == 0 || leagueId == 1) return 0;
-            return (leagueId - 2) % 6;
-        }
-
-        public int LeagueOrder { get; set; }
         public RankProgression RankingPointsProgress
         {
             get
@@ -34,10 +25,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 return new RankProgression  {
                     MMR = MMR - RankProgressionStart.MMR,
                     RankingPoints = RankingPoints - RankProgressionStart.RankingPoints,
-                    LeagueId = LeagueId - RankProgressionStart.LeagueId,
-                    LeagueOrder = LeagueOrder - RankProgressionStart.LeagueOrder,
-                    Rank = RankProgressionStart.Rank - Rank,
-                    Division = CalculateDivision(LeagueId) - CalculateDivision(RankProgressionStart.LeagueId)
                 };
             }
         }
@@ -45,6 +32,17 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public void Update(bool won)
         {
             RecordWin(won);
+        }
+
+        public void Update(in int mmr, in int rankingPoints)
+        {
+            MMR = mmr;
+            if (RankProgressionStart == null || LastGameWasBefore8Hours())
+            {
+                RankProgressionStart = RankProgression.Create(mmr, rankingPoints);
+            }
+
+            RankingPoints = rankingPoints;
         }
 
         private bool LastGameWasBefore8Hours()
