@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.Ladder
                     player => player.Id,
                     rank => rank.Players)
                 .ToListAsync();
-            return result;
+            return result.Where(r => r.Player != null).ToList();
         }
 
         public Task Insert(List<Rank> events)
