@@ -47,20 +47,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             RecordWin(won);
         }
 
-        public void Update(in int mmr, in int rankingPoints, in int rank, in int leagueId, in int leagueOrder)
-        {
-            MMR = mmr;
-            if (RankProgressionStart == null || LastGameWasBefore8Hours())
-            {
-                RankProgressionStart = RankProgression.Create(mmr, rankingPoints, 0, leagueId, leagueOrder);
-            }
-
-            RankingPoints = rankingPoints;
-            Rank = rank;
-            LeagueId = leagueId;
-            LeagueOrder = leagueOrder;
-        }
-
         private bool LastGameWasBefore8Hours()
         {
             if (RankProgressionStart == null) return true;

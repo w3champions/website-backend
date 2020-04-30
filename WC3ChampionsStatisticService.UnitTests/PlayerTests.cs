@@ -30,18 +30,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.Load(player.Id);
             playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, false);
-            playerLoaded.UpdateRank(GameMode.GM_1v1, 234, 123, 1, 2, 3);
             await playerRepository.UpsertPlayer(playerLoaded);
 
             var playerLoadedAgain = await playerRepository.Load(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(player.Id, playerLoadedAgain.Id);
-            Assert.AreEqual(234, playerLoadedAgain.GameModeStats[0].MMR);
-            Assert.AreEqual(1, playerLoadedAgain.GameModeStats[0].Rank);
-            Assert.AreEqual(123, playerLoadedAgain.GameModeStats[0].RankingPoints);
-            Assert.AreEqual(2, playerLoadedAgain.GameModeStats[0].LeagueId);
-            Assert.AreEqual(3, playerLoadedAgain.GameModeStats[0].LeagueOrder);
         }
 
         [Test]
