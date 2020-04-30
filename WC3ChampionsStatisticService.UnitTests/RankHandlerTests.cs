@@ -61,8 +61,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await rankHandler.Update();
 
-            var ranksParsed1 = await rankRepository.LoadPlayerOfLeague(1, 10);
-            var ranksParsed2 = await rankRepository.LoadPlayerOfLeague(2, 10);
+            var ranksParsed1 = await rankRepository.LoadPlayersOfLeague(1, 10);
+            var ranksParsed2 = await rankRepository.LoadPlayersOfLeague(2, 10);
             var ranksInPipe = await matchEventRepository.LoadLatestRanks();
             Assert.AreEqual(3, ranksParsed1.Count);
             Assert.AreEqual(2, ranksParsed2.Count);
@@ -109,7 +109,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await rankHandler.Update();
 
-            var ranksParsed1 = await rankRepository.LoadPlayerOfLeague(1, 10);
+            var ranksParsed1 = await rankRepository.LoadPlayersOfLeague(1, 10);
             Assert.AreEqual(3, ranksParsed1.Count);
             Assert.AreEqual("tag#2@10", ranksParsed1[0].Id);
             Assert.AreEqual("tag#1@10", ranksParsed1[1].Id);
