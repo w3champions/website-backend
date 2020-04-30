@@ -8,6 +8,7 @@ namespace W3ChampionsStatisticService.Ports
     public interface IMatchEventRepository
     {
         Task<List<MatchFinishedEvent>> Load(string lastObjectId,  int pageSize = 100);
+        Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent);
         Task<List<RankingChangedEvent>> LoadLatestRanks(int pageSize = 1000);
         Task DeleteRankEvent(ObjectId id);
     }
