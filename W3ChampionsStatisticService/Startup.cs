@@ -59,8 +59,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<PadServiceRepo>();
 
-            services.AddUnversionedReadModelService<PadSyncHandler>();
-
             if (doRunAsyncHandler == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
