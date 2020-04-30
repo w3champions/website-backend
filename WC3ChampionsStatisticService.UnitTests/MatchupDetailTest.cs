@@ -17,7 +17,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             await matchRepository.Insert(new Matchup(matchFinishedEvent));
 
             var result = await matchRepository.LoadDetails("nmhcCLaRc7");
-
             Assert.AreEqual("nmhcCLaRc7", result.Match.Id);
         }
 
