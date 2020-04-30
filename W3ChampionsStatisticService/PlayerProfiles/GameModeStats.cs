@@ -12,10 +12,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             gameModeStat.Update(won);
         }
 
-        public void RecordRanking(GameMode mode, in int mmr, in int rankingPoints, in int rank, in int leagueId, in int leagueOrder)
+        public void RecordRanking(GameMode mode, in int mmr, in int rankingPoints)
         {
             var gameModeStat = this.Single(s => s.Mode == mode);
-            gameModeStat.Update(mmr, rankingPoints, rank, leagueId, leagueOrder);
+            gameModeStat.Update(mmr, rankingPoints);
         }
     }
 }

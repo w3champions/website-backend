@@ -23,7 +23,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player);
             await playerRepository.UpsertPlayer(player);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 10);
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 10);
 
             Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual("peter#123@10", playerLoaded[0].Players.First().Id);
@@ -43,7 +43,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await rankRepository.Insert(ranks);
             var player = new PlayerOverview("peter#123@10", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 10);
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 10);
 
             Assert.IsEmpty(playerLoaded);
         }
@@ -60,7 +60,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await rankRepository.Insert(ranks2);
             var player = new PlayerOverview("peter#123@10", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await rankRepository.LoadPlayerOfLeague(1, 20);
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 20);
 
             Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual(8, playerLoaded[0].RankNumber);

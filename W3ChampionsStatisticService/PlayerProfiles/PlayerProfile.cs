@@ -57,15 +57,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Create("UnknownPlayer#2@20", "UnknownPlayer#2");
         }
 
-        public void UpdateRank(
-            GameMode mode,
+        public void UpdateRank(GameMode mode,
             int mmr,
-            int rankingPoints,
-            int rank,
-            int leagueId,
-            int leagueOrder)
+            int rankingPoints)
         {
-            GameModeStats.RecordRanking(mode, mmr, rankingPoints, rank, leagueId, leagueOrder);
+            GameModeStats.RecordRanking(mode, mmr, rankingPoints);
         }
     }
 }

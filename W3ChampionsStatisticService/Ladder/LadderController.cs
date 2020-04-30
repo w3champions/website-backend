@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.Ladder
         [HttpGet("{leagueId}")]
         public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int gateWay = 20)
         {
-            var playersInLadder = await _rankRepository.LoadPlayerOfLeague(leagueId, gateWay);
+            var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, gateWay);
             if (playersInLadder == null)
             {
                 return NoContent();

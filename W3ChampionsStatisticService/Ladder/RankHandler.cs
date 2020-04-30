@@ -28,7 +28,12 @@ namespace W3ChampionsStatisticService.Ladder
                 var ranks = changedEvent.ranks
                     .OrderByDescending(r => r.rp)
                     .Select((r, i) =>
-                    new Rank(changedEvent.gateway, changedEvent.league, i + 1, (int) r.rp, r.tagId)).ToList();
+                    new Rank(
+                        changedEvent.gateway,
+                        changedEvent.league,
+                        i + 1,
+                        (int) r.rp,
+                        r.tagId)).ToList();
 
                 await _rankRepository.Insert(ranks);
 
