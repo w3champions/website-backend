@@ -30,6 +30,11 @@ namespace W3ChampionsStatisticService.Matches
 
             var offset = long.Parse(lastVersion);
             var events = await _padRepo.GetFrom(offset);
+            if (!events.Any())
+            {
+                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString());
+            }
+
             while (events.Any())
             {
                 foreach (var finishedEvent in events)
