@@ -58,8 +58,19 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(3, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
             Assert.AreEqual(15, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
             Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
-
         }
+
+        [Test]
+        public void PlayTimesPerDay_TooOldGame()
+        {
+            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
+            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+
+            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-15), dateTime);
+
+            Assert.AreEqual(0, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
+        }
+
 
         [Test]
         public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
