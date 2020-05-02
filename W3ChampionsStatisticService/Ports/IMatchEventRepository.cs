@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.Ports

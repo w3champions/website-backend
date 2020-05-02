@@ -1,10 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using MongoDB.Driver;
-using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PersonalSettings;
-using W3ChampionsStatisticService.Services;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace W3ChampionsStatisticService.Admin
 {
