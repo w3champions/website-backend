@@ -55,7 +55,7 @@ namespace W3ChampionsStatisticService.Matches
                 Name = w.battleTag.Split("#")[0],
                 BattleTag = w.battleTag.Split("#")[1],
                 Id = w.id,
-                CurrentMmr = (int?) w.updatedMmr?.rating ?? 0,
+                CurrentMmr = (int?) w.updatedMmr?.rating ?? (int) w.mmr.rating,
                 OldMmr = (int) w.mmr.rating,
                 Won = w.won,
                 Race = (Race) w.race
