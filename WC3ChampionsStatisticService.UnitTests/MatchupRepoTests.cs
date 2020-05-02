@@ -226,7 +226,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            matchFinishedEvent1.match.gameMode = 2;
+            matchFinishedEvent1.match.gameMode = 6;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             var matches = await matchRepository.Load(GameMode.GM_2v2);
@@ -239,7 +239,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            matchFinishedEvent1.match.gameMode = 2;
+            matchFinishedEvent1.match.gameMode = 6;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             var matches = await matchRepository.Load();
