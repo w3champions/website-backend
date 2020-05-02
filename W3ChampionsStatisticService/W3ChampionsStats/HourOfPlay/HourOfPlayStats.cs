@@ -10,7 +10,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         public void Apply(GameMode gameMode, DateTimeOffset timeOfGame, DateTimeOffset now = default)
         {
             now = now == default ? DateTimeOffset.UtcNow.Date : now.Date;
-            if (now - timeOfGame > TimeSpan.FromDays(14))
+            var daysOfDifference = now - timeOfGame.Date;
+            if (daysOfDifference >= TimeSpan.FromDays(14))
             {
                 return;
             }
