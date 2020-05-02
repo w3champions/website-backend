@@ -39,24 +39,9 @@ namespace W3ChampionsStatisticService.PadEvents
             }
         }
 
-        public async Task<List<RankingChangedEvent>> LoadLatestRanks(int pageSize = 1000)
+        public Task<List<RankingChangedEvent>> LoadRanks()
         {
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
-
-            var events = await mongoCollection.Find(m => true)
-                .SortBy(s => s.id)
-                .Limit(pageSize)
-                .ToListAsync();
-
-            return events;
-        }
-
-        public async Task DeleteRankEvent(ObjectId id)
-        {
-            var mongoCollection = CreateCollection<RankingChangedEvent>();
-            await mongoCollection.DeleteOneAsync(e => e.id == id);
+            return LoadAll<RankingChangedEvent>();
         }
     }
 }

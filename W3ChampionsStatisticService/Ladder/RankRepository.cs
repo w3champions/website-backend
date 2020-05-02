@@ -60,7 +60,7 @@ namespace W3ChampionsStatisticService.Ladder
             return result.Where(r => r.Player != null).ToList();
         }
 
-        public Task Insert(List<Rank> events)
+        public Task InsertMany(List<Rank> events)
         {
             return UpsertMany(events);
         }

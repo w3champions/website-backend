@@ -23,9 +23,11 @@ namespace W3ChampionsStatisticService.PadEvents
     }
 
     [BsonIgnoreExtraElements]
+    [BsonNoId]
     public class RankingChangedEvent
     {
-        public ObjectId id { get; set; }
+        [BsonElement("id")]
+        public int id { get; set; }
         public int gateway { get; set; }
         public int league { get; set; }
         public RankRaw[] ranks { get; set; }

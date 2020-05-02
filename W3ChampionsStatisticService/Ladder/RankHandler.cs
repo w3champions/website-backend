@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -21,24 +21,19 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task Update()
         {
-            var events = await _matchEventRepository.LoadLatestRanks();
+            var events = await _matchEventRepository.LoadRanks();
 
-            foreach (var changedEvent in events)
-            {
-                var ranks = changedEvent.ranks
-                    .OrderByDescending(r => r.rp)
-                    .Select((r, i) =>
+            var ranks = events.SelectMany(changedEvent => changedEvent.ranks
+                .OrderByDescending(r => r.rp)
+                .Select((r, i) =>
                     new Rank(
                         changedEvent.gateway,
                         changedEvent.league,
                         i + 1,
                         (int) r.rp,
-                        r.tagId)).ToList();
+                        r.tagId)).ToList()).ToList();
 
-                await _rankRepository.Insert(ranks);
-
-                await _matchEventRepository.DeleteRankEvent(changedEvent.id);
-            }
+            await _rankRepository.InsertMany(ranks);
         }
     }
 }
