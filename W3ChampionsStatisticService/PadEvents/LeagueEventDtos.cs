@@ -23,6 +23,7 @@ namespace W3ChampionsStatisticService.PadEvents
     }
 
     [BsonIgnoreExtraElements]
+    [BsonNoId]
     public class RankingChangedEvent
     {
         [BsonElement("id")]
