@@ -10,6 +10,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         public void Apply(GameMode gameMode, DateTimeOffset timeOfGame, DateTimeOffset now = default)
         {
             now = now == default ? DateTimeOffset.UtcNow.Date : now.Date;
+            if (now - timeOfGame > TimeSpan.FromDays(14))
+            {
+                return;
+            }
 
             var gameLengthPerMode = PlayTimesPerModeTwoWeeks.SingleOrDefault(m => m.GameMode == gameMode
                                                           && m.Day.Date == timeOfGame.Date);
@@ -29,10 +33,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 PlayTimesPerModeTwoWeeks.Reverse();
             }
 
-            gameLengthPerMode = PlayTimesPerModeTwoWeeks.SingleOrDefault(m => m.GameMode == gameMode
+            gameLengthPerMode = PlayTimesPerModeTwoWeeks.Single(m => m.GameMode == gameMode
                                                           && m.Day.Date == timeOfGame.Date);
-
-            if (gameLengthPerMode == null) return;
 
             gameLengthPerMode.Record(timeOfGame);
             PlayTimesPerMode = CalculateAverage(PlayTimesPerModeTwoWeeks);
