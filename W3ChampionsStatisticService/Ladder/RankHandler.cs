@@ -31,8 +31,7 @@ namespace W3ChampionsStatisticService.Ladder
                         changedEvent.league,
                         i + 1,
                         (int) r.rp,
-                        r.tagId,
-                        changedEvent.gameMode)).ToList()).ToList();
+                        r.tagId)).ToList()).ToList();
 
             await _rankRepository.InsertMany(ranks);
         }
