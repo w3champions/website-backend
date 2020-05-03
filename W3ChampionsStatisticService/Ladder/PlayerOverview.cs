@@ -11,6 +11,7 @@ namespace W3ChampionsStatisticService.Ladder
         {
             return new PlayerOverview
             {
+                // Todo remove when pads events are correct
                 Id = gameMode == GameMode.GM_1v1 ? string.Join("_", playerIds.OrderBy(t => t.Id).Select(t => t.Id)) :
                     $"{string.Join("_", playerIds.OrderBy(t => t.Id).Select(t => t.Id))}_{gameMode}",
                 PlayerIds = playerIds,
