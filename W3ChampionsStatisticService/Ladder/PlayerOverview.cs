@@ -5,36 +5,30 @@ using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.Ladder
 {
-    public class PlayerOverview
+    public class PlayerOverview : WinLoss
     {
-        public PlayerOverview(string id, string nameTag, int gateWay)
+        public static PlayerOverview Create(List<PlayerId> playerIds, int gateWay, GameMode gameMode)
         {
-            Id = id;
-            GateWay = gateWay;
-            Name = nameTag.Split("#")[0];
-            BattleTag = nameTag.Split("#")[1];
+            return new PlayerOverview
+            {
+                Id = $"{string.Join("_", playerIds.OrderBy(t => t.Id).Select(t => t.Id))}_{gameMode}",
+                PlayerIds = playerIds,
+                GateWay = gateWay,
+                GameMode = gameMode
+            };
         }
 
+        public List<PlayerId> PlayerIds { get; set; }
+
         public string Id { get; set; }
-        public string BattleTag { get; set; }
-        public string Name { get; set; }
         public int MMR { get; set; }
         public int GateWay { get; set; }
-        public WinLoss WinLoss { get; set; } = new WinLoss();
-        public List<GameModeWinLoss> WinsByMode { get; set; } = new List<GameModeWinLoss>
-        {
-            GameModeWinLoss.Create(GameMode.GM_1v1),
-            GameModeWinLoss.Create(GameMode.GM_2v2_AT),
-            GameModeWinLoss.Create(GameMode.GM_4v4),
-            GameModeWinLoss.Create(GameMode.FFA),
-        };
+        public GameMode GameMode { get; set; }
 
-        public void RecordWin(bool won, int newMmr, GameMode gameMode)
+        public void RecordWin(bool won, int newMmr)
         {
-            var gameModeWinLoss = WinsByMode.Single(m => m.GameMode == gameMode);
-            gameModeWinLoss.RecordWin(won);
             MMR = newMmr;
-            WinLoss.RecordWin(won);
+            RecordWin(won);
         }
     }
 }
