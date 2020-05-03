@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
                     },
                     new GameLengthPerMode
                     {
-                        GameMode = GameMode.GM_2v2,
+                        GameMode = GameMode.GM_2v2_AT,
                         Lengths = CreateLengths()
                     },
                     new GameLengthPerMode

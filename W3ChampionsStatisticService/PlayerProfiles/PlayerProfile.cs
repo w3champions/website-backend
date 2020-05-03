@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 GameModeStats = new GameModeStats
                 {
                     new GameModeStat(GameMode.GM_1v1),
-                    new GameModeStat(GameMode.GM_2v2),
+                    new GameModeStat(GameMode.GM_2v2_AT),
                     new GameModeStat(GameMode.GM_4v4),
                     new GameModeStat(GameMode.FFA)
                 }
