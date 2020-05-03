@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.Ladder
@@ -21,9 +24,18 @@ namespace W3ChampionsStatisticService.Ladder
         public double Winrate => new WinRate(TotalWins, TotalLosses).Rate;
         public int MMR { get; set; }
         public int GateWay { get; set; }
-
-        public void RecordWin(bool won, int newMmr)
+        public List<GameModeWinLoss> WinsByMode { get; set; } = new List<GameModeWinLoss>
         {
+            GameModeWinLoss.Create(GameMode.GM_1v1),
+            GameModeWinLoss.Create(GameMode.GM_2v2_AT),
+            GameModeWinLoss.Create(GameMode.GM_4v4),
+            GameModeWinLoss.Create(GameMode.FFA),
+        };
+
+        public void RecordWin(bool won, int newMmr, GameMode gameMode)
+        {
+            var gameModeWinLoss = WinsByMode.Single(m => m.GameMode == gameMode);
+            gameModeWinLoss.RecordWin(won);
             MMR = newMmr;
             if (won)
             {
@@ -34,5 +46,15 @@ namespace W3ChampionsStatisticService.Ladder
                 TotalLosses++;
             }
         }
+    }
+
+    public class GameModeWinLoss : WinLoss
+    {
+        public static GameModeWinLoss Create(GameMode gameMode)
+        {
+            return new GameModeWinLoss {GameMode = gameMode};
+        }
+
+        public GameMode GameMode { get; set; }
     }
 }

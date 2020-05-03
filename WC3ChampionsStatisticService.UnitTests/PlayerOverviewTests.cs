@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -60,9 +61,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void UpdateOverview()
         {
             var player = new PlayerOverview("peter#123@10", "peter#123", 1);
-            player.RecordWin(true, 1230);
-            player.RecordWin(false, 1240);
-            player.RecordWin(false, 1250);
+            player.RecordWin(true, 1230, GameMode.GM_1v1);
+            player.RecordWin(false, 1240, GameMode.GM_1v1);
+            player.RecordWin(false, 1250, GameMode.GM_1v1);
 
             Assert.AreEqual(3, player.Games);
             Assert.AreEqual(1, player.TotalWins);
@@ -71,6 +72,22 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("peter", player.Name);
             Assert.AreEqual("peter#123@10", player.Id);
             Assert.AreEqual(1250, player.MMR);
+        }
+
+        [Test]
+        public void UpdateOverview_2v2AT()
+        {
+            var player = new PlayerOverview("peter#123@10", "peter#123", 1);
+            player.RecordWin(true, 1230, GameMode.GM_2v2_AT);
+
+            Assert.AreEqual(1, player.Games);
+            Assert.AreEqual(1, player.TotalWins);
+
+            Assert.AreEqual(GameMode.GM_2v2_AT, player.WinsByMode[1].GameMode);
+            Assert.AreEqual(1, player.WinsByMode[1].Games);
+            Assert.AreEqual(1, player.WinsByMode[1].Wins);
+            Assert.AreEqual(0, player.WinsByMode[1].Losses);
+
         }
     }
 }

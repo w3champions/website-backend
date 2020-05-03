@@ -19,15 +19,15 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            if (nextEvent.match.gameMode == GameMode.GM_1v1)
+            foreach (var playerRaw in nextEvent.match.players)
             {
-                foreach (var playerRaw in nextEvent.match.players)
-                {
-                    var player = await _playerRepository.LoadOverview(playerRaw.id)
-                                 ?? new PlayerOverview(playerRaw.id, playerRaw.battleTag, nextEvent.match.gateway);
-                    player.RecordWin(playerRaw.won, (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating);
-                    await _playerRepository.UpsertPlayer(player);
-                }
+                var player = await _playerRepository.LoadOverview(playerRaw.id)
+                             ?? new PlayerOverview(playerRaw.id, playerRaw.battleTag, nextEvent.match.gateway);
+                player.RecordWin(
+                    playerRaw.won,
+                    (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating,
+                    nextEvent.match.gameMode);
+                await _playerRepository.UpsertPlayer(player);
             }
         }
     }
