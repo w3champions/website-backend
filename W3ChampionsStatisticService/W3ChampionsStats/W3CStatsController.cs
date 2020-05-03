@@ -46,6 +46,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Ok(stats.PlayTimesPerMode);
         }
 
+        [HttpGet("heroes-played")]
+        public async Task<IActionResult> GetPlayedHeroes()
+        {
+            var stats = await _w3StatsRepo.LoadHeroPlayedStat();
+            return Ok(stats.Stats);
+        }
+
         [HttpGet("distinct-players-per-day")]
         public async Task<IActionResult> DistinctPlayersPerDay(DateTimeOffset from = default, DateTimeOffset to = default)
         {
