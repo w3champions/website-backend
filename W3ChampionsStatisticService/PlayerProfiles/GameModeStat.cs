@@ -18,7 +18,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int Rank { get; set; }
         public int LeagueId { get; set; }
         public int LeagueOrder { get; set; }
-        public int Division { get; set; }
         public RankProgression RankingPointsProgress
         {
             get

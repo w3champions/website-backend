@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -21,16 +22,16 @@ namespace W3ChampionsStatisticService.Ladder
             return JoinWith(rank => rank.League == leagueId && rank.Gateway == gateWay);
         }
 
-        public Task<List<Rank>> LoadPlayerOfLeagueLike(string searchFor, int gateWay)
+        public Task<List<Rank>> LoadPlayerOfLeagueLike(string searchFor, int gateWay, GameMode gameMode)
         {
             var search = searchFor.ToLower();
-            return JoinWith(rank => rank.PlayerId.Contains(search) && rank.Gateway == gateWay);
+            return JoinWith(rank => rank.PlayerId.Contains(search) && rank.Gateway == gateWay && rank.GameMode == gameMode);
         }
 
-        public async Task<Rank> LoadPlayerOfLeague(string searchFor)
+        public async Task<Rank> LoadPlayerOfLeague(string searchFor, GameMode gameMode)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id == search);
+            var joinWith = await JoinWith(rank => rank.Id.Contains(search) && rank.GameMode == gameMode);
             return joinWith.FirstOrDefault();
         }
 
