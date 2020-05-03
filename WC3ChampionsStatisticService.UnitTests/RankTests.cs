@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -17,7 +16,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123@10", GameMode.GM_1v1)};
+            var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123@10")};
             await rankRepository.InsertMany(ranks);
             var player = new PlayerOverview("peter#123@10", "peter#123", 10);
             player.RecordWin(true, 1234);
@@ -40,7 +39,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10", GameMode.GM_1v1)};
+            var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10")};
             await rankRepository.InsertMany(ranks);
             var player = new PlayerOverview("peter#123@10", "peter#123", 20);
             await playerRepository.UpsertPlayer(player);
@@ -55,8 +54,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks1 = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10", GameMode.GM_1v1)};
-            var ranks2 = new List<Rank> { new Rank(20, 1, 8, 1456, "peter#123@10", GameMode.GM_1v1)};
+            var ranks1 = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10")};
+            var ranks2 = new List<Rank> { new Rank(20, 1, 8, 1456, "peter#123@10")};
             await rankRepository.InsertMany(ranks1);
             await rankRepository.InsertMany(ranks2);
             var player = new PlayerOverview("peter#123@10", "peter#123", 20);
