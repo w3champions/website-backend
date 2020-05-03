@@ -17,9 +17,9 @@ namespace W3ChampionsStatisticService.Ladder
         {
         }
 
-        public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int gateWay, GameMode gameMode)
+        public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int gateWay)
         {
-            return JoinWith(rank => rank.League == leagueId && rank.Gateway == gateWay && rank.GameMode == gameMode);
+            return JoinWith(rank => rank.League == leagueId && rank.Gateway == gateWay);
         }
 
         public Task<List<Rank>> LoadPlayerOfLeagueLike(string searchFor, int gateWay, GameMode gameMode)
