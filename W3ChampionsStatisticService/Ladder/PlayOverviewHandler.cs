@@ -36,6 +36,7 @@ namespace W3ChampionsStatisticService.Ladder
             var winnerPlayerIds = players.Select(w => PlayerId.Create(w.id, w.battleTag)).ToList();
 
             var winnerIdCombined = (string.Join("_", winnerPlayerIds.OrderBy(w => w.Id).Select(w => w.Id)));
+            // Todo remove when other modes are coming
             if (nextEvent.match.gameMode == GameMode.GM_2v2_AT)
             {
                 winnerIdCombined += $"_{GameMode.GM_2v2_AT}";
