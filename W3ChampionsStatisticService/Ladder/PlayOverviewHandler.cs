@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.Ladder
                              nextEvent.match.gameMode);
 
             winner.RecordWin(
-                true,
+                players.First().won,
                 (int?) players.First().updatedMmr?.rating ?? (int) players.First().mmr.rating);
 
             return winner;
