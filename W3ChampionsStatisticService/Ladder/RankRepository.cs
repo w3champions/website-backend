@@ -31,7 +31,7 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task<Rank> LoadPlayerOfLeague(string searchFor, GameMode gameMode)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id == search && rank.GameMode == gameMode);
+            var joinWith = await JoinWith(rank => rank.Id.Contains(search) && rank.GameMode == gameMode);
             return joinWith.FirstOrDefault();
         }
 
