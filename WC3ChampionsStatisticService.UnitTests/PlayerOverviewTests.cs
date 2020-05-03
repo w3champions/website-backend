@@ -65,9 +65,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             player.RecordWin(false, 1240, GameMode.GM_1v1);
             player.RecordWin(false, 1250, GameMode.GM_1v1);
 
-            Assert.AreEqual(3, player.Games);
-            Assert.AreEqual(1, player.TotalWins);
-            Assert.AreEqual(2, player.TotalLosses);
+            Assert.AreEqual(3, player.WinLoss.Games);
+            Assert.AreEqual(1, player.WinLoss.Wins);
+            Assert.AreEqual(2, player.WinLoss.Losses);
             Assert.AreEqual("123", player.BattleTag);
             Assert.AreEqual("peter", player.Name);
             Assert.AreEqual("peter#123@10", player.Id);
@@ -80,8 +80,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = new PlayerOverview("peter#123@10", "peter#123", 1);
             player.RecordWin(true, 1230, GameMode.GM_2v2_AT);
 
-            Assert.AreEqual(1, player.Games);
-            Assert.AreEqual(1, player.TotalWins);
+            Assert.AreEqual(1, player.WinLoss.Games);
+            Assert.AreEqual(1, player.WinLoss.Wins);
 
             Assert.AreEqual(GameMode.GM_2v2_AT, player.WinsByMode[1].GameMode);
             Assert.AreEqual(1, player.WinsByMode[1].Games);

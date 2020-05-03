@@ -28,10 +28,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual("peter#123@10", playerLoaded[0].Players.First().Id);
-            Assert.AreEqual(1, playerLoaded[0].Players.First().TotalWins);
+            Assert.AreEqual(1, playerLoaded[0].Players.First().WinLoss.Wins);
             Assert.AreEqual(12, playerLoaded[0].RankNumber);
             Assert.AreEqual(1456, playerLoaded[0].RankingPoints);
-            Assert.AreEqual(0, playerLoaded[0].Players.First().TotalLosses);
+            Assert.AreEqual(0, playerLoaded[0].Players.First().WinLoss.Losses);
         }
 
         [Test]

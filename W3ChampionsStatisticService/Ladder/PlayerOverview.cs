@@ -18,12 +18,9 @@ namespace W3ChampionsStatisticService.Ladder
         public string Id { get; set; }
         public string BattleTag { get; set; }
         public string Name { get; set; }
-        public int TotalLosses { get; set; }
-        public int TotalWins { get; set; }
-        public int Games => TotalLosses + TotalWins;
-        public double Winrate => new WinRate(TotalWins, TotalLosses).Rate;
         public int MMR { get; set; }
         public int GateWay { get; set; }
+        public WinLoss WinLoss { get; set; } = new WinLoss();
         public List<GameModeWinLoss> WinsByMode { get; set; } = new List<GameModeWinLoss>
         {
             GameModeWinLoss.Create(GameMode.GM_1v1),
@@ -37,24 +34,7 @@ namespace W3ChampionsStatisticService.Ladder
             var gameModeWinLoss = WinsByMode.Single(m => m.GameMode == gameMode);
             gameModeWinLoss.RecordWin(won);
             MMR = newMmr;
-            if (won)
-            {
-                TotalWins++;
-            }
-            else
-            {
-                TotalLosses++;
-            }
+            WinLoss.RecordWin(won);
         }
-    }
-
-    public class GameModeWinLoss : WinLoss
-    {
-        public static GameModeWinLoss Create(GameMode gameMode)
-        {
-            return new GameModeWinLoss {GameMode = gameMode};
-        }
-
-        public GameMode GameMode { get; set; }
     }
 }
