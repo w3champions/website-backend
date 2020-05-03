@@ -25,10 +25,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                              ?? PlayerProfile.Create(playerRaw.id, playerRaw.battleTag);
                 player.RecordWin(
                     (Race) playerRaw.race,
-                    (GameMode) nextEvent.match.gameMode,
+                    nextEvent.match.gameMode,
                     playerRaw.won);
                 player.UpdateRank(
-                    (GameMode) nextEvent.match.gameMode,
+                    nextEvent.match.gameMode,
                     (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating,
                     (int?) playerRaw.updatedRanking?.rp ?? (int?) playerRaw.ranking?.rp ?? 0);
                 await _playerRepository.UpsertPlayer(player);
