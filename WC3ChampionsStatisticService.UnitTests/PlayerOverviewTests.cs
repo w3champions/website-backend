@@ -5,6 +5,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -88,7 +89,48 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(1, player.Games);
             Assert.AreEqual(1, player.Wins);
             Assert.AreEqual(0, player.Losses);
+        }
 
+        [Test]
+        public async Task UpdateOverview_HandlerUpdate_1v1()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+            matchFinishedEvent.match.players[0].won = true;
+            matchFinishedEvent.match.players[1].won = false;
+            matchFinishedEvent.match.players[0].id = "peter#123@10";
+            matchFinishedEvent.match.players[0].battleTag = "peter#123";
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var playerProfile = await playerRepository.LoadOverview("peter#123@10");
+
+            Assert.AreEqual(1, playerProfile.Wins);
+            Assert.AreEqual(0, playerProfile.Losses);
+            Assert.AreEqual(GameMode.GM_1v1, playerProfile.GameMode);
+        }
+
+        [Test]
+        public async Task UpdateOverview_HandlerUpdate_2v2()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFake2v2Event();
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+            matchFinishedEvent.match.players[0].id = "peter#123@10";
+            matchFinishedEvent.match.players[1].id = "wolf#123@10";
+            matchFinishedEvent.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent.match.players[1].battleTag = "wolf#123";
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var playerProfile = await playerRepository.LoadOverview("peter#123@10_wolf#123@10_GM_2v2_AT");
+
+            Assert.AreEqual(1, playerProfile.Wins);
+            Assert.AreEqual(0, playerProfile.Losses);
+            Assert.AreEqual(GameMode.GM_2v2_AT, playerProfile.GameMode);
         }
     }
 }
