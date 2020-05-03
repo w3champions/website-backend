@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
             var duration = endTime - startTime;
-            stat.Apply((GameMode) nextEvent.match.gameMode, duration);
+            stat.Apply(nextEvent.match.gameMode, duration);
             await _w3Stats.Save(stat);
         }
     }

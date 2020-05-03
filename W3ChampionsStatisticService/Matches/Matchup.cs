@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.Matches
             Id = match.id;
             GateWay = match.gateway;
 
-            GameMode = (GameMode) matchFinishedEvent.match.gameMode;
+            GameMode = matchFinishedEvent.match.gameMode;
 
             StartTime = DateTimeOffset.Now;
             EndTime =  DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.endTime);
