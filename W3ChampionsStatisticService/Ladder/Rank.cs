@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.Ladder
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
         [JsonIgnore]
-        public List<PlayerOverview1v1> Players { get; set; }
-        public PlayerOverview1v1 Player => Players.SingleOrDefault();
+        public List<PlayerOverview> Players { get; set; }
+        public PlayerOverview Player => Players.SingleOrDefault();
     }
 }

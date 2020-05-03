@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
@@ -19,27 +21,33 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            foreach (var playerRaw in nextEvent.match.players)
-            {
-                if (nextEvent.match.gameMode == GameMode.GM_1v1)
-                {
-                    var player = await _playerRepository.LoadOverview(playerRaw.id)
-                                 ?? PlayerOverview1v1.Create(
-                                     playerRaw.id,
-                                     playerRaw.battleTag,
-                                     nextEvent.match.gateway,
-                                     nextEvent.match.gameMode);
-                    player.RecordWin(
-                        playerRaw.won,
-                        (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating);
-                    await _playerRepository.UpsertPlayer(player);
-                }
+            var winners = nextEvent.match.players.Where(p => p.won).ToList();
+            var loosers = nextEvent.match.players.Where(p => !p.won).ToList();
 
-                if (nextEvent.match.gameMode == GameMode.GM_2v2_AT)
-                {
-                    //todo
-                }
-            }
+            var winner = await UpdatePlayers(nextEvent, winners);
+            var looser = await UpdatePlayers(nextEvent, loosers);
+
+            await _playerRepository.UpsertPlayer(winner);
+            await _playerRepository.UpsertPlayer(looser);
+        }
+
+        private async Task<PlayerOverview> UpdatePlayers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> players)
+        {
+            var winnerPlayerIds = players.Select(w => PlayerId.Create(w.id, w.battleTag)).ToList();
+
+            var winnerIdCombined = string.Join("_", winnerPlayerIds.OrderBy(w => w.Id).Select(w => w.Id));
+
+            var winner = await _playerRepository.LoadOverview(winnerIdCombined)
+                         ?? PlayerOverview.Create(
+                             winnerPlayerIds,
+                             nextEvent.match.gateway,
+                             nextEvent.match.gameMode);
+
+            winner.RecordWin(
+                true,
+                (int?) players.First().updatedMmr?.rating ?? (int) players.First().mmr.rating);
+
+            return winner;
         }
     }
 }
