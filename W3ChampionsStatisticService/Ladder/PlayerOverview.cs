@@ -23,6 +23,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public List<PlayerId> PlayerIds { get; set; }
 
+        public string Name => string.Join(" & ", PlayerIds.Select(p => p.Name));
         public string Id { get; set; }
         public int MMR { get; set; }
         public int GateWay { get; set; }
