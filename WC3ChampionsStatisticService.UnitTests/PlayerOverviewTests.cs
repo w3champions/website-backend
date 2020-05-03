@@ -71,7 +71,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(2, player.Losses);
             Assert.AreEqual("123", player.PlayerIds[0].BattleTag);
             Assert.AreEqual("peter", player.PlayerIds[0].Name);
-            Assert.AreEqual("peter#123@10_GM_1v1", player.Id);
+            Assert.AreEqual("peter#123@10", player.Id);
             Assert.AreEqual(1250, player.MMR);
         }
 
