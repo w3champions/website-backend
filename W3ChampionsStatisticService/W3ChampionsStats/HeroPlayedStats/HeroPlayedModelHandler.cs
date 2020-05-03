@@ -19,11 +19,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            var stats = await _w3Stats.LoadHourOfPlay();
             var stat = await _w3Stats.LoadHeroPlayedStat() ?? HeroPlayedStat.Create();
             if (nextEvent.result == null) return;
 
             var heroes = nextEvent.result.players.SelectMany(p => p.heroes);
-            stat.Count(heroes);
+            stat.AddHeroes(heroes);
             await _w3Stats.Save(stat);
         }
     }

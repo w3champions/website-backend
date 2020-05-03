@@ -7,6 +7,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
     public class HourOfPlayStats
     {
+        public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
+        public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
+        public string Id { get; set; } = nameof(HourOfPlayStats);
+
         public void Apply(GameMode gameMode, DateTimeOffset timeOfGame, DateTimeOffset now = default)
         {
             now = now == default ? DateTimeOffset.UtcNow.Date : now.Date;
@@ -65,11 +69,6 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 Day = hourOfPlayPerModes.First().Day
             };
         }
-
-        public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
-        public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
-
-        public string Id { get; set; } = nameof(HourOfPlayStats);
 
         public static HourOfPlayStats Create(DateTimeOffset time = default)
         {
