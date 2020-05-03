@@ -213,10 +213,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            matchFinishedEvent1.match.gameMode = 1;
+            matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            var matches = await matchRepository.Load(GameMode.GM_2v2);
+            var matches = await matchRepository.Load(GameMode.GM_2v2_AT);
 
             Assert.AreEqual(0, matches.Count);
         }
@@ -226,10 +226,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            matchFinishedEvent1.match.gameMode = 6;
+            matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            var matches = await matchRepository.Load(GameMode.GM_2v2);
+            var matches = await matchRepository.Load(GameMode.GM_2v2_AT);
 
             Assert.AreEqual(1, matches.Count);
         }
@@ -239,7 +239,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            matchFinishedEvent1.match.gameMode = 6;
+            matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             var matches = await matchRepository.Load();

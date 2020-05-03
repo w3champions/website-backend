@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -22,7 +23,10 @@ namespace W3ChampionsStatisticService.Ladder
             {
                 var player = await _playerRepository.LoadOverview(playerRaw.id)
                              ?? new PlayerOverview(playerRaw.id, playerRaw.battleTag, nextEvent.match.gateway);
-                player.RecordWin(playerRaw.won, (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating);
+                player.RecordWin(
+                    playerRaw.won,
+                    (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating,
+                    nextEvent.match.gameMode);
                 await _playerRepository.UpsertPlayer(player);
             }
         }

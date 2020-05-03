@@ -93,7 +93,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_GameMode()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.match.gameMode = 1;
+            fakeEvent.match.gameMode = GameMode.GM_1v1;
             var matchup = new Matchup(fakeEvent);
             Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
         }

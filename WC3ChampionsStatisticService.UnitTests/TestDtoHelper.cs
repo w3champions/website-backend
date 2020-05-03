@@ -1,6 +1,7 @@
 using System.Linq;
 using AutoFixture;
 using MongoDB.Bson;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -18,7 +19,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
             fakeEvent.match.gateway = 10;
-            fakeEvent.match.gameMode = 1;
+            fakeEvent.match.gameMode = GameMode.GM_1v1;
 
             fakeEvent.match.players.First().battleTag = name1;
             fakeEvent.match.players.First().won = true;
@@ -41,7 +42,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
             fakeEvent.match.gateway = 10;
-            fakeEvent.match.gameMode = 2;
+            fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
 
             fakeEvent.match.players[0].battleTag = name1;
             fakeEvent.match.players[0].won = true;

@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -65,7 +66,7 @@ namespace W3ChampionsStatisticService.PadEvents
     {
         public int state { get; set; }
         public long startTime { get; set; }
-        public int gameMode { get; set; }
+        public GameMode gameMode { get; set; }
         public int gateway { get; set; }
         public string host { get; set; }
         [BsonElement("id")]
