@@ -35,9 +35,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             player.GameModeStats[0].LeagueId = gm1v1.League;
             player.GameModeStats[0].LeagueOrder = league1v1.order;
 
-            player.GameModeStats[0].Rank = gm2v2.RankNumber;
-            player.GameModeStats[0].LeagueId = gm2v2.League;
-            player.GameModeStats[0].LeagueOrder = league2v2.order;
+            player.GameModeStats[1].Rank = gm2v2.RankNumber;
+            player.GameModeStats[1].LeagueId = gm2v2.League;
+            player.GameModeStats[1].LeagueOrder = league2v2.order;
 
             return Ok(player);
         }
