@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -7,6 +8,7 @@ namespace W3ChampionsStatisticService.PadEvents
     public class LeagueConstellationChangedEvent
     {
         public ObjectId id { get; set; }
+        public GameMode gameMode { get; set; }
         public int gateway { get; set; }
         public League[] leagues { get; set; }
     }
@@ -28,6 +30,7 @@ namespace W3ChampionsStatisticService.PadEvents
     {
         [BsonElement("id")]
         public int id { get; set; }
+        public GameMode gameMode { get; set; }
         public int gateway { get; set; }
         public int league { get; set; }
         public RankRaw[] ranks { get; set; }
