@@ -21,13 +21,24 @@ namespace W3ChampionsStatisticService.Ladder
         {
             foreach (var playerRaw in nextEvent.match.players)
             {
-                var player = await _playerRepository.LoadOverview(playerRaw.id)
-                             ?? new PlayerOverview(playerRaw.id, playerRaw.battleTag, nextEvent.match.gateway);
-                player.RecordWin(
-                    playerRaw.won,
-                    (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating,
-                    nextEvent.match.gameMode);
-                await _playerRepository.UpsertPlayer(player);
+                if (nextEvent.match.gameMode == GameMode.GM_1v1)
+                {
+                    var player = await _playerRepository.LoadOverview(playerRaw.id)
+                                 ?? PlayerOverview1v1.Create(
+                                     playerRaw.id,
+                                     playerRaw.battleTag,
+                                     nextEvent.match.gateway,
+                                     nextEvent.match.gameMode);
+                    player.RecordWin(
+                        playerRaw.won,
+                        (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating);
+                    await _playerRepository.UpsertPlayer(player);
+                }
+
+                if (nextEvent.match.gameMode == GameMode.GM_2v2_AT)
+                {
+                    //todo
+                }
             }
         }
     }

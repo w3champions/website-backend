@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = new PlayerOverview("peter#123@10", "peter#123", 20);
+            var player = PlayerOverview1v1.Create("peter#123@10", "peter#123", 20, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
@@ -29,7 +29,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = new PlayerOverview("peter#123@20", "peter#123", 20);
+            var player = PlayerOverview1v1.Create("peter#123@20", "peter#123", 20, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", 20)).Single();
 
@@ -42,7 +42,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = new PlayerOverview("peter#123@20", "peter#123", 20);
+            var player = PlayerOverview1v1.Create("peter#123@20", "peter#123", 20, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike("", 20));
         }
@@ -52,7 +52,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = new PlayerOverview("peter#123@20", "peter#123", 20);
+            var player = PlayerOverview1v1.Create("peter#123@20", "peter#123", 20, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, 20));
         }
@@ -60,14 +60,14 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void UpdateOverview()
         {
-            var player = new PlayerOverview("peter#123@10", "peter#123", 1);
-            player.RecordWin(true, 1230, GameMode.GM_1v1);
-            player.RecordWin(false, 1240, GameMode.GM_1v1);
-            player.RecordWin(false, 1250, GameMode.GM_1v1);
+            var player = PlayerOverview1v1.Create("peter#123@10", "peter#123", 1, GameMode.GM_1v1);
+            player.RecordWin(true, 1230);
+            player.RecordWin(false, 1240);
+            player.RecordWin(false, 1250);
 
-            Assert.AreEqual(3, player.WinLoss.Games);
-            Assert.AreEqual(1, player.WinLoss.Wins);
-            Assert.AreEqual(2, player.WinLoss.Losses);
+            Assert.AreEqual(3, player.Games);
+            Assert.AreEqual(1, player.Wins);
+            Assert.AreEqual(2, player.Losses);
             Assert.AreEqual("123", player.BattleTag);
             Assert.AreEqual("peter", player.Name);
             Assert.AreEqual("peter#123@10", player.Id);
@@ -77,16 +77,16 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void UpdateOverview_2v2AT()
         {
-            var player = new PlayerOverview("peter#123@10", "peter#123", 1);
-            player.RecordWin(true, 1230, GameMode.GM_2v2_AT);
+            var player = PlayerOverview1v1.Create("peter#123@10", "peter#123", 1, GameMode.GM_2v2_AT);
+            player.RecordWin(true, 1230);
 
-            Assert.AreEqual(1, player.WinLoss.Games);
-            Assert.AreEqual(1, player.WinLoss.Wins);
+            Assert.AreEqual(1, player.Games);
+            Assert.AreEqual(1, player.Wins);
 
-            Assert.AreEqual(GameMode.GM_2v2_AT, player.WinsByMode[1].GameMode);
-            Assert.AreEqual(1, player.WinsByMode[1].Games);
-            Assert.AreEqual(1, player.WinsByMode[1].Wins);
-            Assert.AreEqual(0, player.WinsByMode[1].Losses);
+            Assert.AreEqual(GameMode.GM_2v2_AT, player.GameMode);
+            Assert.AreEqual(1, player.Games);
+            Assert.AreEqual(1, player.Wins);
+            Assert.AreEqual(0, player.Losses);
 
         }
     }

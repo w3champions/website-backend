@@ -47,12 +47,12 @@ namespace W3ChampionsStatisticService.Ladder
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)
         {
             var ranks = CreateCollection<Rank>();
-            var players = CreateCollection<PlayerOverview>();
+            var players = CreateCollection<PlayerOverview1v1>();
             var result = await ranks
                 .Aggregate()
                 .Match(matchExpression)
                 .SortBy(rank => rank.RankNumber)
-                .Lookup<Rank, PlayerOverview, Rank>(players,
+                .Lookup<Rank, PlayerOverview1v1, Rank>(players,
                     rank => rank.PlayerId,
                     player => player.Id,
                     rank => rank.Players)
