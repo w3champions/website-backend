@@ -24,6 +24,9 @@ namespace W3ChampionsStatisticService.Ladder
             var winners = nextEvent.match.players.Where(p => p.won).ToList();
             var loosers = nextEvent.match.players.Where(p => !p.won).ToList();
 
+            // for broken events
+            if (winners.Count == 0 || loosers.Count == 0) return;
+
             var winner = await UpdatePlayers(nextEvent, winners);
             var looser = await UpdatePlayers(nextEvent, loosers);
 
