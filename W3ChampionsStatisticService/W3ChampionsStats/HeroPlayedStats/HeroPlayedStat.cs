@@ -28,6 +28,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
                 heroInList = Stats.Single(h => hero.icon == h.Icon);
                 heroInList.Count++;
             }
+
+            Stats = Stats.OrderByDescending(s => s.Count).ToList();
         }
 
         private string ParseReforgedName(string heroIcon)

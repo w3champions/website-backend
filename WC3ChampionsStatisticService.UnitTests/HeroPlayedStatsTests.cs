@@ -35,6 +35,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, loadHeroPlayedStat.Stats.Single(h => h.Icon == "archmage").Count);
             Assert.AreEqual(2, loadHeroPlayedStat.Stats.Single(h => h.Icon == "mountainking").Count);
+            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].Count);
         }
     }
 }
