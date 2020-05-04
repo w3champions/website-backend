@@ -18,6 +18,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
         {
             foreach (var hero in heroes)
             {
+                hero.icon = ParseReforgedName(hero.icon);
                 var heroInList = Stats.SingleOrDefault(h => hero.icon == h.Icon);
                 if (heroInList == null)
                 {
@@ -27,6 +28,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
                 heroInList = Stats.Single(h => hero.icon == h.Icon);
                 heroInList.Count++;
             }
+        }
+
+        private string ParseReforgedName(string heroIcon)
+        {
+            if (heroIcon == "jainasea") return "archmage";
+            if (heroIcon == "thrallchampion") return "farseer";
+            if (heroIcon == "fallenkingarthas") return "deathknight";
+            if (heroIcon == "cenariusnightmare") return "keeperofthegrove";
+            return heroIcon;
         }
 
         public string Id { get; set; } = nameof(HeroPlayedStat);
