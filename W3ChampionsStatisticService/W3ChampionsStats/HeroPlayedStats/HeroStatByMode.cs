@@ -9,15 +9,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
         public GameMode GameMode { get; set; }
         public List<HeroStatByPick> OrderedPicks { get; set; } = new List<HeroStatByPick>
         {
-            new HeroStatByPick { Pick = 0 },
-            new HeroStatByPick { Pick = 1 },
-            new HeroStatByPick { Pick = 2 },
-            new HeroStatByPick { Pick = 3 }
+            new HeroStatByPick { Pick = EPick.Overall },
+            new HeroStatByPick { Pick = EPick.First },
+            new HeroStatByPick { Pick = EPick.Second },
+            new HeroStatByPick { Pick = EPick.Third }
         };
 
         public void AddHeroes(List<HeroPickDto> heroes)
         {
-            var overallPicks = OrderedPicks.Single(s => s.Pick == 0);
+            var overallPicks = OrderedPicks.Single(s => s.Pick == EPick.Overall);
             foreach (var hero in heroes)
             {
                 var correctPosition = OrderedPicks.Single(s => s.Pick == hero.Pick);

@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             if (nextEvent.result == null) return;
 
             var heroes = nextEvent.result.players.SelectMany(p =>
-                    p.heroes.Select((h, index) => new HeroPickDto(h.icon, index + 1))).ToList();
+                    p.heroes.Select((h, index) => new HeroPickDto(h.icon, (EPick) index + 1))).ToList();
             stat.AddHeroes(heroes, nextEvent.match.gameMode);
             await _w3Stats.Save(stat);
         }
@@ -32,9 +32,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
     public class HeroPickDto
     {
         public string Icon { get; }
-        public int Pick { get; }
+        public EPick Pick { get; }
 
-        public HeroPickDto(string icon, in int pick)
+        public HeroPickDto(string icon, in EPick pick)
         {
             Icon = ParseReforgedName(icon);;
             Pick = pick;
