@@ -22,9 +22,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             var stat = await _w3Stats.LoadHeroPlayedStat() ?? HeroPlayedStat.Create();
             if (nextEvent.result == null) return;
 
-            var heroes = nextEvent.result.players.SelectMany(p => p.heroes.Select(
-                    (h, index) => new HeroPickDto(h.icon, index)))
-            .ToList();
+            var heroes = nextEvent.result.players.SelectMany(p =>
+                    p.heroes.Select((h, index) => new HeroPickDto(h.icon, index + 1))).ToList();
             stat.AddHeroes(heroes, nextEvent.match.gameMode);
             await _w3Stats.Save(stat);
         }
