@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             heroInList = Stats.Single(h => hero.Icon == h.Icon);
             heroInList.Count++;
 
-            Stats = Stats.OrderByDescending(s => s.Count).ToList();
+            Stats = Stats.OrderByDescending(s => s.Icon).ToList();
         }
     }
 }
