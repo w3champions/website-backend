@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
                 heroInList.Count++;
             }
 
-            Stats = Stats.OrderBy(s => s.Count).ToList();
+            Stats = Stats.OrderByDescending(s => s.Count).ToList();
         }
 
         private string ParseReforgedName(string heroIcon)
