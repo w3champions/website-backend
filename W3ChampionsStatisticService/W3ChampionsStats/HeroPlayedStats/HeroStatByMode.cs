@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 {
@@ -16,12 +15,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             new HeroStatByPick { Pick = 3 }
         };
 
-        public void AddHeroes(List<Hero> heroes)
+        public void AddHeroes(List<HeroPickDto> heroes)
         {
             var overallPicks = Stats.Single(s => s.Pick == 0);
             foreach (var hero in heroes)
             {
-                var correctPosition = Stats.Single(s => s.Pick == hero.level);
+                var correctPosition = Stats.Single(s => s.Pick == hero.Pick);
 
                 overallPicks.AddHeroe(hero);
                 correctPosition.AddHeroe(hero);
