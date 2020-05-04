@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
@@ -12,9 +12,22 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             return new HeroPlayedStat();
         }
 
+        public List<HeroStatByMode> Stats { get; set; } = new List<HeroStatByMode>();
+
+        public void AddHeroes(List<Hero> heroes, GameMode gameMode)
+        {
+            var total = Stats.Single(s => s.GameMode == gameMode);
+            total.AddHeroes(heroes);
+        }
+        public string Id { get; set; } = nameof(HeroPlayedStat);
+    }
+
+    public class HeroStatByMode
+    {
+        public GameMode GameMode { get; set; }
         public List<HeroStat> Stats { get; set; } = new List<HeroStat>();
 
-        public void AddHeroes(IEnumerable<Hero> heroes)
+        public void AddHeroes(List<Hero> heroes)
         {
             foreach (var hero in heroes)
             {
@@ -40,7 +53,5 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             if (heroIcon == "cenariusnightmare") return "keeperofthegrove";
             return heroIcon;
         }
-
-        public string Id { get; set; } = nameof(HeroPlayedStat);
     }
 }
