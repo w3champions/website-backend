@@ -36,7 +36,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             // Overall Picks
             Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "archmage").Count);
             Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "mountainking").Count);
-            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats[0].Count);
+            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats[0].Count);
 
             // First Picks
             Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "archmage").Count);
