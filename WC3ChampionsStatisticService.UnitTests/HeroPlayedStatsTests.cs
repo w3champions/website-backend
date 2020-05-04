@@ -34,16 +34,16 @@ namespace WC3ChampionsStatisticService.UnitTests
             var loadHeroPlayedStat = await w3StatsRepo.LoadHeroPlayedStat();
 
             // Overall Picks
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].Stats[0].Stats.Single(h => h.Icon == "archmage").Count);
-            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].Stats[0].Stats.Single(h => h.Icon == "mountainking").Count);
-            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].Stats[0].Stats[0].Count);
+            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "archmage").Count);
+            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "mountainking").Count);
+            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats[0].Count);
 
             // First Picks
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].Stats[1].Stats.Single(h => h.Icon == "archmage").Count);
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].Stats[1].Stats.Single(h => h.Icon == "mountainking").Count);
+            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "archmage").Count);
+            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "mountainking").Count);
 
             // Second Picks
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].Stats[2].Stats.Single(h => h.Icon == "mountainking").Count);
+            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[2].Stats.Single(h => h.Icon == "mountainking").Count);
         }
     }
 }

@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
     public class HeroStatByMode
     {
         public GameMode GameMode { get; set; }
-        public List<HeroStatByPick> Stats { get; set; } = new List<HeroStatByPick>
+        public List<HeroStatByPick> OrderedPicks { get; set; } = new List<HeroStatByPick>
         {
             new HeroStatByPick { Pick = 0 },
             new HeroStatByPick { Pick = 1 },
@@ -17,10 +17,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 
         public void AddHeroes(List<HeroPickDto> heroes)
         {
-            var overallPicks = Stats.Single(s => s.Pick == 0);
+            var overallPicks = OrderedPicks.Single(s => s.Pick == 0);
             foreach (var hero in heroes)
             {
-                var correctPosition = Stats.Single(s => s.Pick == hero.Pick);
+                var correctPosition = OrderedPicks.Single(s => s.Pick == hero.Pick);
 
                 overallPicks.AddHeroe(hero);
                 correctPosition.AddHeroe(hero);
