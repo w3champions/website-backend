@@ -9,6 +9,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 {
     public class IntegrationTestBase
     {
+        // protected readonly MongoClient MongoClient = new MongoClient("mongodb://localhost:27017/");
         protected readonly MongoClient MongoClient = new MongoClient("mongodb://176.28.16.249:3512/");
 
         [SetUp]
