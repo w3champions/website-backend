@@ -5,7 +5,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 {
     public class HeroStatByPick
     {
-        public int Pick { get; set; }
+        public EPick Pick { get; set; }
         public List<HeroStat> Stats { get; set; } = new List<HeroStat>();
 
         public void AddHeroe(HeroPickDto hero)
