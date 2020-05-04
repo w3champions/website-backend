@@ -22,9 +22,31 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
             var stat = await _w3Stats.LoadHeroPlayedStat() ?? HeroPlayedStat.Create();
             if (nextEvent.result == null) return;
 
-            var heroes = nextEvent.result.players.SelectMany(p => p.heroes).ToList();
+            var heroes = nextEvent.result.players.SelectMany(p =>
+                    p.heroes.Select((h, index) => new HeroPickDto(h.icon, index + 1))).ToList();
             stat.AddHeroes(heroes, nextEvent.match.gameMode);
             await _w3Stats.Save(stat);
+        }
+    }
+
+    public class HeroPickDto
+    {
+        public string Icon { get; }
+        public int Pick { get; }
+
+        public HeroPickDto(string icon, in int pick)
+        {
+            Icon = ParseReforgedName(icon);;
+            Pick = pick;
+        }
+
+        private string ParseReforgedName(string heroIcon)
+        {
+            if (heroIcon == "jainasea") return "archmage";
+            if (heroIcon == "thrallchampion") return "farseer";
+            if (heroIcon == "fallenkingarthas") return "deathknight";
+            if (heroIcon == "cenariusnightmare") return "keeperofthegrove";
+            return heroIcon;
         }
     }
 }
