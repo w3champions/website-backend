@@ -47,10 +47,10 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public Stats Stats { get; set; }
 
         [JsonProperty("ladder")]
-        public Dictionary<string, Ladder> Ladder { get; set; }
+        public Dictionary<string, PadLadder> Ladder { get; set; }
     }
 
-    public class Ladder
+    public class PadLadder
     {
         [JsonProperty("wins", NullValueHandling = NullValueHandling.Ignore)]
         public long? Wins { get; set; }

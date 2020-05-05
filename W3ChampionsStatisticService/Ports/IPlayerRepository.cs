@@ -13,6 +13,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<PlayerOverview> LoadOverview(string battleTag);
         Task<PlayerWinLoss> LoadPlayerWinrate(string playerId);
         Task Save(List<PlayerWinLoss> winrate);
-        Task<PlayerOverview> LoadOverviewFrom(int offset);
+        Task<PlayerProfile> LoadPlayerFrom(int offset);
     }
 }

@@ -33,9 +33,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return UpsertMany(winrate);
         }
 
-        public async Task<PlayerOverview> LoadOverviewFrom(int offset)
+        public async Task<PlayerProfile> LoadPlayerFrom(int offset)
         {
-            var mongoCollection = CreateCollection<PlayerOverview>();
+            var mongoCollection = CreateCollection<PlayerProfile>();
             var playerOverview = await mongoCollection
                 .Find(r => true)
                 .Skip(offset)
