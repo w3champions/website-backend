@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                 }
 
                 var id = playerOnMySide.PlayerIds.Single();
-                var player = await _padRepo.GetPlayerFrom($"{id.Name}#{id.BattleTag}");
+                var player = await _padRepo.GetPlayer($"{id.Name}#{id.BattleTag}");
 
                 var fakeEvents = CreatFakeEvents(player, playerOnMySide, offset);
                 foreach (var finishedEvent in fakeEvents)

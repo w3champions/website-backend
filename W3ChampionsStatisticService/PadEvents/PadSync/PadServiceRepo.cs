@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using System.Web;
 using Newtonsoft.Json;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
@@ -19,12 +20,12 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             return deserializeObject.items;
         }
 
-        public async Task<PlayerStatePad> GetPlayerFrom(string battleTag)
+        public async Task<PlayerStatePad> GetPlayer(string battleTag)
         {
             var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("https://api.w3champions.com/player");
-            var encode = UrlEncoder.Create().Encode(battleTag);
-            var result = await httpClient.GetAsync($"/{encode}/stats");
+
+            var encode = HttpUtility.UrlEncode(battleTag);
+            var result = await httpClient.GetAsync($"https://api.w3champions.com/player/{encode}/stats");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<PlayerStatePad>(content);
