@@ -18,6 +18,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
+            fakeEvent.WasFakeEvent = false;
+            fakeEvent.WasFromSync = false;
+
             fakeEvent.match.gateway = 10;
             fakeEvent.match.gameMode = GameMode.GM_1v1;
 
@@ -33,6 +36,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fixture = new Fixture {RepeatCount = 4};
             var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id,  ObjectId.GenerateNewId()).Create();
+
+            fakeEvent.WasFakeEvent = false;
+            fakeEvent.WasFromSync = false;
 
             var name1 = "peter#123";
             var name2 = "wolf#456";

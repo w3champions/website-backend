@@ -66,8 +66,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].id = "peter#123@10";
-            ev.match.players[0].race = 1;
-            ev.match.players[1].race = 2;
+            ev.match.players[0].race = Race.HU;
+            ev.match.players[1].race = Race.OC;
             ev.match.players[0].battleTag = "PEteR#123";
 
             for (int i = 0; i < 100; i++)

@@ -230,7 +230,7 @@ namespace WC3ChampionsStatisticService.UnitTests
            return new PlayerMMrChange()
             {
                 id = playerId,
-                race = (int)race,
+                race = race,
                 won = won
            };
         }

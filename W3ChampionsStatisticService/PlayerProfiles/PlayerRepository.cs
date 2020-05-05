@@ -33,6 +33,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return UpsertMany(winrate);
         }
 
+        public async Task<PlayerProfile> LoadPlayerFrom(int offset)
+        {
+            var mongoCollection = CreateCollection<PlayerProfile>();
+            var playerOverview = await mongoCollection
+                .Find(r => true)
+                .Skip(offset)
+                .FirstOrDefaultAsync();
+            return playerOverview;
+        }
+
         public Task<PlayerProfile> Load(string battleTag)
         {
             return LoadFirst<PlayerProfile>(p => p.Id == battleTag);

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -21,7 +22,7 @@ namespace W3ChampionsStatisticService.PadEvents
         [BsonElement("id")]
         public string id { get; set; }
         public string battleTag { get; set; }
-        public int race { get; set; }
+        public Race race { get; set; }
 
         public bool won { get; set; }
         public Mmr mmr { get; set; }
@@ -193,6 +194,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public Match match { get; set; }
         public Result result { get; set; }
         public bool WasFromSync { get; set; }
+        public bool WasFakeEvent { get; set; }
     }
 
     [BsonIgnoreExtraElements]

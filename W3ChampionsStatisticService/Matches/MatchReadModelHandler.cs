@@ -18,6 +18,7 @@ namespace W3ChampionsStatisticService.Matches
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             var matchup = new Matchup(nextEvent);
             await _matchRepository.Insert(matchup);
         }

@@ -23,12 +23,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 var player = await _playerRepository.Load(playerRaw.id)
                              ?? PlayerProfile.Create(playerRaw.id, playerRaw.battleTag);
                 player.RecordWin(
-                    (Race) playerRaw.race,
+                    playerRaw.race,
                     nextEvent.match.gameMode,
                     playerRaw.won);
                 player.UpdateRank(
                     nextEvent.match.gameMode,
-                    (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating,
+                    (int?) playerRaw.updatedMmr?.rating ?? (int?) playerRaw.mmr?.rating ?? 0,
                     (int?) playerRaw.updatedRanking?.rp ?? (int?) playerRaw.ranking?.rp ?? 0);
                 await _playerRepository.UpsertPlayer(player);
             }

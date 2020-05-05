@@ -9,6 +9,8 @@ using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PadEvents.FakeEventSync;
+using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
@@ -42,14 +44,15 @@ namespace W3ChampionsStatisticService
 
             services.AddControllers();
 
-            var doRunAsyncHandler = _configuration.GetValue<string>("startHandlers");
-            var doPadSyncHandler = _configuration.GetValue<string>("startPadSync");
+            var startHandlers = _configuration.GetValue<string>("startHandlers");
+            var startPadSync = _configuration.GetValue<string>("startPadSync");
+            var startFakeEventHandler = _configuration.GetValue<string>("startFakeEventHandler");
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
             services.AddSingleton(typeof(TrackingService));
-            
+
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
@@ -59,15 +62,22 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
-            services.AddTransient<PadServiceRepo>();
+            services.AddTransient<IPadServiceRepo, PadServiceRepo>();
+            services.AddSingleton<FakeEventCreator>();
+            services.AddSingleton<ITempLossesRepo, TempLossesRepo>();
 
 
-            if (doPadSyncHandler == "true")
+            if (startPadSync == "true")
             {
                 services.AddUnversionedReadModelService<PadSyncHandler>();
             }
 
-            if (doRunAsyncHandler == "true")
+            if (startFakeEventHandler == "true")
+            {
+                services.AddUnversionedReadModelService<FakeEventSyncHandler>();
+            }
+
+            if (startHandlers == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
 
