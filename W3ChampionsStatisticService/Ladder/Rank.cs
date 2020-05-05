@@ -1,13 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
 {
-    [BsonIgnoreExtraElements]
     public class Rank : IIdentifiable
     {
         public Rank(int gateway, int league, int rankNumber, int rankingPoints, string playerId, GameMode gameMode)
