@@ -3,9 +3,9 @@ using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 {
-    public class RaceAndWinDtoPerPlayerWins
+    public class TempRemainingWins
     {
-        public RaceAndWinDtoPerPlayerWins(string id, List<RaceAndWinDto> remainingWins)
+        public TempRemainingWins(string id, List<RaceAndWinDto> remainingWins)
         {
             Id = id;
             RemainingWins = remainingWins;
@@ -15,15 +15,15 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         public List<RaceAndWinDto> RemainingWins { get; set; }
     }
 
-    public class RaceAndWinDtoPerPlayerLosses : RaceAndWinDtoPerPlayerWins
+    public class TempRemainingLosses : TempRemainingWins
     {
-        public RaceAndWinDtoPerPlayerLosses(string id, List<RaceAndWinDto> remainingWins) : base(id, remainingWins)
+        public TempRemainingLosses(string id, List<RaceAndWinDto> remainingWins) : base(id, remainingWins)
         {
         }
 
-        public static RaceAndWinDtoPerPlayerLosses Create(string playerId)
+        public static TempRemainingLosses Create(string playerId)
         {
-            return new RaceAndWinDtoPerPlayerLosses(playerId, new List<RaceAndWinDto>
+            return new TempRemainingLosses(playerId, new List<RaceAndWinDto>
             {
                 new RaceAndWinDto(Race.HU, 0),
                 new RaceAndWinDto(Race.OC, 0),
