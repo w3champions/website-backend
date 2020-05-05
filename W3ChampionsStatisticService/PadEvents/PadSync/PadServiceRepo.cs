@@ -53,10 +53,10 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     public class PadLadder
     {
         [JsonProperty("wins", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Wins { get; set; }
+        public long Wins { get; set; }
 
         [JsonProperty("losses", NullValueHandling = NullValueHandling.Ignore)]
-        public long? Losses { get; set; }
+        public long Losses { get; set; }
 
         [JsonProperty("solo", NullValueHandling = NullValueHandling.Ignore)]
         public Solo Solo { get; set; }

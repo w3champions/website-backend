@@ -74,8 +74,10 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var gateWay = myPlayer.Id.Split("@")[1];
             player.Data.Ladder.TryGetValue(gateWay, out var gatewayStats);
 
-            var gatewayStatsWins = gatewayStats?.Wins ?? 0;
-            var gatewayStatsLosses = gatewayStats?.Losses ?? 0;
+            if (gatewayStats == null) return new List<MatchFinishedEvent>();
+
+            var gatewayStatsWins = gatewayStats.Wins;
+            var gatewayStatsLosses = gatewayStats.Losses;
 
             var matchFinishedEvents = new List<MatchFinishedEvent>();
             var winDiffs = new List<RaceAndWinDto>();
@@ -96,13 +98,32 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
             lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.RnD)));
 
+            var newDiffLosses = MergeDiff(_remainingLosses, player, lossDiffs);
+            var newDiffWins = MergeDiff(_remainingWins, player, winDiffs);
+
             matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs, gatewayStatsWins));
             matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs, gatewayStatsLosses));
 
-            Upsert(_remainingLosses, player, lossDiffs);
-            Upsert(_remainingWins, player, winDiffs);
+            Upsert(_remainingLosses, player, newDiffLosses);
+            Upsert(_remainingWins, player, newDiffWins);
 
             return matchFinishedEvents;
+        }
+
+        private List<RaceAndWinDto> MergeDiff(
+            Dictionary<string, List<RaceAndWinDto>> remainingLosses,
+            PlayerStatePad player,
+            List<RaceAndWinDto> lossDiffs)
+        {
+            if (!remainingLosses.ContainsKey(player.Account))
+            {
+                return lossDiffs;
+            }
+
+            var remainingStuff = remainingLosses[player.Account];
+            return remainingStuff.Zip(
+                lossDiffs,
+                (dto, winDto) => new RaceAndWinDto(dto.Race, Math.Abs(dto.Count - winDto.Count))).ToList();
         }
 
         private void Upsert(
