@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                     playerRaw.won);
                 player.UpdateRank(
                     nextEvent.match.gameMode,
-                    (int?) playerRaw.updatedMmr?.rating ?? (int) playerRaw.mmr.rating,
+                    (int?) playerRaw.updatedMmr?.rating ?? (int?) playerRaw.mmr?.rating ?? 0,
                     (int?) playerRaw.updatedRanking?.rp ?? (int?) playerRaw.ranking?.rp ?? 0);
                 await _playerRepository.UpsertPlayer(player);
             }

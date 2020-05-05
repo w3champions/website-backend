@@ -134,25 +134,25 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     public class Stats
     {
         [JsonProperty("human")]
-        public WinAndLossesPad Human { get; set; }
+        public WinsAndLossesPad Human { get; set; }
 
         [JsonProperty("orc")]
-        public WinAndLossesPad Orc { get; set; }
+        public WinsAndLossesPad Orc { get; set; }
 
         [JsonProperty("undead")]
-        public WinAndLossesPad Undead { get; set; }
+        public WinsAndLossesPad Undead { get; set; }
 
         [JsonProperty("night_elf")]
-        public WinAndLossesPad NightElf { get; set; }
+        public WinsAndLossesPad NightElf { get; set; }
 
         [JsonProperty("random")]
-        public WinAndLossesPad Random { get; set; }
+        public WinsAndLossesPad Random { get; set; }
 
         [JsonProperty("total")]
-        public WinAndLossesPad Total { get; set; }
+        public WinsAndLossesPad Total { get; set; }
     }
 
-    public class WinAndLossesPad
+    public class WinsAndLossesPad
     {
         [JsonProperty("wins")]
         public long Wins { get; set; }
