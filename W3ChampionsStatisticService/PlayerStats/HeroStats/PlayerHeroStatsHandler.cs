@@ -58,8 +58,8 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                     new MapName(nextEvent.match.map).Name,
                     eventPlayer2.won);
 
-                //await _playerRepository.UpsertPlayerHeroStats(p1);
-                //await _playerRepository.UpsertPlayerHeroStats(p2);
+                await _playerRepository.UpsertPlayerHeroStats(p1);
+                await _playerRepository.UpsertPlayerHeroStats(p2);
             }
         }
     }
