@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 {
@@ -18,6 +19,18 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
     {
         public RaceAndWinDtoPerPlayerLosses(string id, List<RaceAndWinDto> remainingWins) : base(id, remainingWins)
         {
+        }
+
+        public static RaceAndWinDtoPerPlayerLosses Create(string playerId)
+        {
+            return new RaceAndWinDtoPerPlayerLosses(playerId, new List<RaceAndWinDto>
+            {
+                new RaceAndWinDto(Race.HU, 0),
+                new RaceAndWinDto(Race.OC, 0),
+                new RaceAndWinDto(Race.NE, 0),
+                new RaceAndWinDto(Race.UD, 0),
+                new RaceAndWinDto(Race.RnD, 0),
+            });
         }
     }
 

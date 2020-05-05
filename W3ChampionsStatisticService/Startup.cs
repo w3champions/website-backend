@@ -62,7 +62,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
-            services.AddTransient<PadServiceRepo>();
+            services.AddTransient<IPadServiceRepo, PadServiceRepo>();
             services.AddSingleton<FakeEventCreator>();
             services.AddSingleton<ITempLossesRepo, TempLossesRepo>();
 

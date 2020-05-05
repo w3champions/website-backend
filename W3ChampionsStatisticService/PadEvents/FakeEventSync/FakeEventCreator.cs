@@ -38,20 +38,22 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             winDiffs.Add(new RaceAndWinDto(Race.HU, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.HU)));
             lossDiffs.Add(new RaceAndWinDto(Race.HU, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.HU)));
 
-            winDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.OC)));
-            lossDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.OC)));
+            winDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Orc.Wins - myPlayer.GetWinsPerRace(Race.OC)));
+            lossDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Orc.Wins - myPlayer.GetLossPerRace(Race.OC)));
 
-            winDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.NE)));
-            lossDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.NE)));
+            winDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.NightElf.Wins - myPlayer.GetWinsPerRace(Race.NE)));
+            lossDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.NightElf.Wins - myPlayer.GetLossPerRace(Race.NE)));
 
-            winDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.UD)));
-            lossDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.UD)));
+            winDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Undead.Wins - myPlayer.GetWinsPerRace(Race.UD)));
+            lossDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Undead.Wins - myPlayer.GetLossPerRace(Race.UD)));
 
-            winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
-            lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.RnD)));
+            winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
+            lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Wins - myPlayer.GetLossPerRace(Race.RnD)));
 
-            var remainingLosses = await _tempLossesRepo.LoadLosses(player.Account);
-            var remainingWins = await _tempLossesRepo.LoadWins(player.Account);
+            var remainingLosses = await _tempLossesRepo.LoadLosses(player.Account)
+                                  ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
+            var remainingWins = await _tempLossesRepo.LoadWins(player.Account)
+                                ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
             var newDiffLosses = MergeDiff(remainingLosses, lossDiffs);
             var newDiffWins = MergeDiff(remainingWins, winDiffs);
 
@@ -70,7 +72,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         {
             return remainingLosses.Zip(
                 lossDiffs,
-                (dto, winDto) => new RaceAndWinDto(dto.Race, Math.Abs((long) (dto.Count - winDto.Count)))).ToList();
+                (dto, winDto) => new RaceAndWinDto(dto.Race, Math.Abs((dto.Count - winDto.Count)))).ToList();
         }
 
         private List<MatchFinishedEvent> CreateGamesOfDiffs(
@@ -80,7 +82,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             List<RaceAndWinDto> winDiffs,
             long gatewayStats)
         {
-            var gateWay = myPlayer.Id.Split("@")[0];
+            var gateWay = myPlayer.Id.Split("@")[1];
             var finishedEvents = new List<MatchFinishedEvent>();
             foreach (var winDiff in winDiffs)
             {

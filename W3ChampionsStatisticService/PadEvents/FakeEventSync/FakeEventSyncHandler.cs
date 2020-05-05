@@ -7,14 +7,14 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 {
     public class FakeEventSyncHandler : IAsyncUpdatable
     {
-        private readonly PadServiceRepo _padRepo;
+        private readonly IPadServiceRepo _padRepo;
         private readonly IVersionRepository _versionRepository;
         private readonly IMatchEventRepository _matchEventRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly FakeEventCreator _fakeEventCreator;
 
         public FakeEventSyncHandler(
-            PadServiceRepo padRepo,
+            IPadServiceRepo padRepo,
             IVersionRepository versionRepository,
             IMatchEventRepository matchEventRepository,
             IPlayerRepository playerRepository,

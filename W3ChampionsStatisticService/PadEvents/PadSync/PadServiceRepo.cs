@@ -7,7 +7,13 @@ using Newtonsoft.Json;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
-    public class PadServiceRepo
+    public interface IPadServiceRepo
+    {
+        Task<List<Match>> GetFrom(long offset);
+        Task<PlayerStatePad> GetPlayer(string battleTag);
+    }
+
+    public class PadServiceRepo : IPadServiceRepo
     {
         public async Task<List<Match>> GetFrom(long offset)
         {
@@ -128,25 +134,25 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     public class Stats
     {
         [JsonProperty("human")]
-        public Human Human { get; set; }
+        public WinAndLossesPad Human { get; set; }
 
         [JsonProperty("orc")]
-        public Human Orc { get; set; }
+        public WinAndLossesPad Orc { get; set; }
 
         [JsonProperty("undead")]
-        public Human Undead { get; set; }
+        public WinAndLossesPad Undead { get; set; }
 
         [JsonProperty("night_elf")]
-        public Human NightElf { get; set; }
+        public WinAndLossesPad NightElf { get; set; }
 
         [JsonProperty("random")]
-        public Human Random { get; set; }
+        public WinAndLossesPad Random { get; set; }
 
         [JsonProperty("total")]
-        public Human Total { get; set; }
+        public WinAndLossesPad Total { get; set; }
     }
 
-    public class Human
+    public class WinAndLossesPad
     {
         [JsonProperty("wins")]
         public long Wins { get; set; }

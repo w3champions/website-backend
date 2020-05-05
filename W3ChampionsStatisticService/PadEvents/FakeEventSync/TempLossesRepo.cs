@@ -10,13 +10,13 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         public async Task<List<RaceAndWinDto>> LoadLosses(string playerAccount)
         {
             var loadFirst = await LoadFirst<RaceAndWinDtoPerPlayerLosses>(l => l.Id == playerAccount);
-            return loadFirst.RemainingWins;
+            return loadFirst?.RemainingWins;
         }
 
         public async Task<List<RaceAndWinDto>> LoadWins(string playerAccount)
         {
             var loadFirst = await LoadFirst<RaceAndWinDtoPerPlayerWins>(l => l.Id == playerAccount);
-            return loadFirst.RemainingWins;
+            return loadFirst?.RemainingWins;
         }
 
         public Task SaveWins(string playerAccount, List<RaceAndWinDto> newDiffWins)
