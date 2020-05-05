@@ -1,10 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.Matches
+namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
     public class PadSyncHandler : IAsyncUpdatable
     {

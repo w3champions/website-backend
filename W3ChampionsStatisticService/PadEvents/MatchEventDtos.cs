@@ -193,6 +193,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public Match match { get; set; }
         public Result result { get; set; }
         public bool WasFromSync { get; set; }
+        public bool WasFakeEvent { get; set; }
     }
 
     [BsonIgnoreExtraElements]
