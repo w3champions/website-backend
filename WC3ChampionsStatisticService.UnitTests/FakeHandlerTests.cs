@@ -137,7 +137,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task SaveAndLoadTempLosses()
         {
-            var wins = RaceAndWinDtoPerPlayerLosses.Create("Peter").RemainingWins;
+            var wins = TempRemainingLosses.Create("Peter").RemainingWins;
             wins[0].Count = 2;
             wins[4].Count = 1;
 
@@ -162,7 +162,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task SaveAndLoadTempWins()
         {
-            var wins = RaceAndWinDtoPerPlayerLosses.Create("Peter").RemainingWins;
+            var wins = TempRemainingLosses.Create("Peter").RemainingWins;
             wins[0].Count = 2;
             wins[4].Count = 1;
 
