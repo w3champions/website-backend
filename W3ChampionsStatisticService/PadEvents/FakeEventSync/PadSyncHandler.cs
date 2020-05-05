@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -65,6 +64,8 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
     public class FakeEventCreator
     {
+        private Dictionary<string, List<RaceAndWinDto>> _remainingWins = new Dictionary<string,List<RaceAndWinDto>>();
+        private Dictionary<string, List<RaceAndWinDto>> _remainingLosses = new Dictionary<string,List<RaceAndWinDto>>();
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
         public IEnumerable<MatchFinishedEvent> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer, int increment)
@@ -72,6 +73,9 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             _dateTime = _dateTime.AddMinutes(increment);
             var gateWay = myPlayer.Id.Split("@")[1];
             player.Data.Ladder.TryGetValue(gateWay, out var gatewayStats);
+
+            var gatewayStatsWins = gatewayStats?.Wins ?? 0;
+            var gatewayStatsLosses = gatewayStats?.Losses ?? 0;
 
             var matchFinishedEvents = new List<MatchFinishedEvent>();
             var winDiffs = new List<RaceAndWinDto>();
@@ -92,28 +96,47 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
             lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.RnD)));
 
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs));
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs, gatewayStatsWins));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs, gatewayStatsLosses));
+
+            Upsert(_remainingLosses, player, lossDiffs);
+            Upsert(_remainingWins, player, winDiffs);
 
             return matchFinishedEvents;
         }
 
+        private void Upsert(
+            Dictionary<string, List<RaceAndWinDto>> remainingLosses,
+            PlayerStatePad player,
+            List<RaceAndWinDto> lossDiffs)
+        {
+            if (remainingLosses.ContainsKey(player.Account))
+            {
+                remainingLosses[player.Account] = lossDiffs;
+            }
+            else
+            {
+                remainingLosses[player.Account] = lossDiffs;
+            }
+        }
+
         private List<MatchFinishedEvent> CreateGamesOfDiffs(
-            bool wins,
+            bool won,
             PlayerProfile myPlayer,
             int increment,
-            List<RaceAndWinDto> winDiffs)
+            List<RaceAndWinDto> winDiffs,
+            long gatewayStats)
         {
             var gateWay = myPlayer.Id.Split("@")[0];
             var finishedEvents = new List<MatchFinishedEvent>();
             foreach (var winDiff in winDiffs)
             {
-                while (winDiff.Count != 0)
+                while (winDiff.Count != 0 && gatewayStats != 0)
                 {
                     finishedEvents.Add(new MatchFinishedEvent
                     {
                         match = CreatMatch(
-                            wins,
+                            won,
                             int.Parse(gateWay),
                             myPlayer.CombinedBattleTag,
                             myPlayer.Id,
@@ -126,6 +149,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                     });
                     increment++;
                     winDiff.Count--;
+                    gatewayStats--;
                 }
             }
 

@@ -9,6 +9,7 @@ using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PadEvents.FakeEventSync;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -61,6 +62,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<PadServiceRepo>();
+            services.AddSingleton<FakeEventCreator>();
 
 
             if (doPadSyncHandler == "true")
