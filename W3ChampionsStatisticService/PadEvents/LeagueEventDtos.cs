@@ -1,5 +1,7 @@
-﻿using MongoDB.Bson;
+﻿using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -30,13 +32,14 @@ namespace W3ChampionsStatisticService.PadEvents
         public int id { get; set; }
         public int gateway { get; set; }
         public int league { get; set; }
+        public GameMode gameMode { get; set; }
         public RankRaw[] ranks { get; set; }
     }
 
     [BsonIgnoreExtraElements]
     public class RankRaw
     {
-        public string tagId { get; set; }
+        public List<string> battleTags { get; set; }
         public double rp { get; set; }
     }
 }
