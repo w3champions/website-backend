@@ -31,7 +31,8 @@ namespace W3ChampionsStatisticService.Ladder
                         changedEvent.league,
                         i + 1,
                         (int) r.rp,
-                        $"{string.Join("_", r.battleTags.OrderBy(t => t))}_{changedEvent.gameMode}")).ToList()).ToList();
+                        $"{string.Join("_", r.battleTags.OrderBy(t => t))}_{changedEvent.gameMode}",
+                        changedEvent.gameMode)).ToList()).ToList();
 
             await _rankRepository.InsertMany(ranks);
         }

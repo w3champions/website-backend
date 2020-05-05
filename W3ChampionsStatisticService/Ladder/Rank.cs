@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
@@ -9,13 +10,14 @@ namespace W3ChampionsStatisticService.Ladder
     [BsonIgnoreExtraElements]
     public class Rank : IIdentifiable
     {
-        public Rank(int gateway, int league, int rankNumber, int rankingPoints, string playerId)
+        public Rank(int gateway, int league, int rankNumber, int rankingPoints, string playerId, GameMode gameMode)
         {
             Gateway = gateway;
             League = league;
             RankNumber = rankNumber;
             RankingPoints = rankingPoints;
             PlayerId = playerId;
+            GameMode = gameMode;
         }
 
         public int Gateway { get; set; }
@@ -27,5 +29,6 @@ namespace W3ChampionsStatisticService.Ladder
         [JsonIgnore]
         public List<PlayerOverview> Players { get; set; }
         public PlayerOverview Player => Players.SingleOrDefault();
+        public GameMode GameMode { get; set; }
     }
 }
