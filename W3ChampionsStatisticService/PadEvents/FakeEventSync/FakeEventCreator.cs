@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,69 +6,21 @@ using MongoDB.Bson;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 {
-    public class FakeEventSyncHandler : IAsyncUpdatable
-    {
-        private readonly PadServiceRepo _padRepo;
-        private readonly IVersionRepository _versionRepository;
-        private readonly IMatchEventRepository _matchEventRepository;
-        private readonly IPlayerRepository _playerRepository;
-        private readonly FakeEventCreator _fakeEventCreator;
-
-        public FakeEventSyncHandler(
-            PadServiceRepo padRepo,
-            IVersionRepository versionRepository,
-            IMatchEventRepository matchEventRepository,
-            IPlayerRepository playerRepository,
-            FakeEventCreator fakeEventCreator
-            )
-        {
-            _padRepo = padRepo;
-            _versionRepository = versionRepository;
-            _matchEventRepository = matchEventRepository;
-            _playerRepository = playerRepository;
-            _fakeEventCreator = fakeEventCreator;
-        }
-
-        public async Task Update()
-        {
-            var lastVersion = await _versionRepository.GetLastVersion<FakeEventSyncHandler>();
-            if (lastVersion == null) lastVersion = "0";
-
-            var offset = int.Parse(lastVersion);
-
-            while (true)
-            {
-                var playerOnMySide = await _playerRepository.LoadPlayerFrom(offset);
-                if (playerOnMySide == null) break;
-
-                var player = await _padRepo.GetPlayer($"{playerOnMySide.Name}#{playerOnMySide.BattleTag}");
-
-                var fakeEvents = _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
-
-                foreach (var finishedEvent in fakeEvents)
-                {
-                    await _matchEventRepository.InsertIfNotExisting(finishedEvent);
-                }
-
-                offset += 1;
-                await _versionRepository.SaveLastVersion<FakeEventSyncHandler>(offset.ToString());
-                await Task.Delay(1000);
-            }
-        }
-    }
-
     public class FakeEventCreator
     {
-        private Dictionary<string, List<RaceAndWinDto>> _remainingWins = new Dictionary<string,List<RaceAndWinDto>>();
-        private Dictionary<string, List<RaceAndWinDto>> _remainingLosses = new Dictionary<string,List<RaceAndWinDto>>();
+        private readonly ITempLossesRepo _tempLossesRepo;
+
+        public FakeEventCreator(ITempLossesRepo tempLossesRepo)
+        {
+            _tempLossesRepo = tempLossesRepo;
+        }
+
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
-        public IEnumerable<MatchFinishedEvent> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer, int increment)
+        public async Task<IEnumerable<MatchFinishedEvent>> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer, int increment)
         {
             _dateTime = _dateTime.AddMinutes(increment);
             var gateWay = myPlayer.Id.Split("@")[1];
@@ -98,47 +50,27 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
             lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.RnD)));
 
-            var newDiffLosses = MergeDiff(_remainingLosses, player, lossDiffs);
-            var newDiffWins = MergeDiff(_remainingWins, player, winDiffs);
+            var remainingLosses = await _tempLossesRepo.LoadLosses(player.Account);
+            var remainingWins = await _tempLossesRepo.LoadWins(player.Account);
+            var newDiffLosses = MergeDiff(remainingLosses, lossDiffs);
+            var newDiffWins = MergeDiff(remainingWins, winDiffs);
 
             matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs, gatewayStatsWins));
             matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs, gatewayStatsLosses));
 
-            Upsert(_remainingLosses, player, newDiffLosses);
-            Upsert(_remainingWins, player, newDiffWins);
+            await _tempLossesRepo.SaveWins(player.Account, newDiffWins);
+            await _tempLossesRepo.SaveLosses(player.Account, newDiffLosses);
 
             return matchFinishedEvents;
         }
 
         private List<RaceAndWinDto> MergeDiff(
-            Dictionary<string, List<RaceAndWinDto>> remainingLosses,
-            PlayerStatePad player,
+            List<RaceAndWinDto> remainingLosses,
             List<RaceAndWinDto> lossDiffs)
         {
-            if (!remainingLosses.ContainsKey(player.Account))
-            {
-                return lossDiffs;
-            }
-
-            var remainingStuff = remainingLosses[player.Account];
-            return remainingStuff.Zip(
+            return remainingLosses.Zip(
                 lossDiffs,
-                (dto, winDto) => new RaceAndWinDto(dto.Race, Math.Abs(dto.Count - winDto.Count))).ToList();
-        }
-
-        private void Upsert(
-            Dictionary<string, List<RaceAndWinDto>> remainingLosses,
-            PlayerStatePad player,
-            List<RaceAndWinDto> lossDiffs)
-        {
-            if (remainingLosses.ContainsKey(player.Account))
-            {
-                remainingLosses[player.Account] = lossDiffs;
-            }
-            else
-            {
-                remainingLosses[player.Account] = lossDiffs;
-            }
+                (dto, winDto) => new RaceAndWinDto(dto.Race, Math.Abs((long) (dto.Count - winDto.Count)))).ToList();
         }
 
         private List<MatchFinishedEvent> CreateGamesOfDiffs(
@@ -205,17 +137,5 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
             };
         }
-    }
-
-    public class RaceAndWinDto
-    {
-        public RaceAndWinDto(Race race, long count)
-        {
-            Race = race;
-            Count = count;
-        }
-
-        public Race Race { get; }
-        public long Count { get; set; }
     }
 }
