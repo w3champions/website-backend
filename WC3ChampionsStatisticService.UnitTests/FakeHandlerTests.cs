@@ -74,11 +74,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerStatePad = CreateFakePadPlayer();
             // means that there is 1 hu win, 1 hu loss and 1 ne win not recorded
             // so 1 hu win should be on eu, 1 hu loss on us and ne win on eu
-            playerStatePad.Account = "peter#123";
-            playerStatePad.Data.Stats.Human = new WinsAndLossesPad { Wins = 2, Losses = 2};
-            playerStatePad.Data.Stats.NightElf = new WinsAndLossesPad { Wins = 1, Losses = 1};
-            playerStatePad.Data.Ladder["10"] = new PadLadder { Losses = 2, Wins = 1 };
-            playerStatePad.Data.Ladder.Add("20", new PadLadder { Losses = 1, Wins = 2 });
+            playerStatePad.account = "peter#123";
+            playerStatePad.data.stats.human = new WinsAndLossesPad { wins = 2, losses = 2};
+            playerStatePad.data.stats.night_elf = new WinsAndLossesPad { wins = 1, losses = 1};
+            playerStatePad.data.ladder["10"] = new PadLadder { solo = new WinsAndLossesPad {  losses = 2, wins = 1 } };
+            playerStatePad.data.ladder.Add("20", new PadLadder { solo = new WinsAndLossesPad { losses = 1, wins = 2 } });
             _padServiceMock.Setup(p => p.GetPlayer("peter#123")).ReturnsAsync(playerStatePad);
 
             await fakeEventSyncHandler.Update();
@@ -189,17 +189,20 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var statePad = new PlayerStatePad
             {
-                Account = "peter#123",
-                Data = new Data
+                account = "peter#123",
+                data = new Data
                 {
-                    Ladder = new Dictionary<string, PadLadder> { { "10", new PadLadder { Losses = 1, Wins = 2 } } },
-                    Stats = new Stats
+                    ladder = new Dictionary<string, PadLadder>
                     {
-                        Human = new WinsAndLossesPad { Wins = 1, Losses = 1 },
-                        NightElf = new WinsAndLossesPad { Wins = 1 },
-                        Orc = new WinsAndLossesPad(),
-                        Undead = new WinsAndLossesPad(),
-                        Random = new WinsAndLossesPad(),
+                        { "10", new PadLadder { solo = new WinsAndLossesPad { losses = 1, wins = 2 } } }
+                    },
+                    stats = new Stats
+                    {
+                        human = new WinsAndLossesPad { wins = 1, losses = 1 },
+                        night_elf = new WinsAndLossesPad { wins = 1 },
+                        orc = new WinsAndLossesPad(),
+                        undead = new WinsAndLossesPad(),
+                        random = new WinsAndLossesPad(),
                     },
                 }
             };
