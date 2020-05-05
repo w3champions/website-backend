@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;

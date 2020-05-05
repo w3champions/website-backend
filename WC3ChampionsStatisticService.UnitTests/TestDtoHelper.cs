@@ -1,10 +1,8 @@
-using System.Collections.Generic;
 using System.Linq;
 using AutoFixture;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PadEvents.PadSync;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
