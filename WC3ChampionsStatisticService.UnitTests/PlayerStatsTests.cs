@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task PlayerHeroStats()
+        public async Task PlayerHeroStats_PlayerAgainstTwoEnemies_PlayerShouldHaveCorrectHeroStats()
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
             var playerHeroStatsHandler = new PlayerHeroStatsHandler(playerRepository);
@@ -127,35 +127,68 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerMKVsNe = playerMKStats.WinLosses.Single(x => x.Race == Race.UD);
             Assert.AreEqual(1, playerMKVsNe.Wins);
             Assert.AreEqual(0, playerMKVsNe.Losses);
+        }
 
-            // *** Enemy UD player hero stats
-            Assert.AreEqual(enemyUdPlayer.id, enemyUdHeroStats.Id);
-            Assert.AreEqual(2, enemyUdHeroStats.HeroStatsItemList.Count);
+        [TestCase(Race.HU)]
+        [TestCase(Race.NE)]
+        [TestCase(Race.OC)]
+        [TestCase(Race.RnD)]
+        [TestCase(Race.UD)]
+        public async Task PlayerHeroStats_PlayerAgainstEnemyAndPlayerWins_EnemyShouldHaveCorrectHeroStats(Race enemyRace)
+        {
+            var playerRepository = new PlayerStatsRepository(MongoClient);
+            var playerHeroStatsHandler = new PlayerHeroStatsHandler(playerRepository);
 
-            // Enemy UD player DK stats
-            var enemyUdDkStats = GetHeroStatsForRaceAndMap(enemyUdHeroStats, "deathknight", Race.UD, "Overall");
+            var player = CreatePlayer("player#123", Race.HU, won: true);
+            var playerHeroes = CreateHeroes("playerhero");
 
-            var enemyUdDkVsHu = enemyUdDkStats.WinLosses.Single(x => x.Race == Race.HU);
-            Assert.AreEqual(0, enemyUdDkVsHu.Wins);
-            Assert.AreEqual(1, enemyUdDkVsHu.Losses);
+            var enemyPlayer = CreatePlayer("enemy#567", enemyRace);
+            var enemyUdHeroes = CreateHeroes("enemyhero");
 
-            // Enemy UD player Lich stats
-            var enemyUdLichStats = GetHeroStatsForRaceAndMap(enemyUdHeroStats, "lich", Race.UD, "Overall");
+            MatchFinishedEvent match1 = CreateMatchEvent(player, playerHeroes, enemyPlayer, enemyUdHeroes);
+            await playerHeroStatsHandler.Update(match1);
 
-            var enemyUdLichVsHu = enemyUdLichStats.WinLosses.Single(x => x.Race == Race.HU);
-            Assert.AreEqual(0, enemyUdLichVsHu.Wins);
-            Assert.AreEqual(1, enemyUdLichVsHu.Losses);
+            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.id);
 
-            // *** Enemy NE player hero stats
-            Assert.AreEqual(enemyNePlayer.id, enemyNeHeroStats.Id);
-            Assert.AreEqual(1, enemyNeHeroStats.HeroStatsItemList.Count);
+            Assert.AreEqual(enemyPlayer.id, enemyHerosStats.Id);
+            Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
 
-            // Enemy NE player DH stats
-            var enemyNeDhStats = GetHeroStatsForRaceAndMap(enemyNeHeroStats, "deamonhunter", Race.NE, "Overall");
+            var enemyHeroStats = GetHeroStatsForRaceAndMap(enemyHerosStats, "enemyhero", enemyRace, "Overall");
 
-            var enemyNeDhVsHu = enemyNeDhStats.WinLosses.Single(x => x.Race == Race.HU);
-            Assert.AreEqual(0, enemyNeDhVsHu.Wins);
-            Assert.AreEqual(1, enemyNeDhVsHu.Losses);
+            var enemyHeroStatsVsPlayerRace = enemyHeroStats.WinLosses.Single(x => x.Race == Race.HU);
+            Assert.AreEqual(0, enemyHeroStatsVsPlayerRace.Wins);
+            Assert.AreEqual(1, enemyHeroStatsVsPlayerRace.Losses);
+        }
+
+        [TestCase(Race.HU)]
+        [TestCase(Race.NE)]
+        [TestCase(Race.OC)]
+        [TestCase(Race.RnD)]
+        [TestCase(Race.UD)]
+        public async Task PlayerHeroStats_PlayerAgainstEnemyAndPlayerLosses_EnemyShouldHaveCorrectHeroStats(Race enemyRace)
+        {
+            var playerRepository = new PlayerStatsRepository(MongoClient);
+            var playerHeroStatsHandler = new PlayerHeroStatsHandler(playerRepository);
+
+            var player = CreatePlayer("player#123", Race.HU, won: false);
+            var playerHeroes = CreateHeroes("playerhero");
+
+            var enemyPlayer = CreatePlayer("enemy#567", enemyRace, won: true);
+            var enemyUdHeroes = CreateHeroes("enemyhero");
+
+            MatchFinishedEvent match1 = CreateMatchEvent(player, playerHeroes, enemyPlayer, enemyUdHeroes);
+            await playerHeroStatsHandler.Update(match1);
+
+            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.id);
+
+            Assert.AreEqual(enemyPlayer.id, enemyHerosStats.Id);
+            Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
+
+            var enemyHeroStats = GetHeroStatsForRaceAndMap(enemyHerosStats, "enemyhero", enemyRace, "Overall");
+
+            var enemyStatsVsPlayerRace = enemyHeroStats.WinLosses.Single(x => x.Race == Race.HU);
+            Assert.AreEqual(1, enemyStatsVsPlayerRace.Wins);
+            Assert.AreEqual(0, enemyStatsVsPlayerRace.Losses);
         }
 
         private static WinLossesPerMap GetHeroStatsForRaceAndMap(PlayerHeroStats playerHeroStats, string heroId, Race race, string mapName)
