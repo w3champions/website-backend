@@ -21,5 +21,12 @@ namespace W3ChampionsStatisticService.PlayerStats
             var matches = await _playerRepository.LoadMapAndRaceStat(battleTag);
             return Ok(matches);
         }
+
+        [HttpGet("{battleTag}/hero-on-map-versus-race")]
+        public async Task<IActionResult> GetHeroOnMapVersusRaceStat([FromRoute] string battleTag)
+        {
+            var matches = await _playerRepository.LoadHeroStat(battleTag);
+            return Ok(matches);
+        }
     }
 }
