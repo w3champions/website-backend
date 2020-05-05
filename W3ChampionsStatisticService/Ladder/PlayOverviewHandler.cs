@@ -53,7 +53,7 @@ namespace W3ChampionsStatisticService.Ladder
 
             winner.RecordWin(
                 players.First().won,
-                (int?) players.First().updatedMmr?.rating ?? (int) players.First().mmr.rating);
+                (int?) players.First().updatedMmr?.rating ?? (int?) players.First().mmr?.rating ?? 0);
 
             return winner;
         }
