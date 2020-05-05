@@ -16,14 +16,14 @@ namespace W3ChampionsStatisticService.Authorization
         }
 
         [HttpGet("token")]
-        public async Task<IActionResult> ResetAllReadModels([FromQuery] string code, [FromQuery] string redirectUri)
+        public async Task<IActionResult> GetToken([FromQuery] string code, [FromQuery] string redirectUri)
         {
             var token = await _authenticationService.GetToken(code, redirectUri);
             return token == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(token);
         }
 
         [HttpGet("battleTag")]
-        public async Task<IActionResult> ResetAllReadModels([FromQuery] string bearer)
+        public async Task<IActionResult> GetUserInfo([FromQuery] string bearer)
         {
             var userInfo = await _authenticationService.GetUser(bearer);
             return userInfo == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(userInfo);
