@@ -50,15 +50,25 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
             lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Losses - myPlayer.GetLossPerRace(Race.RnD)));
 
-            var remainingLosses = await _tempLossesRepo.LoadLosses(player.Account)
-                                  ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
             var remainingWins = await _tempLossesRepo.LoadWins(player.Account)
                                 ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
+            var remainingLosses = await _tempLossesRepo.LoadLosses(player.Account)
+                                  ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
 
             var newDiffLosses = MergeDiff(remainingLosses, lossDiffs);
             var newDiffWins = MergeDiff(remainingWins, winDiffs);
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs, gatewayStatsWins - myPlayer.TotalWins));
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs, gatewayStatsLosses - myPlayer.TotalLosses));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(
+                true,
+                myPlayer,
+                increment,
+                winDiffs,
+                gatewayStatsWins - myPlayer.TotalWins));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(
+                false,
+                myPlayer,
+                increment + matchFinishedEvents.Count,
+                lossDiffs,
+                gatewayStatsLosses - myPlayer.TotalLosses));
 
             await _tempLossesRepo.SaveWins(player.Account, newDiffWins);
             await _tempLossesRepo.SaveLosses(player.Account, newDiffLosses);
@@ -72,7 +82,10 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         {
             return remainingLosses.Zip(
                 lossDiffs,
-                (dto, winDto) => new RaceAndWinDto(dto.Race, winDto.Count - dto.Count)).ToList();
+                (dto, winDto) => new RaceAndWinDto(
+                    dto.Race == winDto.Race ? dto.Race : throw new Exception("nono"),
+                    winDto.Count - dto.Count))
+                .ToList();
         }
 
         private List<MatchFinishedEvent> CreateGamesOfDiffs(
@@ -97,10 +110,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                             myPlayer.Id,
                             winDiff.Race),
                         WasFakeEvent = true,
-                        Id = new
-                            ObjectId
-                            (_dateTime,
-                                0, 0, increment)
+                        Id = new ObjectId(_dateTime, 0, 0, increment)
                     });
                     increment++;
                     winDiff.Count--;

@@ -87,10 +87,13 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(3, events.Count);
             Assert.AreEqual(false, events[0].match.players[0].won);
+            Assert.AreEqual(10, events[0].match.gateway);
             Assert.AreEqual(Race.HU, events[0].match.players[0].race);
             Assert.AreEqual(true, events[1].match.players[0].won);
+            Assert.AreEqual(20, events[1].match.gateway);
             Assert.AreEqual(Race.NE, events[1].match.players[0].race);
             Assert.AreEqual(false, events[2].match.players[0].won);
+            Assert.AreEqual(20, events[2].match.gateway);
             Assert.AreEqual(Race.NE, events[2].match.players[0].race);
         }
 
@@ -106,6 +109,56 @@ namespace WC3ChampionsStatisticService.UnitTests
                 _matchEventRepository,
                 _playerRepository,
                 new FakeEventCreator(_tempLossesRepo));
+        }
+
+        [Test]
+        public async Task SaveAndLoadTempLosses()
+        {
+            var wins = RaceAndWinDtoPerPlayerLosses.Create("Peter").RemainingWins;
+            wins[0].Count = 2;
+            wins[4].Count = 1;
+
+            var tempLossesRepo = new TempLossesRepo(MongoClient);
+            await tempLossesRepo.SaveLosses("Peter", wins);
+            var result = await tempLossesRepo.LoadLosses("Peter");
+
+            Assert.AreEqual(5, result.Count);
+            Assert.AreEqual(2, result[0].Count);
+            Assert.AreEqual(0, result[1].Count);
+            Assert.AreEqual(0, result[2].Count);
+            Assert.AreEqual(0, result[3].Count);
+            Assert.AreEqual(1, result[4].Count);
+
+            Assert.AreEqual(Race.HU, result[0].Race);
+            Assert.AreEqual(Race.OC, result[1].Race);
+            Assert.AreEqual(Race.NE, result[2].Race);
+            Assert.AreEqual(Race.UD, result[3].Race);
+            Assert.AreEqual(Race.RnD, result[4].Race);
+        }
+
+        [Test]
+        public async Task SaveAndLoadTempWins()
+        {
+            var wins = RaceAndWinDtoPerPlayerLosses.Create("Peter").RemainingWins;
+            wins[0].Count = 2;
+            wins[4].Count = 1;
+
+            var tempLossesRepo = new TempLossesRepo(MongoClient);
+            await tempLossesRepo.SaveWins("Peter", wins);
+            var result = await tempLossesRepo.LoadWins("Peter");
+
+            Assert.AreEqual(5, result.Count);
+            Assert.AreEqual(2, result[0].Count);
+            Assert.AreEqual(0, result[1].Count);
+            Assert.AreEqual(0, result[2].Count);
+            Assert.AreEqual(0, result[3].Count);
+            Assert.AreEqual(1, result[4].Count);
+
+            Assert.AreEqual(Race.HU, result[0].Race);
+            Assert.AreEqual(Race.OC, result[1].Race);
+            Assert.AreEqual(Race.NE, result[2].Race);
+            Assert.AreEqual(Race.UD, result[3].Race);
+            Assert.AreEqual(Race.RnD, result[4].Race);
         }
 
 

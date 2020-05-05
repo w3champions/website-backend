@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             Count = count;
         }
 
-        public Race Race { get; }
+        public Race Race { get; set;  }
         public long Count { get; set; }
     }
 }
