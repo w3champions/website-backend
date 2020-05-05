@@ -21,8 +21,13 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent == null || nextEvent.match == null || nextEvent.result == null)
+            {
+                return;
+            }
+
             var dataPlayers = nextEvent.match.players;
-            if (dataPlayers.Count == 2 && nextEvent.result.players.Count == 2)
+            if (dataPlayers?.Count == 2 && nextEvent.result.players?.Count == 2)
             {
                 var eventPlayer1 = dataPlayers[0];
                 var eventPlayer2 = dataPlayers[1];
