@@ -31,7 +31,8 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             _matchEventRepository = matchEventRepository;
             _playerRepository = playerRepository;
             _fakeEventCreator = fakeEventCreator;
-            _logger = logger ?? NullLogger<FakeEventSyncHandler>.Instance;
+            _logger = logger ?? new NullLogger<FakeEventSyncHandler>();
+            ;
         }
 
         public async Task Update()
