@@ -50,6 +50,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                 var player = await _padRepo.GetPlayer($"{playerOnMySide.Name}#{playerOnMySide.BattleTag}");
 
                 var fakeEvents = _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
+
                 foreach (var finishedEvent in fakeEvents)
                 {
                     await _matchEventRepository.InsertIfNotExisting(finishedEvent);
@@ -68,7 +69,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
         public IEnumerable<MatchFinishedEvent> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer, int increment)
         {
-            _dateTime = _dateTime.AddSeconds(increment);
+            _dateTime = _dateTime.AddMinutes(increment);
             var gateWay = myPlayer.Id.Split("@")[1];
             player.Data.Ladder.TryGetValue(gateWay, out var gatewayStats);
 
