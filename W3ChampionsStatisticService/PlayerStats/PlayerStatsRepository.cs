@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -13,9 +14,19 @@ namespace W3ChampionsStatisticService.PlayerStats
             return LoadFirst<RaceOnMapVersusRaceRatio>(p => p.Id == battleTag);
         }
 
+        public Task<PlayerHeroStats> LoadHeroStat(string battleTag)
+        {
+            return LoadFirst<PlayerHeroStats>(p => p.Id == battleTag);
+        }
+
         public Task UpsertMapAndRaceStat(RaceOnMapVersusRaceRatio raceOnMapVersusRaceRatio)
         {
             return Upsert(raceOnMapVersusRaceRatio, p => p.Id == raceOnMapVersusRaceRatio.Id);
+        }
+
+        public Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats)
+        {
+            return Upsert(playerHeroStats, p => p.Id == playerHeroStats.Id);
         }
 
         public PlayerStatsRepository(MongoClient mongoClient) : base(mongoClient)

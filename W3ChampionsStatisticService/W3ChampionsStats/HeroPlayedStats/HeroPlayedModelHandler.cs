@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -37,17 +38,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 
         public HeroPickDto(string icon, in EPick pick)
         {
-            Icon = ParseReforgedName(icon);;
+            Icon = icon.ParseReforgedName();;
             Pick = pick;
-        }
-
-        private string ParseReforgedName(string heroIcon)
-        {
-            if (heroIcon == "jainasea") return "archmage";
-            if (heroIcon == "thrallchampion") return "farseer";
-            if (heroIcon == "fallenkingarthas") return "deathknight";
-            if (heroIcon == "cenariusnightmare") return "keeperofthegrove";
-            return heroIcon;
         }
     }
 }
