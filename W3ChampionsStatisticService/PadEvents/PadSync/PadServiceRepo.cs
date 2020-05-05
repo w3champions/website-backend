@@ -40,127 +40,35 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
     public class PlayerStatePad
     {
-        [JsonProperty("account")]
-        public string Account { get; set; }
-
-        [JsonProperty("data")]
-        public Data Data { get; set; }
+        public string account { get; set; }
+        public Data data { get; set; }
     }
 
     public class Data
     {
-        [JsonProperty("stats")]
-        public Stats Stats { get; set; }
-
-        [JsonProperty("ladder")]
-        public Dictionary<string, PadLadder> Ladder { get; set; }
+        public Stats stats { get; set; }
+        public Dictionary<string, PadLadder> ladder { get; set; }
     }
 
     public class PadLadder
     {
-        [JsonProperty("wins", NullValueHandling = NullValueHandling.Ignore)]
-        public long Wins { get; set; }
-
-        [JsonProperty("losses", NullValueHandling = NullValueHandling.Ignore)]
-        public long Losses { get; set; }
-
-        [JsonProperty("solo", NullValueHandling = NullValueHandling.Ignore)]
-        public Solo Solo { get; set; }
-    }
-
-    public class Solo
-    {
-        [JsonProperty("mmr")]
-        public Mmr Mmr { get; set; }
-
-        [JsonProperty("ranking")]
-        public Ranking Ranking { get; set; }
-
-        [JsonProperty("league")]
-        public League League { get; set; }
-
-        [JsonProperty("wins")]
-        public long Wins { get; set; }
-
-        [JsonProperty("losses")]
-        public long Losses { get; set; }
-    }
-
-    public class League
-    {
-        [JsonProperty("order")]
-        public long Order { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("division")]
-        public long Division { get; set; }
-    }
-
-    public class Mmr
-    {
-        [JsonProperty("rating")]
-        public double Rating { get; set; }
-
-        [JsonProperty("rd")]
-        public double Rd { get; set; }
-
-        [JsonProperty("vol")]
-        public double Vol { get; set; }
-    }
-
-    public class Ranking
-    {
-        [JsonProperty("progress")]
-        public long Progress { get; set; }
-
-        [JsonProperty("rp")]
-        public double Rp { get; set; }
-
-        [JsonProperty("lastGame")]
-        public long LastGame { get; set; }
-
-        [JsonProperty("rank")]
-        public long Rank { get; set; }
-
-        [JsonProperty("leagueId")]
-        public long LeagueId { get; set; }
-
-        [JsonProperty("leagueOrder")]
-        public long LeagueOrder { get; set; }
+        public WinsAndLossesPad solo { get; set; }
     }
 
     public class Stats
     {
-        [JsonProperty("human")]
-        public WinsAndLossesPad Human { get; set; }
-
-        [JsonProperty("orc")]
-        public WinsAndLossesPad Orc { get; set; }
-
-        [JsonProperty("undead")]
-        public WinsAndLossesPad Undead { get; set; }
-
-        [JsonProperty("night_elf")]
-        public WinsAndLossesPad NightElf { get; set; }
-
-        [JsonProperty("random")]
-        public WinsAndLossesPad Random { get; set; }
-
-        [JsonProperty("total")]
-        public WinsAndLossesPad Total { get; set; }
+        public WinsAndLossesPad human { get; set; }
+        public WinsAndLossesPad orc { get; set; }
+        public WinsAndLossesPad undead { get; set; }
+        public WinsAndLossesPad night_elf { get; set; }
+        public WinsAndLossesPad random { get; set; }
     }
 
     public class WinsAndLossesPad
     {
-        [JsonProperty("wins")]
-        public long Wins { get; set; }
-
-        [JsonProperty("losses")]
-        public long Losses { get; set; }
+        public long wins { get; set; }
+        public long losses { get; set; }
     }
-
 
     public class MatchesList
     {

@@ -25,6 +25,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = await padServiceRepo.GetPlayer("ToD#2792");
 
             Assert.IsNotNull(player);
+            Assert.AreNotEqual(0, player.data.ladder["20"].solo.wins);
+            Assert.AreNotEqual(0, player.data.ladder["20"].solo.losses);
         }
 
         [Test]
