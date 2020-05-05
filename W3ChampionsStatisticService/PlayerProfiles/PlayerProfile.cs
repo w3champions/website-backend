@@ -57,6 +57,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int TotalLosses => GameModeStats.Sum(g => g.Losses);
 
         public int TotalWins => GameModeStats.Sum(g => g.Wins);
+        public string CombinedBattleTag => $"{Name}#{BattleTag}";
 
         public static PlayerProfile Default()
         {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
@@ -63,10 +64,11 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
     public class FakeEventCreator
     {
-        private readonly DateTime _dateTime = DateTime.Now.AddDays(-60);
+        private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
         public IEnumerable<MatchFinishedEvent> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer, int increment)
         {
+            _dateTime = _dateTime.AddSeconds(increment);
             var gateWay = myPlayer.Id.Split("@")[1];
             player.Data.Ladder.TryGetValue(gateWay, out var gatewayStats);
 
@@ -89,19 +91,73 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
             lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.RnD)));
 
-            foreach (var winDiff in winDiffs)
-            {
-                matchFinishedEvents.Add(new MatchFinishedEvent
-                    {match = null, WasFakeEvent = true, Id = new ObjectId(_dateTime, 0, 0, increment)});
-            }
-
-            foreach (var lossDiff in lossDiffs)
-            {
-                matchFinishedEvents.Add(new MatchFinishedEvent
-                    {match = null, WasFakeEvent = true, Id = new ObjectId(_dateTime, 0, 0, increment)});
-            }
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs));
 
             return matchFinishedEvents;
+        }
+
+        private List<MatchFinishedEvent> CreateGamesOfDiffs(
+            bool wins,
+            PlayerProfile myPlayer,
+            int increment,
+            List<RaceAndWinDto> winDiffs)
+        {
+            var gateWay = myPlayer.Id.Split("@")[0];
+            var finishedEvents = new List<MatchFinishedEvent>();
+            foreach (var winDiff in winDiffs)
+            {
+                while (winDiff.Count != 0)
+                {
+                    finishedEvents.Add(new MatchFinishedEvent
+                    {
+                        match = CreatMatch(
+                            wins,
+                            int.Parse(gateWay),
+                            myPlayer.CombinedBattleTag,
+                            myPlayer.Id,
+                            winDiff.Race),
+                        WasFakeEvent = true,
+                        Id = new
+                            ObjectId
+                            (_dateTime,
+                                0, 0, increment)
+                    });
+                    increment++;
+                    winDiff.Count--;
+                }
+            }
+
+            return finishedEvents;
+        }
+
+        private Match CreatMatch(bool won, int gateWay, string battleTag, string playerId, Race race)
+        {
+            return new Match
+            {
+                id = Guid.NewGuid().ToString(),
+                gameMode = GameMode.GM_1v1,
+                gateway = gateWay,
+                players = new List<PlayerMMrChange>
+                {
+                    new PlayerMMrChange
+                    {
+                        battleTag = battleTag,
+                        won = won,
+                        race = race,
+                        id = playerId
+                    },
+                    new PlayerMMrChange
+                    {
+                        battleTag = "FakeEnemy#123",
+                        won = !won,
+                        race = Race.RnD,
+                        id = "FakeEnemy#123@10"
+                    }
+
+                }
+
+            };
         }
     }
 
@@ -114,6 +170,6 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         }
 
         public Race Race { get; }
-        public long Count { get; }
+        public long Count { get; set; }
     }
 }
