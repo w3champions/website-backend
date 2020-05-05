@@ -31,28 +31,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             return fakeEvent;
         }
 
-        public static PlayerStatePad CreateFakePadPlayer()
-        {
-            var statePad = new PlayerStatePad();
-            statePad.Data = new Data
-            {
-                Ladder = new Dictionary<string, PadLadder>
-                {
-                    {"10", new PadLadder {Losses = 1, Wins = 2}}
-                },
-                Stats = new Stats
-                {
-                    Human = new WinAndLossesPad {Wins = 1, Losses = 1},
-                    NightElf = new WinAndLossesPad {Wins = 1},
-                    Orc = new WinAndLossesPad(),
-                    Undead = new WinAndLossesPad(),
-                    Random = new WinAndLossesPad(),
-                },
-            };
-
-            return statePad;
-        }
-
         public static MatchFinishedEvent CreateFake2v2Event()
         {
             var fixture = new Fixture {RepeatCount = 4};

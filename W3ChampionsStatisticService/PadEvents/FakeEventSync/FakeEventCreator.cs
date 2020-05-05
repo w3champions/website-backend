@@ -36,29 +36,29 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var lossDiffs = new List<RaceAndWinDto>();
 
             winDiffs.Add(new RaceAndWinDto(Race.HU, player.Data.Stats.Human.Wins - myPlayer.GetWinsPerRace(Race.HU)));
-            lossDiffs.Add(new RaceAndWinDto(Race.HU, player.Data.Stats.Human.Wins - myPlayer.GetLossPerRace(Race.HU)));
+            lossDiffs.Add(new RaceAndWinDto(Race.HU, player.Data.Stats.Human.Losses - myPlayer.GetLossPerRace(Race.HU)));
 
             winDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Orc.Wins - myPlayer.GetWinsPerRace(Race.OC)));
-            lossDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Orc.Wins - myPlayer.GetLossPerRace(Race.OC)));
+            lossDiffs.Add(new RaceAndWinDto(Race.OC, player.Data.Stats.Orc.Losses - myPlayer.GetLossPerRace(Race.OC)));
 
             winDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.NightElf.Wins - myPlayer.GetWinsPerRace(Race.NE)));
-            lossDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.NightElf.Wins - myPlayer.GetLossPerRace(Race.NE)));
+            lossDiffs.Add(new RaceAndWinDto(Race.NE, player.Data.Stats.NightElf.Losses - myPlayer.GetLossPerRace(Race.NE)));
 
             winDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Undead.Wins - myPlayer.GetWinsPerRace(Race.UD)));
-            lossDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Undead.Wins - myPlayer.GetLossPerRace(Race.UD)));
+            lossDiffs.Add(new RaceAndWinDto(Race.UD, player.Data.Stats.Undead.Losses - myPlayer.GetLossPerRace(Race.UD)));
 
             winDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Wins - myPlayer.GetWinsPerRace(Race.RnD)));
-            lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Wins - myPlayer.GetLossPerRace(Race.RnD)));
+            lossDiffs.Add(new RaceAndWinDto(Race.RnD, player.Data.Stats.Random.Losses - myPlayer.GetLossPerRace(Race.RnD)));
 
             var remainingLosses = await _tempLossesRepo.LoadLosses(player.Account)
                                   ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
             var remainingWins = await _tempLossesRepo.LoadWins(player.Account)
                                 ??  RaceAndWinDtoPerPlayerLosses.Create(player.Account).RemainingWins;
+
             var newDiffLosses = MergeDiff(remainingLosses, lossDiffs);
             var newDiffWins = MergeDiff(remainingWins, winDiffs);
-
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs, gatewayStatsWins));
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs, gatewayStatsLosses));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(true, myPlayer, increment, winDiffs, gatewayStatsWins - myPlayer.TotalWins));
+            matchFinishedEvents.AddRange(CreateGamesOfDiffs(false, myPlayer, increment + matchFinishedEvents.Count, lossDiffs, gatewayStatsLosses - myPlayer.TotalLosses));
 
             await _tempLossesRepo.SaveWins(player.Account, newDiffWins);
             await _tempLossesRepo.SaveLosses(player.Account, newDiffLosses);
@@ -72,7 +72,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         {
             return remainingLosses.Zip(
                 lossDiffs,
-                (dto, winDto) => new RaceAndWinDto(dto.Race, Math.Abs((dto.Count - winDto.Count)))).ToList();
+                (dto, winDto) => new RaceAndWinDto(dto.Race, winDto.Count - dto.Count)).ToList();
         }
 
         private List<MatchFinishedEvent> CreateGamesOfDiffs(
@@ -86,7 +86,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var finishedEvents = new List<MatchFinishedEvent>();
             foreach (var winDiff in winDiffs)
             {
-                while (winDiff.Count != 0 && gatewayStats != 0)
+                while (winDiff.Count > 0 && gatewayStats > 0)
                 {
                     finishedEvents.Add(new MatchFinishedEvent
                     {
