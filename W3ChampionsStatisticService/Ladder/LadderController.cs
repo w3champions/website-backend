@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Ladder
@@ -20,16 +21,16 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchPlayer(string searchFor, int gateWay = 20)
+        public async Task<IActionResult> SearchPlayer(string searchFor, int gateWay = 20, GameMode gameMode = GameMode.GM_1v1)
         {
-            var players = await _rankRepository.LoadPlayerOfLeagueLike(searchFor, gateWay);
+            var players = await _rankRepository.SearchPlayerOfLeague(searchFor, gateWay, gameMode);
             return Ok(players);
         }
 
         [HttpGet("{leagueId}")]
-        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int gateWay = 20)
+        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int gateWay = 20, GameMode gameMode = GameMode.GM_1v1)
         {
-            var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, gateWay);
+            var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, gateWay, gameMode);
             if (playersInLadder == null)
             {
                 return NoContent();
