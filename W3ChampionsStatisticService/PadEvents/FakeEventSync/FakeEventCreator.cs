@@ -19,7 +19,8 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
-        public async Task<IEnumerable<MatchFinishedEvent>> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer, int increment)
+        public async Task<List<MatchFinishedEvent>> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer,
+            int increment)
         {
             _dateTime = _dateTime.AddMinutes(increment);
             var gateWay = myPlayer.Id.Split("@")[1];
