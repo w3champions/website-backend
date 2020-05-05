@@ -28,7 +28,6 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public async Task<PlayerStatePad> GetPlayer(string battleTag)
         {
             var httpClient = new HttpClient();
-
             var encode = HttpUtility.UrlEncode(battleTag);
             var result = await httpClient.GetAsync($"https://api.w3champions.com/player/{encode}/stats");
             var content = await result.Content.ReadAsStringAsync();
