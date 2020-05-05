@@ -94,7 +94,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<HourOfPlayModelHandler>();
                 services.AddReadModelService<HeroPlayedModelHandler>();
 
-                // services.AddUnversionedReadModelService<RankHandler>();
+                services.AddUnversionedReadModelService<RankHandler>();
             }
         }
 
