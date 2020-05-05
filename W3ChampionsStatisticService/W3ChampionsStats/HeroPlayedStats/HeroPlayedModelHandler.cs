@@ -19,6 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             var stat = await _w3Stats.LoadHeroPlayedStat() ?? HeroPlayedStat.Create();
             if (nextEvent.result == null) return;
 

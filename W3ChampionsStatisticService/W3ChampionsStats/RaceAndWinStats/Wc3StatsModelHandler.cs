@@ -20,6 +20,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {
                 var stat = await _w3Stats.Load() ?? new Wc3Stats();

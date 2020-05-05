@@ -19,6 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             var stat = await _w3Stats.LoadGameLengths() ?? GameLengthStats.Create();
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);

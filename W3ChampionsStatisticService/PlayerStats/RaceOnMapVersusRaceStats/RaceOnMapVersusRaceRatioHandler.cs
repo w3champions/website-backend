@@ -20,6 +20,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             var dataPlayers = nextEvent.match.players;
             if (dataPlayers.Count == 2)
             {
@@ -28,21 +29,21 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                 var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].id)
                          ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[1].id);
 
-                p1.AddMapWin((Race) dataPlayers[0].race,
-                    (Race) dataPlayers[1].race,
+                p1.AddMapWin(dataPlayers[0].race,
+                    dataPlayers[1].race,
                     "Overall",
                     dataPlayers[0].won);
-                p2.AddMapWin((Race) dataPlayers[1].race,
-                    (Race) dataPlayers[0].race,
+                p2.AddMapWin(dataPlayers[1].race,
+                    dataPlayers[0].race,
                     "Overall",
                     dataPlayers[1].won);
 
-                p1.AddMapWin((Race) dataPlayers[0].race,
-                    (Race) dataPlayers[1].race,
+                p1.AddMapWin(dataPlayers[0].race,
+                    dataPlayers[1].race,
                     new MapName(nextEvent.match.map).Name,
                     dataPlayers[0].won);
-                p2.AddMapWin((Race) dataPlayers[1].race,
-                    (Race) dataPlayers[0].race,
+                p2.AddMapWin(dataPlayers[1].race,
+                    dataPlayers[0].race,
                     new MapName(nextEvent.match.map).Name,
                     dataPlayers[1].won);
 

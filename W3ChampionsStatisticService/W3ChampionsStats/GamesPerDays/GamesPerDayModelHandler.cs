@@ -19,6 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             var match = nextEvent.match;
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime).Date;
 

@@ -19,6 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            if (nextEvent.WasFakeEvent) return;
             var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStats.Create();
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
             stat.Apply(nextEvent.match.gameMode, startTime);
