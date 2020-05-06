@@ -28,11 +28,11 @@ namespace W3ChampionsStatisticService.Ladder
             return JoinWith(rank => rank.PlayerId.Contains(search) && rank.Gateway == gateWay && rank.GameMode == gameMode);
         }
 
-        public async Task<Rank> LoadPlayerOfLeague(string searchFor)
+        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id == search);
-            return joinWith.FirstOrDefault();
+            var joinWith = await JoinWith(rank => rank.Id.Contains(search));
+            return joinWith;
         }
 
         public async Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
