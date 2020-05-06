@@ -87,17 +87,17 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(3, events.Count);
 
-            Assert.AreEqual(false, events[0].match.players[0].won);
-            Assert.AreEqual(10, events[0].match.gateway);
+            Assert.AreEqual(true, events[0].match.players[0].won);
+            Assert.AreEqual(20, events[0].match.gateway);
             Assert.AreEqual(Race.HU, events[0].match.players[0].race);
 
             Assert.AreEqual(true, events[1].match.players[0].won);
             Assert.AreEqual(20, events[1].match.gateway);
-            Assert.AreEqual(Race.HU, events[1].match.players[0].race);
+            Assert.AreEqual(Race.NE, events[1].match.players[0].race);
 
-            Assert.AreEqual(true, events[2].match.players[0].won);
-            Assert.AreEqual(20, events[2].match.gateway);
-            Assert.AreEqual(Race.NE, events[2].match.players[0].race);
+            Assert.AreEqual(false, events[2].match.players[0].won);
+            Assert.AreEqual(10, events[2].match.gateway);
+            Assert.AreEqual(Race.HU, events[2].match.players[0].race);
 
             // Do complete intergration test now
             var handler = new PlayerModelHandler(_playerRepository);

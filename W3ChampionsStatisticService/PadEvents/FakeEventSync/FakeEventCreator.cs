@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         public async Task<List<MatchFinishedEvent>> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer,
             int increment)
         {
-            _dateTime = _dateTime.AddMinutes(increment);
+            _dateTime = _dateTime.AddSeconds(-increment);
             var gateWay = myPlayer.Id.Split("@")[1];
             player.data.ladder.TryGetValue(gateWay, out var gatewayStats);
             if (gatewayStats == null) return new List<MatchFinishedEvent>();
