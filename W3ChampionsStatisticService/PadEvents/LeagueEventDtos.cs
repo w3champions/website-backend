@@ -10,6 +10,7 @@ namespace W3ChampionsStatisticService.PadEvents
     {
         public ObjectId id { get; set; }
         public int gateway { get; set; }
+        public GameMode gameMode { get; set; }
         public League[] leagues { get; set; }
     }
 

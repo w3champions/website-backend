@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -22,16 +23,28 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
             var player = await _playerRepository.Load(battleTag) ?? PlayerProfile.Default();
-            var loadPlayerOfLeagueLike = await _rankRepository.LoadPlayerOfLeague(battleTag);
-            var leagues = await _rankRepository.LoadLeagueConstellation();
+            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
+            var allLeagues = await _rankRepository.LoadLeagueConstellation();
             var gw = int.Parse(battleTag.Split("@")[1]);
-            var constellationOfGw = leagues.Single(l => l.gateway == gw);
-            var league = constellationOfGw.leagues.Single(l => l.id == loadPlayerOfLeagueLike.League);
+            var constellationOfGw = allLeagues.Single(l => l.gateway == gw);
 
-            player.GameModeStats[0].Rank = loadPlayerOfLeagueLike.RankNumber;
-            player.GameModeStats[0].LeagueId = loadPlayerOfLeagueLike.League;
-            player.GameModeStats[0].LeagueOrder = league.order;
-            player.GameModeStats[0].Division = league.order % ((constellationOfGw.leagues.Length - 2) / 5);
+            var loadPlayerOfLeagueLike1V1 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_1v1);
+            if (loadPlayerOfLeagueLike1V1 != null)
+            {
+                player.GameModeStats[0].Rank = loadPlayerOfLeagueLike1V1.RankNumber;
+                player.GameModeStats[0].LeagueId = loadPlayerOfLeagueLike1V1.League;
+                player.GameModeStats[0].LeagueOrder = constellationOfGw.leagues
+                    .SingleOrDefault(l => l.id == loadPlayerOfLeagueLike1V1.League)?.order ?? 0;
+            }
+
+            var loadPlayerOfLeagueLike2V2 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_2v2_AT);
+            if (loadPlayerOfLeagueLike2V2 != null)
+            {
+                player.GameModeStats[1].Rank = loadPlayerOfLeagueLike2V2.RankNumber;
+                player.GameModeStats[1].LeagueId = loadPlayerOfLeagueLike2V2.League;
+                player.GameModeStats[0].LeagueOrder = constellationOfGw.leagues
+                    .SingleOrDefault(l => l.id == loadPlayerOfLeagueLike2V2.League)?.order ?? 0;
+            }
 
             return Ok(player);
         }
