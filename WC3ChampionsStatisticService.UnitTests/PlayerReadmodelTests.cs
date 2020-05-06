@@ -12,10 +12,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void Player_RecentProgress_Mapping()
         {
             var ev = TestDtoHelper.CreateFakeEvent();
-            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
 
-            var player = PlayerProfile.Create("peter#12@10", "Peter#12");
+            var player = PlayerProfile.Create("Peter#12");
             player.GameModeStats[0].RankProgressionStart = RankProgression.Create(90, 200);
             player.UpdateRank(GameMode.GM_1v1, 100, 220);
 
@@ -27,10 +27,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void Player_RecentProgress_DoubleUpdate()
         {
             var ev = TestDtoHelper.CreateFakeEvent();
-            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
 
-            var player = PlayerProfile.Create("peter#12@10", "Peter#12");
+            var player = PlayerProfile.Create("Peter#12");
             player.GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
             player.UpdateRank(GameMode.GM_1v1, 100, 220);
             player.UpdateRank(GameMode.GM_1v1, 100, 230);
@@ -42,10 +42,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void Player_RecentProgress_DoubleUpdate_NoChange()
         {
             var ev = TestDtoHelper.CreateFakeEvent();
-            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
 
-            var player = PlayerProfile.Create("peter#12@10", "Peter#12");
+            var player = PlayerProfile.Create("Peter#12");
             player.GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
             player.UpdateRank(GameMode.GM_1v1, 100, 220);
             player.UpdateRank(GameMode.GM_1v1, 100, 200);
@@ -57,10 +57,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void Player_RecentProgress_DoubleUpdate_NegativeThenPositive()
         {
             var ev = TestDtoHelper.CreateFakeEvent();
-            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
 
-            var player = PlayerProfile.Create("peter#12@10", "Peter#12");
+            var player = PlayerProfile.Create("Peter#12");
             player.GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
             player.UpdateRank(GameMode.GM_1v1, 100, 180);
             player.UpdateRank(GameMode.GM_1v1, 100, 230);
@@ -72,10 +72,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void Player_RecentProgress_NewPlayer()
         {
             var ev = TestDtoHelper.CreateFakeEvent();
-            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
 
-            var player = PlayerProfile.Create("peter#12@10", "Peter#12");
+            var player = PlayerProfile.Create("Peter#12");
             player.UpdateRank(GameMode.GM_1v1, 100, 180);
             player.UpdateRank(GameMode.GM_1v1, 100, 230);
 
@@ -86,10 +86,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void Player_RecentProgress_After8Hours()
         {
             var ev = TestDtoHelper.CreateFakeEvent();
-            ev.match.players[0].id = "peter#123@10";
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
 
-            var player = PlayerProfile.Create("peter#12@10", "Peter#12");
+            var player = PlayerProfile.Create("Peter#12");
             player.GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
             player.GameModeStats[0].RankProgressionStart.Date = DateTimeOffset.UtcNow.AddDays(-1);
             player.UpdateRank(GameMode.GM_1v1, 100, 180);

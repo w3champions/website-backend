@@ -2,18 +2,16 @@
 {
     public class PlayerId
     {
-        public static PlayerId Create(string id, string nameTag)
+        public static PlayerId Create(string nameTag)
         {
             return new PlayerId
             {
-                Id = id,
                 Name = nameTag.Split("#")[0],
-                BattleTag = nameTag.Split("#")[1]
+                BattleTag = nameTag
             };
         }
 
         public string Name { get; set; }
         public string BattleTag { get; set; }
-        public string Id { get; set; }
     }
 }

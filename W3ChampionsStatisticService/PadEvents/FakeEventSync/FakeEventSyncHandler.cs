@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
                 if (fakeEvents.Any())
                 {
-                    _logger.LogWarning($"Events for {playerOnMySide.CombinedBattleTag} with {fakeEvents.Count}");
+                    _logger.LogWarning($"Events for {playerOnMySide.BattleTag} with {fakeEvents.Count}");
                 }
 
                 foreach (var finishedEvent in fakeEvents)

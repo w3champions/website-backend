@@ -2,11 +2,10 @@
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
+namespace W3ChampionsStatisticService.PlayerStats.HeroStats
 {
     public class PlayerHeroStatsHandler : IReadModelHandler
     {
@@ -35,10 +34,10 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                 var blizzardInfoPlayer1 = nextEvent.result.players[0];
                 var blizzardInfoPlayer2 = nextEvent.result.players[1];
 
-                var p1 = await _playerRepository.LoadHeroStat(eventPlayer1.id)
-                         ?? PlayerHeroStats.Create(eventPlayer1.id);
-                var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.id)
-                         ?? PlayerHeroStats.Create(eventPlayer2.id);
+                var p1 = await _playerRepository.LoadHeroStat(eventPlayer1.battleTag)
+                         ?? PlayerHeroStats.Create(eventPlayer1.battleTag);
+                var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag)
+                         ?? PlayerHeroStats.Create(eventPlayer2.battleTag);
 
                 p1.AddMapWin(blizzardInfoPlayer1, (Race)eventPlayer1.race,
                     (Race)eventPlayer2.race,

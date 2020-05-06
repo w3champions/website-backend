@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Ladder
         {
             return new PlayerOverview
             {
-                Id = $"{string.Join("_", playerIds.OrderBy(t => t.Id).Select(t => t.Id))}_{gameMode}",
+                Id = $"{string.Join("_", playerIds.OrderBy(t => t.BattleTag).Select(t => t.BattleTag))}_{gameMode}",
                 PlayerIds = playerIds,
                 GateWay = gateWay,
                 GameMode = gameMode

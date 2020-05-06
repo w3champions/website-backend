@@ -23,7 +23,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task NoEventPresentLocally()
         {
             var fakeEventSyncHandler = CreateSUT();
-            var playerProfile = PlayerProfile.Create("peter#123@10", "peter#123");
+            var playerProfile = PlayerProfile.Create("peter#123");
             await _playerRepository.UpsertPlayer(playerProfile);
             _padServiceMock.Setup(p => p.GetPlayer("peter#123")).ReturnsAsync(CreateFakePadPlayer());
 
@@ -44,7 +44,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task OneGamePresentLocally()
         {
             var fakeEventSyncHandler = CreateSUT();
-            var playerProfile = PlayerProfile.Create("peter#123@10", "peter#123");
+            var playerProfile = PlayerProfile.Create("peter#123");
             playerProfile.RecordWin(Race.HU, GameMode.GM_1v1, true);
             await _playerRepository.UpsertPlayer(playerProfile);
             _padServiceMock.Setup(p => p.GetPlayer("peter#123")).ReturnsAsync(CreateFakePadPlayer());
@@ -64,8 +64,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task OneGamePresentLocally_DifferentGateways()
         {
             var fakeEventSyncHandler = CreateSUT();
-            var playerProfileUs = PlayerProfile.Create("peter#123@10", "peter#123");
-            var playerProfileEu = PlayerProfile.Create("peter#123@20", "peter#123");
+            var playerProfileUs = PlayerProfile.Create("peter#123");
+            var playerProfileEu = PlayerProfile.Create("peter#123");
             playerProfileUs.RecordWin(Race.HU, GameMode.GM_1v1, true);
             playerProfileUs.RecordWin(Race.HU, GameMode.GM_1v1, false);
             playerProfileEu.RecordWin(Race.NE, GameMode.GM_1v1, false);

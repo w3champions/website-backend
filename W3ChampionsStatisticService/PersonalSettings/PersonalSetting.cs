@@ -16,7 +16,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string ProfileMessage { get; set; }
         [BsonIgnore]
         [JsonIgnore]
-        public PlayerProfile Player => Players?.SingleOrDefault() ?? PlayerProfile.Create(Id, Id.Split("@")[0]);
+        public PlayerProfile Player => Players?.SingleOrDefault() ?? PlayerProfile.Create(Id);
         [JsonIgnore]
         public List<PlayerProfile> Players { get; set; }
         public string HomePage { get; set; }

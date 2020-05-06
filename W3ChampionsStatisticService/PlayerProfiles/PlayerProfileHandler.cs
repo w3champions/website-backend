@@ -20,8 +20,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             foreach (var playerRaw in nextEvent.match.players)
             {
-                var player = await _playerRepository.Load(playerRaw.id)
-                             ?? PlayerProfile.Create(playerRaw.id, playerRaw.battleTag);
+                var player = await _playerRepository.Load(playerRaw.battleTag)
+                             ?? PlayerProfile.Create(playerRaw.battleTag);
                 player.RecordWin(
                     playerRaw.race,
                     nextEvent.match.gameMode,

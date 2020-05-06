@@ -36,7 +36,7 @@ namespace W3ChampionsStatisticService.Matches
                     .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                && m.Teams
                                    .Any(t => t.Players
-                                       .Any(p => p.Id.Equals(playerId))))
+                                       .Any(p => p.BattleTag.Equals(playerId))))
                     .SortByDescending(s => s.StartTime)
                     .Skip(offset)
                     .Limit(pageSize)
@@ -46,18 +46,18 @@ namespace W3ChampionsStatisticService.Matches
             // this is fing hacky, fix when there is a good idea
             return await mongoCollection
                 .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                            (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
-                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
+                            (  m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
+                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
 
-                            || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
-                            || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId
-                            || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId
-                            || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+                            || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
+                            || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
+                            || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
+                            || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
 
-                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
-                            || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
-                            || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId
-                            || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
+                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
+                            || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
+                            || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
                              ))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
@@ -82,24 +82,24 @@ namespace W3ChampionsStatisticService.Matches
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
                     m.Teams
                         .Any(t => t.Players
-                            .Any(p => p.Id.Equals(playerId))));
+                            .Any(p => p.BattleTag.Equals(playerId))));
             }
 
             // this is fing hacky, fix when there is a good idea
             return mongoCollection.CountDocumentsAsync(m =>
                 (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                (  m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
-                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                (  m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
+                || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
 
-                || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[0].Id == opponentId
-                || m.Teams[0].Players[0].Id == playerId && m.Teams[1].Players[1].Id == opponentId
-                || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[0].Id == opponentId
-                || m.Teams[0].Players[1].Id == playerId && m.Teams[1].Players[1].Id == opponentId
+                || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
+                || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
+                || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
+                || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
 
-                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[0].Id == opponentId
-                || m.Teams[1].Players[0].Id == playerId && m.Teams[0].Players[1].Id == opponentId
-                || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[0].Id == opponentId
-                || m.Teams[1].Players[1].Id == playerId && m.Teams[0].Players[1].Id == opponentId
+                || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
+                || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
+                || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
+                || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
                 ));
         }
 

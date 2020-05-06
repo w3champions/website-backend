@@ -5,13 +5,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerProfile
     {
-        public static PlayerProfile Create(string id, string battleTag)
+        public static PlayerProfile Create(string battleTag)
         {
             return new PlayerProfile
             {
-                Id = id,
                 Name = battleTag.Split("#")[0],
-                BattleTag = battleTag.Split("#")[1],
+                BattleTag = battleTag,
                 RaceStats = new RaceStats
                 {
                     new RaceStat(Race.HU),
@@ -57,11 +56,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int TotalLosses => GameModeStats.Sum(g => g.Losses);
 
         public int TotalWins => GameModeStats.Sum(g => g.Wins);
-        public string CombinedBattleTag => $"{Name}#{BattleTag}";
 
         public static PlayerProfile Default()
         {
-            return Create("UnknownPlayer#2@20", "UnknownPlayer#2");
+            return Create("UnknownPlayer#2");
         }
 
         public void UpdateRank(GameMode mode,

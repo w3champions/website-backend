@@ -19,8 +19,6 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonNoId]
     public class PlayerMMrChange
     {
-        [BsonElement("id")]
-        public string id { get; set; }
         public string battleTag { get; set; }
         public Race race { get; set; }
 

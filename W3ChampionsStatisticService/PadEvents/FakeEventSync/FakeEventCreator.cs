@@ -93,7 +93,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                         match = CreatMatch(
                             won,
                             int.Parse(gateWay),
-                            myPlayer.CombinedBattleTag,
+                            myPlayer.BattleTag,
                             myPlayer.Id,
                             winDiff.Race),
                         WasFakeEvent = true,
@@ -121,19 +121,15 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                     {
                         battleTag = battleTag,
                         won = won,
-                        race = race,
-                        id = playerId
+                        race = race
                     },
                     new PlayerMMrChange
                     {
                         battleTag = "FakeEnemy#123",
                         won = !won,
-                        race = Race.RnD,
-                        id = "FakeEnemy#123@10"
+                        race = Race.RnD
                     }
-
                 }
-
             };
         }
     }

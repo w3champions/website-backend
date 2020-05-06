@@ -20,7 +20,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             await rankRepository.InsertMany(ranks);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123@10", "peter#123")}, 10, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 10, GameMode.GM_1v1);
             player.RecordWin(true, 1234);
             await playerRepository.UpsertPlayer(player);
             await playerRepository.UpsertPlayer(player);
@@ -43,7 +43,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             await rankRepository.InsertMany(ranks);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123@10", "peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 10, GameMode.GM_1v1);
 
@@ -60,7 +60,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ranks2 = new List<Rank> { new Rank(20, 1, 8, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             await rankRepository.InsertMany(ranks1);
             await rankRepository.InsertMany(ranks2);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123@10", "peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 20, GameMode.GM_1v1);
 
@@ -79,7 +79,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent();
 
             matchFinishedEvent.match.players[0].battleTag = "peTer#123";
-            matchFinishedEvent.match.players[0].id = "peter#123@10";
             rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
             rankingChangedEvent.gateway = 10;
             rankingChangedEvent.gameMode = GameMode.GM_1v1;
