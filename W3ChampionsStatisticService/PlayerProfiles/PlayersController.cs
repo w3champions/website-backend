@@ -26,15 +26,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
             var allLeagues = await _rankRepository.LoadLeagueConstellation();
             var gw = int.Parse(battleTag.Split("@")[1]);
-            var constellationOfGw = allLeagues.Single(l => l.gateway == gw);
 
             var loadPlayerOfLeagueLike1V1 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_1v1);
             if (loadPlayerOfLeagueLike1V1 != null)
             {
                 player.GameModeStats[0].Rank = loadPlayerOfLeagueLike1V1.RankNumber;
                 player.GameModeStats[0].LeagueId = loadPlayerOfLeagueLike1V1.League;
-                player.GameModeStats[0].LeagueOrder = constellationOfGw.leagues
-                    .SingleOrDefault(l => l.id == loadPlayerOfLeagueLike1V1.League)?.order ?? 0;
+                player.GameModeStats[0].LeagueOrder = allLeagues.Single(l => l.gateway == gw && l.gameMode == GameMode.GM_1v1).leagues
+                    .Single(l => l.id == loadPlayerOfLeagueLike1V1.League).order;
             }
 
             var loadPlayerOfLeagueLike2V2 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_2v2_AT);
@@ -42,8 +41,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             {
                 player.GameModeStats[1].Rank = loadPlayerOfLeagueLike2V2.RankNumber;
                 player.GameModeStats[1].LeagueId = loadPlayerOfLeagueLike2V2.League;
-                player.GameModeStats[0].LeagueOrder = constellationOfGw.leagues
-                    .SingleOrDefault(l => l.id == loadPlayerOfLeagueLike2V2.League)?.order ?? 0;
+                player.GameModeStats[1].LeagueOrder = allLeagues.Single(l => l.gateway == gw && l.gameMode == GameMode.GM_2v2_AT).leagues
+                    .Single(l => l.id == loadPlayerOfLeagueLike2V2.League).order;
             }
 
             return Ok(player);

@@ -35,14 +35,9 @@ namespace W3ChampionsStatisticService.Ladder
             return joinWith;
         }
 
-        public async Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
+        public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
         {
-            var mongoCollection = CreateCollection<LeagueConstellationChangedEvent>();
-            var us = await mongoCollection.Find(l => l.gateway == 10).SortByDescending(s => s.id)
-                .FirstOrDefaultAsync();
-            var eu = await mongoCollection.Find(l => l.gateway == 20).SortByDescending(s => s.id)
-                .FirstOrDefaultAsync();
-            return new List<LeagueConstellationChangedEvent> { us, eu };
+            return LoadAll<LeagueConstellationChangedEvent>();
         }
 
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)
