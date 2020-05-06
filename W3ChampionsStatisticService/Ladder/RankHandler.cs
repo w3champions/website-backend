@@ -40,7 +40,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         private static string CreatPlayerId(RankingChangedEvent changedEvent, RankRaw r)
         {
-            var smallBattleTags = r.battleTags.Select(b => $"{b.ToLower()}@{changedEvent.gateway}").OrderBy(t => t);
+            var smallBattleTags = r.battleTags.Select(b => $"{b}@{changedEvent.gateway}").OrderBy(t => t);
             var creatPlayerId = $"{string.Join("_", smallBattleTags)}_{changedEvent.gameMode}";
             return creatPlayerId;
         }

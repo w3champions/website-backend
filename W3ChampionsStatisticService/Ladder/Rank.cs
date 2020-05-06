@@ -15,6 +15,7 @@ namespace W3ChampionsStatisticService.Ladder
             RankNumber = rankNumber;
             RankingPoints = rankingPoints;
             PlayerId = playerId;
+            PlayerIdToLower = playerId.ToLower();
             GameMode = gameMode;
         }
 
@@ -24,6 +25,7 @@ namespace W3ChampionsStatisticService.Ladder
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
+        public string PlayerIdToLower { get; set; }
         [JsonIgnore]
         public List<PlayerOverview> Players { get; set; }
         public PlayerOverview Player => Players.SingleOrDefault();

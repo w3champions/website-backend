@@ -25,13 +25,13 @@ namespace W3ChampionsStatisticService.Ladder
         public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int gateWay, GameMode gameMode)
         {
             var search = searchFor.ToLower();
-            return JoinWith(rank => rank.PlayerId.Contains(search) && rank.Gateway == gateWay && rank.GameMode == gameMode);
+            return JoinWith(rank => rank.PlayerIdToLower.Contains(search) && rank.Gateway == gateWay && rank.GameMode == gameMode);
         }
 
         public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id.Contains(search));
+            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search));
             return joinWith;
         }
 
