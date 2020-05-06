@@ -131,5 +131,26 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(0, playerProfile.Losses);
             Assert.AreEqual(GameMode.GM_2v2_AT, playerProfile.GameMode);
         }
+
+        [Test]
+        public async Task UpdateOverview_HandlerUpdate_1v1_doubleWins()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+            matchFinishedEvent.match.players[0].id = "peter#123@10";
+            matchFinishedEvent.match.players[0].battleTag = "peter#123";
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+            await playOverviewHandler.Update(matchFinishedEvent);
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var playerProfile = await playerRepository.LoadOverview("peter#123@10_GM_1v1");
+
+            Assert.AreEqual(3, playerProfile.Wins);
+            Assert.AreEqual(0, playerProfile.Losses);
+            Assert.AreEqual(GameMode.GM_1v1, playerProfile.GameMode);
+        }
     }
 }
