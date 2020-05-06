@@ -25,7 +25,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var player = await _playerRepository.Load(battleTag) ?? PlayerProfile.Default();
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
             var allLeagues = await _rankRepository.LoadLeagueConstellation();
-            var gw = int.Parse(battleTag.Split("@")[1]);
+            // todo FIX this
+            var gw = 10;
 
             var loadPlayerOfLeagueLike1V1 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_1v1);
             if (loadPlayerOfLeagueLike1V1 != null)

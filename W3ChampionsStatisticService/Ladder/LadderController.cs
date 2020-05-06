@@ -10,14 +10,11 @@ namespace W3ChampionsStatisticService.Ladder
     public class LadderController : ControllerBase
     {
         private readonly IRankRepository _rankRepository;
-        private readonly IMatchEventRepository _matchEventRepository;
 
         public LadderController(
-            IRankRepository rankRepository,
-            IMatchEventRepository matchEventRepository)
+            IRankRepository rankRepository)
         {
             _rankRepository = rankRepository;
-            _matchEventRepository = matchEventRepository;
         }
 
         [HttpGet("search")]
