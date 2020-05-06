@@ -23,7 +23,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.WasFakeEvent = false;
             fakeEvent.WasFromSync = false;
 
-            fakeEvent.match.gateway = GateWay.Usa;
+            fakeEvent.match.gateway = GateWay.Europe;
             fakeEvent.match.gameMode = GameMode.GM_1v1;
 
             fakeEvent.match.players.First().battleTag = name1;

@@ -21,7 +21,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
-            Assert.AreEqual(20, playerLoaded.GateWay);
+            Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
         }
 
 
@@ -35,7 +35,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", GateWay.Europe)).Single();
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
-            Assert.AreEqual(20, playerLoaded.GateWay);
+            Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
         }
 
         [Test]
