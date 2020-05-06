@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using AutoFixture;
 using MongoDB.Bson;
@@ -60,6 +61,25 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.players[3].won = false;
 
             return fakeEvent;
+        }
+
+        public static RankingChangedEvent CreateRankChangedEvent()
+        {
+            return new RankingChangedEvent
+            {
+                gameMode = GameMode.GM_1v1,
+                gateway = 10,
+                league = 1,
+                id = 10010,
+                ranks = new[]
+                {
+                    new RankRaw
+                    {
+                        rp = 14,
+                        battleTags = new List<string> {"peTer#123"}
+                    }
+                }
+            };
         }
     }
 }
