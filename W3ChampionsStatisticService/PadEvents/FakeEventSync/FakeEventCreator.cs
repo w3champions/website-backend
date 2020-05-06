@@ -19,7 +19,9 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
-        public async Task<List<MatchFinishedEvent>> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer,
+        public async Task<List<MatchFinishedEvent>> CreatFakeEvents(
+            PlayerStatePad player,
+            PlayerProfile myPlayer,
             int increment)
         {
             _dateTime = _dateTime.AddSeconds(-increment);

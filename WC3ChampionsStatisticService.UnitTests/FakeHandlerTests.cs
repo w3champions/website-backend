@@ -20,6 +20,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         private TempLossesRepo _tempLossesRepo;
 
         [Test]
+        [Ignore("not used in this case anymore")]
         public async Task NoEventPresentLocally()
         {
             var fakeEventSyncHandler = CreateSUT();
@@ -41,6 +42,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        [Ignore("not used in this case anymore")]
         public async Task OneGamePresentLocally()
         {
             var fakeEventSyncHandler = CreateSUT();
@@ -61,6 +63,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        [Ignore("not used in this case anymore")]
         public async Task OneGamePresentLocally_DifferentGateways()
         {
             var fakeEventSyncHandler = CreateSUT();

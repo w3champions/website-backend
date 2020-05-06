@@ -72,7 +72,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
 
 
-            var personalSetting = new PersonalSetting("peter#123@10");
+            var personalSetting = new PersonalSetting("peter#123");
 
             var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
@@ -83,7 +83,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player);
             await settingsRepo.Save(personalSetting);
 
-            var loaded = await settingsRepo.Load("peter#123@10");
+            var loaded = await settingsRepo.Load("peter#123");
 
             Assert.AreEqual(20, loaded.Player.GetWinsPerRace(Race.HU));
         }

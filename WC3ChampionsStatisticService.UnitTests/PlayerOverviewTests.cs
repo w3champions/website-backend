@@ -69,9 +69,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(3, player.Games);
             Assert.AreEqual(1, player.Wins);
             Assert.AreEqual(2, player.Losses);
-            Assert.AreEqual("123", player.PlayerIds[0].BattleTag);
+            Assert.AreEqual("peter#123", player.PlayerIds[0].BattleTag);
             Assert.AreEqual("peter", player.PlayerIds[0].Name);
-            Assert.AreEqual("peter#123@10_GM_1v1", player.Id);
+            Assert.AreEqual("peter#123@20_GM_1v1", player.Id);
             Assert.AreEqual(1250, player.MMR);
         }
 
@@ -100,6 +100,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.match.players[0].won = true;
             matchFinishedEvent.match.players[1].won = false;
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent.match.gateway = 10;
+            matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
 
@@ -119,6 +121,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
             matchFinishedEvent.match.players[1].battleTag = "wolf#123";
+            matchFinishedEvent.match.gateway = 10;
+            matchFinishedEvent.match.gameMode = GameMode.GM_2v2_AT;
 
             await playOverviewHandler.Update(matchFinishedEvent);
 
@@ -137,6 +141,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent.match.gateway = 10;
+            matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
             await playOverviewHandler.Update(matchFinishedEvent);

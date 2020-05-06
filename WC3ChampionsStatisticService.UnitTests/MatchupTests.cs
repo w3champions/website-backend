@@ -22,10 +22,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchup = new Matchup(fakeEvent);
 
-            Assert.AreEqual("456", matchup.Teams.First().Players.First().BattleTag);
+            Assert.AreEqual("wolf#456", matchup.Teams.First().Players.First().BattleTag);
             Assert.AreEqual("wolf", matchup.Teams.First().Players.First().Name);
 
-            Assert.AreEqual("123", matchup.Teams.Last().Players.First().BattleTag);
+            Assert.AreEqual("peter#123", matchup.Teams.Last().Players.First().BattleTag);
             Assert.AreEqual("peter", matchup.Teams.Last().Players.First().Name);
         }
 

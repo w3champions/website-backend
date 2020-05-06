@@ -68,7 +68,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].race = Race.HU;
             ev.match.players[1].race = Race.OC;
-            ev.match.players[0].battleTag = "PEteR#123";
 
             for (int i = 0; i < 100; i++)
             {

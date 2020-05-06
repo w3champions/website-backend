@@ -31,7 +31,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
-            matchFinishedEvent1.match.players[1].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[1].battleTag = "KOMISCHER#123";
             matchFinishedEvent1.match.players[1].won = true;
             matchFinishedEvent1.match.players[0].won = false;
             matchFinishedEvent1.match.gateway = 10;
@@ -40,10 +40,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             await matchRepository.Insert(new Matchup(matchFinishedEvent2));
 
-            var matches = await matchRepository.LoadFor("peter#123");
+            var matches = await matchRepository.LoadFor("KOMISCHER#123");
 
             Assert.AreEqual(1, matches.Count);
-            Assert.AreEqual("peter#123", matches[0].Teams[0].Players[0].BattleTag);
+            Assert.AreEqual("KOMISCHER#123", matches[0].Teams[0].Players[0].BattleTag);
         }
 
         [Test]
@@ -128,8 +128,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var count = await matchRepository.CountFor("peter#123", "wolf#456");
 
             Assert.AreEqual(1, count);
-            Assert.AreEqual("peter#123@10", matches.Single().Teams.First().Players.Single().BattleTag);
-            Assert.AreEqual("wolf#456@10", matches.Single().Teams.Last().Players.Single().BattleTag);
+            Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
+            Assert.AreEqual("wolf#456", matches.Single().Teams.Last().Players.Single().BattleTag);
         }
 
         [Test]
@@ -204,8 +204,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var count = await matchRepository.CountFor("peter#123", "wolf#456");
 
             Assert.AreEqual(2, count);
-            Assert.AreEqual("peter#123@10", matches[0].Teams[0].Players[0].BattleTag);
-            Assert.AreEqual("peter#123@10", matches[1].Teams[0].Players[0].BattleTag);
+            Assert.AreEqual("peter#123", matches[0].Teams[0].Players[0].BattleTag);
+            Assert.AreEqual("peter#123", matches[1].Teams[0].Players[0].BattleTag);
         }
 
         [Test]

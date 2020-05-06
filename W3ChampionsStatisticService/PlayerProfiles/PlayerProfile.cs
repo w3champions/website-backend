@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             };
         }
 
-        public string Id { get; set; }
+        public string Id => BattleTag;
         public string BattleTag { get; set; }
         public string Name { get; set; }
         public RaceStats RaceStats { get; set; }
