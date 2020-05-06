@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -129,7 +130,7 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
             int pageSize = 100,
-            int gateWay = 10)
+            GateWay gateWay = GateWay.Europe)
         {
             var database = CreateClient();
 

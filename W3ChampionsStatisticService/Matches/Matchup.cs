@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.Matches
         public DateTimeOffset EndTime { get; set; }
         public GameMode GameMode { get; set; }
         public IList<Team> Teams { get; set; } = new List<Team>();
-        public int GateWay { get; set; }
+        public GateWay GateWay { get; set; }
 
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -53,7 +54,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
         }
 
-        public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, int gateWay)
+        public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)
         {
             if (string.IsNullOrEmpty(searchFor)) return new List<PlayerOverview>();
             var database = CreateClient();

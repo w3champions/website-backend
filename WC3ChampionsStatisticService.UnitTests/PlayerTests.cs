@@ -26,19 +26,19 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerProfile.Create("peter#123");
-            player.RecordWin(Race.HU, GameMode.GM_1v1, true);
+            player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.Load(player.Id);
-            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, false);
-            playerLoaded.UpdateRank(GameMode.GM_1v1, 234, 123);
+            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, GateWay.Europe, false);
+            playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123);
             await playerRepository.UpsertPlayer(playerLoaded);
 
             var playerLoadedAgain = await playerRepository.Load(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(player.Id, playerLoadedAgain.Id);
-            Assert.AreEqual(234, playerLoadedAgain.GameModeStats[0].MMR);
-            Assert.AreEqual(123, playerLoadedAgain.GameModeStats[0].RankingPoints);
+            Assert.AreEqual(234, playerLoadedAgain.GateWayStats[1].GameModeStats[0].MMR);
+            Assert.AreEqual(123, playerLoadedAgain.GateWayStats[1].GameModeStats[0].RankingPoints);
         }
 
         [Test]
@@ -69,6 +69,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             ev.match.players[0].race = Race.HU;
             ev.match.players[1].race = Race.OC;
 
+            ev.match.gateway = GateWay.Usa;
+
             for (int i = 0; i < 100; i++)
             {
                 await handler.Update(ev);
@@ -77,7 +79,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerLoaded = await playerRepository.Load("peter#123");
 
             Assert.AreEqual(100, playerLoaded.TotalWins);
-            Assert.AreEqual(100, playerLoaded.GameModeStats[0].Wins);
+            Assert.AreEqual(100, playerLoaded.GateWayStats[0].GameModeStats[0].Wins);
             Assert.AreEqual(100, playerLoaded.RaceStats[0].Wins);
         }
     }

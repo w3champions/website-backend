@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Ports
 {
@@ -10,7 +11,7 @@ namespace W3ChampionsStatisticService.Ports
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
             int pageSize = 100,
-            int gateWay = 10);
+            GateWay gateWay = GateWay.Europe);
         Task Insert(Matchup matchup);
         Task<List<Matchup>> LoadFor(
             string playerId,

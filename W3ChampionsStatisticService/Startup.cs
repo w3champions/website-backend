@@ -78,8 +78,8 @@ namespace W3ChampionsStatisticService
                 services.AddUnversionedReadModelService<FakeEventSyncHandler>();
             }
 
-            if (startHandlers == "true")
-            {
+            // if (startHandlers == "true")
+            // {
                 services.AddReadModelService<MatchReadModelHandler>();
 
                 services.AddReadModelService<PlayerModelHandler>();
@@ -96,7 +96,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<HeroPlayedModelHandler>();
 
                 services.AddUnversionedReadModelService<RankHandler>();
-            }
+            // }
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

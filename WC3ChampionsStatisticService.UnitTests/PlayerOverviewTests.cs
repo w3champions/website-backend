@@ -16,7 +16,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
@@ -30,9 +30,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", 20)).Single();
+            var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", GateWay.Europe)).Single();
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(20, playerLoaded.GateWay);
@@ -43,9 +43,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
-            Assert.IsEmpty(await playerRepository.LoadOverviewLike("", 20));
+            Assert.IsEmpty(await playerRepository.LoadOverviewLike("", GateWay.Europe));
         }
 
         [Test]
@@ -53,15 +53,15 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
-            Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, 20));
+            Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, GateWay.Europe));
         }
 
         [Test]
         public void UpdateOverview()
         {
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
             player.RecordWin(true, 1230);
             player.RecordWin(false, 1240);
             player.RecordWin(false, 1250);
@@ -78,7 +78,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void UpdateOverview_2v2AT()
         {
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, 20, GameMode.GM_2v2_AT);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, GateWay.Europe, GameMode.GM_2v2_AT);
             player.RecordWin(true, 1230);
 
             Assert.AreEqual(1, player.Games);
@@ -100,7 +100,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.match.players[0].won = true;
             matchFinishedEvent.match.players[1].won = false;
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent.match.gateway = 10;
+            matchFinishedEvent.match.gateway = GateWay.Usa;
             matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -121,7 +121,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
             matchFinishedEvent.match.players[1].battleTag = "wolf#123";
-            matchFinishedEvent.match.gateway = 10;
+            matchFinishedEvent.match.gateway = GateWay.Usa;
             matchFinishedEvent.match.gameMode = GameMode.GM_2v2_AT;
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -141,7 +141,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent.match.gateway = 10;
+            matchFinishedEvent.match.gateway = GateWay.Usa;
             matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);

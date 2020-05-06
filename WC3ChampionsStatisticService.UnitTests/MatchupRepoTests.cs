@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -34,8 +35,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.players[1].battleTag = "KOMISCHER#123";
             matchFinishedEvent1.match.players[1].won = true;
             matchFinishedEvent1.match.players[0].won = false;
-            matchFinishedEvent1.match.gateway = 10;
-            matchFinishedEvent2.match.gateway = 10;
+            matchFinishedEvent1.match.gateway = GateWay.Usa;
+            matchFinishedEvent2.match.gateway = GateWay.Usa;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             await matchRepository.Insert(new Matchup(matchFinishedEvent2));

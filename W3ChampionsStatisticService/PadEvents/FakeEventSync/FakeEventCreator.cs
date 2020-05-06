@@ -94,7 +94,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                     {
                         match = CreatMatch(
                             won,
-                            int.Parse(gateWay),
+                            Enum.Parse<GateWay>(gateWay),
                             myPlayer.BattleTag,
                             myPlayer.Id,
                             winDiff.Race),
@@ -110,7 +110,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             return finishedEvents;
         }
 
-        private Match CreatMatch(bool won, int gateWay, string battleTag, string playerId, Race race)
+        private Match CreatMatch(bool won, GateWay gateWay, string battleTag, string playerId, Race race)
         {
             return new Match
             {
