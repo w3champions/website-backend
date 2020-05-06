@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -65,6 +66,37 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual(8, playerLoaded[0].RankNumber);
+        }
+
+        [Test]
+        public async Task RankIntegrationWithMultipleIds()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+            var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent();
+
+            matchFinishedEvent.match.players[0].battleTag = "peTer#123";
+            rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
+            rankingChangedEvent.gateway = 10;
+            rankingChangedEvent.gameMode = GameMode.GM_1v1;
+
+            await InsertRankChangedEvent(rankingChangedEvent);
+            await matchEventRepository.InsertIfNotExisting(matchFinishedEvent);
+
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var rankHandler = new RankHandler(rankRepository, matchEventRepository);
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+            await rankHandler.Update();
+
+            var rank = await rankRepository.SearchPlayerOfLeague("pe", 10, GameMode.GM_1v1);
+
+            Assert.AreEqual(1, rank.Count);
         }
     }
 }
