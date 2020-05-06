@@ -79,6 +79,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent();
 
             matchFinishedEvent.match.players[0].battleTag = "peTer#123";
+            matchFinishedEvent.match.players[0].id = "peter#123@10";
             rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
             rankingChangedEvent.gateway = 10;
             rankingChangedEvent.gameMode = GameMode.GM_1v1;
