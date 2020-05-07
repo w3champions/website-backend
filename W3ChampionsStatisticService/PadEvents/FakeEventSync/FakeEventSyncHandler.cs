@@ -48,7 +48,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                 var playerOnMySide = await _playerRepository.LoadPlayerFrom(offset);
                 if (playerOnMySide == null) break;
 
-                var player = await _padRepo.GetPlayer($"{playerOnMySide.Name}#{playerOnMySide.BattleTag}");
+                var player = await _padRepo.GetPlayer(playerOnMySide.BattleTag);
 
                 var fakeEvents = await _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
 

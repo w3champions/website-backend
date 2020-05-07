@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.Matches;
@@ -10,13 +11,6 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 {
     public class FakeEventCreator
     {
-        private readonly ITempLossesRepo _tempLossesRepo;
-
-        public FakeEventCreator(ITempLossesRepo tempLossesRepo)
-        {
-            _tempLossesRepo = tempLossesRepo;
-        }
-
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
         public async Task<List<MatchFinishedEvent>> CreatFakeEvents(
@@ -25,92 +19,88 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             int increment)
         {
             _dateTime = _dateTime.AddSeconds(-increment);
-            var gateWay = myPlayer.BattleTag.Split("@")[1];
-            player.data.ladder.TryGetValue(gateWay, out var gatewayStats);
-            if (gatewayStats == null) return new List<MatchFinishedEvent>();
 
-            var padRaceStats = player.data.stats;
-            var gatewayStatsWins = gatewayStats.solo.wins;
-            var gatewayStatsLosses = gatewayStats.solo.losses;
+            var raceStats = player.data.stats;
+
+            var gamesToPortWins = new List<RaceAndWinDto>();
+            gamesToPortWins.Add(new RaceAndWinDto(Race.HU, raceStats.human.wins - myPlayer.GetWinsPerRace(Race.HU), true));
+            gamesToPortWins.Add(new RaceAndWinDto(Race.OC, raceStats.orc.wins - myPlayer.GetWinsPerRace(Race.OC), true));
+            gamesToPortWins.Add(new RaceAndWinDto(Race.NE, raceStats.night_elf.wins - myPlayer.GetWinsPerRace(Race.NE), true));
+            gamesToPortWins.Add(new RaceAndWinDto(Race.UD, raceStats.undead.wins - myPlayer.GetWinsPerRace(Race.UD), true));
+            gamesToPortWins.Add(new RaceAndWinDto(Race.RnD, raceStats.random.wins - myPlayer.GetWinsPerRace(Race.RnD), true));
+
+            var gamesToPortLosses = new List<RaceAndWinDto>();
+            gamesToPortLosses.Add(new RaceAndWinDto(Race.HU, raceStats.human.losses - myPlayer.GetLossPerRace(Race.HU), false));
+            gamesToPortLosses.Add(new RaceAndWinDto(Race.OC, raceStats.orc.losses - myPlayer.GetLossPerRace(Race.OC), false));
+            gamesToPortLosses.Add(new RaceAndWinDto(Race.NE, raceStats.night_elf.losses - myPlayer.GetLossPerRace(Race.NE), false));
+            gamesToPortLosses.Add(new RaceAndWinDto(Race.UD, raceStats.undead.losses - myPlayer.GetLossPerRace(Race.UD), false));
+            gamesToPortLosses.Add(new RaceAndWinDto(Race.RnD, raceStats.random.losses - myPlayer.GetLossPerRace(Race.RnD), false));
+
+            var relevantWins = gamesToPortWins.Where(g => g.Count > 0).ToList();
+            var relevantLosses = gamesToPortLosses.Where(g => g.Count > 0).ToList();
+
+            player.data.ladder.TryGetValue("10", out var gatewayStatsUs);
+            player.data.ladder.TryGetValue("20", out var gatewayStatsEu);
+            player.data.ladder.TryGetValue("30", out var gatewayStatsAs);
 
             var matchFinishedEvents = new List<MatchFinishedEvent>();
 
-            var remainingWins = await _tempLossesRepo.LoadWins(player.account);
-            var remainingLosses = await _tempLossesRepo.LoadLosses(player.account);
+            var winsOnUs = PopRange(relevantWins, gatewayStatsUs?.solo?.wins - myPlayer.GateWayStats[0].GameModeStats[0].Wins).ToList();
+            var lossesOnUs = PopRange(relevantLosses, gatewayStatsUs?.solo?.losses - myPlayer.GateWayStats[0].GameModeStats[0].Losses).ToList();
+            var winsOnEU = PopRange(relevantWins, gatewayStatsEu?.solo?.wins - myPlayer.GateWayStats[1].GameModeStats[0].Wins).ToList();
+            var lossesOnEU = PopRange(relevantLosses, gatewayStatsEu?.solo?.losses - myPlayer.GateWayStats[1].GameModeStats[0].Losses).ToList();
+            var winsOnAs = PopRange(relevantWins, gatewayStatsAs?.solo?.wins - myPlayer.GateWayStats[2].GameModeStats[0].Wins).ToList();
+            var lossesOnAs = PopRange(relevantLosses, gatewayStatsAs?.solo?.losses - myPlayer.GateWayStats[2].GameModeStats[0].Losses).ToList();
 
-            if (remainingWins == null)
-            {
-                remainingWins = new List<RaceAndWinDto>();
-                remainingWins.Add(new RaceAndWinDto(Race.HU, padRaceStats.human.wins - myPlayer.GetWinsPerRace(Race.HU)));
-                remainingWins.Add(new RaceAndWinDto(Race.OC, padRaceStats.orc.wins - myPlayer.GetWinsPerRace(Race.OC)));
-                remainingWins.Add(new RaceAndWinDto(Race.NE, padRaceStats.night_elf.wins - myPlayer.GetWinsPerRace(Race.NE)));
-                remainingWins.Add(new RaceAndWinDto(Race.UD, padRaceStats.undead.wins - myPlayer.GetWinsPerRace(Race.UD)));
-                remainingWins.Add(new RaceAndWinDto(Race.RnD, padRaceStats.random.wins - myPlayer.GetWinsPerRace(Race.RnD)));
-            }
-
-            if (remainingLosses == null)
-            {
-                remainingLosses = new List<RaceAndWinDto>();
-                remainingLosses.Add(new RaceAndWinDto(Race.HU, padRaceStats.human.losses - myPlayer.GetLossPerRace(Race.HU)));
-                remainingLosses.Add(new RaceAndWinDto(Race.OC, padRaceStats.orc.losses - myPlayer.GetLossPerRace(Race.OC)));
-                remainingLosses.Add(new RaceAndWinDto(Race.NE, padRaceStats.night_elf.losses - myPlayer.GetLossPerRace(Race.NE)));
-                remainingLosses.Add(new RaceAndWinDto(Race.UD, padRaceStats.undead.losses - myPlayer.GetLossPerRace(Race.UD)));
-                remainingLosses.Add(new RaceAndWinDto(Race.RnD, padRaceStats.random.losses - myPlayer.GetLossPerRace(Race.RnD)));
-            }
-
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(
-                true,
-                myPlayer,
-                increment,
-                remainingWins,
-                gatewayStatsWins - myPlayer.TotalWins));
-            matchFinishedEvents.AddRange(CreateGamesOfDiffs(
-                false,
-                myPlayer,
-                increment + matchFinishedEvents.Count,
-                remainingLosses,
-                gatewayStatsLosses - myPlayer.TotalLosses));
-
-            await _tempLossesRepo.SaveWins(player.account, remainingWins);
-            await _tempLossesRepo.SaveLosses(player.account, remainingLosses);
+            matchFinishedEvents.AddRange(CreatEvents(myPlayer, ref increment, GateWay.Usa, winsOnUs));
+            matchFinishedEvents.AddRange(CreatEvents(myPlayer, ref increment, GateWay.Usa,lossesOnUs));
+            matchFinishedEvents.AddRange(CreatEvents(myPlayer, ref increment, GateWay.Europe,winsOnEU));
+            matchFinishedEvents.AddRange(CreatEvents(myPlayer, ref increment, GateWay.Europe,lossesOnEU));
+            matchFinishedEvents.AddRange(CreatEvents(myPlayer, ref increment, GateWay.Asia,winsOnAs));
+            matchFinishedEvents.AddRange(CreatEvents(myPlayer, ref increment, GateWay.Asia,lossesOnAs));
 
             return matchFinishedEvents;
         }
 
-        private List<MatchFinishedEvent> CreateGamesOfDiffs(
-            bool won,
-            PlayerProfile myPlayer,
-            int increment,
-            List<RaceAndWinDto> winDiffs,
-            long gatewayStats)
+        private IEnumerable<RaceAndWinDto> PopRange(List<RaceAndWinDto> gamesToPortWins, int? soloWins)
         {
-            var gateWay = myPlayer.BattleTag.Split("@")[1];
-            var finishedEvents = new List<MatchFinishedEvent>();
-            foreach (var winDiff in winDiffs)
+            while (soloWins > 0)
             {
-                while (winDiff.Count > 0 && gatewayStats > 0)
-                {
-                    finishedEvents.Add(new MatchFinishedEvent
-                    {
-                        match = CreatMatch(
-                            won,
-                            Enum.Parse<GateWay>(gateWay),
-                            myPlayer.BattleTag,
-                            myPlayer.BattleTag,
-                            winDiff.Race),
-                        WasFakeEvent = true,
-                        Id = new ObjectId(_dateTime, 0, 0, increment)
-                    });
-                    increment++;
-                    winDiff.Count--;
-                    gatewayStats--;
-                }
+                var raceAndWinDto = gamesToPortWins.FirstOrDefault();
+                if (raceAndWinDto == null) break;
+                gamesToPortWins.Remove(raceAndWinDto);
+                soloWins--;
+                yield return raceAndWinDto;
             }
-
-            return finishedEvents;
         }
 
-        private Match CreatMatch(bool won, GateWay gateWay, string battleTag, string playerId, Race race)
+        private IEnumerable<MatchFinishedEvent> CreatEvents(PlayerProfile myPlayer,
+            ref int increment,
+            GateWay gateWay,
+            IEnumerable<RaceAndWinDto> winsOnUs)
+        {
+            var matchFinishedEvents = new List<MatchFinishedEvent>();
+            foreach (var wins in winsOnUs)
+            {
+                matchFinishedEvents.Add(
+                new MatchFinishedEvent
+                {
+                    match = CreatMatch(wins.Won,
+                        gateWay,
+                        myPlayer.BattleTag,
+                        wins.Race),
+                    WasFakeEvent = true,
+                    Id = new ObjectId(_dateTime,
+                        0,
+                        0,
+                        increment++)
+                });
+            }
+
+            return matchFinishedEvents;
+        }
+
+        private Match CreatMatch(bool won, GateWay gateWay, string battleTag, Race race)
         {
             return new Match
             {
