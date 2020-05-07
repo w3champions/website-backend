@@ -45,15 +45,19 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GameMode gameMode,
             GateWay gateWay)
         {
-            var gameModeIndex = 0;
-            if (gameMode == GameMode.GM_1v1) gameModeIndex = 0;
-            if (gameMode == GameMode.GM_2v2_AT) gameModeIndex = 1;
+            var gameModeIndex = gameMode switch
+            {
+                GameMode.GM_1v1 => 0,
+                GameMode.GM_2v2_AT => 1,
+                _ => 0
+            };
+            
             var searchedLeagues = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay);
             if (searchedLeagues != null)
             {
                 player.GateWayStats
-                        .Single(g => g.GateWay == gateWay)
-                        .GameModeStats[gameModeIndex].Rank = searchedLeagues.RankNumber;
+                    .Single(g => g.GateWay == gateWay)
+                    .GameModeStats[gameModeIndex].Rank = searchedLeagues.RankNumber;
                 player.GateWayStats
                     .Single(g => g.GateWay == gateWay)
                     .GameModeStats[gameModeIndex].LeagueId = searchedLeagues.League;

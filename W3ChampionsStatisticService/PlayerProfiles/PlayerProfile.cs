@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -29,6 +30,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             };
         }
 
+        [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
         public RaceStats RaceStats { get; set; }
