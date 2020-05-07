@@ -15,9 +15,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var player = PlayerProfile.Create("peter#123");
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await playerRepository.Load(player.Id);
+            var playerLoaded = await playerRepository.Load(player.BattleTag);
 
-            Assert.AreEqual(player.Id, playerLoaded.Id);
+            Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
         }
 
         [Test]
@@ -28,15 +28,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfile.Create("peter#123");
             player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await playerRepository.Load(player.Id);
+            var playerLoaded = await playerRepository.Load(player.BattleTag);
             playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, GateWay.Europe, false);
             playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123);
             await playerRepository.UpsertPlayer(playerLoaded);
 
-            var playerLoadedAgain = await playerRepository.Load(player.Id);
+            var playerLoadedAgain = await playerRepository.Load(player.BattleTag);
 
-            Assert.AreEqual(player.Id, playerLoaded.Id);
-            Assert.AreEqual(player.Id, playerLoadedAgain.Id);
+            Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
+            Assert.AreEqual(player.BattleTag, playerLoadedAgain.BattleTag);
             Assert.AreEqual(234, playerLoadedAgain.GateWayStats[1].GameModeStats[0].MMR);
             Assert.AreEqual(123, playerLoadedAgain.GateWayStats[1].GameModeStats[0].RankingPoints);
         }
@@ -52,10 +52,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player1);
             await playerRepository.UpsertPlayer(player2);
 
-            var playerLoaded = await playerRepository.Load(player2.Id);
+            var playerLoaded = await playerRepository.Load(player2.BattleTag);
 
             Assert.IsNotNull(playerLoaded);
-            Assert.AreEqual(player2.Id, playerLoaded.Id);
+            Assert.AreEqual(player2.BattleTag, playerLoaded.BattleTag);
         }
 
         [Test]

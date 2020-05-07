@@ -26,7 +26,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 .Match(p => p.Id == battletag)
                 .Lookup<PersonalSetting, PlayerProfile, PersonalSetting>(players,
                     rank => rank.Id,
-                    player => player.Id,
+                    player => player.BattleTag,
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
             return result;

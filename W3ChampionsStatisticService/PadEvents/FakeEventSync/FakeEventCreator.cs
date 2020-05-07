@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             int increment)
         {
             _dateTime = _dateTime.AddSeconds(-increment);
-            var gateWay = myPlayer.Id.Split("@")[1];
+            var gateWay = myPlayer.BattleTag.Split("@")[1];
             player.data.ladder.TryGetValue(gateWay, out var gatewayStats);
             if (gatewayStats == null) return new List<MatchFinishedEvent>();
 
@@ -84,7 +84,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             List<RaceAndWinDto> winDiffs,
             long gatewayStats)
         {
-            var gateWay = myPlayer.Id.Split("@")[1];
+            var gateWay = myPlayer.BattleTag.Split("@")[1];
             var finishedEvents = new List<MatchFinishedEvent>();
             foreach (var winDiff in winDiffs)
             {
@@ -96,7 +96,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                             won,
                             Enum.Parse<GateWay>(gateWay),
                             myPlayer.BattleTag,
-                            myPlayer.Id,
+                            myPlayer.BattleTag,
                             winDiff.Race),
                         WasFakeEvent = true,
                         Id = new ObjectId(_dateTime, 0, 0, increment)
