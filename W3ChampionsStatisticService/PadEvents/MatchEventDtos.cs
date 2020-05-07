@@ -19,8 +19,6 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonNoId]
     public class PlayerMMrChange
     {
-        [BsonElement("id")]
-        public string id { get; set; }
         public string battleTag { get; set; }
         public Race race { get; set; }
 
@@ -68,7 +66,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int state { get; set; }
         public long startTime { get; set; }
         public GameMode gameMode { get; set; }
-        public int gateway { get; set; }
+        public GateWay gateway { get; set; }
         public string host { get; set; }
         [BsonElement("id")]
         public string id { get; set; }

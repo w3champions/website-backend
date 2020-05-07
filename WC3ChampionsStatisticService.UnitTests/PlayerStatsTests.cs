@@ -98,12 +98,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             MatchFinishedEvent match2 = CreateMatchEvent(player, playerHeroes, enemyNePlayer, enemyNeHeroes);
             await playerHeroStatsHandler.Update(match2);
 
-            var playerHeroStats = await playerRepository.LoadHeroStat(player.id);
-            var enemyUdHeroStats = await playerRepository.LoadHeroStat(enemyUdPlayer.id);
-            var enemyNeHeroStats = await playerRepository.LoadHeroStat(enemyNePlayer.id);
+            var playerHeroStats = await playerRepository.LoadHeroStat(player.battleTag);
+            var enemyUdHeroStats = await playerRepository.LoadHeroStat(enemyUdPlayer.battleTag);
+            var enemyNeHeroStats = await playerRepository.LoadHeroStat(enemyNePlayer.battleTag);
 
             // *** Player hero stats
-            Assert.AreEqual(player.id, playerHeroStats.Id);
+            Assert.AreEqual(player.battleTag, playerHeroStats.Id);
             Assert.AreEqual(2, playerHeroStats.HeroStatsItemList.Count);
 
             // Archmage Stats
@@ -148,9 +148,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             MatchFinishedEvent match1 = CreateMatchEvent(player, playerHeroes, enemyPlayer, enemyUdHeroes);
             await playerHeroStatsHandler.Update(match1);
 
-            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.id);
+            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag);
 
-            Assert.AreEqual(enemyPlayer.id, enemyHerosStats.Id);
+            Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.Id);
             Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
 
             var enemyHeroStats = GetHeroStatsForRaceAndMap(enemyHerosStats, "enemyhero", enemyRace, "Overall");
@@ -179,9 +179,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             MatchFinishedEvent match1 = CreateMatchEvent(player, playerHeroes, enemyPlayer, enemyUdHeroes);
             await playerHeroStatsHandler.Update(match1);
 
-            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.id);
+            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag);
 
-            Assert.AreEqual(enemyPlayer.id, enemyHerosStats.Id);
+            Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.Id);
             Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
 
             var enemyHeroStats = GetHeroStatsForRaceAndMap(enemyHerosStats, "enemyhero", enemyRace, "Overall");
@@ -227,9 +227,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
         private static PlayerMMrChange CreatePlayer(string playerId, Race race, bool won = false)
         {
-           return new PlayerMMrChange()
+           return new PlayerMMrChange
             {
-                id = playerId,
+                battleTag = playerId,
                 race = race,
                 won = won
            };

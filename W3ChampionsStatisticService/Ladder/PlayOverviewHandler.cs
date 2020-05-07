@@ -35,9 +35,10 @@ namespace W3ChampionsStatisticService.Ladder
 
         private async Task<PlayerOverview> UpdatePlayers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> players)
         {
-            var winnerPlayerIds = players.Select(w => PlayerId.Create(w.id, w.battleTag)).ToList();
+            var winnerPlayerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
-            var winnerIdCombined = $"{(string.Join("_", winnerPlayerIds.OrderBy(w => w.Id).Select(w => w.Id)))}_{nextEvent.match.gameMode}";
+            var winnerIdCombined =
+                $"{string.Join("_", winnerPlayerIds.OrderBy(t => t.BattleTag).Select(t => $"{t.BattleTag}@{(int)nextEvent.match.gateway}"))}_{nextEvent.match.gameMode}";
 
             var winner = await _playerRepository.LoadOverview(winnerIdCombined)
                          ?? PlayerOverview.Create(

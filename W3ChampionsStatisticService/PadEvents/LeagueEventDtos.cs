@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -8,7 +9,7 @@ namespace W3ChampionsStatisticService.PadEvents
     public class LeagueConstellationChangedEvent
     {
         public int id { get; set; }
-        public int gateway { get; set; }
+        public GateWay gateway { get; set; }
         public GameMode gameMode { get; set; }
         public League[] leagues { get; set; }
     }
@@ -30,7 +31,7 @@ namespace W3ChampionsStatisticService.PadEvents
     {
         [BsonElement("id")]
         public int id { get; set; }
-        public int gateway { get; set; }
+        public GateWay gateway { get; set; }
         public int league { get; set; }
         public GameMode gameMode { get; set; }
         public RankRaw[] ranks { get; set; }

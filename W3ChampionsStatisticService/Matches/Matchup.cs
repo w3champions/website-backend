@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.Matches
         public DateTimeOffset EndTime { get; set; }
         public GameMode GameMode { get; set; }
         public IList<Team> Teams { get; set; } = new List<Team>();
-        public int GateWay { get; set; }
+        public GateWay GateWay { get; set; }
 
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {
@@ -53,12 +53,11 @@ namespace W3ChampionsStatisticService.Matches
         {
             return players.Select(w => new PlayerOverviewMatches {
                 Name = w.battleTag.Split("#")[0],
-                BattleTag = w.battleTag.Split("#")[1],
-                Id = w.id,
+                BattleTag = w.battleTag,
                 CurrentMmr = (int?) w.updatedMmr?.rating ?? (int) w.mmr.rating,
                 OldMmr = (int) w.mmr.rating,
                 Won = w.won,
-                Race = (Race) w.race
+                Race = w.race
             });
         }
     }

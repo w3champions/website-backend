@@ -19,11 +19,13 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
-        public async Task<List<MatchFinishedEvent>> CreatFakeEvents(PlayerStatePad player, PlayerProfile myPlayer,
+        public async Task<List<MatchFinishedEvent>> CreatFakeEvents(
+            PlayerStatePad player,
+            PlayerProfile myPlayer,
             int increment)
         {
             _dateTime = _dateTime.AddSeconds(-increment);
-            var gateWay = myPlayer.Id.Split("@")[1];
+            var gateWay = myPlayer.BattleTag.Split("@")[1];
             player.data.ladder.TryGetValue(gateWay, out var gatewayStats);
             if (gatewayStats == null) return new List<MatchFinishedEvent>();
 
@@ -82,7 +84,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             List<RaceAndWinDto> winDiffs,
             long gatewayStats)
         {
-            var gateWay = myPlayer.Id.Split("@")[1];
+            var gateWay = myPlayer.BattleTag.Split("@")[1];
             var finishedEvents = new List<MatchFinishedEvent>();
             foreach (var winDiff in winDiffs)
             {
@@ -92,9 +94,9 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                     {
                         match = CreatMatch(
                             won,
-                            int.Parse(gateWay),
-                            myPlayer.CombinedBattleTag,
-                            myPlayer.Id,
+                            Enum.Parse<GateWay>(gateWay),
+                            myPlayer.BattleTag,
+                            myPlayer.BattleTag,
                             winDiff.Race),
                         WasFakeEvent = true,
                         Id = new ObjectId(_dateTime, 0, 0, increment)
@@ -108,7 +110,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             return finishedEvents;
         }
 
-        private Match CreatMatch(bool won, int gateWay, string battleTag, string playerId, Race race)
+        private Match CreatMatch(bool won, GateWay gateWay, string battleTag, string playerId, Race race)
         {
             return new Match
             {
@@ -121,19 +123,15 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                     {
                         battleTag = battleTag,
                         won = won,
-                        race = race,
-                        id = playerId
+                        race = race
                     },
                     new PlayerMMrChange
                     {
                         battleTag = "FakeEnemy#123",
                         won = !won,
-                        race = Race.RnD,
-                        id = "FakeEnemy#123@10"
+                        race = Race.RnD
                     }
-
                 }
-
             };
         }
     }

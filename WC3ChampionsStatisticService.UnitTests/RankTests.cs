@@ -18,14 +18,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank(10, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
+            var ranks = new List<Rank> { new Rank(GateWay.Usa, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             await rankRepository.InsertMany(ranks);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123@10", "peter#123")}, 10, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Usa, GameMode.GM_1v1);
             player.RecordWin(true, 1234);
             await playerRepository.UpsertPlayer(player);
             await playerRepository.UpsertPlayer(player);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 10, GameMode.GM_1v1);
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, GateWay.Usa, GameMode.GM_1v1);
 
             Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual("peter#123@10_GM_1v1", playerLoaded[0].Players.First().Id);
@@ -41,11 +41,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
+            var ranks = new List<Rank> { new Rank(GateWay.Europe, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             await rankRepository.InsertMany(ranks);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123@10", "peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 10, GameMode.GM_1v1);
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, GateWay.Usa, GameMode.GM_1v1);
 
             Assert.IsEmpty(playerLoaded);
         }
@@ -56,13 +56,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks1 = new List<Rank> { new Rank(20, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
-            var ranks2 = new List<Rank> { new Rank(20, 1, 8, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
+            var ranks1 = new List<Rank> { new Rank(GateWay.Europe, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
+            var ranks2 = new List<Rank> { new Rank(GateWay.Europe, 1, 8, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             await rankRepository.InsertMany(ranks1);
             await rankRepository.InsertMany(ranks2);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123@10", "peter#123")}, 20, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Usa, GameMode.GM_1v1);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 20, GameMode.GM_1v1);
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, GateWay.Europe, GameMode.GM_1v1);
 
             Assert.AreEqual(1, playerLoaded.Count);
             Assert.AreEqual(8, playerLoaded[0].RankNumber);
@@ -79,9 +79,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent();
 
             matchFinishedEvent.match.players[0].battleTag = "peTer#123";
-            matchFinishedEvent.match.players[0].id = "peter#123@10";
+            matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
+            matchFinishedEvent.match.gateway = GateWay.Usa;
+
             rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
-            rankingChangedEvent.gateway = 10;
+            rankingChangedEvent.gateway = GateWay.Usa;
             rankingChangedEvent.gameMode = GameMode.GM_1v1;
 
             await InsertRankChangedEvent(rankingChangedEvent);
@@ -95,7 +97,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playOverviewHandler.Update(matchFinishedEvent);
             await rankHandler.Update();
 
-            var rank = await rankRepository.SearchPlayerOfLeague("pe", 10, GameMode.GM_1v1);
+            var rank = await rankRepository.SearchPlayerOfLeague("peT", GateWay.Usa, GameMode.GM_1v1);
 
             Assert.AreEqual(1, rank.Count);
         }

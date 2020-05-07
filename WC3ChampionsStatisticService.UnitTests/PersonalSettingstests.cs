@@ -16,10 +16,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123@10", "peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
             }
 
             personalSetting.Players = new List<PlayerProfile> {player };
@@ -35,10 +35,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123@10", "peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 19; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
             }
 
             personalSetting.Players = new List<PlayerProfile> {player };
@@ -55,10 +55,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123@10", "peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
             }
 
             personalSetting.Players = new List<PlayerProfile> { player };
@@ -72,18 +72,18 @@ namespace WC3ChampionsStatisticService.UnitTests
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
 
 
-            var personalSetting = new PersonalSetting("peter#123@10");
+            var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123@10", "peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
             }
 
             await playerRepository.UpsertPlayer(player);
             await settingsRepo.Save(personalSetting);
 
-            var loaded = await settingsRepo.Load("peter#123@10");
+            var loaded = await settingsRepo.Load("peter#123");
 
             Assert.AreEqual(20, loaded.Player.GetWinsPerRace(Race.HU));
         }
@@ -96,7 +96,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var personalSetting = new PersonalSetting("peter#123@10");
 
-            var player = PlayerProfile.Create("ANDERER#123@10", "peter#123");
+            var player = PlayerProfile.Create("peter#123");
 
             await playerRepository.UpsertPlayer(player);
             await settingsRepo.Save(personalSetting);

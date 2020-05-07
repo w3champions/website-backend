@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches
@@ -20,7 +21,7 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100,
             GameMode gameMode = GameMode.Undefined,
-            int gateWay = 10)
+            GateWay gateWay = GateWay.Europe)
         {
             if (pageSize > 100) pageSize = 100;
             var matches = await _matchRepository.Load(gameMode, offset, pageSize, gateWay);

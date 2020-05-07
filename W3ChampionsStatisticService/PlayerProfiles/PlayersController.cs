@@ -1,7 +1,10 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -25,27 +28,46 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var player = await _playerRepository.Load(battleTag) ?? PlayerProfile.Default();
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
             var allLeagues = await _rankRepository.LoadLeagueConstellation();
-            var gw = int.Parse(battleTag.Split("@")[1]);
 
-            var loadPlayerOfLeagueLike1V1 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_1v1);
-            if (loadPlayerOfLeagueLike1V1 != null)
-            {
-                player.GameModeStats[0].Rank = loadPlayerOfLeagueLike1V1.RankNumber;
-                player.GameModeStats[0].LeagueId = loadPlayerOfLeagueLike1V1.League;
-                player.GameModeStats[0].LeagueOrder = allLeagues.Single(l => l.gateway == gw && l.gameMode == GameMode.GM_1v1).leagues
-                    .Single(l => l.id == loadPlayerOfLeagueLike1V1.League).order;
-            }
-
-            var loadPlayerOfLeagueLike2V2 = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == GameMode.GM_2v2_AT);
-            if (loadPlayerOfLeagueLike2V2 != null)
-            {
-                player.GameModeStats[1].Rank = loadPlayerOfLeagueLike2V2.RankNumber;
-                player.GameModeStats[1].LeagueId = loadPlayerOfLeagueLike2V2.League;
-                player.GameModeStats[1].LeagueOrder = allLeagues.Single(l => l.gateway == gw && l.gameMode == GameMode.GM_2v2_AT).leagues
-                    .Single(l => l.id == loadPlayerOfLeagueLike2V2.League).order;
-            }
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Europe);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Usa);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Europe);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Usa);
 
             return Ok(player);
+        }
+
+        //way to shitty, do this with better rm one day
+        private static void PopulateStats(
+            List<Rank> leaguesOfPlayer,
+            PlayerProfile player,
+            List<LeagueConstellationChangedEvent> allLeagues,
+            GameMode gameMode,
+            GateWay gateWay)
+        {
+            var gameModeIndex = gameMode switch
+            {
+                GameMode.GM_1v1 => 0,
+                GameMode.GM_2v2_AT => 1,
+                _ => 0
+            };
+            
+            var searchedLeagues = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay);
+            if (searchedLeagues != null)
+            {
+                player.GateWayStats
+                    .Single(g => g.GateWay == gateWay)
+                    .GameModeStats[gameModeIndex].Rank = searchedLeagues.RankNumber;
+                player.GateWayStats
+                    .Single(g => g.GateWay == gateWay)
+                    .GameModeStats[gameModeIndex].LeagueId = searchedLeagues.League;
+                player.GateWayStats
+                    .Single(g => g.GateWay == gateWay)
+                    .GameModeStats[gameModeIndex].LeagueOrder = allLeagues
+                        .Single(l => l.gateway == gateWay && l.gameMode == gameMode)
+                        .leagues
+                        .Single(l => l.id == searchedLeagues.League).order;;
+            }
         }
 
         [HttpGet("{battleTag}/winrate")]

@@ -4,6 +4,7 @@ using AutoFixture;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -22,7 +23,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.WasFakeEvent = false;
             fakeEvent.WasFromSync = false;
 
-            fakeEvent.match.gateway = 10;
+            fakeEvent.match.gateway = GateWay.Europe;
             fakeEvent.match.gameMode = GameMode.GM_1v1;
 
             fakeEvent.match.players.First().battleTag = name1;
@@ -48,7 +49,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
-            fakeEvent.match.gateway = 10;
+            fakeEvent.match.gateway = GateWay.Usa;
             fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
 
             fakeEvent.match.players[0].battleTag = name1;
@@ -68,7 +69,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             return new RankingChangedEvent
             {
                 gameMode = GameMode.GM_1v1,
-                gateway = 10,
+                gateway = GateWay.Usa,
                 league = 1,
                 id = 10010,
                 ranks = new[]
