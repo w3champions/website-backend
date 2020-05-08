@@ -43,12 +43,14 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var offset = int.Parse(lastVersion);
 
             _logger.LogWarning("starting");
-            while (true)
+            var ids = await _playerRepository.LoadAllIds();
+            foreach (var id in ids)
             {
-                var playerOnMySide = await _playerRepository.LoadPlayerFrom(offset);
+                var playerOnMySide = await _playerRepository.Load(id);
                 if (playerOnMySide == null) break;
 
-                var player = await _padRepo.GetPlayer(playerOnMySide.BattleTag);
+                var player = await _padRepo.GetPlayer(id);
+                if (player == null) break;
 
                 var fakeEvents = _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
 

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ladder;
@@ -33,14 +34,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return UpsertMany(winrate);
         }
 
-        public async Task<PlayerProfile> LoadPlayerFrom(int offset)
+        public async Task<List<string>> LoadAllIds()
         {
             var mongoCollection = CreateCollection<PlayerProfile>();
-            var playerOverview = await mongoCollection
-                .Find(r => true)
-                .Skip(offset)
-                .FirstOrDefaultAsync();
-            return playerOverview;
+            var overViews = await mongoCollection.Find(p => true).Project(p => new { id = p.BattleTag }).ToListAsync();
+            return overViews.Select(p => p.id).ToList();
+
         }
 
         public Task<PlayerProfile> Load(string battleTag)

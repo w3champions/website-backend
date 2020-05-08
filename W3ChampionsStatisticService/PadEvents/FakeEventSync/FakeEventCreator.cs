@@ -22,8 +22,6 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var maxRaceCount = myPlayer.RaceStats.Max(r => r.Games);
             var maxRace = myPlayer.RaceStats.First(r => r.Games == maxRaceCount).Race;
 
-            if (player == null) return new List<MatchFinishedEvent>();
-
             player.data.ladder.TryGetValue("10", out var gatewayStatsUs);
             player.data.ladder.TryGetValue("20", out var gatewayStatsEu);
             player.data.ladder.TryGetValue("30", out var gatewayStatsAs);
