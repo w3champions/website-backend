@@ -77,8 +77,6 @@ namespace W3ChampionsStatisticService
                 services.AddUnversionedReadModelService<FakeEventSyncHandler>();
             }
 
-            services.AddReadModelService<HeroWinRatePerHeroModelHandler>();
-
             if (startHandlers == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
