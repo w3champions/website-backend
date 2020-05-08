@@ -44,22 +44,10 @@ namespace W3ChampionsStatisticService.Matches
                     .ToListAsync();
             }
 
-            // this is fing hacky, fix when there is a good idea
             return await mongoCollection
                 .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                            (  m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-
-                            || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                            || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
-                            || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                            || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
-
-                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-                            || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-                            || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-                             ))
+                            m.Teams[0].Players.Any(x => x.BattleTag == playerId) &&
+                            m.Teams[1].Players.Any(x => x.BattleTag == opponentId))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
