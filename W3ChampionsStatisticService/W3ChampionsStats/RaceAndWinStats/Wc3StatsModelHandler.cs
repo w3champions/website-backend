@@ -21,9 +21,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            if (nextEvent.WasFakeEvent) return;
-            if (nextEvent.match.players.All(p => p.won)) return;
-            if (nextEvent.match.players.All(p => !p.won)) return;
+            if (nextEvent.WasFakeEvent
+                ||nextEvent.match.players.All(p => p.won)
+                ||nextEvent.match.players.All(p => !p.won)) return;
 
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {
