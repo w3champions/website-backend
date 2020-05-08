@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerProfiles;
 
@@ -13,6 +14,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     {
         Task<List<Match>> GetFrom(long offset);
         Task<PlayerStatePad> GetPlayer(string battleTag);
+        Task<LeagueConstellation> GetLeague(GateWay gateWay, GameMode gameMode);
     }
 
     public class PadServiceRepo : IPadServiceRepo
@@ -38,14 +40,20 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             return deserializeObject;
         }
 
-        public async Task<List<League>> GetLeague(GateWay gateWay, GameMode gameMode)
+        public async Task<LeagueConstellation> GetLeague(GateWay gateWay, GameMode gameMode)
         {
             var httpClient = new HttpClient();
             var result = await httpClient.GetAsync($"https://api.w3champions.com/leagues/{(int) gateWay}/{(int) gameMode}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<League>>(content);
-            return deserializeObject;
+            return new LeagueConstellation
+            {
+                Id = $"{gateWay}_{gameMode}",
+                Gateway = gateWay,
+                GameMode = gameMode,
+                Leagues = deserializeObject
+            };
         }
     }
 
