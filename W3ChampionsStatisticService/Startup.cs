@@ -65,8 +65,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IPadServiceRepo, PadServiceRepo>();
             services.AddSingleton<FakeEventCreator>();
-            services.AddSingleton<ITempLossesRepo, TempLossesRepo>();
-
 
             if (startPadSync == "true")
             {

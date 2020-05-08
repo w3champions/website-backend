@@ -65,8 +65,8 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
     public class WinsAndLossesPad
     {
-        public long wins { get; set; }
-        public long losses { get; set; }
+        public int wins { get; set; }
+        public int losses { get; set; }
     }
 
     public class MatchesList
