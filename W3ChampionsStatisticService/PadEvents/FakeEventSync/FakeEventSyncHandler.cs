@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
                 var player = await _padRepo.GetPlayer(playerOnMySide.BattleTag);
 
-                var fakeEvents = await _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
+                var fakeEvents = _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
 
                 if (fakeEvents.Any())
                 {

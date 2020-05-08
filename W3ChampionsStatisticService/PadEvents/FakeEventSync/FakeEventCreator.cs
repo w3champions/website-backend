@@ -13,70 +13,58 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
     {
         private DateTime _dateTime = DateTime.Now.AddDays(-60);
 
-        public async Task<List<MatchFinishedEvent>> CreatFakeEvents(
+        public List<MatchFinishedEvent> CreatFakeEvents(
             PlayerStatePad player,
             PlayerProfile myPlayer,
             int increment)
         {
             _dateTime = _dateTime.AddSeconds(-increment);
 
-            //todo
-            var maxRace = Race.NE;
+            var maxRaceCount = myPlayer.RaceStats.Max(r => r.Games);
+            var maxRace = myPlayer.RaceStats.First(r => r.Games == maxRaceCount).Race;
 
             player.data.ladder.TryGetValue("10", out var gatewayStatsUs);
             player.data.ladder.TryGetValue("20", out var gatewayStatsEu);
             player.data.ladder.TryGetValue("30", out var gatewayStatsAs);
+
             var matchFinishedEvents = new List<MatchFinishedEvent>();
 
+            var winsOnUsToGo = (gatewayStatsUs?.solo?.wins ?? 0) - myPlayer.GateWayStats[0].GameModeStats[0].Wins;
+            var lossOnUsToGo = (gatewayStatsUs?.solo?.losses ?? 0) - myPlayer.GateWayStats[0].GameModeStats[0].Losses;
+            var winsOnEuToGo = (gatewayStatsEu?.solo?.wins ?? 0) - myPlayer.GateWayStats[1].GameModeStats[0].Wins;
+            var lossOnEuToGo = (gatewayStatsEu?.solo?.losses ?? 0) - myPlayer.GateWayStats[1].GameModeStats[0].Losses;
+            var winsOnAsToGo = (gatewayStatsAs?.solo?.wins ?? 0) - myPlayer.GateWayStats[2].GameModeStats[0].Wins;
+            var lossOnAsToGo = (gatewayStatsAs?.solo?.losses ?? 0) - myPlayer.GateWayStats[2].GameModeStats[0].Losses;
 
-            var winsOnUsToGo = gatewayStatsUs?.solo?.wins ?? 0 - myPlayer.GateWayStats[0].GameModeStats[0].Wins;
-
-            CreateGames(winsOnUsToGo, matchFinishedEvents, ref increment);
-
+            matchFinishedEvents.AddRange(CreateGames(winsOnUsToGo, true, maxRace, GateWay.Usa, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(lossOnUsToGo, false, maxRace, GateWay.Usa, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(winsOnEuToGo, true, maxRace, GateWay.Europe, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(lossOnEuToGo, false, maxRace, GateWay.Europe, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(winsOnAsToGo, true, maxRace, GateWay.Asia, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(lossOnAsToGo, false, maxRace, GateWay.Asia, myPlayer.BattleTag, ref increment));
 
             return matchFinishedEvents;
         }
 
-        private List<MatchFinishedEvent> CreateGames(int winsToGo, Race race, ref int increment)
+        private List<MatchFinishedEvent> CreateGames(
+            int winsToGo,
+            bool won,
+            Race race,
+            GateWay gateWay,
+            string battleTag,
+            ref int increment)
         {
             var matchFinishedEvents = new List<MatchFinishedEvent>();
 
             while (winsToGo > 0)
             {
                 winsToGo--;
-                new MatchFinishedEvent
+                matchFinishedEvents.Add(new MatchFinishedEvent
                 {
-                    match = CreatMatch(wins.Won,
+                    match = CreatMatch(won,
                         gateWay,
-                        myPlayer.BattleTag,
-                        wins.Race),
-                    WasFakeEvent = true,
-                    Id = new ObjectId(_dateTime,
-                        0,
-                        0,
-                        increment++)
-                });
-            }
-
-            return matchFinishedEvents;
-        }
-
-        private IEnumerable<MatchFinishedEvent> CreatEvents(
-            PlayerProfile myPlayer,
-            ref int increment,
-            GateWay gateWay,
-            IEnumerable<RaceAndWinDto> winsOnUs)
-        {
-            var matchFinishedEvents = new List<MatchFinishedEvent>();
-            whi (var wins in winsOnUs)
-            {
-                matchFinishedEvents.Add(
-                new MatchFinishedEvent
-                {
-                    match = CreatMatch(wins.Won,
-                        gateWay,
-                        myPlayer.BattleTag,
-                        wins.Race),
+                        battleTag,
+                        race),
                     WasFakeEvent = true,
                     Id = new ObjectId(_dateTime,
                         0,

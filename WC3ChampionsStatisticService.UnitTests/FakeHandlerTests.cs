@@ -34,7 +34,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(true, events[0].match.players[0].won);
             Assert.AreEqual(Race.HU, events[0].match.players[0].race);
             Assert.AreEqual(true, events[1].match.players[0].won);
-            Assert.AreEqual(Race.NE, events[1].match.players[0].race);
+            Assert.AreEqual(Race.HU, events[1].match.players[0].race);
             Assert.AreEqual(false, events[2].match.players[0].won);
             Assert.AreEqual(Race.HU, events[2].match.players[0].race);
         }
@@ -44,7 +44,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEventSyncHandler = CreateSUT();
             var playerProfile = PlayerProfile.Create("peter#123");
-            playerProfile.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
+            playerProfile.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Usa, true);
             await _playerRepository.UpsertPlayer(playerProfile);
             _padServiceMock.Setup(p => p.GetPlayer("peter#123")).ReturnsAsync(CreateFakePadPlayer());
 
@@ -54,7 +54,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(2, events.Count);
             Assert.AreEqual(true, events[0].match.players[0].won);
-            Assert.AreEqual(Race.NE, events[0].match.players[0].race);
+            Assert.AreEqual(Race.HU, events[0].match.players[0].race);
             Assert.AreEqual(false, events[1].match.players[0].won);
             Assert.AreEqual(Race.HU, events[1].match.players[0].race);
         }
@@ -69,8 +69,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             playerProfile.RecordWin(Race.NE, GameMode.GM_1v1, GateWay.Europe, false);
             await _playerRepository.UpsertPlayer(playerProfile);
             var playerStatePad = CreateFakePadPlayer();
-            // means that there is 1 hu win, 1 hu loss and 1 ne win not recorded
-            // so 1 hu win should be on eu, 1 hu loss on us and ne win on eu
+
             playerStatePad.account = "peter#123";
             playerStatePad.data.stats.human = new WinsAndLossesPad { wins = 2, losses = 2};
             playerStatePad.data.stats.night_elf = new WinsAndLossesPad { wins = 1, losses = 1};
@@ -94,7 +93,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(true, events[2].match.players[0].won);
             Assert.AreEqual(GateWay.Europe, events[2].match.gateway);
-            Assert.AreEqual(Race.NE, events[2].match.players[0].race);
+            Assert.AreEqual(Race.HU, events[2].match.players[0].race);
 
             // Do complete intergration test now
             var handler = new PlayerModelHandler(_playerRepository);
@@ -107,8 +106,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(3, playerUs.TotalWins);
             Assert.AreEqual(3, playerUs.TotalLosses);
-            Assert.AreEqual(2, playerUs.GetWinsPerRace(Race.HU));
-            Assert.AreEqual(1, playerUs.GetWinsPerRace(Race.NE));
+            Assert.AreEqual(3, playerUs.GetWinsPerRace(Race.HU));
+            Assert.AreEqual(0, playerUs.GetWinsPerRace(Race.NE));
             Assert.AreEqual(2, playerUs.GetLossPerRace(Race.HU));
             Assert.AreEqual(1, playerUs.GetLossPerRace(Race.NE));
         }
