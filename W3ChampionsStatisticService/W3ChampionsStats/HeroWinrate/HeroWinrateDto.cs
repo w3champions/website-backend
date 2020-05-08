@@ -16,16 +16,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             {
                 Winrate = CombineWinrates(stats, $"{opFirst}_{opSecond}", $"{opFirst}_{opSecond}_all");
             }
-
-            Winrate = stats.SingleOrDefault()?.WinRates.SingleOrDefault(s => s.HeroCombo == $"{opFirst}_{opSecond}_{opThird}")
-                      ?? new HeroWinRate { HeroCombo = $"{opFirst}_{opSecond}_{opThird}" };
+            else
+            {
+                Winrate = stats.SingleOrDefault()?.WinRates.SingleOrDefault(s => s.HeroCombo == $"{opFirst}_{opSecond}_{opThird}")
+                          ?? new HeroWinRate { HeroCombo = $"{opFirst}_{opSecond}_{opThird}" };
+            }
         }
 
         private HeroWinRate CombineWinrates(List<HeroWinRatePerHero> stats, string startsWithString, string comboString)
         {
-            var winrates = stats.Where(s => s.Id.StartsWith(startsWithString)).ToList();
-            var wins = winrates.SelectMany(w => w.WinRates).Sum(w => w.WinLoss.Wins);
-            var losses = winrates.SelectMany(w => w.WinRates).Sum(w => w.WinLoss.Losses);
+            var winrates = stats.SelectMany(s => s.WinRates).Where(s => s.HeroCombo.StartsWith(startsWithString)).ToList();
+            var wins = winrates.Sum(w => w.WinLoss.Wins);
+            var losses = winrates.Sum(w => w.WinLoss.Losses);
             return new HeroWinRate
             {
                 HeroCombo = comboString,
