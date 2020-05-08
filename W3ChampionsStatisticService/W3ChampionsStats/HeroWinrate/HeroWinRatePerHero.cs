@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
-namespace W3ChampionsStatisticService.Ports
+namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {
     public class HeroWinRatePerHero
     {

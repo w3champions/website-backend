@@ -1,6 +1,6 @@
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
-namespace W3ChampionsStatisticService.Ports
+namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {
     public class HeroWinRate
     {
