@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
 {

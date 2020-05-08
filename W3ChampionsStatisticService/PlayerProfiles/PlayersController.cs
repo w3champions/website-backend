@@ -4,8 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles

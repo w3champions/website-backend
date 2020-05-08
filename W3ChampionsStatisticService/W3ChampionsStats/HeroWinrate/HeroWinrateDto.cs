@@ -1,11 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
-using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats
+namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {
     public class HeroWinrateDto
     {
@@ -13,18 +10,33 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
             if (opSecond == "all")
             {
-                var winrates = stats.Where(s => s.Id == $"{opFirst}");
-                Winrate = winrates.SelectMany(w => w.WinRates).Aggregate((h1, h2) =>
-                    new HeroWinRate { WinLoss = new WinLoss { Wins = h1.WinLoss.Wins + h2.WinLoss.Wins} });
+                Winrate = CombineWinrates(stats, $"{opFirst}", $"{opFirst}_all_all");
             }
             else if (opThird == "all")
             {
-                var winrates = stats.Where(s => s.Id == $"{opFirst}_{opSecond}");
+                Winrate = CombineWinrates(stats, $"{opFirst}_{opSecond}", $"{opFirst}_{opSecond}_all");
             }
 
-            Winrate = stats.SingleOrDefault(s => s.Id == $"{opFirst}_{opSecond}_{opThird}") ?? HeroWinRatePerHero.Create($"{opFirst}_{opSecond}_{opThird}");
+            Winrate = stats.SingleOrDefault()?.WinRates.SingleOrDefault(s => s.HeroCombo == $"{opFirst}_{opSecond}_{opThird}")
+                      ?? new HeroWinRate { HeroCombo = $"{opFirst}_{opSecond}_{opThird}" };
         }
 
-        public HeroWinRatePerHero Winrate { get; set; }
+        private HeroWinRate CombineWinrates(List<HeroWinRatePerHero> stats, string startsWithString, string comboString)
+        {
+            var winrates = stats.Where(s => s.Id.StartsWith(startsWithString)).ToList();
+            var wins = winrates.SelectMany(w => w.WinRates).Sum(w => w.WinLoss.Wins);
+            var losses = winrates.SelectMany(w => w.WinRates).Sum(w => w.WinLoss.Losses);
+            return new HeroWinRate
+            {
+                HeroCombo = comboString,
+                WinLoss = new WinLoss
+                {
+                    Wins = wins,
+                    Losses = losses
+                }
+            };
+        }
+
+        public HeroWinRate Winrate { get; set; }
     }
 }
