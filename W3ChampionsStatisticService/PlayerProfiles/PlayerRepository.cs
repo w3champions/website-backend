@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 

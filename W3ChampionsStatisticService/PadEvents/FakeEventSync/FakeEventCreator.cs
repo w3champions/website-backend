@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents.PadSync;
@@ -22,6 +21,8 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
             var maxRaceCount = myPlayer.RaceStats.Max(r => r.Games);
             var maxRace = myPlayer.RaceStats.First(r => r.Games == maxRaceCount).Race;
+
+            if (player == null) return new List<MatchFinishedEvent>();
 
             player.data.ladder.TryGetValue("10", out var gatewayStatsUs);
             player.data.ladder.TryGetValue("20", out var gatewayStatsEu);

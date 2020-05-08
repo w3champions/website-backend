@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
+using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
@@ -101,6 +102,21 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         public Task Save(HeroPlayedStat stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
+        }
+
+        public Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboId)
+        {
+            return LoadFirst<HeroWinRatePerHero>(h => h.Id == heroComboId);
+        }
+
+        public Task<List<HeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
+        {
+            return Load<HeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
+        }
+
+        public Task Save(HeroWinRatePerHero heroWinrate)
+        {
+            return Upsert(heroWinrate, h => h.Id == heroWinrate.Id);
         }
     }
 }

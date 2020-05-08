@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -21,8 +20,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            if (nextEvent.WasFakeEvent) return;
-            if (nextEvent.match.players.All(p => p.won)) return;
+            if (nextEvent.WasFakeEvent
+                ||nextEvent.match.players.All(p => p.won)
+                ||nextEvent.match.players.All(p => !p.won)) return;
 
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {

@@ -24,6 +24,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
+using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
@@ -76,9 +77,6 @@ namespace W3ChampionsStatisticService
                 services.AddUnversionedReadModelService<FakeEventSyncHandler>();
             }
 
-
-            services.AddUnversionedReadModelService<PadLeagueSyncHandler>();
-
             if (startHandlers == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
@@ -95,6 +93,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerWinrateHandler>();
                 services.AddReadModelService<HourOfPlayModelHandler>();
                 services.AddReadModelService<HeroPlayedModelHandler>();
+                services.AddReadModelService<HeroWinRatePerHeroModelHandler>();
 
                 services.AddUnversionedReadModelService<RankHandler>();
                 services.AddUnversionedReadModelService<PadLeagueSyncHandler>();
