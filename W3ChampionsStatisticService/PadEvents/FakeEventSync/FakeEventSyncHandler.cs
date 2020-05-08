@@ -38,8 +38,6 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         public async Task Update()
         {
             var lastVersion = await _versionRepository.GetLastVersion<FakeEventSyncHandler>();
-            if (lastVersion == null) lastVersion = "0";
-
             var offset = int.Parse(lastVersion);
 
             _logger.LogWarning("starting");
@@ -47,10 +45,10 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             foreach (var id in ids)
             {
                 var playerOnMySide = await _playerRepository.Load(id);
-                if (playerOnMySide == null) break;
+                if (playerOnMySide == null) continue;
 
                 var player = await _padRepo.GetPlayer(id);
-                if (player == null) break;
+                if (player == null) continue;
 
                 var fakeEvents = _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
 
@@ -66,7 +64,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
                 offset += 1;
                 await _versionRepository.SaveLastVersion<FakeEventSyncHandler>(offset.ToString());
-                await Task.Delay(1000);
+                await Task.Delay(300);
             }
         }
     }
