@@ -21,7 +21,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            if (nextEvent.result == null || nextEvent.match.gameMode != GameMode.GM_1v1) return;
+            if (nextEvent.result == null
+                || nextEvent.match.gameMode != GameMode.GM_1v1
+                || nextEvent.match.players.All(p => p.won)) return;
 
             var winner = nextEvent.match.players.Single(p => p.won);
             var looser = nextEvent.match.players.Single(p => !p.won);
@@ -36,7 +38,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             var looserWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdLooser) ?? HeroWinRatePerHero.Create(heroComboIdLooser);
 
             winnerWinrate.RecordGame(true, heroComboIdLooser);
-            looserWinrate.RecordGame(false, heroComboIdLooser);
+            looserWinrate.RecordGame(false, heroComboIdWinner);
 
             await _w3Stats.Save(winnerWinrate);
             await _w3Stats.Save(looserWinrate);
