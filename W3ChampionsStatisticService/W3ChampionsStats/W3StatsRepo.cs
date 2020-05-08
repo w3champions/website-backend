@@ -104,9 +104,14 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboIdWinner)
+        public Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboId)
         {
-            return LoadFirst<HeroWinRatePerHero>(h => h.Id == heroComboIdWinner);
+            return LoadFirst<HeroWinRatePerHero>(h => h.Id == heroComboId);
+        }
+
+        public Task<List<HeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
+        {
+            return Load<HeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
         }
 
         public Task Save(HeroWinRatePerHero heroWinrate)

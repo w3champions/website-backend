@@ -27,7 +27,8 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(HourOfPlayStats stat);
         Task<HeroPlayedStat> LoadHeroPlayedStat();
         Task Save(HeroPlayedStat stat);
-        Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboIdWinner);
+        Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboId);
+        Task<List<HeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId);
         Task Save(HeroWinRatePerHero heroWinrate);
     }
 }
