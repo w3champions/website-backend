@@ -23,7 +23,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
         {
             if (nextEvent.result == null
                 || nextEvent.match.gameMode != GameMode.GM_1v1
-                || nextEvent.match.players.All(p => p.won)) return;
+                || nextEvent.match.players.All(p => p.won)
+                || nextEvent.result.players.Any(p => p.heroes.Count == 0)) return;
 
             var winner = nextEvent.match.players.Single(p => p.won);
             var looser = nextEvent.match.players.Single(p => !p.won);
