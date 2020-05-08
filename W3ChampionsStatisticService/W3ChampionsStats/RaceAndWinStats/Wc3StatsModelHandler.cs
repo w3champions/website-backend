@@ -23,6 +23,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
         {
             if (nextEvent.WasFakeEvent) return;
             if (nextEvent.match.players.All(p => p.won)) return;
+            if (nextEvent.match.players.All(p => !p.won)) return;
 
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {
