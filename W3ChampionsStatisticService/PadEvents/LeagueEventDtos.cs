@@ -11,13 +11,15 @@ namespace W3ChampionsStatisticService.PadEvents
         public int id { get; set; }
         public GateWay gateway { get; set; }
         public GameMode gameMode { get; set; }
-        public League[] leagues { get; set; }
+        public LeagueRaw[] leagues { get; set; }
     }
 
     [BsonIgnoreExtraElements]
     [BsonNoId]
-    public class League
+    public class LeagueRaw
     {
+        public int division;
+
         [BsonElement("id")]
         public int id { get; set; }
         public string name { get; set; }

@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
 using NUnit.Framework;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents.PadSync;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -27,6 +29,19 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.IsNotNull(player);
             Assert.AreNotEqual(0, player.data.ladder["20"].solo.wins);
             Assert.AreNotEqual(0, player.data.ladder["20"].solo.losses);
+        }
+
+        [Test]
+        [Ignore("Just for manual tests")]
+        public async Task GeLeagues()
+        {
+            var padServiceRepo = new PadServiceRepo();
+            var league = await padServiceRepo.GetLeague(GateWay.Europe, GameMode.GM_1v1);
+
+            Assert.IsNotNull(league);
+            Assert.AreEqual(0, league.Leagues[0].Order);
+            Assert.AreEqual("Grand Master League", league.Leagues[0].Name);
+            Assert.AreEqual(3, league.Leagues[4].Division);
         }
 
         [Test]

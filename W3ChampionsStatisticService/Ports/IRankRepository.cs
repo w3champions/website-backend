@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Ports
@@ -12,7 +13,8 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<Rank>> LoadPlayersOfLeague(int leagueId, GateWay gateWay, GameMode gameMode);
         Task<List<Rank>> SearchPlayerOfLeague(string searchFor, GateWay gateWay, GameMode gameMode);
         Task<List<Rank>> LoadPlayerOfLeague(string searchFor);
-        Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation();
+        Task<List<LeagueConstellation>> LoadLeagueConstellation();
         Task InsertMany(List<Rank> events);
+        Task InsertLeague(LeagueConstellation leagueConstellation);
     }
 }

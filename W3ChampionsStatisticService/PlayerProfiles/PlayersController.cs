@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -41,7 +42,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private static void PopulateStats(
             List<Rank> leaguesOfPlayer,
             PlayerProfile player,
-            List<LeagueConstellationChangedEvent> allLeagues,
+            List<LeagueConstellation> allLeagues,
             GameMode gameMode,
             GateWay gateWay)
         {
@@ -64,9 +65,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 player.GateWayStats
                     .Single(g => g.GateWay == gateWay)
                     .GameModeStats[gameModeIndex].LeagueOrder = allLeagues
-                        .Single(l => l.gateway == gateWay && l.gameMode == gameMode)
-                        .leagues
-                        .Single(l => l.id == searchedLeagues.League).order;;
+                        .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
+                        .Leagues
+                        .Single(l => l.Id == searchedLeagues.League).Order;
+                player.GateWayStats
+                    .Single(g => g.GateWay == gateWay)
+                    .GameModeStats[gameModeIndex].Division = allLeagues
+                        .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
+                        .Leagues
+                        .Single(l => l.Id == searchedLeagues.League).Division;
             }
         }
 

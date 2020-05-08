@@ -76,6 +76,9 @@ namespace W3ChampionsStatisticService
                 services.AddUnversionedReadModelService<FakeEventSyncHandler>();
             }
 
+
+            services.AddUnversionedReadModelService<PadLeagueSyncHandler>();
+
             if (startHandlers == "true")
             {
                 services.AddReadModelService<MatchReadModelHandler>();
@@ -94,6 +97,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<HeroPlayedModelHandler>();
 
                 services.AddUnversionedReadModelService<RankHandler>();
+                services.AddUnversionedReadModelService<PadLeagueSyncHandler>();
             }
         }
 

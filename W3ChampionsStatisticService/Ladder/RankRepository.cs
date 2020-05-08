@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -36,9 +37,9 @@ namespace W3ChampionsStatisticService.Ladder
             return joinWith;
         }
 
-        public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellation()
+        public Task<List<LeagueConstellation>> LoadLeagueConstellation()
         {
-            return LoadAll<LeagueConstellationChangedEvent>();
+            return LoadAll<LeagueConstellation>();
         }
 
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)
@@ -60,6 +61,11 @@ namespace W3ChampionsStatisticService.Ladder
         public Task InsertMany(List<Rank> events)
         {
             return UpsertMany(events);
+        }
+
+        public Task InsertLeague(LeagueConstellation leagueConstellation)
+        {
+            return Upsert(leagueConstellation, l => l.Id == leagueConstellation.Id);
         }
     }
 }
