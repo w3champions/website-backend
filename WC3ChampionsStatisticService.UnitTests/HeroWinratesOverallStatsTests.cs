@@ -90,6 +90,31 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(1, heroWinrateDto.Winrate.WinLoss.Losses);
         }
 
+        [Test]
+        public async Task HappyPath_MoreGames_DtoHasCorrectSums_IgnoreSecondHero()
+        {
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
+            var handler = new HeroWinRatePerHeroModelHandler(w3StatsRepo);
+
+            var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
+            var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
+            var matchFinishedEvent3 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage", "moutainking" });
+            var matchFinishedEvent4 = CreatFakeEvent(new []{ "archmage", "bloodmage" }, new []{"deathknight"});
+            var matchFinishedEvent5 = CreatFakeEvent(new []{ "bloodmage" }, new []{"deathknight", "lich"});
+
+            await handler.Update(matchFinishedEvent1);
+            await handler.Update(matchFinishedEvent2);
+            await handler.Update(matchFinishedEvent3);
+            await handler.Update(matchFinishedEvent4);
+            await handler.Update(matchFinishedEvent5);
+
+            var stats = await new W3StatsRepo(MongoClient).LoadHeroWinrateLike("deathknight");
+            var heroWinrateDto = new HeroWinrateDto(stats, "archmage", "all", "all");
+
+            Assert.AreEqual(2, heroWinrateDto.Winrate.WinLoss.Wins);
+            Assert.AreEqual(1, heroWinrateDto.Winrate.WinLoss.Losses);
+        }
+
         private static MatchFinishedEvent CreatFakeEvent(string[] winnerHeroes, string[] looserHeroes)
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
