@@ -41,7 +41,8 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var offset = int.Parse(lastVersion);
 
             _logger.LogWarning("starting");
-            var ids = await _playerRepository.LoadAllIds();
+            var ids = (await _playerRepository.LoadAllIds()).Skip(offset);
+
             foreach (var id in ids)
             {
                 var playerOnMySide = await _playerRepository.Load(id);
@@ -64,7 +65,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
                 offset += 1;
                 await _versionRepository.SaveLastVersion<FakeEventSyncHandler>(offset.ToString());
-                await Task.Delay(300);
+                await Task.Delay(1000);
             }
         }
     }

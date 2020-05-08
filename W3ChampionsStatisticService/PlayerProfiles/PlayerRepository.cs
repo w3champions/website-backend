@@ -37,7 +37,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<List<string>> LoadAllIds()
         {
             var mongoCollection = CreateCollection<PlayerProfile>();
-            var overViews = await mongoCollection.Find(p => true).Project(p => new { id = p.BattleTag }).ToListAsync();
+            var overViews = await mongoCollection
+                .Find(p => true)
+                .SortBy(p => p.BattleTag)
+                .Project(p => new { id = p.BattleTag })
+                .ToListAsync();
             return overViews.Select(p => p.id).ToList();
 
         }
