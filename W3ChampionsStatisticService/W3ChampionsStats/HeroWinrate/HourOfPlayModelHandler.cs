@@ -32,8 +32,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             var heroComboIdWinner = string.Join("_", winnerHeroes.Select(h => h.icon.ParseReforgedName()));
             var heroComboIdLooser = string.Join("_", looserHeroes.Select(h => h.icon.ParseReforgedName()));
 
-            var winnerWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdWinner);
-            var looserWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdLooser);
+            var winnerWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdWinner) ?? HeroWinRatePerHero.Create(heroComboIdWinner);
+            var looserWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdLooser) ?? HeroWinRatePerHero.Create(heroComboIdLooser);
 
             winnerWinrate.RecordGame(true, heroComboIdLooser);
             looserWinrate.RecordGame(false, heroComboIdLooser);

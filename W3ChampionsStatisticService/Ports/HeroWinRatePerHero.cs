@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService.Ports
 {
@@ -18,6 +19,15 @@ namespace W3ChampionsStatisticService.Ports
             heroWinrate.RecordGame(won);
         }
 
-        public List<HeroWinRate> WinRates { get; set; }
+        public List<HeroWinRate> WinRates { get; set; } = new List<HeroWinRate>();
+        public string Id { get; set; }
+
+        public static HeroWinRatePerHero Create(string heroComboId)
+        {
+            return new HeroWinRatePerHero
+            {
+                Id = heroComboId
+            };
+        }
     }
 }

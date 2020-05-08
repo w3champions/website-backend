@@ -102,5 +102,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
+
+        public Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboIdWinner)
+        {
+            return LoadFirst<HeroWinRatePerHero>(h => h.Id == heroComboIdWinner);
+        }
+
+        public Task Save(HeroWinRatePerHero heroWinrate)
+        {
+            return Upsert(heroWinrate, h => h.Id == heroWinrate.Id);
+        }
     }
 }
