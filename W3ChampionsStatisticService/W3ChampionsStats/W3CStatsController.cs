@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
@@ -64,11 +65,22 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             string opThird = "all")
         {
             string searchString = first;
-            if (second != "all") searchString += $"_{second}";
-            if (third != "all") searchString += $"_{third}";
-            var stats = await _w3StatsRepo.LoadHeroWinrateLike(searchString);
-            var heroWinrateDto = new HeroWinrateDto(stats, opFirst, opSecond, opThird);
-            return Ok(heroWinrateDto);
+            if (second == "none" || third == "none")
+            {
+                if (second != "none") searchString += $"_{second}";
+                if (third != "none") searchString += $"_{third}";
+                var stats = await _w3StatsRepo.LoadHeroWinrate(searchString);
+                var heroWinrateDto = new HeroWinrateDto(new List<HeroWinRatePerHero> { stats }, opFirst, opSecond, opThird);
+                return Ok(heroWinrateDto);
+            }
+            else
+            {
+                if (second != "all") searchString += $"_{second}";
+                if (third != "all") searchString += $"_{third}";
+                var stats = await _w3StatsRepo.LoadHeroWinrateLike(searchString);
+                var heroWinrateDto = new HeroWinrateDto(stats, opFirst, opSecond, opThird);
+                return Ok(heroWinrateDto);
+            }
         }
 
         [HttpGet("distinct-players-per-day")]
