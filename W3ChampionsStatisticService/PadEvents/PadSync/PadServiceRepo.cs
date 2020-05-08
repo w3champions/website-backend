@@ -4,6 +4,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
+using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
@@ -33,6 +35,16 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<PlayerStatePad>(content);
+            return deserializeObject;
+        }
+
+        public async Task<List<League>> GetLeague(GateWay gateWay, GameMode gameMode)
+        {
+            var httpClient = new HttpClient();
+            var result = await httpClient.GetAsync($"https://api.w3champions.com/leagues/{(int) gateWay}/{(int) gameMode}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<List<League>>(content);
             return deserializeObject;
         }
     }

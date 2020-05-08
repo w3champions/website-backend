@@ -18,6 +18,8 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonNoId]
     public class League
     {
+        public int division;
+
         [BsonElement("id")]
         public int id { get; set; }
         public string name { get; set; }
