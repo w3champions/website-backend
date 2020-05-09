@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Ports
