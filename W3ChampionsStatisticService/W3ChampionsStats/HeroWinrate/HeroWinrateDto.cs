@@ -18,8 +18,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             }
             else
             {
-                Winrate = stats.SingleOrDefault()?.WinRates.SingleOrDefault(s => s.HeroCombo == $"{opFirst}_{opSecond}_{opThird}")
-                          ?? new HeroWinRate { HeroCombo = $"{opFirst}_{opSecond}_{opThird}" };
+                Winrate = CombineWinrates(stats, $"{opFirst}_{opSecond}_{opThird}");
             }
         }
 
