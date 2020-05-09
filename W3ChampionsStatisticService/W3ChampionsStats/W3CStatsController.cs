@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
@@ -12,10 +11,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
     public class W3CStatsController : ControllerBase
     {
         private readonly IW3StatsRepo _w3StatsRepo;
+        private readonly HeroStatsQueryHandler _heroStatsQueryHandler;
 
-        public W3CStatsController(IW3StatsRepo w3StatsRepo)
+        public W3CStatsController(IW3StatsRepo w3StatsRepo, HeroStatsQueryHandler heroStatsQueryHandler)
         {
             _w3StatsRepo = w3StatsRepo;
+            _heroStatsQueryHandler = heroStatsQueryHandler;
         }
 
         [HttpGet("map-race-wins")]
@@ -64,23 +65,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             string opSecond = "all",
             string opThird = "all")
         {
-            string searchString = first;
-            if (second == "none" || third == "none")
-            {
-                if (second != "none") searchString += $"_{second}";
-                if (third != "none") searchString += $"_{third}";
-                var stats = await _w3StatsRepo.LoadHeroWinrate(searchString);
-                var heroWinrateDto = new HeroWinrateDto(new List<HeroWinRatePerHero> { stats }, opFirst, opSecond, opThird);
-                return Ok(heroWinrateDto.Winrate.WinLoss);
-            }
-            else
-            {
-                if (second != "all") searchString += $"_{second}";
-                if (third != "all") searchString += $"_{third}";
-                var stats = await _w3StatsRepo.LoadHeroWinrateLike(searchString);
-                var heroWinrateDto = new HeroWinrateDto(stats, opFirst, opSecond, opThird);
-                return Ok(heroWinrateDto.Winrate.WinLoss);
-            }
+            var stats = await _heroStatsQueryHandler.GetStats(first, second, third, opFirst, opSecond, opThird);
+            return Ok(stats);
         }
 
         [HttpGet("distinct-players-per-day")]
