@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Matches;
@@ -27,23 +28,27 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
                 || nextEvent.match.players.All(p => !p.won)
                 || nextEvent.result.players.Any(p => p.heroes.Count == 0)) return;
 
-            var winner = nextEvent.match.players.Single(p => p.won);
-            var looser = nextEvent.match.players.Single(p => !p.won);
+            var heroComboIdWinner = ExtractHeroComboId(nextEvent, p => p.won);
+            var heroComboIdLooser = ExtractHeroComboId(nextEvent, p => !p.won);
 
+            await UpdateStat(heroComboIdWinner, heroComboIdLooser, true);
+            await UpdateStat(heroComboIdLooser, heroComboIdWinner, false);
+        }
+
+        private static string ExtractHeroComboId(MatchFinishedEvent nextEvent, Func<PlayerMMrChange, bool> func)
+        {
+            var winner = nextEvent.match.players.Single(func);
             var winnerHeroes = nextEvent.result.players.Single(p => p.battleTag == winner.battleTag).heroes;
-            var looserHeroes = nextEvent.result.players.Single(p => p.battleTag == looser.battleTag).heroes;
-
             var heroComboIdWinner = string.Join("_", winnerHeroes.Select(h => h.icon.ParseReforgedName()));
-            var heroComboIdLooser = string.Join("_", looserHeroes.Select(h => h.icon.ParseReforgedName()));
+            return heroComboIdWinner;
+        }
 
-            var winnerWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdWinner) ?? HeroWinRatePerHero.Create(heroComboIdWinner);
-            var looserWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdLooser) ?? HeroWinRatePerHero.Create(heroComboIdLooser);
-
-            winnerWinrate.RecordGame(true, heroComboIdLooser);
-            looserWinrate.RecordGame(false, heroComboIdWinner);
-
+        private async Task UpdateStat(string heroComboIdWinner, string heroComboIdLooser, bool won)
+        {
+            var winnerWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdWinner) ??
+                                HeroWinRatePerHero.Create(heroComboIdWinner);
+            winnerWinrate.RecordGame(won, heroComboIdLooser);
             await _w3Stats.Save(winnerWinrate);
-            await _w3Stats.Save(looserWinrate);
         }
     }
 }
