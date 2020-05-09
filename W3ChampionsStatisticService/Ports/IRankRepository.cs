@@ -13,6 +13,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<Rank>> LoadPlayerOfLeague(string searchFor);
         Task<List<LeagueConstellation>> LoadLeagueConstellation();
         Task InsertMany(List<Rank> events);
-        Task InsertLeague(LeagueConstellation leagueConstellation);
+        Task InsertLeagues(List<LeagueConstellation> leagueConstellations);
     }
 }

@@ -10,5 +10,6 @@ namespace W3ChampionsStatisticService.Ports
         Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent);
         Task Insert(List<MatchFinishedEvent> matchFinishedEvent);
         Task<List<RankingChangedEvent>> LoadRanks();
+        Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
     }
 }

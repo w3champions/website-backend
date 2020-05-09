@@ -61,9 +61,9 @@ namespace W3ChampionsStatisticService.Ladder
             return UpsertMany(events);
         }
 
-        public Task InsertLeague(LeagueConstellation leagueConstellation)
+        public Task InsertLeagues(List<LeagueConstellation> leagueConstellations)
         {
-            return Upsert(leagueConstellation, l => l.Id == leagueConstellation.Id);
+            return UpsertMany(leagueConstellations);
         }
     }
 }
