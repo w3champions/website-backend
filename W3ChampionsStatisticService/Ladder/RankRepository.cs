@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -61,9 +62,9 @@ namespace W3ChampionsStatisticService.Ladder
             return UpsertMany(events);
         }
 
-        public Task InsertLeague(LeagueConstellation leagueConstellation)
+        public Task InsertLeagues(List<LeagueConstellation> leagueConstellations)
         {
-            return Upsert(leagueConstellation, l => l.Id == leagueConstellation.Id);
+            return UpsertMany(leagueConstellations);
         }
     }
 }
