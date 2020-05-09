@@ -59,7 +59,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             await matchRepository.Insert(new Matchup(matchFinishedEvent2));
 
-            var matches = await matchRepository.LoadFor("eter#123");
+            var matches = await matchRepository.LoadFor("asd#123");
 
             Assert.AreEqual(0, matches.Count);
         }

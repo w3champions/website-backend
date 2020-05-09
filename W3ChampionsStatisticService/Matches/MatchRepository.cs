@@ -35,9 +35,7 @@ namespace W3ChampionsStatisticService.Matches
             {
                 return await mongoCollection
                     .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                               && m.Teams
-                                   .Any(t => t.Players
-                                       .Any(p => p.BattleTag.Equals(playerId))))
+                               && (m.Team1Players.Contains(playerId) || m.Team2Players.Contains(playerId)))
                     .SortByDescending(s => s.StartTime)
                     .Skip(offset)
                     .Limit(pageSize)
