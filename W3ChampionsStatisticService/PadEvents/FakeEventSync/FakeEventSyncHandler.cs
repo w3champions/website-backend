@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -38,28 +39,26 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
         public async Task Update()
         {
             var lastVersion = await _versionRepository.GetLastVersion<FakeEventSyncHandler>();
-            if (lastVersion == null) lastVersion = "0";
-
             var offset = int.Parse(lastVersion);
 
             _logger.LogWarning("starting");
-            while (true)
+            var loadAllIds = await _playerRepository.LoadAllIds();
+            var ids = loadAllIds.Skip(offset);
+            foreach (var id in ids)
             {
-                var playerOnMySide = await _playerRepository.LoadPlayerFrom(offset);
-                if (playerOnMySide == null) break;
+                var playerOnMySide = await _playerRepository.Load(id);
+                if (playerOnMySide == null) continue;
 
-                var player = await _padRepo.GetPlayer(playerOnMySide.BattleTag);
+                var player = await _padRepo.GetPlayer(id);
+                if (player == null) continue;
 
                 var fakeEvents = _fakeEventCreator.CreatFakeEvents(player, playerOnMySide, offset);
 
                 if (fakeEvents.Any())
                 {
                     _logger.LogWarning($"Events for {playerOnMySide.BattleTag} with {fakeEvents.Count}");
-                }
-
-                foreach (var finishedEvent in fakeEvents)
-                {
-                    await _matchEventRepository.InsertIfNotExisting(finishedEvent);
+                    File.AppendAllLines("log.txt", new []{ $"Events for {playerOnMySide.BattleTag} with {fakeEvents.Count}"});
+                    await _matchEventRepository.Insert(fakeEvents);
                 }
 
                 offset += 1;

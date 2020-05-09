@@ -39,6 +39,12 @@ namespace W3ChampionsStatisticService.PadEvents
             }
         }
 
+        public async Task Insert(List<MatchFinishedEvent> matchFinishedEvent)
+        {
+            var mongoCollection = CreateCollection<MatchFinishedEvent>();
+            await mongoCollection.InsertManyAsync(matchFinishedEvent);
+        }
+
         public Task<List<RankingChangedEvent>> LoadRanks()
         {
             return LoadAll<RankingChangedEvent>();
