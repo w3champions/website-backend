@@ -21,6 +21,9 @@ namespace W3ChampionsStatisticService.Matches
         public IList<Team> Teams { get; set; } = new List<Team>();
         public GateWay GateWay { get; set; }
 
+        public string Team1Players { get; set; }
+        public string Team2Players { get; set; }
+
         public Matchup(MatchFinishedEvent matchFinishedEvent)
         {
             var match = matchFinishedEvent.match;
@@ -40,6 +43,16 @@ namespace W3ChampionsStatisticService.Matches
 
             Teams.Add(CreateTeam(winners));
             Teams.Add(CreateTeam(loosers));
+
+            if (Teams.Count > 0)
+            {
+                Team1Players = string.Join(";", Teams[0].Players.Select(x => x.BattleTag));
+            }
+
+            if (Teams.Count > 1)
+            {
+                Team2Players = string.Join(";", Teams[1].Players.Select(x => x.BattleTag));
+            }
         }
 
         private static Team CreateTeam(IEnumerable<PlayerMMrChange> loosers)

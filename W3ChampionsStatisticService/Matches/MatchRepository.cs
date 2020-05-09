@@ -44,22 +44,10 @@ namespace W3ChampionsStatisticService.Matches
                     .ToListAsync();
             }
 
-            // this is fing hacky, fix when there is a good idea
             return await mongoCollection
                 .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                            (  m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-
-                            || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                            || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
-                            || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                            || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
-
-                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-                            || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-                            || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-                            || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-                             ))
+                     (m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
+                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId)))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -86,22 +74,10 @@ namespace W3ChampionsStatisticService.Matches
                             .Any(p => p.BattleTag.Equals(playerId))));
             }
 
-            // this is fing hacky, fix when there is a good idea
-            return mongoCollection.CountDocumentsAsync(m =>
+            return mongoCollection.CountDocumentsAsync(m => 
                 (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                (  m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-
-                || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                || m.Teams[0].Players[0].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
-                || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[0].BattleTag == opponentId
-                || m.Teams[0].Players[1].BattleTag == playerId && m.Teams[1].Players[1].BattleTag == opponentId
-
-                || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-                || m.Teams[1].Players[0].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-                || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[0].BattleTag == opponentId
-                || m.Teams[1].Players[1].BattleTag == playerId && m.Teams[0].Players[1].BattleTag == opponentId
-                ));
+                     (m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
+                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId)));
         }
 
         public async Task<MatchupDetail> LoadDetails(string id)
