@@ -10,8 +10,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<Matchup>> Load(
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
-            int pageSize = 100,
-            GateWay gateWay = GateWay.Europe);
+            int pageSize = 100);
         Task Insert(Matchup matchup);
         Task<List<Matchup>> LoadFor(
             string playerId,

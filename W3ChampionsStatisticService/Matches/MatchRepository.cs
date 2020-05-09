@@ -105,15 +105,13 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<List<Matchup>> Load(
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
-            int pageSize = 100,
-            GateWay gateWay = GateWay.Europe)
+            int pageSize = 100)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
-            var events = await mongoCollection.Find(m => m.GateWay == gateWay
-                                                         && (gameMode == GameMode.Undefined || m.GameMode == gameMode))
+            var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)

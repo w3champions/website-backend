@@ -20,11 +20,10 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<IActionResult> GetMatches(
             int offset = 0,
             int pageSize = 100,
-            GameMode gameMode = GameMode.Undefined,
-            GateWay gateWay = GateWay.Europe)
+            GameMode gameMode = GameMode.Undefined)
         {
             if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.Load(gameMode, offset, pageSize, gateWay);
+            var matches = await _matchRepository.Load(gameMode, offset, pageSize);
             var count = await _matchRepository.Count();
             return Ok(new { matches, count });
         }
