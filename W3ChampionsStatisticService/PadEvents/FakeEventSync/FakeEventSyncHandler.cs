@@ -57,6 +57,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                 if (fakeEvents.Any())
                 {
                     _logger.LogWarning($"Events for {playerOnMySide.BattleTag} with {fakeEvents.Count}");
+                    File.AppendAllLines("log.txt", new []{ $"Events for {playerOnMySide.BattleTag} with {fakeEvents.Count}"});
                     await _matchEventRepository.Insert(fakeEvents);
                 }
 
