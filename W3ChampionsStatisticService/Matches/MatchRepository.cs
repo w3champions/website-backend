@@ -43,8 +43,8 @@ namespace W3ChampionsStatisticService.Matches
 
             return await mongoCollection
                 .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                     (m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
-                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId)))
+                     ((m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
+                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))))
                 .SortByDescending(s => s.StartTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -73,8 +73,8 @@ namespace W3ChampionsStatisticService.Matches
 
             return mongoCollection.CountDocumentsAsync(m => 
                 (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                     (m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
-                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId)));
+                     ((m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
+                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))));
         }
 
         public async Task<MatchupDetail> LoadDetails(string id)
