@@ -21,7 +21,9 @@ namespace W3ChampionsStatisticService.Matches
         public IList<Team> Teams { get; set; } = new List<Team>();
         public GateWay GateWay { get; set; }
 
+        [JsonIgnore]
         public string Team1Players { get; set; }
+        [JsonIgnore]
         public string Team2Players { get; set; }
 
         public Matchup(MatchFinishedEvent matchFinishedEvent)
