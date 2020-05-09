@@ -10,11 +10,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
         {
             if (opSecond == "all")
             {
-                Winrate = CombineWinrates(stats, $"{opFirst}", $"{opFirst}_all_all");
+                Winrate = CombineWinrates(stats, $"{opFirst}");
             }
             else if (opThird == "all")
             {
-                Winrate = CombineWinrates(stats, $"{opFirst}_{opSecond}", $"{opFirst}_{opSecond}_all");
+                Winrate = CombineWinrates(stats, $"{opFirst}_{opSecond}");
             }
             else
             {
@@ -23,14 +23,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             }
         }
 
-        private HeroWinRate CombineWinrates(List<HeroWinRatePerHero> stats, string startsWithString, string comboString)
+        private HeroWinRate CombineWinrates(List<HeroWinRatePerHero> stats, string startsWithString)
         {
             var winrates = stats.SelectMany(s => s.WinRates).Where(s => s.HeroCombo.StartsWith(startsWithString)).ToList();
             var wins = winrates.Sum(w => w.WinLoss.Wins);
             var losses = winrates.Sum(w => w.WinLoss.Losses);
             return new HeroWinRate
             {
-                HeroCombo = comboString,
                 WinLoss = new WinLoss
                 {
                     Wins = wins,
