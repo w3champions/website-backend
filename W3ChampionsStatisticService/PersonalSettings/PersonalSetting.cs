@@ -55,14 +55,14 @@ namespace W3ChampionsStatisticService.PersonalSettings
             new WinsToPictureId(0, 0),
             new WinsToPictureId(1, 5),
             new WinsToPictureId(2, 20),
-            new WinsToPictureId(3, 50),
-            new WinsToPictureId(4, 120),
-            new WinsToPictureId(5, 200),
-            new WinsToPictureId(6, 300),
-            new WinsToPictureId(7, 450),
-            new WinsToPictureId(8, 600),
-            new WinsToPictureId(9, 900),
-            new WinsToPictureId(10, 1200)
+            new WinsToPictureId(3, 70),
+            new WinsToPictureId(4, 150),
+            new WinsToPictureId(5, 250),
+            new WinsToPictureId(6, 400),
+            new WinsToPictureId(7, 600),
+            new WinsToPictureId(8, 900),
+            new WinsToPictureId(9, 1200),
+            new WinsToPictureId(10, 1500)
         };
     }
 
