@@ -71,7 +71,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
                 if (third != "none") searchString += $"_{third}";
                 var stats = await _w3StatsRepo.LoadHeroWinrate(searchString);
                 var heroWinrateDto = new HeroWinrateDto(new List<HeroWinRatePerHero> { stats }, opFirst, opSecond, opThird);
-                return Ok(heroWinrateDto);
+                return Ok(heroWinrateDto.Winrate.WinLoss);
             }
             else
             {
@@ -79,7 +79,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
                 if (third != "all") searchString += $"_{third}";
                 var stats = await _w3StatsRepo.LoadHeroWinrateLike(searchString);
                 var heroWinrateDto = new HeroWinrateDto(stats, opFirst, opSecond, opThird);
-                return Ok(heroWinrateDto);
+                return Ok(heroWinrateDto.Winrate.WinLoss);
             }
         }
 
