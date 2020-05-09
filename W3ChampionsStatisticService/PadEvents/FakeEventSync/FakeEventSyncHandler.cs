@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -41,8 +42,8 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var offset = int.Parse(lastVersion);
 
             _logger.LogWarning("starting");
-            var ids = (await _playerRepository.LoadAllIds()).Skip(offset);
-
+            var loadAllIds = await _playerRepository.LoadAllIds();
+            var ids = loadAllIds.Skip(offset);
             foreach (var id in ids)
             {
                 var playerOnMySide = await _playerRepository.Load(id);
@@ -56,11 +57,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                 if (fakeEvents.Any())
                 {
                     _logger.LogWarning($"Events for {playerOnMySide.BattleTag} with {fakeEvents.Count}");
-                }
-
-                foreach (var finishedEvent in fakeEvents)
-                {
-                    await _matchEventRepository.InsertIfNotExisting(finishedEvent);
+                    await _matchEventRepository.Insert(fakeEvents);
                 }
 
                 offset += 1;
