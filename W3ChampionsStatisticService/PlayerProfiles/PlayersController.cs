@@ -74,18 +74,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                         .GameModeStats[gameModeIndex].LeagueOrder = allLeagues
                         .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
                         .Leagues
-                        .Single(l => l.Id == searchedLeagues.League).Order;
+                        .SingleOrDefault(l => l.Id == searchedLeagues.League)?.Order ?? 6;
                     player.GateWayStats
                         .Single(g => g.GateWay == gateWay)
                         .GameModeStats[gameModeIndex].Division = allLeagues
                         .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
                         .Leagues
-                        .Single(l => l.Id == searchedLeagues.League).Division;
+                        .SingleOrDefault(l => l.Id == searchedLeagues.League)?.Division ?? 0;
                 }
             }
             catch (Exception e)
             {
-                _trackingService.TrackException(e, $"could not find ladder for {player.BattleTag}");
+                _trackingService.TrackException(e, $"could not find ladder for {player.BattleTag} gm {gameMode} gw {gateWay}");
             }
 
         }
