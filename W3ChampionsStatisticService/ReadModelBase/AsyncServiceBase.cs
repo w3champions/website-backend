@@ -9,14 +9,14 @@ namespace W3ChampionsStatisticService.ReadModelBase
 {
     public class AsyncServiceBase<T> : IHostedService where T : IAsyncUpdatable
     {
-        protected readonly IServiceScopeFactory _serviceScopeFactory;
+        protected readonly IServiceScopeFactory ServiceScopeFactory;
 
         private Task _executingTask;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
 
         public AsyncServiceBase(IServiceScopeFactory serviceScopeFactory)
         {
-            _serviceScopeFactory = serviceScopeFactory;
+            ServiceScopeFactory = serviceScopeFactory;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -35,7 +35,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
             do
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                using (var scope = ServiceScopeFactory.CreateScope())
                 {
                     try
                     {
@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     catch (Exception e)
                     {
                         var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
-                        telemetryClient.TrackException(e);
+                        telemetryClient.TrackException(e, "Some Readmodelhandler is dying");
                     }
 
                     await Task.Delay(5000, stoppingToken);
