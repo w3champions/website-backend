@@ -5,6 +5,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -104,6 +105,30 @@ namespace WC3ChampionsStatisticService.UnitTests
             var loaded = await settingsRepo.Load("peter#123@10");
 
             Assert.AreEqual(0, loaded.Player.GetWinsPerRace(Race.HU));
+        }
+
+        [Test]
+        public async Task SetPictureWhenSettingsAreNotThere()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepository);
+
+            var player = PlayerProfile.Create("modmoto#123");
+            for (int i = 0; i < 30; i++)
+            {
+                player.RecordWin(Race.NE, GameMode.GM_1v1, GateWay.Europe, true);
+            }
+
+            await playerRepository.UpsertPlayer(player);
+
+            var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
+                new SetPictureCommand {Race = Race.NE, PictureId = 2});
+
+            Assert.IsTrue(result);
+            var settings = await personalSettingsRepository.Load("modmoto#123");
+
+            Assert.AreEqual(2, settings.ProfilePicture.PictureId);
         }
     }
 }

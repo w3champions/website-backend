@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public bool SetProfilePicture(Race race, long pictureId)
         {
-            var winsPerRace = Player.GetWinsPerRace(race);
+            var winsPerRace = Player?.GetWinsPerRace(race);
             if (winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == pictureId)?.NeededWins)
             {
                 ProfilePicture = new ProfilePicture(race, pictureId);
