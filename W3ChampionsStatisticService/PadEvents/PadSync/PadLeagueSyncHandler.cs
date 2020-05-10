@@ -38,12 +38,12 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                     Division = le.division,
                     Name = le.name.Replace("League", "").Trim(),
                     Order = le.order
-                }).ToList()
+                }).OrderBy(l => l.Order).ThenBy(l => l.Division).ToList()
             }).ToList();
 
             await _rankRepository.InsertLeagues(leagueConstellations);
 
-            await Task.Delay(86400000);
+            await Task.Delay(60000);
         }
     }
 }
