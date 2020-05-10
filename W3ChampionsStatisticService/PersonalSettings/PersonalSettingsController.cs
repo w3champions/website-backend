@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
@@ -13,15 +14,18 @@ namespace W3ChampionsStatisticService.PersonalSettings
         private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IPlayerRepository _playerRepository;
+        private readonly PersonalSettingsCommandHandler _commandHandler;
 
         public PersonalSettingsController(
             IBlizzardAuthenticationService authenticationService,
             IPersonalSettingsRepository personalSettingsRepository,
-            IPlayerRepository playerRepository)
+            IPlayerRepository playerRepository,
+            PersonalSettingsCommandHandler commandHandler)
         {
             _authenticationService = authenticationService;
             _personalSettingsRepository = personalSettingsRepository;
             _playerRepository = playerRepository;
+            _commandHandler = commandHandler;
         }
 
         [HttpGet("{battleTag}")]
@@ -86,12 +90,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 return Unauthorized("Sorry H4ckerb0i");
             }
 
-            var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
+            var result = await _commandHandler.UpdatePicture(battleTag, command);
 
-            var result = setting.SetProfilePicture(command.Race, command.PictureId);
             if (!result) return BadRequest();
-
-            await _personalSettingsRepository.Save(setting);
 
             return Ok();
         }
