@@ -41,9 +41,9 @@ namespace W3ChampionsStatisticService.Services
             }
         }
 
-        public void TrackException(Exception ex)
+        public void TrackException(Exception ex, string message)
         {
-            _logger.LogError(ex, "Some Readmodelhandler is dying");
+            _logger.LogError(ex, message);
             _telemetry.TrackException(ex);
         }
     }
