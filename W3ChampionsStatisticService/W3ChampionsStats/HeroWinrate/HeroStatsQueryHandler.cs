@@ -43,6 +43,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 
         private WinLoss HeroWinrateDto(List<HeroWinRatePerHero> stats, string opFirst, string opSecond, string opThird)
         {
+            if (opFirst == "all" && opSecond == "none") return CombineWinrates(stats, s => s.HeroCombo.Split("_").Length == 1);
+            if (opFirst == "all" && opSecond == "all" && opThird == "none") return CombineWinrates(stats, s => s.HeroCombo.Split("_").Length == 2);
+            if (opFirst == "all") return CombineWinrates(stats, s => true);
             if (opSecond == "all") return CombineWinrates(stats, s => s.HeroCombo.StartsWith($"{opFirst}"));
             if (opThird == "all") return CombineWinrates(stats, s => s.HeroCombo.StartsWith($"{opFirst}_{opSecond}"));
             if (opSecond == "none") return CombineWinrates(stats, s => s.HeroCombo == $"{opFirst}");
