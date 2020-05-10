@@ -25,6 +25,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             string opThird)
         {
             var searchString = first;
+            if (first == "all" && opFirst == "all") return new WinLoss();
             if (second == "none" || third == "none")
             {
                 if (second != "none") searchString += $"_{second}";
