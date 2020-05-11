@@ -26,9 +26,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
 
             PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Europe);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Usa);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.America);
             PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Europe);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Usa);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.America);
             return player;
         }
 

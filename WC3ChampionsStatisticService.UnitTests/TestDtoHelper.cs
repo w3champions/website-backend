@@ -50,7 +50,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
-            fakeEvent.match.gateway = GateWay.Usa;
+            fakeEvent.match.gateway = GateWay.America;
             fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
             fakeEvent.match.season = 0;
 
@@ -71,7 +71,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             return new RankingChangedEvent
             {
                 gameMode = GameMode.GM_1v1,
-                gateway = GateWay.Usa,
+                gateway = GateWay.America,
                 league = 1,
                 id = 10010,
                 ranks = new[]

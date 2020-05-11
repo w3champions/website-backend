@@ -100,7 +100,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.match.players[0].won = true;
             matchFinishedEvent.match.players[1].won = false;
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent.match.gateway = GateWay.Usa;
+            matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -121,7 +121,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
             matchFinishedEvent.match.players[1].battleTag = "wolf#123";
-            matchFinishedEvent.match.gateway = GateWay.Usa;
+            matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_2v2_AT;
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -141,7 +141,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent.match.gateway = GateWay.Usa;
+            matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
