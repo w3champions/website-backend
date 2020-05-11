@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.Ports
         Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent);
         Task Insert(List<MatchFinishedEvent> matchFinishedEvent);
         Task<List<RankingChangedEvent>> LoadUnsyncedRanks();
-        Task MarkRanksAsSynced(List<int> ids);
+        Task MarkRanksAsSynced();
         Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
     }
 }
