@@ -10,8 +10,8 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertPlayer(PlayerProfile playerProfile);
         Task UpsertPlayerOverview(PlayerOverview playerOverview);
         Task<PlayerProfile> LoadPlayer(string battleTag);
-        Task<PlayerOverview> LoadOverview(string battleTag);
-        Task<PlayerWinLoss> LoadPlayerWinrate(string playerId);
+        Task<PlayerOverview> LoadOverview(string battleTag, int season);
+        Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season);
         Task UpsertWins(List<PlayerWinLoss> winrate);
         Task<List<string>> LoadAllIds();
     }

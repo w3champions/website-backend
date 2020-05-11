@@ -26,9 +26,9 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         [HttpGet("{leagueId}")]
-        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, [FromRoute] int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
         {
-            var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, gateWay, gameMode);
+            var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
             if (playersInLadder == null)
             {
                 return NoContent();
@@ -38,9 +38,9 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         [HttpGet("league-constellation")]
-        public async Task<IActionResult> GetLeagueConstellation()
+        public async Task<IActionResult> GetLeagueConstellation([FromRoute] int season)
         {
-            var leagues = await _rankRepository.LoadLeagueConstellation();
+            var leagues = await _rankRepository.LoadLeagueConstellation(season);
             return Ok(leagues);
         }
     }

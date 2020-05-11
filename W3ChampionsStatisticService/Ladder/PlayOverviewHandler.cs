@@ -37,14 +37,14 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var winnerPlayerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
-            var winnerIdCombined =
-                $"{string.Join("_", winnerPlayerIds.OrderBy(t => t.BattleTag).Select(t => $"{t.BattleTag}@{(int)nextEvent.match.gateway}"))}_{nextEvent.match.gameMode}";
+            var winnerIdCombined = $"{string.Join("_", winnerPlayerIds.OrderBy(t => t.BattleTag).Select(t => $"{t.BattleTag}@{(int) nextEvent.match.gateway}"))}_{nextEvent.match.gameMode}";
 
-            var winner = await _playerRepository.LoadOverview(winnerIdCombined)
+            var winner = await _playerRepository.LoadOverview(winnerIdCombined, nextEvent.match.season)
                          ?? PlayerOverview.Create(
                              winnerPlayerIds,
                              nextEvent.match.gateway,
-                             nextEvent.match.gameMode);
+                             nextEvent.match.gameMode,
+                             nextEvent.match.season);
 
             winner.RecordWin(
                 players.First().won,

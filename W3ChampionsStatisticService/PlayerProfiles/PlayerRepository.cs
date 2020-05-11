@@ -24,9 +24,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             await Upsert(playerOverview, p => p.Id.Equals(playerOverview.Id));
         }
 
-        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId)
+        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
         {
-            return LoadFirst<PlayerWinLoss>(p => p.Id == playerId);
+            return LoadFirst<PlayerWinLoss>(p => p.Id == playerId && p.Season == season);
         }
 
         public Task UpsertWins(List<PlayerWinLoss> winrate)
@@ -51,9 +51,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerProfile>(p => p.BattleTag == battleTag);
         }
 
-        public Task<PlayerOverview> LoadOverview(string battleTag)
+        public Task<PlayerOverview> LoadOverview(string battleTag, int season)
         {
-            return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
+            return LoadFirst<PlayerOverview>(p => p.Id == battleTag && p.Season == season);
         }
 
         public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)

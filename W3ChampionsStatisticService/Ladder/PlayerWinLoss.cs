@@ -7,6 +7,7 @@ namespace W3ChampionsStatisticService.Ladder
     {
         public string Id { get; set; }
         public WinLoss Stats { get; set; } = new WinLoss();
+        public int Season { get; set; }
 
         public PlayerWinLoss Apply(in bool won)
         {
@@ -14,7 +15,7 @@ namespace W3ChampionsStatisticService.Ladder
             return this;
         }
 
-        public static PlayerWinLoss Create(string battleTag)
+        public static PlayerWinLoss Create(string battleTag, int season)
         {
             return new PlayerWinLoss
             {

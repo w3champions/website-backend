@@ -57,7 +57,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int TotalLosses => GateWayStats.Sum(g => g.GameModeStats.Sum(s => s.Losses));
 
         public int TotalWins => GateWayStats.Sum(g => g.GameModeStats.Sum(s => s.Wins));
-
         public static PlayerProfile Default()
         {
             return Create("UnknownPlayer#2");

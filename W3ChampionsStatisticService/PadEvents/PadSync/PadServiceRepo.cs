@@ -47,13 +47,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<League>>(content);
-            return new LeagueConstellation
-            {
-                Id = $"{gateWay}_{gameMode}",
-                Gateway = gateWay,
-                GameMode = gameMode,
-                Leagues = deserializeObject
-            };
+            return new LeagueConstellation(0, gateWay, gameMode, deserializeObject);
         }
     }
 

@@ -9,7 +9,13 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class Rank : IIdentifiable
     {
-        public Rank(GateWay gateway, int league, int rankNumber, int rankingPoints, string playerId, GameMode gameMode)
+        public Rank(string playerId,
+            int league,
+            int rankNumber,
+            int rankingPoints,
+            GateWay gateway,
+            GameMode gameMode,
+            int season)
         {
             Gateway = gateway;
             League = league;
@@ -18,6 +24,7 @@ namespace W3ChampionsStatisticService.Ladder
             PlayerId = playerId;
             PlayerIdToLower = playerId.ToLower();
             GameMode = gameMode;
+            Season = season;
         }
 
         public GateWay Gateway { get; set; }
@@ -31,5 +38,6 @@ namespace W3ChampionsStatisticService.Ladder
         public List<PlayerOverview> Players { get; set; }
         public PlayerOverview Player => Players.SingleOrDefault();
         public GameMode GameMode { get; set; }
+        public int Season { get; set; }
     }
 }

@@ -8,15 +8,15 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
     public class PadLeagueSyncHandler : IAsyncUpdatable
     {
+        private readonly IMatchEventRepository _matchEventRepository;
         private readonly IPadServiceRepo _padRepo;
         private readonly IRankRepository _rankRepository;
-        private readonly IMatchEventRepository _matchEventRepository;
 
         public PadLeagueSyncHandler(
             IPadServiceRepo padRepo,
             IRankRepository rankRepository,
             IMatchEventRepository matchEventRepository
-            )
+        )
         {
             _padRepo = padRepo;
             _rankRepository = rankRepository;
@@ -27,19 +27,11 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         {
             var loadLeagueConstellation = await _matchEventRepository.LoadLeagueConstellationChanged();
 
-            var leagueConstellations = loadLeagueConstellation.Select(l => new LeagueConstellation
-            {
-                GameMode = l.gameMode,
-                Gateway = l.gateway,
-                Id = $"{l.gateway}_{l.gameMode}",
-                Leagues = l.leagues.Select(le => new League
-                {
-                    Id = le.id,
-                    Division = le.division,
-                    Name = le.name.Replace("League", "").Trim(),
-                    Order = le.order
-                }).OrderBy(l => l.Order).ThenBy(l => l.Division).ToList()
-            }).ToList();
+            var leagueConstellations = loadLeagueConstellation.Select(l =>
+                new LeagueConstellation(l.season, l.gateway, l.gameMode, l.leagues.Select(le =>
+                    new League(le.id, le.order, le.name.Replace("League", "").Trim(), le.division)
+                ).OrderBy(l => l.Order).ThenBy(l => l.Division).ToList().ToList())
+            ).ToList();
 
             await _rankRepository.InsertLeagues(leagueConstellations);
 

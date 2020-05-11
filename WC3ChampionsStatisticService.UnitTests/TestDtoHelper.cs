@@ -25,6 +25,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.gateway = GateWay.Europe;
             fakeEvent.match.gameMode = GameMode.GM_1v1;
+            fakeEvent.match.season = 0;
 
             fakeEvent.match.players.First().battleTag = name1;
             fakeEvent.match.players.First().won = true;
@@ -51,6 +52,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.gateway = GateWay.Usa;
             fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
+            fakeEvent.match.season = 0;
 
             fakeEvent.match.players[0].battleTag = name1;
             fakeEvent.match.players[0].won = true;

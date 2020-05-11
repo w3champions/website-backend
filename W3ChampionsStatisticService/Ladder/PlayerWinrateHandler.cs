@@ -20,15 +20,15 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             var playerMMrChanges = nextEvent.match.players;
-            var winrateTasks = playerMMrChanges.Select(async p => await LoadAndApply(p));
+            var winrateTasks = playerMMrChanges.Select(async p => await LoadAndApply(p, nextEvent.match.season));
             var newWinrates = (await Task.WhenAll(winrateTasks)).ToList();
             await _playerRepository.UpsertWins(newWinrates);
         }
 
-        private async Task<PlayerWinLoss> LoadAndApply(PlayerMMrChange p)
+        private async Task<PlayerWinLoss> LoadAndApply(PlayerMMrChange p, int season)
         {
-            var playerWinLoss = await _playerRepository.LoadPlayerWinrate(p.battleTag);
-            var loadPlayerWinrate = playerWinLoss ?? PlayerWinLoss.Create(p.battleTag);
+            var playerWinLoss = await _playerRepository.LoadPlayerWinrate(p.battleTag, season);
+            var loadPlayerWinrate = playerWinLoss ?? PlayerWinLoss.Create(p.battleTag, season);
             return loadPlayerWinrate.Apply(p.won);
         }
     }
