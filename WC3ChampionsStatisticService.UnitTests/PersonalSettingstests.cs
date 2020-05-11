@@ -5,7 +5,6 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
