@@ -62,6 +62,24 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task EmptyRanksDoesNothing()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankRepository = new Mock<IRankRepository>();
+            var rankHandler = new RankHandler(rankRepository.Object, matchEventRepository);
+
+            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
+
+            await rankHandler.Update();
+
+            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)), Times.Once);
+
+            await rankHandler.Update();
+
+            rankRepository.Verify(r => r.InsertRanks(It.IsAny<List<Rank>>()), Times.Once);
+        }
+
+        [Test]
         public async Task OneGamePresentLocally()
         {
             var fakeEventSyncHandler = CreateSUT();
