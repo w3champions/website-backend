@@ -18,7 +18,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
-            var playerLoaded = await playerRepository.LoadOverview(player.Id, 0);
+            var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
             Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
@@ -71,7 +71,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(2, player.Losses);
             Assert.AreEqual("peter#123", player.PlayerIds[0].BattleTag);
             Assert.AreEqual("peter", player.PlayerIds[0].Name);
-            Assert.AreEqual("peter#123@20_GM_1v1", player.Id);
+            Assert.AreEqual("0_peter#123@20_GM_1v1", player.Id);
             Assert.AreEqual(1250, player.MMR);
         }
 
@@ -105,7 +105,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var playerProfile = await playerRepository.LoadOverview("peter#123@10_GM_1v1", 0);
+            var playerProfile = await playerRepository.LoadOverview("0_peter#123@10_GM_1v1");
 
             Assert.AreEqual(1, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);
@@ -126,7 +126,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var playerProfile = await playerRepository.LoadOverview("peter#123@10_wolf#123@10_GM_2v2_AT", 0);
+            var playerProfile = await playerRepository.LoadOverview("0_peter#123@10_wolf#123@10_GM_2v2_AT");
 
             Assert.AreEqual(1, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);
@@ -148,7 +148,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playOverviewHandler.Update(matchFinishedEvent);
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var playerProfile = await playerRepository.LoadOverview("peter#123@10_GM_1v1", 0);
+            var playerProfile = await playerRepository.LoadOverview("0_peter#123@10_GM_1v1");
 
             Assert.AreEqual(3, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);

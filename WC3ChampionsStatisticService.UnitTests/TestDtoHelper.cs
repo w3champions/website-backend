@@ -72,6 +72,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             {
                 gameMode = GameMode.GM_1v1,
                 gateway = GateWay.America,
+                season = 0,
                 league = 1,
                 id = 10010,
                 ranks = new[]

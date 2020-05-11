@@ -105,8 +105,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await rankRepository.InsertRanks(new List<Rank>
             {
-                new Rank("hans#123@20_wurst#456@20_GM_2v2_AT", 3, 10, 3000, GateWay.Europe, GameMode.GM_2v2_AT, 0),
-                new Rank("hans#123@20_peter#456@20_GM_2v2_AT", 2, 10, 3000, GateWay.Europe, GameMode.GM_2v2_AT, 0),
+                new Rank("0_hans#123@20_wurst#456@20_GM_2v2_AT", 3, 10, 3000, GateWay.Europe, GameMode.GM_2v2_AT, 0),
+                new Rank("0_hans#123@20_peter#456@20_GM_2v2_AT", 2, 10, 3000, GateWay.Europe, GameMode.GM_2v2_AT, 0),
             });
 
             var playerProfile = PlayerProfile.Create("hans#123");

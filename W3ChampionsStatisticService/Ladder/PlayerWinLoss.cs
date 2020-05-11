@@ -19,7 +19,8 @@ namespace W3ChampionsStatisticService.Ladder
         {
             return new PlayerWinLoss
             {
-                Id = battleTag
+                Id = $"{season}_{battleTag}",
+                Season = season
             };
         }
     }
