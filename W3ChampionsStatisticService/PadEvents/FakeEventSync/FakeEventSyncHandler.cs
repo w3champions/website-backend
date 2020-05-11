@@ -46,7 +46,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
             var ids = loadAllIds.Skip(offset);
             foreach (var id in ids)
             {
-                var playerOnMySide = await _playerRepository.Load(id);
+                var playerOnMySide = await _playerRepository.LoadPlayer(id);
                 if (playerOnMySide == null) continue;
 
                 var player = await _padRepo.GetPlayer(id);

@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetMatches(string id)
+        public async Task<IActionResult> GetMatcheDetails(string id)
         {
             var match = await _matchRepository.LoadDetails(id);
             return Ok(match);

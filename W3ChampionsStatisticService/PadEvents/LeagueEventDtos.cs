@@ -31,12 +31,13 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonNoId]
     public class RankingChangedEvent
     {
-        [BsonElement("id")]
+        [BsonElement("_id")]
         public int id { get; set; }
         public GateWay gateway { get; set; }
         public int league { get; set; }
         public GameMode gameMode { get; set; }
         public RankRaw[] ranks { get; set; }
+        public bool wasSyncedJustNow { get; set; }
     }
 
     [BsonIgnoreExtraElements]

@@ -34,7 +34,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
             var mongoDatabase = database;
             var mongoCollection = mongoDatabase.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
-            await mongoCollection.InsertOneAsync(newEvent);
+            await mongoCollection.FindOneAndReplaceAsync(
+                (Expression<Func<RankingChangedEvent, bool>>) (ev => ev.id == newEvent.id),
+                newEvent,
+                new FindOneAndReplaceOptions<RankingChangedEvent> {IsUpsert = true});
         }
     }
 }

@@ -23,6 +23,14 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return database;
         }
 
+        public void CreateIndex<T>(Expression<Func<T,object>> func)
+        {
+            var collection = CreateCollection<T>();
+            var indexKeys = Builders<T>.IndexKeys.Descending(func);
+            var indexModel = new CreateIndexModel<T>(indexKeys, new CreateIndexOptions());
+            collection.Indexes.CreateOne(indexModel);
+        }
+
         protected async Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
         {
             var mongoCollection = CreateCollection<T>();
@@ -37,10 +45,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements.ToList();
         }
 
-        protected async Task<List<T>> LoadAll<T>()
+        protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null)
         {
+            if (expression == null) expression = l => true;
             var mongoCollection = CreateCollection<T>();
-            var elements = await mongoCollection.Find(l => true).ToListAsync();
+            var elements = await mongoCollection.Find(expression).ToListAsync();
             return elements;
         }
 

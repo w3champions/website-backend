@@ -64,7 +64,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             return fakeEvent;
         }
 
-        public static RankingChangedEvent CreateRankChangedEvent()
+        public static RankingChangedEvent CreateRankChangedEvent(string battleTag = "peTer#123")
         {
             return new RankingChangedEvent
             {
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                     new RankRaw
                     {
                         rp = 14,
-                        battleTags = new List<string> {"peTer#123"}
+                        battleTags = new List<string> { battleTag }
                     }
                 }
             };

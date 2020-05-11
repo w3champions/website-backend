@@ -52,6 +52,8 @@ namespace W3ChampionsStatisticService
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
+            var mongoDbRepositoryBase = new MongoDbRepositoryBase(mongoClient);
+            mongoDbRepositoryBase.CreateIndex<Matchup>(m => m.StartTime);
 
             services.AddSingleton(typeof(TrackingService));
 
@@ -68,6 +70,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<FakeEventCreator>();
             services.AddSingleton<HeroStatsQueryHandler>();
             services.AddSingleton<PersonalSettingsCommandHandler>();
+            services.AddSingleton<PlayerQueryHandler>();
 
             if (startPadSync == "true")
             {

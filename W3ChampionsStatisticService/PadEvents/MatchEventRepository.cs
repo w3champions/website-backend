@@ -45,9 +45,18 @@ namespace W3ChampionsStatisticService.PadEvents
             await mongoCollection.InsertManyAsync(matchFinishedEvent);
         }
 
-        public Task<List<RankingChangedEvent>> LoadRanks()
+        public async Task<List<RankingChangedEvent>> CheckoutForRead()
         {
-            return LoadAll<RankingChangedEvent>();
+            var mongoCollection = CreateCollection<RankingChangedEvent>();
+            var ids = await mongoCollection
+                .Find(p => !p.wasSyncedJustNow)
+                .Project(p => p.id)
+                .ToListAsync();
+            var filterDefinition = Builders<RankingChangedEvent>.Filter.In(e => e.id, ids);
+            var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
+            await mongoCollection.UpdateManyAsync(filterDefinition, updateDefinition);
+            var ranks = await LoadAll<RankingChangedEvent>(r => ids.Contains(r.id));
+            return ranks;
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged()

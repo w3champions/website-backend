@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var playerProfile = await _playerRepository.Load(battleTag);
+                var playerProfile = await _playerRepository.LoadPlayer(battleTag);
                 setting = new PersonalSetting(battleTag);
                 setting.Players = new List<PlayerProfile> { playerProfile };
             }
