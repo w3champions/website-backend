@@ -57,7 +57,9 @@ namespace W3ChampionsStatisticService.PadEvents
             foreach (var id in ids)
             {
                 var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
-                var rankingEventToSync = await mongoCollection.FindOneAndUpdateAsync(e => !e.wasSyncedJustNow && e.id == id, updateDefinition);
+                var rankingEventToSync = await mongoCollection.FindOneAndUpdateAsync(e =>
+                    e.wasSyncedJustNow != true &&
+                    e.id == id, updateDefinition);
                 if (rankingEventToSync != null)
                 {
                     rankingChangedEventsToSync.Add(rankingEventToSync);
