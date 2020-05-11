@@ -46,12 +46,7 @@ namespace W3ChampionsStatisticService.PadEvents
             await mongoCollection.InsertManyAsync(matchFinishedEvent);
         }
 
-        public Task<List<RankingChangedEvent>> LoadUnsyncedRanks()
-        {
-            return LoadAll<RankingChangedEvent>(r => !r.wasSyncedJustNow);
-        }
-
-        public async Task MarkRanksAsSynced()
+        public async Task<List<RankingChangedEvent>> CheckoutForRead()
         {
             var mongoCollection = CreateCollection<RankingChangedEvent>();
             var ids = await mongoCollection
@@ -61,6 +56,8 @@ namespace W3ChampionsStatisticService.PadEvents
             var filterDefinition = Builders<RankingChangedEvent>.Filter.In(e => e.id, ids);
             var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
             await mongoCollection.UpdateManyAsync(filterDefinition, updateDefinition);
+            var ranks = await LoadAll<RankingChangedEvent>(r => ids.Contains(r.id));
+            return ranks;
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged()
