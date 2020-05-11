@@ -68,6 +68,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<FakeEventCreator>();
             services.AddSingleton<HeroStatsQueryHandler>();
             services.AddSingleton<PersonalSettingsCommandHandler>();
+            services.AddSingleton<PlayerQueryHandler>();
 
             if (startPadSync == "true")
             {
