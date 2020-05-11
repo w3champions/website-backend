@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -45,9 +46,17 @@ namespace W3ChampionsStatisticService.PadEvents
             await mongoCollection.InsertManyAsync(matchFinishedEvent);
         }
 
-        public Task<List<RankingChangedEvent>> LoadRanks()
+        public Task<List<RankingChangedEvent>> LoadUnsyncedRanks()
         {
-            return LoadAll<RankingChangedEvent>();
+            return LoadAll<RankingChangedEvent>(r => !r.wasSyncedJustNow);
+        }
+
+        public Task MarkRanksAsSynced(List<int> ids)
+        {
+            var mongoCollection = CreateCollection<RankingChangedEvent>();
+            var filterDefinition = Builders<RankingChangedEvent>.Filter.In(e => e.id, ids);
+            var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
+            return mongoCollection.UpdateManyAsync(filterDefinition, updateDefinition);
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged()

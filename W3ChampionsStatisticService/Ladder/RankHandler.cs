@@ -22,7 +22,9 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task Update()
         {
-            var events = await _matchEventRepository.LoadRanks();
+            var events = await _matchEventRepository.LoadUnsyncedRanks();
+            var ids = events.Select(e => e.id).ToList();
+            await _matchEventRepository.MarkRanksAsSynced(ids);
 
             var ranks = events.SelectMany(changedEvent => changedEvent.ranks
                 .OrderByDescending(r => r.rp)

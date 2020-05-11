@@ -37,10 +37,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements.ToList();
         }
 
-        protected async Task<List<T>> LoadAll<T>()
+        protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null)
         {
+            if (expression == null) expression = l => true;
             var mongoCollection = CreateCollection<T>();
-            var elements = await mongoCollection.Find(l => true).ToListAsync();
+            var elements = await mongoCollection.Find(expression).ToListAsync();
             return elements;
         }
 

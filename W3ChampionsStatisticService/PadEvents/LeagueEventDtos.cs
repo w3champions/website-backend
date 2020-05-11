@@ -37,6 +37,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int league { get; set; }
         public GameMode gameMode { get; set; }
         public RankRaw[] ranks { get; set; }
+        public bool wasSyncedJustNow { get; set; }
     }
 
     [BsonIgnoreExtraElements]

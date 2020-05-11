@@ -2,11 +2,13 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Moq;
 using NUnit.Framework;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PadEvents.FakeEventSync;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -37,6 +39,26 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(Race.HU, events[1].match.players[0].race);
             Assert.AreEqual(false, events[2].match.players[0].won);
             Assert.AreEqual(Race.HU, events[2].match.players[0].race);
+        }
+
+        [Test]
+        public async Task OnlyOneRankIsSyncedBecausePreviousWasSynced()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankRepository = new Mock<IRankRepository>();
+            var rankHandler = new RankHandler(rankRepository.Object, matchEventRepository);
+
+            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
+
+            await rankHandler.Update();
+
+            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)));
+
+            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("wolf#456"));
+
+            await rankHandler.Update();
+
+            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)));
         }
 
         [Test]
