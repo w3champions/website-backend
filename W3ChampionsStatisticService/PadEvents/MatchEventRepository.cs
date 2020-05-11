@@ -50,14 +50,20 @@ namespace W3ChampionsStatisticService.PadEvents
         {
             var mongoCollection = CreateCollection<RankingChangedEvent>();
             var ids = await mongoCollection
-                .Find(p => !p.wasSyncedJustNow)
+                .Find(p => true)
                 .Project(p => p.id)
                 .ToListAsync();
-            var filterDefinition = Builders<RankingChangedEvent>.Filter.In(e => e.id, ids);
-            var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
-            await mongoCollection.UpdateManyAsync(filterDefinition, updateDefinition);
-            var ranks = await LoadAll<RankingChangedEvent>(r => ids.Contains(r.id));
-            return ranks;
+            var rankingChangedEventsToSync = new List<RankingChangedEvent>();
+            foreach (var id in ids)
+            {
+                var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
+                var rankingEventToSync = await mongoCollection.FindOneAndUpdateAsync(e => !e.wasSyncedJustNow && e.id == id, updateDefinition);
+                if (rankingEventToSync != null)
+                {
+                    rankingChangedEventsToSync.Add(rankingEventToSync);
+                }
+            }
+            return rankingChangedEventsToSync;
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged()
