@@ -19,12 +19,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank> { new Rank(GateWay.Usa, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
-            await rankRepository.InsertMany(ranks);
+            await rankRepository.InsertRanks(ranks);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Usa, GameMode.GM_1v1);
             player.RecordWin(true, 1234);
-            await playerRepository.UpsertPlayer(player);
-            await playerRepository.UpsertPlayer(player);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
+            await playerRepository.UpsertPlayerOverview(player);
+            await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, GateWay.Usa, GameMode.GM_1v1);
 
             Assert.AreEqual(1, playerLoaded.Count);
@@ -42,9 +42,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank> { new Rank(GateWay.Europe, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
-            await rankRepository.InsertMany(ranks);
+            await rankRepository.InsertRanks(ranks);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, GateWay.Usa, GameMode.GM_1v1);
 
             Assert.IsEmpty(playerLoaded);
@@ -58,10 +58,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var ranks1 = new List<Rank> { new Rank(GateWay.Europe, 1, 12, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
             var ranks2 = new List<Rank> { new Rank(GateWay.Europe, 1, 8, 1456, "peter#123@10_GM_1v1", GameMode.GM_1v1)};
-            await rankRepository.InsertMany(ranks1);
-            await rankRepository.InsertMany(ranks2);
+            await rankRepository.InsertRanks(ranks1);
+            await rankRepository.InsertRanks(ranks2);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Usa, GameMode.GM_1v1);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, GateWay.Europe, GameMode.GM_1v1);
 
             Assert.AreEqual(1, playerLoaded.Count);

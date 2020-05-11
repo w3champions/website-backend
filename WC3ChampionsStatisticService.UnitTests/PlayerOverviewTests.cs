@@ -17,7 +17,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
@@ -31,7 +31,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", GateWay.Europe)).Single();
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
@@ -44,7 +44,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike("", GateWay.Europe));
         }
 
@@ -54,7 +54,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerOverview(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, GateWay.Europe));
         }
 

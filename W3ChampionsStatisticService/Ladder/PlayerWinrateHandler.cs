@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.Ladder
             var playerMMrChanges = nextEvent.match.players;
             var winrateTasks = playerMMrChanges.Select(async p => await LoadAndApply(p));
             var newWinrates = (await Task.WhenAll(winrateTasks)).ToList();
-            await _playerRepository.Save(newWinrates);
+            await _playerRepository.UpsertWins(newWinrates);
         }
 
         private async Task<PlayerWinLoss> LoadAndApply(PlayerMMrChange p)

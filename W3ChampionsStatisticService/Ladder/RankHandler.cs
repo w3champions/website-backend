@@ -35,7 +35,7 @@ namespace W3ChampionsStatisticService.Ladder
                         CreatPlayerId(changedEvent, r),
                         changedEvent.gameMode)).ToList()).ToList();
 
-            await _rankRepository.InsertMany(ranks);
+            await _rankRepository.InsertRanks(ranks);
         }
 
         private static string CreatPlayerId(RankingChangedEvent changedEvent, RankRaw r)

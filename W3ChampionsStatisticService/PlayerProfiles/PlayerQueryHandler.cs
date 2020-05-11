@@ -19,9 +19,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _playerRepository = playerRepository;
             _rankRepository = rankRepository;
         }
-        public async Task<PlayerProfile> Get(string battleTag)
+        public async Task<PlayerProfile> LoadPlayerWithRanks(string battleTag)
         {
-            var player = await _playerRepository.Load(battleTag) ?? PlayerProfile.Default();
+            var player = await _playerRepository.LoadPlayer(battleTag) ?? PlayerProfile.Default();
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
             var allLeagues = await _rankRepository.LoadLeagueConstellation();
 
@@ -47,7 +47,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 _ => 0
             };
 
-            var searchedLeagues = leaguesOfPlayer.FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay);
+            var searchedLeagues = gameMode != GameMode.GM_2v2_AT
+                ? leaguesOfPlayer.FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay)
+                : leaguesOfPlayer.OrderBy(l => l.League).ThenBy(l => l.RankNumber).FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay);
+
             if (searchedLeagues != null)
             {
                 player.GateWayStats

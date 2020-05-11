@@ -29,8 +29,8 @@ namespace W3ChampionsStatisticService.Ladder
             var winner = await UpdatePlayers(nextEvent, winners);
             var looser = await UpdatePlayers(nextEvent, loosers);
 
-            await _playerRepository.UpsertPlayer(winner);
-            await _playerRepository.UpsertPlayer(looser);
+            await _playerRepository.UpsertPlayerOverview(winner);
+            await _playerRepository.UpsertPlayerOverview(looser);
         }
 
         private async Task<PlayerOverview> UpdatePlayers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> players)

@@ -31,7 +31,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
-            var player = await _playerQueryHandler.Get(battleTag);
+            var player = await _playerQueryHandler.LoadPlayerWithRanks(battleTag);
             return Ok(player);
         }
 

@@ -102,7 +102,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 await handler.Update(matchFinishedEvent);
             }
 
-            var playerUs = await _playerRepository.Load("peter#123");
+            var playerUs = await _playerRepository.LoadPlayer("peter#123");
 
             Assert.AreEqual(3, playerUs.TotalWins);
             Assert.AreEqual(3, playerUs.TotalLosses);
