@@ -48,9 +48,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
             if (gameModeStatsPerGateway == null)
             {
-                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.America, season));
-                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, season));
-                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Asia, season));
+                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Asia, season));
+                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Europe, season));
+                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.America, season));
             }
             gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
             gameModeStatsPerGateway.GameModeStats.RecordGame(mode, won);
@@ -75,9 +75,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
             if (gameModeStatsPerGateway == null)
             {
-                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.America, season));
-                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, season));
-                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Asia, season));
+                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Asia, season));
+                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Europe, season));
+                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.America, season));
             }
             gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
             gameModeStatsPerGateway.GameModeStats.RecordRanking(mode, mmr, rankingPoints);
