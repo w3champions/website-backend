@@ -19,16 +19,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _playerRepository = playerRepository;
             _rankRepository = rankRepository;
         }
-        public async Task<PlayerProfile> LoadPlayerWithRanks(string battleTag)
+        public async Task<PlayerProfile> LoadPlayerWithRanks(string battleTag, int season)
         {
             var player = await _playerRepository.LoadPlayer(battleTag) ?? PlayerProfile.Default();
-            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
-            var allLeagues = await _rankRepository.LoadLeagueConstellation();
+            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
+            var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
 
             PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Europe);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Usa);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.America);
             PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Europe);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Usa);
+            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.America);
             return player;
         }
 

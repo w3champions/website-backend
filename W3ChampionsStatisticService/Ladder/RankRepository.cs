@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Ladder
         {
         }
 
-        public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, GateWay gateWay, GameMode gameMode)
+        public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
         {
             return JoinWith(rank => rank.League == leagueId && rank.Gateway == gateWay && rank.GameMode == gameMode);
         }
@@ -28,16 +28,16 @@ namespace W3ChampionsStatisticService.Ladder
             return JoinWith(rank => rank.PlayerIdToLower.Contains(search) && rank.Gateway == gateWay && rank.GameMode == gameMode);
         }
 
-        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor)
+        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search));
+            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
             return joinWith;
         }
 
-        public Task<List<LeagueConstellation>> LoadLeagueConstellation()
+        public Task<List<LeagueConstellation>> LoadLeagueConstellation(int season)
         {
-            return LoadAll<LeagueConstellation>();
+            return LoadAll<LeagueConstellation>(l => l.Season == season);
         }
 
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)

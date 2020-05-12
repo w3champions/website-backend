@@ -9,24 +9,24 @@ namespace W3ChampionsStatisticService.PlayerStats
 {
     public class PlayerStatsRepository : MongoDbRepositoryBase, IPlayerStatsRepository
     {
-        public Task<RaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag)
+        public Task<RaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag, int season)
         {
-            return LoadFirst<RaceOnMapVersusRaceRatio>(p => p.Id == battleTag);
+            return LoadFirst<RaceOnMapVersusRaceRatio>(p => p.Id == battleTag && p.Season == season);
         }
 
-        public Task<PlayerHeroStats> LoadHeroStat(string battleTag)
+        public Task<PlayerHeroStats> LoadHeroStat(string battleTag, int season)
         {
-            return LoadFirst<PlayerHeroStats>(p => p.Id == battleTag);
+            return LoadFirst<PlayerHeroStats>(p => p.Id == battleTag && p.Season == season);
         }
 
         public Task UpsertMapAndRaceStat(RaceOnMapVersusRaceRatio raceOnMapVersusRaceRatio)
         {
-            return Upsert(raceOnMapVersusRaceRatio, p => p.Id == raceOnMapVersusRaceRatio.Id);
+            return Upsert(raceOnMapVersusRaceRatio, p => p.Id == raceOnMapVersusRaceRatio.Id && p.Season == raceOnMapVersusRaceRatio.Season);
         }
 
         public Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats)
         {
-            return Upsert(playerHeroStats, p => p.Id == playerHeroStats.Id);
+            return Upsert(playerHeroStats, p => p.Id == playerHeroStats.Id && p.Season == playerHeroStats.Season);
         }
 
         public PlayerStatsRepository(MongoClient mongoClient) : base(mongoClient)

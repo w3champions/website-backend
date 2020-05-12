@@ -16,16 +16,16 @@ namespace W3ChampionsStatisticService.PlayerStats
         }
 
         [HttpGet("{battleTag}/race-on-map-versus-race")]
-        public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag)
+        public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag, [FromRoute] int season)
         {
-            var matches = await _playerRepository.LoadMapAndRaceStat(battleTag);
+            var matches = await _playerRepository.LoadMapAndRaceStat(battleTag, season);
             return Ok(matches);
         }
 
         [HttpGet("{battleTag}/hero-on-map-versus-race")]
-        public async Task<IActionResult> GetHeroOnMapVersusRaceStat([FromRoute] string battleTag)
+        public async Task<IActionResult> GetHeroOnMapVersusRaceStat([FromRoute] string battleTag, [FromRoute] int season)
         {
-            var matches = await _playerRepository.LoadHeroStat(battleTag);
+            var matches = await _playerRepository.LoadHeroStat(battleTag, season);
             return Ok(matches);
         }
     }

@@ -24,9 +24,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             await Upsert(playerOverview, p => p.Id.Equals(playerOverview.Id));
         }
 
-        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId)
+        public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
         {
-            return LoadFirst<PlayerWinLoss>(p => p.Id == playerId);
+            return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
         }
 
         public Task UpsertWins(List<PlayerWinLoss> winrate)

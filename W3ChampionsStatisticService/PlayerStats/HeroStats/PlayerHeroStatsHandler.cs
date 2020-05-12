@@ -33,10 +33,10 @@ namespace W3ChampionsStatisticService.PlayerStats.HeroStats
                 var blizzardInfoPlayer1 = nextEvent.result.players[0];
                 var blizzardInfoPlayer2 = nextEvent.result.players[1];
 
-                var p1 = await _playerRepository.LoadHeroStat(eventPlayer1.battleTag)
-                         ?? PlayerHeroStats.Create(eventPlayer1.battleTag);
-                var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag)
-                         ?? PlayerHeroStats.Create(eventPlayer2.battleTag);
+                var p1 = await _playerRepository.LoadHeroStat(eventPlayer1.battleTag, nextEvent.match.season)
+                         ?? PlayerHeroStats.Create(eventPlayer1.battleTag, nextEvent.match.season);
+                var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag, nextEvent.match.season)
+                         ?? PlayerHeroStats.Create(eventPlayer2.battleTag, nextEvent.match.season);
 
                 p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
                     eventPlayer2.race,

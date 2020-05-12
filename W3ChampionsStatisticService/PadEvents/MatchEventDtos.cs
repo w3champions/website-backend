@@ -63,6 +63,7 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonNoId]
     public class Match
     {
+        public int season { get; set; }
         public int state { get; set; }
         public long startTime { get; set; }
         public GameMode gameMode { get; set; }

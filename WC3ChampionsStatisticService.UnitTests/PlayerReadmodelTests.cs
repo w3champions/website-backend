@@ -14,14 +14,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             var player = PlayerProfile.Create("Peter#12");
-            player.GateWayStats[1].GameModeStats[0].RankProgressionStart = RankProgression.Create(90, 200);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 220);
+            player.GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, 0));
+            player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankProgressionStart = RankProgression.Create(90, 200);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 220, 0);
 
-            Assert.AreEqual(20, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.RankingPoints);
-            Assert.AreEqual(10, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.MMR);
+            Assert.AreEqual(20, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.RankingPoints);
+            Assert.AreEqual(10, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.MMR);
         }
 
         [Test]
@@ -30,14 +31,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             var player = PlayerProfile.Create("Peter#12");
-            player.GateWayStats[1].GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 220);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 230);
+            player.GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, 0));
+            player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 220, 0);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 230, 0);
 
-            Assert.AreEqual(30, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.RankingPoints);
+            Assert.AreEqual(30, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.RankingPoints);
         }
 
         [Test]
@@ -46,14 +48,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             var player = PlayerProfile.Create("Peter#12");
-            player.GateWayStats[1].GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 220);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 200);
+            player.GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, 0));
+            player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 220, 0);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 200, 0);
 
-            Assert.AreEqual(0, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.RankingPoints);
+            Assert.AreEqual(0, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.RankingPoints);
         }
 
         [Test]
@@ -62,14 +65,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             var player = PlayerProfile.Create("Peter#12");
-            player.GateWayStats[1].GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 180);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 230);
+            player.GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, 0));
+            player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 180, 0);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 230, 0);
 
-            Assert.AreEqual(30, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.RankingPoints);
+            Assert.AreEqual(30, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.RankingPoints);
         }
 
         [Test]
@@ -78,13 +82,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             var player = PlayerProfile.Create("Peter#12");
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 180);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 230);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 180, 0);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 230, 0);
 
-            Assert.AreEqual(50, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.RankingPoints);
+            Assert.AreEqual(50, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.RankingPoints);
         }
 
         [Test]
@@ -93,14 +97,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].won = true;
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             var player = PlayerProfile.Create("Peter#12");
+            player.GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, 0));
             player.GateWayStats[0].GameModeStats[0].RankProgressionStart = RankProgression.Create(0, 200);
             player.GateWayStats[0].GameModeStats[0].RankProgressionStart.Date = DateTimeOffset.UtcNow.AddDays(-1);
-            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 180);
+            player.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 100, 180, 0);
 
-            Assert.AreEqual(0, player.GateWayStats[1].GameModeStats[0].RankingPointsProgress.RankingPoints);
+            Assert.AreEqual(0, player.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPointsProgress.RankingPoints);
         }
     }
 }

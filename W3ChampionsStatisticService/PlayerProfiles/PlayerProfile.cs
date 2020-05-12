@@ -22,11 +22,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                     new RaceStat(Race.RnD)
                 },
                 GateWayStats = new List<GameModeStatsPerGateway>()
-                {
-                    GameModeStatsPerGateway.Create(GateWay.Usa),
-                    GameModeStatsPerGateway.Create(GateWay.Europe),
-                    GameModeStatsPerGateway.Create(GateWay.Asia),
-                }
             };
         }
 
@@ -48,16 +43,23 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return raceStat.Losses;
         }
 
-        public void RecordWin(Race race, GameMode mode, GateWay gateWay, bool won)
+        public void RecordWin(Race race, GameMode mode, GateWay gateWay, int season, bool won)
         {
-            GateWayStats.Single(g => g.GateWay == gateWay).GameModeStats.RecordGame(mode, won);
+            var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
+            if (gameModeStatsPerGateway == null)
+            {
+                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.America, season));
+                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, season));
+                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Asia, season));
+            }
+            gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
+            gameModeStatsPerGateway.GameModeStats.RecordGame(mode, won);
             RaceStats.RecordGame(race, won);
         }
 
         public int TotalLosses => GateWayStats.Sum(g => g.GameModeStats.Sum(s => s.Losses));
 
         public int TotalWins => GateWayStats.Sum(g => g.GameModeStats.Sum(s => s.Wins));
-
         public static PlayerProfile Default()
         {
             return Create("UnknownPlayer#2");
@@ -67,19 +69,34 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GameMode mode,
             GateWay gateWay,
             int mmr,
-            int rankingPoints)
+            int rankingPoints,
+            int season)
         {
-            GateWayStats.Single(g => g.GateWay == gateWay).GameModeStats.RecordRanking(mode, mmr, rankingPoints);
+            var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
+            if (gameModeStatsPerGateway == null)
+            {
+                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.America, season));
+                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Europe, season));
+                GateWayStats.Add(GameModeStatsPerGateway.Create(GateWay.Asia, season));
+            }
+            gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
+            gameModeStatsPerGateway.GameModeStats.RecordRanking(mode, mmr, rankingPoints);
+        }
+
+        public GameModeStatsPerGateway GetStatForGateway(GateWay gateWay)
+        {
+            return GateWayStats.FirstOrDefault(g => g.GateWay == gateWay);
         }
     }
 
     public class GameModeStatsPerGateway
     {
-        public static GameModeStatsPerGateway Create(GateWay gateway)
+        public static GameModeStatsPerGateway Create(GateWay gateway, int season)
         {
             return new GameModeStatsPerGateway
             {
                 GateWay = gateway,
+                Season = season,
                 GameModeStats = new GameModeStats
                 {
                     new GameModeStat(GameMode.GM_1v1),
@@ -93,12 +110,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public GateWay GateWay { get; set; }
 
         public GameModeStats GameModeStats { get; set; }
+        public int Season { get; set; }
     }
 
     public enum GateWay
     {
         Undefined = 0,
-        Usa = 10,
+        America = 10,
         Europe = 20,
         Asia = 30
     }

@@ -16,7 +16,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
@@ -30,7 +30,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", GateWay.Europe)).Single();
 
@@ -43,7 +43,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike("", GateWay.Europe));
         }
@@ -53,7 +53,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
             Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, GateWay.Europe));
         }
@@ -61,7 +61,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void UpdateOverview()
         {
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             player.RecordWin(true, 1230);
             player.RecordWin(false, 1240);
             player.RecordWin(false, 1250);
@@ -71,14 +71,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(2, player.Losses);
             Assert.AreEqual("peter#123", player.PlayerIds[0].BattleTag);
             Assert.AreEqual("peter", player.PlayerIds[0].Name);
-            Assert.AreEqual("peter#123@20_GM_1v1", player.Id);
+            Assert.AreEqual("0_peter#123@20_GM_1v1", player.Id);
             Assert.AreEqual(1250, player.MMR);
         }
 
         [Test]
         public void UpdateOverview_2v2AT()
         {
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, GateWay.Europe, GameMode.GM_2v2_AT);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, GateWay.Europe, GameMode.GM_2v2_AT, 0);
             player.RecordWin(true, 1230);
 
             Assert.AreEqual(1, player.Games);
@@ -100,12 +100,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.match.players[0].won = true;
             matchFinishedEvent.match.players[1].won = false;
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent.match.gateway = GateWay.Usa;
+            matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var playerProfile = await playerRepository.LoadOverview("peter#123@10_GM_1v1");
+            var playerProfile = await playerRepository.LoadOverview("0_peter#123@10_GM_1v1");
 
             Assert.AreEqual(1, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);
@@ -121,12 +121,12 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
             matchFinishedEvent.match.players[1].battleTag = "wolf#123";
-            matchFinishedEvent.match.gateway = GateWay.Usa;
+            matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_2v2_AT;
 
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var playerProfile = await playerRepository.LoadOverview("peter#123@10_wolf#123@10_GM_2v2_AT");
+            var playerProfile = await playerRepository.LoadOverview("0_peter#123@10_wolf#123@10_GM_2v2_AT");
 
             Assert.AreEqual(1, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);
@@ -141,14 +141,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent.match.gateway = GateWay.Usa;
+            matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
 
             await playOverviewHandler.Update(matchFinishedEvent);
             await playOverviewHandler.Update(matchFinishedEvent);
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var playerProfile = await playerRepository.LoadOverview("peter#123@10_GM_1v1");
+            var playerProfile = await playerRepository.LoadOverview("0_peter#123@10_GM_1v1");
 
             Assert.AreEqual(3, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);

@@ -19,7 +19,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
             }
 
             personalSetting.Players = new List<PlayerProfile> {player };
@@ -38,7 +38,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 19; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
             }
 
             personalSetting.Players = new List<PlayerProfile> {player };
@@ -58,7 +58,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
             }
 
             personalSetting.Players = new List<PlayerProfile> { player };
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
+                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
             }
 
             await playerRepository.UpsertPlayer(player);
@@ -116,7 +116,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfile.Create("modmoto#123");
             for (int i = 0; i < 30; i++)
             {
-                player.RecordWin(Race.NE, GameMode.GM_1v1, GateWay.Europe, true);
+                player.RecordWin(Race.NE, GameMode.GM_1v1, GateWay.Europe, 0, true);
             }
 
             await playerRepository.UpsertPlayer(player);

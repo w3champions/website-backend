@@ -18,9 +18,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123");
+            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
 
             Assert.AreEqual(player.Id, playerLoaded.Id);
         }
@@ -30,13 +30,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123");
+            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
             player.AddMapWin(Race.HU, Race.UD, "TM", true);
             player.AddMapWin(Race.HU, Race.OC, "EI", true);
             player.AddMapWin(Race.HU, Race.UD, "TM", false);
 
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
 
 
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM").Wins);
@@ -49,12 +49,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123");
+            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
             player.AddMapWin(Race.RnD, Race.UD, "TM", true);
             player.AddMapWin(Race.HU, Race.RnD, "EI", false);
 
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
 
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, "TM").Wins);
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "EI").Losses);
@@ -65,13 +65,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123");
+            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
             player.AddMapWin(Race.HU, Race.UD, "TM", true);
             player.AddMapWin(Race.NE, Race.UD, "TM", true);
             player.AddMapWin(Race.OC, Race.UD, "TM", true);
 
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
 
             Assert.AreEqual(3, playerLoaded.GetWinLoss(Race.Total, Race.UD, "TM").Wins);
         }
@@ -98,9 +98,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             MatchFinishedEvent match2 = CreateMatchEvent(player, playerHeroes, enemyNePlayer, enemyNeHeroes);
             await playerHeroStatsHandler.Update(match2);
 
-            var playerHeroStats = await playerRepository.LoadHeroStat(player.battleTag);
-            var enemyUdHeroStats = await playerRepository.LoadHeroStat(enemyUdPlayer.battleTag);
-            var enemyNeHeroStats = await playerRepository.LoadHeroStat(enemyNePlayer.battleTag);
+            var playerHeroStats = await playerRepository.LoadHeroStat(player.battleTag, 0);
+            var enemyUdHeroStats = await playerRepository.LoadHeroStat(enemyUdPlayer.battleTag, 0);
+            var enemyNeHeroStats = await playerRepository.LoadHeroStat(enemyNePlayer.battleTag, 0);
 
             // *** Player hero stats
             Assert.AreEqual(player.battleTag, playerHeroStats.Id);
@@ -148,7 +148,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             MatchFinishedEvent match1 = CreateMatchEvent(player, playerHeroes, enemyPlayer, enemyUdHeroes);
             await playerHeroStatsHandler.Update(match1);
 
-            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag);
+            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag, 0);
 
             Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.Id);
             Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
@@ -179,7 +179,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             MatchFinishedEvent match1 = CreateMatchEvent(player, playerHeroes, enemyPlayer, enemyUdHeroes);
             await playerHeroStatsHandler.Update(match1);
 
-            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag);
+            var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag, 0);
 
             Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.Id);
             Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);

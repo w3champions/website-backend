@@ -35,8 +35,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.players[1].battleTag = "KOMISCHER#123";
             matchFinishedEvent1.match.players[1].won = true;
             matchFinishedEvent1.match.players[0].won = false;
-            matchFinishedEvent1.match.gateway = GateWay.Usa;
-            matchFinishedEvent2.match.gateway = GateWay.Usa;
+            matchFinishedEvent1.match.gateway = GateWay.America;
+            matchFinishedEvent2.match.gateway = GateWay.America;
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent1));
             await matchRepository.Insert(new Matchup(matchFinishedEvent2));

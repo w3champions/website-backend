@@ -6,16 +6,18 @@ namespace W3ChampionsStatisticService.PlayerStats.HeroStats
 {
     public class PlayerHeroStats
     {
-        public static PlayerHeroStats Create(string battleTag)
+        public static PlayerHeroStats Create(string battleTag, int season)
         {
             return new PlayerHeroStats
             {
-                Id = battleTag
+                Id = battleTag,
+                Season = season
             };
         }
 
         public HeroStatsItemList HeroStatsItemList { get; set; } = HeroStatsItemList.Create();
         public string Id { get; set; }
+        public int Season { get; set; }
 
         public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string mapName, bool won)
         {

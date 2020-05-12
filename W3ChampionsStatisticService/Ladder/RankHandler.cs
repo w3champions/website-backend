@@ -28,13 +28,9 @@ namespace W3ChampionsStatisticService.Ladder
             var ranks = events.SelectMany(changedEvent => changedEvent.ranks
                 .OrderByDescending(r => r.rp)
                 .Select((r, i) =>
-                    new Rank(
-                        changedEvent.gateway,
+                    new Rank(CreatPlayerId(changedEvent, r),
                         changedEvent.league,
-                        i + 1,
-                        (int) r.rp,
-                        CreatPlayerId(changedEvent, r),
-                        changedEvent.gameMode)).ToList()).ToList();
+                        i + 1, (int) r.rp, changedEvent.gateway, changedEvent.gameMode, changedEvent.season)).ToList()).ToList();
 
             await _rankRepository.InsertRanks(ranks);
         }
@@ -42,7 +38,7 @@ namespace W3ChampionsStatisticService.Ladder
         private static string CreatPlayerId(RankingChangedEvent changedEvent, RankRaw r)
         {
             var btags = r.battleTags.Select(b => $"{b}@{(int)changedEvent.gateway}").OrderBy(t => t);
-            var creatPlayerId = $"{string.Join("_", btags)}_{changedEvent.gameMode}";
+            var creatPlayerId = $"{changedEvent.season}_{string.Join("_", btags)}_{changedEvent.gameMode}";
             return creatPlayerId;
         }
     }

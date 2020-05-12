@@ -28,19 +28,19 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerProfile.Create("peter#123");
-            player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, true);
+            player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadPlayer(player.BattleTag);
-            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, GateWay.Europe, false);
-            playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123);
+            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, GateWay.Europe, 0, false);
+            playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123, 0);
             await playerRepository.UpsertPlayer(playerLoaded);
 
             var playerLoadedAgain = await playerRepository.LoadPlayer(player.BattleTag);
 
             Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
             Assert.AreEqual(player.BattleTag, playerLoadedAgain.BattleTag);
-            Assert.AreEqual(234, playerLoadedAgain.GateWayStats[1].GameModeStats[0].MMR);
-            Assert.AreEqual(123, playerLoadedAgain.GateWayStats[1].GameModeStats[0].RankingPoints);
+            Assert.AreEqual(234, playerLoadedAgain.GetStatForGateway(GateWay.Europe).GameModeStats[0].MMR);
+            Assert.AreEqual(123, playerLoadedAgain.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPoints);
         }
 
         [Test]
@@ -71,7 +71,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             ev.match.players[0].race = Race.HU;
             ev.match.players[1].race = Race.OC;
 
-            ev.match.gateway = GateWay.Usa;
+            ev.match.gateway = GateWay.America;
 
             for (int i = 0; i < 100; i++)
             {
@@ -94,58 +94,33 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await rankRepository.InsertLeagues(new List<LeagueConstellation>
             {
-                new LeagueConstellation
+                new LeagueConstellation(0, GateWay.Europe, GameMode.GM_2v2_AT, new List<League>
                 {
-                    GameMode = GameMode.GM_2v2_AT, Gateway = GateWay.Europe, Id = "egal",
-                    Leagues = new List<League>
-                    {
-                        new League
-                        {
-                            Division = 0,
-                            Id = 1,
-                            Name = "GrandMaster",
-                            Order = 0
-                        },new League
-                        {
-                            Division = 0,
-                            Id = 2,
-                            Name = "Master",
-                            Order = 1
-                        },new League
-                        {
-                            Division = 1,
-                            Id = 3,
-                            Name = "Diamond",
-                            Order = 2
-                        },
-                        new League
-                        {
-                            Division = 2,
-                            Id = 4,
-                            Name = "Diamond",
-                            Order = 2
-                        }
-                    }
-                },
+                    new League(1, 0, "GrandMaster", 0),
+                    new League(1, 1, "Master", 0),
+                    new League(1, 2, "Diamond", 1),
+                    new League(1, 2, "Diamond", 2),
+                })
             });
 
             await rankRepository.InsertRanks(new List<Rank>
             {
-                new Rank(GateWay.Europe, 3, 10, 3000, "hans#123@20_wurst#456@20_GM_2v2_AT", GameMode.GM_2v2_AT),
-                new Rank(GateWay.Europe, 2, 10, 3000, "hans#123@20_peter#456@20_GM_2v2_AT", GameMode.GM_2v2_AT),
+                new Rank("0_hans#123@20_wurst#456@20_GM_2v2_AT", 3, 10, 3000, GateWay.Europe, GameMode.GM_2v2_AT, 0),
+                new Rank("0_hans#123@20_peter#456@20_GM_2v2_AT", 2, 10, 3000, GateWay.Europe, GameMode.GM_2v2_AT, 0),
             });
 
             var playerProfile = PlayerProfile.Create("hans#123");
-            var playerOverview1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("hans#123"), PlayerId.Create("wurst#456") }, GateWay.Europe, GameMode.GM_2v2_AT);
-            var playerOverview2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("hans#123"), PlayerId.Create("peter#456") }, GateWay.Europe, GameMode.GM_2v2_AT);
+            playerProfile.RecordWin(Race.HU, GameMode.GM_2v2_AT, GateWay.Europe, 1, true);
+            var playerOverview1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("hans#123"), PlayerId.Create("wurst#456") }, GateWay.Europe, GameMode.GM_2v2_AT, 0);
+            var playerOverview2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("hans#123"), PlayerId.Create("peter#456") }, GateWay.Europe, GameMode.GM_2v2_AT, 0);
 
             await playerRepository.UpsertPlayer(playerProfile);
             await playerRepository.UpsertPlayerOverview(playerOverview2);
             await playerRepository.UpsertPlayerOverview(playerOverview1);
 
-            var playerLoaded = await playerQueryHandler.LoadPlayerWithRanks("hans#123");
+            var playerLoaded = await playerQueryHandler.LoadPlayerWithRanks("hans#123", 0);
 
-            Assert.AreEqual(2, playerLoaded.GateWayStats[1].GameModeStats[1].LeagueId);
+            Assert.AreEqual(2, playerLoaded.GetStatForGateway(GateWay.Europe).GameModeStats[1].LeagueId);
         }
     }
 }

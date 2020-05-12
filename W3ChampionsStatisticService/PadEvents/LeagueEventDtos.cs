@@ -9,6 +9,7 @@ namespace W3ChampionsStatisticService.PadEvents
     public class LeagueConstellationChangedEvent
     {
         public int id { get; set; }
+        public int season { get; set; }
         public GateWay gateway { get; set; }
         public GameMode gameMode { get; set; }
         public LeagueRaw[] leagues { get; set; }
@@ -33,6 +34,7 @@ namespace W3ChampionsStatisticService.PadEvents
     {
         [BsonElement("_id")]
         public int id { get; set; }
+        public int season { get; set; }
         public GateWay gateway { get; set; }
         public int league { get; set; }
         public GameMode gameMode { get; set; }

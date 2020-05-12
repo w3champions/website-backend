@@ -8,10 +8,10 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IRankRepository
     {
-        Task<List<Rank>> LoadPlayersOfLeague(int leagueId, GateWay gateWay, GameMode gameMode);
+        Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode);
         Task<List<Rank>> SearchPlayerOfLeague(string searchFor, GateWay gateWay, GameMode gameMode);
-        Task<List<Rank>> LoadPlayerOfLeague(string searchFor);
-        Task<List<LeagueConstellation>> LoadLeagueConstellation();
+        Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season);
+        Task<List<LeagueConstellation>> LoadLeagueConstellation(int season);
         Task InsertRanks(List<Rank> events);
         Task InsertLeagues(List<LeagueConstellation> leagueConstellations);
     }

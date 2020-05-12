@@ -28,15 +28,15 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
             var matchFinishedEvents = new List<MatchFinishedEvent>();
 
-            var winsOnUsToGo = (gatewayStatsUs?.solo?.wins ?? 0) - myPlayer.GateWayStats[0].GameModeStats[0].Wins;
-            var lossOnUsToGo = (gatewayStatsUs?.solo?.losses ?? 0) - myPlayer.GateWayStats[0].GameModeStats[0].Losses;
-            var winsOnEuToGo = (gatewayStatsEu?.solo?.wins ?? 0) - myPlayer.GateWayStats[1].GameModeStats[0].Wins;
-            var lossOnEuToGo = (gatewayStatsEu?.solo?.losses ?? 0) - myPlayer.GateWayStats[1].GameModeStats[0].Losses;
-            var winsOnAsToGo = (gatewayStatsAs?.solo?.wins ?? 0) - myPlayer.GateWayStats[2].GameModeStats[0].Wins;
-            var lossOnAsToGo = (gatewayStatsAs?.solo?.losses ?? 0) - myPlayer.GateWayStats[2].GameModeStats[0].Losses;
+            var winsOnUsToGo = (gatewayStatsUs?.solo?.wins ?? 0) - myPlayer.GetStatForGateway(GateWay.America).GameModeStats[0].Wins;
+            var lossOnUsToGo = (gatewayStatsUs?.solo?.losses ?? 0) - myPlayer.GetStatForGateway(GateWay.America).GameModeStats[0].Losses;
+            var winsOnEuToGo = (gatewayStatsEu?.solo?.wins ?? 0) - myPlayer.GetStatForGateway(GateWay.Europe).GameModeStats[0].Wins;
+            var lossOnEuToGo = (gatewayStatsEu?.solo?.losses ?? 0) - myPlayer.GetStatForGateway(GateWay.Europe).GameModeStats[0].Losses;
+            var winsOnAsToGo = (gatewayStatsAs?.solo?.wins ?? 0) - myPlayer.GetStatForGateway(GateWay.Asia).GameModeStats[0].Wins;
+            var lossOnAsToGo = (gatewayStatsAs?.solo?.losses ?? 0) - myPlayer.GetStatForGateway(GateWay.Asia).GameModeStats[0].Losses;
 
-            matchFinishedEvents.AddRange(CreateGames(winsOnUsToGo, true, maxRace, GateWay.Usa, myPlayer.BattleTag, ref increment));
-            matchFinishedEvents.AddRange(CreateGames(lossOnUsToGo, false, maxRace, GateWay.Usa, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(winsOnUsToGo, true, maxRace, GateWay.America, myPlayer.BattleTag, ref increment));
+            matchFinishedEvents.AddRange(CreateGames(lossOnUsToGo, false, maxRace, GateWay.America, myPlayer.BattleTag, ref increment));
             matchFinishedEvents.AddRange(CreateGames(winsOnEuToGo, true, maxRace, GateWay.Europe, myPlayer.BattleTag, ref increment));
             matchFinishedEvents.AddRange(CreateGames(lossOnEuToGo, false, maxRace, GateWay.Europe, myPlayer.BattleTag, ref increment));
             matchFinishedEvents.AddRange(CreateGames(winsOnAsToGo, true, maxRace, GateWay.Asia, myPlayer.BattleTag, ref increment));
