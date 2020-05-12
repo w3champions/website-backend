@@ -62,7 +62,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
                 }
 
                 offset += 1;
-                await _versionRepository.SaveLastVersion<FakeEventSyncHandler>(offset.ToString(), 0);
+                await _versionRepository.SaveLastVersion<FakeEventSyncHandler>(offset.ToString());
                 await Task.Delay(1000);
             }
         }

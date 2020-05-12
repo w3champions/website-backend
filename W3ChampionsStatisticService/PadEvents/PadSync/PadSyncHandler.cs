@@ -31,7 +31,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             var events = await _padRepo.GetFrom(offset);
             if (!events.Any())
             {
-                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString(), 0);
+                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString());
             }
 
             while (events.Any())
@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 }
 
                 offset += 100;
-                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString(), 0);
+                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString());
                 events = await _padRepo.GetFrom(offset);
                 await Task.Delay(1000);
             }

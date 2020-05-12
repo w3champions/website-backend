@@ -5,7 +5,7 @@ namespace W3ChampionsStatisticService.Ports
     public interface IVersionRepository
     {
         Task<HandlerVersion> GetLastVersion<T>();
-        Task SaveLastVersion<T>(string lastVersion, int season);
+        Task SaveLastVersion<T>(string lastVersion, int season = 0);
     }
 
     public class HandlerVersion

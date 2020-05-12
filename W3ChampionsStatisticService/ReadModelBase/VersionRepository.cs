@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return new HandlerVersion(lastVersion, version?.Season ?? 0);
         }
 
-        public async Task SaveLastVersion<T>(string lastVersion, int season)
+        public async Task SaveLastVersion<T>(string lastVersion, int season = 0)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);

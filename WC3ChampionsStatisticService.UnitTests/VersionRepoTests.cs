@@ -12,7 +12,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var versionRepository = new VersionRepository(MongoClient);
 
-            await versionRepository.SaveLastVersion<IntegrationTestBase>("123", 0);
+            await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
 
             Assert.AreEqual("123", version);
@@ -23,8 +23,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var versionRepository = new VersionRepository(MongoClient);
 
-            await versionRepository.SaveLastVersion<IntegrationTestBase>("123", 0);
-            await versionRepository.SaveLastVersion<VersionRepoTest>("456", 0);
+            await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
+            await versionRepository.SaveLastVersion<VersionRepoTest>("456");
 
             var version1 = await versionRepository.GetLastVersion<IntegrationTestBase>();
             var version2 = await versionRepository.GetLastVersion<VersionRepoTest>();
@@ -38,8 +38,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var versionRepository = new VersionRepository(MongoClient);
 
-            await versionRepository.SaveLastVersion<IntegrationTestBase>("123", 0);
-            await versionRepository.SaveLastVersion<IntegrationTestBase>("1234", 0);
+            await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
+            await versionRepository.SaveLastVersion<IntegrationTestBase>("1234");
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
 
             Assert.AreEqual("1234", version);
