@@ -20,11 +20,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public async Task<PersonalSetting> Load(string battletag)
         {
             var settings = CreateCollection<PersonalSetting>();
-            var players = CreateCollection<PlayerProfile>();
+            var players = CreateCollection<PlayerRaceWins>();
             var result = await settings
                 .Aggregate()
                 .Match(p => p.Id == battletag)
-                .Lookup<PersonalSetting, PlayerProfile, PersonalSetting>(players,
+                .Lookup<PersonalSetting, PlayerRaceWins, PersonalSetting>(players,
                     rank => rank.Id,
                     player => player.BattleTag,
                     rank => rank.Players)
