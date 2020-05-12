@@ -23,14 +23,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}")]
-        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, [FromRoute] int season)
+        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, int season)
         {
             var player = await _playerQueryHandler.LoadPlayerWithRanks(battleTag, season);
             return Ok(player);
         }
 
         [HttpGet("{battleTag}/winrate")]
-        public async Task<IActionResult> GetPlayerWinrate([FromRoute] string battleTag, [FromRoute] int season)
+        public async Task<IActionResult> GetPlayerWinrate([FromRoute] string battleTag, int season)
         {
             var wins = await _playerRepository.LoadPlayerWinrate(battleTag, season);
             return Ok(wins);

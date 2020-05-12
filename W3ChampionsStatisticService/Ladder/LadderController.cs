@@ -26,7 +26,7 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         [HttpGet("{leagueId}")]
-        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, [FromRoute] int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
         {
             var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
             if (playersInLadder == null)
@@ -38,7 +38,7 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         [HttpGet("league-constellation")]
-        public async Task<IActionResult> GetLeagueConstellation([FromRoute] int season)
+        public async Task<IActionResult> GetLeagueConstellation(int season)
         {
             var leagues = await _rankRepository.LoadLeagueConstellation(season);
             return Ok(leagues);
