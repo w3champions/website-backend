@@ -56,19 +56,19 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             if (searchedLeagues != null)
             {
                 player.GateWayStats
-                    .Single(g => g.GateWay == gateWay)
+                    .First(g => g.GateWay == gateWay)
                     .GameModeStats[gameModeIndex].Rank = searchedLeagues.RankNumber;
                 player.GateWayStats
-                    .Single(g => g.GateWay == gateWay)
+                    .First(g => g.GateWay == gateWay)
                     .GameModeStats[gameModeIndex].LeagueId = searchedLeagues.League;
                 player.GateWayStats
-                    .Single(g => g.GateWay == gateWay)
+                    .First(g => g.GateWay == gateWay)
                     .GameModeStats[gameModeIndex].LeagueOrder = allLeagues
                     .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
                     .Leagues
                     .SingleOrDefault(l => l.Id == searchedLeagues.League)?.Order ?? 6;
                 player.GateWayStats
-                    .Single(g => g.GateWay == gateWay)
+                    .First(g => g.GateWay == gateWay)
                     .GameModeStats[gameModeIndex].Division = allLeagues
                     .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
                     .Leagues
