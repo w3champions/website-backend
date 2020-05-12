@@ -24,14 +24,14 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<PadSyncHandler>();
+            var lastVersion = (await _versionRepository.GetLastVersion<PadSyncHandler>()).Version;
             if (lastVersion == null) lastVersion = "0";
 
             var offset = long.Parse(lastVersion);
             var events = await _padRepo.GetFrom(offset);
             if (!events.Any())
             {
-                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString());
+                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString(), 0);
             }
 
             while (events.Any())
@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 }
 
                 offset += 100;
-                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString());
+                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString(), 0);
                 events = await _padRepo.GetFrom(offset);
                 await Task.Delay(1000);
             }
