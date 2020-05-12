@@ -15,7 +15,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public string ProfileMessage { get; set; }
         [BsonIgnore]
+        [JsonIgnore]
         public PlayerRaceWins RaceWins => Players?.SingleOrDefault() ?? PlayerRaceWins.Create(Id);
+        public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
         [JsonIgnore]
         public List<PlayerRaceWins> Players { get; set; }
         public string HomePage { get; set; }
