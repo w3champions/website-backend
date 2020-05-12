@@ -18,6 +18,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
+            //beta disabled for avatars
+            if (nextEvent.match.season == 0) return;
+
             foreach (var playerRaw in nextEvent.match.players)
             {
                 var player = await _playerRepository.LoadPlayerRaceWins(playerRaw.battleTag)

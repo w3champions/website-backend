@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await versionRepository.SaveLastVersion<IntegrationTestBase>("123");
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
 
-            Assert.AreEqual("123", version);
+            Assert.AreEqual("123", version.Version);
         }
 
         [Test]
@@ -29,8 +29,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var version1 = await versionRepository.GetLastVersion<IntegrationTestBase>();
             var version2 = await versionRepository.GetLastVersion<VersionRepoTest>();
 
-            Assert.AreEqual("123", version1);
-            Assert.AreEqual("456", version2);
+            Assert.AreEqual("123", version1.Version);
+            Assert.AreEqual("456", version2.Version);
         }
 
         [Test]
@@ -42,7 +42,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await versionRepository.SaveLastVersion<IntegrationTestBase>("1234");
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
 
-            Assert.AreEqual("1234", version);
+            Assert.AreEqual("1234", version.Version);
         }
 
         [Test]
@@ -52,7 +52,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var version = await versionRepository.GetLastVersion<IntegrationTestBase>();
 
-            Assert.AreEqual("000000000000000000000000", version);
+            Assert.AreEqual("000000000000000000000000", version.Version);
         }
     }
 }

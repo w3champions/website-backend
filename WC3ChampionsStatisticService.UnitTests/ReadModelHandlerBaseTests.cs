@@ -26,11 +26,11 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var mockMatchRepo = new Mock<IMatchRepository>();
 
-            var versionRepository = new Mock<IVersionRepository>();
+            var versionRepository = new VersionRepository(MongoClient);
 
             var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
-                versionRepository.Object,
+                versionRepository,
                 new MatchReadModelHandler(mockMatchRepo.Object));
 
             await handler.Update();
@@ -52,11 +52,11 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var mockMatchRepo = new Mock<IMatchRepository>();
 
-            var versionRepository = new Mock<IVersionRepository>();
+            var versionRepository = new VersionRepository(MongoClient);
 
             var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
-                versionRepository.Object,
+                versionRepository,
                 new MatchReadModelHandler(mockMatchRepo.Object));
 
             await handler.Update();
