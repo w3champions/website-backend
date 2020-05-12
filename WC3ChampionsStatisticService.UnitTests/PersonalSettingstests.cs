@@ -82,7 +82,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var loaded = await settingsRepo.Load("peter#123");
 
-            Assert.AreEqual(20, loaded.Player.GetWinsPerRace(Race.HU));
+            Assert.AreEqual(20, loaded.RaceWins.GetWinsPerRace(Race.HU));
         }
 
         [Test]
@@ -99,7 +99,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var loaded = await settingsRepo.Load("peter#123@10");
 
-            Assert.AreEqual(0, loaded.Player.GetWinsPerRace(Race.HU));
+            Assert.AreEqual(0, loaded.RaceWins.GetWinsPerRace(Race.HU));
         }
 
         [Test]
