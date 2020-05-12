@@ -2,8 +2,6 @@
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {

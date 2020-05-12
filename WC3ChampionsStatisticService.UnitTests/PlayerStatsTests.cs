@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;

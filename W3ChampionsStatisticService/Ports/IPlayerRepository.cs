@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Ports

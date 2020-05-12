@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Extensions;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;

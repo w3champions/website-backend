@@ -1,5 +1,4 @@
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 {

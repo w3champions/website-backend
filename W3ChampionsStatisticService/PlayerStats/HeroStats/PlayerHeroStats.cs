@@ -1,7 +1,6 @@
 ﻿using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats
 {

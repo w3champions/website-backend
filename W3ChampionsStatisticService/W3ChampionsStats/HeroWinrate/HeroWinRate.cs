@@ -1,5 +1,4 @@
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 {

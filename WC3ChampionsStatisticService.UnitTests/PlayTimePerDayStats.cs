@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 

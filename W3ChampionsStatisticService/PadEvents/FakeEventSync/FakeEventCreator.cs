@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PlayerProfiles;
 
