@@ -92,7 +92,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var rankHandler = new RankHandler(rankRepository, matchEventRepository);
+            var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
 
             await playOverviewHandler.Update(matchFinishedEvent);
             await rankHandler.Update();

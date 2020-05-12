@@ -99,8 +99,8 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<HeroWinRatePerHeroModelHandler>();
                 services.AddReadModelService<PlayerRaceWinModelHandler>();
 
-                services.AddUnversionedReadModelService<RankHandler>();
-                services.AddUnversionedReadModelService<PadLeagueSyncHandler>();
+                services.AddUnversionedReadModelService<RankSyncHandler>();
+                services.AddUnversionedReadModelService<LeagueSyncHandler>();
             }
         }
 

@@ -6,12 +6,12 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
 {
-    public class RankHandler : IAsyncUpdatable
+    public class RankSyncHandler : IAsyncUpdatable
     {
         private readonly IRankRepository _rankRepository;
         private readonly IMatchEventRepository _matchEventRepository;
 
-        public RankHandler(
+        public RankSyncHandler(
             IRankRepository rankRepository,
             IMatchEventRepository matchEventRepository
             )

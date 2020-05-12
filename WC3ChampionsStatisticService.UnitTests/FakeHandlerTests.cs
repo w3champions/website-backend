@@ -47,7 +47,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
             var rankRepository = new Mock<IRankRepository>();
-            var rankHandler = new RankHandler(rankRepository.Object, matchEventRepository);
+            var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository);
 
             await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
 
@@ -67,7 +67,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
             var rankRepository = new Mock<IRankRepository>();
-            var rankHandler = new RankHandler(rankRepository.Object, matchEventRepository);
+            var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository);
 
             await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
 
