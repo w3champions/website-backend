@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -48,8 +49,8 @@ namespace W3ChampionsStatisticService.Ladder
         [HttpGet("seasons")]
         public async Task<IActionResult> GetLeagueSeasons()
         {
-            var leagues = await _rankRepository.LoadSeasons();
-            return Ok(leagues);
+            var seasons = await _rankRepository.LoadSeasons();
+            return Ok(seasons.OrderByDescending(s => s.Id));
         }
     }
 }
