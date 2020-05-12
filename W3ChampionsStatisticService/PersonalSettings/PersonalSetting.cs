@@ -64,28 +64,4 @@ namespace W3ChampionsStatisticService.PersonalSettings
             new WinsToPictureId(10, 1500)
         };
     }
-
-    public class WinsToPictureId
-    {
-        public int PictureId { get; }
-        public int NeededWins { get; }
-
-        public WinsToPictureId(int pictureId, int neededWins)
-        {
-            PictureId = pictureId;
-            NeededWins = neededWins;
-        }
-    }
-
-    public class RaceToMaxPicture
-    {
-        public Race Race { get; }
-        public long Max { get; }
-
-        public RaceToMaxPicture(Race race, long max)
-        {
-            Race = race;
-            Max = max;
-        }
-    }
 }
