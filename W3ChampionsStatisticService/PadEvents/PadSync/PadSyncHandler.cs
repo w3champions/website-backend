@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<PadSyncHandler>();
+            var lastVersion = (await _versionRepository.GetLastVersion<PadSyncHandler>()).Version;
             if (lastVersion == null) lastVersion = "0";
 
             var offset = long.Parse(lastVersion);

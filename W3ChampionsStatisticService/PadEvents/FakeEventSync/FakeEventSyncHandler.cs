@@ -38,7 +38,7 @@ namespace W3ChampionsStatisticService.PadEvents.FakeEventSync
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<FakeEventSyncHandler>();
+            var lastVersion = (await _versionRepository.GetLastVersion<FakeEventSyncHandler>()).Version;
             var offset = int.Parse(lastVersion);
 
             _logger.LogWarning("starting");

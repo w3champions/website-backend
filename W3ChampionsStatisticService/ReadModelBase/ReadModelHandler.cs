@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
         public async Task Update()
         {
             var lastVersion = await _versionRepository.GetLastVersion<T>();
-            var nextEvents = await _eventRepository.Load(lastVersion, 1000);
+            var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
 
             while (nextEvents.Any())
             {
@@ -37,13 +37,19 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 {
                     try
                     {
+                        if (nextEvent.match.season > lastVersion.Season)
+                        {
+                            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
+                            lastVersion = await _versionRepository.GetLastVersion<T>();
+                        }
+
                         // Skip the cancel events for now
-                        if (nextEvent.match.state != 3)
+                        if (nextEvent.match.state != 3 && nextEvent.match.season == lastVersion.Season)
                         {
                             await _innerHandler.Update(nextEvent);
                         }
 
-                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString());
+                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
                     }
                     catch (Exception e)
                     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -16,6 +17,14 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task Setup()
         {
             await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service");
+        }
+
+        protected async Task InsertMatchEvents(List<MatchFinishedEvent> newEvents)
+        {
+            foreach (var ev in newEvents)
+            {
+                await InsertMatchEvent(ev);
+            }
         }
 
         protected async Task InsertMatchEvent(MatchFinishedEvent newEvent)
