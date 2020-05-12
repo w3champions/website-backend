@@ -11,18 +11,15 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
-        private readonly IPlayerRepository _playerRepository;
         private readonly PersonalSettingsCommandHandler _commandHandler;
 
         public PersonalSettingsController(
             IBlizzardAuthenticationService authenticationService,
             IPersonalSettingsRepository personalSettingsRepository,
-            IPlayerRepository playerRepository,
             PersonalSettingsCommandHandler commandHandler)
         {
             _authenticationService = authenticationService;
             _personalSettingsRepository = personalSettingsRepository;
-            _playerRepository = playerRepository;
             _commandHandler = commandHandler;
         }
 
@@ -32,7 +29,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var player = await _playerRepository.LoadPlayerRaceWins(battleTag);
+                var player = await _personalSettingsRepository.LoadPlayerRaceWins(battleTag);
                 return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerRaceWins> { player }});
             }
             return Ok(setting);

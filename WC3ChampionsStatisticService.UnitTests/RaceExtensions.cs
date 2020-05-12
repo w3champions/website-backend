@@ -1,4 +1,5 @@
 using System.Linq;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 

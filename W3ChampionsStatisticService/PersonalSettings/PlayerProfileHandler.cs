@@ -7,10 +7,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PlayerRaceWinModelHandler : IReadModelHandler
     {
-        private readonly IPlayerRepository _playerRepository;
+        private readonly IPersonalSettingsRepository _playerRepository;
 
         public PlayerRaceWinModelHandler(
-            IPlayerRepository playerRepository
+            IPersonalSettingsRepository playerRepository
             )
         {
             _playerRepository = playerRepository;

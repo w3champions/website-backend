@@ -7,14 +7,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
     public class PersonalSettingsCommandHandler
     {
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
-        private readonly IPlayerRepository _playerRepository;
 
         public PersonalSettingsCommandHandler(
-            IPersonalSettingsRepository personalSettingsRepository,
-            IPlayerRepository playerRepository)
+            IPersonalSettingsRepository personalSettingsRepository)
         {
             _personalSettingsRepository = personalSettingsRepository;
-            _playerRepository = playerRepository;
         }
 
         public async Task<bool> UpdatePicture(string battleTag, SetPictureCommand command)
@@ -22,7 +19,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var playerProfile = await _playerRepository.LoadPlayerRaceWins(battleTag);
+                var playerProfile = await _personalSettingsRepository.LoadPlayerRaceWins(battleTag);
                 setting = new PersonalSetting(battleTag);
                 setting.Players = new List<PlayerRaceWins> { playerProfile };
             }

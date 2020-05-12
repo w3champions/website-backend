@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
@@ -34,12 +35,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             }
         }
 
-        public void Update(bool won)
-        {
-            RecordWin(won);
-        }
-
-        public void Update(in int mmr, in int rankingPoints)
+        public void RecordRanking(in int mmr, in int rankingPoints)
         {
             MMR = mmr;
             if (RankProgressionStart == null || LastGameWasBefore8Hours())

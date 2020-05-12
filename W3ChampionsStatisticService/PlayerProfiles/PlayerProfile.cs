@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -13,13 +14,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             {
                 Name = battleTag.Split("#")[0],
                 BattleTag = battleTag,
-                RaceStats = new RaceStats
+                RaceStats = new List<RaceWinLoss>()
                 {
-                    new RaceStat(Race.HU),
-                    new RaceStat(Race.OC),
-                    new RaceStat(Race.UD),
-                    new RaceStat(Race.NE),
-                    new RaceStat(Race.RnD)
+                    new RaceWinLoss(Race.HU),
+                    new RaceWinLoss(Race.OC),
+                    new RaceWinLoss(Race.UD),
+                    new RaceWinLoss(Race.NE),
+                    new RaceWinLoss(Race.RnD)
                 },
                 GateWayStats = new List<GameModeStatsPerGateway>()
             };
@@ -28,7 +29,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
-        public RaceStats RaceStats { get; set; }
+        public List<RaceWinLoss> RaceStats { get; set; }
         public List<GameModeStatsPerGateway> GateWayStats { get; set; }
 
         public long GetWinsPerRace(Race race)
@@ -53,8 +54,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.America, season));
             }
             gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
-            gameModeStatsPerGateway.GameModeStats.RecordGame(mode, won);
-            RaceStats.RecordGame(race, won);
+            gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == mode).RecordWin(won);
+            RaceStats.Single(r => r.Race == race).RecordWin(won);
         }
 
         public int TotalLosses => GateWayStats.Sum(g => g.GameModeStats.Sum(s => s.Losses));
@@ -80,7 +81,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.America, season));
             }
             gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
-            gameModeStatsPerGateway.GameModeStats.RecordRanking(mode, mmr, rankingPoints);
+            gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == mode).RecordRanking(mmr, rankingPoints);
         }
 
         public GameModeStatsPerGateway GetStatForGateway(GateWay gateWay)
@@ -97,7 +98,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             {
                 GateWay = gateway,
                 Season = season,
-                GameModeStats = new GameModeStats
+                GameModeStats = new List<GameModeStat>()
                 {
                     new GameModeStat(GameMode.GM_1v1),
                     new GameModeStat(GameMode.GM_2v2_AT),
@@ -109,7 +110,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public GateWay GateWay { get; set; }
 
-        public GameModeStats GameModeStats { get; set; }
+        public List<GameModeStat> GameModeStats { get; set; }
         public int Season { get; set; }
     }
 

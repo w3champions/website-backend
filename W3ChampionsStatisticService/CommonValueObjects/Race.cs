@@ -1,4 +1,4 @@
-﻿namespace W3ChampionsStatisticService.PlayerProfiles
+﻿namespace W3ChampionsStatisticService.CommonValueObjects
 {
     public enum Race
     {

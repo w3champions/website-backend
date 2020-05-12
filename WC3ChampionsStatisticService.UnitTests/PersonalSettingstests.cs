@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
-using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -67,9 +67,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task RepoLoadWithJoin()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-
 
             var personalSetting = new PersonalSetting("peter#123");
 
@@ -79,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 player.RecordWin(Race.HU,  true);
             }
 
-            await playerRepository.UpsertPlayerRaceWin(player);
+            await settingsRepo.UpsertPlayerRaceWin(player);
             await settingsRepo.Save(personalSetting);
 
             var loaded = await settingsRepo.Load("peter#123");
@@ -90,14 +88,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task RepoLoadWithJoin_NotFoundPlayer()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
 
             var personalSetting = new PersonalSetting("peter#123@10");
 
             var player = PlayerRaceWins.Create("peter#123");
 
-            await playerRepository.UpsertPlayerRaceWin(player);
+            await settingsRepo.UpsertPlayerRaceWin(player);
             await settingsRepo.Save(personalSetting);
 
             var loaded = await settingsRepo.Load("peter#123@10");
@@ -108,9 +105,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task SetPictureWhenSettingsAreNotThere()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepository);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository);
 
             var player = PlayerRaceWins.Create("modmoto#123");
             for (int i = 0; i < 30; i++)
@@ -118,7 +114,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 player.RecordWin(Race.NE, true);
             }
 
-            await playerRepository.UpsertPlayerRaceWin(player);
+            await personalSettingsRepository.UpsertPlayerRaceWin(player);
 
             var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
                 new SetPictureCommand {Race = Race.NE, PictureId = 2});
