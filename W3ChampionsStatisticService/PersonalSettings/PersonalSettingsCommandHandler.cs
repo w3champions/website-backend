@@ -23,9 +23,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var playerProfile = await _playerRepository.LoadPlayer(battleTag);
+                var playerProfile = await _playerRepository.LoadPlayerRaceWins(battleTag);
                 setting = new PersonalSetting(battleTag);
-                setting.Players = new List<PlayerProfile> { playerProfile };
+                setting.Players = new List<PlayerRaceWins> { playerProfile };
             }
 
             var result = setting.SetProfilePicture(command.Race, command.PictureId);

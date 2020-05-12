@@ -33,8 +33,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var player = await _playerRepository.LoadPlayer(battleTag);
-                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerProfile> { player }});
+                var player = await _playerRepository.LoadPlayerRaceWins(battleTag);
+                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerRaceWins> { player }});
             }
             return Ok(setting);
         }
