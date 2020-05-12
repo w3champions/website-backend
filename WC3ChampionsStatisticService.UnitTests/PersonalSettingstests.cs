@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 
@@ -16,13 +15,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123");
+            var player = PlayerRaceWins.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
+                player.RecordWin(Race.HU, true);
             }
 
-            personalSetting.Players = new List<PlayerProfile> {player };
+            personalSetting.Players = new List<PlayerRaceWins> {player };
             var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
 
             Assert.IsTrue(profilePicture);
@@ -35,13 +34,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123");
+            var player = PlayerRaceWins.Create("peter#123");
             for (int i = 0; i < 19; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
+                player.RecordWin(Race.HU, true);
             }
 
-            personalSetting.Players = new List<PlayerProfile> {player };
+            personalSetting.Players = new List<PlayerRaceWins> {player };
             personalSetting.SetProfilePicture(Race.HU, 1);
             var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
 
@@ -55,13 +54,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123");
+            var player = PlayerRaceWins.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
+                player.RecordWin(Race.HU, true);
             }
 
-            personalSetting.Players = new List<PlayerProfile> { player };
+            personalSetting.Players = new List<PlayerRaceWins> { player };
             Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.Race == Race.HU).Max);
         }
 
@@ -74,13 +73,13 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerProfile.Create("peter#123");
+            var player = PlayerRaceWins.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
+                player.RecordWin(Race.HU,  true);
             }
 
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerRaceWin(player);
             await settingsRepo.Save(personalSetting);
 
             var loaded = await settingsRepo.Load("peter#123");
@@ -96,9 +95,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var personalSetting = new PersonalSetting("peter#123@10");
 
-            var player = PlayerProfile.Create("peter#123");
+            var player = PlayerRaceWins.Create("peter#123");
 
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerRaceWin(player);
             await settingsRepo.Save(personalSetting);
 
             var loaded = await settingsRepo.Load("peter#123@10");
@@ -113,13 +112,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
             var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepository);
 
-            var player = PlayerProfile.Create("modmoto#123");
+            var player = PlayerRaceWins.Create("modmoto#123");
             for (int i = 0; i < 30; i++)
             {
-                player.RecordWin(Race.NE, GameMode.GM_1v1, GateWay.Europe, 0, true);
+                player.RecordWin(Race.NE, true);
             }
 
-            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayerRaceWin(player);
 
             var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
                 new SetPictureCommand {Race = Race.NE, PictureId = 2});

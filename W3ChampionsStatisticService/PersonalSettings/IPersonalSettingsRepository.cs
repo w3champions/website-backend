@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using MongoDB.Driver;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PersonalSettings
