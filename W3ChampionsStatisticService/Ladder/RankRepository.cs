@@ -26,10 +26,14 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Season == season);
         }
 
-        public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, GateWay gateWay, GameMode gameMode)
+        public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
         {
             var search = searchFor.ToLower();
-            return JoinWith(rank => rank.PlayerIdToLower.Contains(search) && rank.Gateway == gateWay && rank.GameMode == gameMode);
+            return JoinWith(rank =>
+                rank.PlayerIdToLower.Contains(search)
+                && rank.Gateway == gateWay
+                && rank.GameMode == gameMode
+                && rank.Season == season);
         }
 
         public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)

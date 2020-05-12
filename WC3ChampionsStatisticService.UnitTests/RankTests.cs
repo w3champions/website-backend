@@ -97,7 +97,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playOverviewHandler.Update(matchFinishedEvent);
             await rankHandler.Update();
 
-            var rank = await rankRepository.SearchPlayerOfLeague("peT", GateWay.America, GameMode.GM_1v1);
+            var rank = await rankRepository.SearchPlayerOfLeague("peT", 0, GateWay.America, GameMode.GM_1v1);
 
             Assert.AreEqual(1, rank.Count);
         }

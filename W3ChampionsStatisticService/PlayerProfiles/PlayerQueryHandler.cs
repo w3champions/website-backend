@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
@@ -21,7 +22,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
         public async Task<PlayerProfile> LoadPlayerWithRanks(string battleTag, int season)
         {
-            var player = await _playerRepository.LoadPlayer(battleTag) ?? PlayerProfile.Default();
+            var player = await _playerRepository.LoadPlayer(battleTag);
+            if (player == null) return null;
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
             var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
 

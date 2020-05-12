@@ -19,9 +19,10 @@ namespace W3ChampionsStatisticService.Ladder
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchPlayer(string searchFor, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+        public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
+        gameMode = GameMode.GM_1v1)
         {
-            var players = await _rankRepository.SearchPlayerOfLeague(searchFor, gateWay, gameMode);
+            var players = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
             return Ok(players);
         }
 
