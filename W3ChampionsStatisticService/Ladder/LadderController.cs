@@ -44,5 +44,12 @@ namespace W3ChampionsStatisticService.Ladder
             var leagues = await _rankRepository.LoadLeagueConstellation(season);
             return Ok(leagues);
         }
+
+        [HttpGet("seasons")]
+        public async Task<IActionResult> GetLeagueSeasons()
+        {
+            var leagues = await _rankRepository.LoadSeasons();
+            return Ok(leagues);
+        }
     }
 }

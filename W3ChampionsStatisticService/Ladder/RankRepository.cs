@@ -73,5 +73,15 @@ namespace W3ChampionsStatisticService.Ladder
         {
             return UpsertMany(leagueConstellations);
         }
+
+        public Task UpsertSeason(Season season)
+        {
+            return Upsert(season, s => s.Id == season.Id);
+        }
+
+        public Task<List<Season>> LoadSeasons()
+        {
+            return LoadAll<Season>();
+        }
     }
 }

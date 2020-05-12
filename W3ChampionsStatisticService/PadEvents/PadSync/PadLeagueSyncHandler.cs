@@ -34,6 +34,10 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             ).ToList();
 
             await _rankRepository.InsertLeagues(leagueConstellations);
+            if (leagueConstellations.Any())
+            {
+                await _rankRepository.UpsertSeason(new Season(leagueConstellations.First().Season));
+            }
 
             await Task.Delay(60000);
         }
