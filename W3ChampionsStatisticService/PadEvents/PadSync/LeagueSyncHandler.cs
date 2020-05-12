@@ -6,19 +6,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
-    public class PadLeagueSyncHandler : IAsyncUpdatable
+    public class LeagueSyncHandler : IAsyncUpdatable
     {
         private readonly IMatchEventRepository _matchEventRepository;
-        private readonly IPadServiceRepo _padRepo;
         private readonly IRankRepository _rankRepository;
 
-        public PadLeagueSyncHandler(
-            IPadServiceRepo padRepo,
+        public LeagueSyncHandler(
             IRankRepository rankRepository,
             IMatchEventRepository matchEventRepository
         )
         {
-            _padRepo = padRepo;
             _rankRepository = rankRepository;
             _matchEventRepository = matchEventRepository;
         }
@@ -34,6 +31,10 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             ).ToList();
 
             await _rankRepository.InsertLeagues(leagueConstellations);
+            if (leagueConstellations.Any())
+            {
+                await _rankRepository.UpsertSeason(new Season(leagueConstellations.First().Season));
+            }
 
             await Task.Delay(60000);
         }

@@ -92,12 +92,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
             await playOverviewHandler.Update(matchFinishedEvent);
 
-            var rankHandler = new RankHandler(rankRepository, matchEventRepository);
+            var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
 
             await playOverviewHandler.Update(matchFinishedEvent);
             await rankHandler.Update();
 
-            var rank = await rankRepository.SearchPlayerOfLeague("peT", GateWay.America, GameMode.GM_1v1);
+            var rank = await rankRepository.SearchPlayerOfLeague("peT", 0, GateWay.America, GameMode.GM_1v1);
 
             Assert.AreEqual(1, rank.Count);
         }
