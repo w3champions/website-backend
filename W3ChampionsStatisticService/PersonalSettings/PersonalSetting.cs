@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
-using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
@@ -15,17 +15,16 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public string ProfileMessage { get; set; }
         [BsonIgnore]
+        public PlayerRaceWins RaceWins => Players?.SingleOrDefault() ?? PlayerRaceWins.Create(Id);
         [JsonIgnore]
-        public PlayerProfile Player => Players?.SingleOrDefault() ?? PlayerProfile.Create(Id);
-        [JsonIgnore]
-        public List<PlayerProfile> Players { get; set; }
+        public List<PlayerRaceWins> Players { get; set; }
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }
 
         public bool SetProfilePicture(Race race, long pictureId)
         {
-            var winsPerRace = Player?.GetWinsPerRace(race);
+            var winsPerRace = RaceWins?.GetWinsPerRace(race);
             if (winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == pictureId)?.NeededWins)
             {
                 ProfilePicture = new ProfilePicture(race, pictureId);
@@ -37,11 +36,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public List<RaceToMaxPicture> PickablePictures => new List<RaceToMaxPicture>
         {
-            new RaceToMaxPicture(Race.HU, GetMaxOf(Player.GetWinsPerRace(Race.HU)) ),
-            new RaceToMaxPicture(Race.OC, GetMaxOf(Player.GetWinsPerRace(Race.OC)) ),
-            new RaceToMaxPicture(Race.NE, GetMaxOf(Player.GetWinsPerRace(Race.NE)) ),
-            new RaceToMaxPicture(Race.UD, GetMaxOf(Player.GetWinsPerRace(Race.UD)) ),
-            new RaceToMaxPicture(Race.RnD, GetMaxOf(Player.GetWinsPerRace(Race.RnD)) )
+            new RaceToMaxPicture(Race.HU, GetMaxOf(RaceWins.GetWinsPerRace(Race.HU)) ),
+            new RaceToMaxPicture(Race.OC, GetMaxOf(RaceWins.GetWinsPerRace(Race.OC)) ),
+            new RaceToMaxPicture(Race.NE, GetMaxOf(RaceWins.GetWinsPerRace(Race.NE)) ),
+            new RaceToMaxPicture(Race.UD, GetMaxOf(RaceWins.GetWinsPerRace(Race.UD)) ),
+            new RaceToMaxPicture(Race.RnD, GetMaxOf(RaceWins.GetWinsPerRace(Race.RnD)) )
         };
 
         private long GetMaxOf(long getWinsPerRace)
@@ -64,29 +63,5 @@ namespace W3ChampionsStatisticService.PersonalSettings
             new WinsToPictureId(9, 1200),
             new WinsToPictureId(10, 1500)
         };
-    }
-
-    public class WinsToPictureId
-    {
-        public int PictureId { get; }
-        public int NeededWins { get; }
-
-        public WinsToPictureId(int pictureId, int neededWins)
-        {
-            PictureId = pictureId;
-            NeededWins = neededWins;
-        }
-    }
-
-    public class RaceToMaxPicture
-    {
-        public Race Race { get; }
-        public long Max { get; }
-
-        public RaceToMaxPicture(Race race, long max)
-        {
-            Race = race;
-            Max = max;
-        }
     }
 }

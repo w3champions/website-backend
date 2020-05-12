@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PersonalSettings
@@ -8,14 +7,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
     public class PersonalSettingsCommandHandler
     {
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
-        private readonly IPlayerRepository _playerRepository;
 
         public PersonalSettingsCommandHandler(
-            IPersonalSettingsRepository personalSettingsRepository,
-            IPlayerRepository playerRepository)
+            IPersonalSettingsRepository personalSettingsRepository)
         {
             _personalSettingsRepository = personalSettingsRepository;
-            _playerRepository = playerRepository;
         }
 
         public async Task<bool> UpdatePicture(string battleTag, SetPictureCommand command)
@@ -23,9 +19,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var playerProfile = await _playerRepository.LoadPlayer(battleTag);
+                var playerProfile = await _personalSettingsRepository.LoadPlayerRaceWins(battleTag);
                 setting = new PersonalSetting(battleTag);
-                setting.Players = new List<PlayerProfile> { playerProfile };
+                setting.Players = new List<PlayerRaceWins> { playerProfile };
             }
 
             var result = setting.SetProfilePicture(command.Race, command.PictureId);

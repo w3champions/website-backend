@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {

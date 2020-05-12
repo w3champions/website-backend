@@ -1,6 +1,4 @@
-using W3ChampionsStatisticService.PlayerProfiles;
-
-namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
+namespace W3ChampionsStatisticService.CommonValueObjects
 {
     public class RaceWinLoss : WinLoss
     {

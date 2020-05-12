@@ -1,4 +1,4 @@
-﻿namespace W3ChampionsStatisticService.Matches
+﻿namespace W3ChampionsStatisticService.CommonValueObjects
 {
     public enum GameMode
     {

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
