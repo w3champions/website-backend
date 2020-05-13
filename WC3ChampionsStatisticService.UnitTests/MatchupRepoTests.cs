@@ -135,6 +135,32 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task SearchForPlayerAndOpponent_FilterByGateway()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.gateway = GateWay.America;
+            matchFinishedEvent2.match.gateway = GateWay.Europe;
+
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
+
+            matchFinishedEvent2.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
+
+            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            var matches = await matchRepository.LoadFor("peter#123", null, GateWay.America);
+            var count = await matchRepository.CountFor("peter#123", null, GateWay.America);
+
+            Assert.AreEqual(1, count);
+            Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
+        }
+
+        [Test]
         public async Task SearchForPlayerAndOpponent_2v2_SameTeam()
         {
             var matchRepository = new MatchRepository(MongoClient);

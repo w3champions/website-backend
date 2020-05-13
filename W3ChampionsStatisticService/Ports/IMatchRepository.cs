@@ -12,16 +12,16 @@ namespace W3ChampionsStatisticService.Ports
             int offset = 0,
             int pageSize = 100);
         Task Insert(Matchup matchup);
-        Task<List<Matchup>> LoadFor(
-            string playerId,
+        Task<List<Matchup>> LoadFor(string playerId,
             string opponentId = null,
+            GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int pageSize = 100,
             int offset = 0);
         Task<long> Count();
-        Task<long> CountFor(
-            string playerId,
+        Task<long> CountFor(string playerId,
             string opponentId = null,
+            GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined);
 
         Task<MatchupDetail> LoadDetails(string id);
