@@ -35,10 +35,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             await UpdateStat(heroComboIdLooser, heroComboIdWinner, false);
         }
 
-        private static string ExtractHeroComboId(MatchFinishedEvent nextEvent, Func<PlayerMMrChange, bool> func)
+        private static string ExtractHeroComboId(MatchFinishedEvent nextEvent, Func<PlayerBlizzard, bool> func)
         {
-            var winner = nextEvent.match.players.Single(func);
-            var winnerHeroes = nextEvent.result.players.Single(p => p.battleTag == winner.battleTag).heroes;
+            var winnerHeroes = nextEvent.result.players.Single(func).heroes;
             var heroComboIdWinner = string.Join("_", winnerHeroes.Select(h => h.icon.ParseReforgedName()));
             return heroComboIdWinner;
         }
