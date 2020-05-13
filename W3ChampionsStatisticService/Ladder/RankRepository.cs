@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.Ladder
             return JoinWith(rank =>
                 rank.PlayerIdToLower.Contains(search)
                 && rank.Gateway == gateWay
-                && rank.GameMode == gameMode
+                && (gameMode == GameMode.Undefined || rank.GameMode == gameMode)
                 && rank.Season == season);
         }
 
