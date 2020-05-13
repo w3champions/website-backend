@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Matches
 
         public Task Insert(Matchup matchup)
         {
-            return Upsert(matchup, m => m.Id == matchup.Id);
+            return Upsert(matchup, m => m.MatchId == matchup.MatchId);
         }
 
         public async Task<List<Matchup>> LoadFor(string playerId,
@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.Matches
                     .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                && (m.Team1Players.Contains(playerId) || m.Team2Players.Contains(playerId)))
-                    .SortByDescending(s => s.StartTime)
+                    .SortByDescending(s => s.Id)
                     .Skip(offset)
                     .Limit(pageSize)
                     .ToListAsync();
@@ -48,7 +48,7 @@ namespace W3ChampionsStatisticService.Matches
                             && (gateWay == GateWay.Undefined || m.GateWay == gateWay) &&
                      ((m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
                     || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))))
-                .SortByDescending(s => s.StartTime)
+                .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
@@ -85,7 +85,7 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<MatchupDetail> LoadDetails(string id)
         {
             var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.match.id == id);
-            var match = await LoadFirst<Matchup>(t => t.Id == id);
+            var match = await LoadFirst<Matchup>(t => t.MatchId == id);
 
             return new MatchupDetail
             {
@@ -114,7 +114,7 @@ namespace W3ChampionsStatisticService.Matches
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
             var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                .SortByDescending(s => s.StartTime)
+                .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();

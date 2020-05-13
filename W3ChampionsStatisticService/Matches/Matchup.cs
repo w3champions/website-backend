@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -11,7 +12,8 @@ namespace W3ChampionsStatisticService.Matches
     public class Matchup
     {
         public string Map { get; set; }
-        public string Id { get; set; }
+        public ObjectId Id { get; set; }
+        public string MatchId { get; set; }
         [JsonIgnore]
         public TimeSpan Duration { get; set; }
 
@@ -31,7 +33,8 @@ namespace W3ChampionsStatisticService.Matches
         {
             var match = matchFinishedEvent.match;
             Map = new MapName(matchFinishedEvent.match.map).Name;
-            Id = match.id;
+            Id = matchFinishedEvent.Id;
+            MatchId = match.id;
             GateWay = match.gateway;
 
             GameMode = matchFinishedEvent.match.gameMode;

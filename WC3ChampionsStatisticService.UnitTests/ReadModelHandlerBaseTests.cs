@@ -106,7 +106,7 @@ namespace WC3ChampionsStatisticService.UnitTests
              Assert.AreEqual(1, version.Season);
              Assert.AreEqual(fakeEvent5.Id.ToString(), version.Version);
              Assert.AreEqual(4, matches.Count);
-             Assert.AreEqual("Test", matches[3].Id);
+             Assert.AreEqual("Test", matches[3].MatchId);
         }
     }
 }
