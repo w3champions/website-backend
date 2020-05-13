@@ -98,36 +98,4 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return GateWayStats.FirstOrDefault(g => g.GateWay == gateWay);
         }
     }
-
-    public class GameModeStatsPerGateway
-    {
-        public static GameModeStatsPerGateway Create(GateWay gateway, int season)
-        {
-            return new GameModeStatsPerGateway
-            {
-                GateWay = gateway,
-                Season = season,
-                GameModeStats = new List<GameModeStat>()
-                {
-                    new GameModeStat(GameMode.GM_1v1),
-                    new GameModeStat(GameMode.GM_2v2_AT),
-                    new GameModeStat(GameMode.GM_4v4),
-                    new GameModeStat(GameMode.FFA)
-                }
-            };
-        }
-
-        public GateWay GateWay { get; set; }
-
-        public List<GameModeStat> GameModeStats { get; set; }
-        public int Season { get; set; }
-    }
-
-    public enum GateWay
-    {
-        Undefined = 0,
-        America = 10,
-        Europe = 20,
-        Asia = 30
-    }
 }
