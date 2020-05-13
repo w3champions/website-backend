@@ -39,7 +39,7 @@ namespace W3ChampionsStatisticService.Matches
                     .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                && (m.Team1Players.Contains(playerId) || m.Team2Players.Contains(playerId)))
-                    .SortBy(s => s.Id)
+                    .SortByDescending(s => s.Id)
                     .Skip(offset)
                     .Limit(pageSize)
                     .ToListAsync();
@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.Matches
                             && (gateWay == GateWay.Undefined || m.GateWay == gateWay) &&
                      ((m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
                     || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))))
-                .SortBy(s => s.Id)
+                .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
@@ -116,7 +116,7 @@ namespace W3ChampionsStatisticService.Matches
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
             var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                .SortBy(s => s.Id)
+                .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
