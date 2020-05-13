@@ -138,8 +138,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
             matchFinishedEvent.match.players[0].won = false;
+            matchFinishedEvent.result.players[0].won = false;
             matchFinishedEvent.match.players[1].battleTag = "wolf#456";
             matchFinishedEvent.match.players[1].won = true;
+            matchFinishedEvent.result.players[1].won = true;
 
             matchFinishedEvent.result.players[0].heroes = looserHeroes.Select(h => new Hero { icon = h }).ToList();
             matchFinishedEvent.result.players[1].heroes = winnerHeroes.Select(h => new Hero { icon = h }).ToList();
