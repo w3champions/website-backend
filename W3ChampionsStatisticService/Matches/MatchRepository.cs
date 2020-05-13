@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
@@ -20,7 +21,8 @@ namespace W3ChampionsStatisticService.Matches
             return Upsert(matchup, m => m.MatchId == matchup.MatchId);
         }
 
-        public async Task<List<Matchup>> LoadFor(string playerId,
+        public async Task<List<Matchup>> LoadFor(
+            string playerId,
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
@@ -82,10 +84,10 @@ namespace W3ChampionsStatisticService.Matches
                     || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))));
         }
 
-        public async Task<MatchupDetail> LoadDetails(string id)
+        public async Task<MatchupDetail> LoadDetails(ObjectId id)
         {
-            var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.match.id == id);
-            var match = await LoadFirst<Matchup>(t => t.MatchId == id);
+            var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.Id == id);
+            var match = await LoadFirst<Matchup>(t => t.Id == id);
 
             return new MatchupDetail
             {

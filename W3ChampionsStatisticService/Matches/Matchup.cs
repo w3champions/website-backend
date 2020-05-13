@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Matches
 {

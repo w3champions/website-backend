@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder

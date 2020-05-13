@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 
@@ -31,7 +32,7 @@ namespace W3ChampionsStatisticService.Matches
         [HttpGet("{id}")]
         public async Task<IActionResult> GetMatcheDetails(string id)
         {
-            var match = await _matchRepository.LoadDetails(id);
+            var match = await _matchRepository.LoadDetails(new ObjectId(id));
             return Ok(match);
         }
 

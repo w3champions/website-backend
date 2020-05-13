@@ -6,7 +6,6 @@ using System.Web;
 using Newtonsoft.Json;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
 {

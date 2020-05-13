@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 
@@ -24,7 +25,7 @@ namespace W3ChampionsStatisticService.Ports
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined);
 
-        Task<MatchupDetail> LoadDetails(string id);
+        Task<MatchupDetail> LoadDetails(ObjectId id);
     }
 
     public class MatchupDetail
