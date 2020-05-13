@@ -12,7 +12,12 @@ namespace W3ChampionsStatisticService.Matches
     public class Matchup
     {
         public string Map { get; set; }
+        [JsonIgnore]
         public ObjectId Id { get; set; }
+
+        [JsonPropertyName("id")]
+        public string ObjectId => Id.ToString();
+        [JsonIgnore]
         public string MatchId { get; set; }
         [JsonIgnore]
         public TimeSpan Duration { get; set; }
