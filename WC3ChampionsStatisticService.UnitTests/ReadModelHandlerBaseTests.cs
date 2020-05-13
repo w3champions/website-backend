@@ -75,15 +75,20 @@ namespace WC3ChampionsStatisticService.UnitTests
              var fakeEvent5 = TestDtoHelper.CreateFakeEvent();
 
              fakeEvent1.match.season = 0;
+             fakeEvent1.match.startTime = 5000;
              fakeEvent1.Id = ObjectId.GenerateNewId();
              fakeEvent2.match.season = 0;
+             fakeEvent2.match.startTime = 4000;
              fakeEvent2.Id = ObjectId.GenerateNewId();
              fakeEvent3.match.season = 1;
+             fakeEvent3.match.startTime = 3000;
              fakeEvent3.Id = ObjectId.GenerateNewId();
              fakeEvent4.match.season = 1;
+             fakeEvent4.match.startTime = 2000;
              fakeEvent4.match.id = "Test";
              fakeEvent4.Id = ObjectId.GenerateNewId();
              fakeEvent5.match.season = 0;
+             fakeEvent5.match.startTime = 1000;
              fakeEvent5.Id = ObjectId.GenerateNewId();
 
              await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
