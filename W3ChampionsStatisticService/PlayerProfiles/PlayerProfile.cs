@@ -50,21 +50,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             if (raceStatsPerGateway == null)
             {
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.RnD, GateWay.Asia, season));
-                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Asia, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.UD, GateWay.Asia, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.NE, GateWay.Asia, season));
+                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Asia, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.HU, GateWay.Asia, season));
 
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.RnD, GateWay.Europe, season));
-                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Europe, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.UD, GateWay.Europe, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.NE, GateWay.Europe, season));
+                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Europe, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.HU, GateWay.Europe, season));
 
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.RnD, GateWay.America, season));
-                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.America, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.UD, GateWay.America, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.NE, GateWay.America, season));
+                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.America, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.HU, GateWay.America, season));
             }
             raceStatsPerGateway = RaceStats.Single(g => g.GateWay == gateWay && g.Season == season && g.Race == race);
