@@ -18,8 +18,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            //beta disabled for avatars
-            if (nextEvent.match.season == 0) return;
+            // beta enabled until friday for avatars
+            // if (nextEvent.match.season == 0) return;
 
             foreach (var playerRaw in nextEvent.match.players)
             {
