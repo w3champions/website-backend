@@ -50,21 +50,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             if (raceStatsPerGateway == null)
             {
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.RnD, GateWay.Asia, season));
-                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Asia, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.UD, GateWay.Asia, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.NE, GateWay.Asia, season));
+                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Asia, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.HU, GateWay.Asia, season));
 
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.RnD, GateWay.Europe, season));
-                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Europe, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.UD, GateWay.Europe, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.NE, GateWay.Europe, season));
+                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.Europe, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.HU, GateWay.Europe, season));
 
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.RnD, GateWay.America, season));
-                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.America, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.UD, GateWay.America, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.NE, GateWay.America, season));
+                RaceStats.Insert(0, new RaceWinLossPerGateway(Race.OC, GateWay.America, season));
                 RaceStats.Insert(0, new RaceWinLossPerGateway(Race.HU, GateWay.America, season));
             }
             raceStatsPerGateway = RaceStats.Single(g => g.GateWay == gateWay && g.Season == season && g.Race == race);
@@ -97,37 +97,5 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             return GateWayStats.FirstOrDefault(g => g.GateWay == gateWay);
         }
-    }
-
-    public class GameModeStatsPerGateway
-    {
-        public static GameModeStatsPerGateway Create(GateWay gateway, int season)
-        {
-            return new GameModeStatsPerGateway
-            {
-                GateWay = gateway,
-                Season = season,
-                GameModeStats = new List<GameModeStat>()
-                {
-                    new GameModeStat(GameMode.GM_1v1),
-                    new GameModeStat(GameMode.GM_2v2_AT),
-                    new GameModeStat(GameMode.GM_4v4),
-                    new GameModeStat(GameMode.FFA)
-                }
-            };
-        }
-
-        public GateWay GateWay { get; set; }
-
-        public List<GameModeStat> GameModeStats { get; set; }
-        public int Season { get; set; }
-    }
-
-    public enum GateWay
-    {
-        Undefined = 0,
-        America = 10,
-        Europe = 20,
-        Asia = 30
     }
 }
