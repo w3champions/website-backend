@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 
@@ -12,11 +13,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent.match.id = "nmhcCLaRc7";
+            matchFinishedEvent.Id = ObjectId.GenerateNewId();
             var matchRepository = new MatchRepository(MongoClient);
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent));
 
-            var result = await matchRepository.LoadDetails("nmhcCLaRc7");
+            var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
             Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
         }
 
@@ -25,6 +27,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent.match.id = "nmhcCLaRc7";
+            matchFinishedEvent.Id = ObjectId.GenerateNewId();
             matchFinishedEvent.result.players[0].heroes[0].icon = "Archmage";
             matchFinishedEvent.result.players[1].heroes[0].icon = "Warden";
 
@@ -34,7 +37,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await matchRepository.Insert(new Matchup(matchFinishedEvent));
 
-            var result = await matchRepository.LoadDetails("nmhcCLaRc7");
+            var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
 
             Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
             Assert.AreEqual("Archmage", result.PlayerScores[0].Heroes[0].icon);
