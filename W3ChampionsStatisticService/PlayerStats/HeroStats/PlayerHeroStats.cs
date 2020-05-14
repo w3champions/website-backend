@@ -11,12 +11,15 @@ namespace W3ChampionsStatisticService.PlayerStats.HeroStats
             return new PlayerHeroStats
             {
                 Id = $"{season}_{battleTag}",
+                BattleTag = battleTag,
                 Season = season
             };
         }
 
-        public HeroStatsItemList HeroStatsItemList { get; set; } = HeroStatsItemList.Create();
         public string Id { get; set; }
+
+        public HeroStatsItemList HeroStatsItemList { get; set; } = HeroStatsItemList.Create();
+        public string BattleTag { get; set; }
         public int Season { get; set; }
 
         public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string mapName, bool won)
