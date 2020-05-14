@@ -7,14 +7,15 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService.Ports
 {
     public interface IW3StatsRepo
     {
-        Task<OverallRaceAndWinStats> Load();
-        Task Save(OverallRaceAndWinStats stat);
+        Task<OverallRaceAndWinStat> Load();
+        Task Save(OverallRaceAndWinStat stat);
         Task<GameDay> LoadGamesPerDay(DateTime date);
         Task Save(GameDay stat);
         Task<GameLengthStats> LoadGameLengths();

@@ -10,6 +10,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
@@ -20,12 +21,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
         }
 
-        public Task<OverallRaceAndWinStats> Load()
+        public Task<OverallRaceAndWinStat> Load()
         {
-            return LoadFirst<OverallRaceAndWinStats>(s => s.Id == nameof(OverallRaceAndWinStats));
+            return LoadFirst<OverallRaceAndWinStat>(s => s.Id == nameof(OverallRaceAndWinStat));
         }
 
-        public Task Save(OverallRaceAndWinStats stat)
+        public Task Save(OverallRaceAndWinStat stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }

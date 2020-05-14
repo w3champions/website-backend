@@ -5,6 +5,7 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 {
@@ -30,8 +31,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
                 var players = nextEvent.match.players;
                 var averageMmr = players.Average(p => p.mmr.rating);
 
-                var statOverall = await _w3Stats.Load() ?? new OverallRaceAndWinStats(-1);
-                var statPerMmr = await _w3Stats.Load() ?? new OverallRaceAndWinStats(ToLeagueOrder(averageMmr));
+                var statOverall = await _w3Stats.Load() ?? new OverallRaceAndWinStat(-1);
+                var statPerMmr = await _w3Stats.Load() ?? new OverallRaceAndWinStat(ToLeagueOrder(averageMmr));
 
                 statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won);
                 statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won);
