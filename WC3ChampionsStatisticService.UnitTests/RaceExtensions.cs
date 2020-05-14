@@ -6,7 +6,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 {
     public static class RaceExtensions
     {
-        public static WinLoss GetWinLoss(this RaceOnMapVersusRaceRatio ratio, Race myRace, Race enemyRace, string map)
+        public static WinLoss GetWinLoss(this PlayerRaceOnMapVersusRaceRatio ratio, Race myRace, Race enemyRace, string map)
         {
             return ratio.RaceWinsOnMap
                 .Single(r => r.Race == myRace).WinLossesOnMap

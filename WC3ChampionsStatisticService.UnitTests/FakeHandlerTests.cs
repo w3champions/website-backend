@@ -139,7 +139,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(Race.HU, events[2].match.players[0].race);
 
             // Do complete intergration test now
-            var handler = new PlayerModelHandler(_playerRepository);
+            var handler = new PlayerProfileHandler(_playerRepository);
             foreach (var matchFinishedEvent in events)
             {
                 await handler.Update(matchFinishedEvent);

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
 {
-    public class PlayersOnGameDay
+    public class DistinctPlayersPerDay
     {
         public DateTimeOffset Date { get; set; }
         public long DistinctPlayers => Players.Count;
@@ -12,9 +12,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
         public List<string> Players { get; set; } = new List<string>();
         public string Id => Date.Date.ToString("yyyy-MM-dd");
 
-        public static PlayersOnGameDay Create(DateTimeOffset endTime)
+        public static DistinctPlayersPerDay Create(DateTimeOffset endTime)
         {
-            return new PlayersOnGameDay
+            return new DistinctPlayersPerDay
             {
                 Date = endTime.Date
             };

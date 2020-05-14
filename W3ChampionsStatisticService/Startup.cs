@@ -26,7 +26,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
-using W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats;
+using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
 namespace W3ChampionsStatisticService
 {
@@ -82,22 +82,29 @@ namespace W3ChampionsStatisticService
 
             if (startHandlers == "true")
             {
-                services.AddReadModelService<MatchReadModelHandler>();
-
-                services.AddReadModelService<PlayerModelHandler>();
+                // PlayerProfile
+                services.AddReadModelService<PlayerProfileHandler>();
                 services.AddReadModelService<PlayOverviewHandler>();
-
-                services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
-                services.AddReadModelService<PlayerHeroStatsHandler>();
-                services.AddReadModelService<Wc3StatsModelHandler>();
-                services.AddReadModelService<GamesPerDayModelHandler>();
-                services.AddReadModelService<GameLengthsModelHandler>();
-                services.AddReadModelService<DistinctPlayersPerDayHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
-                services.AddReadModelService<HourOfPlayModelHandler>();
-                services.AddReadModelService<HeroPlayedModelHandler>();
-                services.AddReadModelService<HeroWinRatePerHeroModelHandler>();
-                services.AddReadModelService<PlayerRaceWinModelHandler>();
+
+                // PlayerStats
+                services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
+                services.AddReadModelService<PlayerHeroStatsHandler>();
+                services.AddReadModelService<PlayerRaceWinsModelHandler>();
+
+                // Generell Stats
+                services.AddReadModelService<GamesPerDayHandler>();
+                services.AddReadModelService<GameLengthStatHandler>();
+                services.AddReadModelService<DistinctPlayersPerDayHandler>();
+                services.AddReadModelService<HourOfPlayStatHandler>();
+                services.AddReadModelService<HeroPlayedStatHandler>();
+
+                // Game Balance Stats
+                services.AddReadModelService<OverallRaceAndWinStatHandler>();
+                services.AddReadModelService<OverallHeroWinRatePerHeroModelHandler>();
+
+                // Ladder Syncs
+                services.AddReadModelService<MatchReadModelHandler>();
 
                 services.AddUnversionedReadModelService<RankSyncHandler>();
                 services.AddUnversionedReadModelService<LeagueSyncHandler>();

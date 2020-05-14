@@ -1,6 +1,6 @@
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
+namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
 {
     public class MapToRaceVsRaceRatio
     {

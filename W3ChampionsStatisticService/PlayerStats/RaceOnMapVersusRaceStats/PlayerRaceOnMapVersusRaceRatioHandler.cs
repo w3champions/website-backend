@@ -6,11 +6,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
-    public class RaceOnMapVersusRaceRatioHandler : IReadModelHandler
+    public class PlayerRaceOnMapVersusRaceRatioHandler : IReadModelHandler
     {
         private readonly IPlayerStatsRepository _playerRepository;
 
-        public RaceOnMapVersusRaceRatioHandler(
+        public PlayerRaceOnMapVersusRaceRatioHandler(
             IPlayerStatsRepository playerRepository
             )
         {
@@ -24,9 +24,9 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             if (dataPlayers.Count == 2)
             {
                 var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].battleTag, nextEvent.match.season)
-                         ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[0].battleTag, nextEvent.match.season);
+                         ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[0].battleTag, nextEvent.match.season);
                 var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag, nextEvent.match.season)
-                         ?? RaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag, nextEvent.match.season);
+                         ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag, nextEvent.match.season);
 
                 p1.AddMapWin(dataPlayers[0].race,
                     dataPlayers[1].race,

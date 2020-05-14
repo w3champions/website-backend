@@ -9,9 +9,9 @@ namespace W3ChampionsStatisticService.PlayerStats
 {
     public class PlayerStatsRepository : MongoDbRepositoryBase, IPlayerStatsRepository
     {
-        public Task<RaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag, int season)
+        public Task<PlayerRaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag, int season)
         {
-            return LoadFirst<RaceOnMapVersusRaceRatio>(p => p.Id == battleTag && p.Season == season);
+            return LoadFirst<PlayerRaceOnMapVersusRaceRatio>(p => p.Id == battleTag && p.Season == season);
         }
 
         public Task<PlayerHeroStats> LoadHeroStat(string battleTag, int season)
@@ -19,9 +19,9 @@ namespace W3ChampionsStatisticService.PlayerStats
             return LoadFirst<PlayerHeroStats>(p => p.Id == battleTag && p.Season == season);
         }
 
-        public Task UpsertMapAndRaceStat(RaceOnMapVersusRaceRatio raceOnMapVersusRaceRatio)
+        public Task UpsertMapAndRaceStat(PlayerRaceOnMapVersusRaceRatio playerRaceOnMapVersusRaceRatio)
         {
-            return Upsert(raceOnMapVersusRaceRatio, p => p.Id == raceOnMapVersusRaceRatio.Id && p.Season == raceOnMapVersusRaceRatio.Season);
+            return Upsert(playerRaceOnMapVersusRaceRatio, p => p.Id == playerRaceOnMapVersusRaceRatio.Id && p.Season == playerRaceOnMapVersusRaceRatio.Season);
         }
 
         public Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats)

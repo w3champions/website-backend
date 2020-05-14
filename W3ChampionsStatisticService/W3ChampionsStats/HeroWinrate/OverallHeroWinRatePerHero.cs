@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {
-    public class HeroWinRatePerHero
+    public class OverallHeroWinRatePerHero
     {
         public void RecordGame(bool won, string opponentHeroCombo)
         {
@@ -21,9 +21,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
         public List<HeroWinRate> WinRates { get; set; } = new List<HeroWinRate>();
         public string Id { get; set; }
 
-        public static HeroWinRatePerHero Create(string heroComboId)
+        public static OverallHeroWinRatePerHero Create(string heroComboId)
         {
-            return new HeroWinRatePerHero
+            return new OverallHeroWinRatePerHero
             {
                 Id = heroComboId
             };
