@@ -47,6 +47,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         }
 
+        public async Task<List<int>> LoadMmrs(int season)
+        {
+            var mongoCollection = CreateCollection<PlayerOverview>();
+            var mmrs = await mongoCollection
+                .Find(p => p.Season == season)
+                .Project(p => p.MMR)
+                .ToListAsync();
+            return mmrs;
+        }
+
         public Task<PlayerProfile> LoadPlayer(string battleTag)
         {
             return LoadFirst<PlayerProfile>(p => p.BattleTag == battleTag);

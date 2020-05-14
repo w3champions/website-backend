@@ -1,17 +1,19 @@
 ﻿using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
     [BsonIgnoreExtraElements]
-    public class LeagueConstellationChangedEvent
+    public class LeagueConstellationChangedEvent : ISyncable
     {
         public int id { get; set; }
         public int season { get; set; }
         public GateWay gateway { get; set; }
         public GameMode gameMode { get; set; }
         public LeagueRaw[] leagues { get; set; }
+        public bool wasSyncedJustNow { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -29,7 +31,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
     [BsonIgnoreExtraElements]
     [BsonNoId]
-    public class RankingChangedEvent
+    public class RankingChangedEvent : ISyncable
     {
         [BsonElement("_id")]
         public int id { get; set; }

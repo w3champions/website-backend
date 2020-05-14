@@ -26,6 +26,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
 namespace W3ChampionsStatisticService
@@ -69,6 +70,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<HeroStatsQueryHandler>();
             services.AddSingleton<PersonalSettingsCommandHandler>();
             services.AddSingleton<PlayerQueryHandler>();
+            services.AddSingleton<MmrDistributionHandler>();
 
             if (startPadSync == "true")
             {

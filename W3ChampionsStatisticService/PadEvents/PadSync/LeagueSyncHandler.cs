@@ -35,8 +35,6 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             {
                 await _rankRepository.UpsertSeason(new Season(leagueConstellations.Max(l => l.Season)));
             }
-
-            await Task.Delay(60000);
         }
     }
 }
