@@ -5,11 +5,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
-    public class PlayerRaceWinModelHandler : IReadModelHandler
+    public class PlayerRaceWinsModelHandler : IReadModelHandler
     {
         private readonly IPersonalSettingsRepository _playerRepository;
 
-        public PlayerRaceWinModelHandler(
+        public PlayerRaceWinsModelHandler(
             IPersonalSettingsRepository playerRepository
             )
         {

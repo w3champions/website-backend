@@ -4,13 +4,13 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
+namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 {
-    public class HourOfPlayModelHandler : IReadModelHandler
+    public class GamesPerDayHandler : IReadModelHandler
     {
         private readonly IW3StatsRepo _w3Stats;
 
-        public HourOfPlayModelHandler(
+        public GamesPerDayHandler(
             IW3StatsRepo w3Stats
             )
         {
@@ -20,9 +20,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
-            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStats.Create();
-            var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
-            stat.Apply(nextEvent.match.gameMode, startTime);
+            var match = nextEvent.match;
+            var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime).Date;
+
+            var stat = await _w3Stats.LoadGamesPerDay(endTime) ?? GamesPerDay.Create(endTime);
+
+            stat.AddGame();
+
             await _w3Stats.Save(stat);
         }
     }

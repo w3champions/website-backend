@@ -2,11 +2,18 @@ using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
+namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
 {
-    public class Wc3Stats
+    public class OverallRaceAndWinStat
     {
-        public string Id => nameof(Wc3Stats);
+        public int MmrRange { get; set; }
+
+        public OverallRaceAndWinStat(int mmrRange)
+        {
+            MmrRange = mmrRange;
+        }
+
+        public int Id => MmrRange;
 
         public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();
 

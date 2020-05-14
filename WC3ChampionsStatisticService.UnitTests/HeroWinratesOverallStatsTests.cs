@@ -14,7 +14,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task HappyPath()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var handler = new HeroWinRatePerHeroModelHandler(w3StatsRepo);
+            var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
             var matchFinishedEvent = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
 
@@ -36,7 +36,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task HappyPath_MoreGames()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var handler = new HeroWinRatePerHeroModelHandler(w3StatsRepo);
+            var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
             var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
             var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
@@ -68,7 +68,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task HappyPath_MoreGames_DtoHasCorrectSums()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var handler = new HeroWinRatePerHeroModelHandler(w3StatsRepo);
+            var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
             var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
             var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
@@ -93,7 +93,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task HappyPath_MoreGames_DtoHasCorrectSums_IgnoreSecondHero()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var handler = new HeroWinRatePerHeroModelHandler(w3StatsRepo);
+            var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
             var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
             var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
@@ -118,7 +118,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task MoreGames_MirrorBug()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var handler = new HeroWinRatePerHeroModelHandler(w3StatsRepo);
+            var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
             await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));
             await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));

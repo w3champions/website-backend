@@ -64,7 +64,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerMultipleWinRecords()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var handler = new PlayerModelHandler(playerRepository);
+            var handler = new PlayerProfileHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";

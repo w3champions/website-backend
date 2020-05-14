@@ -28,8 +28,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         [HttpGet("map-race-wins")]
         public async Task<IActionResult> GetRaceVersusRaceStat()
         {
-            var stats = await _w3StatsRepo.Load();
-            return Ok(stats.StatsPerModes);
+            var stats = await _w3StatsRepo.LoadRaceVsRaceStats();
+            return Ok(stats);
         }
 
         [HttpGet("games-per-day")]

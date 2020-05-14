@@ -18,7 +18,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
+            var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
 
@@ -30,7 +30,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
+            var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
             player.AddMapWin(Race.HU, Race.UD, "TM", true);
             player.AddMapWin(Race.HU, Race.OC, "EI", true);
             player.AddMapWin(Race.HU, Race.UD, "TM", false);
@@ -49,7 +49,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
+            var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
             player.AddMapWin(Race.RnD, Race.UD, "TM", true);
             player.AddMapWin(Race.HU, Race.RnD, "EI", false);
 
@@ -65,7 +65,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
-            var player = RaceOnMapVersusRaceRatio.Create("peter#123", 0);
+            var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
             player.AddMapWin(Race.HU, Race.UD, "TM", true);
             player.AddMapWin(Race.NE, Race.UD, "TM", true);
             player.AddMapWin(Race.OC, Race.UD, "TM", true);

@@ -5,7 +5,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
 {
-    public class GameLengthStats
+    public class GameLengthStat
     {
         public void Apply(GameMode gameMode, TimeSpan duration)
         {
@@ -14,11 +14,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
         }
 
         public List<GameLengthPerMode> GameLengths { get; set; } = new List<GameLengthPerMode>();
-        public string Id { get; set; } = nameof(GameLengthStats);
+        public string Id { get; set; } = nameof(GameLengthStat);
 
-        public static GameLengthStats Create()
+        public static GameLengthStat Create()
         {
-            return new GameLengthStats
+            return new GameLengthStat
             {
                 GameLengths = new List<GameLengthPerMode>
                 {
