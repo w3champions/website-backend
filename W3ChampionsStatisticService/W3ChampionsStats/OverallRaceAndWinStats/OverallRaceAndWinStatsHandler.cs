@@ -5,9 +5,8 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
-using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
+namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
 {
     public class OverallRaceAndWinStatsHandler : IReadModelHandler
     {
@@ -47,13 +46,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 
         private int ToLeagueOrder(double averageMmr)
         {
-            if (averageMmr > 2200) return 0;
-            if (averageMmr > 1800) return 1;
-            if (averageMmr > 1600) return 2;
-            if (averageMmr > 1400) return 3;
-            if (averageMmr > 1200) return 4;
-            if (averageMmr > 1000) return 5;
-            return 6;
+            if (averageMmr > 2200) return 2200;
+            if (averageMmr > 2000) return 2000;
+            if (averageMmr > 1800) return 1800;
+            if (averageMmr > 1600) return 1600;
+            if (averageMmr > 1400) return 1400;
+            if (averageMmr > 1200) return 1200;
+            return 1000;
         }
     }
 }
