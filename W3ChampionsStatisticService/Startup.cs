@@ -89,7 +89,7 @@ namespace W3ChampionsStatisticService
 
                 services.AddReadModelService<RaceOnMapVersusRaceRatioHandler>();
                 services.AddReadModelService<PlayerHeroStatsHandler>();
-                services.AddReadModelService<Wc3StatsModelHandler>();
+                services.AddReadModelService<OverallRaceAndWinStatsHandler>();
                 services.AddReadModelService<GamesPerDayModelHandler>();
                 services.AddReadModelService<GameLengthsModelHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();

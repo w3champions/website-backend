@@ -8,11 +8,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 {
-    public class Wc3StatsModelHandler : IReadModelHandler
+    public class OverallRaceAndWinStatsHandler : IReadModelHandler
     {
         private readonly IW3StatsRepo _w3Stats;
 
-        public Wc3StatsModelHandler(
+        public OverallRaceAndWinStatsHandler(
             IW3StatsRepo w3Stats
             )
         {
@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {
-                var stat = await _w3Stats.Load() ?? new Wc3Stats();
+                var stat = await _w3Stats.Load() ?? new OverallRaceAndWinStats();
                 var players = nextEvent.match.players;
 
                 stat.Apply("Overall", players[0].race, players[1].race, players[0].won);

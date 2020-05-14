@@ -20,12 +20,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
         }
 
-        public Task<Wc3Stats> Load()
+        public Task<OverallRaceAndWinStats> Load()
         {
-            return LoadFirst<Wc3Stats>(s => s.Id == nameof(Wc3Stats));
+            return LoadFirst<OverallRaceAndWinStats>(s => s.Id == nameof(OverallRaceAndWinStats));
         }
 
-        public Task Save(Wc3Stats stat)
+        public Task Save(OverallRaceAndWinStats stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }

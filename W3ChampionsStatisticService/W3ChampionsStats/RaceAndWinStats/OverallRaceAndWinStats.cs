@@ -4,9 +4,9 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 {
-    public class Wc3Stats
+    public class OverallRaceAndWinStats
     {
-        public string Id => nameof(Wc3Stats);
+        public string Id => nameof(OverallRaceAndWinStats);
 
         public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();
 

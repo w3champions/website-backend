@@ -13,8 +13,8 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IW3StatsRepo
     {
-        Task<Wc3Stats> Load();
-        Task Save(Wc3Stats stat);
+        Task<OverallRaceAndWinStats> Load();
+        Task Save(OverallRaceAndWinStats stat);
         Task<GameDay> LoadGamesPerDay(DateTime date);
         Task Save(GameDay stat);
         Task<GameLengthStats> LoadGameLengths();
