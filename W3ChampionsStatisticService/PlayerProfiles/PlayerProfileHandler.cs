@@ -5,11 +5,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class PlayerModelHandler : IReadModelHandler
+    public class PlayerProfileHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public PlayerModelHandler(
+        public PlayerProfileHandler(
             IPlayerRepository playerRepository
             )
         {

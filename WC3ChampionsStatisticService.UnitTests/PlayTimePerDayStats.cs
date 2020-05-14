@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void PlayTimesPerDay()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
 
@@ -27,7 +27,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void PlayTimesPerDayOneHourOff()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddHours(-1), dateTime);
 
@@ -38,7 +38,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void PlayTimesPerDayOneDayAfterInterval()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(1), dateTime.AddDays(1));
 
@@ -49,7 +49,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void PlayTimesPerDay_Average()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-1), dateTime);
@@ -64,7 +64,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void PlayTimesPerDay_TooOldGame()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-15), dateTime);
 
@@ -75,7 +75,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void PlayTimesPerDay_TooOldGame_On14Days()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-14), dateTime);
 
@@ -87,7 +87,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
         {
             var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStats.Create(dateTime);
+            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
             await w3StatsRepo.Save(hourOfPlayStats);

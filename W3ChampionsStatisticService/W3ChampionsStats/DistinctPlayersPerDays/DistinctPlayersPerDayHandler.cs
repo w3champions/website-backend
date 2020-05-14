@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
             var match = nextEvent.match;
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime).Date;
 
-            var stat = await _w3Stats.LoadPlayersPerDay(endTime) ?? PlayersOnGameDay.Create(endTime);
+            var stat = await _w3Stats.LoadPlayersPerDay(endTime) ?? DistinctPlayersPerDay.Create(endTime);
 
             foreach (var player in match.players)
             {

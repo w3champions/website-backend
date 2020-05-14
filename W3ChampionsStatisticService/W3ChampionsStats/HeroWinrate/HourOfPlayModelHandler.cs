@@ -9,11 +9,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {
-    public class HeroWinRatePerHeroModelHandler : IReadModelHandler
+    public class OverallHeroWinRatePerHeroModelHandler : IReadModelHandler
     {
         private readonly IW3StatsRepo _w3Stats;
 
-        public HeroWinRatePerHeroModelHandler(
+        public OverallHeroWinRatePerHeroModelHandler(
             IW3StatsRepo w3Stats
             )
         {
@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
         private async Task UpdateStat(string heroComboIdWinner, string heroComboIdLooser, bool won)
         {
             var winnerWinrate = await _w3Stats.LoadHeroWinrate(heroComboIdWinner) ??
-                                HeroWinRatePerHero.Create(heroComboIdWinner);
+                                OverallHeroWinRatePerHero.Create(heroComboIdWinner);
             winnerWinrate.RecordGame(won, heroComboIdLooser);
             await _w3Stats.Save(winnerWinrate);
         }

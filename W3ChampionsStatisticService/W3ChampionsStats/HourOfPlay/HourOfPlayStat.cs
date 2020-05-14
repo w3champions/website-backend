@@ -5,11 +5,11 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
-    public class HourOfPlayStats
+    public class HourOfPlayStat
     {
         public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
         public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
-        public string Id { get; set; } = nameof(HourOfPlayStats);
+        public string Id { get; set; } = nameof(HourOfPlayStat);
 
         public void Apply(GameMode gameMode, DateTimeOffset timeOfGame, DateTimeOffset now = default)
         {
@@ -70,7 +70,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             };
         }
 
-        public static HourOfPlayStats Create(DateTimeOffset time = default)
+        public static HourOfPlayStat Create(DateTimeOffset time = default)
         {
             time = time == default ? DateTime.UtcNow.Date : time;
 
@@ -80,7 +80,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             AddDay(average, GameMode.GM_4v4, 0, time);
             AddDay(average, GameMode.FFA, 0, time);
 
-            return new HourOfPlayStats
+            return new HourOfPlayStat
             {
                 PlayTimesPerModeTwoWeeks = Create14DaysOfPlaytime(time),
                 PlayTimesPerMode = average

@@ -31,7 +31,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
                 if (second != "none") searchString += $"_{second}";
                 if (third != "none") searchString += $"_{third}";
                 var stats = await _w3StatsRepo.LoadHeroWinrate(searchString);
-                return HeroWinrateDto(new List<HeroWinRatePerHero> {stats}, opFirst, opSecond, opThird);
+                return HeroWinrateDto(new List<OverallHeroWinRatePerHero> {stats}, opFirst, opSecond, opThird);
             }
             else
             {
@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
             }
         }
 
-        private WinLoss HeroWinrateDto(List<HeroWinRatePerHero> stats, string opFirst, string opSecond, string opThird)
+        private WinLoss HeroWinrateDto(List<OverallHeroWinRatePerHero> stats, string opFirst, string opSecond, string opThird)
         {
             if (opFirst == "all" && opSecond == "none") return CombineWinrates(stats, s => s.HeroCombo.Split("_").Length == 1);
             if (opFirst == "all" && opSecond == "all" && opThird == "none") return CombineWinrates(stats, s => s.HeroCombo.Split("_").Length == 2);
@@ -56,7 +56,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
         }
 
         private WinLoss CombineWinrates(
-            List<HeroWinRatePerHero> stats,
+            List<OverallHeroWinRatePerHero> stats,
             Func<HeroWinRate, bool> func)
         {
             var winrates = stats.SelectMany(s => s.WinRates).Where(func).ToList();

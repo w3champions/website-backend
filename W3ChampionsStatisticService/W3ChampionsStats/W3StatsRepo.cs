@@ -35,40 +35,40 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<GameDay> LoadGamesPerDay(DateTime date)
+        public Task<GamesPerDay> LoadGamesPerDay(DateTime date)
         {
-            return LoadFirst<GameDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
+            return LoadFirst<GamesPerDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
         }
 
-        public Task Save(GameDay stat)
-        {
-            return Upsert(stat, s => s.Id == stat.Id);
-        }
-
-        public Task<GameLengthStats> LoadGameLengths()
-        {
-            return LoadFirst<GameLengthStats>(s => s.Id == nameof(GameLengthStats));
-        }
-
-        public Task Save(GameLengthStats stat)
+        public Task Save(GamesPerDay stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<PlayersOnGameDay> LoadPlayersPerDay(DateTime date)
+        public Task<GameLengthStat> LoadGameLengths()
         {
-            return LoadFirst<PlayersOnGameDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
+            return LoadFirst<GameLengthStat>(s => s.Id == nameof(GameLengthStat));
         }
 
-        public Task Save(PlayersOnGameDay stat)
+        public Task Save(GameLengthStat stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public async Task<List<PlayersOnGameDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
+        public Task<DistinctPlayersPerDay> LoadPlayersPerDay(DateTime date)
+        {
+            return LoadFirst<DistinctPlayersPerDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
+        }
+
+        public Task Save(DistinctPlayersPerDay stat)
+        {
+            return Upsert(stat, s => s.Id == stat.Id);
+        }
+
+        public async Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
         {
             var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<PlayersOnGameDay>(nameof(PlayersOnGameDay));
+            var mongoCollection = mongoDatabase.GetCollection<DistinctPlayersPerDay>(nameof(DistinctPlayersPerDay));
 
             var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
                 .SortByDescending(s => s.Date)
@@ -77,10 +77,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return stats;
         }
 
-        public async Task<List<GameDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to)
+        public async Task<List<GamesPerDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to)
         {
             var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<GameDay>(nameof(GameDay));
+            var mongoCollection = mongoDatabase.GetCollection<GamesPerDay>(nameof(GamesPerDay));
 
             var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
                 .SortByDescending(s => s.Date)
@@ -89,12 +89,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return stats;
         }
 
-        public Task<HourOfPlayStats> LoadHourOfPlay()
+        public Task<HourOfPlayStat> LoadHourOfPlay()
         {
-            return LoadFirst<HourOfPlayStats>(s => s.Id == nameof(HourOfPlayStats));
+            return LoadFirst<HourOfPlayStat>(s => s.Id == nameof(HourOfPlayStat));
         }
 
-        public Task Save(HourOfPlayStats stat)
+        public Task Save(HourOfPlayStat stat)
         {
             return Upsert(stat, s => s.Id == stat.Id);
         }
@@ -109,19 +109,19 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<HeroWinRatePerHero> LoadHeroWinrate(string heroComboId)
+        public Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId)
         {
-            return LoadFirst<HeroWinRatePerHero>(h => h.Id == heroComboId);
+            return LoadFirst<OverallHeroWinRatePerHero>(h => h.Id == heroComboId);
         }
 
-        public Task<List<HeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
+        public Task<List<OverallHeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
         {
-            return Load<HeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
+            return Load<OverallHeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
         }
 
-        public Task Save(HeroWinRatePerHero heroWinrate)
+        public Task Save(OverallHeroWinRatePerHero overallHeroWinrate)
         {
-            return Upsert(heroWinrate, h => h.Id == heroWinrate.Id);
+            return Upsert(overallHeroWinrate, h => h.Id == overallHeroWinrate.Id);
         }
     }
 }

@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task HappyPath()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var heroPlayedModelHandler = new HeroPlayedModelHandler(w3StatsRepo);
+            var heroPlayedModelHandler = new HeroPlayedStatHandler(w3StatsRepo);
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 

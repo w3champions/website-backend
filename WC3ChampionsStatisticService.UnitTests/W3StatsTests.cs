@@ -23,7 +23,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.endTime = 1585701559200;
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var gamesPerDay = new GamesPerDayModelHandler(w3StatsRepo);
+            var gamesPerDay = new GamesPerDayHandler(w3StatsRepo);
             await gamesPerDay.Update(fakeEvent);
             await gamesPerDay.Update(fakeEvent);
 
@@ -35,7 +35,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void GameLengtStatsBelow30s()
         {
-            var gameLengthStats = GameLengthStats.Create();
+            var gameLengthStats = GameLengthStat.Create();
             gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(0, 0, 20));
 
             Assert.AreEqual(1, gameLengthStats.GameLengths[0].Lengths[0].Games);
@@ -45,7 +45,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void GameLengtStatsLongetThan1hour()
         {
-            var gameLengthStats = GameLengthStats.Create();
+            var gameLengthStats = GameLengthStat.Create();
             gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(1, 5, 20));
 
             Assert.AreEqual(1, gameLengthStats.GameLengths[0].Lengths[120].Games);
@@ -56,9 +56,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task DistincPlayerPerDay()
         {
             var time1 = new DateTime(2020, 10, 17);
-            var gamesPerDay1 = PlayersOnGameDay.Create(new DateTimeOffset(time1));
+            var gamesPerDay1 = DistinctPlayersPerDay.Create(new DateTimeOffset(time1));
             var time2 = new DateTime(2020, 10, 16);
-            var gamesPerDay2 = PlayersOnGameDay.Create(new DateTimeOffset(time2));
+            var gamesPerDay2 = DistinctPlayersPerDay.Create(new DateTimeOffset(time2));
             gamesPerDay1.AddPlayer("peter");
             gamesPerDay1.AddPlayer("wolf");
             gamesPerDay2.AddPlayer("peter");
@@ -93,7 +93,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await InsertMatchEvents(new List<MatchFinishedEvent> {fakeEvent1, fakeEvent2});
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var overallRaceAndWinStatsHandler = new OverallRaceAndWinStatsHandler(w3StatsRepo);
+            var overallRaceAndWinStatsHandler = new OverallRaceAndWinStatHandler(w3StatsRepo);
 
             await overallRaceAndWinStatsHandler.Update(fakeEvent1);
             await overallRaceAndWinStatsHandler.Update(fakeEvent2);

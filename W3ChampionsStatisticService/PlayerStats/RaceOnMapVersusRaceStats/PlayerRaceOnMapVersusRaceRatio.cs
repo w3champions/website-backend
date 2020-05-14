@@ -2,11 +2,11 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
-    public class RaceOnMapVersusRaceRatio
+    public class PlayerRaceOnMapVersusRaceRatio
     {
-        public static RaceOnMapVersusRaceRatio Create(string battleTag, int season)
+        public static PlayerRaceOnMapVersusRaceRatio Create(string battleTag, int season)
         {
-            return new RaceOnMapVersusRaceRatio
+            return new PlayerRaceOnMapVersusRaceRatio
             {
                 Id = battleTag,
                 Season = season
