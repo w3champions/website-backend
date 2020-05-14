@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -45,23 +46,28 @@ namespace W3ChampionsStatisticService.PadEvents
             await mongoCollection.InsertManyAsync(matchFinishedEvent);
         }
 
-        public async Task<List<RankingChangedEvent>> CheckoutForRead()
+        public Task<List<RankingChangedEvent>> CheckoutForRead()
         {
-            var mongoCollection = CreateCollection<RankingChangedEvent>();
+            return Checkout<RankingChangedEvent>();
+        }
+
+        private async Task<List<T>> Checkout<T>() where T: ISyncable
+        {
+            var mongoCollection = CreateCollection<T>();
             var ids = await mongoCollection
                 .Find(p => !p.wasSyncedJustNow)
                 .Project(p => p.id)
                 .ToListAsync();
-            var filterDefinition = Builders<RankingChangedEvent>.Filter.In(e => e.id, ids);
-            var updateDefinition = Builders<RankingChangedEvent>.Update.Set(e => e.wasSyncedJustNow, true);
+            var filterDefinition = Builders<T>.Filter.In(e => e.id, ids);
+            var updateDefinition = Builders<T>.Update.Set(e => e.wasSyncedJustNow, true);
             await mongoCollection.UpdateManyAsync(filterDefinition, updateDefinition);
-            var ranks = await LoadAll<RankingChangedEvent>(r => ids.Contains(r.id));
-            return ranks;
+            var items = await LoadAll<T>(r => ids.Contains(r.id));
+            return items;
         }
 
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged()
         {
-            return LoadAll<LeagueConstellationChangedEvent>();
+            return Checkout<LeagueConstellationChangedEvent>();
         }
     }
 }

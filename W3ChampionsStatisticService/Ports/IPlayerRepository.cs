@@ -14,5 +14,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season);
         Task UpsertWins(List<PlayerWinLoss> winrate);
         Task<List<string>> LoadAllIds();
+        Task<List<int>> LoadMmrs(int season);
     }
 }

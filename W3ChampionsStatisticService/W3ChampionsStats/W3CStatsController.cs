@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
@@ -12,11 +13,16 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
     {
         private readonly IW3StatsRepo _w3StatsRepo;
         private readonly HeroStatsQueryHandler _heroStatsQueryHandler;
+        private readonly IPlayerRepository _playerRepository;
 
-        public W3CStatsController(IW3StatsRepo w3StatsRepo, HeroStatsQueryHandler heroStatsQueryHandler)
+        public W3CStatsController(
+            IW3StatsRepo w3StatsRepo,
+            HeroStatsQueryHandler heroStatsQueryHandler,
+            IPlayerRepository playerRepository)
         {
             _w3StatsRepo = w3StatsRepo;
             _heroStatsQueryHandler = heroStatsQueryHandler;
+            _playerRepository = playerRepository;
         }
 
         [HttpGet("map-race-wins")]
@@ -76,6 +82,17 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             to = to != default ? to : DateTimeOffset.MaxValue;
             var stats = await _w3StatsRepo.LoadPlayersPerDayBetween(from, to);
             return Ok(stats);
+        }
+
+        [HttpGet("mmr-distribution")]
+        public async Task<IActionResult> GetMmrDistribution(int season)
+        {
+            var mmrs = await _playerRepository.LoadMmrs(season);
+            var ranges = new[] { 2200, 2000, 1800, 1600, 1400, 1200 };
+            var grouped = ranges.Select(r => new {
+                Mmr = r,
+                Count = mmrs.Count(x => x >= r) });
+            return Ok(grouped);
         }
     }
 }
