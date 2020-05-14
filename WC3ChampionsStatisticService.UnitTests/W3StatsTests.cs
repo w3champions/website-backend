@@ -102,7 +102,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(3, result.Count);
 
-            Assert.AreEqual(-1, result[0].MmrRange);
+            Assert.AreEqual(0, result[0].MmrRange);
             Assert.AreEqual(1200, result[1].MmrRange);
             Assert.AreEqual(1800, result[2].MmrRange);
         }
