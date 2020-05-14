@@ -20,9 +20,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-            Assert.AreEqual(player.Id, playerLoaded.Id);
+            Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
         }
 
         [Test]
@@ -36,7 +36,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             player.AddMapWin(Race.HU, Race.UD, "TM", false);
 
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
 
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM").Wins);
@@ -54,7 +54,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             player.AddMapWin(Race.HU, Race.RnD, "EI", false);
 
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, "TM").Wins);
             Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "EI").Losses);
@@ -71,7 +71,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             player.AddMapWin(Race.OC, Race.UD, "TM", true);
 
             await playerRepository.UpsertMapAndRaceStat(player);
-            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.Id, 0);
+            var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
             Assert.AreEqual(3, playerLoaded.GetWinLoss(Race.Total, Race.UD, "TM").Wins);
         }
@@ -103,7 +103,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var enemyNeHeroStats = await playerRepository.LoadHeroStat(enemyNePlayer.battleTag, 0);
 
             // *** Player hero stats
-            Assert.AreEqual(player.battleTag, playerHeroStats.Id);
+            Assert.AreEqual(player.battleTag, playerHeroStats.BattleTag);
             Assert.AreEqual(2, playerHeroStats.HeroStatsItemList.Count);
 
             // Archmage Stats
@@ -150,7 +150,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag, 0);
 
-            Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.Id);
+            Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.BattleTag);
             Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
 
             var enemyHeroStats = GetHeroStatsForRaceAndMap(enemyHerosStats, "enemyhero", enemyRace, "Overall");
@@ -181,7 +181,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var enemyHerosStats = await playerRepository.LoadHeroStat(enemyPlayer.battleTag, 0);
 
-            Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.Id);
+            Assert.AreEqual(enemyPlayer.battleTag, enemyHerosStats.BattleTag);
             Assert.AreEqual(1, enemyHerosStats.HeroStatsItemList.Count);
 
             var enemyHeroStats = GetHeroStatsForRaceAndMap(enemyHerosStats, "enemyhero", enemyRace, "Overall");

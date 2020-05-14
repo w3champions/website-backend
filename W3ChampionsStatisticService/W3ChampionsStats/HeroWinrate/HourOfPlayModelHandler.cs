@@ -26,6 +26,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
                 || nextEvent.match.gameMode != GameMode.GM_1v1
                 || nextEvent.match.players.All(p => p.won)
                 || nextEvent.match.players.All(p => !p.won)
+                || nextEvent.result.players.Count != 2
                 || nextEvent.result.players.Any(p => p.heroes.Count == 0)) return;
 
             var heroComboIdWinner = ExtractHeroComboId(nextEvent, p => p.won);

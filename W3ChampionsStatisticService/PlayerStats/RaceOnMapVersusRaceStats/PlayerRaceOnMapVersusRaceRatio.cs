@@ -8,13 +8,15 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
         {
             return new PlayerRaceOnMapVersusRaceRatio
             {
-                Id = battleTag,
+                Id = $"{season}_{battleTag}",
+                BattleTag = battleTag,
                 Season = season
             };
         }
 
-        public MapWinsPerRaceList RaceWinsOnMap { get; set; } = MapWinsPerRaceList.Create();
         public string Id { get; set; }
+        public MapWinsPerRaceList RaceWinsOnMap { get; set; } = MapWinsPerRaceList.Create();
+        public string BattleTag { get; set; }
         public int Season { get; set; }
 
         public void AddMapWin(Race myRace, Race enemyRace, string mapName, bool won)
