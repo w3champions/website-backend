@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
                 var players = nextEvent.match.players;
                 var averageMmr = players.Average(p => p.mmr.rating);
 
-                var statOverall = await _w3Stats.LoadRaceVsRaceStat(-1) ?? new OverallRaceAndWinStat(-1);
+                var statOverall = await _w3Stats.LoadRaceVsRaceStat(0) ?? new OverallRaceAndWinStat(0);
                 var statPerMmr = await _w3Stats.LoadRaceVsRaceStat(ToMaxMMr(averageMmr)) ?? new OverallRaceAndWinStat(ToMaxMMr(averageMmr));
 
                 statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won);
