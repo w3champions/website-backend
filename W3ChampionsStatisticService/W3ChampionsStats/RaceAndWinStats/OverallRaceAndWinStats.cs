@@ -6,6 +6,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 {
     public class OverallRaceAndWinStats
     {
+        public int LeagueOrder { get; set; }
+
+        public OverallRaceAndWinStats(int leagueOrder)
+        {
+            LeagueOrder = leagueOrder;
+        }
+
         public string Id => nameof(OverallRaceAndWinStats);
 
         public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();

@@ -27,17 +27,32 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.RaceAndWinStats
 
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {
-                var stat = await _w3Stats.Load() ?? new OverallRaceAndWinStats();
                 var players = nextEvent.match.players;
+                var averageMmr = players.Average(p => p.mmr.rating);
 
-                stat.Apply("Overall", players[0].race, players[1].race, players[0].won);
-                stat.Apply("Overall", players[1].race, players[0].race, players[1].won);
+                var statOverall = await _w3Stats.Load() ?? new OverallRaceAndWinStats(-1);
+                var statPerMmr = await _w3Stats.Load() ?? new OverallRaceAndWinStats(ToLeagueOrder(averageMmr));
 
-                stat.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won);
-                stat.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won);
+                statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won);
+                statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won);
 
-                await _w3Stats.Save(stat);
+                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won);
+                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won);
+
+                await _w3Stats.Save(statOverall);
+                await _w3Stats.Save(statPerMmr);
             }
+        }
+
+        private int ToLeagueOrder(double averageMmr)
+        {
+            if (averageMmr > 2200) return 0;
+            if (averageMmr > 1800) return 1;
+            if (averageMmr > 1600) return 2;
+            if (averageMmr > 1400) return 3;
+            if (averageMmr > 1200) return 4;
+            if (averageMmr > 1000) return 5;
+            return 6;
         }
     }
 }
