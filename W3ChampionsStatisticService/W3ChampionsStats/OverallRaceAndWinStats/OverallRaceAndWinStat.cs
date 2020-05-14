@@ -13,7 +13,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
             MmrRange = mmrRange;
         }
 
-        public string Id => $"MMR_{MmrRange.ToString()}";
+        public int Id => MmrRange;
 
         public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();
 

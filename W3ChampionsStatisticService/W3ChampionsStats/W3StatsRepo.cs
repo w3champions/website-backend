@@ -20,9 +20,14 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
         }
 
-        public Task<OverallRaceAndWinStat> Load()
+        public Task<List<OverallRaceAndWinStat>> LoadRaceVsRaceStats()
         {
-            return LoadFirst<OverallRaceAndWinStat>(s => s.Id == nameof(OverallRaceAndWinStat));
+            return LoadAll<OverallRaceAndWinStat>();
+        }
+
+        public Task<OverallRaceAndWinStat> LoadRaceVsRaceStat(int mmrRange)
+        {
+            return LoadFirst<OverallRaceAndWinStat>(m => m.Id == mmrRange);
         }
 
         public Task Save(OverallRaceAndWinStat stat)

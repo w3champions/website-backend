@@ -30,8 +30,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
                 var players = nextEvent.match.players;
                 var averageMmr = players.Average(p => p.mmr.rating);
 
-                var statOverall = await _w3Stats.Load() ?? new OverallRaceAndWinStat(-1);
-                var statPerMmr = await _w3Stats.Load() ?? new OverallRaceAndWinStat(ToLeagueOrder(averageMmr));
+                var statOverall = await _w3Stats.LoadRaceVsRaceStat(-1) ?? new OverallRaceAndWinStat(-1);
+                var statPerMmr = await _w3Stats.LoadRaceVsRaceStat(ToMaxMMr(averageMmr)) ?? new OverallRaceAndWinStat(ToMaxMMr(averageMmr));
 
                 statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won);
                 statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won);
@@ -44,7 +44,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
             }
         }
 
-        private int ToLeagueOrder(double averageMmr)
+        private int ToMaxMMr(double averageMmr)
         {
             if (averageMmr > 2200) return 2200;
             if (averageMmr > 2000) return 2000;
