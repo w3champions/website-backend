@@ -34,9 +34,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
                 var statPerMmr = await _w3Stats.LoadRaceVsRaceStat(ToMaxMMr(averageMmr)) ?? new OverallRaceAndWinStat(ToMaxMMr(averageMmr));
 
                 statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won);
-                statPerMmr.Apply("Overall", players[1].race, players[0].race, players[1].won);
+                statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won);
 
                 statOverall.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won);
+                statOverall.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won);
+
+                statPerMmr.Apply("Overall", players[0].race, players[1].race, players[0].won);
+                statPerMmr.Apply("Overall", players[1].race, players[0].race, players[1].won);
+
+                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won);
                 statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won);
 
                 await _w3Stats.Save(statOverall);
