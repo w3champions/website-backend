@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.PlayerStats.HeroStats
         {
             return new PlayerHeroStats
             {
-                Id = battleTag,
+                Id = $"{season}_{battleTag}",
                 Season = season
             };
         }

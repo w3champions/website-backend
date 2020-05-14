@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
         {
             return new PlayerRaceOnMapVersusRaceRatio
             {
-                Id = battleTag,
+                Id = $"{season}_{battleTag}",
                 Season = season
             };
         }
