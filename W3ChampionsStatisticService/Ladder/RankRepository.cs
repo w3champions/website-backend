@@ -35,16 +35,16 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Season == season);
         }
 
-        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
+        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
+            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search));
             return joinWith;
         }
 
-        public Task<List<LeagueConstellation>> LoadLeagueConstellation(int season)
+        public Task<List<LeagueConstellation>> LoadLeagueConstellation(int? season = null)
         {
-            return LoadAll<LeagueConstellation>(l => l.Season == season);
+            return LoadAll<LeagueConstellation>(l => season == null || l.Season == season);
         }
 
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)
