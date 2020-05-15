@@ -9,6 +9,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerProfile
     {
+        private List<Season> _participatedInSeasons = new List<Season>();
+
         public static PlayerProfile Create(string battleTag)
         {
             return new PlayerProfile
@@ -23,7 +25,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
-        public List<Season> ParticipatedInSeasons { get; set; } = new List<Season>();
+
+        // do this until sorted everywhere
+        public List<Season> ParticipatedInSeasons
+        {
+            get => _participatedInSeasons.OrderByDescending(s => s.Id).ToList();
+            set => _participatedInSeasons = value;
+        }
+
         public List<RaceWinLossPerGateway> RaceStats { get; set; }
         public List<GameModeStatsPerGateway> GateWayStats { get; set; }
 
@@ -43,9 +52,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             {
                 ParticipatedInSeasons.Insert(0, new Season(season));
             }
-
-            // do this a few days
-            ParticipatedInSeasons = ParticipatedInSeasons.OrderByDescending(s => s.Id).ToList();
 
             var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
             if (gameModeStatsPerGateway == null)
