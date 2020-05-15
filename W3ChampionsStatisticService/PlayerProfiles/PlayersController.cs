@@ -9,23 +9,20 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     public class PlayersController : ControllerBase
     {
         private readonly IPlayerRepository _playerRepository;
-        private readonly IRankRepository _rankRepository;
         private readonly PlayerQueryHandler _playerQueryHandler;
 
         public PlayersController(
             IPlayerRepository playerRepository,
-            IRankRepository rankRepository,
             PlayerQueryHandler playerQueryHandler)
         {
             _playerRepository = playerRepository;
-            _rankRepository = rankRepository;
             _playerQueryHandler = playerQueryHandler;
         }
 
         [HttpGet("{battleTag}")]
-        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, int season)
+        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
-            var player = await _playerQueryHandler.LoadPlayerWithRanks(battleTag, season);
+            var player = await _playerQueryHandler.LoadPlayerWithRanks(battleTag);
             return Ok(player);
         }
 

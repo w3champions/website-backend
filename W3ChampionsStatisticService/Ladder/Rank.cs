@@ -8,7 +8,8 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class Rank : IIdentifiable
     {
-        public Rank(string playerId,
+        public Rank(
+            string playerId,
             int league,
             int rankNumber,
             int rankingPoints,

@@ -97,9 +97,9 @@ namespace WC3ChampionsStatisticService.UnitTests
                 new LeagueConstellation(0, GateWay.Europe, GameMode.GM_2v2_AT, new List<League>
                 {
                     new League(1, 0, "GrandMaster", 0),
-                    new League(1, 1, "Master", 0),
-                    new League(1, 2, "Diamond", 1),
-                    new League(1, 2, "Diamond", 2),
+                    new League(2, 1, "Master", 0),
+                    new League(3, 2, "Diamond", 1),
+                    new League(4, 2, "Diamond", 2),
                 })
             });
 
@@ -110,7 +110,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             });
 
             var playerProfile = PlayerProfile.Create("hans#123");
-            playerProfile.RecordWin(Race.HU, GameMode.GM_2v2_AT, GateWay.Europe, 1, true);
+            playerProfile.RecordWin(Race.HU, GameMode.GM_2v2_AT, GateWay.Europe, 0, true);
             var playerOverview1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("hans#123"), PlayerId.Create("wurst#456") }, GateWay.Europe, GameMode.GM_2v2_AT, 0);
             var playerOverview2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("hans#123"), PlayerId.Create("peter#456") }, GateWay.Europe, GameMode.GM_2v2_AT, 0);
 
@@ -118,7 +118,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayerOverview(playerOverview2);
             await playerRepository.UpsertPlayerOverview(playerOverview1);
 
-            var playerLoaded = await playerQueryHandler.LoadPlayerWithRanks("hans#123", 0);
+            var playerLoaded = await playerQueryHandler.LoadPlayerWithRanks("hans#123");
 
             Assert.AreEqual(2, playerLoaded.GetStatForGateway(GateWay.Europe).GameModeStats[1].LeagueId);
         }

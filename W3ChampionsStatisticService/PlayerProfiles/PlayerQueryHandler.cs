@@ -19,60 +19,52 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _playerRepository = playerRepository;
             _rankRepository = rankRepository;
         }
-        public async Task<PlayerProfile> LoadPlayerWithRanks(string battleTag, int season)
+
+        public async Task<PlayerProfile> LoadPlayerWithRanks(string battleTag)
         {
             var player = await _playerRepository.LoadPlayer(battleTag);
             if (player == null) return null;
-            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
-            var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
+            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
+            var allLeagues = await _rankRepository.LoadLeagueConstellation();
 
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.Europe);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_1v1, GateWay.America);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.Europe);
-            PopulateStats(leaguesOfPlayer, player, allLeagues, GameMode.GM_2v2_AT, GateWay.America);
+            PopulateStats(leaguesOfPlayer, player, allLeagues);
             return player;
         }
 
          //way to shitty, do this with better rm one day
-        private void PopulateStats(
-            List<Rank> leaguesOfPlayer,
+        private void PopulateStats(List<Rank> leaguesOfPlayer,
             PlayerProfile player,
-            List<LeagueConstellation> allLeagues,
-            GameMode gameMode,
-            GateWay gateWay)
+            List<LeagueConstellation> allLeagues)
         {
-            var gameModeIndex = gameMode switch
+            var gm1V1S = leaguesOfPlayer.Where(l => l.GameMode == GameMode.GM_1v1);
+            foreach (var rank in gm1V1S)
             {
-                GameMode.GM_1v1 => 0,
-                GameMode.GM_2v2_AT => 1,
-                _ => 0
-            };
-
-            var searchedLeagues = gameMode != GameMode.GM_2v2_AT
-                ? leaguesOfPlayer.FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay)
-                : leaguesOfPlayer.OrderBy(l => l.League).ThenBy(l => l.RankNumber).FirstOrDefault(l => l.GameMode == gameMode && l.Gateway == gateWay);
-
-            if (searchedLeagues != null)
-            {
-                player.GateWayStats
-                    .First(g => g.GateWay == gateWay)
-                    .GameModeStats[gameModeIndex].Rank = searchedLeagues.RankNumber;
-                player.GateWayStats
-                    .First(g => g.GateWay == gateWay)
-                    .GameModeStats[gameModeIndex].LeagueId = searchedLeagues.League;
-                player.GateWayStats
-                    .First(g => g.GateWay == gateWay)
-                    .GameModeStats[gameModeIndex].LeagueOrder = allLeagues
-                    .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
-                    .Leagues
-                    .SingleOrDefault(l => l.Id == searchedLeagues.League)?.Order ?? 6;
-                player.GateWayStats
-                    .First(g => g.GateWay == gateWay)
-                    .GameModeStats[gameModeIndex].Division = allLeagues
-                    .Single(l => l.Gateway == gateWay && l.GameMode == gameMode)
-                    .Leagues
-                    .SingleOrDefault(l => l.Id == searchedLeagues.League)?.Division ?? 0;
+                PopulateLeague(player, allLeagues, rank);
             }
+
+            var all2V2SGrouped = leaguesOfPlayer.Where(l => l.GameMode == GameMode.GM_2v2_AT).GroupBy(l => l.Season);
+            foreach (var groupForOneSeason in all2V2SGrouped)
+            {
+                var highest2V2Ranking = groupForOneSeason.OrderBy(r => r.League).ThenBy(r => r.RankNumber).First();
+                PopulateLeague(player, allLeagues, highest2V2Ranking);
+            }
+        }
+
+        private static void PopulateLeague(PlayerProfile player, List<LeagueConstellation> allLeagues, Rank rank)
+        {
+            var leagueConstellation = allLeagues.Single(l =>
+                l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
+            var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
+
+            var gameModeStatsPerGateway = player.GateWayStats.Single(g => g.Season == rank.Season && g.GateWay == rank.Gateway);
+
+            var gameModeStat = gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == rank.GameMode);
+
+            gameModeStat.Division = league.Division;
+            gameModeStat.LeagueId = league.Id;
+            gameModeStat.LeagueOrder = league.Order;
+            gameModeStat.Division = league.Division;
+            gameModeStat.Rank = rank.RankNumber;
         }
     }
 }
