@@ -20,6 +20,9 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
+            if (nextEvent.match.season == 0) return;
+
+
             var dataPlayers = nextEvent.match.players;
             if (dataPlayers.Count == 2)
             {
