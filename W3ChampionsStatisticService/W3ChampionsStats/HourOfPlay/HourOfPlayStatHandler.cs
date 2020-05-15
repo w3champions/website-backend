@@ -20,8 +20,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
-            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStat.Create();
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
+            var now = DateTimeOffset.UtcNow.Date;
+            var daysOfDifference = now - startTime.Date;
+            if (daysOfDifference >= TimeSpan.FromDays(14))
+            {
+                return;
+            }
+
+            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStat.Create();
             stat.Apply(nextEvent.match.gameMode, startTime);
             await _w3Stats.Save(stat);
         }
