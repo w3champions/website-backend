@@ -2,6 +2,7 @@
 using System.Linq;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -21,6 +22,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
+        public List<int> ParticipatedInSeasons { get; set; } = new List<int>();
         public List<RaceWinLossPerGateway> RaceStats { get; set; }
         public List<GameModeStatsPerGateway> GateWayStats { get; set; }
 
@@ -36,6 +38,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public void RecordWin(Race race, GameMode mode, GateWay gateWay, int season, bool won)
         {
+            if (!ParticipatedInSeasons.Contains(season)) ParticipatedInSeasons.Add(season);
+
             var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
             if (gameModeStatsPerGateway == null)
             {
