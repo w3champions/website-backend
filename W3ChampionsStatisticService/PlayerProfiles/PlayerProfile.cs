@@ -39,7 +39,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public void RecordWin(Race race, GameMode mode, GateWay gateWay, int season, bool won)
         {
-            if (!ParticipatedInSeasons.Select(s => s.Id).Contains(season)) ParticipatedInSeasons.Add(new Season(season));
+            if (!ParticipatedInSeasons.Select(s => s.Id).Contains(season))
+            {
+                ParticipatedInSeasons.Insert(0, new Season(season));
+            }
+
+            // do this a few days
+            ParticipatedInSeasons = ParticipatedInSeasons.OrderByDescending(s => s.Id).ToList();
 
             var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
             if (gameModeStatsPerGateway == null)
