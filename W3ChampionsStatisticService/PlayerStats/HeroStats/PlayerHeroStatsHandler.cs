@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.PlayerStats.HeroStats
 
         public async Task Update(MatchFinishedEvent nextEvent)
         {
-            if (nextEvent == null || nextEvent.match == null || nextEvent.result == null)
+            if (nextEvent == null || nextEvent.match == null || nextEvent.result == null || nextEvent.match.season == 0)
             {
                 return;
             }
