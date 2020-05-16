@@ -50,5 +50,18 @@ namespace W3ChampionsStatisticService.Matches
             var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode);
             return Ok(new { matches, count });
         }
+
+
+        [HttpGet("ongoing")]
+        public async Task<IActionResult> GetOnGoingMatches(
+            int offset = 0,
+            int pageSize = 100,
+            GameMode gameMode = GameMode.Undefined)
+        {
+            if (pageSize > 100) pageSize = 100;
+            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, offset, pageSize);
+            var count = await _matchRepository.CountOnGoingMatches();
+            return Ok(new { matches, count });
+        }
     }
 }

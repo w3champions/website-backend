@@ -29,6 +29,19 @@ namespace W3ChampionsStatisticService.PadEvents
     }
 
     [BsonIgnoreExtraElements]
+    [BsonNoId]
+    public class UnfinishedMatchPlayer
+    {
+        public int team { get; set; }
+        public string id { get; set; }
+        public string battleTag { get; set; }
+        public Race race { get; set; }
+
+        public Mmr mmr { get; set; }
+        public Ranking ranking { get; set; }
+    }
+
+    [BsonIgnoreExtraElements]
     public class Ranking
     {
         public double rp { get; set; }
@@ -74,6 +87,23 @@ namespace W3ChampionsStatisticService.PadEvents
         public string map { get; set; }
         public List<PlayerMMrChange> players { get; set; }
         public long endTime { get; set; }
+    }
+
+    [BsonIgnoreExtraElements]
+    [BsonNoId]
+    public class UnfinishedMatch
+    {
+        public int season { get; set; }
+        public int state { get; set; }
+        public long startTime { get; set; }
+        public GameMode gameMode { get; set; }
+        public GateWay gateway { get; set; }
+        public string host { get; set; }
+        [BsonElement("id")]
+        public string id { get; set; }
+        public int mapId { get; set; }
+        public string map { get; set; }
+        public List<UnfinishedMatchPlayer> players { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -198,7 +228,7 @@ namespace W3ChampionsStatisticService.PadEvents
     [BsonIgnoreExtraElements]
     public class MatchStartedEvent : PadEvent
     {
-        public Match match { get; set; }
+        public UnfinishedMatch match { get; set; }
     }
 
     [BsonIgnoreExtraElements]
