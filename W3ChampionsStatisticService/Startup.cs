@@ -8,7 +8,6 @@ using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.Matches.OnGoingMatches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PadEvents.FakeEventSync;
 using W3ChampionsStatisticService.PadEvents.PadSync;

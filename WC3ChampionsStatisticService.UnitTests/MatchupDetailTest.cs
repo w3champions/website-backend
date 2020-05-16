@@ -16,7 +16,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.Id = ObjectId.GenerateNewId();
             var matchRepository = new MatchRepository(MongoClient);
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
             var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
             Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
@@ -35,7 +35,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchRepository = new MatchRepository(MongoClient);
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
             var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
 

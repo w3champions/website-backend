@@ -3,7 +3,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.Matches.OnGoingMatches
+namespace W3ChampionsStatisticService.Matches
 {
     public class MatchReadModelStartedMatchesHandler : IReadModelStartedMatchesHandler
     {
@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Matches.OnGoingMatches
 
         public async Task Update(MatchStartedEvent nextEvent)
         {
-            var matchup = new OnGoingMatchup(nextEvent);
+            var matchup = OnGoingMatchup.Create(nextEvent);
 
             foreach (var team in matchup.Teams)
             {

@@ -33,42 +33,57 @@ namespace W3ChampionsStatisticService.Matches
         [JsonIgnore]
         public string Team2Players { get; set; }
 
-        public Matchup(MatchFinishedEvent matchFinishedEvent)
+        public Matchup()
+        {
+        }
+
+        public static Matchup Create(MatchFinishedEvent matchFinishedEvent)
         {
             var match = matchFinishedEvent.match;
-            Map = new MapName(matchFinishedEvent.match.map).Name;
-            Id = matchFinishedEvent.Id;
-            MatchId = match.id;
-            GateWay = match.gateway;
 
-            GameMode = matchFinishedEvent.match.gameMode;
+            var startTime = DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.startTime);
+            var endTime = DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.endTime);
 
-            StartTime = DateTimeOffset.Now;
-            EndTime =  DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.endTime);
-            StartTime =  DateTimeOffset.FromUnixTimeMilliseconds(matchFinishedEvent.match.startTime);
-            Duration = EndTime - StartTime;
+            var result = new Matchup()
+            {
+                Id = matchFinishedEvent.Id,
+                Map = new MapName(matchFinishedEvent.match.map).Name,
+                MatchId = match.id,
+                GateWay = match.gateway,
+                GameMode = matchFinishedEvent.match.gameMode,
+                StartTime = startTime,
+                EndTime = endTime,
+                Duration = endTime - startTime,
+            };
 
             var winners = match.players.Where(p => p.won);
             var loosers = match.players.Where(p => !p.won);
 
-            Teams.Add(CreateTeam(winners));
-            Teams.Add(CreateTeam(loosers));
+            result.Teams.Add(CreateTeam(winners));
+            result.Teams.Add(CreateTeam(loosers));
 
-            if (Teams.Count > 0)
+            SetTeamPlayers(result);
+
+            return result;
+        }
+
+        protected static void SetTeamPlayers(Matchup result)
+        {
+            if (result.Teams.Count > 0)
             {
-                Team1Players = string.Join(";", Teams[0].Players.Select(x => x.BattleTag));
+                result.Team1Players = string.Join(";", result.Teams[0].Players.Select(x => x.BattleTag));
             }
 
-            if (Teams.Count > 1)
+            if (result.Teams.Count > 1)
             {
-                Team2Players = string.Join(";", Teams[1].Players.Select(x => x.BattleTag));
+                result.Team2Players = string.Join(";", result.Teams[1].Players.Select(x => x.BattleTag));
             }
         }
 
-        private static Team CreateTeam(IEnumerable<PlayerMMrChange> loosers)
+        private static Team CreateTeam(IEnumerable<PlayerMMrChange> players)
         {
             var team = new Team();
-            team.Players.AddRange(CreatePlayerArray(loosers));
+            team.Players.AddRange(CreatePlayerArray(players));
             return team;
         }
 
