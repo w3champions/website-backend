@@ -63,5 +63,12 @@ namespace W3ChampionsStatisticService.Matches
             var count = await _matchRepository.CountOnGoingMatches();
             return Ok(new { matches, count });
         }
+
+        [HttpGet("ongoing/{playerId}")]
+        public async Task<IActionResult> GetOnGoingMatches(string playerId)
+        {
+            var onGoingMatch = await _matchRepository.LoadOnGoingMatchForPlayer(playerId);
+            return Ok(onGoingMatch);
+        }
     }
 }
