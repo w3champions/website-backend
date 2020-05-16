@@ -29,6 +29,21 @@ namespace W3ChampionsStatisticService.PadEvents
             return events;
         }
 
+        public async Task<List<MatchStartedEvent>> LoadStartedMatches(string lastObjectId = null, int pageSize = 100)
+        {
+            lastObjectId ??= ObjectId.Empty.ToString();
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
+
+            var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
+                .SortBy(s => s.Id)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            return events;
+        }
+
         public async Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent)
         {
             matchFinishedEvent.WasFromSync = true;

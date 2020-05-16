@@ -79,6 +79,13 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 .Cast<WriteModel<T>>().ToList();
             return collection.BulkWriteAsync(bulkOps);
         }
+
+        protected async Task Delete<T>(Expression<Func<T, bool>> deleteQuery)
+        {
+            var mongoDatabase = CreateClient();
+            var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+            await mongoCollection.DeleteOneAsync<T>(deleteQuery);
+        }
     }
 
     public interface IIdentifiable

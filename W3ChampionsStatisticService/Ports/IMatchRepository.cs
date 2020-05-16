@@ -26,6 +26,16 @@ namespace W3ChampionsStatisticService.Ports
             GameMode gameMode = GameMode.Undefined);
 
         Task<MatchupDetail> LoadDetails(ObjectId id);
+
+        Task InsertOnGoingMatch(OnGoingMatchup matchup);
+        Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
+        Task DeleteOnGoingMatch(string matchId);
+
+        Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            int offset = 0,
+            int pageSize = 100);
+        Task<long> CountOnGoingMatches();
     }
 
     public class MatchupDetail

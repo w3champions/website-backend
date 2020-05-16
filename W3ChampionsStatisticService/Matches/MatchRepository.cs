@@ -123,5 +123,47 @@ namespace W3ChampionsStatisticService.Matches
 
             return events;
         }
+
+        public Task InsertOnGoingMatch(OnGoingMatchup matchup)
+        {
+            return Upsert(matchup, m => m.MatchId == matchup.MatchId);
+        }
+
+
+        public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+        {
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
+
+            return await mongoCollection
+                .Find(m => m.Team1Players.Contains(playerId) || m.Team2Players.Contains(playerId))
+                .FirstOrDefaultAsync();
+        }
+
+        public Task DeleteOnGoingMatch(string matchId)
+        {
+            return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
+        }
+
+        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode = GameMode.Undefined, int offset = 0, int pageSize = 100)
+        {
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
+
+            var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                .SortByDescending(s => s.StartTime)
+                .Skip(offset)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            return events;
+        }
+
+        public Task<long> CountOnGoingMatches()
+        {
+            return CreateCollection<OnGoingMatchup>().CountDocumentsAsync(x => true);
+        }
     }
 }

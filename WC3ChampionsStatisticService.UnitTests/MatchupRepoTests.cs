@@ -18,8 +18,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var matches = await matchRepository.Load();
 
             Assert.AreEqual(2, matches.Count);
@@ -38,8 +38,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.gateway = GateWay.America;
             matchFinishedEvent2.match.gateway = GateWay.America;
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
 
             var matches = await matchRepository.LoadFor("KOMISCHER#123");
 
@@ -56,8 +56,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.players[1].battleTag = "peter#123";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
 
             var matches = await matchRepository.LoadFor("asd#123");
 
@@ -71,8 +71,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
             var matches = await matchRepository.Load();
 
             Assert.AreEqual(1, matches.Count);
@@ -101,9 +101,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent3.match.players[0].battleTag = "notFound";
             matchFinishedEvent3.match.players[1].battleTag = "notFound2";
 
-            var matchup = new Matchup(matchFinishedEvent1);
+            var matchup = Matchup.Create(matchFinishedEvent1);
             await matchRepository.Insert(matchup);
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var count = await matchRepository.CountFor(matchup.Teams[0].Players[0].BattleTag);
 
             Assert.AreEqual(2, count);
@@ -123,8 +123,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var matches = await matchRepository.LoadFor("peter#123", "wolf#456");
             var count = await matchRepository.CountFor("peter#123", "wolf#456");
 
@@ -150,8 +150,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var matches = await matchRepository.LoadFor("peter#123", null, GateWay.America);
             var count = await matchRepository.CountFor("peter#123", null, GateWay.America);
 
@@ -175,8 +175,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var matches = await matchRepository.LoadFor("peter#123@10", "wolf#456");
             var count = await matchRepository.CountFor("peter#123@10", "wolf#456");
 
@@ -199,8 +199,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var matches = await matchRepository.LoadFor("peter#123", "wolf#456");
             var count = await matchRepository.CountFor("peter#123", "wolf#456");
 
@@ -225,8 +225,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "wolf#456";
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
-            await matchRepository.Insert(new Matchup(matchFinishedEvent2));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
             var matches = await matchRepository.LoadFor("peter#123", "wolf#456");
             var count = await matchRepository.CountFor("peter#123", "wolf#456");
 
@@ -242,7 +242,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             var matches = await matchRepository.Load(GameMode.GM_2v2_AT);
 
             Assert.AreEqual(0, matches.Count);
@@ -255,7 +255,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             var matches = await matchRepository.Load(GameMode.GM_2v2_AT);
 
             Assert.AreEqual(1, matches.Count);
@@ -268,7 +268,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
-            await matchRepository.Insert(new Matchup(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             var matches = await matchRepository.Load();
 
             Assert.AreEqual(1, matches.Count);

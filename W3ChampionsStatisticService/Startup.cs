@@ -108,6 +108,9 @@ namespace W3ChampionsStatisticService
                 // Ladder Syncs
                 services.AddReadModelService<MatchReadModelHandler>();
 
+                // On going matches
+                services.AddReadModelStartedMatchesService<MatchReadModelStartedMatchesHandler>();
+
                 services.AddUnversionedReadModelService<RankSyncHandler>();
                 services.AddUnversionedReadModelService<LeagueSyncHandler>();
             }
@@ -136,6 +139,15 @@ namespace W3ChampionsStatisticService
             services.AddTransient<T>();
             services.AddTransient<ReadModelHandler<T>>();
             services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
+            return services;
+        }
+
+        public static IServiceCollection AddReadModelStartedMatchesService<T>(this IServiceCollection services) where T : class, IReadModelStartedMatchesHandler
+        {
+            services.AddTransient<T>();
+            services.AddTransient<ReadModelStartedMatchesHandler<T>>();
+            services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelStartedMatchesHandler<T>>>();
+
             return services;
         }
 
