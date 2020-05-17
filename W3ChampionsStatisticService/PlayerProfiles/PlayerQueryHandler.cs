@@ -69,7 +69,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 gameModeStat.Division = league.Division;
                 gameModeStat.LeagueId = league.Id;
                 gameModeStat.LeagueOrder = league.Order;
-                gameModeStat.Division = league.Division;
                 gameModeStat.Rank = rank.RankNumber;
             }
             catch (Exception e)
