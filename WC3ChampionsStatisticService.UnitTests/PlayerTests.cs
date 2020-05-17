@@ -90,7 +90,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
-            var playerQueryHandler = new PlayerQueryHandler(playerRepository, rankRepository);
+            var playerQueryHandler = new PlayerQueryHandler(playerRepository, null, rankRepository);
 
             await rankRepository.InsertLeagues(new List<LeagueConstellation>
             {

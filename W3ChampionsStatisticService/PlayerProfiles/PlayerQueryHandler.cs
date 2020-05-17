@@ -1,22 +1,27 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerQueryHandler
     {
         private readonly IPlayerRepository _playerRepository;
+        private readonly TrackingService _trackingService;
         private readonly IRankRepository _rankRepository;
 
         public PlayerQueryHandler(
             IPlayerRepository playerRepository,
+            TrackingService trackingService,
             IRankRepository rankRepository)
         {
             _playerRepository = playerRepository;
+            _trackingService = trackingService;
             _rankRepository = rankRepository;
         }
 
@@ -50,21 +55,28 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             }
         }
 
-        private static void PopulateLeague(PlayerProfile player, List<LeagueConstellation> allLeagues, Rank rank)
+        private void PopulateLeague(PlayerProfile player, List<LeagueConstellation> allLeagues, Rank rank)
         {
-            var leagueConstellation = allLeagues.Single(l =>
-                l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
-            var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
+            try
+            {
+                var leagueConstellation = allLeagues.Single(l =>
+                    l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
+                var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
-            var gameModeStatsPerGateway = player.GateWayStats.Single(g => g.Season == rank.Season && g.GateWay == rank.Gateway);
+                var gameModeStatsPerGateway = player.GateWayStats.Single(g => g.Season == rank.Season && g.GateWay == rank.Gateway);
 
-            var gameModeStat = gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == rank.GameMode);
+                var gameModeStat = gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == rank.GameMode);
 
-            gameModeStat.Division = league.Division;
-            gameModeStat.LeagueId = league.Id;
-            gameModeStat.LeagueOrder = league.Order;
-            gameModeStat.Division = league.Division;
-            gameModeStat.Rank = rank.RankNumber;
+                gameModeStat.Division = league.Division;
+                gameModeStat.LeagueId = league.Id;
+                gameModeStat.LeagueOrder = league.Order;
+                gameModeStat.Division = league.Division;
+                gameModeStat.Rank = rank.RankNumber;
+            }
+            catch (Exception e)
+            {
+                _trackingService.TrackException(e, $"A League was not found for {rank.Id}");
+            }
         }
     }
 }
