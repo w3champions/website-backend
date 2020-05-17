@@ -63,21 +63,15 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task EmptyRanksDoesNothing()
+        public async Task EmptyRanksDoesNotThrwoBulkWriteException()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
-            var rankRepository = new Mock<IRankRepository>();
-            var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository);
+            var rankHandler = new RankSyncHandler(new RankRepository(MongoClient), matchEventRepository);
 
             await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
 
             await rankHandler.Update();
-
-            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)), Times.Once);
-
             await rankHandler.Update();
-
-            rankRepository.Verify(r => r.InsertRanks(It.IsAny<List<Rank>>()), Times.Once);
         }
 
         [Test]
