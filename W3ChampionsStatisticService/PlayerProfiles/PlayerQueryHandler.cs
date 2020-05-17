@@ -59,8 +59,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             try
             {
-                var leagueConstellation = allLeagues.Single(l =>
-                    l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
+                var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
                 var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
                 var gameModeStatsPerGateway = player.GateWayStats.Single(g => g.Season == rank.Season && g.GateWay == rank.Gateway);
@@ -68,14 +67,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 var gameModeStat = gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == rank.GameMode);
 
                 gameModeStat.Division = league.Division;
-                gameModeStat.LeagueId = league.Id;
                 gameModeStat.LeagueOrder = league.Order;
-                gameModeStat.Division = league.Division;
+
+                gameModeStat.LeagueId = rank.League;
                 gameModeStat.Rank = rank.RankNumber;
             }
             catch (Exception e)
             {
-                _trackingService.TrackException(e, $"A League was not found for {rank.Id}");
+                _trackingService.TrackException(e, $"A League was not found for {rank.Id} RN: {rank.RankNumber} LE:{rank.League}");
             }
         }
     }
