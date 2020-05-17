@@ -67,8 +67,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 var gameModeStat = gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == rank.GameMode);
 
                 gameModeStat.Division = league.Division;
-                gameModeStat.LeagueId = league.Id;
                 gameModeStat.LeagueOrder = league.Order;
+
+                gameModeStat.LeagueId = rank.League;
                 gameModeStat.Rank = rank.RankNumber;
             }
             catch (Exception e)
