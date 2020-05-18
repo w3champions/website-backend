@@ -8,9 +8,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting
     {
-        public PersonalSetting(string battleTag)
+        public PersonalSetting(string battleTag, List<PlayerRaceWins> players = null)
         {
             Id = battleTag;
+            Players = players ?? new List<PlayerRaceWins>();
         }
 
         public string ProfileMessage { get; set; }
