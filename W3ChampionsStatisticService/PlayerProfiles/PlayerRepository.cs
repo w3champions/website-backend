@@ -70,7 +70,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<List<At2V2StatsPerGateway>> LoadPlayerTeamStatsWinrate(string battleTag, int season)
         {
-            return LoadAll<At2V2StatsPerGateway>(t => t.Id == battleTag && t.Season == season);
+            return LoadAll<At2V2StatsPerGateway>(t => t.Id.Contains(battleTag) && t.Season == season);
         }
 
         public Task<PlayerProfile> LoadPlayer(string battleTag)
