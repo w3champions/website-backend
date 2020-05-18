@@ -46,15 +46,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 ParticipatedInSeasons.Insert(0, new Season(season));
             }
 
-            var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
-            if (gameModeStatsPerGateway == null)
+            if (mode != GameMode.GM_2v2_AT)
             {
-                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Asia, season));
-                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Europe, season));
-                GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.America, season));
+                var gameModeStatsPerGateway = GateWayStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season);
+                if (gameModeStatsPerGateway == null)
+                {
+                    GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Asia, season));
+                    GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.Europe, season));
+                    GateWayStats.Insert(0, GameModeStatsPerGateway.Create(GateWay.America, season));
+                }
+                gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
+                gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == mode).RecordWin(won);
             }
-            gameModeStatsPerGateway = GateWayStats.Single(g => g.GateWay == gateWay && g.Season == season);
-            gameModeStatsPerGateway.GameModeStats.Single(g => g.Mode == mode).RecordWin(won);
 
             var raceStatsPerGateway = RaceStats.SingleOrDefault(g => g.GateWay == gateWay && g.Season == season && g.Race == race);
             if (raceStatsPerGateway == null)
