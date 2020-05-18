@@ -28,6 +28,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public Task Save(PersonalSetting setting)
         {
+            setting.Players = null;
             return Upsert(setting, p => p.Id == setting.Id);
         }
 

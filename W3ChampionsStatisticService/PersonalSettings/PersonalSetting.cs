@@ -20,7 +20,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public PlayerRaceWins RaceWins => Players?.SingleOrDefault() ?? PlayerRaceWins.Create(Id);
         public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
         [JsonIgnore]
-        [BsonIgnore]
         public List<PlayerRaceWins> Players { get; set; }
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
