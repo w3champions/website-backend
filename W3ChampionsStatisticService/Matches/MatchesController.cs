@@ -58,7 +58,7 @@ namespace W3ChampionsStatisticService.Matches
             int pageSize = 100,
             GameMode gameMode = GameMode.Undefined)
         {
-            if (pageSize > 100) pageSize = 100;
+            if (pageSize > 200) pageSize = 200;
             var matches = await _matchRepository.LoadOnGoingMatches(gameMode, offset, pageSize);
             var count = await _matchRepository.CountOnGoingMatches();
             return Ok(new { matches, count });
