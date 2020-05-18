@@ -7,11 +7,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
 {
-    public class Player2v2StatsHandler : IReadModelHandler
+    public class GameModeStatPerGatewayHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public Player2v2StatsHandler(
+        public GameModeStatPerGatewayHandler(
             IPlayerRepository playerRepository
             )
         {
@@ -21,13 +21,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             var match = nextEvent.match;
-            if (match.gameMode != GameMode.GM_2v2_AT)
-            {
-                return;
-            }
 
             var winners = match.players.Where(p => p.won).ToList();
             var loosers = match.players.Where(p => !p.won).ToList();
+
+            // some events are buggy
+            if (winners.Count != loosers.Count && match.gameMode != GameMode.FFA) return;
 
             var winnerId = new BattleTagIdCombined(
                 winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
@@ -41,8 +40,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
                 match.gameMode,
                 match.season);
 
-            var winner = await _playerRepository.LoadTeamStat(winnerId.Id) ?? At2V2StatsPerGateway.Create(winnerId);
-            var looser = await _playerRepository.LoadTeamStat(looserId.Id) ?? At2V2StatsPerGateway.Create(looserId);
+            var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? GameModeStatPerGateway.Create(winnerId);
+            var looser = await _playerRepository.LoadGameModeStatPerGateway(looserId.Id) ?? GameModeStatPerGateway.Create(looserId);
 
             winner.RecordWin(true);
             looser.RecordWin(false);
@@ -55,8 +54,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
                 (int?) loosers.First().updatedMmr?.rating ?? (int?) loosers.First().mmr?.rating ?? 0,
                 (int?) loosers.First().updatedRanking?.rp ?? (int?) loosers.First().ranking?.rp ?? 0);
 
-            await _playerRepository.UpsertTeamStat(winner);
-            await _playerRepository.UpsertTeamStat(looser);
+            await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
+            await _playerRepository.UpsertPlayerGameModeStatPerGateway(looser);
         }
     }
 }

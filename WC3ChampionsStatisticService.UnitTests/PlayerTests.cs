@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerProfiles._2v2Stats;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -44,6 +45,29 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task PlayerStatsMapping()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var battleTagIdCombined = new BattleTagIdCombined(new List<PlayerId>
+                {
+                    PlayerId.Create("peter#123")
+                },
+                GateWay.Europe,
+                GameMode.GM_1v1,
+                1);
+            var player = GameModeStatPerGateway.Create(battleTagIdCombined);
+
+            await playerRepository.UpsertPlayerGameModeStatPerGateway(player);
+
+            var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, GameMode.GM_1v1, 1);
+
+
+            playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123, 0);
+
+        }
+
+        [Test]
         public async Task PlayerIdMappedRight()
         {
             var playerRepository = new PlayerRepository(MongoClient);
@@ -65,6 +89,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
             var handler = new PlayerProfileHandler(playerRepository);
+            var handler2 = new GameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.players[0].battleTag = "peter#123";
@@ -76,12 +101,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             for (int i = 0; i < 100; i++)
             {
                 await handler.Update(ev);
+                await handler2.Update(ev);
             }
 
             var playerLoaded = await playerRepository.LoadPlayer("peter#123");
+            var playerLoadedStats = await playerRepository.LoadPlayerGameModeStat("peter#123", GameMode.GM_1v1, GateWay.Europe, 0);
 
-            Assert.AreEqual(100, playerLoaded.TotalWins);
-            Assert.AreEqual(100, playerLoaded.GateWayStats[0].GameModeStats[0].Wins);
+            Assert.AreEqual(100, playerLoadedStats.Single().Wins);
             Assert.AreEqual(100, playerLoaded.RaceStats[0].Wins);
         }
     }

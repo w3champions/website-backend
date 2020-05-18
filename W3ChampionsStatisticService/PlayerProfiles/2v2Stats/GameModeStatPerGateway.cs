@@ -3,17 +3,23 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
 {
-    public class At2V2StatsPerGateway : BaseRankedStat
+    public class GameModeStatPerGateway : BaseRankedStat
     {
-        public static At2V2StatsPerGateway Create(BattleTagIdCombined id)
+        public static GameModeStatPerGateway Create(BattleTagIdCombined id)
         {
-            return new At2V2StatsPerGateway
+            return new GameModeStatPerGateway
             {
                 Id = id.Id,
                 Season = id.Season,
+                GateWay = id.GateWay,
+                GameMode = id.GameMode,
                 PlayerIds = id.BattleTags
             };
         }
+
+        public GameMode GameMode { get; set; }
+
+        public GateWay GateWay { get; set; }
 
         public List<PlayerId> PlayerIds { get; set; }
 

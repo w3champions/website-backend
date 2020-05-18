@@ -9,7 +9,6 @@ using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PadEvents.FakeEventSync;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -50,7 +49,6 @@ namespace W3ChampionsStatisticService
 
             var startHandlers = _configuration.GetValue<string>("startHandlers");
             var startPadSync = _configuration.GetValue<string>("startPadSync");
-            var startFakeEventHandler = _configuration.GetValue<string>("startFakeEventHandler");
             var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
@@ -67,20 +65,13 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IPadServiceRepo, PadServiceRepo>();
-            services.AddSingleton<FakeEventCreator>();
             services.AddSingleton<HeroStatsQueryHandler>();
             services.AddSingleton<PersonalSettingsCommandHandler>();
-            services.AddSingleton<PlayerQueryHandler>();
             services.AddSingleton<MmrDistributionHandler>();
 
             if (startPadSync == "true")
             {
                 services.AddUnversionedReadModelService<PadSyncHandler>();
-            }
-
-            if (startFakeEventHandler == "true")
-            {
-                services.AddUnversionedReadModelService<FakeEventSyncHandler>();
             }
 
             if (startHandlers == "true")
@@ -94,7 +85,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
                 services.AddReadModelService<PlayerHeroStatsHandler>();
                 services.AddReadModelService<PlayerRaceWinsModelHandler>();
-                services.AddReadModelService<Player2v2StatsHandler>();
+                services.AddReadModelService<GameModeStatPerGatewayHandler>();
 
                 // Generell Stats
                 services.AddReadModelService<GamesPerDayHandler>();

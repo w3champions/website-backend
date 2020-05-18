@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -9,20 +10,17 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     public class PlayersController : ControllerBase
     {
         private readonly IPlayerRepository _playerRepository;
-        private readonly PlayerQueryHandler _playerQueryHandler;
 
         public PlayersController(
-            IPlayerRepository playerRepository,
-            PlayerQueryHandler playerQueryHandler)
+            IPlayerRepository playerRepository)
         {
             _playerRepository = playerRepository;
-            _playerQueryHandler = playerQueryHandler;
         }
 
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
-            var player = await _playerQueryHandler.LoadPlayerWithRanks(battleTag);
+            var player = await _playerRepository.LoadPlayer(battleTag);
             return Ok(player);
         }
 
@@ -33,10 +31,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Ok(wins);
         }
 
-        [HttpGet("{battleTag}/team-stats-2v2")]
-        public async Task<IActionResult> GetPlayer2v2TeamStats([FromRoute] string battleTag, int season)
+        [HttpGet("{battleTag}/game-mode-stats")]
+        public async Task<IActionResult> GetPlayer2v2TeamStats(
+            [FromRoute] string battleTag,
+            GameMode gameMode,
+            GateWay gateWay,
+            int season)
         {
-            var wins = await _playerRepository.LoadPlayerTeamStatsWinrate(battleTag, season);
+            var wins = await _playerRepository.LoadPlayerGameModeStat(battleTag, gameMode, gateWay, season);
             return Ok(wins);
         }
     }

@@ -28,12 +28,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                     nextEvent.match.gateway,
                     nextEvent.match.season,
                     playerRaw.won);
-                player.UpdateRank(
-                    nextEvent.match.gameMode,
-                    nextEvent.match.gateway,
-                    (int?) playerRaw.updatedMmr?.rating ?? (int?) playerRaw.mmr?.rating ?? 0,
-                    (int?) playerRaw.updatedRanking?.rp ?? (int?) playerRaw.ranking?.rp ?? 0,
-                    nextEvent.match.season);
                 await _playerRepository.UpsertPlayer(player);
             }
         }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text.Json.Serialization;
-using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles

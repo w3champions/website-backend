@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -36,18 +35,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return UpsertMany(winrate);
         }
 
-        public async Task<List<string>> LoadAllIds()
-        {
-            var mongoCollection = CreateCollection<PlayerProfile>();
-            var overViews = await mongoCollection
-                .Find(p => true)
-                .SortBy(p => p.BattleTag)
-                .Project(p => new { id = p.BattleTag })
-                .ToListAsync();
-            return overViews.Select(p => p.id).ToList();
-
-        }
-
         public async Task<List<int>> LoadMmrs(int season)
         {
             var mongoCollection = CreateCollection<PlayerOverview>();
@@ -58,19 +45,27 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return mmrs;
         }
 
-        public Task<At2V2StatsPerGateway> LoadTeamStat(string id)
+        public Task<GameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
-            return LoadFirst<At2V2StatsPerGateway>(t => t.Id == id);
+            return LoadFirst<GameModeStatPerGateway>(t => t.Id == id);
         }
 
-        public Task UpsertTeamStat(At2V2StatsPerGateway stat)
+        public Task UpsertPlayerGameModeStatPerGateway(GameModeStatPerGateway stat)
         {
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
-        public Task<List<At2V2StatsPerGateway>> LoadPlayerTeamStatsWinrate(string battleTag, int season)
+        public Task<List<GameModeStatPerGateway>> LoadPlayerGameModeStat(
+            string battleTag,
+            GameMode gameMode,
+            GateWay gateWay,
+            int season)
         {
-            return LoadAll<At2V2StatsPerGateway>(t => t.Id.Contains(battleTag) && t.Season == season);
+            return LoadAll<GameModeStatPerGateway>(t =>
+                t.Id.Contains(battleTag) &&
+                t.GateWay == gateWay &&
+                t.GameMode == gameMode &&
+                t.Season == season );
         }
 
         public Task<PlayerProfile> LoadPlayer(string battleTag)
