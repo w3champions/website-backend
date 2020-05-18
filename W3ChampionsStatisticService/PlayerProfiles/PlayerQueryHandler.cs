@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var all2V2SGrouped = leaguesOfPlayer.Where(l => l.GameMode == GameMode.GM_2v2_AT).GroupBy(l => l.Season);
             foreach (var groupForOneSeason in all2V2SGrouped)
             {
-                var highest2V2Ranking = groupForOneSeason.OrderBy(r => r.League).ThenBy(r => r.RankNumber).First();
+                var highest2V2Ranking = groupForOneSeason.OrderByDescending(r => r.RankingPoints).First();
                 PopulateLeague(player, allLeagues, highest2V2Ranking);
             }
         }
