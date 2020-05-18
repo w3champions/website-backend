@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
-        public List<Season> ParticipatedInSeasons  { get; set; }
+        public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
         public List<RaceWinLossPerGateway> RaceStats { get; set; }
         public List<GameModeStatsPerGateway> GateWayStats { get; set; }
 
