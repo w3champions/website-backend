@@ -53,7 +53,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 GateWay.Europe,
                 GameMode.GM_1v1,
                 1);
-            var player = GameModeStatPerGateway.Create(battleTagIdCombined);
+            var player = PlayerGameModeStatPerGateway.Create(battleTagIdCombined);
             player.RecordRanking(234, 123);
 
             await playerRepository.UpsertPlayerGameModeStatPerGateway(player);
@@ -86,7 +86,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
             var handler = new PlayerProfileHandler(playerRepository);
-            var handler2 = new GameModeStatPerGatewayHandler(playerRepository);
+            var handler2 = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.gameMode = GameMode.GM_1v1;
@@ -96,8 +96,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].race = Race.HU;
             ev.match.players[1].race = Race.OC;
-
-            ev.match.gateway = GateWay.America;
 
             for (int i = 0; i < 100; i++)
             {

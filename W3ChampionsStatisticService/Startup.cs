@@ -85,7 +85,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
                 services.AddReadModelService<PlayerHeroStatsHandler>();
                 services.AddReadModelService<PlayerRaceWinsModelHandler>();
-                services.AddReadModelService<GameModeStatPerGatewayHandler>();
+                services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
 
                 // Generell Stats
                 services.AddReadModelService<GamesPerDayHandler>();

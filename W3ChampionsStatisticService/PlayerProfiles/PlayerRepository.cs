@@ -45,23 +45,23 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return mmrs;
         }
 
-        public Task<GameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
+        public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
-            return LoadFirst<GameModeStatPerGateway>(t => t.Id == id);
+            return LoadFirst<PlayerGameModeStatPerGateway>(t => t.Id == id);
         }
 
-        public Task UpsertPlayerGameModeStatPerGateway(GameModeStatPerGateway stat)
+        public Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat)
         {
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
-        public Task<List<GameModeStatPerGateway>> LoadGameModeStatPerGateway(
+        public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(
             string battleTag,
             GameMode gameMode,
             GateWay gateWay,
             int season)
         {
-            return LoadAll<GameModeStatPerGateway>(t =>
+            return LoadAll<PlayerGameModeStatPerGateway>(t =>
                 t.Id.Contains(battleTag) &&
                 t.GateWay == gateWay &&
                 t.GameMode == gameMode &&

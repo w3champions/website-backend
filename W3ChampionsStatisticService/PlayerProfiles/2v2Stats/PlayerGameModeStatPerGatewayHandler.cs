@@ -7,11 +7,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
 {
-    public class GameModeStatPerGatewayHandler : IReadModelHandler
+    public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public GameModeStatPerGatewayHandler(
+        public PlayerGameModeStatPerGatewayHandler(
             IPlayerRepository playerRepository
             )
         {
@@ -40,8 +40,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
                 match.gameMode,
                 match.season);
 
-            var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? GameModeStatPerGateway.Create(winnerId);
-            var looser = await _playerRepository.LoadGameModeStatPerGateway(looserId.Id) ?? GameModeStatPerGateway.Create(looserId);
+            var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
+            var looser = await _playerRepository.LoadGameModeStatPerGateway(looserId.Id) ?? PlayerGameModeStatPerGateway.Create(looserId);
 
             winner.RecordWin(true);
             looser.RecordWin(false);

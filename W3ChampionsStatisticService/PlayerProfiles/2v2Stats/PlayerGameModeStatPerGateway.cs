@@ -3,11 +3,11 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
 {
-    public class GameModeStatPerGateway : BaseRankedStat
+    public class PlayerGameModeStatPerGateway : BaseRankedStat
     {
-        public static GameModeStatPerGateway Create(BattleTagIdCombined id)
+        public static PlayerGameModeStatPerGateway Create(BattleTagIdCombined id)
         {
-            return new GameModeStatPerGateway
+            return new PlayerGameModeStatPerGateway
             {
                 Id = id.Id,
                 Season = id.Season,
