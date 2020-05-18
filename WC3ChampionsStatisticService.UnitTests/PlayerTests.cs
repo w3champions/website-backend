@@ -89,6 +89,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler2 = new GameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeEvent();
+            ev.match.gameMode = GameMode.GM_1v1;
+            ev.match.gateway = GateWay.Europe;
+            ev.match.season = 1;
+            ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].battleTag = "peter#123";
             ev.match.players[0].race = Race.HU;
             ev.match.players[1].race = Race.OC;
