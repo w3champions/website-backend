@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PlayerProfiles._2v2Stats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -55,6 +56,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 .Project(p => p.MMR)
                 .ToListAsync();
             return mmrs;
+        }
+
+        public Task<At2V2StatsPerGateway> LoadTeamStat(string id)
+        {
+            return LoadFirst<At2V2StatsPerGateway>(t => t.Id == id);
+        }
+
+        public Task UpsertTeamStat(At2V2StatsPerGateway stat)
+        {
+            return Upsert(stat, t => t.Id == stat.Id);
         }
 
         public Task<PlayerProfile> LoadPlayer(string battleTag)
