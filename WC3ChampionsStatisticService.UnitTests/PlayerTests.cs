@@ -33,15 +33,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadPlayer(player.BattleTag);
             playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, GateWay.Europe, 0, false);
-            playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123, 0);
             await playerRepository.UpsertPlayer(playerLoaded);
 
             var playerLoadedAgain = await playerRepository.LoadPlayer(player.BattleTag);
 
             Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
             Assert.AreEqual(player.BattleTag, playerLoadedAgain.BattleTag);
-            Assert.AreEqual(234, playerLoadedAgain.GetStatForGateway(GateWay.Europe).GameModeStats[0].MMR);
-            Assert.AreEqual(123, playerLoadedAgain.GetStatForGateway(GateWay.Europe).GameModeStats[0].RankingPoints);
         }
 
         [Test]
@@ -57,14 +54,14 @@ namespace WC3ChampionsStatisticService.UnitTests
                 GameMode.GM_1v1,
                 1);
             var player = GameModeStatPerGateway.Create(battleTagIdCombined);
+            player.RecordRanking(234, 123);
 
             await playerRepository.UpsertPlayerGameModeStatPerGateway(player);
 
-            var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, GameMode.GM_1v1, 1);
+            var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("peter#123", GameMode.GM_1v1, GateWay.Europe, 1);
 
-
-            playerLoaded.UpdateRank(GameMode.GM_1v1, GateWay.Europe, 234, 123, 0);
-
+            Assert.AreEqual(234, playerLoadedAgain.Single().MMR);
+            Assert.AreEqual(123, playerLoadedAgain.Single().RankingPoints);
         }
 
         [Test]
@@ -105,7 +102,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             var playerLoaded = await playerRepository.LoadPlayer("peter#123");
-            var playerLoadedStats = await playerRepository.LoadPlayerGameModeStat("peter#123", GameMode.GM_1v1, GateWay.Europe, 0);
+            var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GameMode.GM_1v1, GateWay.Europe, 0);
 
             Assert.AreEqual(100, playerLoadedStats.Single().Wins);
             Assert.AreEqual(100, playerLoaded.RaceStats[0].Wins);

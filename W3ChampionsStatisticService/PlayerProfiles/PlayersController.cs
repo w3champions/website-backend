@@ -38,7 +38,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GateWay gateWay,
             int season)
         {
-            var wins = await _playerRepository.LoadPlayerGameModeStat(battleTag, gameMode, gateWay, season);
+            var wins = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gameMode, gateWay, season);
             return Ok(wins);
         }
     }
