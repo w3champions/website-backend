@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var all2V2SGrouped = leaguesOfPlayer.Where(l => l.GameMode == GameMode.GM_2v2_AT).GroupBy(l => l.Season);
             foreach (var groupForOneSeason in all2V2SGrouped)
             {
-                var highest2V2Ranking = groupForOneSeason.OrderByDescending(r => r.RankingPoints).First();
+                var highest2V2Ranking = groupForOneSeason.OrderBy(r => r.League).ThenByDescending(r => r.RankNumber).First();
                 PopulateLeague(player, allLeagues, highest2V2Ranking);
             }
         }
@@ -69,6 +69,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 gameModeStat.Division = league.Division;
                 gameModeStat.LeagueOrder = league.Order;
 
+                gameModeStat.RankingPoints = rank.RankingPoints;
                 gameModeStat.LeagueId = rank.League;
                 gameModeStat.Rank = rank.RankNumber;
             }
