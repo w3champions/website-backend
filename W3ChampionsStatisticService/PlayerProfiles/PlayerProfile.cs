@@ -25,14 +25,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
-
-        // do this until sorted everywhere
-        public List<Season> ParticipatedInSeasons
-        {
-            get => _participatedInSeasons.OrderByDescending(s => s.Id).ToList();
-            set => _participatedInSeasons = value;
-        }
-
+        public List<Season> ParticipatedInSeasons  { get; set; }
         public List<RaceWinLossPerGateway> RaceStats { get; set; }
         public List<GameModeStatsPerGateway> GateWayStats { get; set; }
 
