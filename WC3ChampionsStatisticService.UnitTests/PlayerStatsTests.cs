@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
@@ -189,6 +190,30 @@ namespace WC3ChampionsStatisticService.UnitTests
             var enemyStatsVsPlayerRace = enemyHeroStats.WinLosses.Single(x => x.Race == Race.HU);
             Assert.AreEqual(1, enemyStatsVsPlayerRace.Wins);
             Assert.AreEqual(0, enemyStatsVsPlayerRace.Losses);
+        }
+
+        [Test]
+        public async Task PlayerStats_PlayerParticipatedRaceIsCorrect()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playerHeroStatsHandler = new PlayerProfileHandler(playerRepository);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent1.match.season = 0;
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent2.match.season = 1;
+            var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent3.match.season = 1;
+
+            await playerHeroStatsHandler.Update(matchFinishedEvent1);
+            await playerHeroStatsHandler.Update(matchFinishedEvent2);
+            await playerHeroStatsHandler.Update(matchFinishedEvent3);
+
+            var enemyStatsVsPlayerRace = await playerRepository.LoadPlayer(matchFinishedEvent1.match.players[0].battleTag);
+
+            Assert.AreEqual(2, enemyStatsVsPlayerRace.ParticipatedInSeasons.Count);
+            Assert.AreEqual(1, enemyStatsVsPlayerRace.ParticipatedInSeasons[0].Id);
+            Assert.AreEqual(0, enemyStatsVsPlayerRace.ParticipatedInSeasons[1].Id);
         }
 
         private static WinLossesPerMap GetHeroStatsForRaceAndMap(PlayerHeroStats playerHeroStats, string heroId, Race race, string mapName)
