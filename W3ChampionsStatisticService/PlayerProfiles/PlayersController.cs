@@ -32,5 +32,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var wins = await _playerRepository.LoadPlayerWinrate(battleTag, season);
             return Ok(wins);
         }
+
+        [HttpGet("{battleTag}/team-stats-2v2")]
+        public async Task<IActionResult> GetPlayer2v2TeamStats([FromRoute] string battleTag, int season)
+        {
+            var wins = await _playerRepository.LoadPlayerTeamStatsWinrate(battleTag, season);
+            return Ok(wins);
+        }
     }
 }

@@ -68,6 +68,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
+        public Task<List<At2V2StatsPerGateway>> LoadPlayerTeamStatsWinrate(string battleTag, int season)
+        {
+            return LoadAll<At2V2StatsPerGateway>(t => t.Id == battleTag && t.Season == season);
+        }
+
         public Task<PlayerProfile> LoadPlayer(string battleTag)
         {
             return LoadFirst<PlayerProfile>(p => p.BattleTag == battleTag);

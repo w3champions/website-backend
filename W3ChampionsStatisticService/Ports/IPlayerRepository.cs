@@ -19,5 +19,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<int>> LoadMmrs(int season);
         Task<At2V2StatsPerGateway> LoadTeamStat(string id);
         Task UpsertTeamStat(At2V2StatsPerGateway stat);
+        Task<List<At2V2StatsPerGateway>> LoadPlayerTeamStatsWinrate(string battleTag, int season);
     }
 }
