@@ -1,4 +1,4 @@
-﻿namespace W3ChampionsStatisticService.Ladder
+﻿namespace W3ChampionsStatisticService.CommonValueObjects
 {
     public class PlayerId
     {

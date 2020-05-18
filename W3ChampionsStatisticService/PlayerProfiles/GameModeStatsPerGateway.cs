@@ -3,7 +3,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class GameModeStatsPerGateway
+    public class GameModeStatsPerGateway : BaseRankedStat
     {
         public static GameModeStatsPerGateway Create(GateWay gateway, int season)
         {
@@ -14,7 +14,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 GameModeStats = new List<GameModeStat>()
                 {
                     new GameModeStat(GameMode.GM_1v1),
-                    new GameModeStat(GameMode.GM_2v2_AT),
                     new GameModeStat(GameMode.GM_4v4),
                     new GameModeStat(GameMode.FFA)
                 }

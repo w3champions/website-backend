@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
     [BsonIgnoreExtraElements]
-    public class GameModeStat : WinLoss
+    public class GameModeStat : BaseRankedStat
     {
         public GameModeStat(GameMode gameMode)
         {
@@ -14,12 +14,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         public GameMode Mode { set; get; }
-        public int MMR { set; get; }
-        public int RankingPoints { get; set; }
-        public int Rank { get; set; }
-        public int LeagueId { get; set; }
-        public int LeagueOrder { get; set; }
-        public int Division { get; set; }
 
         public RankProgression RankingPointsProgress
         {
