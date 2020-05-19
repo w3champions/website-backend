@@ -1,13 +1,12 @@
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
+using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
@@ -36,6 +35,7 @@ namespace W3ChampionsStatisticService
     public class Startup
     {
         private readonly IConfiguration _configuration;
+        private string _corsPolicyName = "CorsPolicy";
 
         public Startup(IConfiguration configuration)
         {
@@ -47,6 +47,23 @@ namespace W3ChampionsStatisticService
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
+            services.AddCors(options =>
+            {
+                options.AddPolicy(_corsPolicyName,
+                    builder =>
+                    {
+                        builder.WithOrigins(
+                                "http://localhost:8080",
+                                "https://www.w3champions.com",
+                                "https://www.test.w3champions.com"
+                            )
+                            .AllowAnyHeader()
+                            .AllowAnyMethod()
+                            .AllowCredentials();
+                    });
+            });
+
+            services.AddSignalR();
             services.AddControllers();
 
             var startHandlers = _configuration.GetValue<string>("startHandlers");
@@ -57,7 +74,6 @@ namespace W3ChampionsStatisticService
             services.AddSingleton(mongoClient);
 
             services.AddSingleton(typeof(TrackingService));
-            services.AddSignalR();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -128,23 +144,13 @@ namespace W3ChampionsStatisticService
             });
             app.UseRouting();
 
-            app.UseCors(o => o
-                .AllowAnyOrigin()
-                .AllowAnyHeader()
-                .AllowAnyMethod());
+            app.UseCors(_corsPolicyName);
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
                 endpoints.MapHub<ChatHub>("/chatHub");
             });
-        }
-    }
-
-    public class ChatHub : Hub
-    {
-        public async Task SendMessage(string user, string message)
-        {
-            await Clients.All.SendAsync("ReceiveMessage", user, message);
         }
     }
 
