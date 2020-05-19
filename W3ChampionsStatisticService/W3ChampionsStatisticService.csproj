@@ -6,6 +6,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.13.1" />
+      <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
       <PackageReference Include="MongoDB.Driver" Version="2.10.2" />
     </ItemGroup>
 

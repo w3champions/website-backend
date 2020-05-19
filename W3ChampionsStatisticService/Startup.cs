@@ -1,6 +1,8 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -55,6 +57,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton(mongoClient);
 
             services.AddSingleton(typeof(TrackingService));
+            services.AddSignalR();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -124,11 +127,24 @@ namespace W3ChampionsStatisticService
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
             app.UseRouting();
+
             app.UseCors(o => o
                 .AllowAnyOrigin()
                 .AllowAnyHeader()
                 .AllowAnyMethod());
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapHub<ChatHub>("/chatHub");
+            });
+        }
+    }
+
+    public class ChatHub : Hub
+    {
+        public async Task SendMessage(string user, string message)
+        {
+            await Clients.All.SendAsync("ReceiveMessage", user, message);
         }
     }
 
