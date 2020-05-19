@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -15,13 +16,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerRaceWins.Create("peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, true);
+                player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerRaceWins> {player };
+            personalSetting.Players = new List<PlayerProfile> {player };
             var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
 
             Assert.IsTrue(profilePicture);
@@ -34,13 +35,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerRaceWins.Create("peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 19; i++)
             {
-                player.RecordWin(Race.HU, true);
+                player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerRaceWins> {player };
+            personalSetting.Players = new List<PlayerProfile> {player };
             personalSetting.SetProfilePicture(Race.HU, 1);
             var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
 
@@ -54,13 +55,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerRaceWins.Create("peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, true);
+                player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerRaceWins> { player };
+            personalSetting.Players = new List<PlayerProfile> { player };
             Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.Race == Race.HU).Max);
         }
 
@@ -68,16 +69,16 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task RepoLoadWithJoin()
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-
+            var playerRepo = new PlayerRepository(MongoClient);
             var personalSetting = new PersonalSetting("peter#123");
 
-            var player = PlayerRaceWins.Create("peter#123");
+            var player = PlayerProfile.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU,  true);
+                player.RecordWin(Race.HU, 0, true);
             }
 
-            await settingsRepo.UpsertPlayerRaceWin(player);
+            await playerRepo.UpsertPlayer(player);
             await settingsRepo.Save(personalSetting);
 
             var loaded = await settingsRepo.Load("peter#123");
@@ -89,12 +90,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task RepoLoadWithJoin_NotFoundPlayer()
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-
+            var playerRepo = new PlayerRepository(MongoClient);
             var personalSetting = new PersonalSetting("peter#123@10");
 
-            var player = PlayerRaceWins.Create("peter#123");
+            var player = PlayerProfile.Create("peter#123");
 
-            await settingsRepo.UpsertPlayerRaceWin(player);
+            await playerRepo.UpsertPlayer(player);
             await settingsRepo.Save(personalSetting);
 
             var loaded = await settingsRepo.Load("peter#123@10");
@@ -106,15 +107,16 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task SetPictureWhenSettingsAreNotThere()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
 
-            var player = PlayerRaceWins.Create("modmoto#123");
+            var player = PlayerProfile.Create("modmoto#123");
             for (int i = 0; i < 30; i++)
             {
-                player.RecordWin(Race.NE, true);
+                player.RecordWin(Race.NE, 1, true);
             }
 
-            await personalSettingsRepository.UpsertPlayerRaceWin(player);
+            await playerRepo.UpsertPlayer(player);
 
             var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
                 new SetPictureCommand {Race = Race.NE, PictureId = 2});

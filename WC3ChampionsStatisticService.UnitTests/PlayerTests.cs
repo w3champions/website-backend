@@ -20,7 +20,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var player = PlayerProfile.Create("peter#123");
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await playerRepository.LoadPlayer(player.BattleTag);
+            var playerLoaded = await playerRepository.LoadPlayerProfile(player.BattleTag);
 
             Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
         }
@@ -31,13 +31,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerProfile.Create("peter#123");
-            player.RecordWin(Race.HU, GameMode.GM_1v1, GateWay.Europe, 0, true);
+            player.RecordWin(Race.HU, 0, true);
             await playerRepository.UpsertPlayer(player);
-            var playerLoaded = await playerRepository.LoadPlayer(player.BattleTag);
-            playerLoaded.RecordWin(Race.UD, GameMode.GM_1v1, GateWay.Europe, 0, false);
+            var playerLoaded = await playerRepository.LoadPlayerProfile(player.BattleTag);
+            playerLoaded.RecordWin(Race.UD, 0, false);
             await playerRepository.UpsertPlayer(playerLoaded);
 
-            var playerLoadedAgain = await playerRepository.LoadPlayer(player.BattleTag);
+            var playerLoadedAgain = await playerRepository.LoadPlayerProfile(player.BattleTag);
 
             Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
             Assert.AreEqual(player.BattleTag, playerLoadedAgain.BattleTag);
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepository.UpsertPlayer(player1);
             await playerRepository.UpsertPlayer(player2);
 
-            var playerLoaded = await playerRepository.LoadPlayer(player2.BattleTag);
+            var playerLoaded = await playerRepository.LoadPlayerProfile(player2.BattleTag);
 
             Assert.IsNotNull(playerLoaded);
             Assert.AreEqual(player2.BattleTag, playerLoaded.BattleTag);

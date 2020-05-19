@@ -14,6 +14,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             {
                 Name = battleTag.Split("#")[0],
                 BattleTag = battleTag,
+                WinLosses = new List<RaceWinLoss>
+                {
+                    new RaceWinLoss(Race.HU),
+                    new RaceWinLoss(Race.OC),
+                    new RaceWinLoss(Race.NE),
+                    new RaceWinLoss(Race.UD),
+                    new RaceWinLoss(Race.RnD)
+                }
             };
         }
 
@@ -22,12 +30,23 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public string Name { get; set; }
         public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
 
-        public void RecordWin(Race race, GameMode mode, GateWay gateWay, int season, bool won)
+        public List<RaceWinLoss> WinLosses { get; set; }
+
+        public void RecordWin(Race race, int season, bool won)
         {
             if (!ParticipatedInSeasons.Select(s => s.Id).Contains(season))
             {
                 ParticipatedInSeasons.Insert(0, new Season(season));
             }
+
+            WinLosses.Single(w => w.Race == race).RecordWin(won);
+        }
+
+        public string Id => BattleTag;
+
+        public int GetWinsPerRace(Race race)
+        {
+            return WinLosses.Single(w => w.Race == race).Wins;
         }
     }
 }

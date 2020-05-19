@@ -3,25 +3,26 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting
     {
-        public PersonalSetting(string battleTag, List<PlayerRaceWins> players = null)
+        public PersonalSetting(string battleTag, List<PlayerProfile> players = null)
         {
             Id = battleTag;
-            Players = players ?? new List<PlayerRaceWins>();
+            Players = players ?? new List<PlayerProfile>();
         }
 
         public string ProfileMessage { get; set; }
         [BsonIgnore]
         [JsonIgnore]
-        public PlayerRaceWins RaceWins => Players?.SingleOrDefault() ?? PlayerRaceWins.Create(Id);
+        public PlayerProfile RaceWins => Players?.SingleOrDefault() ?? PlayerProfile.Create(Id);
         public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
         [JsonIgnore]
         [BsonIgnoreIfNull]
-        public List<PlayerRaceWins> Players { get; set; }
+        public List<PlayerProfile> Players { get; set; }
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }

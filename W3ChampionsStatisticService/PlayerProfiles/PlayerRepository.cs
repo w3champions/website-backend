@@ -81,7 +81,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
-        public Task<PlayerProfile> LoadPlayer(string battleTag)
+        public Task<PlayerProfile> LoadPlayerProfile(string battleTag)
         {
             return LoadFirst<PlayerProfile>(p => p.BattleTag == battleTag);
         }

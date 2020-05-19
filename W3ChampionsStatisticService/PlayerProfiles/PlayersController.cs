@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
-            var player = await _playerRepository.LoadPlayer(battleTag);
+            var player = await _playerRepository.LoadPlayerProfile(battleTag);
             return Ok(player);
         }
 
