@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Ladder
@@ -29,7 +30,6 @@ namespace W3ChampionsStatisticService.Ladder
             var playerRanks = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
 
             await PopulateCalculatedRace(playerRanks);
-            await PopulatePersonalSettingData(playerRanks);
 
             return playerRanks;
         }
@@ -48,37 +48,23 @@ namespace W3ChampionsStatisticService.Ladder
             {
                 foreach (var playerId in rank.Player.PlayerIds)
                 {
-                    PlayerRaceWins playerRaceWins = null;
-                    if (raceWinRates.TryGetValue(playerId.BattleTag, out playerRaceWins))
+                    PlayerDetails playerDetails = null;
+                    if (raceWinRates.TryGetValue(playerId.BattleTag, out playerDetails))
                     {
-                        playerId.CalculatedRace = playerRaceWins.GetMainRace();
-                    }
-                }
-            }
-        }
-
-        private async Task PopulatePersonalSettingData(List<Rank> playerRanks)
-        {
-            var playerIds = playerRanks
-                .SelectMany(x => x.Player.PlayerIds)
-                .Select(x => x.BattleTag)
-                .ToArray();
-
-            var personalSettings = (await _personalSettingsRepository.LoadForPlayers(playerIds))
-                .ToDictionary(x => x.Id);
-
-            foreach (var rank in playerRanks)
-            {
-                foreach (var playerId in rank.Player.PlayerIds)
-                {
-                    PersonalSetting playerPersonalSetting = null;
-                    if (personalSettings.TryGetValue(playerId.BattleTag, out playerPersonalSetting))
-                    {
-                        if (playerPersonalSetting.ProfilePicture != null)
+                        if (rank.PlayersInfo == null)
                         {
-                            playerId.SelectedRace = playerPersonalSetting.ProfilePicture.Race;
-                            playerId.PictureId = playerPersonalSetting.ProfilePicture.PictureId;
+                            rank.PlayersInfo = new List<PlayerInfo>();
                         }
+
+                        var profilePicture = playerDetails.PersonalSettings?.FirstOrDefault()?.ProfilePicture;
+
+                        rank.PlayersInfo.Add(new PlayerInfo()
+                        {
+                            BattleTag = playerId.BattleTag,
+                            CalculatedRace = playerDetails.GetMainRace(),
+                            PictureId = profilePicture?.PictureId,
+                            SelectedRace = profilePicture?.Race
+                        });
                     }
                 }
             }

@@ -31,14 +31,20 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
         }
 
-        public async Task<List<PlayerRaceWins>> LoadPlayersRaceWins(string[] playerIds)
+        public async Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds)
         {
             var database = CreateClient();
 
-            var mongoCollection = database.GetCollection<PlayerRaceWins>(nameof(PlayerRaceWins));
+            var playerRaceWins = database.GetCollection<PlayerDetails>(nameof(PlayerRaceWins));
+            var personalSettings = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
 
-            return await mongoCollection
-                .Find(x => playerIds.Contains(x.Id))
+            return await playerRaceWins
+                .Aggregate()
+                .Match(x => playerIds.Contains(x.Id))
+                .Lookup<PlayerDetails, PersonalSetting, PlayerDetails>(personalSettings,
+                    raceWins => raceWins.Id,
+                    settings => settings.Id,
+                    details => details.PersonalSettings)
                 .ToListAsync();
         }
 

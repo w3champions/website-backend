@@ -38,14 +38,5 @@ namespace W3ChampionsStatisticService.PersonalSettings
         {
             return WinLosses.Single(w => w.Race == race).Wins;
         }
-
-        public Race GetMainRace()
-        {
-            var mostGamesRace = WinLosses
-                 .OrderByDescending(x => x.Games)
-                 .FirstOrDefault();
-
-            return mostGamesRace != null ? mostGamesRace.Race : Race.RnD;
-        }
     }
 }

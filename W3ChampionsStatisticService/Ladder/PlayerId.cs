@@ -16,14 +16,5 @@ namespace W3ChampionsStatisticService.Ladder
 
         public string Name { get; set; }
         public string BattleTag { get; set; }
-
-        [BsonIgnore]
-        public Race CalculatedRace { get; set; }
-
-        [BsonIgnore]
-        public Race? SelectedRace { get; set; }
-
-        [BsonIgnore]
-        public long? PictureId { get; set; }
     }
 }
