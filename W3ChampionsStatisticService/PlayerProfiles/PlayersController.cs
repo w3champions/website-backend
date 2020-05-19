@@ -40,5 +40,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var wins = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
             return Ok(wins);
         }
+
+        [HttpGet("{battleTag}/race-stats")]
+        public async Task<IActionResult> GetRaceStats(
+            [FromRoute] string battleTag,
+            GateWay gateWay,
+            int season)
+        {
+            var wins = await _playerRepository.LoadRaceStatPerGateway(battleTag, gateWay, season);
+            return Ok(wins);
+        }
     }
 }

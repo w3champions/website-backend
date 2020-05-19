@@ -3,8 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -87,6 +89,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
             var handler = new PlayerProfileHandler(playerRepository);
             var handler2 = new PlayerGameModeStatPerGatewayHandler(playerRepository);
+            var handler3 = new PlayerRaceStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.gameMode = GameMode.GM_1v1;
@@ -101,13 +104,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             {
                 await handler.Update(ev);
                 await handler2.Update(ev);
+                await handler3.Update(ev);
             }
 
-            var playerLoaded = await playerRepository.LoadPlayer("peter#123");
+            var playerLoaded = await playerRepository.LoadRaceStatPerGateway("peter#123", Race.HU, GateWay.Europe, 1);
             var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, 1);
 
             Assert.AreEqual(100, playerLoadedStats.Single().Wins);
-            Assert.AreEqual(100, playerLoaded.RaceStats[5].Wins);
+            Assert.AreEqual(100, playerLoaded.Wins);
         }
     }
 }

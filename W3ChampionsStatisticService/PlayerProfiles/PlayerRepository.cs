@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -63,6 +64,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 t.Id.Contains(battleTag) &&
                 t.GateWay == gateWay &&
                 t.Season == season );
+        }
+
+        public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
+        {
+            return LoadAll<PlayerRaceStatPerGateway>(t => t.Id.StartsWith($"{season}_{battleTag}_@{gateWay}"));
+        }
+
+        public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
+        {
+            return LoadFirst<PlayerRaceStatPerGateway>(t => t.Id == $"{season}_{battleTag}_@{gateWay}_{race}");
+        }
+
+        public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
+        {
+            return Upsert(stat, t => t.Id == stat.Id);
         }
 
         public Task<PlayerProfile> LoadPlayer(string battleTag)
