@@ -42,8 +42,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             WinLosses.Single(w => w.Race == race).RecordWin(won);
         }
 
-        public string Id => BattleTag;
-
         public int GetWinsPerRace(Race race)
         {
             return WinLosses.Single(w => w.Race == race).Wins;
