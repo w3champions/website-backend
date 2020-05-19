@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerProfiles._2v2Stats;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

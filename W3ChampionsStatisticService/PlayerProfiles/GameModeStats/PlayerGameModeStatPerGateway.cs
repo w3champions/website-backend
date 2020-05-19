@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.CommonValueObjects;
 
-namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
     public class PlayerGameModeStatPerGateway : BaseRankedStat
     {

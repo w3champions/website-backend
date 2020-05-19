@@ -12,7 +12,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerProfiles._2v2Stats;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;

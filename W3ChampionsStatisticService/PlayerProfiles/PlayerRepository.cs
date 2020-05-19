@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.PlayerProfiles._2v2Stats;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 

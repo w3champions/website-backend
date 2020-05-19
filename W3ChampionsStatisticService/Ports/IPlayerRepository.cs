@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.PlayerProfiles._2v2Stats;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
 namespace W3ChampionsStatisticService.Ports
 {

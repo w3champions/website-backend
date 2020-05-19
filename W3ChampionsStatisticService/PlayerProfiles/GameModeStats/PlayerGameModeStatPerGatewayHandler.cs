@@ -5,7 +5,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.PlayerProfiles._2v2Stats
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
     public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
     {
