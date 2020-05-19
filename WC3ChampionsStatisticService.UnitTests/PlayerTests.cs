@@ -104,10 +104,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             var playerLoaded = await playerRepository.LoadPlayer("peter#123");
-            var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GameMode.GM_1v1, GateWay.Europe, 0);
+            var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GameMode.GM_1v1, GateWay.Europe, 1);
 
             Assert.AreEqual(100, playerLoadedStats.Single().Wins);
-            Assert.AreEqual(100, playerLoaded.RaceStats[0].Wins);
+            Assert.AreEqual(100, playerLoaded.RaceStats[5].Wins);
         }
     }
 }
