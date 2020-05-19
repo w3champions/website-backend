@@ -11,11 +11,14 @@ namespace W3ChampionsStatisticService.Ladder
     public class LadderController : ControllerBase
     {
         private readonly IRankRepository _rankRepository;
+        private readonly RankQueryHandler _rankQueryHandler;
 
         public LadderController(
-            IRankRepository rankRepository)
+            IRankRepository rankRepository,
+            RankQueryHandler rankQueryHandler)
         {
             _rankRepository = rankRepository;
+            _rankQueryHandler = rankQueryHandler;
         }
 
         [HttpGet("search")]
@@ -29,7 +32,8 @@ namespace W3ChampionsStatisticService.Ladder
         [HttpGet("{leagueId}")]
         public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
         {
-            var playersInLadder = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
+            var playersInLadder = await _rankQueryHandler.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
+
             if (playersInLadder == null)
             {
                 return NoContent();

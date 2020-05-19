@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -28,6 +29,17 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
         {
             return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
+        }
+
+        public async Task<List<PlayerRaceWins>> LoadPlayersRaceWins(string[] playerIds)
+        {
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<PlayerRaceWins>(nameof(PlayerRaceWins));
+
+            return await mongoCollection
+                .Find(x => playerIds.Contains(x.Id))
+                .ToListAsync();
         }
 
         public Task UpsertWins(List<PlayerWinLoss> winrate)

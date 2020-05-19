@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -24,6 +27,17 @@ namespace W3ChampionsStatisticService.PersonalSettings
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
             return result;
+        }
+
+        public async Task<List<PersonalSetting>> LoadForPlayers(string[] playerIds)
+        {
+            var database = CreateClient();
+
+            var mongoCollection = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
+
+            return await mongoCollection
+                .Find(x => playerIds.Contains(x.Id))
+                .ToListAsync();
         }
 
         public Task Save(PersonalSetting setting)
