@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}/game-mode-stats")]
-        public async Task<IActionResult> GetPlayer2v2TeamStats(
+        public async Task<IActionResult> GetGameModeStats(
             [FromRoute] string battleTag,
             GameMode gameMode,
             GateWay gateWay,
