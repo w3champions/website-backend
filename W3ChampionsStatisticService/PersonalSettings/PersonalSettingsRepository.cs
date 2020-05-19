@@ -29,17 +29,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return result;
         }
 
-        public async Task<List<PersonalSetting>> LoadForPlayers(string[] playerIds)
-        {
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
-
-            return await mongoCollection
-                .Find(x => playerIds.Contains(x.Id))
-                .ToListAsync();
-        }
-
         public Task Save(PersonalSetting setting)
         {
             setting.Players = null;

@@ -11,7 +11,6 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(PersonalSetting setting);
         Task<PlayerRaceWins> LoadPlayerRaceWins(string playerRawBattleTag);
         Task UpsertPlayerRaceWin(PlayerRaceWins player);
-        Task<List<PersonalSetting>> LoadForPlayers(string[] playerIds);
     }
 
 }
