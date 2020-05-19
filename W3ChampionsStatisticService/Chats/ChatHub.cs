@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using W3ChampionsStatisticService.Ports;
@@ -21,7 +20,7 @@ namespace W3ChampionsStatisticService.Chats
             var res = await _blizzardAuthenticationService.GetUser(bearer);
             if (res != null)
             {
-                await Clients.All.SendAsync("ReceiveMessage", res.battletag, message);
+                await Clients.All.SendAsync("ReceiveMessage", res.battletag, res.name, message);
             }
         }
 
@@ -35,10 +34,9 @@ namespace W3ChampionsStatisticService.Chats
             var res = await _blizzardAuthenticationService.GetUser(bearer);
             if (res != null)
             {
-                var connectedUser = new ChatUser(res.battletag, res.battletag.Split("#")[0]);
-
+                var connectedUser = new ChatUser(res.battletag, res.name);
                 await Clients.Caller.SendAsync("StartChat", new List<ChatUser> { connectedUser });
-                await Clients.All.SendAsync("UserEntered", connectedUser.Name, connectedUser.BattleTag);
+                await Clients.Others.SendAsync("UserEntered", connectedUser.Name, connectedUser.BattleTag);
             }
         }
     }
