@@ -75,6 +75,9 @@ namespace W3ChampionsStatisticService
 
             services.AddSingleton(typeof(TrackingService));
 
+
+            services.AddSingleton<ConnectionMapping>();
+
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
@@ -85,11 +88,11 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IPadServiceRepo, PadServiceRepo>();
-            services.AddSingleton<FakeEventCreator>();
-            services.AddSingleton<HeroStatsQueryHandler>();
-            services.AddSingleton<PersonalSettingsCommandHandler>();
-            services.AddSingleton<PlayerQueryHandler>();
-            services.AddSingleton<MmrDistributionHandler>();
+            services.AddTransient<FakeEventCreator>();
+            services.AddTransient<HeroStatsQueryHandler>();
+            services.AddTransient<PersonalSettingsCommandHandler>();
+            services.AddTransient<PlayerQueryHandler>();
+            services.AddTransient<MmrDistributionHandler>();
 
             if (startPadSync == "true")
             {

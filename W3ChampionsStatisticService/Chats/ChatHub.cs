@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using W3ChampionsStatisticService.Ports;
@@ -9,10 +8,14 @@ namespace W3ChampionsStatisticService.Chats
     public class ChatHub : Hub
     {
         private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
+        private readonly ConnectionMapping _connections;
 
-        public ChatHub(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public ChatHub(
+            IBlizzardAuthenticationService blizzardAuthenticationService,
+            ConnectionMapping connections)
         {
             _blizzardAuthenticationService = blizzardAuthenticationService;
+            _connections = connections;
         }
 
         public async Task SendMessage(string message, string bearer)
@@ -26,7 +29,10 @@ namespace W3ChampionsStatisticService.Chats
 
         public override async Task OnDisconnectedAsync(Exception exception)
         {
-            await Clients.All.SendAsync("UserLeft", "egal");
+            var user = _connections.GetUser(Context.ConnectionId);
+            _connections.Remove(Context.ConnectionId);
+            await Clients.All.SendAsync("UserLeft", user.BattleTag);
+            await base.OnDisconnectedAsync(exception);
         }
 
         public async Task LoginAs(string bearer)
@@ -35,9 +41,11 @@ namespace W3ChampionsStatisticService.Chats
             if (res != null)
             {
                 var connectedUser = new ChatUser(res.battletag, res.name);
-                await Clients.Caller.SendAsync("StartChat", new List<ChatUser> { connectedUser });
+                _connections.Add(Context.ConnectionId, connectedUser);
                 await Clients.Others.SendAsync("UserEntered", connectedUser.Name, connectedUser.BattleTag);
             }
+
+            await Clients.Caller.SendAsync("StartChat", _connections.Users);
         }
     }
 }
