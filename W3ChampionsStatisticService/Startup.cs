@@ -70,6 +70,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<HeroStatsQueryHandler>();
             services.AddSingleton<PersonalSettingsCommandHandler>();
             services.AddSingleton<PlayerQueryHandler>();
+            services.AddSingleton<RankQueryHandler>();
             services.AddSingleton<MmrDistributionHandler>();
 
             if (startPadSync == "true")
