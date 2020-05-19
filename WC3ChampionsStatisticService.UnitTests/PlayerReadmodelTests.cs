@@ -97,7 +97,6 @@ namespace WC3ChampionsStatisticService.UnitTests
                 0);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
-            gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(0, 200);
             gameModeStatPerGateway.RecordRanking(100, 180);
             gameModeStatPerGateway.RecordRanking(100, 230);
 
@@ -117,8 +116,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(0, 200);
-            gameModeStatPerGateway.RankProgressionStart.Date = DateTimeOffset.UtcNow.AddDays(-1);
             gameModeStatPerGateway.RecordRanking(100, 180);
+            gameModeStatPerGateway.RankProgressionStart.Date = DateTimeOffset.UtcNow.AddDays(-1);
             gameModeStatPerGateway.RecordRanking(100, 230);
 
             Assert.AreEqual(0, gameModeStatPerGateway.RankingPointsProgress.RankingPoints);

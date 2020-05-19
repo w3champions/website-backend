@@ -27,12 +27,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public void RecordRanking(in int mmr, in int rankingPoints)
         {
-            MMR = mmr;
             if (RankProgressionStart == null || LastGameWasBefore8Hours())
             {
                 RankProgressionStart = RankProgression.Create(mmr, rankingPoints);
             }
 
+            MMR = mmr;
             RankingPoints = rankingPoints;
         }
 
