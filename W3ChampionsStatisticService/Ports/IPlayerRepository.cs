@@ -18,6 +18,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<int>> LoadMmrs(int season);
         Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id);
         Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat);
-        Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag, GameMode gameMode, GateWay gateWay, int season);
+        Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag, GateWay gateWay,
+            int season);
     }
 }

@@ -55,16 +55,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
-        public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(
-            string battleTag,
-            GameMode gameMode,
+        public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag,
             GateWay gateWay,
             int season)
         {
             return LoadAll<PlayerGameModeStatPerGateway>(t =>
                 t.Id.Contains(battleTag) &&
                 t.GateWay == gateWay &&
-                t.GameMode == gameMode &&
                 t.Season == season );
         }
 

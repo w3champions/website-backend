@@ -34,11 +34,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}/game-mode-stats")]
         public async Task<IActionResult> GetGameModeStats(
             [FromRoute] string battleTag,
-            GameMode gameMode,
             GateWay gateWay,
             int season)
         {
-            var wins = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gameMode, gateWay, season);
+            var wins = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
             return Ok(wins);
         }
     }

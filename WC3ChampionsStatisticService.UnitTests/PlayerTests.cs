@@ -58,7 +58,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await playerRepository.UpsertPlayerGameModeStatPerGateway(player);
 
-            var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("peter#123", GameMode.GM_1v1, GateWay.Europe, 1);
+            var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, 1);
 
             Assert.AreEqual(234, playerLoadedAgain.Single().MMR);
             Assert.AreEqual(123, playerLoadedAgain.Single().RankingPoints);
@@ -104,7 +104,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             var playerLoaded = await playerRepository.LoadPlayer("peter#123");
-            var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GameMode.GM_1v1, GateWay.Europe, 1);
+            var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, 1);
 
             Assert.AreEqual(100, playerLoadedStats.Single().Wins);
             Assert.AreEqual(100, playerLoaded.RaceStats[5].Wins);
