@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
@@ -15,6 +16,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<PlayerProfileVnext> LoadPlayerProfile(string battleTag);
         Task<PlayerOverview> LoadOverview(string battleTag);
         Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season);
+        Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds);
         Task UpsertWins(List<PlayerWinLoss> winrate);
         Task<List<int>> LoadMmrs(int season);
         Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id);
