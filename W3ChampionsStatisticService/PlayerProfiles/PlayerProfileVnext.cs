@@ -39,7 +39,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 ParticipatedInSeasons.Insert(0, new Season(season));
             }
 
-            WinLosses.Single(w => w.Race == race).RecordWin(won);
+            if (season != 0)
+            {
+                WinLosses.Single(w => w.Race == race).RecordWin(won);
+            }
         }
 
         public int GetWinsPerRace(Race race)
