@@ -50,8 +50,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var wins = await _playerRepository.LoadRaceStatPerGateway(battleTag, gateWay, season);
             var ordered = wins.OrderBy(s => s.Race).ToList();
-            var firstPick = ordered[0];
-            if (firstPick.Race != Race.RnD) return Ok(ordered);
+            var firstPick = ordered.FirstOrDefault();
+            if (firstPick?.Race != Race.RnD) return Ok(ordered);
 
             ordered.Remove(firstPick);
             ordered.Add(firstPick);
