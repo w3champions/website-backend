@@ -75,9 +75,6 @@ namespace W3ChampionsStatisticService
                 services.AddUnversionedReadModelService<PadSyncHandler>();
             }
 
-            services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
-            services.AddReadModelService<PlayerProfileVnextHandler>();
-
             if (startHandlers == "true")
             {
                 // PlayerProfile
