@@ -13,6 +13,7 @@ using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
@@ -74,6 +75,8 @@ namespace W3ChampionsStatisticService
                 services.AddUnversionedReadModelService<PadSyncHandler>();
             }
 
+            services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
+
             if (startHandlers == "true")
             {
                 // PlayerProfile
@@ -85,6 +88,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
                 services.AddReadModelService<PlayerHeroStatsHandler>();
                 services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
+                services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
 
                 // Generell Stats
                 services.AddReadModelService<GamesPerDayHandler>();

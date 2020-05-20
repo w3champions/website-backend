@@ -10,9 +10,9 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface IPlayerRepository
     {
-        Task UpsertPlayer(PlayerProfile playerProfile);
+        Task UpsertPlayer(PlayerProfileVnext playerProfileVnext);
         Task UpsertPlayerOverview(PlayerOverview playerOverview);
-        Task<PlayerProfile> LoadPlayerProfile(string battleTag);
+        Task<PlayerProfileVnext> LoadPlayerProfile(string battleTag);
         Task<PlayerOverview> LoadOverview(string battleTag);
         Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season);
         Task UpsertWins(List<PlayerWinLoss> winrate);

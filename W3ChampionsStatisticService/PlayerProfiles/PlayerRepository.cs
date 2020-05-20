@@ -16,9 +16,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
         }
 
-        public async Task UpsertPlayer(PlayerProfile playerProfile)
+        public async Task UpsertPlayer(PlayerProfileVnext playerProfileVnext)
         {
-            await Upsert(playerProfile, p => p.BattleTag.Equals(playerProfile.BattleTag));
+            await Upsert(playerProfileVnext, p => p.BattleTag.Equals(playerProfileVnext.BattleTag));
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -81,9 +81,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
-        public Task<PlayerProfile> LoadPlayerProfile(string battleTag)
+        public Task<PlayerProfileVnext> LoadPlayerProfile(string battleTag)
         {
-            return LoadFirst<PlayerProfile>(p => p.BattleTag == battleTag);
+            return LoadFirst<PlayerProfileVnext>(p => p.BattleTag == battleTag);
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)

@@ -34,7 +34,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             if (setting == null)
             {
                 var player = await _playerRepository.LoadPlayerProfile(battleTag);
-                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerProfile> { player }});
+                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerProfileVnext> { player }});
             }
             return Ok(setting);
         }

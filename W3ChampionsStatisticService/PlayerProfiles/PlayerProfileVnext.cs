@@ -6,11 +6,11 @@ using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class PlayerProfile
+    public class PlayerProfileVnext
     {
-        public static PlayerProfile Create(string battleTag)
+        public static PlayerProfileVnext Create(string battleTag)
         {
-            return new PlayerProfile
+            return new PlayerProfileVnext
             {
                 Name = battleTag.Split("#")[0],
                 BattleTag = battleTag,
