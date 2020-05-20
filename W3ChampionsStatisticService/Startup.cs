@@ -80,7 +80,7 @@ namespace W3ChampionsStatisticService
             if (startHandlers == "true")
             {
                 // PlayerProfile
-                services.AddReadModelService<PlayerProfileVnextHandler>();
+                services.AddReadModelService<PlayerOverallStatsHandler>();
                 services.AddReadModelService<PlayOverviewHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
 

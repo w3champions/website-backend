@@ -5,11 +5,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class PlayerProfileVnextHandler : IReadModelHandler
+    public class PlayerOverallStatsHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public PlayerProfileVnextHandler(
+        public PlayerOverallStatsHandler(
             IPlayerRepository playerRepository
             )
         {
@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             foreach (var playerRaw in nextEvent.match.players)
             {
                 var player = await _playerRepository.LoadPlayerProfile(playerRaw.battleTag)
-                             ?? PlayerProfileVnext.Create(playerRaw.battleTag);
+                             ?? PlayerOverallStats.Create(playerRaw.battleTag);
                 player.RecordWin(
                     playerRaw.race,
                     nextEvent.match.season, playerRaw.won);

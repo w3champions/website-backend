@@ -196,7 +196,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerStats_PlayerParticipatedRaceIsCorrect()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var playerHeroStatsHandler = new PlayerProfileVnextHandler(playerRepository);
+            var playerHeroStatsHandler = new PlayerOverallStatsHandler(playerRepository);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.season = 0;

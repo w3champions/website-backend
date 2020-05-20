@@ -17,7 +17,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerProfileVnext.Create("peter#123");
+            var player = PlayerOverallStats.Create("peter#123");
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadPlayerProfile(player.BattleTag);
 
@@ -29,7 +29,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerProfileVnext.Create("peter#123");
+            var player = PlayerOverallStats.Create("peter#123");
             player.RecordWin(Race.HU, 0, true);
             await playerRepository.UpsertPlayer(player);
             var playerLoaded = await playerRepository.LoadPlayerProfile(player.BattleTag);
@@ -70,8 +70,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player1 = PlayerProfileVnext.Create("peter#123");
-            var player2 = PlayerProfileVnext.Create("wolf#456");
+            var player1 = PlayerOverallStats.Create("peter#123");
+            var player2 = PlayerOverallStats.Create("wolf#456");
 
             await playerRepository.UpsertPlayer(player1);
             await playerRepository.UpsertPlayer(player2);
@@ -86,7 +86,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerMultipleWinRecords()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var handler = new PlayerProfileVnextHandler(playerRepository);
+            var handler = new PlayerOverallStatsHandler(playerRepository);
             var handler2 = new PlayerGameModeStatPerGatewayHandler(playerRepository);
             var handler3 = new PlayerRaceStatPerGatewayHandler(playerRepository);
 

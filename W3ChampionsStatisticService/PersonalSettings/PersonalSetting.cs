@@ -9,20 +9,20 @@ namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting
     {
-        public PersonalSetting(string battleTag, List<PlayerProfileVnext> players = null)
+        public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
         {
             Id = battleTag;
-            Players = players ?? new List<PlayerProfileVnext>();
+            Players = players ?? new List<PlayerOverallStats>();
         }
 
         public string ProfileMessage { get; set; }
         [BsonIgnore]
         [JsonIgnore]
-        public PlayerProfileVnext RaceWins => Players?.SingleOrDefault() ?? PlayerProfileVnext.Create(Id);
+        public PlayerOverallStats RaceWins => Players?.SingleOrDefault() ?? PlayerOverallStats.Create(Id);
         public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
         [JsonIgnore]
         [BsonIgnoreIfNull]
-        public List<PlayerProfileVnext> Players { get; set; }
+        public List<PlayerOverallStats> Players { get; set; }
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }

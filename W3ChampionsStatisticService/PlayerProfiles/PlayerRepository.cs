@@ -18,9 +18,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
         }
 
-        public async Task UpsertPlayer(PlayerProfileVnext playerProfileVnext)
+        public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
-            await Upsert(playerProfileVnext, p => p.BattleTag.Equals(playerProfileVnext.BattleTag));
+            await Upsert(playerOverallStats, p => p.BattleTag.Equals(playerOverallStats.BattleTag));
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var database = CreateClient();
 
-            var playerRaceWins = database.GetCollection<PlayerDetails>(nameof(PlayerProfileVnext));
+            var playerRaceWins = database.GetCollection<PlayerDetails>(nameof(PlayerOverallStats));
             var personalSettings = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
 
             return await playerRaceWins
@@ -100,9 +100,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Upsert(stat, t => t.Id == stat.Id);
         }
 
-        public Task<PlayerProfileVnext> LoadPlayerProfile(string battleTag)
+        public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)
         {
-            return LoadFirst<PlayerProfileVnext>(p => p.BattleTag == battleTag);
+            return LoadFirst<PlayerOverallStats>(p => p.BattleTag == battleTag);
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
