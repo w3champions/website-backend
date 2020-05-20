@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
@@ -48,7 +49,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             int season)
         {
             var wins = await _playerRepository.LoadRaceStatPerGateway(battleTag, gateWay, season);
-            return Ok(wins);
+            var ordered = wins.OrderBy(s => s.Race).ToList();
+            var firstPick = ordered[0];
+            if (firstPick.Race != Race.RnD) return Ok(ordered);
+
+            ordered.Remove(firstPick);
+            ordered.Add(firstPick);
+            return Ok(ordered);
         }
     }
 }
