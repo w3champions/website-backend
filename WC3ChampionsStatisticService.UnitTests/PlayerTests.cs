@@ -87,7 +87,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerMultipleWinRecords()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var handler = new PlayerProfileHandler(playerRepository);
+            var handler = new PlayerProfileVnextHandler(playerRepository);
             var handler2 = new PlayerGameModeStatPerGatewayHandler(playerRepository);
             var handler3 = new PlayerRaceStatPerGatewayHandler(playerRepository);
 

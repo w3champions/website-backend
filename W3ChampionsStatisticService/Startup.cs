@@ -76,11 +76,12 @@ namespace W3ChampionsStatisticService
             }
 
             services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
+            services.AddReadModelService<PlayerProfileVnextHandler>();
 
             if (startHandlers == "true")
             {
                 // PlayerProfile
-                services.AddReadModelService<PlayerProfileHandler>();
+                services.AddReadModelService<PlayerProfileVnextHandler>();
                 services.AddReadModelService<PlayOverviewHandler>();
                 services.AddReadModelService<PlayerWinrateHandler>();
 
