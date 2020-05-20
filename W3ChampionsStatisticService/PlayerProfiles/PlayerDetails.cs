@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
+    [BsonIgnoreExtraElements]
     public class PlayerDetails
     {
         public string Id { get; set; }

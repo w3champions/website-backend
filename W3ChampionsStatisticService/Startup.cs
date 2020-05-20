@@ -9,10 +9,11 @@ using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PadEvents.FakeEventSync;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
@@ -65,9 +66,10 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IPadServiceRepo, PadServiceRepo>();
-            services.AddSingleton<HeroStatsQueryHandler>();
-            services.AddSingleton<PersonalSettingsCommandHandler>();
-            services.AddSingleton<MmrDistributionHandler>();
+            services.AddTransient<HeroStatsQueryHandler>();
+            services.AddTransient<PersonalSettingsCommandHandler>();
+            services.AddTransient<MmrDistributionHandler>();
+            services.AddTransient<RankQueryHandler>();
 
             if (startPadSync == "true")
             {

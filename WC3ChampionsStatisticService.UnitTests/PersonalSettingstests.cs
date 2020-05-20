@@ -75,7 +75,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var player = PlayerProfileVnext.Create("peter#123");
             for (int i = 0; i < 20; i++)
             {
-                player.RecordWin(Race.HU, 0, true);
+                player.RecordWin(Race.HU, 1, true);
             }
 
             await playerRepo.UpsertPlayer(player);

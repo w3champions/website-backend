@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
@@ -30,6 +31,23 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
         {
             return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
+        }
+
+        public async Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds)
+        {
+            var database = CreateClient();
+
+            var playerRaceWins = database.GetCollection<PlayerDetails>(nameof(PlayerProfileVnext));
+            var personalSettings = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
+
+            return await playerRaceWins
+                .Aggregate()
+                .Match(x => playerIds.Contains(x.Id))
+                .Lookup<PlayerDetails, PersonalSetting, PlayerDetails>(personalSettings,
+                    raceWins => raceWins.Id,
+                    settings => settings.Id,
+                    details => details.PersonalSettings)
+                .ToListAsync();
         }
 
         public Task UpsertWins(List<PlayerWinLoss> winrate)
