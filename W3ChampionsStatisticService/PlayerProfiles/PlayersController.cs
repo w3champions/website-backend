@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -11,11 +12,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     public class PlayersController : ControllerBase
     {
         private readonly IPlayerRepository _playerRepository;
+        private readonly GameModeStatQueryHandler _queryHandler;
 
         public PlayersController(
-            IPlayerRepository playerRepository)
+            IPlayerRepository playerRepository,
+            GameModeStatQueryHandler queryHandler)
         {
             _playerRepository = playerRepository;
+            _queryHandler = queryHandler;
         }
 
         [HttpGet("{battleTag}")]
@@ -38,7 +42,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GateWay gateWay,
             int season)
         {
-            var wins = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
+            var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
             return Ok(wins);
         }
 

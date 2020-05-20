@@ -70,6 +70,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<PersonalSettingsCommandHandler>();
             services.AddTransient<MmrDistributionHandler>();
             services.AddTransient<RankQueryHandler>();
+            services.AddTransient<GameModeStatQueryHandler>();
 
             if (startPadSync == "true")
             {
