@@ -53,7 +53,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
                 var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
-                var gameModeStat = player.Single(g => g.Id == rank.Id);
+                var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
+                if (gameModeStat == null) return;
 
                 gameModeStat.Division = league.Division;
                 gameModeStat.LeagueOrder = league.Order;
