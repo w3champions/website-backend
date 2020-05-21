@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
+using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
@@ -46,6 +47,7 @@ namespace W3ChampionsStatisticService
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
+            services.AddSignalR();
             services.AddControllers();
 
             var startHandlers = _configuration.GetValue<string>("startHandlers");
@@ -54,7 +56,8 @@ namespace W3ChampionsStatisticService
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
-            services.AddSingleton(typeof(TrackingService));
+            services.AddSingleton<TrackingService>();
+            services.AddSingleton<ConnectionMapping>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -72,10 +75,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<RankQueryHandler>();
             services.AddTransient<GameModeStatQueryHandler>();
 
-            if (startPadSync == "true")
-            {
-                services.AddUnversionedReadModelService<PadSyncHandler>();
-            }
+            if (startPadSync == "true") services.AddUnversionedReadModelService<PadSyncHandler>();
 
             if (startHandlers == "true")
             {
@@ -120,17 +120,29 @@ namespace W3ChampionsStatisticService
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
             app.UseRouting();
-            app.UseCors(o => o
-                .AllowAnyOrigin()
-                .AllowAnyHeader()
-                .AllowAnyMethod());
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseCors(builder =>
+                builder.WithOrigins(
+                        "http://localhost:8080",
+                        "https://www.w3champions.com",
+                        "https://www.test.w3champions.com",
+                        "http://176.28.16.249"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials());
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapHub<ChatHub>("/chatHub");
+            });
         }
     }
 
     public static class ReadModelExtensions
     {
-        public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
+        public static IServiceCollection AddReadModelService<T>(this IServiceCollection services)
+            where T : class, IReadModelHandler
         {
             services.AddTransient<T>();
             services.AddTransient<ReadModelHandler<T>>();
@@ -138,7 +150,8 @@ namespace W3ChampionsStatisticService
             return services;
         }
 
-        public static IServiceCollection AddReadModelStartedMatchesService<T>(this IServiceCollection services) where T : class, IReadModelStartedMatchesHandler
+        public static IServiceCollection AddReadModelStartedMatchesService<T>(this IServiceCollection services)
+            where T : class, IReadModelStartedMatchesHandler
         {
             services.AddTransient<T>();
             services.AddTransient<ReadModelStartedMatchesHandler<T>>();
@@ -147,7 +160,8 @@ namespace W3ChampionsStatisticService
             return services;
         }
 
-        public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
+        public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services)
+            where T : class, IAsyncUpdatable
         {
             services.AddTransient<T>();
             services.AddSingleton<IHostedService, AsyncServiceBase<T>>();
