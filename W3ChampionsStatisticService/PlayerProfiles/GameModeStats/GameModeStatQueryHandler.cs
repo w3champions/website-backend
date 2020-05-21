@@ -31,41 +31,29 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             int season)
         {
             var player = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
-            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag);
-            var allLeagues = await _rankRepository.LoadLeagueConstellation();
+            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
+            var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
 
-            PopulateStats(leaguesOfPlayer, player, allLeagues);
-            return player;
-        }
-
-         //way to shitty, do this with better rm one day
-        private void PopulateStats(List<Rank> leaguesOfPlayer,
-            List<PlayerGameModeStatPerGateway> player,
-            List<LeagueConstellation> allLeagues)
-        {
-            var gm1V1S = leaguesOfPlayer.Where(l => l.GameMode == GameMode.GM_1v1);
-            foreach (var rank in gm1V1S)
+            foreach (var rank in leaguesOfPlayer)
             {
                 PopulateLeague(player, allLeagues, rank);
             }
 
-            var all2V2SGrouped = leaguesOfPlayer.Where(l => l.GameMode == GameMode.GM_2v2_AT).GroupBy(l => l.Season);
-            foreach (var groupForOneSeason in all2V2SGrouped)
-            {
-                var highest2V2Ranking = groupForOneSeason.OrderBy(r => r.League).ThenByDescending(r => r.RankNumber).First();
-                PopulateLeague(player, allLeagues, highest2V2Ranking);
-            }
+            return player;
         }
 
-        private void PopulateLeague(List<PlayerGameModeStatPerGateway> player, List<LeagueConstellation> allLeagues, Rank
-         rank)
+        private void PopulateLeague(
+            List<PlayerGameModeStatPerGateway> player,
+            List<LeagueConstellation> allLeagues,
+            Rank rank)
         {
             try
             {
+                if (rank.RankNumber == 0) return;
                 var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
                 var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
-                var gameModeStat = player.Single(g => g.Season == rank.Season && g.GateWay == rank.Gateway && g.GameMode == rank.GameMode);
+                var gameModeStat = player.Single(g => g.Id == rank.Id);
 
                 gameModeStat.Division = league.Division;
                 gameModeStat.LeagueOrder = league.Order;

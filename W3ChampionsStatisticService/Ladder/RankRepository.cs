@@ -35,10 +35,10 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Season == season);
         }
 
-        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor)
+        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search));
+            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
             return joinWith;
         }
 
