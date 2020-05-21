@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.Admin
     public class AdminController : ControllerBase
     {
         [HttpGet("health-check")]
-        public IActionResult HealtCheck()
+        public IActionResult HealthCheck()
         {
             return Ok();
         }

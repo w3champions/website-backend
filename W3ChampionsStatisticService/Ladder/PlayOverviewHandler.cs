@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -37,14 +38,18 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var winnerPlayerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
-            var winnerIdCombined = $"{nextEvent.match.season}_{string.Join("_", winnerPlayerIds.OrderBy(t => t.BattleTag).Select(t => $"{t.BattleTag}@{(int) nextEvent.match.gateway}"))}_{nextEvent.match.gameMode}";
+            var match = nextEvent.match;
+            var winnerIdCombined = new BattleTagIdCombined(
+                players.Select(p => PlayerId.Create(p.battleTag)).ToList(),
+                match.gateway,
+                match.gameMode, match.season);
 
-            var winner = await _playerRepository.LoadOverview(winnerIdCombined)
+            var winner = await _playerRepository.LoadOverview(winnerIdCombined.Id)
                          ?? PlayerOverview.Create(
                              winnerPlayerIds,
-                             nextEvent.match.gateway,
-                             nextEvent.match.gameMode,
-                             nextEvent.match.season);
+                             match.gateway,
+                             match.gameMode,
+                             match.season);
 
             winner.RecordWin(
                 players.First().won,

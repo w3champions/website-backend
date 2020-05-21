@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
@@ -13,16 +11,13 @@ namespace W3ChampionsStatisticService.Ladder
     {
         private readonly IRankRepository _rankRepository;
         private readonly IPlayerRepository _playerRepository;
-        private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
         public RankQueryHandler(
             IRankRepository rankRepository,
-            IPlayerRepository playerRepository,
-            IPersonalSettingsRepository personalSettingsRepository)
+            IPlayerRepository playerRepository)
         {
             _rankRepository = rankRepository;
             _playerRepository = playerRepository;
-            _personalSettingsRepository = personalSettingsRepository;
         }
 
         public async Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)

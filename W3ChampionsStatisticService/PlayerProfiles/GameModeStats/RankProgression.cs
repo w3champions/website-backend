@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace W3ChampionsStatisticService.PlayerProfiles
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
     public class RankProgression
     {

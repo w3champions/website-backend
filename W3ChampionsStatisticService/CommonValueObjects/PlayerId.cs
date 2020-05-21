@@ -1,7 +1,4 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
-using W3ChampionsStatisticService.CommonValueObjects;
-
-namespace W3ChampionsStatisticService.Ladder
+﻿namespace W3ChampionsStatisticService.CommonValueObjects
 {
     public class PlayerId
     {

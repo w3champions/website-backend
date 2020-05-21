@@ -196,7 +196,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerStats_PlayerParticipatedRaceIsCorrect()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var playerHeroStatsHandler = new PlayerProfileHandler(playerRepository);
+            var playerHeroStatsHandler = new PlayerOverallStatsHandler(playerRepository);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.season = 0;
@@ -209,7 +209,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerHeroStatsHandler.Update(matchFinishedEvent2);
             await playerHeroStatsHandler.Update(matchFinishedEvent3);
 
-            var enemyStatsVsPlayerRace = await playerRepository.LoadPlayer(matchFinishedEvent1.match.players[0].battleTag);
+            var enemyStatsVsPlayerRace = await playerRepository.LoadPlayerProfile(matchFinishedEvent1.match.players[0].battleTag);
 
             Assert.AreEqual(2, enemyStatsVsPlayerRace.ParticipatedInSeasons.Count);
             Assert.AreEqual(1, enemyStatsVsPlayerRace.ParticipatedInSeasons[0].Id);
