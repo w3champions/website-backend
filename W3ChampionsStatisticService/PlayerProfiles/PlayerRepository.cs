@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -15,9 +18,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
         }
 
-        public async Task UpsertPlayer(PlayerProfile playerProfile)
+        public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
-            await Upsert(playerProfile, p => p.BattleTag.Equals(playerProfile.BattleTag));
+            await Upsert(playerOverallStats, p => p.BattleTag.Equals(playerOverallStats.BattleTag));
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -30,21 +33,26 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
         }
 
+        public async Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds)
+        {
+            var database = CreateClient();
+
+            var playerRaceWins = database.GetCollection<PlayerDetails>(nameof(PlayerOverallStats));
+            var personalSettings = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
+
+            return await playerRaceWins
+                .Aggregate()
+                .Match(x => playerIds.Contains(x.Id))
+                .Lookup<PlayerDetails, PersonalSetting, PlayerDetails>(personalSettings,
+                    raceWins => raceWins.BattleTag,
+                    settings => settings.Id,
+                    details => details.PersonalSettings)
+                .ToListAsync();
+        }
+
         public Task UpsertWins(List<PlayerWinLoss> winrate)
         {
             return UpsertMany(winrate);
-        }
-
-        public async Task<List<string>> LoadAllIds()
-        {
-            var mongoCollection = CreateCollection<PlayerProfile>();
-            var overViews = await mongoCollection
-                .Find(p => true)
-                .SortBy(p => p.BattleTag)
-                .Project(p => new { id = p.BattleTag })
-                .ToListAsync();
-            return overViews.Select(p => p.id).ToList();
-
         }
 
         public async Task<List<int>> LoadMmrs(int season)
@@ -57,9 +65,44 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return mmrs;
         }
 
-        public Task<PlayerProfile> LoadPlayer(string battleTag)
+        public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
-            return LoadFirst<PlayerProfile>(p => p.BattleTag == battleTag);
+            return LoadFirst<PlayerGameModeStatPerGateway>(t => t.Id == id);
+        }
+
+        public Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat)
+        {
+            return Upsert(stat, t => t.Id == stat.Id);
+        }
+
+        public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag,
+            GateWay gateWay,
+            int season)
+        {
+            return LoadAll<PlayerGameModeStatPerGateway>(t =>
+                t.Id.Contains(battleTag) &&
+                t.GateWay == gateWay &&
+                t.Season == season );
+        }
+
+        public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
+        {
+            return LoadAll<PlayerRaceStatPerGateway>(t => t.Id.StartsWith($"{season}_{battleTag}_@{gateWay}"));
+        }
+
+        public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
+        {
+            return LoadFirst<PlayerRaceStatPerGateway>(t => t.Id == $"{season}_{battleTag}_@{gateWay}_{race}");
+        }
+
+        public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
+        {
+            return Upsert(stat, t => t.Id == stat.Id);
+        }
+
+        public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)
+        {
+            return LoadFirst<PlayerOverallStats>(p => p.BattleTag == battleTag);
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)

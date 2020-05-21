@@ -1,17 +1,51 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
     public class RankTests : IntegrationTestBase
     {
+        [Test]
+        public async Task OnlyOneRankIsSyncedBecausePreviousWasSynced()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankRepository = new Mock<IRankRepository>();
+            var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository);
+
+            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
+
+            await rankHandler.Update();
+
+            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)));
+
+            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("wolf#456"));
+
+            await rankHandler.Update();
+
+            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)));
+        }
+
+        [Test]
+        public async Task EmptyRanksDoesNotThrwoBulkWriteException()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankHandler = new RankSyncHandler(new RankRepository(MongoClient), matchEventRepository);
+
+            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
+
+            await rankHandler.Update();
+            await rankHandler.Update();
+        }
+
         [Test]
         public async Task LoadAndSave()
         {

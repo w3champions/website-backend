@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -25,6 +26,7 @@ namespace W3ChampionsStatisticService.Ladder
             PlayerIdToLower = playerId.ToLower();
             GameMode = gameMode;
             Season = season;
+            PlayersInfo = new List<PlayerInfo>();
         }
 
         public GateWay Gateway { get; set; }
@@ -40,5 +42,8 @@ namespace W3ChampionsStatisticService.Ladder
         public PlayerOverview Player => Players.SingleOrDefault();
         public GameMode GameMode { get; set; }
         public int Season { get; set; }
+
+        [BsonIgnore]
+        public List<PlayerInfo> PlayersInfo { get; set; }
     }
 }

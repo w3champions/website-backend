@@ -1,19 +1,34 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 
-namespace W3ChampionsStatisticService.PlayerProfiles
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
-    [BsonIgnoreExtraElements]
-    public class GameModeStat : WinLoss
+    public class PlayerGameModeStatPerGateway : WinLoss
     {
-        public GameModeStat(GameMode gameMode)
+        public static PlayerGameModeStatPerGateway Create(BattleTagIdCombined id)
         {
-            Mode = gameMode;
+            return new PlayerGameModeStatPerGateway
+            {
+                Id = id.Id,
+                Season = id.Season,
+                GateWay = id.GateWay,
+                GameMode = id.GameMode,
+                PlayerIds = id.BattleTags
+            };
         }
 
-        public GameMode Mode { set; get; }
+        public GameMode GameMode { get; set; }
+
+        public GateWay GateWay { get; set; }
+
+        public List<PlayerId> PlayerIds { get; set; }
+
+        public int Season { get; set; }
+
+        public string Id { get; set; }
+
         public int MMR { set; get; }
         public int RankingPoints { get; set; }
         public int Rank { get; set; }
@@ -35,12 +50,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public void RecordRanking(in int mmr, in int rankingPoints)
         {
-            MMR = mmr;
             if (RankProgressionStart == null || LastGameWasBefore8Hours())
             {
                 RankProgressionStart = RankProgression.Create(mmr, rankingPoints);
             }
 
+            MMR = mmr;
             RankingPoints = rankingPoints;
         }
 
