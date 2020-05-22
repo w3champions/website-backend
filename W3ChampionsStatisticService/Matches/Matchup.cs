@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.Matches
         [JsonIgnore]
         public TimeSpan Duration { get; set; }
 
-        public long DurationInSeconds => (long) Duration.TotalSeconds;
+        public long DurationInSeconds => (long)Duration.TotalSeconds;
         public DateTimeOffset StartTime { get; set; }
         public DateTimeOffset EndTime { get; set; }
         public GameMode GameMode { get; set; }
@@ -32,6 +32,10 @@ namespace W3ChampionsStatisticService.Matches
         public string Team1Players { get; set; }
         [JsonIgnore]
         public string Team2Players { get; set; }
+        [JsonIgnore]
+        public string Team3Players { get; set; }
+        [JsonIgnore]
+        public string Team4Players { get; set; }
 
         public Matchup()
         {
@@ -56,15 +60,49 @@ namespace W3ChampionsStatisticService.Matches
                 Duration = endTime - startTime,
             };
 
-            var winners = match.players.Where(p => p.won);
-            var loosers = match.players.Where(p => !p.won);
+            var players = match.players
+                .OrderByDescending(x => x.won)
+                .ThenBy(x => x.team)
+                .ToList();
 
-            result.Teams.Add(CreateTeam(winners));
-            result.Teams.Add(CreateTeam(loosers));
+            var teamGroups = SplitPlayersIntoTeams(players, match.gameMode);
+
+            foreach (var team in teamGroups)
+            {
+                result.Teams.Add(CreateTeam(team.Value));
+                result.Teams = result.Teams
+                    .OrderByDescending(x => x.Players.Any(y => y.Won))
+                    .ToList();
+            }
 
             SetTeamPlayers(result);
 
             return result;
+        }
+
+        protected static Dictionary<int, List<T>> SplitPlayersIntoTeams<T>(List<T> players, GameMode gameMode)
+            where T: UnfinishedMatchPlayer
+        {
+            var teams = players.GroupBy(x => x.team)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+            if (teams.Count() == 1)
+            {
+                var totalPlayers = players.Count;
+                var playersInTeam = totalPlayers / GetNumberOfTeamsFromGameMode(gameMode);
+
+                int team = 0;
+                for (int i = 0; i < totalPlayers; i += playersInTeam)
+                {
+                    var playersTeam = new List<T>();
+                    playersTeam.AddRange(players.Skip(playersInTeam).Take(playersInTeam));
+                    teams[team] = playersTeam;
+
+                    team++;
+                }
+            }
+
+            return teams;
         }
 
         protected static void SetTeamPlayers(Matchup result)
@@ -78,6 +116,37 @@ namespace W3ChampionsStatisticService.Matches
             {
                 result.Team2Players = string.Join(";", result.Teams[1].Players.Select(x => x.BattleTag));
             }
+
+            if (result.Teams.Count > 2)
+            {
+                result.Team3Players = string.Join(";", result.Teams[2].Players.Select(x => x.BattleTag));
+            }
+
+            if (result.Teams.Count > 3)
+            {
+                result.Team4Players = string.Join(";", result.Teams[3].Players.Select(x => x.BattleTag));
+            }
+        }
+
+        protected static int GetNumberOfTeamsFromGameMode(GameMode gameMode)
+        {
+            switch (gameMode)
+            {
+                case GameMode.GM_1v1:
+                case GameMode.GM_2v2_AT:
+                case GameMode.GM_4v4:
+                    {
+                        return 2;
+                    }
+                case GameMode.FFA:
+                    {
+                        return 4;
+                    }
+                default:
+                    {
+                        return 2;
+                    }
+            }
         }
 
         private static Team CreateTeam(IEnumerable<PlayerMMrChange> players)
@@ -89,11 +158,12 @@ namespace W3ChampionsStatisticService.Matches
 
         private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(IEnumerable<PlayerMMrChange> players)
         {
-            return players.Select(w => new PlayerOverviewMatches {
+            return players.Select(w => new PlayerOverviewMatches
+            {
                 Name = w.battleTag.Split("#")[0],
                 BattleTag = w.battleTag,
-                CurrentMmr = (int?) w.updatedMmr?.rating ?? (int) w.mmr.rating,
-                OldMmr = (int) w.mmr.rating,
+                CurrentMmr = (int?)w.updatedMmr?.rating ?? (int)w.mmr.rating,
+                OldMmr = (int)w.mmr.rating,
                 Won = w.won,
                 Race = w.race
             });

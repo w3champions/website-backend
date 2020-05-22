@@ -16,15 +16,10 @@ namespace W3ChampionsStatisticService.PadEvents
 
     [BsonIgnoreExtraElements]
     [BsonNoId]
-    public class PlayerMMrChange
+    public class PlayerMMrChange : UnfinishedMatchPlayer
     {
-        public string battleTag { get; set; }
-        public Race race { get; set; }
-
         public bool won { get; set; }
-        public Mmr mmr { get; set; }
         public Mmr updatedMmr { get; set; }
-        public Ranking ranking { get; set; }
         public Ranking updatedRanking { get; set; }
     }
 

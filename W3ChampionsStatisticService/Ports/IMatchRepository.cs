@@ -36,6 +36,8 @@ namespace W3ChampionsStatisticService.Ports
             int offset = 0,
             int pageSize = 100);
         Task<long> CountOnGoingMatches();
+
+        Task EnsureIndices();
     }
 
     public class MatchupDetail

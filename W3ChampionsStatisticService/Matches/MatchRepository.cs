@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
@@ -32,13 +33,14 @@ namespace W3ChampionsStatisticService.Matches
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
+            var textSearchOpts = new TextSearchOptions();
 
             if (string.IsNullOrEmpty(opponentId))
             {
                 return await mongoCollection
-                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                               && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                               && (m.Team1Players.Contains(playerId) || m.Team2Players.Contains(playerId)))
+                    .Find(m => Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
+                        && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                        && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                     .SortByDescending(s => s.Id)
                     .Skip(offset)
                     .Limit(pageSize)
@@ -46,10 +48,10 @@ namespace W3ChampionsStatisticService.Matches
             }
 
             return await mongoCollection
-                .Find(m =>  (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                            && (gateWay == GateWay.Undefined || m.GateWay == gateWay) &&
-                     ((m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
-                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))))
+                .Find(m =>
+                    Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
+                    && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -67,21 +69,19 @@ namespace W3ChampionsStatisticService.Matches
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined)
         {
+            var textSearchOpts = new TextSearchOptions();
             var mongoCollection = CreateCollection<Matchup>();
             if (string.IsNullOrEmpty(opponentId))
             {
                 return mongoCollection.CountDocumentsAsync(m =>
-                    (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay) &&
-                    m.Teams
-                        .Any(t => t.Players
-                            .Any(p => p.BattleTag.Equals(playerId))));
+                    Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
+                    && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
             }
 
-            return mongoCollection.CountDocumentsAsync(m => 
-                (gameMode == GameMode.Undefined || m.GameMode == gameMode) &&
-                     ((m.Team1Players.Contains(playerId) && m.Team2Players.Contains(opponentId))
-                    || (m.Team2Players.Contains(playerId) && m.Team1Players.Contains(opponentId))));
+            return mongoCollection.CountDocumentsAsync(m =>
+                Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
+                && (gameMode == GameMode.Undefined || m.GameMode == gameMode));
         }
 
         public async Task<MatchupDetail> LoadDetails(ObjectId id)
@@ -94,6 +94,22 @@ namespace W3ChampionsStatisticService.Matches
                 Match = match,
                 PlayerScores = originalMatch?.result?.players.Select(p => CreateDetail(p)).ToList()
             };
+        }
+
+        public Task EnsureIndices()
+        {
+            var collection = CreateCollection<Matchup>();
+
+            var matchUpLogBuilder = Builders<Matchup>.IndexKeys;
+
+            var textIndex = new CreateIndexModel<Matchup>(
+                matchUpLogBuilder
+                .Text(x => x.Team1Players)
+                .Text(x => x.Team2Players)
+                .Text(x => x.Team3Players)
+                .Text(x => x.Team4Players)
+            );
+            return collection.Indexes.CreateOneAsync(textIndex);
         }
 
         private PlayerScore CreateDetail(PlayerBlizzard playerBlizzard)
@@ -137,7 +153,11 @@ namespace W3ChampionsStatisticService.Matches
             var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
 
             return await mongoCollection
-                .Find(m => m.Team1Players.Contains(playerId) || m.Team2Players.Contains(playerId))
+                .Find(m => m.Team1Players.Contains(playerId) 
+                        || m.Team2Players.Contains(playerId)
+                        || m.Team3Players.Contains(playerId)
+                        || m.Team4Players.Contains(playerId)
+                )
                 .FirstOrDefaultAsync();
         }
 
