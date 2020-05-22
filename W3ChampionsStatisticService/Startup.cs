@@ -112,7 +112,10 @@ namespace W3ChampionsStatisticService
             }
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            IMatchRepository matchRepository)
         {
             // without that, nginx forwarding in docker wont work
             app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -125,6 +128,8 @@ namespace W3ChampionsStatisticService
                 .AllowAnyHeader()
                 .AllowAnyMethod());
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+            matchRepository.EnsureIndices();
         }
     }
 

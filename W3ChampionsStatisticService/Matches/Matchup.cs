@@ -60,7 +60,12 @@ namespace W3ChampionsStatisticService.Matches
                 Duration = endTime - startTime,
             };
 
-            var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
+            var players = match.players
+                .OrderByDescending(x => x.won)
+                .ThenBy(x => x.team)
+                .ToList();
+
+            var teamGroups = SplitPlayersIntoTeams(players, match.gameMode);
 
             foreach (var team in teamGroups)
             {

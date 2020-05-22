@@ -10,6 +10,13 @@ namespace WC3ChampionsStatisticService.UnitTests
     [TestFixture]
     public class MatchupRepoTests : IntegrationTestBase
     {
+        [SetUp]
+        public async Task Setup()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+            await matchRepository.EnsureIndices();
+        }
+
         [Test]
         public async Task LoadAndSave()
         {
