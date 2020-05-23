@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -32,6 +33,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             if (!events.Any())
             {
                 await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString());
+                Console.WriteLine("No events found anymore");
             }
 
             while (events.Any())
@@ -40,6 +42,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 {
                     if (finishedEvent.state == 2)
                     {
+                        finishedEvent.season = 1;
                         await _matchEventRepository.InsertIfNotExisting(new MatchFinishedEvent { match = finishedEvent});
                     }
                 }
