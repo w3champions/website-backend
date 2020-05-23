@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -51,6 +52,10 @@ namespace W3ChampionsStatisticService.PadEvents
             if (foundEvent == null)
             {
                 await mongoCollection.InsertOneAsync(matchFinishedEvent);
+            }
+            else
+            {
+                Console.WriteLine("------EVENT WAS PRESENT ALLREADY");
             }
         }
 

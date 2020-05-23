@@ -74,6 +74,7 @@ namespace W3ChampionsStatisticService
 
             if (startPadSync == "true")
             {
+                services.AddTransient<PadServiceRepo>();
                 services.AddUnversionedReadModelService<PadSyncHandler>();
             }
 
