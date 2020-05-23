@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
@@ -28,6 +29,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
             if (nextEvent.match.gameMode == GameMode.GM_1v1)
             {
                 var players = nextEvent.match.players;
+                if (Math.Abs(nextEvent.match.players[0].mmr.rating - nextEvent.match.players[1].mmr.rating) > 200)
+                {
+                    return;
+                }
+
                 var averageMmr = players.Average(p => p.mmr.rating);
 
                 var statOverall = await _w3Stats.LoadRaceVsRaceStat(0) ?? new OverallRaceAndWinStat(0);
