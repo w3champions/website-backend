@@ -49,7 +49,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 }
 
                 offset += 100;
-                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString());
+                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString(), handlerVersion.Season);
                 events = await _padRepo.GetFrom(offset);
                 await Task.Delay(1000);
             }
