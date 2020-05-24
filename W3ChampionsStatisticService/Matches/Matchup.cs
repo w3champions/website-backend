@@ -27,6 +27,7 @@ namespace W3ChampionsStatisticService.Matches
         public GameMode GameMode { get; set; }
         public IList<Team> Teams { get; set; } = new List<Team>();
         public GateWay GateWay { get; set; }
+        public int Season { get; set; }
 
         [JsonIgnore]
         public string Team1Players { get; set; }
@@ -58,6 +59,7 @@ namespace W3ChampionsStatisticService.Matches
                 StartTime = startTime,
                 EndTime = endTime,
                 Duration = endTime - startTime,
+                Season = match.season
             };
 
             var players = match.players
