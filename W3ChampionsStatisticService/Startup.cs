@@ -47,7 +47,6 @@ namespace W3ChampionsStatisticService
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
-            services.AddSignalR();
             services.AddControllers();
 
             var startHandlers = _configuration.GetValue<string>("startHandlers");
@@ -75,7 +74,11 @@ namespace W3ChampionsStatisticService
             services.AddTransient<RankQueryHandler>();
             services.AddTransient<GameModeStatQueryHandler>();
 
-            if (startPadSync == "true") services.AddUnversionedReadModelService<PadSyncHandler>();
+            if (startPadSync == "true")
+            {
+                services.AddTransient<PadServiceRepo>();
+                services.AddUnversionedReadModelService<PadSyncHandler>();
+            }
 
             if (startHandlers == "true")
             {
@@ -112,7 +115,10 @@ namespace W3ChampionsStatisticService
             }
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(
+            IApplicationBuilder app,
+            IWebHostEnvironment env,
+            IMatchRepository matchRepository)
         {
             // without that, nginx forwarding in docker wont work
             app.UseForwardedHeaders(new ForwardedHeadersOptions
@@ -141,8 +147,7 @@ namespace W3ChampionsStatisticService
 
     public static class ReadModelExtensions
     {
-        public static IServiceCollection AddReadModelService<T>(this IServiceCollection services)
-            where T : class, IReadModelHandler
+        public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
         {
             services.AddTransient<T>();
             services.AddTransient<ReadModelHandler<T>>();
@@ -150,8 +155,7 @@ namespace W3ChampionsStatisticService
             return services;
         }
 
-        public static IServiceCollection AddReadModelStartedMatchesService<T>(this IServiceCollection services)
-            where T : class, IReadModelStartedMatchesHandler
+        public static IServiceCollection AddReadModelStartedMatchesService<T>(this IServiceCollection services) where T : class, IReadModelStartedMatchesHandler
         {
             services.AddTransient<T>();
             services.AddTransient<ReadModelStartedMatchesHandler<T>>();
@@ -160,8 +164,7 @@ namespace W3ChampionsStatisticService
             return services;
         }
 
-        public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services)
-            where T : class, IAsyncUpdatable
+        public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
         {
             services.AddTransient<T>();
             services.AddSingleton<IHostedService, AsyncServiceBase<T>>();

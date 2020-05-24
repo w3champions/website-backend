@@ -23,21 +23,12 @@ namespace W3ChampionsStatisticService.Matches
                 StartTime = startTime,
             };
 
-            var numberOfTeams = match.players.GroupBy(x => x.team).Count();
+            var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
 
-            var firstTeam = match.players.Where(p => p.team == 0);
-            var secondTeam = match.players.Where(p => p.team == 1);
-
-            if (numberOfTeams == 1)
+            foreach (var team in teamGroups)
             {
-                var totalPlayers = match.players.Count;
-                var playersInTeam = totalPlayers / 2;
-                firstTeam = match.players.Take(playersInTeam);
-                secondTeam = match.players.Skip(playersInTeam).Take(playersInTeam);
+                result.Teams.Add(CreateTeam(team.Value));
             }
-
-            result.Teams.Add(CreateTeam(firstTeam));
-            result.Teams.Add(CreateTeam(secondTeam));
 
             SetTeamPlayers(result);
 

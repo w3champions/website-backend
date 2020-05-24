@@ -10,6 +10,13 @@ namespace WC3ChampionsStatisticService.UnitTests
     [TestFixture]
     public class MatchupRepoTests : IntegrationTestBase
     {
+        [SetUp]
+        public async Task Setup()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+            await matchRepository.EnsureIndices();
+        }
+
         [Test]
         public async Task LoadAndSave()
         {
@@ -192,9 +199,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[0].team = 0;
             matchFinishedEvent1.match.players[1].battleTag = "LostTeam1#456";
+            matchFinishedEvent1.match.players[1].team = 0;
+
             matchFinishedEvent1.match.players[2].battleTag = "wolf#456";
+            matchFinishedEvent1.match.players[2].team = 1;
             matchFinishedEvent1.match.players[3].battleTag = "LostTeam2#456";
+            matchFinishedEvent1.match.players[3].team = 2;
 
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
@@ -218,9 +230,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[0].team = 0;
             matchFinishedEvent1.match.players[1].battleTag = "LostTeam1#456";
+            matchFinishedEvent1.match.players[1].team = 0;
+
             matchFinishedEvent1.match.players[2].battleTag = "wolf#456";
+            matchFinishedEvent1.match.players[2].team = 1;
             matchFinishedEvent1.match.players[3].battleTag = "LostTeam2#456";
+            matchFinishedEvent1.match.players[3].team = 1;
 
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "wolf#456";
