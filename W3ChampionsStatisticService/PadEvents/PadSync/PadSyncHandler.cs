@@ -43,13 +43,12 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 {
                     if (finishedEvent.state == 2)
                     {
-                        finishedEvent.season = handlerVersion.Season;
                         await _matchEventRepository.InsertIfNotExisting(new MatchFinishedEvent { match = finishedEvent});
                     }
                 }
 
                 offset += 100;
-                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString(), handlerVersion.Season);
+                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString());
                 events = await _padRepo.GetFrom(offset);
                 await Task.Delay(1000);
             }
