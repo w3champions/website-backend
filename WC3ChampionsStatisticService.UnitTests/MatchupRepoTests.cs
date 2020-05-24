@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PadEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -289,6 +291,26 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matches = await matchRepository.Load();
 
             Assert.AreEqual(1, matches.Count);
+        }
+
+        [Test]
+        public async Task ReforgedIconGetsReplaced()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.result.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.result.players[0].heroes = new List<Hero> { new Hero { icon = "jainasea"}};
+
+            await InsertMatchEvent(matchFinishedEvent1);
+
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+
+            var result = await matchRepository.LoadDetails(matchFinishedEvent1.Id);
+
+            Assert.AreEqual("archmage", result.PlayerScores[0].Heroes[0].icon);
         }
     }
 }
