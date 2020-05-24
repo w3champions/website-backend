@@ -52,10 +52,11 @@ namespace W3ChampionsStatisticService.PadEvents
             if (foundEvent == null)
             {
                 await mongoCollection.InsertOneAsync(matchFinishedEvent);
+                Console.WriteLine($"INSERTED: {matchFinishedEvent.match.id}");
             }
             else
             {
-                Console.WriteLine("------EVENT WAS PRESENT ALLREADY");
+                Console.WriteLine($"EVENT WAS PRESENT ALLREADY: {foundEvent.match.id}");
             }
         }
 
