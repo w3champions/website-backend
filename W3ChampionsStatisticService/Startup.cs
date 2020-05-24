@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
+using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
@@ -54,7 +55,8 @@ namespace W3ChampionsStatisticService
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
-            services.AddSingleton(typeof(TrackingService));
+            services.AddSingleton<TrackingService>();
+            services.AddSingleton<ConnectionMapping>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -124,13 +126,22 @@ namespace W3ChampionsStatisticService
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
             app.UseRouting();
-            app.UseCors(o => o
-                .AllowAnyOrigin()
-                .AllowAnyHeader()
-                .AllowAnyMethod());
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+            app.UseCors(builder =>
+                builder.WithOrigins(
+                        "http://localhost:8080",
+                        "https://www.w3champions.com",
+                        "https://www.test.w3champions.com",
+                        "http://176.28.16.249"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials());
 
-            matchRepository.EnsureIndices();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+                endpoints.MapHub<ChatHub>("/chatHub");
+            });
         }
     }
 
