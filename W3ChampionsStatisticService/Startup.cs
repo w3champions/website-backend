@@ -55,6 +55,8 @@ namespace W3ChampionsStatisticService
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
+            services.AddSignalR();
+
             services.AddSingleton<TrackingService>();
             services.AddSingleton<ConnectionMapping>();
 
