@@ -129,14 +129,10 @@ namespace W3ChampionsStatisticService
             });
             app.UseRouting();
             app.UseCors(builder =>
-                builder.WithOrigins(
-                        "http://localhost:8080",
-                        "https://www.w3champions.com",
-                        "https://www.test.w3champions.com",
-                        "http://176.28.16.249"
-                    )
+                builder
                     .AllowAnyHeader()
                     .AllowAnyMethod()
+                    .SetIsOriginAllowed(_ => true)
                     .AllowCredentials());
 
             app.UseEndpoints(endpoints =>
