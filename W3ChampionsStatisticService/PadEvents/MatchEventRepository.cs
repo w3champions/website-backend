@@ -35,8 +35,11 @@ namespace W3ChampionsStatisticService.PadEvents
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
+            var version = ObjectId.Parse(lastObjectId);
+            var delay = ObjectId.GenerateNewId(DateTime.Now.AddSeconds(-20));
 
-            var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
+            var events = await mongoCollection.Find(m =>
+                m.Id > version && m.Id < delay)
                 .SortBy(s => s.Id)
                 .Limit(pageSize)
                 .ToListAsync();

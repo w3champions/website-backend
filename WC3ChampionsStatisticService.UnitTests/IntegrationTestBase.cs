@@ -38,6 +38,17 @@ namespace WC3ChampionsStatisticService.UnitTests
                 new FindOneAndReplaceOptions<MatchFinishedEvent> {IsUpsert = true});
         }
 
+        protected async Task InsertMatchStartedEvent(MatchStartedEvent newEvent)
+        {
+            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
+            var mongoDatabase = database;
+            var mongoCollection = mongoDatabase.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
+            await mongoCollection.FindOneAndReplaceAsync(
+                (Expression<Func<MatchStartedEvent, bool>>) (ev => ev.match.id == newEvent.match.id),
+                newEvent,
+                new FindOneAndReplaceOptions<MatchStartedEvent> {IsUpsert = true});
+        }
+
         protected async Task InsertRankChangedEvent(RankingChangedEvent newEvent)
         {
             var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
