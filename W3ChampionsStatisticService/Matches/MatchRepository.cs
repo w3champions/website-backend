@@ -5,7 +5,6 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;

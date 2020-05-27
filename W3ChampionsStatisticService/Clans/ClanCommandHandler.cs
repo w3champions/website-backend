@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.Clans
             await _clanRepository.UpsertMemberShip(clanMemberShip);
         }
 
-        public async Task<Clan> AddMember(string clanId, string playerBattleTag)
+        public async Task<Clan> AcceptInvite(string clanId, string playerBattleTag)
         {
             var clan = await _clanRepository.LoadClan(clanId);
             var clanMemberShip = await _clanRepository.LoadMemberShip(playerBattleTag) ?? ClanMembership.Create(playerBattleTag);

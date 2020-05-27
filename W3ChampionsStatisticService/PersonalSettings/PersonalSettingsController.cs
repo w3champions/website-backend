@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
@@ -46,15 +47,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [HttpPut("{battleTag}")]
         public async Task<IActionResult> SetPersonalSetting(
            string battleTag,
-           [FromQuery] string authentication,
            [FromBody] PersonalSettingsDTO dto)
         {
-            var userInfo = await _authenticationService.GetUser(authentication);
-            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
-            {
-                return Unauthorized("Sorry H4ckerb0i");
-            }
-
             var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
 
             setting.Update(dto);
@@ -66,16 +60,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         [HttpPut("{battleTag}/api-key")]
         public async Task<IActionResult> SetApiKey(
-            string battleTag,
-            [FromQuery] string authentication)
+            string battleTag)
         {
-            var userInfo = await _authenticationService.GetUser(authentication);
-            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
-            {
-                return Unauthorized("Sorry H4ckerb0i");
-            }
-
-            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(userInfo.battletag) ?? new ChatUser(battleTag);
+            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(battleTag) ?? new ChatUser(battleTag);
             chatUser.CreatApiKey();
             await _chatAuthenticationService.SaveUser(chatUser);
 
@@ -83,20 +70,14 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         [HttpGet("{battleTag}/api-key")]
+        [BnetAuth]
         public async Task<IActionResult> GetApiKey(
-            string battleTag,
-            [FromQuery] string authentication)
+            string battleTag)
         {
-            var userInfo = await _authenticationService.GetUser(authentication);
-            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
-            {
-                return Unauthorized("Sorry H4ckerb0i");
-            }
-
-            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(userInfo.battletag);
+            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(battleTag);
             if (chatUser == null)
             {
-                chatUser = new ChatUser(userInfo.battletag);
+                chatUser = new ChatUser(battleTag);
                 await _chatAuthenticationService.SaveUser(chatUser);
             }
 
@@ -104,17 +85,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         [HttpPut("{battleTag}/profile-picture")]
+        [BnetAuth]
         public async Task<IActionResult> SetProfilePicture(
             string battleTag,
-            [FromQuery] string authentication,
             [FromBody] SetPictureCommand command)
         {
-            var userInfo = await _authenticationService.GetUser(authentication);
-            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
-            {
-                return Unauthorized("Sorry H4ckerb0i");
-            }
-
             var result = await _commandHandler.UpdatePicture(battleTag, command);
 
             if (!result) return BadRequest();
