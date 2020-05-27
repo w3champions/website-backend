@@ -14,9 +14,9 @@ namespace W3ChampionsStatisticService.Clans
             _clanRepository = clanRepository;
         }
 
-        public async Task<Clan> CreateClan(CreateClanDto clanDto)
+        public async Task<Clan> CreateClan(string clanName, string battleTagOfFounder)
         {
-            var clan = Clan.Create(clanDto.ClanName);
+            var clan = Clan.Create(clanName, battleTagOfFounder);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
             if (!wasSaved) throw new ValidationException("Clan Name allready taken");
             return clan;
@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.Clans
             return clan;
         }
 
-        public async Task InviteToClan(string battleTag, string clanId)
+        public async Task InviteToClan(string battleTag, string clanId, string personWhoInvitesBattleTag)
         {
             var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag)
                                  ?? ClanMembership.Create(battleTag);
@@ -43,7 +43,7 @@ namespace W3ChampionsStatisticService.Clans
                 throw new ValidationException("Clan not found");
             }
 
-            clan.Invite(clanMemberShip);
+            clan.Invite(clanMemberShip, personWhoInvitesBattleTag);
 
             await _clanRepository.UpsertClan(clan);
             await _clanRepository.UpsertMemberShip(clanMemberShip);

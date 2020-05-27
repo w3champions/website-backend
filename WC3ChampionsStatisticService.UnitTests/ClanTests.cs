@@ -24,14 +24,14 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void InvitePlayer_ClanNotPresent()
         {
             Assert.ThrowsAsync<ValidationException>(async () =>
-                await _handler.InviteToClan("peter#123", ObjectId.GenerateNewId().ToString()));
+                await _handler.InviteToClan("peter#123", ObjectId.GenerateNewId().ToString(), "doesNotMatter"));
         }
 
         [Test]
         public async Task InvitePlayer()
         {
             var clan = await CreateClanForTest();
-            await _handler.InviteToClan("peter#123", clan.Id.ToString());
+            await _handler.InviteToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
 
             var member = await _clanRepository.LoadMemberShip("peter#123");
             var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
@@ -45,7 +45,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task CreatClan()
         {
             var clanNameExpected = "Cool Shit";
-            var clan = await _handler.CreateClan(new CreateClanDto {ClanName = clanNameExpected});
+            var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
 
             var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
 
@@ -57,16 +57,16 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task CreatClanWithSameNameNotPossible()
         {
             var clanNameExpected = "Cool Shit";
-            await _handler.CreateClan(new CreateClanDto {ClanName = clanNameExpected});
+            await _handler.CreateClan(clanNameExpected, "Peter#123");
 
             Assert.ThrowsAsync<ValidationException>(async () =>
-                await _handler.CreateClan(new CreateClanDto {ClanName = clanNameExpected}));
+                await _handler.CreateClan(clanNameExpected, "Peter#123"));
         }
 
         private Task<Clan> CreateClanForTest()
         {
             var clanNameExpected = "Cool Shit";
-            return _handler.CreateClan(new CreateClanDto {ClanName = clanNameExpected});
+            return _handler.CreateClan(clanNameExpected, "Peter#123");
         }
     }
 }

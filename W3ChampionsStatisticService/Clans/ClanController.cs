@@ -17,9 +17,9 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateClan([FromBody] CreateClanDto clanDto)
+        public async Task<IActionResult> CreateClan([FromBody] CreateClanDto clanDto, string authorization)
         {
-            var clan = await _clanCommandHandler.CreateClan(clanDto);
+            var clan = await _clanCommandHandler.CreateClan(clanDto.ClanName, "123");
             return Ok(clan);
         }
 

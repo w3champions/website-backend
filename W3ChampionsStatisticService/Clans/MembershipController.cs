@@ -16,9 +16,13 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPut("{battleTag}")]
-        public async Task<IActionResult> InviteToClan(string battleTag, [FromBody] InviteToClanDto clanDto)
+        public async Task<IActionResult> InviteToClan(
+            [FromRoute] string battleTag,
+            [FromBody] InviteToClanDto clanDto,
+            string authorization)
         {
-            await _clanCommandHandler.InviteToClan(battleTag, clanDto.ClanId);
+            // TODO auth
+            await _clanCommandHandler.InviteToClan(battleTag, clanDto.ClanId, authorization);
             return Ok();
         }
 
