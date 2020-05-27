@@ -34,9 +34,26 @@ namespace W3ChampionsStatisticService.PersonalSettings
             if (setting == null)
             {
                 var player = await _playerRepository.LoadPlayerProfile(battleTag);
-                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerOverallStats> { player }});
+                return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerOverallStats> { player } });
             }
             return Ok(setting);
+        }
+
+        [HttpPut("{battleTag}")]
+        public async Task<IActionResult> SetPersonalSetting(
+           string battleTag,
+           [FromQuery] string authentication,
+           [FromBody] PersonalSetting setting)
+        {
+            var userInfo = await _authenticationService.GetUser(authentication);
+            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            await _personalSettingsRepository.Save(setting);
+
+            return Ok();
         }
 
         [HttpPut("{battleTag}/profile-message")]

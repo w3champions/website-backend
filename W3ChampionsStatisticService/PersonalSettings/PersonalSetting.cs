@@ -9,6 +9,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting
     {
+        public PersonalSetting()
+        {
+
+        }
         public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
         {
             Id = battleTag;
@@ -23,6 +27,13 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [JsonIgnore]
         [BsonIgnoreIfNull]
         public List<PlayerOverallStats> Players { get; set; }
+
+        public string Twitch { get; set; }
+
+        public string YouTube { get; set; }
+
+        public string Twitter { get; set; }
+
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }
