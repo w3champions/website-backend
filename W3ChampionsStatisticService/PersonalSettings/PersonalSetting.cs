@@ -75,5 +75,14 @@ namespace W3ChampionsStatisticService.PersonalSettings
             new WinsToPictureId(9, 1200),
             new WinsToPictureId(10, 1500)
         };
+
+        public void Update(PersonalSettingsDTO dto)
+        {
+            ProfileMessage = dto.ProfileMessage;
+            Twitch = dto.Twitch;
+            YouTube = dto.Youtube;
+            Twitter = dto.Twitter;
+            HomePage = dto.HomePage;
+        }
     }
 }

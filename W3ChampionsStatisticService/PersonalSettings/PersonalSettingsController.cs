@@ -56,11 +56,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
-            setting.ProfileMessage = dto.ProfileMessage;
-            setting.Twitch = dto.Twitch;
-            setting.YouTube = dto.Youtube;
-            setting.Twitter = dto.Twitter;
-            setting.HomePage = dto.HomePage;
+
+            setting.Update(dto);
 
             await _personalSettingsRepository.Save(setting);
 
