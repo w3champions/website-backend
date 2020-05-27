@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Authorization
 
         public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
         {
-            return serviceProvider.GetService<BnetAuthFilter>();
+            return serviceProvider.GetService<BnetAuthenticationFilter>();
         }
     }
 }

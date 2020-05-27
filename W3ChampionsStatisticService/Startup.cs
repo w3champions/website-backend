@@ -79,7 +79,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<ChatAuthenticationService>();
             services.AddTransient<IClanRepository, ClanRepository>();
             services.AddTransient<ClanCommandHandler>();
-            services.AddTransient<BnetAuthFilter>();
+            services.AddTransient<BnetAuthenticationFilter>();
 
             if (startPadSync == "true")
             {

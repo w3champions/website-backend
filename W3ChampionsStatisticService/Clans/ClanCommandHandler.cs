@@ -62,9 +62,13 @@ namespace W3ChampionsStatisticService.Clans
             return clan;
         }
 
-        public async Task DeleteClan(string clanId)
+        public async Task DeleteClan(string clanId, string actingPlayer)
         {
             var clan = await _clanRepository.LoadClan(clanId);
+            if (clan.ChiefTain != actingPlayer)
+            {
+                throw new ValidationException("Only Chieftain can delete the clan");
+            }
             await _clanRepository.DeleteClan(clanId);
 
             foreach (var member in clan.Members)

@@ -7,10 +7,10 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Authorization
 {
-    public class BnetAuthFilter : IAsyncActionFilter {
+    public class BnetAuthenticationFilter : IAsyncActionFilter {
         private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
 
-        public BnetAuthFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public BnetAuthenticationFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
         {
             _blizzardAuthenticationService = blizzardAuthenticationService;
         }
@@ -24,13 +24,22 @@ namespace W3ChampionsStatisticService.Authorization
                 var auth = queryString["authorization"];
                 var res = await _blizzardAuthenticationService.GetUser(auth);
 
-                var btagString = battleTag?.ToString();
-                if (
-                    res != null
-                    && !string.IsNullOrEmpty(btagString)
-                    && btagString.StartsWith(res.battletag))
+                var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
+                if (actingPlayerContent != null)
                 {
+                    context.ActionArguments["actingPlayer"] = res.battletag;
                     await next.Invoke();
+                }
+                else
+                {
+                    var btagString = battleTag?.ToString();
+                    if (
+                        res != null
+                        && !string.IsNullOrEmpty(btagString)
+                        && btagString.StartsWith(res.battletag))
+                    {
+                        await next.Invoke();
+                    }
                 }
             }
 

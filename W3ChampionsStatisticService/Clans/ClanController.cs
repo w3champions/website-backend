@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Clans.Commands;
 using W3ChampionsStatisticService.Ports;
 
@@ -21,9 +22,12 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateClan([FromBody] CreateClanDto clanDto)
+        [BnetAuth]
+        public async Task<IActionResult> CreateClan(
+            [FromBody] CreateClanDto clanDto,
+            string actingPlayer)
         {
-            var clan = await _clanCommandHandler.CreateClan(clanDto.ClanName, "123");
+            var clan = await _clanCommandHandler.CreateClan(clanDto.ClanName, actingPlayer);
             return Ok(clan);
         }
 
@@ -42,20 +46,28 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpDelete("{clanId}")]
-        public async Task<IActionResult> DeleteClan(string clanId)
+        [BnetAuth]
+        public async Task<IActionResult> DeleteClan(
+            string clanId,
+            string actingPlayer)
         {
-            await _clanCommandHandler.DeleteClan(clanId);
+            await _clanCommandHandler.DeleteClan(clanId, actingPlayer);
             return Ok();
         }
 
         [HttpPost("{clanId}/invites")]
-        public async Task<IActionResult> InviteToClan(string clanId, [FromBody] CreateInviteDto inviteDto)
+        [BnetAuth]
+        public async Task<IActionResult> InviteToClan(
+            string clanId,
+            string actingPlayer,
+            [FromBody] CreateInviteDto inviteDto)
         {
-            await _clanCommandHandler.InviteToClan(inviteDto.PlayerBattleTag, clanId, "123");
+            await _clanCommandHandler.InviteToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
             return Ok();
         }
 
         [HttpPut("{clanId}/invites/{battleTag}")]
+        [BnetAuth]
         public async Task<IActionResult> AcceptInvite(string clanId, string battleTag)
         {
             var clan = await _clanCommandHandler.AcceptInvite(clanId, battleTag);
