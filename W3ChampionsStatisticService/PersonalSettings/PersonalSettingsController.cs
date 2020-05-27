@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
@@ -13,17 +14,20 @@ namespace W3ChampionsStatisticService.PersonalSettings
         private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IPlayerRepository _playerRepository;
+        private readonly ChatAuthenticationService _chatAuthenticationService;
         private readonly PersonalSettingsCommandHandler _commandHandler;
 
         public PersonalSettingsController(
             IBlizzardAuthenticationService authenticationService,
             IPersonalSettingsRepository personalSettingsRepository,
             IPlayerRepository playerRepository,
+            ChatAuthenticationService chatAuthenticationService,
             PersonalSettingsCommandHandler commandHandler)
         {
             _authenticationService = authenticationService;
             _personalSettingsRepository = personalSettingsRepository;
             _playerRepository = playerRepository;
+            _chatAuthenticationService = chatAuthenticationService;
             _commandHandler = commandHandler;
         }
 
@@ -75,6 +79,24 @@ namespace W3ChampionsStatisticService.PersonalSettings
             await _personalSettingsRepository.Save(setting);
 
             return Ok();
+        }
+
+        [HttpPut("{battleTag}/api-key")]
+        public async Task<IActionResult> SetApiKey(
+            string battleTag,
+            [FromQuery] string authentication)
+        {
+            var userInfo = await _authenticationService.GetUser(authentication);
+            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(userInfo.battletag) ?? new ChatUser(battleTag);
+            chatUser.CreatApiKey();
+            await _chatAuthenticationService.SaveUser(chatUser);
+
+            return Ok(chatUser);
         }
 
         [HttpPut("{battleTag}/profile-picture")]

@@ -75,6 +75,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<MmrDistributionHandler>();
             services.AddTransient<RankQueryHandler>();
             services.AddTransient<GameModeStatQueryHandler>();
+            services.AddTransient<ChatAuthenticationService>();
 
             if (startPadSync == "true")
             {
