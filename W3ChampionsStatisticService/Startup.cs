@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Chats;
+using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
@@ -76,6 +77,8 @@ namespace W3ChampionsStatisticService
             services.AddTransient<RankQueryHandler>();
             services.AddTransient<GameModeStatQueryHandler>();
             services.AddTransient<ChatAuthenticationService>();
+            services.AddTransient<IClanRepository, ClanRepository>();
+            services.AddTransient<ClanCommandHandler>();
 
             if (startPadSync == "true")
             {
