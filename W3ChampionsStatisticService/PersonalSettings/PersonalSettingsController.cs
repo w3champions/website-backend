@@ -43,24 +43,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public async Task<IActionResult> SetPersonalSetting(
            string battleTag,
            [FromQuery] string authentication,
-           [FromBody] PersonalSetting setting)
-        {
-            var userInfo = await _authenticationService.GetUser(authentication);
-            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
-            {
-                return Unauthorized("Sorry H4ckerb0i");
-            }
-
-            await _personalSettingsRepository.Save(setting);
-
-            return Ok();
-        }
-
-        [HttpPut("{battleTag}/profile-message")]
-        public async Task<IActionResult> SetProfileMessage(
-            string battleTag,
-            [FromQuery] string authentication,
-            [FromBody] ProfileCommand command)
+           [FromBody] PersonalSettingsDTO dto)
         {
             var userInfo = await _authenticationService.GetUser(authentication);
             if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
@@ -69,26 +52,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
-            setting.ProfileMessage = command.Value;
-            await _personalSettingsRepository.Save(setting);
+            setting.ProfileMessage = dto.ProfileMessage;
+            setting.Twitch = dto.Twitch;
+            setting.YouTube = dto.Youtube;
+            setting.Twitter = dto.Twitter;
+            setting.HomePage = dto.HomePage;
 
-            return Ok();
-        }
-
-        [HttpPut("{battleTag}/home-page")]
-        public async Task<IActionResult> SetHomePage(
-            string battleTag,
-            [FromQuery] string authentication,
-            [FromBody] ProfileCommand command)
-        {
-            var userInfo = await _authenticationService.GetUser(authentication);
-            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
-            {
-                return Unauthorized("Sorry H4ckerb0i");
-            }
-
-            var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
-            setting.HomePage = command.Value;
             await _personalSettingsRepository.Save(setting);
 
             return Ok();

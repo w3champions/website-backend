@@ -9,10 +9,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting
     {
-        public PersonalSetting()
-        {
-
-        }
         public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
         {
             Id = battleTag;
