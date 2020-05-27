@@ -38,6 +38,7 @@ namespace W3ChampionsStatisticService.Authorization
                         && !string.IsNullOrEmpty(btagString)
                         && btagString.StartsWith(res.battletag))
                     {
+                        context.ActionArguments["battleTag"] = res.battletag;
                         await next.Invoke();
                     }
                 }
