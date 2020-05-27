@@ -16,13 +16,16 @@ namespace W3ChampionsStatisticService.Clans
 
         public async Task<Clan> CreateClan(string clanName, string battleTagOfFounder)
         {
-            var clan = Clan.Create(clanName, battleTagOfFounder);
+            var memberShip = await _clanRepository.LoadMemberShip(battleTagOfFounder) ?? ClanMembership.Create(battleTagOfFounder);
+            var clan = Clan.Create(clanName, memberShip);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
             if (!wasSaved) throw new ValidationException("Clan Name allready taken");
+            memberShip.SignForClan(clan);
+            await _clanRepository.UpsertMemberShip(memberShip);
             return clan;
         }
 
-        public async Task<Clan> SignClanPetition(string clanId, string battleTag)
+        public async Task<Clan> SignClanPetition(string battleTag, string clanId)
         {
             var clan = await _clanRepository.LoadClan(clanId);
             var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? ClanMembership.Create(battleTag);
@@ -57,6 +60,19 @@ namespace W3ChampionsStatisticService.Clans
             await _clanRepository.UpsertClan(clan);
             await _clanRepository.UpsertMemberShip(clanMemberShip);
             return clan;
+        }
+
+        public async Task DeleteClan(string clanId)
+        {
+            var clan = await _clanRepository.LoadClan(clanId);
+            await _clanRepository.DeleteClan(clanId);
+
+            foreach (var member in clan.Members)
+            {
+                var memberOfDb = await _clanRepository.LoadMemberShip(member);
+                memberOfDb.ExitClan();
+                await _clanRepository.UpsertMemberShip(memberOfDb);
+            }
         }
     }
 }

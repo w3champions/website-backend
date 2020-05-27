@@ -30,6 +30,12 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements.FirstOrDefault();
         }
 
+        protected Task Insert<T>(T element)
+        {
+            var mongoCollection = CreateCollection<T>();
+            return mongoCollection.InsertOneAsync(element);
+        }
+
         protected async Task<List<T>> Load<T>(Expression<Func<T, bool>> expression)
         {
             var mongoCollection = CreateCollection<T>();

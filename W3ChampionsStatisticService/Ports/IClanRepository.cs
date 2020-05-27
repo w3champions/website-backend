@@ -10,5 +10,6 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertClan(Clan clan);
         Task<ClanMembership> LoadMemberShip(string battleTag);
         Task UpsertMemberShip(ClanMembership clanMemberShip);
+        Task DeleteClan(string clanId);
     }
 }

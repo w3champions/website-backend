@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.Clans
         {
             var clanFound = await LoadFirst<Clan>(c => c.ClanName == clan.ClanName);
             if (clanFound != null) return false;
-            await Upsert(clan, c => c.Id == clan.Id);
+            await Insert(clan);
             return true;
         }
 
@@ -34,6 +34,11 @@ namespace W3ChampionsStatisticService.Clans
         public Task UpsertMemberShip(ClanMembership clanMemberShip)
         {
             return Upsert(clanMemberShip, c => c.BattleTag == clanMemberShip.BattleTag);
+        }
+
+        public Task DeleteClan(string clanId)
+        {
+            return Delete<Clan>(c => c.Id == new ObjectId(clanId));
         }
 
         public ClanRepository(MongoClient mongoClient) : base(mongoClient)

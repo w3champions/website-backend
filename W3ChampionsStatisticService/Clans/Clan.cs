@@ -1,12 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using MongoDB.Bson;
 
 namespace W3ChampionsStatisticService.Clans
 {
     public class Clan
     {
+        [JsonIgnore]
         public ObjectId Id { get; set; }
+
+        [JsonPropertyName("id")]
+        public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
         public string ChiefTain { get; set; }
 
@@ -17,9 +22,7 @@ namespace W3ChampionsStatisticService.Clans
         public List<string> Shamans { get; set; } = new List<string>();
         public List<string> PendingInvites { get; set; } = new List<string>();
 
-
-
-        public static Clan Create(string clanName, string battleTagOfFounder)
+        public static Clan Create(string clanName, ClanMembership founder)
         {
             var trim = clanName.Trim();
             if (trim.Length < 3)
@@ -27,11 +30,14 @@ namespace W3ChampionsStatisticService.Clans
                 throw new ValidationException("Name too short");
             }
 
-            return new Clan
+            var clan = new Clan
             {
                 ClanName = clanName,
-                ChiefTain = battleTagOfFounder,
+                ChiefTain = founder.BattleTag,
+                FoundingFathers = new List<string> { founder.BattleTag }
             };
+
+            return clan;
         }
 
         public void Sign(ClanMembership membership)
@@ -46,7 +52,7 @@ namespace W3ChampionsStatisticService.Clans
                 throw new ValidationException("Can not sign Clan Founding twice");
             }
 
-            membership.ParticipateInClan(this);
+            membership.SignForClan(this);
 
             FoundingFathers.Add(membership.BattleTag);
 
@@ -69,12 +75,17 @@ namespace W3ChampionsStatisticService.Clans
                 throw new ValidationException("Can not participate in clan twice");
             }
 
-            membership.ParticipateInClan(this);
+            membership.JoinClan(this);
             Members.Add(membership.BattleTag);
         }
 
         public void Invite(ClanMembership clanMemberShip, string personWhoInvitesBattleTag)
         {
+            if (!IsSuccesfullyFounded)
+            {
+                throw new ValidationException("Clan not founded yet");
+            }
+
             if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag))
             {
                 throw new ValidationException("Only chieftains and shamans can invite");

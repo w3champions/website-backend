@@ -8,17 +8,24 @@ namespace W3ChampionsStatisticService.Clans
     {
         [BsonId]
         public string BattleTag { get; set; }
-        public ObjectId ClanId { get; set; }
+        public ObjectId? ClanId { get; set; }
 
-        public void ParticipateInClan(Clan clan)
+        public void JoinClan(Clan clan)
         {
-            if (ClanId == null) throw new ValidationException("User Allready in clan");
+            if (ClanId != null) throw new ValidationException("User Allready in clan");
             if (clan.Id != PendingInviteFromClan) throw new ValidationException("Invite to another clan still pending");
 
             ClanId = clan.Id;
         }
 
-        public ObjectId PendingInviteFromClan { get; set; }
+        public void SignForClan(Clan clan)
+        {
+            if (ClanId != null) throw new ValidationException("User Allready in clan");
+
+            ClanId = clan.Id;
+        }
+
+        public ObjectId? PendingInviteFromClan { get; set; }
 
         public static ClanMembership Create(string battleTag)
         {
@@ -31,6 +38,11 @@ namespace W3ChampionsStatisticService.Clans
         public void Invite(Clan clan)
         {
             PendingInviteFromClan = clan.Id;
+        }
+
+        public void ExitClan()
+        {
+            ClanId = null;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace W3ChampionsStatisticService.Clans
+﻿namespace W3ChampionsStatisticService.Clans.Commands
 {
     public class SignClanDto
     {
