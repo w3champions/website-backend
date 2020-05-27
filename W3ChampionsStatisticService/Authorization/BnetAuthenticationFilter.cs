@@ -44,7 +44,7 @@ namespace W3ChampionsStatisticService.Authorization
                 }
             }
 
-            var unauthorizedResult = new UnauthorizedObjectResult("Sorry Hackerboy");
+            var unauthorizedResult = new UnauthorizedObjectResult("Sorry H4ckerb0i");
             context.Result = unauthorizedResult;
         }
     }
