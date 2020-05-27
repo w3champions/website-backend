@@ -99,6 +99,22 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return Ok(chatUser);
         }
 
+        [HttpGet("{battleTag}/api-key")]
+        public async Task<IActionResult> GetApiKey(
+            string battleTag,
+            [FromQuery] string authentication)
+        {
+            var userInfo = await _authenticationService.GetUser(authentication);
+            if (userInfo == null || !battleTag.StartsWith(userInfo.battletag))
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(userInfo.battletag);
+
+            return Ok(chatUser);
+        }
+
         [HttpPut("{battleTag}/profile-picture")]
         public async Task<IActionResult> SetProfilePicture(
             string battleTag,
