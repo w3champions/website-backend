@@ -9,16 +9,22 @@ namespace W3ChampionsStatisticService.Chats
         {
             BattleTag = battleTag;
             Name = battleTag.Split("#")[0];
+            ApiKey = NewApiKey();
         }
 
+        [BsonId]
         public string BattleTag { get; set; }
         public string Name { get; set; }
-        [BsonId]
         public string ApiKey { get; set; }
 
         public void CreatApiKey()
         {
-            ApiKey = Guid.NewGuid().ToString();
+            ApiKey = NewApiKey();
+        }
+
+        private static string NewApiKey()
+        {
+            return Guid.NewGuid().ToString();
         }
     }
 }

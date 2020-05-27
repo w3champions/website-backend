@@ -97,6 +97,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var chatUser = await _chatAuthenticationService.GetUserByBattleTag(userInfo.battletag);
+            if (chatUser == null)
+            {
+                chatUser = new ChatUser(userInfo.battletag);
+                await _chatAuthenticationService.SaveUser(chatUser);
+            }
 
             return Ok(chatUser);
         }

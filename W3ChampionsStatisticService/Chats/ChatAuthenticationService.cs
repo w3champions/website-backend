@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Chats
 
         public Task SaveUser(ChatUser user)
         {
-            return Upsert(user, c => c.ApiKey == user.ApiKey);
+            return Upsert(user, c => c.BattleTag == user.BattleTag);
         }
 
         public Task<ChatUser> GetUserByBattleTag(string battleTag)
