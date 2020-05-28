@@ -1,14 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Clans
 {
-    public class ClanMembership
+    public class ClanMembership : IIdentifiable
     {
-        [BsonId]
         public string BattleTag { get; set; }
         public ObjectId? ClanId { get; set; }
+        public string Id => BattleTag;
 
         public void JoinClan(Clan clan)
         {

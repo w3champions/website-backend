@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
@@ -39,6 +40,16 @@ namespace W3ChampionsStatisticService.Clans
         public Task DeleteClan(string clanId)
         {
             return Delete<Clan>(c => c.Id == new ObjectId(clanId));
+        }
+
+        public Task<List<ClanMembership>> LoadMemberShips(List<string> clanMembers)
+        {
+            return LoadAll<ClanMembership>(m => clanMembers.Contains(m.BattleTag));
+        }
+
+        public Task SaveMemberShips(List<ClanMembership> clanMembers)
+        {
+            return UpsertMany(clanMembers);
         }
 
         public ClanRepository(MongoClient mongoClient) : base(mongoClient)

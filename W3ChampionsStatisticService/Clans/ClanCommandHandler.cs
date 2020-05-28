@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 
@@ -71,12 +72,14 @@ namespace W3ChampionsStatisticService.Clans
             }
             await _clanRepository.DeleteClan(clanId);
 
-            foreach (var member in clan.Members)
+            var memberShips = await _clanRepository.LoadMemberShips(clan.Members);
+
+            foreach (var member in memberShips)
             {
-                var memberOfDb = await _clanRepository.LoadMemberShip(member);
-                memberOfDb.ExitClan();
-                await _clanRepository.UpsertMemberShip(memberOfDb);
+                member.ExitClan();
             }
+
+            await _clanRepository.SaveMemberShips(memberShips);
         }
     }
 }
