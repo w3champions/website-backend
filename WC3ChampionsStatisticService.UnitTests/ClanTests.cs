@@ -100,6 +100,27 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.ThrowsAsync<ValidationException>(async () => await _handler.CreateClan("Cool Shit NEW", "Peter#123"));
         }
 
+        [Test]
+        public async Task DeleteClan()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            await _handler.DeleteClan(clan.IdRaw, clan.ChiefTain);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
+            Assert.IsNull(clanLoaded);
+
+
+            var chieftain = await _clanRepository.LoadMemberShip(clan.ChiefTain);
+            Assert.IsNull(chieftain.ClanId);
+
+            foreach (var clanMember in clan.Members)
+            {
+                var member = await _clanRepository.LoadMemberShip(clanMember);
+                Assert.IsNull(member.ClanId);
+            }
+        }
+
         private Task<Clan> CreateClanForTest()
         {
             var clanNameExpected = "Cool Shit";
