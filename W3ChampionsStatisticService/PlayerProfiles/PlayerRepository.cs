@@ -20,12 +20,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
-            await Upsert(playerOverallStats, p => p.BattleTag.Equals(playerOverallStats.BattleTag));
+            await Upsert(playerOverallStats);
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
         {
-            await Upsert(playerOverview, p => p.Id.Equals(playerOverview.Id));
+            await Upsert(playerOverview);
         }
 
         public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
@@ -72,7 +72,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat)
         {
-            return Upsert(stat, t => t.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag,
@@ -97,7 +97,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
         {
-            return Upsert(stat, t => t.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)

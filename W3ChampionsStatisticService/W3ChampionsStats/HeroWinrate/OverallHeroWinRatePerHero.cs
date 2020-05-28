@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate
 {
-    public class OverallHeroWinRatePerHero
+    public class OverallHeroWinRatePerHero : IIdentifiable
     {
         public void RecordGame(bool won, string opponentHeroCombo)
         {

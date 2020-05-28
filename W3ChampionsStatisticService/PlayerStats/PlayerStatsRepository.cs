@@ -21,12 +21,12 @@ namespace W3ChampionsStatisticService.PlayerStats
 
         public Task UpsertMapAndRaceStat(PlayerRaceOnMapVersusRaceRatio playerRaceOnMapVersusRaceRatio)
         {
-            return Upsert(playerRaceOnMapVersusRaceRatio, p => p.Id == playerRaceOnMapVersusRaceRatio.Id);
+            return Upsert(playerRaceOnMapVersusRaceRatio);
         }
 
         public Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats)
         {
-            return Upsert(playerHeroStats, p => p.Id == playerHeroStats.Id);
+            return Upsert(playerHeroStats);
         }
 
         public PlayerStatsRepository(MongoClient mongoClient) : base(mongoClient)

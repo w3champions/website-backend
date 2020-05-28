@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task Save(GamesPerDay stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<GameLengthStat> LoadGameLengths()
@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task Save(GameLengthStat stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<DistinctPlayersPerDay> LoadPlayersPerDay(DateTime date)
@@ -62,7 +62,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task Save(DistinctPlayersPerDay stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public async Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
@@ -96,7 +96,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task Save(HourOfPlayStat stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<HeroPlayedStat> LoadHeroPlayedStat()
@@ -116,12 +116,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task<List<OverallHeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
         {
-            return Load<OverallHeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
+            return LoadAll<OverallHeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
         }
 
         public Task Save(OverallHeroWinRatePerHero overallHeroWinrate)
         {
-            return Upsert(overallHeroWinrate, h => h.Id == overallHeroWinrate.Id);
+            return Upsert(overallHeroWinrate);
         }
     }
 }

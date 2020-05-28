@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Matches
 {

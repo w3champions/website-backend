@@ -1,9 +1,10 @@
 ﻿using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats
 {
-    public class PlayerHeroStats
+    public class PlayerHeroStats : IIdentifiable
     {
         public static PlayerHeroStats Create(string battleTag, int season)
         {

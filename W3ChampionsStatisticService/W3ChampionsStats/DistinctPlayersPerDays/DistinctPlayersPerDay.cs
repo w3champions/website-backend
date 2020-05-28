@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
 {
-    public class DistinctPlayersPerDay
+    public class DistinctPlayersPerDay : IIdentifiable
     {
         public DateTimeOffset Date { get; set; }
         public long DistinctPlayers => Players.Count;

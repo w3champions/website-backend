@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
-    public class PlayerGameModeStatPerGateway : WinLoss
+    public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
     {
         public static PlayerGameModeStatPerGateway Create(BattleTagIdCombined id)
         {

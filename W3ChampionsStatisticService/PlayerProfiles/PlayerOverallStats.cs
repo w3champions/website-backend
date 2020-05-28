@@ -3,10 +3,11 @@ using System.Linq;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class PlayerOverallStats
+    public class PlayerOverallStats : IIdentifiable
     {
         public static PlayerOverallStats Create(string battleTag)
         {
@@ -25,7 +26,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             };
         }
 
-        [BsonId]
+
+        public string Id => BattleTag;
         public string BattleTag { get; set; }
         public string Name { get; set; }
         public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();

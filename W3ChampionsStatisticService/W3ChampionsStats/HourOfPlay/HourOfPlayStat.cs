@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
-    public class HourOfPlayStat
+    public class HourOfPlayStat : IIdentifiable
     {
         public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
         public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
