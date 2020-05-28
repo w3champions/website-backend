@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿
+
+using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
@@ -7,17 +9,16 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Authorization
 {
-    public class BnetAuthenticationFilter : IAsyncActionFilter {
+    public class InjectBattleTagFromAuthCodeFilter : IAsyncActionFilter {
         private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
 
-        public BnetAuthenticationFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public InjectBattleTagFromAuthCodeFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
         {
             _blizzardAuthenticationService = blizzardAuthenticationService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            context.RouteData.Values.TryGetValue("battleTag", out var battleTag);
             var queryString = HttpUtility.ParseQueryString(context.HttpContext.Request.QueryString.Value);
             if (queryString.AllKeys.Contains("authorization"))
             {
@@ -29,18 +30,6 @@ namespace W3ChampionsStatisticService.Authorization
                 {
                     context.ActionArguments["actingPlayer"] = res.battletag;
                     await next.Invoke();
-                }
-                else
-                {
-                    var btagString = battleTag?.ToString();
-                    if (
-                        res != null
-                        && !string.IsNullOrEmpty(btagString)
-                        && btagString.StartsWith(res.battletag))
-                    {
-                        context.ActionArguments["battleTag"] = res.battletag;
-                        await next.Invoke();
-                    }
                 }
             }
 

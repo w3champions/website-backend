@@ -70,7 +70,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         [HttpGet("{battleTag}/api-key")]
-        [BnetAuth]
+        [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> GetApiKey(
             string battleTag)
         {
@@ -85,7 +85,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         [HttpPut("{battleTag}/profile-picture")]
-        [BnetAuth]
+        [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> SetProfilePicture(
             string battleTag,
             [FromBody] SetPictureCommand command)

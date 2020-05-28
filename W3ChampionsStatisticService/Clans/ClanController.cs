@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPost]
-        [BnetAuth]
+        [InjectBattleTagFromAuthCode]
         public async Task<IActionResult> CreateClan(
             [FromBody] CreateClanDto clanDto,
             string actingPlayer)
@@ -46,7 +46,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpDelete("{clanId}")]
-        [BnetAuth]
+        [InjectBattleTagFromAuthCode]
         public async Task<IActionResult> DeleteClan(
             string clanId,
             string actingPlayer)
@@ -56,7 +56,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPost("{clanId}/invites")]
-        [BnetAuth]
+        [InjectBattleTagFromAuthCode]
         public async Task<IActionResult> InviteToClan(
             string clanId,
             string actingPlayer,
@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPut("{clanId}/invites/{battleTag}")]
-        [BnetAuth]
+        [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> AcceptInvite(string clanId, string battleTag)
         {
             var clan = await _clanCommandHandler.AcceptInvite(clanId, battleTag);
