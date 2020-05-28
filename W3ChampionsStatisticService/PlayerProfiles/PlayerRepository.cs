@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
         {
-            return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
+            return LoadFirst<PlayerWinLoss>($"{season}_{playerId}");
         }
 
         public async Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds)
@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
-            return LoadFirst<PlayerGameModeStatPerGateway>(t => t.Id == id);
+            return LoadFirst<PlayerGameModeStatPerGateway>(id);
         }
 
         public Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat)
@@ -92,7 +92,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
         {
-            return LoadFirst<PlayerRaceStatPerGateway>(t => t.Id == $"{season}_{battleTag}_@{gateWay}_{race}");
+            return LoadFirst<PlayerRaceStatPerGateway>($"{season}_{battleTag}_@{gateWay}_{race}");
         }
 
         public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
@@ -107,7 +107,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
-            return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
+            return LoadFirst<PlayerOverview>(battleTag);
         }
 
         public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)
