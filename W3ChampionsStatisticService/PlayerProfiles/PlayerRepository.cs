@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
-            await Upsert(playerOverallStats);
+            await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)

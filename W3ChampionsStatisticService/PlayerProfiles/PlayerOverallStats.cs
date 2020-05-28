@@ -7,8 +7,14 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
-    public class PlayerOverallStats : IIdentifiable
+    public class PlayerOverallStats
     {
+        [BsonId]
+        public string BattleTag { get; set; }
+        public string Name { get; set; }
+        public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
+        public List<RaceWinLoss> WinLosses { get; set; }
+
         public static PlayerOverallStats Create(string battleTag)
         {
             return new PlayerOverallStats
@@ -25,14 +31,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 }
             };
         }
-
-
-        public string Id => BattleTag;
-        public string BattleTag { get; set; }
-        public string Name { get; set; }
-        public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
-
-        public List<RaceWinLoss> WinLosses { get; set; }
 
         public void RecordWin(Race race, int season, bool won)
         {
