@@ -31,6 +31,8 @@ using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService
 {
@@ -48,7 +50,10 @@ namespace W3ChampionsStatisticService
             var appInsightsKey = _configuration.GetValue<string>("appInsights");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
-            services.AddControllers();
+            services.AddControllers(c =>
+            {
+                c.Filters.Add<ValidationExceptionFilter>();
+            });
 
             var startHandlers = _configuration.GetValue<string>("startHandlers");
             var startPadSync = _configuration.GetValue<string>("startPadSync");

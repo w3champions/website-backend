@@ -1,13 +1,11 @@
-﻿
-
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.Authorization
+namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     public class InjectBattleTagFromAuthCodeFilter : IAsyncActionFilter {
         private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
@@ -33,7 +31,7 @@ namespace W3ChampionsStatisticService.Authorization
                 }
             }
 
-            var unauthorizedResult = new UnauthorizedObjectResult("Sorry H4ckerb0i");
+            var unauthorizedResult = new UnauthorizedObjectResult(new { error = "Sorry H4ckerb0i"});
             context.Result = unauthorizedResult;
         }
     }

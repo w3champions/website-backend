@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace W3ChampionsStatisticService.Authorization
+namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     [AttributeUsage(AttributeTargets.Method)]
     public class CheckIfBattleTagBelongsToAuthCodeAttribute : Attribute, IFilterFactory

@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Clans.Commands;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Clans
 {
