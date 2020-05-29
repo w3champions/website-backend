@@ -262,7 +262,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-            var matches = await matchRepository.Load(GameMode.GM_2v2_AT);
+            var matches = await matchRepository.Load(GateWay.Undefined, GameMode.GM_2v2_AT);
 
             Assert.AreEqual(0, matches.Count);
         }
@@ -275,7 +275,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-            var matches = await matchRepository.Load(GameMode.GM_2v2_AT);
+            var matches = await matchRepository.Load(GateWay.Undefined, GameMode.GM_2v2_AT);
 
             Assert.AreEqual(1, matches.Count);
         }
