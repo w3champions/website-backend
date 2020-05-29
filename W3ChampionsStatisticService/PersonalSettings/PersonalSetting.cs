@@ -85,6 +85,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             YouTube = dto.Youtube;
             Twitter = dto.Twitter;
             HomePage = dto.HomePage;
+            Country = dto.Country;
         }
     }
 }
