@@ -58,11 +58,6 @@ namespace W3ChampionsStatisticService.Matches
                 .ToListAsync();
         }
 
-        public Task<long> Count()
-        {
-            return CreateCollection<Matchup>().CountDocumentsAsync(x => true);
-        }
-
         public Task<long> CountFor(
             string playerId,
             string opponentId = null,
@@ -128,6 +123,7 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         public async Task<List<Matchup>> Load(
+            GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
             int pageSize = 100)
@@ -136,13 +132,24 @@ namespace W3ChampionsStatisticService.Matches
 
             var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
 
-            var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
+            var events = await mongoCollection
+                .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
 
             return events;
+        }
+
+        public Task<long> Count(
+            GateWay gateWay = GateWay.Undefined,
+            GameMode gameMode = GameMode.Undefined)
+        {
+            return CreateCollection<Matchup>().CountDocumentsAsync(m =>
+                    (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)
@@ -171,13 +178,19 @@ namespace W3ChampionsStatisticService.Matches
             return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode = GameMode.Undefined, int offset = 0, int pageSize = 100)
+        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined,
+            int offset = 0,
+            int pageSize = 100)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
 
-            var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
+            var events = await mongoCollection
+                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -186,9 +199,13 @@ namespace W3ChampionsStatisticService.Matches
             return events;
         }
 
-        public Task<long> CountOnGoingMatches()
+        public Task<long> CountOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined)
         {
-            return CreateCollection<OnGoingMatchup>().CountDocumentsAsync(x => true);
+            return CreateCollection<OnGoingMatchup>()
+                .CountDocumentsAsync(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
         }
     }
 }

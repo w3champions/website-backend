@@ -9,17 +9,23 @@ namespace W3ChampionsStatisticService.Ports
     public interface IMatchRepository
     {
         Task<List<Matchup>> Load(
+            GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
             int pageSize = 100);
+
+        Task<long> Count(
+            GateWay gateWay = GateWay.Undefined,
+            GameMode gameMode = GameMode.Undefined);
+
         Task Insert(Matchup matchup);
+
         Task<List<Matchup>> LoadFor(string playerId,
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int pageSize = 100,
             int offset = 0);
-        Task<long> Count();
         Task<long> CountFor(string playerId,
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
@@ -33,9 +39,13 @@ namespace W3ChampionsStatisticService.Ports
 
         Task<List<OnGoingMatchup>> LoadOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100);
-        Task<long> CountOnGoingMatches();
+
+        Task<long> CountOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined);
 
         Task EnsureIndices();
     }
