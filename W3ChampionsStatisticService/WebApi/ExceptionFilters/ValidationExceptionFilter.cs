@@ -10,8 +10,7 @@ namespace W3ChampionsStatisticService.WebApi.ExceptionFilters
         {
             if (!(context.Exception is ValidationException validationException)) return;
 
-            var result = new OkObjectResult(new { error = validationException.Message });
-            result.StatusCode = 400;
+            var result = new BadRequestObjectResult(new ErrorResult(validationException.Message));
             context.Result = result;
         }
     }

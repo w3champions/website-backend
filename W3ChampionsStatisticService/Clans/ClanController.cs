@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Clans.Commands;
 using W3ChampionsStatisticService.Ports;
@@ -41,6 +42,7 @@ namespace W3ChampionsStatisticService.Clans
         [HttpGet("{clanId}")]
         public async Task<IActionResult> GetClan(string clanId)
         {
+            throw new ValidationException("test lol");
             var clan = await _clanRepository.LoadClan(clanId);
             return Ok(clan);
         }
@@ -51,6 +53,7 @@ namespace W3ChampionsStatisticService.Clans
             string clanId,
             string actingPlayer)
         {
+            throw new ValidationException("test lol");
             await _clanCommandHandler.DeleteClan(clanId, actingPlayer);
             return Ok();
         }

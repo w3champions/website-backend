@@ -4,6 +4,7 @@ using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
@@ -35,7 +36,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 }
             }
 
-            var unauthorizedResult = new UnauthorizedObjectResult(new { error = "Sorry H4ckerb0i"});
+            var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
             context.Result = unauthorizedResult;
         }
     }
