@@ -172,13 +172,19 @@ namespace W3ChampionsStatisticService.Matches
             return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode = GameMode.Undefined, int offset = 0, int pageSize = 100)
+        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined,
+            int offset = 0,
+            int pageSize = 100)
         {
             var database = CreateClient();
 
             var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
 
-            var events = await mongoCollection.Find(m => gameMode == GameMode.Undefined || m.GameMode == gameMode)
+            var events = await mongoCollection
+                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -187,9 +193,13 @@ namespace W3ChampionsStatisticService.Matches
             return events;
         }
 
-        public Task<long> CountOnGoingMatches()
+        public Task<long> CountOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined)
         {
-            return CreateCollection<OnGoingMatchup>().CountDocumentsAsync(x => true);
+            return CreateCollection<OnGoingMatchup>()
+                .CountDocumentsAsync(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
         }
     }
 }

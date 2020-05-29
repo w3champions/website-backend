@@ -56,11 +56,12 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<IActionResult> GetOnGoingMatches(
             int offset = 0,
             int pageSize = 100,
-            GameMode gameMode = GameMode.Undefined)
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined)
         {
             if (pageSize > 200) pageSize = 200;
-            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, offset, pageSize);
-            var count = await _matchRepository.CountOnGoingMatches();
+            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
+            var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay);
             return Ok(new { matches, count });
         }
 
