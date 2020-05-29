@@ -24,6 +24,11 @@ namespace W3ChampionsStatisticService.Clans
 
         public static Clan Create(string clanName, ClanMembership founder)
         {
+            if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty))
+            {
+                throw new ValidationException("Founder can not be in another clan");
+            }
+
             var trim = clanName.Trim();
             if (trim.Length < 3)
             {
@@ -52,9 +57,15 @@ namespace W3ChampionsStatisticService.Clans
                 throw new ValidationException("Can not sign Clan Founding twice");
             }
 
-            membership.SignForClan(this);
+            if (!PendingInvites.Contains(membership.BattleTag))
+            {
+                throw new ValidationException("Player was not invites to sign the clan");
+            }
+
+            membership.JoinClan(this);
 
             FoundingFathers.Add(membership.BattleTag);
+            PendingInvites.Remove(membership.BattleTag);
 
             if (FoundingFathers.Count >= 7)
             {
@@ -77,15 +88,11 @@ namespace W3ChampionsStatisticService.Clans
 
             membership.JoinClan(this);
             Members.Add(membership.BattleTag);
+            PendingInvites.Remove(membership.BattleTag);
         }
 
         public void Invite(ClanMembership clanMemberShip, string personWhoInvitesBattleTag)
         {
-            if (!IsSuccesfullyFounded)
-            {
-                throw new ValidationException("Clan not founded yet");
-            }
-
             if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag))
             {
                 throw new ValidationException("Only chieftains and shamans can invite");

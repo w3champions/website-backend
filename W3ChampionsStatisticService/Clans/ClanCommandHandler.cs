@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.Clans
             var clan = Clan.Create(clanName, memberShip);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
             if (!wasSaved) throw new ValidationException("Clan Name allready taken");
-            memberShip.SignForClan(clan);
+            memberShip.ClanId = clan.Id;
             await _clanRepository.UpsertMemberShip(memberShip);
             return clan;
         }
@@ -79,6 +79,18 @@ namespace W3ChampionsStatisticService.Clans
             }
 
             await _clanRepository.SaveMemberShips(memberShips);
+        }
+
+        public async Task<Clan> GetClanForPlayer(string battleTag)
+        {
+            var membership = await _clanRepository.LoadMemberShip(battleTag);
+            if (membership?.ClanId != null)
+            {
+                var clan = await _clanRepository.LoadClan(membership.ClanId.ToString());
+                return clan;
+            }
+
+            return null;
         }
     }
 }

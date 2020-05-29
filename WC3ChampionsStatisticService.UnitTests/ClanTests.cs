@@ -44,7 +44,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task SignPetition()
         {
-            var clan = await CreateClanForTest();
+            var clanNameExpected = "Cool Shit";
+            var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
+
+            await _handler.InviteToClan("peter#123", clan.Id.ToString(), "Peter#123");
             await _handler.SignClanPetition("peter#123", clan.Id.ToString());
 
             var member = await _clanRepository.LoadMemberShip("peter#123");
@@ -121,18 +124,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
         }
 
-        private Task<Clan> CreateClanForTest()
-        {
-            var clanNameExpected = "Cool Shit";
-            return _handler.CreateClan(clanNameExpected, "Peter#123");
-        }
-
         private async Task<Clan> CreateFoundedClanForTest()
         {
             var clanNameExpected = "Cool Shit";
             var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
             for (int i = 0; i < 6; i++)
             {
+                await _handler.InviteToClan($"btag#{i}", clan.Id.ToString(), "Peter#123");
                 await _handler.SignClanPetition($"btag#{i}", clan.Id.ToString());
             }
 

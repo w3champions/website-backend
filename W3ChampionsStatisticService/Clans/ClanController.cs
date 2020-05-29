@@ -46,6 +46,13 @@ namespace W3ChampionsStatisticService.Clans
             return Ok(clan);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetClanForPlayer(string battleTag)
+        {
+            var clan = await _clanCommandHandler.GetClanForPlayer(battleTag);
+            return Ok(clan);
+        }
+
         [HttpDelete("{clanId}")]
         [InjectBattleTagFromAuthCode]
         public async Task<IActionResult> DeleteClan(

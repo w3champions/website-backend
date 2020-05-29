@@ -16,13 +16,7 @@ namespace W3ChampionsStatisticService.Clans
             if (clan.Id != PendingInviteFromClan) throw new ValidationException("Invite to another clan still pending");
 
             ClanId = clan.Id;
-        }
-
-        public void SignForClan(Clan clan)
-        {
-            if (ClanId != null) throw new ValidationException("User Allready in clan");
-
-            ClanId = clan.Id;
+            PendingInviteFromClan = null;
         }
 
         public ObjectId? PendingInviteFromClan { get; set; }
