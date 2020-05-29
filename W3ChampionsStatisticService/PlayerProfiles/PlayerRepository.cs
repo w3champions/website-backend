@@ -65,6 +65,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return mmrs;
         }
 
+        public Task<List<PlayerOverallStats>> SearchForPlayer(string search)
+        {
+            return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(search), 5);
+        }
+
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
             return LoadFirst<PlayerGameModeStatPerGateway>(id);

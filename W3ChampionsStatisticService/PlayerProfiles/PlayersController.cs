@@ -29,6 +29,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Ok(player);
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchPlayer(string search)
+        {
+            var players = await _playerRepository.SearchForPlayer(search);
+            return Ok(players);
+        }
+
         [HttpGet("{battleTag}/winrate")]
         public async Task<IActionResult> GetPlayerWinrate([FromRoute] string battleTag, int season)
         {

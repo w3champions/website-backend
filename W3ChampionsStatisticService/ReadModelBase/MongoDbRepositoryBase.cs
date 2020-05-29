@@ -41,11 +41,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return mongoCollection.InsertOneAsync(element);
         }
 
-        protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null)
+        protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null, int? limit = null)
         {
             if (expression == null) expression = l => true;
             var mongoCollection = CreateCollection<T>();
-            var elements = await mongoCollection.Find(expression).ToListAsync();
+            var elements = await mongoCollection.Find(expression).Limit(limit).ToListAsync();
             return elements;
         }
 

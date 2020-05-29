@@ -25,6 +25,21 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task Search()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var player = PlayerOverallStats.Create("Peter#123");
+            var player2 = PlayerOverallStats.Create("Anderer#123");
+            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayer(player2);
+            var playerLoaded = await playerRepository.SearchForPlayer("ete");
+
+            Assert.AreEqual(player.BattleTag, playerLoaded[0].BattleTag);
+            Assert.AreEqual(1, playerLoaded.Count);
+        }
+
+        [Test]
         public async Task PlayerMapping()
         {
             var playerRepository = new PlayerRepository(MongoClient);
