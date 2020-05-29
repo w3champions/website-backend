@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Ok(player);
         }
 
-        [HttpGet("search")]
+        [HttpGet]
         public async Task<IActionResult> SearchPlayer(string search)
         {
             var players = await _playerRepository.SearchForPlayer(search);
