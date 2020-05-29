@@ -20,17 +20,17 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
-            await Upsert(playerOverallStats, p => p.BattleTag.Equals(playerOverallStats.BattleTag));
+            await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
         {
-            await Upsert(playerOverview, p => p.Id.Equals(playerOverview.Id));
+            await Upsert(playerOverview);
         }
 
         public Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season)
         {
-            return LoadFirst<PlayerWinLoss>(p => p.Id == $"{season}_{playerId}");
+            return LoadFirst<PlayerWinLoss>($"{season}_{playerId}");
         }
 
         public async Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds)
@@ -67,12 +67,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
-            return LoadFirst<PlayerGameModeStatPerGateway>(t => t.Id == id);
+            return LoadFirst<PlayerGameModeStatPerGateway>(id);
         }
 
         public Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat)
         {
-            return Upsert(stat, t => t.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag,
@@ -92,12 +92,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
         {
-            return LoadFirst<PlayerRaceStatPerGateway>(t => t.Id == $"{season}_{battleTag}_@{gateWay}_{race}");
+            return LoadFirst<PlayerRaceStatPerGateway>($"{season}_{battleTag}_@{gateWay}_{race}");
         }
 
         public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
         {
-            return Upsert(stat, t => t.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)
@@ -107,7 +107,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
-            return LoadFirst<PlayerOverview>(p => p.Id == battleTag);
+            return LoadFirst<PlayerOverview>(battleTag);
         }
 
         public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)

@@ -11,22 +11,22 @@ namespace W3ChampionsStatisticService.PlayerStats
     {
         public Task<PlayerRaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag, int season)
         {
-            return LoadFirst<PlayerRaceOnMapVersusRaceRatio>(p => p.Id == $"{season}_{battleTag}");
+            return LoadFirst<PlayerRaceOnMapVersusRaceRatio>($"{season}_{battleTag}");
         }
 
         public Task<PlayerHeroStats> LoadHeroStat(string battleTag, int season)
         {
-            return LoadFirst<PlayerHeroStats>(p => p.Id == $"{season}_{battleTag}");
+            return LoadFirst<PlayerHeroStats>($"{season}_{battleTag}");
         }
 
         public Task UpsertMapAndRaceStat(PlayerRaceOnMapVersusRaceRatio playerRaceOnMapVersusRaceRatio)
         {
-            return Upsert(playerRaceOnMapVersusRaceRatio, p => p.Id == playerRaceOnMapVersusRaceRatio.Id);
+            return Upsert(playerRaceOnMapVersusRaceRatio);
         }
 
         public Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats)
         {
-            return Upsert(playerHeroStats, p => p.Id == playerHeroStats.Id);
+            return Upsert(playerHeroStats);
         }
 
         public PlayerStatsRepository(MongoClient mongoClient) : base(mongoClient)

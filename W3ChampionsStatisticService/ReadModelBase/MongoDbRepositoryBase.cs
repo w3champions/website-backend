@@ -30,11 +30,15 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements.FirstOrDefault();
         }
 
-        protected async Task<List<T>> Load<T>(Expression<Func<T, bool>> expression)
+        protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
+        {
+            return LoadFirst<T>(x => x.Id == id);
+        }
+
+        protected Task Insert<T>(T element)
         {
             var mongoCollection = CreateCollection<T>();
-            var elements = await mongoCollection.FindAsync(expression);
-            return elements.ToList();
+            return mongoCollection.InsertOneAsync(element);
         }
 
         protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null)
@@ -62,6 +66,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 new FindOneAndReplaceOptions<T> {IsUpsert = true});
         }
 
+        protected Task Upsert<T>(T insertObject)  where T : IIdentifiable
+        {
+            return Upsert(insertObject, x => x.Id == insertObject.Id);
+        }
+
         protected Task UpsertMany<T>(List<T> insertObject) where T : IIdentifiable
         {
             if (!insertObject.Any()) return Task.CompletedTask;
@@ -79,6 +88,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
             var mongoDatabase = CreateClient();
             var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
             await mongoCollection.DeleteOneAsync<T>(deleteQuery);
+        }
+
+        protected Task Delete<T>(string id) where T : IIdentifiable
+        {
+            return Delete<T>(x => x.Id == id);
         }
     }
 

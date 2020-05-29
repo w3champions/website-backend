@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
 {
-    public class GameLengthStat
+    public class GameLengthStat : IIdentifiable
     {
         public void Apply(GameMode gameMode, TimeSpan duration)
         {

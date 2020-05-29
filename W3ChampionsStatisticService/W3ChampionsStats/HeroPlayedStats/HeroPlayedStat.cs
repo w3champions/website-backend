@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 {
-    public class HeroPlayedStat
+    public class HeroPlayedStat : IIdentifiable
     {
         public static HeroPlayedStat Create()
         {

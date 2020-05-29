@@ -1,8 +1,9 @@
 ﻿using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats
 {
-    public class PlayerRaceStatPerGateway : WinLoss
+    public class PlayerRaceStatPerGateway : WinLoss, IIdentifiable
     {
         public PlayerRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
         {

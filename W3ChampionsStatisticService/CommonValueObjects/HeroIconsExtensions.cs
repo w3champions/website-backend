@@ -1,4 +1,4 @@
-﻿namespace W3ChampionsStatisticService.Extensions
+﻿namespace W3ChampionsStatisticService.CommonValueObjects
 {
     public static class HeroIconsExtensions
     {

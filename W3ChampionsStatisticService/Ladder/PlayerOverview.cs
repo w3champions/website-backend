@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
 {
-    public class PlayerOverview : WinLoss
+    public class PlayerOverview : WinLoss, IIdentifiable
     {
         public static PlayerOverview Create(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, int season)
         {

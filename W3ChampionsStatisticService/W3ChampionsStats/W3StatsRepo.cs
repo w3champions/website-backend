@@ -37,32 +37,32 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task<GamesPerDay> LoadGamesPerDay(DateTime date)
         {
-            return LoadFirst<GamesPerDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
+            return LoadFirst<GamesPerDay>(date.Date.ToString("yyyy-MM-dd"));
         }
 
         public Task Save(GamesPerDay stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<GameLengthStat> LoadGameLengths()
         {
-            return LoadFirst<GameLengthStat>(s => s.Id == nameof(GameLengthStat));
+            return LoadFirst<GameLengthStat>(nameof(GameLengthStat));
         }
 
         public Task Save(GameLengthStat stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<DistinctPlayersPerDay> LoadPlayersPerDay(DateTime date)
         {
-            return LoadFirst<DistinctPlayersPerDay>(s => s.Id == date.Date.ToString("yyyy-MM-dd"));
+            return LoadFirst<DistinctPlayersPerDay>(date.Date.ToString("yyyy-MM-dd"));
         }
 
         public Task Save(DistinctPlayersPerDay stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public async Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
@@ -91,37 +91,37 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public Task<HourOfPlayStat> LoadHourOfPlay()
         {
-            return LoadFirst<HourOfPlayStat>(s => s.Id == nameof(HourOfPlayStat));
+            return LoadFirst<HourOfPlayStat>(nameof(HourOfPlayStat));
         }
 
         public Task Save(HourOfPlayStat stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<HeroPlayedStat> LoadHeroPlayedStat()
         {
-            return LoadFirst<HeroPlayedStat>(s => s.Id == nameof(HeroPlayedStat));
+            return LoadFirst<HeroPlayedStat>(nameof(HeroPlayedStat));
         }
 
         public Task Save(HeroPlayedStat stat)
         {
-            return Upsert(stat, s => s.Id == stat.Id);
+            return Upsert(stat);
         }
 
         public Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId)
         {
-            return LoadFirst<OverallHeroWinRatePerHero>(h => h.Id == heroComboId);
+            return LoadFirst<OverallHeroWinRatePerHero>(heroComboId);
         }
 
         public Task<List<OverallHeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
         {
-            return Load<OverallHeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
+            return LoadAll<OverallHeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
         }
 
         public Task Save(OverallHeroWinRatePerHero overallHeroWinrate)
         {
-            return Upsert(overallHeroWinrate, h => h.Id == overallHeroWinrate.Id);
+            return Upsert(overallHeroWinrate);
         }
     }
 }

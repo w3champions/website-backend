@@ -1,30 +1,29 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Chats
 {
     public class ChatHub : Hub
     {
-        private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
+        private readonly ChatAuthenticationService _authenticationService;
         private readonly ConnectionMapping _connections;
 
         public ChatHub(
-            IBlizzardAuthenticationService blizzardAuthenticationService,
+            ChatAuthenticationService authenticationService,
             ConnectionMapping connections)
         {
-            _blizzardAuthenticationService = blizzardAuthenticationService;
+            _authenticationService = authenticationService;
             _connections = connections;
         }
 
-        public async Task SendMessage(string message, string bearer)
+        public async Task SendMessage(string message, string chatApiKey)
         {
             var trimmedMessage = message.Trim();
-            var res = await _blizzardAuthenticationService.GetUser(bearer);
+            var res = await _authenticationService.GetUser(chatApiKey);
             if (res != null && !string.IsNullOrEmpty(trimmedMessage))
             {
-                await Clients.All.SendAsync("ReceiveMessage", res.battletag, res.name, trimmedMessage);
+                await Clients.All.SendAsync("ReceiveMessage", res.BattleTag, res.Name, trimmedMessage);
             }
         }
 
@@ -40,14 +39,13 @@ namespace W3ChampionsStatisticService.Chats
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task LoginAs(string bearer)
+        public async Task LoginAs(string chatApiKey)
         {
-            var res = await _blizzardAuthenticationService.GetUser(bearer);
+            var res = await _authenticationService.GetUser(chatApiKey);
             if (res != null)
             {
-                var connectedUser = new ChatUser(res.battletag, res.name);
-                _connections.Add(Context.ConnectionId, connectedUser);
-                await Clients.Others.SendAsync("UserEntered", connectedUser.Name, connectedUser.BattleTag);
+                _connections.Add(Context.ConnectionId, res);
+                await Clients.Others.SendAsync("UserEntered", res.Name, res.BattleTag);
                 await Clients.Caller.SendAsync("StartChat", _connections.Users);
             }
             else

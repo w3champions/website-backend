@@ -1,8 +1,9 @@
 using System;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 {
-    public class GamesPerDay
+    public class GamesPerDay : IIdentifiable
     {
         public DateTimeOffset Date { get; set; }
         public long GamesPlayed { get; set; }

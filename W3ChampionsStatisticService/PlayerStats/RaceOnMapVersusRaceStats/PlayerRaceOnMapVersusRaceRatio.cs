@@ -1,8 +1,9 @@
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
-    public class PlayerRaceOnMapVersusRaceRatio
+    public class PlayerRaceOnMapVersusRaceRatio : IIdentifiable
     {
         public static PlayerRaceOnMapVersusRaceRatio Create(string battleTag, int season)
         {

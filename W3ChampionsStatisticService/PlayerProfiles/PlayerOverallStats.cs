@@ -8,6 +8,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerOverallStats
     {
+        [BsonId]
+        public string BattleTag { get; set; }
+        public string Name { get; set; }
+        public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
+        public List<RaceWinLoss> WinLosses { get; set; }
+
         public static PlayerOverallStats Create(string battleTag)
         {
             return new PlayerOverallStats
@@ -24,13 +30,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 }
             };
         }
-
-        [BsonId]
-        public string BattleTag { get; set; }
-        public string Name { get; set; }
-        public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
-
-        public List<RaceWinLoss> WinLosses { get; set; }
 
         public void RecordWin(Race race, int season, bool won)
         {
