@@ -80,5 +80,17 @@ namespace W3ChampionsStatisticService.Clans
 
             await _clanRepository.SaveMemberShips(memberShips);
         }
+
+        public async Task<Clan> GetClanForPlayer(string battleTag)
+        {
+            var membership = await _clanRepository.LoadMemberShip(battleTag);
+            if (membership?.ClanId != null)
+            {
+                var clan = await _clanRepository.LoadClan(membership.ClanId.ToString());
+                return clan;
+            }
+
+            return null;
+        }
     }
 }
