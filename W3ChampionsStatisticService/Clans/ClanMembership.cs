@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public void SignForClan(Clan clan)
         {
-            if (ClanId != null) throw new ValidationException("User Allready in clan");
+            if (ClanId != null && ClanId != ObjectId.Empty) throw new ValidationException("User Allready in clan");
 
             ClanId = clan.Id;
         }

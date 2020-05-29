@@ -37,6 +37,9 @@ namespace W3ChampionsStatisticService.Clans
                 FoundingFathers = new List<string> { founder.BattleTag }
             };
 
+            // just to check if founder is not in clan yet, assignment of id is later
+            founder.SignForClan(clan);
+
             return clan;
         }
 
