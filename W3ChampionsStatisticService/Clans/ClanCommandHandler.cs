@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.Clans
             var clan = Clan.Create(clanName, memberShip);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
             if (!wasSaved) throw new ValidationException("Clan Name allready taken");
-            memberShip.SignForClan(clan);
+            memberShip.ClanId = clan.Id;
             await _clanRepository.UpsertMemberShip(memberShip);
             return clan;
         }
