@@ -33,9 +33,13 @@ namespace W3ChampionsStatisticService.Ports
 
         Task<List<OnGoingMatchup>> LoadOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100);
-        Task<long> CountOnGoingMatches();
+
+        Task<long> CountOnGoingMatches(
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined);
 
         Task EnsureIndices();
     }
