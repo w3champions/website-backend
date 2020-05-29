@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 if (
                     res != null
                     && !string.IsNullOrEmpty(btagString)
-                    && btagString.StartsWith(res.battletag))
+                    && btagString !=res.battletag)
                 {
                     context.ActionArguments["battleTag"] = res.battletag;
                     await next.Invoke();
