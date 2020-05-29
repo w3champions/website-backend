@@ -52,11 +52,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
-            setting.ProfileMessage = dto.ProfileMessage;
-            setting.Twitch = dto.Twitch;
-            setting.YouTube = dto.Youtube;
-            setting.Twitter = dto.Twitter;
-            setting.HomePage = dto.HomePage;
+            setting.ProfileMessage = dto.ProfileMessage != null ? dto.ProfileMessage : setting.ProfileMessage;
+            setting.Twitch = dto.Twitch != null ? dto.Twitch : setting.Twitch;
+            setting.YouTube = dto.Youtube != null ? dto.Twitch : setting.Twitch;
+            setting.Twitter = dto.Twitter != null ? dto.Twitter : setting.Twitter;
+            setting.HomePage = dto.HomePage != null ? dto.HomePage : setting.HomePage;
+            setting.Country = dto.Country != null ? dto.Country : setting.Country;
 
             await _personalSettingsRepository.Save(setting);
 

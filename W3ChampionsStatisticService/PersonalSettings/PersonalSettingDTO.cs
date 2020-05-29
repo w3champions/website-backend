@@ -15,5 +15,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         [MaxLength(50)]
         public string HomePage { get; set; }
+
+        public string Country { get; set; }
     }
 }
