@@ -72,5 +72,14 @@ namespace W3ChampionsStatisticService.Clans
 
             PendingInvites.Add(clanMemberShip.BattleTag);
         }
+
+        public void RevokeInvite(ClanMembership clanMemberShip, string personWhoInvitesBattleTag)
+        {
+            if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag)) throw new ValidationException("Only chieftains and shamans can invite");
+
+            clanMemberShip.RevokeInvite();
+
+            PendingInvites.Remove(clanMemberShip.BattleTag);
+        }
     }
 }

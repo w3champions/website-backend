@@ -38,5 +38,10 @@ namespace W3ChampionsStatisticService.Clans
         {
             ClanId = null;
         }
+
+        public void RevokeInvite()
+        {
+            PendingInviteFromClan = null;
+        }
     }
 }

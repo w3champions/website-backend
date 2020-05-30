@@ -68,9 +68,20 @@ namespace W3ChampionsStatisticService.Clans
         public async Task<IActionResult> InviteToClan(
             string clanId,
             string actingPlayer,
-            [FromBody] CreateInviteDto inviteDto)
+            [FromBody] InviteDto inviteDto)
         {
             await _clanCommandHandler.InviteToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
+            return Ok();
+        }
+
+        [HttpDelete("{clanId}/invites")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> RevokeInvitationToClan(
+            string clanId,
+            string actingPlayer,
+            [FromBody] InviteDto inviteDto)
+        {
+            await _clanCommandHandler.RevokeInvitationToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
             return Ok();
         }
 

@@ -42,6 +42,22 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task RevokeInvite()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            await _handler.InviteToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
+            await _handler.RevokeInvitationToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
+
+            var member = await _clanRepository.LoadMemberShip("peter#123");
+            var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
+
+            Assert.AreEqual("peter#123", member.BattleTag);
+            Assert.IsNull( member.PendingInviteFromClan);
+            Assert.IsEmpty(clanLoaded.PendingInvites);
+        }
+
+        [Test]
         public async Task SignPetition()
         {
             var clanNameExpected = "Cool Shit";
