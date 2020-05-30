@@ -22,16 +22,24 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             var winners = nextEvent.match.players.Where(p => p.won).ToList();
-            var loosers = nextEvent.match.players.Where(p => !p.won).ToList();
+            var losers = nextEvent.match.players.Where(p => !p.won).ToList();
 
             // for broken events
-            if (winners.Count == 0 || loosers.Count == 0) return;
+            if (winners.Count == 0 || losers.Count == 0) return;
 
             var winner = await UpdatePlayers(nextEvent, winners);
-            var looser = await UpdatePlayers(nextEvent, loosers);
-
             await _playerRepository.UpsertPlayerOverview(winner);
-            await _playerRepository.UpsertPlayerOverview(looser);
+
+            await UpdateLosers(nextEvent, losers);
+        }
+
+        private async Task UpdateLosers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> losers)
+        {
+            foreach (var losingTeam in losers.GroupBy(x => x.team))
+            {
+                var loser = await UpdatePlayers(nextEvent, losingTeam.ToList());
+                await _playerRepository.UpsertPlayerOverview(loser);
+            }
         }
 
         private async Task<PlayerOverview> UpdatePlayers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> players)

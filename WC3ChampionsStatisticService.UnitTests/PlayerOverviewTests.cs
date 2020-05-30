@@ -134,6 +134,42 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task UpdateOverview_HandlerUpdate_FFA()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFakeFFAEvent();
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var winners = matchFinishedEvent.match.players.Where(x => x.won);
+
+            Assert.AreEqual(1, winners.Count());
+
+            foreach (var player in winners)
+            {
+                var playerProfile = await playerRepository.LoadOverview($"0_{player.battleTag}@20_FFA");
+
+                Assert.AreEqual(1, playerProfile.Wins);
+                Assert.AreEqual(0, playerProfile.Losses);
+                Assert.AreEqual(GameMode.FFA, playerProfile.GameMode);
+            }
+
+            var losers = matchFinishedEvent.match.players.Where(x => !x.won);
+
+            Assert.AreEqual(3, losers.Count());
+
+            foreach (var player in losers)
+            {
+                var playerProfile = await playerRepository.LoadOverview($"0_{player.battleTag}@20_FFA");
+
+                Assert.AreEqual(0, playerProfile.Wins);
+                Assert.AreEqual(1, playerProfile.Losses);
+                Assert.AreEqual(GameMode.FFA, playerProfile.GameMode);
+            }
+        }
+
+        [Test]
         public async Task UpdateOverview_HandlerUpdate_1v1_doubleWins()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
