@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPost]
-        [InjectBattleTagFromAuthCode]
+        [InjectActingPlayerAuthCode]
         public async Task<IActionResult> CreateClan(
             [FromBody] CreateClanDto clanDto,
             string actingPlayer)
@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpDelete("{clanId}")]
-        [InjectBattleTagFromAuthCode]
+        [InjectActingPlayerAuthCode]
         public async Task<IActionResult> DeleteClan(
             string clanId,
             string actingPlayer)
@@ -64,7 +64,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpPost("{clanId}/invites")]
-        [InjectBattleTagFromAuthCode]
+        [InjectActingPlayerAuthCode]
         public async Task<IActionResult> InviteToClan(
             string clanId,
             string actingPlayer,

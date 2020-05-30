@@ -5,13 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     [AttributeUsage(AttributeTargets.Method)]
-    public class InjectBattleTagFromAuthCodeAttribute : Attribute, IFilterFactory
+    public class InjectActingPlayerAuthCodeAttribute : Attribute, IFilterFactory
     {
         public bool IsReusable => false;
 
         public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
         {
-            return serviceProvider.GetService<InjectBattleTagFromAuthCodeFilter>();
+            return serviceProvider.GetService<InjectActingPlayerFromAuthCodeFilter>();
         }
     }
 }

@@ -85,7 +85,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IClanRepository, ClanRepository>();
             services.AddTransient<ClanCommandHandler>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
-            services.AddTransient<InjectBattleTagFromAuthCodeFilter>();
+            services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
 
             if (startPadSync == "true")
             {

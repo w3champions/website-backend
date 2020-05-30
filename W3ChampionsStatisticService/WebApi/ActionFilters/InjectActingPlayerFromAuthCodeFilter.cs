@@ -8,10 +8,10 @@ using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
-    public class InjectBattleTagFromAuthCodeFilter : IAsyncActionFilter {
+    public class InjectActingPlayerFromAuthCodeFilter : IAsyncActionFilter {
         private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
 
-        public InjectBattleTagFromAuthCodeFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public InjectActingPlayerFromAuthCodeFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
         {
             _blizzardAuthenticationService = blizzardAuthenticationService;
         }
