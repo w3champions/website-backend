@@ -24,20 +24,13 @@ namespace W3ChampionsStatisticService.Clans
 
         public static Clan Create(string clanName, ClanMembership founder)
         {
-            if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty))
-            {
-                throw new ValidationException("Founder can not be in another clan");
-            }
-
             var trim = clanName.Trim();
-            if (trim.Length < 3)
-            {
-                throw new ValidationException("Name too short");
-            }
+            if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty)) throw new ValidationException("Founder can not be in another clan");
+            if (trim.Length < 3) throw new ValidationException("Name too short");
 
             var clan = new Clan
             {
-                ClanName = clanName,
+                ClanName = trim,
                 ChiefTain = founder.BattleTag,
                 FoundingFathers = new List<string> { founder.BattleTag }
             };
@@ -47,25 +40,11 @@ namespace W3ChampionsStatisticService.Clans
 
         public void Sign(ClanMembership membership)
         {
-            if (IsSuccesfullyFounded)
-            {
-                throw new ValidationException("Can not sign final clan anymore");
-            }
+            if (IsSuccesfullyFounded) throw new ValidationException("Can not sign final clan anymore");
 
-            if (FoundingFathers.Contains(membership.BattleTag))
-            {
-                throw new ValidationException("Can not sign Clan Founding twice");
-            }
-
-            if (!PendingInvites.Contains(membership.BattleTag))
-            {
-                throw new ValidationException("Player was not invites to sign the clan");
-            }
-
-            membership.JoinClan(this);
+            AddMember(membership);
 
             FoundingFathers.Add(membership.BattleTag);
-            PendingInvites.Remove(membership.BattleTag);
 
             if (FoundingFathers.Count >= 7)
             {
@@ -76,15 +55,8 @@ namespace W3ChampionsStatisticService.Clans
 
         public void AddMember(ClanMembership membership)
         {
-            if (!IsSuccesfullyFounded)
-            {
-                throw new ValidationException("Clan not founded yet");
-            }
-
-            if (Members.Contains(membership.BattleTag))
-            {
-                throw new ValidationException("Can not participate in clan twice");
-            }
+            if (Members.Contains(membership.BattleTag)) throw new ValidationException("Can not participate in clan twice");
+            if (!PendingInvites.Contains(membership.BattleTag)) throw new ValidationException("Player was not invites to sign the clan");
 
             membership.JoinClan(this);
             Members.Add(membership.BattleTag);
@@ -93,17 +65,10 @@ namespace W3ChampionsStatisticService.Clans
 
         public void Invite(ClanMembership clanMemberShip, string personWhoInvitesBattleTag)
         {
-            if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag))
-            {
-                throw new ValidationException("Only chieftains and shamans can invite");
-            }
+            if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag)) throw new ValidationException("Only chieftains and shamans can invite");
+            if (PendingInvites.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
 
             clanMemberShip.Invite(this);
-
-            if (PendingInvites.Contains(clanMemberShip.BattleTag))
-            {
-                throw new ValidationException("Can not invite player twice");
-            }
 
             PendingInvites.Add(clanMemberShip.BattleTag);
         }
