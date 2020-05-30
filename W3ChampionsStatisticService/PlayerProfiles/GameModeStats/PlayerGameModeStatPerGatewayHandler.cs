@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
@@ -23,39 +24,56 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             var match = nextEvent.match;
 
             var winners = match.players.Where(p => p.won).ToList();
-            var loosers = match.players.Where(p => !p.won).ToList();
+
+            var losers = match.players.Where(p => !p.won).ToList();
 
             // some events are buggy
-            if (winners.Count != loosers.Count && match.gameMode != GameMode.FFA) return;
+            if (winners.Count != losers.Count && match.gameMode != GameMode.FFA) return;
 
+            await RecordWinners(match, winners);
+
+            await RecordLosers(match, losers);
+        }
+
+        private async Task RecordLosers(Match match, List<PlayerMMrChange> losers)
+        {
+            foreach (var losingTeam in losers.GroupBy(x => x.team))
+            {
+                var loserId = new BattleTagIdCombined(
+                  losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
+                  match.gateway,
+                  match.gameMode,
+                  match.season);
+
+                var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
+
+                loser.RecordWin(false);
+
+                var firstLooser = losingTeam.First();
+
+                loser.RecordRanking(
+                    (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
+                    (int?)firstLooser.updatedRanking?.rp ?? (int?)firstLooser.ranking?.rp ?? 0);
+
+                await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
+            }
+        }
+
+        private async Task RecordWinners(Match match, List<PlayerMMrChange> winners)
+        {
             var winnerId = new BattleTagIdCombined(
                 winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
                 match.gateway,
                 match.gameMode,
                 match.season);
 
-            var looserId = new BattleTagIdCombined(
-                loosers.Select(w => PlayerId.Create(w.battleTag)).ToList(),
-                match.gateway,
-                match.gameMode,
-                match.season);
-
             var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
-            var looser = await _playerRepository.LoadGameModeStatPerGateway(looserId.Id) ?? PlayerGameModeStatPerGateway.Create(looserId);
-
             winner.RecordWin(true);
-            looser.RecordWin(false);
-
             winner.RecordRanking(
-                (int?) winners.First().updatedMmr?.rating ?? (int?) winners.First().mmr?.rating ?? 0,
-                (int?) winners.First().updatedRanking?.rp ?? (int?) winners.First().ranking?.rp ?? 0);
-
-            looser.RecordRanking(
-                (int?) loosers.First().updatedMmr?.rating ?? (int?) loosers.First().mmr?.rating ?? 0,
-                (int?) loosers.First().updatedRanking?.rp ?? (int?) loosers.First().ranking?.rp ?? 0);
+                (int?)winners.First().updatedMmr?.rating ?? (int?)winners.First().mmr?.rating ?? 0,
+                (int?)winners.First().updatedRanking?.rp ?? (int?)winners.First().ranking?.rp ?? 0);
 
             await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
-            await _playerRepository.UpsertPlayerGameModeStatPerGateway(looser);
         }
     }
 }
