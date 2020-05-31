@@ -24,6 +24,12 @@ namespace W3ChampionsStatisticService.Ladder
             var winners = nextEvent.match.players.Where(p => p.won).ToList();
             var losers = nextEvent.match.players.Where(p => !p.won).ToList();
 
+            if (winners.Count == 0 || losers.Count == 0)
+            {
+                // We should log the bad event here
+                return;
+            }
+
             // for broken events
             if (winners.Count == 0 || losers.Count == 0) return;
 

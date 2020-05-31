@@ -27,6 +27,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
             var losers = match.players.Where(p => !p.won).ToList();
 
+            if (winners.Count == 0 || losers.Count == 0)
+            {
+                // We should log the bad event here
+                return;
+            }
+
             // some events are buggy
             if (winners.Count != losers.Count && match.gameMode != GameMode.FFA) return;
 
