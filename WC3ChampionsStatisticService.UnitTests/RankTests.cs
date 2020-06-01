@@ -6,6 +6,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
@@ -134,6 +135,48 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rank = await rankRepository.SearchPlayerOfLeague("peT", 0, GateWay.America, GameMode.GM_1v1);
 
             Assert.AreEqual(1, rank.Count);
+        }
+
+        [Test]
+        public async Task ReturnRanksHave_CorrectPersonalSettings()
+        {
+            // Arrange
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var queryHandler = new RankQueryHandler(rankRepository, playerRepository);
+           
+            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            await rankRepository.InsertRanks(ranks);
+
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
+            player.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player);
+
+            var playerStats = new PlayerOverallStats()
+            {
+                BattleTag = "peter#123",
+            };
+            await playerRepository.UpsertPlayer(playerStats);
+
+            var settings = new PersonalSetting("peter#123")
+            {
+                ProfilePicture = new ProfilePicture(Race.HU, 5),
+                Country = "BG"
+            };
+            await personalSettingsRepository.Save(settings);
+
+            // Act
+            var playerLoaded = await queryHandler.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);
+
+            // Assert
+            Assert.AreEqual(1, playerLoaded.Count);
+
+            var playerRank = playerLoaded[0];
+            Assert.AreEqual("1_peter#123@10_GM_1v1", playerRank.Players.First().Id);
+            Assert.AreEqual(playerRank.PlayersInfo[0].SelectedRace, Race.HU);
+            Assert.AreEqual(playerRank.PlayersInfo[0].PictureId, 5);
+            Assert.AreEqual(playerRank.PlayersInfo[0].Country, "BG");
         }
     }
 }
