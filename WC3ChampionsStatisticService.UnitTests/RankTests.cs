@@ -138,7 +138,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task ReturnRanksHave_CorrectPersonalSettings()
+        public async Task ReturnRanks_WhenPlayersHavePersonalSettingsConfigured_MustHaveCorrectPersonalSettings()
         {
             // Arrange
             var rankRepository = new RankRepository(MongoClient);
@@ -177,6 +177,38 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(playerRank.PlayersInfo[0].SelectedRace, Race.HU);
             Assert.AreEqual(playerRank.PlayersInfo[0].PictureId, 5);
             Assert.AreEqual(playerRank.PlayersInfo[0].Country, "BG");
+        }
+
+        [Test]
+        public async Task ReturnRanks_WhenPlayersDoNotHavePersonalSettingsConfigured_MustHaveNotThrowError()
+        {
+            // Arrange
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var queryHandler = new RankQueryHandler(rankRepository, playerRepository);
+
+            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            await rankRepository.InsertRanks(ranks);
+
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
+            player.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player);
+
+            var playerStats = new PlayerOverallStats()
+            {
+                BattleTag = "peter#123",
+            };
+            await playerRepository.UpsertPlayer(playerStats);
+
+            // Act
+            var playerLoaded = await queryHandler.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);
+
+            // Assert
+            Assert.AreEqual(1, playerLoaded.Count);
+
+            var playerRank = playerLoaded[0];
+            Assert.AreEqual("1_peter#123@10_GM_1v1", playerRank.Players.First().Id);
         }
     }
 }

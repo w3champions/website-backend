@@ -60,7 +60,7 @@ namespace W3ChampionsStatisticService.Ladder
                             CalculatedRace = playerDetails.GetMainRace(),
                             PictureId = profilePicture?.PictureId,
                             SelectedRace = profilePicture?.Race,
-                            Country = personalSettings.Country
+                            Country = personalSettings?.Country
                         });
                     }
                 }
