@@ -24,7 +24,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void InvitePlayer_ClanNotPresent()
         {
             Assert.ThrowsAsync<ValidationException>(async () =>
-                await _handler.InviteToClan("peter#123", ObjectId.GenerateNewId().ToString(), "doesNotMatter"));
+                await _handler.InviteToClan(ObjectId.GenerateNewId().ToString(), "peter#123", "doesNotMatter"));
         }
 
         [Test]
@@ -32,14 +32,14 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await _handler.CreateClan("egal", "Peter#123");
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("Peter#123", clan.IdRaw, "Peter#123"));
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan(clan.IdRaw, "Peter#123", "Peter#123"));
         }
 
         [Test]
         public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
         {
             var clan = await _handler.CreateClan("egal", "Peter#123");
-            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+            await _handler.InviteToClan(clan.IdRaw, "NewGUY#123", "Peter#123");
             await _handler.RevokeInvitationToClan("NewGUY#123", clan.IdRaw, "Peter#123");
 
             var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
@@ -52,17 +52,17 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task InvitePlayer_ThatHasAlreadySigned()
         {
             var clan = await _handler.CreateClan("egal", "Peter#123");
-            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+            await _handler.InviteToClan(clan.IdRaw, "NewGUY#123", "Peter#123");
             await _handler.AcceptInvite(clan.IdRaw, "NewGUY#123");
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123"));
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan(clan.IdRaw, "NewGUY#123", "Peter#123"));
         }
 
         [Test]
         public async Task InvitePlayer()
         {
             var clan = await CreateFoundedClanForTest();
-            await _handler.InviteToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
+            await _handler.InviteToClan(clan.Id.ToString(), "peter#123", clan.ChiefTain);
 
             var member = await _clanRepository.LoadMemberShip("peter#123");
             var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            await _handler.InviteToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
+            await _handler.InviteToClan(clan.Id.ToString(), "peter#123", clan.ChiefTain);
             await _handler.RevokeInvitationToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
 
             var member = await _clanRepository.LoadMemberShip("peter#123");
@@ -94,8 +94,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanNameExpected = "Cool Shit";
             var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
 
-            await _handler.InviteToClan("peter#123", clan.Id.ToString(), "Peter#123");
-            await _handler.SignClanPetition("peter#123", clan.Id.ToString());
+            await _handler.InviteToClan(clan.Id.ToString(), "peter#123", "Peter#123");
+            await _handler.AcceptInvite(clan.Id.ToString(), "peter#123");
 
             var member = await _clanRepository.LoadMemberShip("peter#123");
             var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
@@ -177,8 +177,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
             for (int i = 0; i < 6; i++)
             {
-                await _handler.InviteToClan($"btag#{i}", clan.Id.ToString(), "Peter#123");
-                await _handler.SignClanPetition($"btag#{i}", clan.Id.ToString());
+                await _handler.InviteToClan(clan.Id.ToString(), $"btag#{i}", "Peter#123");
+                await _handler.AcceptInvite(clan.Id.ToString(), $"btag#{i}");
             }
 
             return clan;

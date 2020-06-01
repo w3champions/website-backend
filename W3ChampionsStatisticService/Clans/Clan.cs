@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
+using W3ChampionsStatisticService.Clans.ClanStates;
 
 namespace W3ChampionsStatisticService.Clans
 {
@@ -9,17 +10,19 @@ namespace W3ChampionsStatisticService.Clans
     {
         [JsonIgnore]
         public ObjectId Id { get; set; }
+        [JsonIgnore]
+        public ClanState ClanState { get; set; }
 
         [JsonPropertyName("id")]
         public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
         public string ChiefTain { get; set; }
 
-        public bool IsSuccesfullyFounded { get; set; }
+        public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
 
-        public List<string> Members { get; set; } = new List<string>();
-        public List<string> FoundingFathers { get; set; } = new List<string>();
-        public List<string> Shamans { get; set; } = new List<string>();
+        public List<string> Members => ClanState.Members;
+        public List<string> FoundingFathers => ClanState.FoundingFathers;
+        public List<string> Shamans => ClanState.Shamans;
         public List<string> PendingInvites { get; set; } = new List<string>();
 
         public static Clan Create(string clanName, ClanMembership founder)
@@ -32,34 +35,20 @@ namespace W3ChampionsStatisticService.Clans
             {
                 ClanName = trim,
                 ChiefTain = founder.BattleTag,
-                FoundingFathers = new List<string> { founder.BattleTag }
+                ClanState = new NotFoundedClan(founder.BattleTag)
             };
 
             return clan;
         }
 
-        public void Sign(ClanMembership membership)
-        {
-            if (IsSuccesfullyFounded) throw new ValidationException("Can not sign final clan anymore");
-
-            AddMember(membership);
-
-            FoundingFathers.Add(membership.BattleTag);
-
-            if (FoundingFathers.Count >= 7)
-            {
-                IsSuccesfullyFounded = true;
-                Members = FoundingFathers;
-            }
-        }
-
-        public void AddMember(ClanMembership membership)
+        public void AcceptInvite(ClanMembership membership)
         {
             if (Members.Contains(membership.BattleTag)) throw new ValidationException("Can not participate in clan twice");
             if (!PendingInvites.Contains(membership.BattleTag)) throw new ValidationException("Player was not invites to sign the clan");
 
             membership.JoinClan(this);
-            Members.Add(membership.BattleTag);
+
+            ClanState = ClanState.AcceptInvite(membership);
 
             PendingInvites.Remove(membership.BattleTag);
         }
@@ -95,6 +84,8 @@ namespace W3ChampionsStatisticService.Clans
         public void LeaveClan(ClanMembership clanMemberShip)
         {
             clanMemberShip.ExitClan();
+
+            ClanState = ClanState.LeaveClan(clanMemberShip);
 
             if (!IsSuccesfullyFounded)
             {
