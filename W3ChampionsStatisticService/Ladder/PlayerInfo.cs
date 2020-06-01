@@ -11,5 +11,7 @@ namespace W3ChampionsStatisticService.Ladder
         public Race? SelectedRace { get; set; }
 
         public long? PictureId { get; set; }
+
+        public string Country { get; set; }
     }
 }

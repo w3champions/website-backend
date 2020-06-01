@@ -24,12 +24,12 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var playerRanks = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
 
-            await PopulateCalculatedRace(playerRanks);
+            await PopulatePlayerInfos(playerRanks);
 
             return playerRanks;
         }
 
-        private async Task PopulateCalculatedRace(List<Rank> ranks)
+        private async Task PopulatePlayerInfos(List<Rank> ranks)
         {
             var playerIds = ranks
                 .SelectMany(x => x.Player.PlayerIds)
@@ -51,14 +51,16 @@ namespace W3ChampionsStatisticService.Ladder
                             rank.PlayersInfo = new List<PlayerInfo>();
                         }
 
-                        var profilePicture = playerDetails.PersonalSettings?.FirstOrDefault()?.ProfilePicture;
+                        var personalSettings = playerDetails.PersonalSettings?.FirstOrDefault();
+                        var profilePicture = personalSettings?.ProfilePicture;
 
                         rank.PlayersInfo.Add(new PlayerInfo()
                         {
                             BattleTag = playerId.BattleTag,
                             CalculatedRace = playerDetails.GetMainRace(),
                             PictureId = profilePicture?.PictureId,
-                            SelectedRace = profilePicture?.Race
+                            SelectedRace = profilePicture?.Race,
+                            Country = personalSettings?.Country
                         });
                     }
                 }

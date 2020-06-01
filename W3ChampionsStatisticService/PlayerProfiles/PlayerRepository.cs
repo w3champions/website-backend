@@ -44,7 +44,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 .Aggregate()
                 .Match(x => playerIds.Contains(x.Id))
                 .Lookup<PlayerDetails, PersonalSetting, PlayerDetails>(personalSettings,
-                    raceWins => raceWins.BattleTag,
+                    raceWins => raceWins.Id,
                     settings => settings.Id,
                     details => details.PersonalSettings)
                 .ToListAsync();
