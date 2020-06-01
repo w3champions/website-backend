@@ -59,14 +59,7 @@ namespace W3ChampionsStatisticService.Clans
             if (!PendingInvites.Contains(membership.BattleTag)) throw new ValidationException("Player was not invites to sign the clan");
 
             membership.JoinClan(this);
-            if (!IsSuccesfullyFounded)
-            {
-                FoundingFathers.Add(membership.BattleTag);
-            }
-            else
-            {
-                Members.Add(membership.BattleTag);
-            }
+            Members.Add(membership.BattleTag);
 
             PendingInvites.Remove(membership.BattleTag);
         }
