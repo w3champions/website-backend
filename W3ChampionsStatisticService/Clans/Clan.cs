@@ -59,7 +59,15 @@ namespace W3ChampionsStatisticService.Clans
             if (!PendingInvites.Contains(membership.BattleTag)) throw new ValidationException("Player was not invites to sign the clan");
 
             membership.JoinClan(this);
-            Members.Add(membership.BattleTag);
+            if (!IsSuccesfullyFounded)
+            {
+                FoundingFathers.Remove(membership.BattleTag);
+            }
+            else
+            {
+                Members.Remove(membership.BattleTag);
+            }
+
             PendingInvites.Remove(membership.BattleTag);
         }
 
@@ -89,6 +97,20 @@ namespace W3ChampionsStatisticService.Clans
             clanMemberShip.RevokeInvite();
 
             PendingInvites.Remove(clanMemberShip.BattleTag);
+        }
+
+        public void LeaveClan(ClanMembership clanMemberShip)
+        {
+            clanMemberShip.ExitClan();
+
+            if (!IsSuccesfullyFounded)
+            {
+                FoundingFathers.Remove(clanMemberShip.BattleTag);
+            }
+            else
+            {
+                Members.Remove(clanMemberShip.BattleTag);
+            }
         }
     }
 }

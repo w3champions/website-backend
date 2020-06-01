@@ -84,6 +84,16 @@ namespace W3ChampionsStatisticService.Clans
             return Ok();
         }
 
+        [HttpDelete("{clanId}/members/{battleTag}")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> RevokeInvitationToClan(
+            string clanId,
+            string battleTag)
+        {
+            var clan = await _clanCommandHandler.LeaveClan(clanId, battleTag);
+            return Ok(clan);
+        }
+
         [HttpPut("{clanId}/invites/{battleTag}")]
         [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> AcceptInvite(string clanId, string battleTag)

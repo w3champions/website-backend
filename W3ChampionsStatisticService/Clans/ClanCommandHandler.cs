@@ -118,5 +118,20 @@ namespace W3ChampionsStatisticService.Clans
 
             return clan;
         }
+
+        public async Task<Clan> LeaveClan(string clanId, string battleTag)
+        {
+            var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
+
+            clan.LeaveClan(clanMemberShip);
+
+            await _clanRepository.UpsertClan(clan);
+            await _clanRepository.UpsertMemberShip(clanMemberShip);
+
+            return clan;
+        }
     }
 }
