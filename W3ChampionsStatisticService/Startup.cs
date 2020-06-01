@@ -1,13 +1,16 @@
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Clans;
+using W3ChampionsStatisticService.Clans.ClanStates;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
@@ -62,6 +65,8 @@ namespace W3ChampionsStatisticService
             services.AddSingleton(mongoClient);
 
             services.AddSignalR();
+
+            services.AddSpecialBsonRegistrations();
 
             services.AddSingleton<TrackingService>();
             services.AddSingleton<ConnectionMapping>();
