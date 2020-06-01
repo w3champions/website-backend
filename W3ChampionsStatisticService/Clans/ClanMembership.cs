@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -7,8 +8,19 @@ namespace W3ChampionsStatisticService.Clans
     public class ClanMembership : IIdentifiable
     {
         public string BattleTag { get; set; }
+        [JsonIgnore]
         public ObjectId? ClanId { get; set; }
+        [JsonIgnore]
+        public ObjectId? PendingInviteFromClan { get; set; }
+
+        [JsonPropertyName("clanId")]
+        public string ClanIdRaw => ClanId?.ToString();
+
+        [JsonPropertyName("pendingInviteFromClan")]
+        public string PendingInviteFromClanRaw => PendingInviteFromClan?.ToString();
+        [JsonIgnore]
         public string Id => BattleTag;
+        public string ClanName { get; set; }
 
         public void JoinClan(Clan clan)
         {
@@ -17,9 +29,8 @@ namespace W3ChampionsStatisticService.Clans
 
             ClanId = clan.Id;
             PendingInviteFromClan = null;
+            ClanName = clan.ClanName;
         }
-
-        public ObjectId? PendingInviteFromClan { get; set; }
 
         public static ClanMembership Create(string battleTag)
         {
@@ -32,16 +43,19 @@ namespace W3ChampionsStatisticService.Clans
         public void Invite(Clan clan)
         {
             PendingInviteFromClan = clan.Id;
+            ClanName = clan.ClanName;
         }
 
         public void ExitClan()
         {
             ClanId = null;
+            ClanName = null;
         }
 
         public void RevokeInvite()
         {
             PendingInviteFromClan = null;
+            ClanName = null;
         }
     }
 }
