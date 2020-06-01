@@ -38,28 +38,27 @@ namespace W3ChampionsStatisticService.Clans
             return clan;
         }
 
-        public void Sign(ClanMembership membership)
-        {
-            if (IsSuccesfullyFounded) throw new ValidationException("Can not sign final clan anymore");
-
-            AddMember(membership);
-
-            FoundingFathers.Add(membership.BattleTag);
-
-            if (FoundingFathers.Count >= 7)
-            {
-                IsSuccesfullyFounded = true;
-                Members = FoundingFathers;
-            }
-        }
-
-        public void AddMember(ClanMembership membership)
+        public void AcceptInvite(ClanMembership membership)
         {
             if (Members.Contains(membership.BattleTag)) throw new ValidationException("Can not participate in clan twice");
             if (!PendingInvites.Contains(membership.BattleTag)) throw new ValidationException("Player was not invites to sign the clan");
 
             membership.JoinClan(this);
-            Members.Add(membership.BattleTag);
+
+            if (!IsSuccesfullyFounded)
+            {
+                FoundingFathers.Add(membership.BattleTag);
+
+                if (FoundingFathers.Count >= 7)
+                {
+                    IsSuccesfullyFounded = true;
+                    Members = FoundingFathers;
+                }
+            }
+            else
+            {
+                Members.Add(membership.BattleTag);
+            }
 
             PendingInvites.Remove(membership.BattleTag);
         }

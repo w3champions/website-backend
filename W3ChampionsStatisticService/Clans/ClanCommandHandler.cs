@@ -25,17 +25,7 @@ namespace W3ChampionsStatisticService.Clans
             return clan;
         }
 
-        public async Task<Clan> SignClanPetition(string battleTag, string clanId)
-        {
-            var clan = await _clanRepository.LoadClan(clanId);
-            var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? ClanMembership.Create(battleTag);
-            clan.Sign(clanMemberShip);
-            await _clanRepository.UpsertClan(clan);
-            await _clanRepository.UpsertMemberShip(clanMemberShip);
-            return clan;
-        }
-
-        public async Task InviteToClan(string battleTag, string clanId, string personWhoInvitesBattleTag)
+        public async Task InviteToClan(string clanId, string battleTag, string personWhoInvitesBattleTag)
         {
             var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag)
                                  ?? ClanMembership.Create(battleTag);
@@ -56,7 +46,7 @@ namespace W3ChampionsStatisticService.Clans
         {
             var clan = await _clanRepository.LoadClan(clanId);
             var clanMemberShip = await _clanRepository.LoadMemberShip(playerBattleTag) ?? ClanMembership.Create(playerBattleTag);
-            clan.AddMember(clanMemberShip);
+            clan.AcceptInvite(clanMemberShip);
             await _clanRepository.UpsertClan(clan);
             await _clanRepository.UpsertMemberShip(clanMemberShip);
             return clan;

@@ -31,13 +31,6 @@ namespace W3ChampionsStatisticService.Clans
             return Ok(clan);
         }
 
-        [HttpPost("{clanId}/signees")]
-        public async Task<IActionResult> SignClanPetition(string clanId, [FromBody] SignClanDto clanDto)
-        {
-            var clan = await _clanCommandHandler.SignClanPetition(clanDto.PlayerBattleTag, clanId);
-            return Ok(clan);
-        }
-
         [HttpGet("{clanId}")]
         public async Task<IActionResult> GetClan(string clanId)
         {
@@ -69,7 +62,7 @@ namespace W3ChampionsStatisticService.Clans
             string actingPlayer,
             [FromBody] InviteDto inviteDto)
         {
-            await _clanCommandHandler.InviteToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
+            await _clanCommandHandler.InviteToClan(clanId, inviteDto.PlayerBattleTag, actingPlayer);
             return Ok();
         }
 
