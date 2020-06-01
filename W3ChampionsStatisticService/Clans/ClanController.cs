@@ -78,7 +78,7 @@ namespace W3ChampionsStatisticService.Clans
         }
 
         [HttpDelete("{clanId}/members/{battleTag}")]
-        [InjectActingPlayerAuthCode]
+        [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> RevokeInvitationToClan(
             string clanId,
             string battleTag)
