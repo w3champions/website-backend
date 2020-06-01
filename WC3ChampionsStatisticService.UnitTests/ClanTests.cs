@@ -28,6 +28,37 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task InvitePlayer_ThatHasAlreadySigned_Founder()
+        {
+            var clan = await _handler.CreateClan("egal", "Peter#123");
+
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("Peter#123", clan.IdRaw, "Peter#123"));
+        }
+
+        [Test]
+        public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
+        {
+            var clan = await _handler.CreateClan("egal", "Peter#123");
+            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+            await _handler.RevokeInvitationToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
+
+            Assert.AreEqual(1, clanLoaded.FoundingFathers.Count);
+            Assert.AreEqual("Peter#123", clanLoaded.FoundingFathers[0]);
+        }
+
+        [Test]
+        public async Task InvitePlayer_ThatHasAlreadySigned()
+        {
+            var clan = await _handler.CreateClan("egal", "Peter#123");
+            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+            await _handler.AcceptInvite(clan.IdRaw, "NewGUY#123");
+
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123"));
+        }
+
+        [Test]
         public async Task InvitePlayer()
         {
             var clan = await CreateFoundedClanForTest();
