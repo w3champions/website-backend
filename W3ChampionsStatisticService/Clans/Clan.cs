@@ -83,5 +83,12 @@ namespace W3ChampionsStatisticService.Clans
 
             PendingInvites.Remove(clanMemberShip.BattleTag);
         }
+
+        public void RejectInvite(ClanMembership clanMemberShip)
+        {
+            clanMemberShip.RevokeInvite();
+
+            PendingInvites.Remove(clanMemberShip.BattleTag);
+        }
     }
 }

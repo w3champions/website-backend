@@ -91,5 +91,13 @@ namespace W3ChampionsStatisticService.Clans
             var clan = await _clanCommandHandler.AcceptInvite(clanId, battleTag);
             return Ok(clan);
         }
+
+        [HttpDelete("{clanId}/invites/{battleTag}")]
+        [CheckIfBattleTagBelongsToAuthCode]
+        public async Task<IActionResult> RejectInvite(string clanId, string battleTag)
+        {
+            var clan = await _clanCommandHandler.RejectInvite(clanId, battleTag);
+            return Ok(clan);
+        }
     }
 }
