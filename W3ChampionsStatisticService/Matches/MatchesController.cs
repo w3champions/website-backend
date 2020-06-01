@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -63,6 +64,9 @@ namespace W3ChampionsStatisticService.Matches
             if (pageSize > 200) pageSize = 200;
             var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
             var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay);
+
+            PlayerNamesObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
+
             return Ok(new { matches, count });
         }
 
@@ -70,6 +74,9 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<IActionResult> GetOnGoingMatches(string playerId)
         {
             var onGoingMatch = await _matchRepository.LoadOnGoingMatchForPlayer(playerId);
+
+            PlayerNamesObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
+
             return Ok(onGoingMatch);
         }
     }

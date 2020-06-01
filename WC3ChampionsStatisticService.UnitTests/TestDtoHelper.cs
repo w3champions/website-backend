@@ -55,12 +55,58 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent.match.players[0].battleTag = name1;
             fakeEvent.match.players[0].won = true;
+            fakeEvent.match.players[0].team = 0;
+
             fakeEvent.match.players[1].battleTag = name2;
             fakeEvent.match.players[1].won = true;
+            fakeEvent.match.players[1].team = 0;
+
             fakeEvent.match.players[2].battleTag = name3;
             fakeEvent.match.players[2].won = false;
+            fakeEvent.match.players[2].team = 1;
+
             fakeEvent.match.players[3].battleTag = name4;
             fakeEvent.match.players[3].won = false;
+            fakeEvent.match.players[3].team = 1;
+
+            return fakeEvent;
+        }
+
+
+        public static MatchFinishedEvent CreateFakeFFAEvent()
+        {
+            var fixture = new Fixture { RepeatCount = 4 };
+            var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+            fakeEvent.WasFakeEvent = false;
+            fakeEvent.WasFromSync = false;
+
+            var name1 = "peter#123";
+            var name2 = "wolf#456";
+            var name3 = "TEAM2#123";
+            var name4 = "TEAM2#456";
+
+            fakeEvent.match.map = "Maps/frozenthrone/community/(4)losttemple.w3x";
+
+            fakeEvent.match.gateway = GateWay.Europe;
+            fakeEvent.match.gameMode = GameMode.FFA;
+            fakeEvent.match.season = 0;
+
+            fakeEvent.match.players[0].battleTag = name1;
+            fakeEvent.match.players[0].team = 0;
+            fakeEvent.match.players[0].won = true;
+
+            fakeEvent.match.players[1].battleTag = name2;
+            fakeEvent.match.players[1].won = false;
+            fakeEvent.match.players[1].team = 1;
+
+            fakeEvent.match.players[2].battleTag = name3;
+            fakeEvent.match.players[2].won = false;
+            fakeEvent.match.players[2].team = 2;
+
+            fakeEvent.match.players[3].battleTag = name4;
+            fakeEvent.match.players[3].won = false;
+            fakeEvent.match.players[3].team = 3;
 
             return fakeEvent;
         }
