@@ -61,11 +61,11 @@ namespace W3ChampionsStatisticService.Clans
             membership.JoinClan(this);
             if (!IsSuccesfullyFounded)
             {
-                FoundingFathers.Remove(membership.BattleTag);
+                FoundingFathers.Add(membership.BattleTag);
             }
             else
             {
-                Members.Remove(membership.BattleTag);
+                Members.Add(membership.BattleTag);
             }
 
             PendingInvites.Remove(membership.BattleTag);
