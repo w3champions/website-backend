@@ -84,7 +84,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
 
             Assert.AreEqual("peter#123", member.BattleTag);
-            Assert.IsNull( member.PendingInviteFromClan);
+            Assert.IsNull(member.PendingInviteFromClan);
             Assert.IsEmpty(clanLoaded.PendingInvites);
         }
 

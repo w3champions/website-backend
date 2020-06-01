@@ -60,6 +60,7 @@ namespace W3ChampionsStatisticService.Clans
 
             membership.JoinClan(this);
             Members.Add(membership.BattleTag);
+
             PendingInvites.Remove(membership.BattleTag);
         }
 
@@ -82,6 +83,27 @@ namespace W3ChampionsStatisticService.Clans
             clanMemberShip.RevokeInvite();
 
             PendingInvites.Remove(clanMemberShip.BattleTag);
+        }
+
+        public void RejectInvite(ClanMembership clanMemberShip)
+        {
+            clanMemberShip.RevokeInvite();
+
+            PendingInvites.Remove(clanMemberShip.BattleTag);
+        }
+
+        public void LeaveClan(ClanMembership clanMemberShip)
+        {
+            clanMemberShip.ExitClan();
+
+            if (!IsSuccesfullyFounded)
+            {
+                FoundingFathers.Remove(clanMemberShip.BattleTag);
+            }
+            else
+            {
+                Members.Remove(clanMemberShip.BattleTag);
+            }
         }
     }
 }
