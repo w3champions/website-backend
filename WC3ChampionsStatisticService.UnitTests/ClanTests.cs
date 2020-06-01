@@ -28,6 +28,37 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task InvitePlayer_ThatHasAlreadySigned_Founder()
+        {
+            var clan = await _handler.CreateClan("egal", "Peter#123");
+
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("Peter#123", clan.IdRaw, "Peter#123"));
+        }
+
+        [Test]
+        public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
+        {
+            var clan = await _handler.CreateClan("egal", "Peter#123");
+            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+            await _handler.RevokeInvitationToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
+
+            Assert.AreEqual(1, clanLoaded.FoundingFathers.Count);
+            Assert.AreEqual("Peter#123", clanLoaded.FoundingFathers[0]);
+        }
+
+        [Test]
+        public async Task InvitePlayer_ThatHasAlreadySigned()
+        {
+            var clan = await _handler.CreateClan("egal", "Peter#123");
+            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
+            await _handler.AcceptInvite(clan.IdRaw, "NewGUY#123");
+
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123"));
+        }
+
+        [Test]
         public async Task InvitePlayer()
         {
             var clan = await CreateFoundedClanForTest();
@@ -39,6 +70,22 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("peter#123", member.BattleTag);
             Assert.AreEqual(clanLoaded.Id, member.PendingInviteFromClan);
             Assert.AreEqual(clanLoaded.PendingInvites.Single(), member.BattleTag);
+        }
+
+        [Test]
+        public async Task RevokeInvite()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            await _handler.InviteToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
+            await _handler.RevokeInvitationToClan("peter#123", clan.Id.ToString(), clan.ChiefTain);
+
+            var member = await _clanRepository.LoadMemberShip("peter#123");
+            var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
+
+            Assert.AreEqual("peter#123", member.BattleTag);
+            Assert.IsNull( member.PendingInviteFromClan);
+            Assert.IsEmpty(clanLoaded.PendingInvites);
         }
 
         [Test]

@@ -65,10 +65,8 @@ namespace W3ChampionsStatisticService.Clans
         public async Task DeleteClan(string clanId, string actingPlayer)
         {
             var clan = await _clanRepository.LoadClan(clanId);
-            if (clan.ChiefTain != actingPlayer)
-            {
-                throw new ValidationException("Only Chieftain can delete the clan");
-            }
+            if (clan.ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can delete the clan");
+            
             await _clanRepository.DeleteClan(clanId);
 
             var memberShips = await _clanRepository.LoadMemberShips(clan.Members);
@@ -91,6 +89,19 @@ namespace W3ChampionsStatisticService.Clans
             }
 
             return null;
+        }
+
+        public async Task RevokeInvitationToClan(string battleTag, string clanId, string personWhoInvitesBattleTag)
+        {
+            var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
+
+            clan.RevokeInvite(clanMemberShip, personWhoInvitesBattleTag);
+
+            await _clanRepository.UpsertClan(clan);
+            await _clanRepository.UpsertMemberShip(clanMemberShip);
         }
     }
 }
