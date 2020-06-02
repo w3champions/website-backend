@@ -84,7 +84,7 @@ namespace W3ChampionsStatisticService.Clans
             string actingPlayer,
             [FromBody] InviteDto inviteDto)
         {
-            var clan = await _clanCommandHandler.AddShamanToClan(clanId, inviteDto.PlayerBattleTag, actingPlayer);
+            var clan = await _clanCommandHandler.AddShamanToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
             return Ok(clan);
         }
 
