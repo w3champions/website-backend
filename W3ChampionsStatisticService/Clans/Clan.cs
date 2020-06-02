@@ -83,7 +83,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public void LeaveClan(ClanMembership clanMemberShip)
         {
-            clanMemberShip.ExitClan();
+            clanMemberShip.LeaveClan();
 
             ClanState = ClanState.LeaveClan(clanMemberShip);
 
@@ -95,6 +95,23 @@ namespace W3ChampionsStatisticService.Clans
             {
                 Members.Remove(clanMemberShip.BattleTag);
             }
+        }
+
+        public void AddShaman(string shamanId, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+            if (!Members.Contains(shamanId)) throw new ValidationException("Shaman has to be in clan");
+            if (shamanId == ChiefTain) throw new ValidationException("Chieftain can not be made Shaman");
+            if (Shamans.Contains(shamanId)) throw new ValidationException("Player is already Shaman");
+
+            Shamans.Add(shamanId);
+        }
+
+        public void RemoveShaman(string shamanId, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+
+            Shamans.Remove(shamanId);
         }
     }
 }

@@ -63,7 +63,7 @@ namespace W3ChampionsStatisticService.Clans
 
             foreach (var member in memberShips)
             {
-                member.ExitClan();
+                member.LeaveClan();
             }
 
             await _clanRepository.SaveMemberShips(memberShips);
@@ -120,6 +120,32 @@ namespace W3ChampionsStatisticService.Clans
 
             await _clanRepository.UpsertClan(clan);
             await _clanRepository.UpsertMemberShip(clanMemberShip);
+
+            return clan;
+        }
+
+        public async Task<Clan> RemoveShamanFromClan(string shamanId, string clanId, string actingPlayer)
+        {
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null) throw new ValidationException("Clan not found");
+
+            clan.RemoveShaman(shamanId, actingPlayer);
+
+            await _clanRepository.UpsertClan(clan);
+
+            return clan;
+        }
+
+        public async Task<Clan> AddShamanToClan(string shamanId, string clanId, string actingPlayer)
+        {
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null) throw new ValidationException("Clan not found");
+
+            clan.AddShaman(shamanId, actingPlayer);
+
+            await _clanRepository.UpsertClan(clan);
 
             return clan;
         }

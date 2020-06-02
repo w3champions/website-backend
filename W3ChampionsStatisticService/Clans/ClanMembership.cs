@@ -46,7 +46,7 @@ namespace W3ChampionsStatisticService.Clans
             ClanName = clan.ClanName;
         }
 
-        public void ExitClan()
+        public void LeaveClan()
         {
             ClanId = null;
             ClanName = null;

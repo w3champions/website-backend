@@ -77,6 +77,28 @@ namespace W3ChampionsStatisticService.Clans
             return Ok();
         }
 
+        [HttpPost("{clanId}/shamans")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> AddShamanToClan(
+            string clanId,
+            string actingPlayer,
+            [FromBody] InviteDto inviteDto)
+        {
+            var clan = await _clanCommandHandler.AddShamanToClan(clanId, inviteDto.PlayerBattleTag, actingPlayer);
+            return Ok(clan);
+        }
+
+        [HttpDelete("{clanId}/shamans/{shamanId}")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> RemoveShamanFromClan(
+            string clanId,
+            string actingPlayer,
+            string shamanId)
+        {
+            var clan = await _clanCommandHandler.RemoveShamanFromClan(shamanId, clanId, actingPlayer);
+            return Ok(clan);
+        }
+
         [HttpDelete("{clanId}/members/{battleTag}")]
         [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> RevokeInvitationToClan(
