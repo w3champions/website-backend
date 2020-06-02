@@ -126,12 +126,28 @@ namespace W3ChampionsStatisticService.Clans
 
         public async Task<Clan> RemoveShamanFromClan(string shamanId, string clanId, string actingPlayer)
         {
-            throw new System.NotImplementedException();
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null) throw new ValidationException("Clan not found");
+
+            clan.AddShaman(shamanId, actingPlayer);
+
+            await _clanRepository.UpsertClan(clan);
+
+            return clan;
         }
 
-        public async Task<Clan> AddShamanToClan(string clanId, string inviteDtoPlayerBattleTag, string actingPlayer)
+        public async Task<Clan> AddShamanToClan(string shamanId, string clanId, string actingPlayer)
         {
-            throw new System.NotImplementedException();
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null) throw new ValidationException("Clan not found");
+
+            clan.RemoveShaman(shamanId, actingPlayer);
+
+            await _clanRepository.UpsertClan(clan);
+
+            return clan;
         }
     }
 }

@@ -96,5 +96,20 @@ namespace W3ChampionsStatisticService.Clans
                 Members.Remove(clanMemberShip.BattleTag);
             }
         }
+
+        public void AddShaman(string shamanId, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+            if (Shamans.Contains(shamanId)) throw new ValidationException("Player is already Shaman");
+
+            Shamans.Add(shamanId);
+        }
+
+        public void RemoveShaman(string shamanId, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+
+            Shamans.Remove(shamanId);
+        }
     }
 }
