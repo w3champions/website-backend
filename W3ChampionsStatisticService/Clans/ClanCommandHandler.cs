@@ -123,5 +123,15 @@ namespace W3ChampionsStatisticService.Clans
 
             return clan;
         }
+
+        public async Task<Clan> RemoveShamanFromClan(string shamanId, string clanId, string actingPlayer)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public async Task<Clan> AddShamanToClan(string clanId, string inviteDtoPlayerBattleTag, string actingPlayer)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }
