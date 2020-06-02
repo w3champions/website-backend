@@ -100,6 +100,8 @@ namespace W3ChampionsStatisticService.Clans
         public void AddShaman(string shamanId, string actingPlayer)
         {
             if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+            if (!Members.Contains(shamanId)) throw new ValidationException("Shaman has to be in clan");
+            if (shamanId == ChiefTain) throw new ValidationException("Chieftain can not be made Shaman");
             if (Shamans.Contains(shamanId)) throw new ValidationException("Player is already Shaman");
 
             Shamans.Add(shamanId);

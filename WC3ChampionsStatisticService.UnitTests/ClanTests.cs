@@ -36,6 +36,47 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task PromoteToShaman()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            await _handler.AddShamanToClan(clan.Members[2], clan.IdRaw, clan.ChiefTain);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
+
+            Assert.AreEqual(clan.Members[2], clanLoaded.Shamans.Single());
+        }
+
+        [Test]
+        public async Task DemoteShaman()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            await _handler.AddShamanToClan(clan.Members[2], clan.IdRaw, clan.ChiefTain);
+            await _handler.RemoveShamanFromClan(clan.Members[2], clan.IdRaw, clan.ChiefTain);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
+
+            Assert.IsEmpty(clanLoaded.Shamans);
+        }
+
+        [Test]
+        public async Task PromoteShamanThatISNotInClan_Fails()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.AddShamanToClan("NotInChal#123", clan.IdRaw, clan.ChiefTain));
+        }
+
+        [Test]
+        public async Task PromoteShamanThatIsChieftain_Fails()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.AddShamanToClan(clan.ChiefTain, clan.IdRaw, clan.ChiefTain));
+        }
+
+        [Test]
         public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
         {
             var clan = await _handler.CreateClan("egal", "Peter#123");
@@ -181,7 +222,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 await _handler.AcceptInvite(clan.Id.ToString(), $"btag#{i}");
             }
 
-            return clan;
+            return await _clanRepository.LoadClan(clan.IdRaw);
         }
     }
 }

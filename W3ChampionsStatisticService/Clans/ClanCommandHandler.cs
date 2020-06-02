@@ -130,7 +130,7 @@ namespace W3ChampionsStatisticService.Clans
 
             if (clan == null) throw new ValidationException("Clan not found");
 
-            clan.AddShaman(shamanId, actingPlayer);
+            clan.RemoveShaman(shamanId, actingPlayer);
 
             await _clanRepository.UpsertClan(clan);
 
@@ -143,7 +143,7 @@ namespace W3ChampionsStatisticService.Clans
 
             if (clan == null) throw new ValidationException("Clan not found");
 
-            clan.RemoveShaman(shamanId, actingPlayer);
+            clan.AddShaman(shamanId, actingPlayer);
 
             await _clanRepository.UpsertClan(clan);
 
