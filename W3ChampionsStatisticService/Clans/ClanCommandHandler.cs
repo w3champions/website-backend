@@ -63,7 +63,7 @@ namespace W3ChampionsStatisticService.Clans
 
             foreach (var member in memberShips)
             {
-                member.ExitClan();
+                member.LeaveClan();
             }
 
             await _clanRepository.SaveMemberShips(memberShips);

@@ -83,7 +83,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public void LeaveClan(ClanMembership clanMemberShip)
         {
-            clanMemberShip.ExitClan();
+            clanMemberShip.LeaveClan();
 
             ClanState = ClanState.LeaveClan(clanMemberShip);
 
