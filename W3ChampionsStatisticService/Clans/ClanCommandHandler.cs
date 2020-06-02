@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.Clans
             return clan;
         }
 
-        public async Task InviteToClan(string clanId, string battleTag, string personWhoInvitesBattleTag)
+        public async Task InviteToClan(string battleTag, string clanId, string personWhoInvitesBattleTag)
         {
             var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag)
                                  ?? ClanMembership.Create(battleTag);
@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.Clans
             await _clanRepository.UpsertMemberShip(clanMemberShip);
         }
 
-        public async Task<Clan> AcceptInvite(string clanId, string playerBattleTag)
+        public async Task<Clan> AcceptInvite(string playerBattleTag, string clanId)
         {
             var clan = await _clanRepository.LoadClan(clanId);
             var clanMemberShip = await _clanRepository.LoadMemberShip(playerBattleTag) ?? ClanMembership.Create(playerBattleTag);
@@ -145,6 +145,21 @@ namespace W3ChampionsStatisticService.Clans
 
             clan.AddShaman(shamanId, actingPlayer);
 
+            await _clanRepository.UpsertClan(clan);
+
+            return clan;
+        }
+
+        public async Task<Clan> KickPlayer(string battleTag, string clanId, string actingPlayer)
+        {
+            var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
+
+            clan.KickPlayer(clanMemberShip, actingPlayer);
+
+            await _clanRepository.UpsertMemberShip(clanMemberShip);
             await _clanRepository.UpsertClan(clan);
 
             return clan;

@@ -113,5 +113,16 @@ namespace W3ChampionsStatisticService.Clans
 
             Shamans.Remove(shamanId);
         }
+
+        public void KickPlayer(ClanMembership clanMemberShip, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer && !Shamans.Contains(actingPlayer)) throw new ValidationException("Only Chieftain or shamans can kick players");
+            if (!Members.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Player not in this clan");
+            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Can not kick chieftain");
+
+            clanMemberShip.LeaveClan();
+            Members.Remove(clanMemberShip.BattleTag);
+            Shamans.Remove(clanMemberShip.BattleTag);
+        }
     }
 }

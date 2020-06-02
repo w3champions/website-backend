@@ -60,9 +60,9 @@ namespace W3ChampionsStatisticService.Clans
         public async Task<IActionResult> InviteToClan(
             string clanId,
             string actingPlayer,
-            [FromBody] InviteDto inviteDto)
+            [FromBody] PlayerDto playerDto)
         {
-            await _clanCommandHandler.InviteToClan(clanId, inviteDto.PlayerBattleTag, actingPlayer);
+            await _clanCommandHandler.InviteToClan(playerDto.PlayerBattleTag, clanId, actingPlayer);
             return Ok();
         }
 
@@ -71,9 +71,9 @@ namespace W3ChampionsStatisticService.Clans
         public async Task<IActionResult> RevokeInvitationToClan(
             string clanId,
             string actingPlayer,
-            [FromBody] InviteDto inviteDto)
+            [FromBody] PlayerDto playerDto)
         {
-            await _clanCommandHandler.RevokeInvitationToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
+            await _clanCommandHandler.RevokeInvitationToClan(playerDto.PlayerBattleTag, clanId, actingPlayer);
             return Ok();
         }
 
@@ -82,9 +82,9 @@ namespace W3ChampionsStatisticService.Clans
         public async Task<IActionResult> AddShamanToClan(
             string clanId,
             string actingPlayer,
-            [FromBody] InviteDto inviteDto)
+            [FromBody] PlayerDto playerDto)
         {
-            var clan = await _clanCommandHandler.AddShamanToClan(inviteDto.PlayerBattleTag, clanId, actingPlayer);
+            var clan = await _clanCommandHandler.AddShamanToClan(playerDto.PlayerBattleTag, clanId, actingPlayer);
             return Ok(clan);
         }
 
@@ -109,11 +109,22 @@ namespace W3ChampionsStatisticService.Clans
             return Ok(clan);
         }
 
+        [HttpPut("{clanId}/members/{battleTag}")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> KickPlayerFromClan(
+            string clanId,
+            string actingPlayer,
+            string battleTag)
+        {
+            var clan = await _clanCommandHandler.KickPlayer(battleTag, clanId, actingPlayer);
+            return Ok(clan);
+        }
+
         [HttpPut("{clanId}/invites/{battleTag}")]
         [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> AcceptInvite(string clanId, string battleTag)
         {
-            var clan = await _clanCommandHandler.AcceptInvite(clanId, battleTag);
+            var clan = await _clanCommandHandler.AcceptInvite(battleTag, clanId);
             return Ok(clan);
         }
 
