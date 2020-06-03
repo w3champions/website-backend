@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.Clans.Commands
         public string ClanName { get; set; }
 
         [Required]
-        [RegularExpression(@"^\w{1,5}$", ErrorMessage = "Abbreviation must be between 1 and 5 characters")]
+        [RegularExpression(@"^\w{2,5}$", ErrorMessage = "Abbreviation must be between 1 and 5 characters")]
         public string ClanAbbrevation { get; set; }
     }
 }
