@@ -77,6 +77,18 @@ namespace W3ChampionsStatisticService.Clans
             return Ok();
         }
 
+        [HttpPut("{clanId}/chieftain")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> SwitchChieftain(
+            string clanId,
+            string actingPlayer,
+            [FromBody] PlayerDto playerDto)
+        {
+            var clan = await _clanCommandHandler.SwitchChieftain(playerDto.PlayerBattleTag, clanId, actingPlayer);
+            return Ok(clan);
+        }
+
+
         [HttpPost("{clanId}/shamans")]
         [InjectActingPlayerAuthCode]
         public async Task<IActionResult> AddShamanToClan(

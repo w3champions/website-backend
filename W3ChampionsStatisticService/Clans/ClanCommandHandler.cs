@@ -164,5 +164,18 @@ namespace W3ChampionsStatisticService.Clans
 
             return clan;
         }
+
+        public async Task<Clan> SwitchChieftain(string newChieftain, string clanId, string actingPlayer)
+        {
+            var clan = await _clanRepository.LoadClan(clanId);
+
+            if (clan == null) throw new ValidationException("Clan not found");
+
+            clan.SwitchChieftain(newChieftain, actingPlayer);
+
+            await _clanRepository.UpsertClan(clan);
+
+            return clan;
+        }
     }
 }
