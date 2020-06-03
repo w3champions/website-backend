@@ -48,6 +48,15 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task LeaveAsChieftain()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            Assert.ThrowsAsync<ValidationException>(async () =>
+                await _handler.LeaveClan(clan.IdRaw, clan.ChiefTain));
+        }
+
+        [Test]
         public async Task DemoteShaman()
         {
             var clan = await CreateFoundedClanForTest();
