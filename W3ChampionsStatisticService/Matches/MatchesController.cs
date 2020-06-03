@@ -64,7 +64,7 @@ namespace W3ChampionsStatisticService.Matches
             var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
             var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay);
 
-            PlayerNamesObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
+            PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
             return Ok(new { matches, count });
         }
@@ -74,7 +74,7 @@ namespace W3ChampionsStatisticService.Matches
         {
             var onGoingMatch = await _matchRepository.LoadOnGoingMatchForPlayer(playerId);
 
-            PlayerNamesObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
+            PlayersObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
 
             return Ok(onGoingMatch);
         }
