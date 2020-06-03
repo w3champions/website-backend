@@ -252,7 +252,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
 
-            Assert.AreEqual(6, clanLoaded.Members.Count);
+            Assert.AreEqual(5, clanLoaded.Members.Count);
             Assert.IsFalse(clanLoaded.Members.Contains(clan.Members[1]));
         }
 

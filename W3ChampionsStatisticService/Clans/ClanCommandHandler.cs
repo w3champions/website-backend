@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 
@@ -59,6 +60,7 @@ namespace W3ChampionsStatisticService.Clans
             
             await _clanRepository.DeleteClan(clanId);
 
+            clan.Members.Add(clan.ChiefTain);
             var memberShips = await _clanRepository.LoadMemberShips(clan.Members);
 
             foreach (var member in memberShips)
