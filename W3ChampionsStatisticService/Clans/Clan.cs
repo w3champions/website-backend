@@ -125,5 +125,13 @@ namespace W3ChampionsStatisticService.Clans
             Members.Remove(clanMemberShip.BattleTag);
             Shamans.Remove(clanMemberShip.BattleTag);
         }
+
+        public void SwitchChieftain(string newChieftain, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can switch to new Chieftain");
+            if (!Members.Contains(newChieftain)) throw new ValidationException("New Chieftain not part of this Clan");
+
+            ChiefTain = newChieftain;
+        }
     }
 }
