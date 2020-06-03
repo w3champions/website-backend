@@ -69,6 +69,20 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task SwitchChieftain_ShamanIsRemoved()
+        {
+            var clan = await CreateFoundedClanForTest();
+
+            await _handler.AddShamanToClan(clan.Members[1], clan.IdRaw, clan.ChiefTain);
+            await _handler.SwitchChieftain(clan.Members[1], clan.IdRaw, clan.ChiefTain);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
+
+            Assert.AreEqual(clan.Members[1], clanLoaded.ChiefTain);
+            Assert.IsEmpty(clan.Shamans);
+        }
+
+        [Test]
         public async Task SwitchChieftain_NotChieftainActing()
         {
             var clan = await CreateFoundedClanForTest();
