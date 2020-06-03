@@ -1,4 +1,5 @@
 ﻿using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -13,5 +14,7 @@ namespace W3ChampionsStatisticService.Ladder
         public long? PictureId { get; set; }
 
         public string Country { get; set; }
+
+        public string TwitchName { get; set; }
     }
 }
