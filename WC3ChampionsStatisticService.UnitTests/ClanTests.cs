@@ -61,11 +61,15 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            await _handler.SwitchChieftain(clan.Members[1], clan.IdRaw, clan.ChiefTain);
+            var newChieftain = clan.Members[1];
+            await _handler.AddShamanToClan(newChieftain, clan.IdRaw, clan.ChiefTain);
+            await _handler.SwitchChieftain(newChieftain, clan.IdRaw, clan.ChiefTain);
 
             var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
 
-            Assert.AreEqual(clan.Members[1], clanLoaded.ChiefTain);
+            Assert.AreEqual(clanLoaded.Shamans[0], clan.ChiefTain);
+            Assert.AreEqual(clanLoaded.ChiefTain, newChieftain);
+            Assert.IsFalse(clanLoaded.Members.Contains(newChieftain));
         }
 
         [Test]
