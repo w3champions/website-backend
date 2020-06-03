@@ -16,6 +16,7 @@ namespace W3ChampionsStatisticService.Clans
         [JsonPropertyName("id")]
         public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
+        public string ClanAbbrevation { get; set; }
         public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
@@ -25,7 +26,7 @@ namespace W3ChampionsStatisticService.Clans
         public List<string> Shamans => ClanState.Shamans;
         public List<string> PendingInvites { get; set; } = new List<string>();
 
-        public static Clan Create(string clanName, ClanMembership founder)
+        public static Clan Create(string clanName, string clanAbbrevation, ClanMembership founder)
         {
             var trim = clanName.Trim();
             if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty)) throw new ValidationException("Founder can not be in another clan");
@@ -34,7 +35,8 @@ namespace W3ChampionsStatisticService.Clans
             var clan = new Clan
             {
                 ClanName = trim,
-                ClanState = new NotFoundedClan(founder.BattleTag)
+                ClanState = new NotFoundedClan(founder.BattleTag),
+                ClanAbbrevation = clanAbbrevation,
             };
 
             return clan;

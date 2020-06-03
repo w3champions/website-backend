@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.Clans
             [FromBody] CreateClanDto clanDto,
             string actingPlayer)
         {
-            var clan = await _clanCommandHandler.CreateClan(clanDto.ClanName, actingPlayer);
+            var clan = await _clanCommandHandler.CreateClan(clanDto.ClanName, clanDto.ClanAbbrevation, actingPlayer);
             return Ok(clan);
         }
 
