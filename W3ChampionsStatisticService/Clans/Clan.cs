@@ -16,7 +16,7 @@ namespace W3ChampionsStatisticService.Clans
         [JsonPropertyName("id")]
         public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
-        public string ChiefTain { get; set; }
+        public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
 
@@ -34,7 +34,6 @@ namespace W3ChampionsStatisticService.Clans
             var clan = new Clan
             {
                 ClanName = trim,
-                ChiefTain = founder.BattleTag,
                 ClanState = new NotFoundedClan(founder.BattleTag)
             };
 
@@ -131,8 +130,9 @@ namespace W3ChampionsStatisticService.Clans
             if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can switch to new Chieftain");
             if (!Members.Contains(newChieftain)) throw new ValidationException("New Chieftain not part of this Clan");
 
+            Members.Add(ChiefTain);
             Shamans.Remove(newChieftain);
-            ChiefTain = newChieftain;
+            ClanState.ChiefTain = newChieftain;
         }
     }
 }

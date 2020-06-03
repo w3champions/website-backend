@@ -7,6 +7,7 @@ namespace W3ChampionsStatisticService.Clans.ClanStates
         public NotFoundedClan(string founder)
         {
             FoundingFathers = new List<string> { founder };
+            ChiefTain = founder;
         }
 
         public override ClanState AcceptInvite(ClanMembership membership)
@@ -15,7 +16,7 @@ namespace W3ChampionsStatisticService.Clans.ClanStates
 
             if (FoundingFathers.Count >= 7)
             {
-                return new FoundedClan(FoundingFathers);
+                return new FoundedClan(FoundingFathers, ChiefTain);
             }
 
             return this;
