@@ -131,6 +131,7 @@ namespace W3ChampionsStatisticService.Clans
             if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can switch to new Chieftain");
             if (!Members.Contains(newChieftain)) throw new ValidationException("New Chieftain not part of this Clan");
 
+            Shamans.Remove(newChieftain);
             ChiefTain = newChieftain;
         }
     }
