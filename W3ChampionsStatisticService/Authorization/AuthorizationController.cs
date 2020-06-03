@@ -11,13 +11,16 @@ namespace W3ChampionsStatisticService.Authorization
     {
         private readonly IBlizzardAuthenticationService _authenticationService;
 
-        public AuthorizationController(IBlizzardAuthenticationService authenticationService)
+        private readonly ITwitchAuthenticationService _twitchAuthenticationService;
+
+        public AuthorizationController(IBlizzardAuthenticationService authenticationService, ITwitchAuthenticationService twitchAuthenticationService)
         {
             _authenticationService = authenticationService;
+            _twitchAuthenticationService = twitchAuthenticationService;
         }
 
         [HttpGet("token")]
-        public async Task<IActionResult> GetToken([FromQuery] string code, [FromQuery] string redirectUri)
+        public async Task<IActionResult> GetBlizzardToken([FromQuery] string code, [FromQuery] string redirectUri)
         {
             var token = await _authenticationService.GetToken(code, redirectUri);
             return token == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(token);
@@ -29,5 +32,14 @@ namespace W3ChampionsStatisticService.Authorization
             var userInfo = await _authenticationService.GetUser(bearer);
             return userInfo == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(userInfo);
         }
+
+        [HttpGet("twitch")]
+        public async Task<IActionResult> GetTwitchToken()
+        {
+            const string CLIENT_ID = "38ac0gifyt5khcuq23h2p8zpcqosbc";
+            const string CLIENT_SECRET = "0kec9qsb8otc3q0ibs3w2cjtiwaiez";
+            var token = await _twitchAuthenticationService.GetToken(CLIENT_ID, CLIENT_SECRET);
+            return Ok(token);
+        } 
     }
 }

@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.Authorization
             return JsonConvert.DeserializeObject<BlizzardUserInfo>(readAsStringAsync);
         }
 
-        public async Task<BlizzardToken> GetToken(string code, string redirectUri)
+        public async Task<OAuthToken> GetToken(string code, string redirectUri)
         {
             var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("https://eu.battle.net/oauth/token");
@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.Authorization
             }
 
             var readAsStringAsync = await res.Content.ReadAsStringAsync();
-            return JsonConvert.DeserializeObject<BlizzardToken>(readAsStringAsync);
+            return JsonConvert.DeserializeObject<OAuthToken>(readAsStringAsync);
         }
     }
 }
