@@ -16,6 +16,7 @@ namespace W3ChampionsStatisticService.Clans
         [JsonPropertyName("id")]
         public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
+        public string ClanAbbrevation { get; set; }
         public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
@@ -25,7 +26,7 @@ namespace W3ChampionsStatisticService.Clans
         public List<string> Shamans => ClanState.Shamans;
         public List<string> PendingInvites { get; set; } = new List<string>();
 
-        public static Clan Create(string clanName, ClanMembership founder)
+        public static Clan Create(string clanName, string clanAbbrevation, ClanMembership founder)
         {
             var trim = clanName.Trim();
             if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty)) throw new ValidationException("Founder can not be in another clan");
@@ -34,7 +35,8 @@ namespace W3ChampionsStatisticService.Clans
             var clan = new Clan
             {
                 ClanName = trim,
-                ClanState = new NotFoundedClan(founder.BattleTag)
+                ClanState = new NotFoundedClan(founder.BattleTag),
+                ClanAbbrevation = clanAbbrevation,
             };
 
             return clan;
@@ -104,6 +106,7 @@ namespace W3ChampionsStatisticService.Clans
             if (shamanId == ChiefTain) throw new ValidationException("Chieftain can not be made Shaman");
             if (Shamans.Contains(shamanId)) throw new ValidationException("Player is already Shaman");
 
+            Members.Remove(shamanId);
             Shamans.Add(shamanId);
         }
 
@@ -112,12 +115,14 @@ namespace W3ChampionsStatisticService.Clans
             if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
 
             Shamans.Remove(shamanId);
+            Members.Add(shamanId);
         }
 
         public void KickPlayer(ClanMembership clanMemberShip, string actingPlayer)
         {
             if (ChiefTain != actingPlayer && !Shamans.Contains(actingPlayer)) throw new ValidationException("Only Chieftain or shamans can kick players");
-            if (!Members.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Player not in this clan");
+            if (!Members.Contains(clanMemberShip.BattleTag) && !Shamans.Contains(clanMemberShip.BattleTag))
+                throw new ValidationException("Player not in this clan");
             if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Can not kick chieftain");
 
             clanMemberShip.LeaveClan();
@@ -128,10 +133,10 @@ namespace W3ChampionsStatisticService.Clans
         public void SwitchChieftain(string newChieftain, string actingPlayer)
         {
             if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can switch to new Chieftain");
-            if (!Members.Contains(newChieftain)) throw new ValidationException("New Chieftain not part of this Clan");
+            if (!Shamans.Contains(newChieftain)) throw new ValidationException("Only Shaman can be promoted to Chieftain");
 
-            Members.Add(ChiefTain);
             Shamans.Remove(newChieftain);
+            Shamans.Add(ChiefTain);
             ClanState.ChiefTain = newChieftain;
         }
     }
