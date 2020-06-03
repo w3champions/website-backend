@@ -84,7 +84,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public void LeaveClan(ClanMembership clanMemberShip)
         {
-            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Chieftain can not leave cal, transfer ownership first");
+            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Chieftain can not leave clan, transfer ownership first");
             clanMemberShip.LeaveClan();
 
             ClanState = ClanState.LeaveClan(clanMemberShip);
