@@ -3,7 +3,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.Matches
 {
-    public static class PlayerNamesObfuscator
+    public static class PlayersObfuscator
     {
         public static void ObfuscatePlayersForFFA(params OnGoingMatchup[] matches)
         {
@@ -16,6 +16,8 @@ namespace W3ChampionsStatisticService.Matches
                     {
                         player.BattleTag = "*";
                         player.Name = "*";
+                        player.CurrentMmr = 0;
+                        player.OldMmr = 0;
                     }
                 }
             }
