@@ -83,7 +83,8 @@ namespace W3ChampionsStatisticService.Clans
 
         public void LeaveClan(ClanMembership clanMemberShip)
         {
-            clanMemberShip.ExitClan();
+            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Chieftain can not leave cal, transfer ownership first");
+            clanMemberShip.LeaveClan();
 
             ClanState = ClanState.LeaveClan(clanMemberShip);
 
@@ -95,6 +96,42 @@ namespace W3ChampionsStatisticService.Clans
             {
                 Members.Remove(clanMemberShip.BattleTag);
             }
+        }
+
+        public void AddShaman(string shamanId, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+            if (!Members.Contains(shamanId)) throw new ValidationException("Shaman has to be in clan");
+            if (shamanId == ChiefTain) throw new ValidationException("Chieftain can not be made Shaman");
+            if (Shamans.Contains(shamanId)) throw new ValidationException("Player is already Shaman");
+
+            Shamans.Add(shamanId);
+        }
+
+        public void RemoveShaman(string shamanId, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
+
+            Shamans.Remove(shamanId);
+        }
+
+        public void KickPlayer(ClanMembership clanMemberShip, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer && !Shamans.Contains(actingPlayer)) throw new ValidationException("Only Chieftain or shamans can kick players");
+            if (!Members.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Player not in this clan");
+            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Can not kick chieftain");
+
+            clanMemberShip.LeaveClan();
+            Members.Remove(clanMemberShip.BattleTag);
+            Shamans.Remove(clanMemberShip.BattleTag);
+        }
+
+        public void SwitchChieftain(string newChieftain, string actingPlayer)
+        {
+            if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can switch to new Chieftain");
+            if (!Members.Contains(newChieftain)) throw new ValidationException("New Chieftain not part of this Clan");
+
+            ChiefTain = newChieftain;
         }
     }
 }

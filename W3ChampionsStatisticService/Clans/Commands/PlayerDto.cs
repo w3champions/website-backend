@@ -1,6 +1,6 @@
 ﻿namespace W3ChampionsStatisticService.Clans.Commands
 {
-    public class InviteDto
+    public class PlayerDto
     {
         public string PlayerBattleTag { get; set; }
     }
