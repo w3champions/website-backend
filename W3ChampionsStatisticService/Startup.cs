@@ -57,7 +57,7 @@ namespace W3ChampionsStatisticService
 
             var startHandlers = _configuration.GetValue<string>("startHandlers");
             var startPadSync = _configuration.GetValue<string>("startPadSync");
-            var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://176.28.16.249:3513";
+            var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://localhost:27017";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
@@ -76,6 +76,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
+            services.AddTransient<ITwitchAuthenticationService, TwitchAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IPadServiceRepo, PadServiceRepo>();
             services.AddTransient<HeroStatsQueryHandler>();
