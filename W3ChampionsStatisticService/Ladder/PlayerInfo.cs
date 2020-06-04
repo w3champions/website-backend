@@ -1,5 +1,4 @@
 ﻿using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -16,5 +15,7 @@ namespace W3ChampionsStatisticService.Ladder
         public string Country { get; set; }
 
         public string TwitchName { get; set; }
+
+        public string ClanAbbrevation { get; set; }
     }
 }

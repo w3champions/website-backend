@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -33,7 +32,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerWinLoss>($"{season}_{playerId}");
         }
 
-        public async Task<List<PlayerDetails>> LoadPlayersRaceWins(string[] playerIds)
+        public async Task<List<PlayerDetails>> LoadPlayersRaceWins(List<string> playerIds)
         {
             var database = CreateClient();
 
