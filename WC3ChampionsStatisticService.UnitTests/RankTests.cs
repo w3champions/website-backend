@@ -234,7 +234,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 BattleTag = "peter#123",
             };
             await playerRepository.UpsertPlayer(playerStats);
-            await clanRepository.UpsertMemberShip(new ClanMembership { BattleTag = "peter#123", ClanAbbrevation = "W3C"} );
+            await clanRepository.UpsertMemberShip(new ClanMembership { BattleTag = "peter#123", ClanId = "W3C"} );
 
             // Act
             var playerLoaded = await queryHandler.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);

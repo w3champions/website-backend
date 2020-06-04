@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.Ladder
                             SelectedRace = profilePicture?.Race,
                             Country = personalSettings?.Country,
                             TwitchName = personalSettings?.Twitch,
-                            ClanAbbrevation = membership?.ClanAbbrevation
+                            ClanAbbrevation = membership?.ClanId
                         });
                     }
                 }

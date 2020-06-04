@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Clans.ClanStates;
 
 namespace W3ChampionsStatisticService.Clans
@@ -9,14 +9,12 @@ namespace W3ChampionsStatisticService.Clans
     public class Clan
     {
         [JsonIgnore]
-        public ObjectId Id { get; set; }
-        [JsonIgnore]
         public ClanState ClanState { get; set; }
 
-        [JsonPropertyName("id")]
-        public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
-        public string ClanAbbrevation { get; set; }
+
+        [BsonId]
+        public string ClanId { get; set; }
         public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
@@ -29,14 +27,14 @@ namespace W3ChampionsStatisticService.Clans
         public static Clan Create(string clanName, string clanAbbrevation, ClanMembership founder)
         {
             var trim = clanName.Trim();
-            if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty)) throw new ValidationException("Founder can not be in another clan");
+            if (!(founder.ClanId == null || string.IsNullOrWhiteSpace(founder.ClanId))) throw new ValidationException("Founder can not be in another clan");
             if (trim.Length < 3) throw new ValidationException("Name too short");
 
             var clan = new Clan
             {
                 ClanName = trim,
                 ClanState = new NotFoundedClan(founder.BattleTag),
-                ClanAbbrevation = clanAbbrevation,
+                ClanId = clanAbbrevation,
             };
 
             return clan;
