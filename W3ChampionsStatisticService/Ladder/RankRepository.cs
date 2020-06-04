@@ -89,7 +89,7 @@ namespace W3ChampionsStatisticService.Ladder
                 $"{season}_{i}@{(int) GateWay.Asia}_{GameMode.GM_1v1}",
                 $"{season}_{i}@{(int) GateWay.Europe}_{GameMode.GM_1v1}"
             }).ToList();
-            return LoadAll<Rank>(r => idsToFind.Contains(r.Id));
+            return JoinWith(r => idsToFind.Contains(r.Id));
         }
     }
 }
