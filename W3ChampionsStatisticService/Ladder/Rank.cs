@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.Ladder
         public string PlayerIdToLower { get; set; }
         [JsonIgnore]
         public List<PlayerOverview> Players { get; set; }
-        public PlayerOverview Player => Players.SingleOrDefault();
+        public PlayerOverview Player => Players?.SingleOrDefault();
         public GameMode GameMode { get; set; }
         public int Season { get; set; }
 
