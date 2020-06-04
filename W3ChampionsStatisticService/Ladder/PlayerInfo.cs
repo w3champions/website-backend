@@ -16,6 +16,6 @@ namespace W3ChampionsStatisticService.Ladder
 
         public string TwitchName { get; set; }
 
-        public string ClanAbbrevation { get; set; }
+        public string ClanId { get; set; }
     }
 }

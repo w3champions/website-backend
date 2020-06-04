@@ -1,6 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Clans
 {
@@ -8,10 +13,16 @@ namespace W3ChampionsStatisticService.Clans
 
     {
         private readonly IClanRepository _clanRepository;
+        private readonly TrackingService _trackingService;
+        private readonly IRankRepository _rankRepository;
 
-        public ClanCommandHandler(IClanRepository clanRepository)
+        public ClanCommandHandler(IClanRepository clanRepository,
+            IRankRepository rankRepository,
+            TrackingService trackingService)
         {
             _clanRepository = clanRepository;
+            _trackingService = trackingService;
+            _rankRepository = rankRepository;
         }
 
         public async Task<Clan> CreateClan(string clanName, string clanAbbrevation, string battleTagOfFounder)
@@ -20,7 +31,7 @@ namespace W3ChampionsStatisticService.Clans
             var clan = Clan.Create(clanName, clanAbbrevation, memberShip);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
             if (!wasSaved) throw new ValidationException("Clan Name allready taken");
-            memberShip.ClanId = clan.Id;
+            memberShip.ClanId = clan.ClanId;
             await _clanRepository.UpsertMemberShip(memberShip);
             return clan;
         }
@@ -75,7 +86,7 @@ namespace W3ChampionsStatisticService.Clans
             var membership = await _clanRepository.LoadMemberShip(battleTag);
             if (membership?.ClanId != null)
             {
-                var clan = await _clanRepository.LoadClan(membership.ClanId.ToString());
+                var clan = await LoadClan(membership.ClanId);
                 return clan;
             }
 
@@ -177,6 +188,55 @@ namespace W3ChampionsStatisticService.Clans
             await _clanRepository.UpsertClan(clan);
 
             return clan;
+        }
+
+        public async Task<Clan> LoadClan(string clanId)
+        {
+            var clan = await _clanRepository.LoadClan(clanId);
+            var seasons = await _rankRepository.LoadSeasons();
+            var season = seasons.Max(s => s.Id);
+            var leagueConstellation = await _rankRepository.LoadLeagueConstellation(season);
+
+            var list = new List<string>();
+            list.AddRange(clan.Members);
+            list.AddRange(clan.Shamans);
+            list.Add(clan.ChiefTain);
+            var ranksFromClan = await _rankRepository.Load1V1Ranks(list, season);
+
+            PopulateLeague(ranksFromClan, leagueConstellation);
+
+            clan.Ranks = ranksFromClan.ToList();
+
+            return clan;
+        }
+
+        private void PopulateLeague(
+            List<Rank> ranks,
+            List<LeagueConstellation> allLeagues)
+        {
+            foreach (var rank in ranks)
+            {
+                try
+                {
+                    var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
+                    var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
+
+                    var rankOfPlayer = ranks.SingleOrDefault(g => g.Id == rank.Id);
+                    if (rankOfPlayer == null) return;
+
+                    rankOfPlayer.LeagueName = league.Name;
+                    rankOfPlayer.LeagueDivision = league.Division;
+                    rankOfPlayer.LeagueOrder = league.Order;
+
+                    rankOfPlayer.RankingPoints = rankOfPlayer.RankingPoints;
+                    rankOfPlayer.League = rankOfPlayer.League;
+                    rankOfPlayer.RankNumber = rankOfPlayer.RankNumber;
+                }
+                catch (Exception e)
+                {
+                    _trackingService.TrackException(e, $"A League was not found for {rank.Id} RN: {rank.RankNumber} LE:{rank.League}");
+                }
+            }
         }
     }
 }

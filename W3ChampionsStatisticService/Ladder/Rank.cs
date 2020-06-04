@@ -32,6 +32,9 @@ namespace W3ChampionsStatisticService.Ladder
         public GateWay Gateway { get; set; }
         public string Id => PlayerId;
         public int League { get; set; }
+        public int LeagueDivision { get; set; }
+        public string LeagueName { get; set; }
+        public int LeagueOrder { get; set; }
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
@@ -39,7 +42,7 @@ namespace W3ChampionsStatisticService.Ladder
         public string PlayerIdToLower { get; set; }
         [JsonIgnore]
         public List<PlayerOverview> Players { get; set; }
-        public PlayerOverview Player => Players.SingleOrDefault();
+        public PlayerOverview Player => Players?.SingleOrDefault();
         public GameMode GameMode { get; set; }
         public int Season { get; set; }
 
