@@ -11,13 +11,16 @@ namespace W3ChampionsStatisticService.Clans
     public class ClanController : ControllerBase
     {
         private readonly ClanCommandHandler _clanCommandHandler;
+        private readonly IRankRepository _rankRepository;
         private readonly IClanRepository _clanRepository;
 
         public ClanController(
             ClanCommandHandler clanCommandHandler,
+            IRankRepository rankRepository,
             IClanRepository clanRepository)
         {
             _clanCommandHandler = clanCommandHandler;
+            _rankRepository = rankRepository;
             _clanRepository = clanRepository;
         }
 
@@ -35,6 +38,8 @@ namespace W3ChampionsStatisticService.Clans
         public async Task<IActionResult> GetClan(string clanId)
         {
             var clan = await _clanRepository.LoadClan(clanId);
+            var leagues = await _rankRepository.LoadLeagueConstellation();
+
             return Ok(clan);
         }
 
