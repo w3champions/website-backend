@@ -243,7 +243,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(1, playerLoaded.Count);
 
             var playerRank = playerLoaded[0];
-            Assert.AreEqual("W3C", playerRank.PlayersInfo.Single().ClanAbbrevation);
+            Assert.AreEqual("W3C", playerRank.PlayersInfo.Single().ClanId);
         }
     }
 }

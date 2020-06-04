@@ -86,7 +86,7 @@ namespace W3ChampionsStatisticService.Clans
             var membership = await _clanRepository.LoadMemberShip(battleTag);
             if (membership?.ClanId != null)
             {
-                var clan = await _clanRepository.LoadClan(membership.ClanId.ToString());
+                var clan = await _clanRepository.LoadClan(membership.ClanId);
                 return clan;
             }
 
