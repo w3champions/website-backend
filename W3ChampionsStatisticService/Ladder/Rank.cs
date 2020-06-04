@@ -22,6 +22,7 @@ namespace W3ChampionsStatisticService.Ladder
             League = league.Id;
             LeagueOrder = league.Order;
             LeagueName = league.Name;
+            LeagueDivision = league.Division;
             RankNumber = rankNumber;
             RankingPoints = rankingPoints;
             PlayerId = playerId;
@@ -36,6 +37,7 @@ namespace W3ChampionsStatisticService.Ladder
         public int League { get; set; }
         public int LeagueOrder { get; set; }
         public string LeagueName { get; set; }
+        public int LeagueDivision { get; set; }
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
@@ -49,5 +51,6 @@ namespace W3ChampionsStatisticService.Ladder
 
         [BsonIgnore]
         public List<PlayerInfo> PlayersInfo { get; set; }
+
     }
 }

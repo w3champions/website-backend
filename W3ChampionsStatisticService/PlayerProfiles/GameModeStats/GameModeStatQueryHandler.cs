@@ -32,11 +32,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
         {
             var player = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
-            var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
 
             foreach (var rank in leaguesOfPlayer)
             {
-                PopulateLeague(player, allLeagues, rank);
+                PopulateLeague(player, rank);
             }
 
             return player;
@@ -44,20 +43,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
         private void PopulateLeague(
             List<PlayerGameModeStatPerGateway> player,
-            List<LeagueConstellation> allLeagues,
             Rank rank)
         {
             try
             {
                 if (rank.RankNumber == 0) return;
-                var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
-                var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
                 var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
                 if (gameModeStat == null) return;
 
-                gameModeStat.Division = league.Division;
-                gameModeStat.LeagueOrder = league.Order;
+                gameModeStat.LeagueDivision = rank.LeagueDivision;
+                gameModeStat.LeagueOrder = rank.LeagueOrder;
+                gameModeStat.LeagueName = rank.LeagueName;
 
                 gameModeStat.RankingPoints = rank.RankingPoints;
                 gameModeStat.LeagueId = rank.League;

@@ -23,7 +23,20 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new Mock<IRankRepository>();
             var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository);
 
-            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
+            var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent("peter#123");
+
+            rankRepository.Setup(r => r.LoadLeagueConstellation(It.IsAny<int>())).ReturnsAsync(
+                new List<LeagueConstellation>
+                {
+                    new LeagueConstellation(rankingChangedEvent.season,
+                        rankingChangedEvent.gateway,
+                        rankingChangedEvent.gameMode,
+                        new List<League>
+                        {
+                            new League(1, 2, "Bronze", 3)
+                        })
+                });
+            await InsertRankChangedEvent(rankingChangedEvent);
 
             await rankHandler.Update();
 
@@ -54,7 +67,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 0)};
+            var ranks = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", FakeLeaue(), 12, 1456, GateWay.America, 
+            GameMode
+            .GM_1v1, 0)};
             await rankRepository.InsertRanks(ranks);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.America, GameMode.GM_1v1, 0);
             player.RecordWin(true, 1234);
@@ -71,13 +86,18 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(0, playerLoaded[0].Players.First().Losses);
         }
 
+        private League FakeLeaue()
+        {
+            return new League(1, 2, "bronze", 4);
+        }
+
         [Test]
         public async Task LoadAndSave_NotFound()
         {
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
+            var ranks = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", FakeLeaue(), 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
             await rankRepository.InsertRanks(ranks);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
@@ -92,8 +112,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks1 = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
-            var ranks2 = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 8, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
+            var ranks1 = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", FakeLeaue(), 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
+            var ranks2 = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", FakeLeaue(), 8, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
             await rankRepository.InsertRanks(ranks1);
             await rankRepository.InsertRanks(ranks2);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.America, GameMode.GM_1v1, 0);
@@ -148,7 +168,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
            
-            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", FakeLeaue(), 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
             await rankRepository.InsertRanks(ranks);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
@@ -190,7 +210,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", FakeLeaue(), 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
             await rankRepository.InsertRanks(ranks);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
@@ -222,7 +242,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", FakeLeaue(), 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
             await rankRepository.InsertRanks(ranks);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
