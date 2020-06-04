@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Clans.ClanStates;
+using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Clans
 {
@@ -23,6 +24,7 @@ namespace W3ChampionsStatisticService.Clans
         public List<string> FoundingFathers => ClanState.FoundingFathers;
         public List<string> Shamans => ClanState.Shamans;
         public List<string> PendingInvites { get; set; } = new List<string>();
+        public List<Rank> Ranks { get; set; } = new List<Rank>();
 
         public static Clan Create(string clanName, string clanAbbrevation, ClanMembership founder)
         {

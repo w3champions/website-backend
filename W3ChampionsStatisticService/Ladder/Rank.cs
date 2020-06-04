@@ -32,6 +32,9 @@ namespace W3ChampionsStatisticService.Ladder
         public GateWay Gateway { get; set; }
         public string Id => PlayerId;
         public int League { get; set; }
+        public int LeagueDivision { get; set; }
+        public string LeagueName { get; set; }
+        public int LeagueOrder { get; set; }
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }

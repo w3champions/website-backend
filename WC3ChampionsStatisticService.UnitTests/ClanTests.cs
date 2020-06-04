@@ -1,23 +1,29 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Clans;
+using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
     public class ClanTests : IntegrationTestBase
     {
-        private ClanRepository _clanRepository;
+        private IClanRepository _clanRepository;
+        private IRankRepository _rankRepository;
         private ClanCommandHandler _handler;
 
         [SetUp]
         public void SetUp()
         {
             _clanRepository = new ClanRepository(MongoClient);
-            _handler = new ClanCommandHandler(_clanRepository);
+            _rankRepository = new RankRepository(MongoClient);
+            _handler = new ClanCommandHandler(_clanRepository, _rankRepository, null);
         }
 
         [Test]
@@ -341,6 +347,33 @@ namespace WC3ChampionsStatisticService.UnitTests
                 var member = await _clanRepository.LoadMemberShip(clanMember);
                 Assert.IsNull(member.ClanId);
             }
+        }
+
+        [Test]
+        public async Task LoadClan_PopulateRanks()
+        {
+            var clan = await CreateFoundedClanForTest();
+            await _rankRepository.UpsertSeason(new Season(0));
+            await _rankRepository.UpsertSeason(new Season(1));
+            await _rankRepository.InsertRanks(new List<Rank>
+            {
+                new Rank($"1_{clan.Members[0]}@20_GM_1v1", 1, 5, 1500, GateWay.Europe, GameMode.GM_1v1, 1)
+            });
+
+            await _rankRepository.InsertLeagues(new List<LeagueConstellation>
+            {
+                new LeagueConstellation(1, GateWay.Europe, GameMode.GM_1v1, new List<League>
+                {
+                    new League(1, 2, "Wood", 5)
+                })
+            });
+
+            var clanLoaded = await _handler.LoadClan(clan.ClanId);
+
+            Assert.AreEqual(1, clanLoaded.Ranks.First().League);
+            Assert.AreEqual(2, clanLoaded.Ranks.First().LeagueOrder);
+            Assert.AreEqual("Wood", clanLoaded.Ranks.First().LeagueName);
+            Assert.AreEqual(5, clanLoaded.Ranks.First().LeagueDivision);
         }
 
         private async Task<Clan> CreateFoundedClanForTest()
