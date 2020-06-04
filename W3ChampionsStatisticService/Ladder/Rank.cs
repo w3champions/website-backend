@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Ladder
     {
         public Rank(
             string playerId,
-            League league,
+            int league,
             int rankNumber,
             int rankingPoints,
             GateWay gateway,
@@ -19,10 +19,7 @@ namespace W3ChampionsStatisticService.Ladder
             int season)
         {
             Gateway = gateway;
-            League = league.Id;
-            LeagueOrder = league.Order;
-            LeagueName = league.Name;
-            LeagueDivision = league.Division;
+            League = league;
             RankNumber = rankNumber;
             RankingPoints = rankingPoints;
             PlayerId = playerId;
@@ -35,9 +32,6 @@ namespace W3ChampionsStatisticService.Ladder
         public GateWay Gateway { get; set; }
         public string Id => PlayerId;
         public int League { get; set; }
-        public int LeagueOrder { get; set; }
-        public string LeagueName { get; set; }
-        public int LeagueDivision { get; set; }
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
         public string PlayerId { get; set; }
@@ -51,6 +45,5 @@ namespace W3ChampionsStatisticService.Ladder
 
         [BsonIgnore]
         public List<PlayerInfo> PlayersInfo { get; set; }
-
     }
 }
