@@ -7,6 +7,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -367,6 +368,15 @@ namespace WC3ChampionsStatisticService.UnitTests
                     new League(1, 2, "Wood", 5)
                 })
             });
+
+            var playerRepository = new PlayerRepository(MongoClient);
+            await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId>
+                {
+                    PlayerId.Create(clan.Members[0])
+                },
+                GateWay.Europe,
+                GameMode.GM_1v1,
+                1));
 
             var clanLoaded = await _handler.LoadClan(clan.ClanId);
 
