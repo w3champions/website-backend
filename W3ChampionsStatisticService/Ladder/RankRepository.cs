@@ -82,14 +82,9 @@ namespace W3ChampionsStatisticService.Ladder
             return LoadAll<Season>();
         }
 
-        public Task<List<Rank>> Load1V1Ranks(List<string> list, int season)
+        public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season)
         {
-            var idsToFind = list.SelectMany(btag => new List<string> {
-                $"{season}_{btag}@{(int) GateWay.America}_{GameMode.GM_1v1}",
-                $"{season}_{btag}@{(int) GateWay.Europe}_{GameMode.GM_1v1}",
-                $"{season}_{btag}@{(int) GateWay.Asia}_{GameMode.GM_1v1}"
-            }).ToList();
-            return JoinWith(r => idsToFind.Contains(r.Id));
+            return JoinWith(r => list.Any(l => r.Id.Contains(l)));
         }
     }
 }
