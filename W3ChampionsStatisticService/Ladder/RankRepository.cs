@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var search = searchFor.ToLower();
             return JoinWith(rank =>
-                rank.PlayerIdToLower.Contains(search)
+                rank.PlayerId.ToLower().Contains(search)
                 && rank.Gateway == gateWay
                 && (gameMode == GameMode.Undefined || rank.GameMode == gameMode)
                 && rank.Season == season);
@@ -84,7 +84,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season)
         {
-            return JoinWith(r => list.Any(l => r.Id.Contains(l)));
+            return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
         }
     }
 }
