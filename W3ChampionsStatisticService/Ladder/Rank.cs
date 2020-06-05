@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder
 {
+    [BsonIgnoreExtraElements]
     public class Rank : IIdentifiable
     {
         public Rank(
