@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -32,13 +31,6 @@ namespace W3ChampionsStatisticService.Ladder
                         i + 1, (int) r.rp, changedEvent.gateway, changedEvent.gameMode, changedEvent.season)).ToList()).ToList();
 
             await _rankRepository.InsertRanks(ranks);
-        }
-
-        private static string CreatPlayerId(RankingChangedEvent changedEvent, RankRaw r)
-        {
-            var btags = r.battleTags.Select(b => $"{b}@{(int)changedEvent.gateway}").OrderBy(t => t);
-            var creatPlayerId = $"{changedEvent.season}_{string.Join("_", btags)}_{changedEvent.gameMode}";
-            return creatPlayerId;
         }
     }
 }
