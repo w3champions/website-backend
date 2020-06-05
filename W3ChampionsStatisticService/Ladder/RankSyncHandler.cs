@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.Ladder
             var ranks = events.SelectMany(changedEvent => changedEvent.ranks
                 .OrderByDescending(r => r.rp)
                 .Select((r, i) =>
-                    new Rank(CreatPlayerId(changedEvent, r),
+                    new Rank(r.battleTags,
                         changedEvent.league,
                         i + 1, (int) r.rp, changedEvent.gateway, changedEvent.gameMode, changedEvent.season)).ToList()).ToList();
 

@@ -15,6 +15,6 @@ namespace W3ChampionsStatisticService.Ports
         Task InsertLeagues(List<LeagueConstellation> leagueConstellations);
         Task UpsertSeason(Season season);
         Task<List<Season>> LoadSeasons();
-        Task<List<Rank>> Load1V1Ranks(List<string> list, int season);
+        Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season);
     }
 }

@@ -28,13 +28,11 @@ namespace W3ChampionsStatisticService.Clans
 
         public static Clan Create(string clanName, string clanAbbrevation, ClanMembership founder)
         {
-            var trim = clanName.Trim();
             if (!(founder.ClanId == null || string.IsNullOrWhiteSpace(founder.ClanId))) throw new ValidationException("Founder can not be in another clan");
-            if (trim.Length < 3) throw new ValidationException("Name too short");
 
             var clan = new Clan
             {
-                ClanName = trim,
+                ClanName = clanName,
                 ClanState = new NotFoundedClan(founder.BattleTag),
                 ClanId = clanAbbrevation,
             };

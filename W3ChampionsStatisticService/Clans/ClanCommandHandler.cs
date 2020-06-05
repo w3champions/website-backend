@@ -201,7 +201,7 @@ namespace W3ChampionsStatisticService.Clans
             list.AddRange(clan.Members);
             list.AddRange(clan.Shamans);
             list.Add(clan.ChiefTain);
-            var ranksFromClan = await _rankRepository.Load1V1Ranks(list, season);
+            var ranksFromClan = await _rankRepository.LoadRanksForPlayers(list, season);
 
             PopulateLeague(ranksFromClan, leagueConstellation);
 

@@ -54,7 +54,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 0)};
+            var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 0)};
             await rankRepository.InsertRanks(ranks);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.America, GameMode.GM_1v1, 0);
             player.RecordWin(true, 1234);
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
+            var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
             await rankRepository.InsertRanks(ranks);
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
@@ -92,11 +92,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             var rankRepository = new RankRepository(MongoClient);
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var ranks1 = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
-            var ranks2 = new List<Rank> { new Rank("0_peter#123@10_GM_1v1", 1, 8, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
+            var ranks1 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
+            var ranks2 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 8, 1456, GateWay.Europe, GameMode.GM_1v1, 0)};
             await rankRepository.InsertRanks(ranks1);
             await rankRepository.InsertRanks(ranks2);
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.America, GameMode.GM_1v1, 0);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
             await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 0, GateWay.Europe, GameMode.GM_1v1);
 
@@ -148,7 +148,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
            
-            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
             await rankRepository.InsertRanks(ranks);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
@@ -190,7 +190,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
             await rankRepository.InsertRanks(ranks);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
@@ -222,7 +222,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-            var ranks = new List<Rank> { new Rank("1_peter#123@10_GM_1v1", 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
+            var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, GateWay.America, GameMode.GM_1v1, 1) };
             await rankRepository.InsertRanks(ranks);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1);
