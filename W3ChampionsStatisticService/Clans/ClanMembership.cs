@@ -7,7 +7,6 @@ namespace W3ChampionsStatisticService.Clans
     public class ClanMembership : IIdentifiable
     {
         public string BattleTag { get; set; }
-        [JsonIgnore]
         public string ClanId { get; set; }
         [JsonIgnore]
         public string PendingInviteFromClan { get; set; }
