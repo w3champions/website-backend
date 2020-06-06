@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Clans
 {
@@ -13,15 +10,12 @@ namespace W3ChampionsStatisticService.Clans
 
     {
         private readonly IClanRepository _clanRepository;
-        private readonly TrackingService _trackingService;
         private readonly IRankRepository _rankRepository;
 
         public ClanCommandHandler(IClanRepository clanRepository,
-            IRankRepository rankRepository,
-            TrackingService trackingService)
+            IRankRepository rankRepository)
         {
             _clanRepository = clanRepository;
-            _trackingService = trackingService;
             _rankRepository = rankRepository;
         }
 
@@ -195,7 +189,6 @@ namespace W3ChampionsStatisticService.Clans
             var clan = await _clanRepository.LoadClan(clanId);
             var seasons = await _rankRepository.LoadSeasons();
             var season = seasons.Max(s => s.Id);
-            var leagueConstellation = await _rankRepository.LoadLeagueConstellation(season);
 
             var list = new List<string>();
             list.AddRange(clan.Members);
@@ -203,40 +196,9 @@ namespace W3ChampionsStatisticService.Clans
             list.Add(clan.ChiefTain);
             var ranksFromClan = await _rankRepository.LoadRanksForPlayers(list, season);
 
-            PopulateLeague(ranksFromClan, leagueConstellation);
-
             clan.Ranks = ranksFromClan.ToList();
 
             return clan;
-        }
-
-        private void PopulateLeague(
-            List<Rank> ranks,
-            List<LeagueConstellation> allLeagues)
-        {
-            foreach (var rank in ranks)
-            {
-                try
-                {
-                    var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
-                    var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
-
-                    var rankOfPlayer = ranks.SingleOrDefault(g => g.Id == rank.Id);
-                    if (rankOfPlayer == null) return;
-
-                    rankOfPlayer.LeagueName = league.Name;
-                    rankOfPlayer.LeagueDivision = league.Division;
-                    rankOfPlayer.LeagueOrder = league.Order;
-
-                    rankOfPlayer.RankingPoints = rankOfPlayer.RankingPoints;
-                    rankOfPlayer.League = rankOfPlayer.League;
-                    rankOfPlayer.RankNumber = rankOfPlayer.RankNumber;
-                }
-                catch (Exception e)
-                {
-                    _trackingService.TrackException(e, $"A League was not found for {rank.Id} RN: {rank.RankNumber} LE:{rank.League}");
-                }
-            }
         }
     }
 }
