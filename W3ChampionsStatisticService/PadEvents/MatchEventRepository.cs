@@ -29,22 +29,9 @@ namespace W3ChampionsStatisticService.PadEvents
             return events;
         }
 
-        public async Task<List<MatchStartedEvent>> LoadStartedMatches(string lastObjectId = null, int pageSize = 100)
+        public Task<List<MatchStartedEvent>> LoadStartedMatches()
         {
-            lastObjectId ??= ObjectId.Empty.ToString();
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
-            var version = ObjectId.Parse(lastObjectId);
-            var delay = ObjectId.GenerateNewId(DateTime.Now.AddSeconds(-20));
-
-            var events = await mongoCollection.Find(m =>
-                m.Id > version && m.Id < delay)
-                .SortBy(s => s.Id)
-                .Limit(pageSize)
-                .ToListAsync();
-
-            return events;
+            return LoadAll<MatchStartedEvent>(limit: 1000);
         }
 
         public async Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent)
@@ -91,6 +78,11 @@ namespace W3ChampionsStatisticService.PadEvents
         public Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged()
         {
             return Checkout<LeagueConstellationChangedEvent>();
+        }
+
+        public Task DeleteStartedEvent(ObjectId nextEventId)
+        {
+            return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
         }
     }
 }
