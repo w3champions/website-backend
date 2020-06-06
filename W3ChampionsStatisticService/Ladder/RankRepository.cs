@@ -41,9 +41,9 @@ namespace W3ChampionsStatisticService.Ladder
             return JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
         }
 
-        public Task<List<LeagueConstellation>> LoadLeagueConstellation(int? season = null)
+        public Task<List<LeagueConstellation>> LoadLeagueConstellation(int season)
         {
-            return LoadAll<LeagueConstellation>(l => season == null || l.Season == season);
+            return LoadAll<LeagueConstellation>(l => l.Season == season);
         }
 
         private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)

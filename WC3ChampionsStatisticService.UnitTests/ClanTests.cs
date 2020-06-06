@@ -358,7 +358,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await _rankRepository.UpsertSeason(new Season(1));
             await _rankRepository.InsertRanks(new List<Rank>
             {
-                new Rank(new List<string> { clan.Members[0] }, 1, 5, 1500, GateWay.Europe, GameMode.GM_1v1, 1)
+                new Rank(new List<string> { clan.Members[0] }, new League(1, 2, "whatever", 3), 5, 1500, GateWay.Europe, GameMode.GM_1v1, 1)
             });
 
             await _rankRepository.InsertLeagues(new List<LeagueConstellation>

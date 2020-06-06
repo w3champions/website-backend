@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.Ladder
     {
         public Rank(
             List<string> playerIds,
-            int league,
+            League league,
             int rankNumber,
             int rankingPoints,
             GateWay gateway,
@@ -20,7 +20,10 @@ namespace W3ChampionsStatisticService.Ladder
             int season)
         {
             Gateway = gateway;
-            League = league;
+            League = league.Id;
+            LeagueDivision = league.Division;
+            LeagueOrder = league.Order;
+            LeagueName = league.Name;
             RankNumber = rankNumber;
             RankingPoints = rankingPoints;
             var btags = playerIds.Select(b => $"{b}@{(int) gateway}").OrderBy(t => t);
