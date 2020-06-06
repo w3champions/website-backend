@@ -31,7 +31,8 @@ namespace W3ChampionsStatisticService.PadEvents
 
         public Task<List<MatchStartedEvent>> LoadStartedMatches()
         {
-            return LoadAll<MatchStartedEvent>(limit: 1000);
+            var delay = ObjectId.GenerateNewId(DateTime.Now.AddSeconds(-20));
+            return LoadAll<MatchStartedEvent>(m => m.Id < delay, 1000);
         }
 
         public async Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent)
