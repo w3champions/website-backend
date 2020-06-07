@@ -24,7 +24,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             _clanRepository = new ClanRepository(MongoClient);
             _rankRepository = new RankRepository(MongoClient);
-            _handler = new ClanCommandHandler(_clanRepository, _rankRepository, null);
+            _handler = new ClanCommandHandler(_clanRepository, _rankRepository);
         }
 
         [Test]
