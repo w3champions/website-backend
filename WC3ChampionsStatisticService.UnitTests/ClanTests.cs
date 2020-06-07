@@ -361,14 +361,6 @@ namespace WC3ChampionsStatisticService.UnitTests
                 new Rank(new List<string> { clan.Members[0] }, new League(1, 2, "whatever", 3), 5, 1500, GateWay.Europe, GameMode.GM_1v1, 1)
             });
 
-            await _rankRepository.InsertLeagues(new List<LeagueConstellation>
-            {
-                new LeagueConstellation(1, GateWay.Europe, GameMode.GM_1v1, new List<League>
-                {
-                    new League(1, 2, "Wood", 5)
-                })
-            });
-
             var playerRepository = new PlayerRepository(MongoClient);
             await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId>
                 {
@@ -382,8 +374,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, clanLoaded.Ranks.First().League);
             Assert.AreEqual(2, clanLoaded.Ranks.First().LeagueOrder);
-            Assert.AreEqual("Wood", clanLoaded.Ranks.First().LeagueName);
-            Assert.AreEqual(5, clanLoaded.Ranks.First().LeagueDivision);
+            Assert.AreEqual("whatever", clanLoaded.Ranks.First().LeagueName);
+            Assert.AreEqual(3, clanLoaded.Ranks.First().LeagueDivision);
         }
 
         private async Task<Clan> CreateFoundedClanForTest()

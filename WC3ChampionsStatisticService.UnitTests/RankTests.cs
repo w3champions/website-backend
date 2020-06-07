@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -9,7 +8,6 @@ using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -17,23 +15,58 @@ namespace WC3ChampionsStatisticService.UnitTests
     public class RankTests : IntegrationTestBase
     {
         [Test]
-        public async Task OnlyOneRankIsSyncedBecausePreviousWasSynced()
+        public async Task RankSyncIsWorking()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
-            var rankRepository = new Mock<IRankRepository>();
-            var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository, null);
+            var rankRepository = new RankRepository(MongoClient);
+            var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository, null);
 
-            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
+            var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent("peter#123");
+            rankingChangedEvent.season = 1;
+            rankingChangedEvent.league = 1;
+            rankingChangedEvent.gateway = GateWay.America;
+            await InsertRankChangedEvent(rankingChangedEvent);
+
+            await rankRepository.InsertLeagues(new List<LeagueConstellation>
+            {
+                new LeagueConstellation(1, GateWay.America, GameMode.GM_1v1, new List<League>
+                {
+                    new League(1, 2, "Bronze", 4),
+                    new League(2, 3, "Wood", 5),
+                })
+            });
+
+            var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.America, GameMode.GM_1v1, 1);
+            var player2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("wolf#456")}, GateWay.America, GameMode.GM_1v1, 1);
+            var playerRepository = new PlayerRepository(MongoClient);
+            await playerRepository.UpsertPlayerOverview(player1);
+            await playerRepository.UpsertPlayerOverview(player2);
 
             await rankHandler.Update();
 
-            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)));
+            var ranks = await rankRepository.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);
+            Assert.AreEqual(1, ranks.Count);
 
-            await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("wolf#456"));
+            var rankChangedEvent = TestDtoHelper.CreateRankChangedEvent("wolf#456");
+            rankChangedEvent.season = 1;
+            rankChangedEvent.league = 2;
+            rankChangedEvent.gateway = GateWay.America;
+            await InsertRankChangedEvent(rankChangedEvent);
 
             await rankHandler.Update();
 
-            rankRepository.Verify(r => r.InsertRanks(It.Is<List<Rank>>(rl => rl.Count == 1)));
+            var ranksAfterwards = await rankRepository.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);
+            var ranksAfterwards2 = await rankRepository.LoadPlayersOfLeague(2, 1, GateWay.America, GameMode.GM_1v1);
+            Assert.AreEqual(1, ranksAfterwards.Count);
+            Assert.AreEqual(1, ranksAfterwards2.Count);
+
+            Assert.AreEqual("Bronze", ranksAfterwards[0].LeagueName);
+            Assert.AreEqual(4, ranksAfterwards[0].LeagueDivision);
+            Assert.AreEqual(2, ranksAfterwards[0].LeagueOrder);
+
+            Assert.AreEqual("Wood", ranksAfterwards2[0].LeagueName);
+            Assert.AreEqual(5, ranksAfterwards2[0].LeagueDivision);
+            Assert.AreEqual(3, ranksAfterwards2[0].LeagueOrder);
         }
 
         [Test]
