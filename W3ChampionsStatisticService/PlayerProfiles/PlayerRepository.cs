@@ -115,8 +115,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)
         {
             if (string.IsNullOrEmpty(searchFor)) return new List<PlayerOverview>();
-            var database = CreateClient();
-            var mongoCollection = database.GetCollection<PlayerOverview>(nameof(PlayerOverview));
+            var mongoCollection = CreateCollection<PlayerOverview>();
 
             var lower = searchFor.ToLower();
             var playerOverviews = await mongoCollection

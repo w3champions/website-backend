@@ -67,8 +67,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public async Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
         {
-            var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<DistinctPlayersPerDay>(nameof(DistinctPlayersPerDay));
+            var mongoCollection = CreateCollection<DistinctPlayersPerDay>();
 
             var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
                 .SortByDescending(s => s.Date)
@@ -79,8 +78,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         public async Task<List<GamesPerDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to)
         {
-            var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<GamesPerDay>(nameof(GamesPerDay));
+            var mongoCollection = CreateCollection<GamesPerDay>();
 
             var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
                 .SortByDescending(s => s.Date)
