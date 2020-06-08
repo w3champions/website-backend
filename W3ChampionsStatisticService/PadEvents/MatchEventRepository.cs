@@ -90,5 +90,10 @@ namespace W3ChampionsStatisticService.PadEvents
         {
             return Checkout<LeagueConstellationChangedEvent>();
         }
+
+        public Task DeleteStartedEvent(ObjectId nextEventId)
+        {
+            return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
+        }
     }
 }
