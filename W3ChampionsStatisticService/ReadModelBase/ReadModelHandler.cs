@@ -37,6 +37,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 {
                     try
                     {
+                        if (lastVersion.IsStopped) return;
                         if (nextEvent.match.season > lastVersion.Season)
                         {
                             await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);

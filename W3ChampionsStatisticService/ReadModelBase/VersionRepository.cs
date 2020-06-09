@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 .FirstOrDefaultAsync()?
                 .Result;
             var lastVersion = version?.LastVersion ?? ObjectId.Empty.ToString();
-            return new HandlerVersion(lastVersion, version?.Season ?? 0);
+            return new HandlerVersion(lastVersion, version?.Season ?? 0, version?.Stopped ?? false, version?.SyncState ?? SyncState.UpToDate);
         }
 
         public async Task SaveLastVersion<T>(string lastVersion, int season = 0)
