@@ -13,7 +13,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
         }
 
-        public async Task<HandlerVersion> GetLastVersion<T>(bool tempVersion = false)
+        public async Task<HandlerVersion> GetLastVersion<T>(bool tempVersion)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 version?.SyncState ?? SyncState.UpToDate);
         }
 
-        public async Task SaveLastVersion<T>(string lastVersion, int season = 0, bool tempVersion = false)
+        public async Task SaveLastVersion<T>(string lastVersion, bool tempVersion, int season = 0)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
@@ -58,7 +58,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             }
         }
 
-        public async Task SaveSyncState<T>(SyncState syncState, bool tempVersion = false)
+        public async Task SaveSyncState<T>(SyncState syncState, bool tempVersion)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);

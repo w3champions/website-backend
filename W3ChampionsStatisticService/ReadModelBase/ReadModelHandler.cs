@@ -14,6 +14,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private readonly T _innerHandler;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly TrackingService _trackingService;
+        private bool _isTempSync;
 
         public ReadModelHandler(
             IMatchEventRepository eventRepository,
@@ -31,7 +32,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<T>();
+            var lastVersion = await _versionRepository.GetLastVersion<T>(_isTempSync);
             var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
 
             while (nextEvents.Any())
@@ -46,15 +47,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
                             await StartParallelThread();
                         }
 
-                        if (lastVersion.SyncState == SyncState.Syncing)
-                        {
-                            lastVersion = await _versionRepository.GetLastVersion<T>();
-                        }
-
                         if (nextEvent.match.season > lastVersion.Season)
                         {
-                            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
-                            lastVersion = await _versionRepository.GetLastVersion<T>();
+                            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, _isTempSync, nextEvent.match.season);
+                            lastVersion = await _versionRepository.GetLastVersion<T>(_isTempSync);
                         }
 
                         // Skip the cancel events for now
@@ -63,7 +59,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                             await _innerHandler.Update(nextEvent);
                         }
 
-                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
+                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), _isTempSync, lastVersion.Season);
                     }
                     catch (Exception e)
                     {
@@ -82,7 +78,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             var readModelHandler = serviceScope.ServiceProvider.GetService<ReadModelHandler<T>>();
             readModelHandler.SetAsTempRepoPrefix();
 
-            await _versionRepository.SaveSyncState<T>(SyncState.Syncing);
+            await _versionRepository.SaveSyncState<T>(SyncState.Syncing, false);
 
             // Run as new thread, fire and forget
             Task.Run(() => readModelHandler.Update());
@@ -90,6 +86,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
         private void SetAsTempRepoPrefix()
         {
+            _isTempSync = true;
             _innerHandler.SetAsTempRepoPrefix();
         }
     }
