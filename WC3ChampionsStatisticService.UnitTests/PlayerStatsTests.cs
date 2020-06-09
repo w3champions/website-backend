@@ -32,17 +32,17 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
-            player.AddMapWin(Race.HU, Race.UD, "TM", true, "1.32.5");
-            player.AddMapWin(Race.HU, Race.OC, "EI", true, "1.32.5");
-            player.AddMapWin(Race.HU, Race.UD, "TM", false, "1.32.5");
+            var patch = "1.32.5";
+            player.AddMapWin(Race.HU, Race.UD, "TM", true, patch);
+            player.AddMapWin(Race.HU, Race.OC, "EI", true, patch);
+            player.AddMapWin(Race.HU, Race.UD, "TM", false, patch);
 
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-
-            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM").Wins);
-            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM").Losses);
-            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.OC, "EI").Wins);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM", patch).Wins);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM", patch).Losses);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.OC, "EI", patch).Wins);
         }
 
         [Test]
@@ -51,14 +51,16 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
-            player.AddMapWin(Race.RnD, Race.UD, "TM", true, "1.32.5");
-            player.AddMapWin(Race.HU, Race.RnD, "EI", false, "1.32.5");
+            var patch = "1.32.5";
+
+            player.AddMapWin(Race.RnD, Race.UD, "TM", true, patch);
+            player.AddMapWin(Race.HU, Race.RnD, "EI", false, patch);
 
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, "TM").Wins);
-            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "EI").Losses);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, "TM", patch).Wins);
+            Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "EI", patch).Losses);
         }
 
         [Test]
@@ -67,14 +69,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
-            player.AddMapWin(Race.HU, Race.UD, "TM", true, "1.32.5");
-            player.AddMapWin(Race.NE, Race.UD, "TM", true, "1.32.5");
-            player.AddMapWin(Race.OC, Race.UD, "TM", true, "1.32.5");
+            var patch = "1.32.5";
+            player.AddMapWin(Race.HU, Race.UD, "TM", true, patch);
+            player.AddMapWin(Race.NE, Race.UD, "TM", true, patch);
+            player.AddMapWin(Race.OC, Race.UD, "TM", true, patch);
 
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-            Assert.AreEqual(3, playerLoaded.GetWinLoss(Race.Total, Race.UD, "TM").Wins);
+            Assert.AreEqual(3, playerLoaded.GetWinLoss(Race.Total, Race.UD, "TM", patch).Wins);
         }
 
         [Test]
@@ -238,7 +241,6 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             matchFinishedEvent.match.players[1] = enemyPlayer;
             matchFinishedEvent.result.players[1].heroes = enemyHeroes;
-
 
             return matchFinishedEvent;
         }
