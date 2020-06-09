@@ -28,11 +28,20 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
-            var newVersion = new VersionDto {HandlerName = HandlerName<T>(), LastVersion = lastVersion, Season = season};
-            await mongoCollection.ReplaceOneAsync(
-                new BsonDocument("_id", HandlerName<T>()),
-                options: new ReplaceOptions { IsUpsert = true },
-                replacement: newVersion);
+            var version = await mongoCollection.FindAsync(e => e.Id == HandlerName<T>());
+            if (version != null)
+            {
+                var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.Id, HandlerName<T>());
+                var updateDefinition = Builders<VersionDto>.Update
+                    .Set(e => e.LastVersion, lastVersion)
+                    .Set(e => e.Season, season);
+                await mongoCollection.UpdateOneAsync(filterDefinition, updateDefinition);
+            }
+            else
+            {
+                await mongoCollection.InsertOneAsync(new VersionDto
+                    {LastVersion = lastVersion, HandlerName = HandlerName<T>()});
+            }
         }
 
         private static string HandlerName<T>()
@@ -46,6 +55,15 @@ namespace W3ChampionsStatisticService.ReadModelBase
         public string Id => HandlerName;
         public string HandlerName { get; set; }
         public string LastVersion { get; set; }
+        public bool Stopped { get; set; } = false;
+        public SyncState SyncState { get; set; } = SyncState.UpToDate;
         public int Season { get; set; }
+    }
+
+    public enum SyncState
+    {
+        UpToDate = 0,
+        Syncing = 1,
+        SyncUpToOriginalSync = 2
     }
 }
