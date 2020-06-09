@@ -1,22 +1,25 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Clans.ClanStates;
+using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Clans
 {
     public class Clan
     {
         [JsonIgnore]
-        public ObjectId Id { get; set; }
-        [JsonIgnore]
         public ClanState ClanState { get; set; }
 
-        [JsonPropertyName("id")]
-        public string IdRaw => Id.ToString();
         public string ClanName { get; set; }
+<<<<<<< HEAD
         public string ClanAbbrevation { get; set; }
+=======
+
+        [BsonId]
+        public string ClanId { get; set; }
+>>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
         public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
@@ -25,18 +28,23 @@ namespace W3ChampionsStatisticService.Clans
         public List<string> FoundingFathers => ClanState.FoundingFathers;
         public List<string> Shamans => ClanState.Shamans;
         public List<string> PendingInvites { get; set; } = new List<string>();
+        public List<Rank> Ranks { get; set; } = new List<Rank>();
 
         public static Clan Create(string clanName, string clanAbbrevation, ClanMembership founder)
         {
-            var trim = clanName.Trim();
-            if (!(founder.ClanId == null || founder.ClanId == ObjectId.Empty)) throw new ValidationException("Founder can not be in another clan");
-            if (trim.Length < 3) throw new ValidationException("Name too short");
+            if (!(founder.ClanId == null || string.IsNullOrWhiteSpace(founder.ClanId))) throw new ValidationException("Founder can not be in another clan");
 
             var clan = new Clan
             {
+<<<<<<< HEAD
                 ClanName = trim,
                 ClanState = new NotFoundedClan(founder.BattleTag),
                 ClanAbbrevation = clanAbbrevation,
+=======
+                ClanName = clanName,
+                ClanState = new NotFoundedClan(founder.BattleTag),
+                ClanId = clanAbbrevation,
+>>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
             };
 
             return clan;
@@ -84,7 +92,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public void LeaveClan(ClanMembership clanMemberShip)
         {
-            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Chieftain can not leave cal, transfer ownership first");
+            if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Chieftain can not leave clan, transfer ownership first");
             clanMemberShip.LeaveClan();
 
             ClanState = ClanState.LeaveClan(clanMemberShip);

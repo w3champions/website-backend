@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Clans.Commands;
-using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Clans
@@ -11,14 +10,11 @@ namespace W3ChampionsStatisticService.Clans
     public class ClanController : ControllerBase
     {
         private readonly ClanCommandHandler _clanCommandHandler;
-        private readonly IClanRepository _clanRepository;
 
         public ClanController(
-            ClanCommandHandler clanCommandHandler,
-            IClanRepository clanRepository)
+            ClanCommandHandler clanCommandHandler)
         {
             _clanCommandHandler = clanCommandHandler;
-            _clanRepository = clanRepository;
         }
 
         [HttpPost]
@@ -34,7 +30,8 @@ namespace W3ChampionsStatisticService.Clans
         [HttpGet("{clanId}")]
         public async Task<IActionResult> GetClan(string clanId)
         {
-            var clan = await _clanRepository.LoadClan(clanId);
+            var clan = await _clanCommandHandler.LoadClan(clanId);
+
             return Ok(clan);
         }
 

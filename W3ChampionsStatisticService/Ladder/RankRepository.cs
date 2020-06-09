@@ -29,17 +29,16 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var search = searchFor.ToLower();
             return JoinWith(rank =>
-                rank.PlayerIdToLower.Contains(search)
+                rank.PlayerId.ToLower().Contains(search)
                 && rank.Gateway == gateWay
                 && (gameMode == GameMode.Undefined || rank.GameMode == gameMode)
                 && rank.Season == season);
         }
 
-        public async Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
+        public Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
         {
             var search = searchFor.ToLower();
-            var joinWith = await JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
-            return joinWith;
+            return JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
         }
 
         public Task<List<LeagueConstellation>> LoadLeagueConstellation(int? season = null)
@@ -81,6 +80,11 @@ namespace W3ChampionsStatisticService.Ladder
         public Task<List<Season>> LoadSeasons()
         {
             return LoadAll<Season>();
+        }
+
+        public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season)
+        {
+            return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
         }
     }
 }

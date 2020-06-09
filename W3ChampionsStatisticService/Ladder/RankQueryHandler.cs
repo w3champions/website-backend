@@ -2,9 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -12,13 +10,16 @@ namespace W3ChampionsStatisticService.Ladder
     {
         private readonly IRankRepository _rankRepository;
         private readonly IPlayerRepository _playerRepository;
+        private readonly IClanRepository _clanRepository;
 
         public RankQueryHandler(
             IRankRepository rankRepository,
-            IPlayerRepository playerRepository)
+            IPlayerRepository playerRepository,
+            IClanRepository clanRepository)
         {
             _rankRepository = rankRepository;
             _playerRepository = playerRepository;
+            _clanRepository = clanRepository;
         }
 
         public async Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
@@ -35,17 +36,20 @@ namespace W3ChampionsStatisticService.Ladder
             var playerIds = ranks
                 .SelectMany(x => x.Player.PlayerIds)
                 .Select(x => x.BattleTag)
-                .ToArray();
+                .ToList();
 
             var raceWinRates = (await _playerRepository.LoadPlayersRaceWins(playerIds))
+                .ToDictionary(x => x.Id);
+
+            var clanMemberships = (await _clanRepository.LoadMemberShips(playerIds))
                 .ToDictionary(x => x.Id);
 
             foreach (var rank in ranks)
             {
                 foreach (var playerId in rank.Player.PlayerIds)
                 {
-                    PlayerDetails playerDetails = null;
-                    if (raceWinRates.TryGetValue(playerId.BattleTag, out playerDetails))
+                    clanMemberships.TryGetValue(playerId.BattleTag, out var membership);
+                    if (raceWinRates.TryGetValue(playerId.BattleTag, out var playerDetails))
                     {
                         if (rank.PlayersInfo == null)
                         {
@@ -62,7 +66,8 @@ namespace W3ChampionsStatisticService.Ladder
                             PictureId = profilePicture?.PictureId,
                             SelectedRace = profilePicture?.Race,
                             Country = personalSettings?.Country,
-                            TwitchName = personalSettings?.Twitch
+                            TwitchName = personalSettings?.Twitch,
+                            ClanId = membership?.ClanId
                         });
                     }
                 }

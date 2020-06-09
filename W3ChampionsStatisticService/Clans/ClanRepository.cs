@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -11,7 +10,11 @@ namespace W3ChampionsStatisticService.Clans
     {
         public async Task<bool> TryInsertClan(Clan clan)
         {
+<<<<<<< HEAD
             var clanFound = await LoadFirst<Clan>(c => c.ClanAbbrevation == clan.ClanAbbrevation);
+=======
+            var clanFound = await LoadFirst<Clan>(c => c.ClanId == clan.ClanId);
+>>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
             if (clanFound != null) return false;
             await Insert(clan);
             return true;
@@ -19,12 +22,12 @@ namespace W3ChampionsStatisticService.Clans
 
         public Task UpsertClan(Clan clan)
         {
-            return Upsert(clan, c => c.Id == clan.Id);
+            return Upsert(clan, c => c.ClanId == clan.ClanId);
         }
 
         public Task<Clan> LoadClan(string clanId)
         {
-            return LoadFirst<Clan>(l => l.Id == new ObjectId(clanId));
+            return LoadFirst<Clan>(l => l.ClanId == clanId);
         }
 
         public Task<ClanMembership> LoadMemberShip(string battleTag)
@@ -39,7 +42,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public Task DeleteClan(string clanId)
         {
-            return Delete<Clan>(c => c.Id == new ObjectId(clanId));
+            return Delete<Clan>(c => c.ClanId == clanId);
         }
 
         public Task<List<ClanMembership>> LoadMemberShips(List<string> clanMembers)
