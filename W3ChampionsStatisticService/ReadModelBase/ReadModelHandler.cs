@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 
@@ -20,7 +19,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             IMatchEventRepository eventRepository,
             IVersionRepository versionRepository,
             T innerHandler,
-            IServiceScopeFactory serviceScopeFactory,
+            IServiceScopeFactory serviceScopeFactory = null,
             TrackingService trackingService = null)
         {
             _eventRepository = eventRepository;
@@ -45,6 +44,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
                         if (lastVersion.SyncState == SyncState.SyncStartRequested)
                         {
                             await StartParallelThread();
+                        }
+
+                        if (lastVersion.SyncState == SyncState.Syncing)
+                        {
+                            lastVersion = await _versionRepository.GetLastVersion<T>();
                         }
 
                         if (nextEvent.match.season > lastVersion.Season)
@@ -78,12 +82,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
             var readModelHandler = serviceScope.ServiceProvider.GetService<ReadModelHandler<T>>();
             readModelHandler.SetAsTempRepoPrefix();
 
-            await _versionRepository.SaveSyncState<T>(SyncState.ParallelSyncStarted);
+            await _versionRepository.SaveSyncState<T>(SyncState.Syncing);
 
+            // Run as new thread, fire and forget
             Task.Run(() => readModelHandler.Update());
-
-            await _versionRepository.SaveSyncState<T>(SyncState.ParallelSyncStarted);
-
         }
 
         private void SetAsTempRepoPrefix()

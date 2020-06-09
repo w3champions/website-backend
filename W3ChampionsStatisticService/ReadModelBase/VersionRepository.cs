@@ -5,7 +5,7 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
-    public class VersionRepository : MongoDbRepositoryBase,  IVersionRepository
+    public class VersionRepository : MongoDbRepositoryBase, IVersionRepository
     {
         private readonly string _collection = "HandlerVersions";
 
@@ -13,25 +13,34 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
         }
 
-        public async Task<HandlerVersion> GetLastVersion<T>()
+        public async Task<HandlerVersion> GetLastVersion<T>(bool tempVersion = false)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
-            var version = (await mongoCollection.FindAsync(c => c.HandlerName == HandlerName<T>()))
+            var version = (await mongoCollection.FindAsync(c =>
+                c.HandlerName == (tempVersion
+                    ? HandlerName<T>()
+                    : TempHandlerName<T>())))
                 .FirstOrDefaultAsync()?
                 .Result;
             var lastVersion = version?.LastVersion ?? ObjectId.Empty.ToString();
-            return new HandlerVersion(lastVersion, version?.Season ?? 0, version?.Stopped ?? false, version?.SyncState ?? SyncState.UpToDate);
+            return new HandlerVersion(lastVersion, version?.Season ?? 0, version?.Stopped ?? false,
+                version?.SyncState ?? SyncState.UpToDate);
         }
 
-        public async Task SaveLastVersion<T>(string lastVersion, int season = 0)
+        public async Task SaveLastVersion<T>(string lastVersion, int season = 0, bool tempVersion = false)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
-            var version = await mongoCollection.Find(e => e.HandlerName == HandlerName<T>()).FirstOrDefaultAsync();
+            var version = await mongoCollection.Find(e => e.HandlerName == (tempVersion
+                ? HandlerName<T>()
+                : TempHandlerName<T>())).FirstOrDefaultAsync();
             if (version != null)
             {
-                var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.HandlerName, HandlerName<T>());
+                var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.HandlerName,
+                    tempVersion
+                        ? HandlerName<T>()
+                        : TempHandlerName<T>());
                 var updateDefinition = Builders<VersionDto>.Update
                     .Set(e => e.LastVersion, lastVersion)
                     .Set(e => e.Season, season);
@@ -40,16 +49,24 @@ namespace W3ChampionsStatisticService.ReadModelBase
             else
             {
                 await mongoCollection.InsertOneAsync(new VersionDto
-                    {LastVersion = lastVersion, Season = season, HandlerName = HandlerName<T>()});
+                {
+                    LastVersion = lastVersion, Season = season, HandlerName =
+                        tempVersion
+                            ? HandlerName<T>()
+                            : TempHandlerName<T>()
+                });
             }
         }
 
-        public async Task SaveSyncState<T>(SyncState syncState)
+        public async Task SaveSyncState<T>(SyncState syncState, bool tempVersion = false)
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
 
-            var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.HandlerName, HandlerName<T>());
+            var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.HandlerName,
+                tempVersion
+                    ? HandlerName<T>()
+                    : TempHandlerName<T>());
             var updateDefinition = Builders<VersionDto>.Update
                 .Set(e => e.SyncState, syncState);
             await mongoCollection.UpdateOneAsync(filterDefinition, updateDefinition);
@@ -58,6 +75,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private static string HandlerName<T>()
         {
             return typeof(T).Name;
+        }
+
+        private static string TempHandlerName<T>()
+        {
+            return typeof(T).Name + "_temp";
         }
     }
 
@@ -77,6 +99,6 @@ namespace W3ChampionsStatisticService.ReadModelBase
         SyncStartRequested = 1,
         ParallelSyncStarted = 2,
         Syncing = 3,
-        SyncUpToOriginalSync = 4,
+        SyncUpToOriginalSync = 4
     }
 }

@@ -55,10 +55,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements;
         }
 
-        protected IMongoCollection<T> CreateCollection<T>()
+        protected IMongoCollection<T> CreateCollection<T>(string collectionName = null)
         {
             var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name + _collectionNameSuffix);
+            var mongoCollection = mongoDatabase.GetCollection<T>((collectionName ?? typeof(T).Name) + _collectionNameSuffix);
             return mongoCollection;
         }
 
