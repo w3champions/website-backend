@@ -69,13 +69,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clan = await CreateFoundedClanForTest();
 
             var newChieftain = clan.Members[1];
-<<<<<<< HEAD
-            await _handler.AddShamanToClan(newChieftain, clan.IdRaw, clan.ChiefTain);
-            await _handler.SwitchChieftain(newChieftain, clan.IdRaw, clan.ChiefTain);
-=======
             await _handler.AddShamanToClan(newChieftain, clan.ClanId, clan.ChiefTain);
             await _handler.SwitchChieftain(newChieftain, clan.ClanId, clan.ChiefTain);
->>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
 
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
@@ -153,13 +148,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
         {
             var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
-<<<<<<< HEAD
-            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
-            await _handler.RevokeInvitationToClan("NewGUY#123", clan.IdRaw, "Peter#123");
-=======
             await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
             await _handler.RevokeInvitationToClan("NewGUY#123", clan.ClanId, "Peter#123");
->>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
 
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
@@ -171,13 +161,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task InvitePlayer_ThatHasAlreadySigned()
         {
             var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
-<<<<<<< HEAD
-            await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
-            await _handler.AcceptInvite("NewGUY#123", clan.IdRaw);
-=======
             await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
             await _handler.AcceptInvite("NewGUY#123", clan.ClanId);
->>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
 
             Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123"));
         }

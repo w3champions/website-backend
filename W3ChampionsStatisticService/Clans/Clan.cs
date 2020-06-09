@@ -13,13 +13,9 @@ namespace W3ChampionsStatisticService.Clans
         public ClanState ClanState { get; set; }
 
         public string ClanName { get; set; }
-<<<<<<< HEAD
-        public string ClanAbbrevation { get; set; }
-=======
 
         [BsonId]
         public string ClanId { get; set; }
->>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
         public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);
@@ -36,15 +32,9 @@ namespace W3ChampionsStatisticService.Clans
 
             var clan = new Clan
             {
-<<<<<<< HEAD
-                ClanName = trim,
-                ClanState = new NotFoundedClan(founder.BattleTag),
-                ClanAbbrevation = clanAbbrevation,
-=======
                 ClanName = clanName,
                 ClanState = new NotFoundedClan(founder.BattleTag),
                 ClanId = clanAbbrevation,
->>>>>>> 629abc0ae8ea22b87ff8d6a33b67053422f90c36
             };
 
             return clan;

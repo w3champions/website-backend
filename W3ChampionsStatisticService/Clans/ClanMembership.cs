@@ -26,7 +26,6 @@ namespace W3ChampionsStatisticService.Clans
             ClanId = clan.ClanId;
             PendingInviteFromClan = null;
             ClanName = clan.ClanName;
-            ClanAbbrevation = clan.ClanAbbrevation;
         }
 
         public static ClanMembership Create(string battleTag)
@@ -41,7 +40,6 @@ namespace W3ChampionsStatisticService.Clans
         {
             PendingInviteFromClan = clan.ClanId;
             ClanName = clan.ClanName;
-            ClanAbbrevation = clan.ClanAbbrevation;
         }
 
         public void LeaveClan()
