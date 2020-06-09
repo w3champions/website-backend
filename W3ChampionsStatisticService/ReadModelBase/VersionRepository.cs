@@ -28,10 +28,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
-            var version = await mongoCollection.FindAsync(e => e.Id == HandlerName<T>());
+            var version = await mongoCollection.Find(e => e.HandlerName == HandlerName<T>()).FirstOrDefaultAsync();
             if (version != null)
             {
-                var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.Id, HandlerName<T>());
+                var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.HandlerName, HandlerName<T>());
                 var updateDefinition = Builders<VersionDto>.Update
                     .Set(e => e.LastVersion, lastVersion)
                     .Set(e => e.Season, season);
@@ -49,7 +49,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             var database = CreateClient();
             var mongoCollection = database.GetCollection<VersionDto>(_collection);
 
-            var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.Id, HandlerName<T>());
+            var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.HandlerName, HandlerName<T>());
             var updateDefinition = Builders<VersionDto>.Update
                 .Set(e => e.SyncState, syncState);
             await mongoCollection.UpdateOneAsync(filterDefinition, updateDefinition);
