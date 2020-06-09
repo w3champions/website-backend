@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 
@@ -16,17 +13,20 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private readonly IMatchEventRepository _eventRepository;
         private readonly IVersionRepository _versionRepository;
         private readonly T _innerHandler;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly TrackingService _trackingService;
 
         public ReadModelHandler(
             IMatchEventRepository eventRepository,
             IVersionRepository versionRepository,
             T innerHandler,
+            IServiceScopeFactory serviceScopeFactory,
             TrackingService trackingService = null)
         {
             _eventRepository = eventRepository;
             _versionRepository = versionRepository;
             _innerHandler = innerHandler;
+            _serviceScopeFactory = serviceScopeFactory;
             _trackingService = trackingService;
         }
 
@@ -74,8 +74,14 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
         private async Task StartParallelThread()
         {
-            // Todo
+            var serviceScope = _serviceScopeFactory.CreateScope();
+            var readModelHandler = serviceScope.ServiceProvider.GetService<T>();
+            readModelHandler.ResetReadModelDbName();
+
+            Task.Run(() => readModelHandler.Update());
+
             await _versionRepository.SaveSyncState<T>(SyncState.ParallelSyncStarted);
+
         }
     }
 }
