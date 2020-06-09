@@ -7,6 +7,7 @@ namespace W3ChampionsStatisticService.Ports
     {
         Task<HandlerVersion> GetLastVersion<T>();
         Task SaveLastVersion<T>(string lastVersion, int season = 0);
+        Task SaveSyncState<T>(SyncState syncState);
     }
 
     public class HandlerVersion

@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
@@ -12,18 +16,18 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private readonly IMatchEventRepository _eventRepository;
         private readonly IVersionRepository _versionRepository;
         private readonly T _innerHandler;
-        private readonly ILogger<ReadModelHandler<T>> _logger;
+        private readonly TrackingService _trackingService;
 
         public ReadModelHandler(
             IMatchEventRepository eventRepository,
             IVersionRepository versionRepository,
             T innerHandler,
-            ILogger<ReadModelHandler<T>> logger = null)
+            TrackingService trackingService = null)
         {
             _eventRepository = eventRepository;
             _versionRepository = versionRepository;
             _innerHandler = innerHandler;
-            _logger = logger ?? new Logger<ReadModelHandler<T>>(new NullLoggerFactory());
+            _trackingService = trackingService;
         }
 
         public async Task Update()
@@ -38,6 +42,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     try
                     {
                         if (lastVersion.IsStopped) return;
+                        if (lastVersion.SyncState == SyncState.SyncStartRequested)
+                        {
+                            await StartParallelThread();
+                        }
+
                         if (nextEvent.match.season > lastVersion.Season)
                         {
                             await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
@@ -54,13 +63,19 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
+                        _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
                         throw;
                     }
                 }
 
                 nextEvents = await _eventRepository.Load(nextEvents.Last().Id.ToString());
             }
+        }
+
+        private async Task StartParallelThread()
+        {
+            // Todo
+            await _versionRepository.SaveSyncState<T>(SyncState.ParallelSyncStarted);
         }
     }
 }

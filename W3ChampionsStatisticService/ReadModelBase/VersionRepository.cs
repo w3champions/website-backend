@@ -44,6 +44,17 @@ namespace W3ChampionsStatisticService.ReadModelBase
             }
         }
 
+        public async Task SaveSyncState<T>(SyncState syncState)
+        {
+            var database = CreateClient();
+            var mongoCollection = database.GetCollection<VersionDto>(_collection);
+
+            var filterDefinition = Builders<VersionDto>.Filter.Eq(e => e.Id, HandlerName<T>());
+            var updateDefinition = Builders<VersionDto>.Update
+                .Set(e => e.SyncState, syncState);
+            await mongoCollection.UpdateOneAsync(filterDefinition, updateDefinition);
+        }
+
         private static string HandlerName<T>()
         {
             return typeof(T).Name;
@@ -63,7 +74,9 @@ namespace W3ChampionsStatisticService.ReadModelBase
     public enum SyncState
     {
         UpToDate = 0,
-        Syncing = 1,
-        SyncUpToOriginalSync = 2
+        SyncStartRequested = 1,
+        ParallelSyncStarted = 2,
+        Syncing = 3,
+        SyncUpToOriginalSync = 4,
     }
 }
