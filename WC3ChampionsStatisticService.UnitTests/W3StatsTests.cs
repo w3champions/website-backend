@@ -86,14 +86,30 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             fakeEvent1.match.players[0].mmr.rating = 1300;
             fakeEvent1.match.players[1].mmr.rating = 1300;
+            fakeEvent1.match.startTime = 1591374182684;
 
             fakeEvent2.match.players[0].mmr.rating = 1800;
             fakeEvent2.match.players[1].mmr.rating = 1900;
+            fakeEvent2.match.startTime = 1591370203764;
 
             await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2 });
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
             var patchRepo = new PatchRepository(MongoClient);
+
+            var patch1 = new Patch
+            {
+                Version = "1.32.5",
+                StartDate = DateTime.SpecifyKind(new DateTime(2020, 4, 27, 0, 0, 0), DateTimeKind.Utc)
+            };
+
+            var patch2 = new Patch
+            {
+                Version = "1.32.6",
+                StartDate = DateTime.SpecifyKind(new DateTime(2020, 6, 3, 19, 0, 0), DateTimeKind.Utc)
+            };
+
+            await patchRepo.InsertPatches(new List<Patch>() { patch1, patch2 });
             var overallRaceAndWinStatsHandler = new OverallRaceAndWinStatHandler(w3StatsRepo, patchRepo);
 
             await overallRaceAndWinStatsHandler.Update(fakeEvent1);
