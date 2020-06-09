@@ -21,6 +21,7 @@ namespace W3ChampionsStatisticService.Clans
         [JsonIgnore]
         public string Id => BattleTag;
         public string ClanName { get; set; }
+        public string ClanAbbrevation { get; set; }
 
         public void JoinClan(Clan clan)
         {
@@ -30,6 +31,7 @@ namespace W3ChampionsStatisticService.Clans
             ClanId = clan.Id;
             PendingInviteFromClan = null;
             ClanName = clan.ClanName;
+            ClanAbbrevation = clan.ClanAbbrevation;
         }
 
         public static ClanMembership Create(string battleTag)
@@ -44,6 +46,7 @@ namespace W3ChampionsStatisticService.Clans
         {
             PendingInviteFromClan = clan.Id;
             ClanName = clan.ClanName;
+            ClanAbbrevation = clan.ClanAbbrevation;
         }
 
         public void LeaveClan()

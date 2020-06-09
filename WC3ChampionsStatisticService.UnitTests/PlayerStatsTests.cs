@@ -32,9 +32,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
-            player.AddMapWin(Race.HU, Race.UD, "TM", true);
-            player.AddMapWin(Race.HU, Race.OC, "EI", true);
-            player.AddMapWin(Race.HU, Race.UD, "TM", false);
+            player.AddMapWin(Race.HU, Race.UD, "TM", true, "1.32.5");
+            player.AddMapWin(Race.HU, Race.OC, "EI", true, "1.32.5");
+            player.AddMapWin(Race.HU, Race.UD, "TM", false, "1.32.5");
 
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
@@ -51,8 +51,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
-            player.AddMapWin(Race.RnD, Race.UD, "TM", true);
-            player.AddMapWin(Race.HU, Race.RnD, "EI", false);
+            player.AddMapWin(Race.RnD, Race.UD, "TM", true, "1.32.5");
+            player.AddMapWin(Race.HU, Race.RnD, "EI", false, "1.32.5");
 
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
@@ -67,9 +67,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerStatsRepository(MongoClient);
 
             var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
-            player.AddMapWin(Race.HU, Race.UD, "TM", true);
-            player.AddMapWin(Race.NE, Race.UD, "TM", true);
-            player.AddMapWin(Race.OC, Race.UD, "TM", true);
+            player.AddMapWin(Race.HU, Race.UD, "TM", true, "1.32.5");
+            player.AddMapWin(Race.NE, Race.UD, "TM", true, "1.32.5");
+            player.AddMapWin(Race.OC, Race.UD, "TM", true, "1.32.5");
 
             await playerRepository.UpsertMapAndRaceStat(player);
             var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
@@ -252,12 +252,12 @@ namespace WC3ChampionsStatisticService.UnitTests
 
         private static PlayerMMrChange CreatePlayer(string playerId, Race race, bool won = false)
         {
-           return new PlayerMMrChange
+            return new PlayerMMrChange
             {
                 battleTag = playerId,
                 race = race,
                 won = won
-           };
+            };
         }
     }
 }

@@ -90,10 +90,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent2.match.players[0].mmr.rating = 1800;
             fakeEvent2.match.players[1].mmr.rating = 1900;
 
-            await InsertMatchEvents(new List<MatchFinishedEvent> {fakeEvent1, fakeEvent2});
+            await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2 });
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var overallRaceAndWinStatsHandler = new OverallRaceAndWinStatHandler(w3StatsRepo);
+            var patchRepo = new PatchRepository(MongoClient);
+            var overallRaceAndWinStatsHandler = new OverallRaceAndWinStatHandler(w3StatsRepo, patchRepo);
 
             await overallRaceAndWinStatsHandler.Update(fakeEvent1);
             await overallRaceAndWinStatsHandler.Update(fakeEvent2);

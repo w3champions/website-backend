@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Clans
     {
         public async Task<bool> TryInsertClan(Clan clan)
         {
-            var clanFound = await LoadFirst<Clan>(c => c.ClanName == clan.ClanName);
+            var clanFound = await LoadFirst<Clan>(c => c.ClanAbbrevation == clan.ClanAbbrevation);
             if (clanFound != null) return false;
             await Insert(clan);
             return true;

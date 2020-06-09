@@ -15,10 +15,10 @@ namespace W3ChampionsStatisticService.Clans
             _clanRepository = clanRepository;
         }
 
-        public async Task<Clan> CreateClan(string clanName, string battleTagOfFounder)
+        public async Task<Clan> CreateClan(string clanName, string clanAbbrevation, string battleTagOfFounder)
         {
             var memberShip = await _clanRepository.LoadMemberShip(battleTagOfFounder) ?? ClanMembership.Create(battleTagOfFounder);
-            var clan = Clan.Create(clanName, memberShip);
+            var clan = Clan.Create(clanName, clanAbbrevation, memberShip);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
             if (!wasSaved) throw new ValidationException("Clan Name allready taken");
             memberShip.ClanId = clan.Id;

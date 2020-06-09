@@ -30,7 +30,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InvitePlayer_ThatHasAlreadySigned_Founder()
         {
-            var clan = await _handler.CreateClan("egal", "Peter#123");
+            var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
 
             Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("Peter#123", clan.IdRaw, "Peter#123"));
         }
@@ -61,11 +61,15 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            await _handler.SwitchChieftain(clan.Members[1], clan.IdRaw, clan.ChiefTain);
+            var newChieftain = clan.Members[1];
+            await _handler.AddShamanToClan(newChieftain, clan.IdRaw, clan.ChiefTain);
+            await _handler.SwitchChieftain(newChieftain, clan.IdRaw, clan.ChiefTain);
 
             var clanLoaded = await _clanRepository.LoadClan(clan.IdRaw);
 
-            Assert.AreEqual(clan.Members[1], clanLoaded.ChiefTain);
+            Assert.AreEqual(clanLoaded.Shamans[0], clan.ChiefTain);
+            Assert.AreEqual(clanLoaded.ChiefTain, newChieftain);
+            Assert.IsFalse(clanLoaded.Members.Contains(newChieftain));
         }
 
         [Test]
@@ -136,7 +140,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
         {
-            var clan = await _handler.CreateClan("egal", "Peter#123");
+            var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
             await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
             await _handler.RevokeInvitationToClan("NewGUY#123", clan.IdRaw, "Peter#123");
 
@@ -149,7 +153,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task InvitePlayer_ThatHasAlreadySigned()
         {
-            var clan = await _handler.CreateClan("egal", "Peter#123");
+            var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
             await _handler.InviteToClan("NewGUY#123", clan.IdRaw, "Peter#123");
             await _handler.AcceptInvite("NewGUY#123", clan.IdRaw);
 
@@ -190,7 +194,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task SignPetition()
         {
             var clanNameExpected = "Cool Shit";
-            var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
+            var clan = await _handler.CreateClan(clanNameExpected, "CS", "Peter#123");
 
             await _handler.InviteToClan("peter#123", clan.Id.ToString(), "Peter#123");
             await _handler.AcceptInvite("peter#123", clan.Id.ToString());
@@ -209,7 +213,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task CreateClan()
         {
             var clanNameExpected = "Cool Shit";
-            var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
+            var clan = await _handler.CreateClan(clanNameExpected, "CS", "Peter#123");
 
             var clanLoaded = await _clanRepository.LoadClan(clan.Id.ToString());
 
@@ -292,17 +296,17 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task CreatClanWithSameNameNotPossible()
         {
             var clanNameExpected = "Cool Shit";
-            await _handler.CreateClan(clanNameExpected, "Peter#123");
+            await _handler.CreateClan(clanNameExpected, "CS", "Peter#123");
 
             Assert.ThrowsAsync<ValidationException>(async () =>
-                await _handler.CreateClan(clanNameExpected, "Peter#123"));
+                await _handler.CreateClan(clanNameExpected, "CS", "Peter#123"));
         }
 
         [Test]
         public async Task CreatClan_FounderGetsCreated()
         {
             var clanNameExpected = "Cool Shit";
-            var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
+            var clan = await _handler.CreateClan(clanNameExpected, "CS", "Peter#123");
 
             var founder = await _clanRepository.LoadMemberShip("Peter#123");
 
@@ -313,9 +317,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task CreatClan_FoundingTwiceIsProhibitted()
         {
-            await _handler.CreateClan("Cool Shit", "Peter#123");
+            await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.CreateClan("Cool Shit NEW", "Peter#123"));
+            Assert.ThrowsAsync<ValidationException>(async () => await _handler.CreateClan("Cool Shit NEW", "CS", "Peter#123"));
         }
 
         [Test]
@@ -341,8 +345,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
         private async Task<Clan> CreateFoundedClanForTest()
         {
-            var clanNameExpected = "Cool Shit";
-            var clan = await _handler.CreateClan(clanNameExpected, "Peter#123");
+            var clan = await _handler.CreateClan("Cool Stuff", "CS", "Peter#123");
             for (int i = 0; i < 6; i++)
             {
                 await _handler.InviteToClan($"btag#{i}", clan.Id.ToString(), "Peter#123");

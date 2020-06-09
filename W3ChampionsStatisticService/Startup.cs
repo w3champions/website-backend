@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Clans;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
@@ -75,6 +76,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IRankRepository, RankRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
+            services.AddTransient<IPatchRepository, PatchRepository>();
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<ITwitchAuthenticationService, TwitchAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
