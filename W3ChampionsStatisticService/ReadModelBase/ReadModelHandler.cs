@@ -75,13 +75,20 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private async Task StartParallelThread()
         {
             var serviceScope = _serviceScopeFactory.CreateScope();
-            var readModelHandler = serviceScope.ServiceProvider.GetService<T>();
-            readModelHandler.ResetReadModelDbName();
+            var readModelHandler = serviceScope.ServiceProvider.GetService<ReadModelHandler<T>>();
+            readModelHandler.SetAsTempRepoPrefix();
+
+            await _versionRepository.SaveSyncState<T>(SyncState.ParallelSyncStarted);
 
             Task.Run(() => readModelHandler.Update());
 
             await _versionRepository.SaveSyncState<T>(SyncState.ParallelSyncStarted);
 
+        }
+
+        private void SetAsTempRepoPrefix()
+        {
+            _innerHandler.SetAsTempRepoPrefix();
         }
     }
 }

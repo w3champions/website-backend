@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
     public interface IReadModelHandler
     {
         Task Update(MatchFinishedEvent nextEvent);
-        void ResetReadModelDbName()
+        void SetAsTempRepoPrefix()
         {
             var fieldInfos = GetType().GetFields();
 
