@@ -40,7 +40,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
             else
             {
                 await mongoCollection.InsertOneAsync(new VersionDto
-                    {LastVersion = lastVersion, HandlerName = HandlerName<T>()});
+                    {LastVersion = lastVersion, Season = season, HandlerName = HandlerName<T>()});
             }
         }
 
