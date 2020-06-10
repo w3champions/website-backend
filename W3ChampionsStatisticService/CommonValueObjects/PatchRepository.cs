@@ -16,7 +16,6 @@ namespace W3ChampionsStatisticService.CommonValueObjects
         public async Task<string> GetPatchVersionFromDate(DateTime dateTime)
         {
             var patches = await LoadPatches();
-            Console.WriteLine(patches);
             return patches.Where(x => dateTime > x.StartDate).ToList().Last().Version;
         }
 
