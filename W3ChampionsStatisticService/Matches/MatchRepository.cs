@@ -30,9 +30,7 @@ namespace W3ChampionsStatisticService.Matches
             int pageSize = 100,
             int offset = 0)
         {
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
+            var mongoCollection = CreateCollection<Matchup>();
             var textSearchOpts = new TextSearchOptions();
 
             if (string.IsNullOrEmpty(opponentId))
@@ -128,9 +126,7 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100)
         {
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<Matchup>(nameof(Matchup));
+            var mongoCollection =CreateCollection<Matchup>();
 
             var events = await mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
@@ -160,9 +156,7 @@ namespace W3ChampionsStatisticService.Matches
 
         public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
         {
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
+            var mongoCollection = CreateCollection<OnGoingMatchup>();
 
             return await mongoCollection
                 .Find(m => m.Team1Players.Contains(playerId) 
@@ -184,9 +178,7 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100)
         {
-            var database = CreateClient();
-
-            var mongoCollection = database.GetCollection<OnGoingMatchup>(nameof(OnGoingMatchup));
+            var mongoCollection = CreateCollection<OnGoingMatchup>();
 
             var events = await mongoCollection
                     .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)

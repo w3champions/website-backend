@@ -34,10 +34,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public async Task<List<PlayerDetails>> LoadPlayersRaceWins(List<string> playerIds)
         {
-            var database = CreateClient();
-
-            var playerRaceWins = database.GetCollection<PlayerDetails>(nameof(PlayerOverallStats));
-            var personalSettings = database.GetCollection<PersonalSetting>(nameof(PersonalSetting));
+            var playerRaceWins = CreateCollection<PlayerDetails>(nameof(PlayerOverallStats));
+            var personalSettings = CreateCollection<PersonalSetting>();
 
             return await playerRaceWins
                 .Aggregate()
@@ -117,8 +115,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)
         {
             if (string.IsNullOrEmpty(searchFor)) return new List<PlayerOverview>();
-            var database = CreateClient();
-            var mongoCollection = database.GetCollection<PlayerOverview>(nameof(PlayerOverview));
+            var mongoCollection = CreateCollection<PlayerOverview>();
 
             var lower = searchFor.ToLower();
             var playerOverviews = await mongoCollection
