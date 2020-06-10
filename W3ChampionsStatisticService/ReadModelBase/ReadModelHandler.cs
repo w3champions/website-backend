@@ -42,10 +42,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     try
                     {
                         if (lastVersion.IsStopped) return;
-                        if (lastVersion.SyncState == SyncState.SyncStartRequested)
-                        {
-                            await StartParallelThread();
-                        }
+                        // if (lastVersion.SyncState == SyncState.SyncStartRequested)
+                        // {
+                        //     await StartParallelThread();
+                        // }
 
                         if (nextEvent.match.season > lastVersion.Season)
                         {
@@ -71,23 +71,23 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 nextEvents = await _eventRepository.Load(nextEvents.Last().Id.ToString());
             }
         }
-
-        private async Task StartParallelThread()
-        {
-            var serviceScope = _serviceScopeFactory.CreateScope();
-            var readModelHandler = serviceScope.ServiceProvider.GetService<ReadModelHandler<T>>();
-            readModelHandler.SetAsTempRepoPrefix();
-
-            await _versionRepository.SaveSyncState<T>(SyncState.Syncing, false);
-
-            // Run as new thread, fire and forget
-            Task.Run(() => readModelHandler.Update());
-        }
-
-        private void SetAsTempRepoPrefix()
-        {
-            _isTempSync = true;
-            _innerHandler.SetAsTempRepoPrefix();
-        }
+        //
+        // private async Task StartParallelThread()
+        // {
+        //     var serviceScope = _serviceScopeFactory.CreateScope();
+        //     var readModelHandler = serviceScope.ServiceProvider.GetService<ReadModelHandler<T>>();
+        //     readModelHandler.SetAsTempRepoPrefix();
+        //
+        //     await _versionRepository.SaveSyncState<T>(SyncState.Syncing, false);
+        //
+        //     // Run as new thread, fire and forget
+        //     Task.Run(() => readModelHandler.Update());
+        // }
+        //
+        // private void SetAsTempRepoPrefix()
+        // {
+        //     _isTempSync = true;
+        //     _innerHandler.SetAsTempRepoPrefix();
+        // }
     }
 }
