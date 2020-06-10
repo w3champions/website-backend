@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -5,52 +6,66 @@ namespace W3ChampionsStatisticService.Chats
 {
     public class ConnectionMapping
     {
-        private readonly Dictionary<string, ChatUser> _connections =
-            new Dictionary<string, ChatUser>();
+        private readonly Dictionary<string, Dictionary<string, ChatUser>> _connections =
+            new Dictionary<string, Dictionary<string, ChatUser>>();
 
-        public List<ChatUser> Users
+        public List<ChatUser> GetUsersOfRoom(string chatRoom)
         {
-            get
+            lock (_connections)
             {
-                lock (_connections)
+                return _connections[chatRoom].Values.Select(v => v).ToList();
+            }
+        }
+
+        public void Add(string connectionId, string chatRoom, ChatUser user)
+        {
+            lock (_connections)
+            {
+                if (!_connections.ContainsKey(chatRoom))
                 {
-                    return _connections.Values.Select(v => v).ToList();
+                    var chatUsers = new Dictionary<string, ChatUser> {{connectionId, user}};
+                    _connections.Add(chatRoom, chatUsers);
+                }
+                else
+                {
+                    var chatUsers = _connections[chatRoom];
+                    if (!chatUsers.ContainsKey(connectionId))
+                    {
+                        chatUsers.Add(connectionId, user);
+                    }
                 }
             }
         }
 
-        public void Add(string connectionId, ChatUser user)
+        public ChatUser GetUser(string connectionId)
         {
             lock (_connections)
             {
-                if (!_connections.ContainsKey(connectionId))
-                {
-                    _connections.Add(connectionId, user);
-                }
+                var connection = _connections.Values.SingleOrDefault(r => r.ContainsKey(connectionId));
+                return connection?[connectionId];
             }
-        }
-
-        public ChatUser GetUser(string key)
-        {
-            lock (_connections)
-            {
-                if (_connections.TryGetValue(key, out var userFound))
-                {
-                    return userFound;
-                }
-            }
-
-            return null;
         }
 
         public void Remove(string connectionId)
         {
             lock (_connections)
             {
-                if (_connections.ContainsKey(connectionId))
+                var connection = _connections.Values.SingleOrDefault(r => r.ContainsKey(connectionId));
+                connection?.Remove(connectionId);
+            }
+        }
+
+        public string GetRoom(string connectionId)
+        {
+            lock (_connections)
+            {
+                foreach (var keyValuePair in _connections)
                 {
-                    _connections.Remove(connectionId);
+                    var contains = keyValuePair.Value.Keys.Contains(connectionId);
+                    if (contains) return keyValuePair.Key;
                 }
+
+                return null;
             }
         }
     }
