@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
@@ -12,23 +12,27 @@ namespace W3ChampionsStatisticService.ReadModelBase
         private readonly IMatchEventRepository _eventRepository;
         private readonly IVersionRepository _versionRepository;
         private readonly T _innerHandler;
-        private readonly ILogger<ReadModelHandler<T>> _logger;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly TrackingService _trackingService;
+        private bool _isTempSync;
 
         public ReadModelHandler(
             IMatchEventRepository eventRepository,
             IVersionRepository versionRepository,
             T innerHandler,
-            ILogger<ReadModelHandler<T>> logger = null)
+            IServiceScopeFactory serviceScopeFactory = null,
+            TrackingService trackingService = null)
         {
             _eventRepository = eventRepository;
             _versionRepository = versionRepository;
             _innerHandler = innerHandler;
-            _logger = logger ?? new Logger<ReadModelHandler<T>>(new NullLoggerFactory());
+            _serviceScopeFactory = serviceScopeFactory;
+            _trackingService = trackingService;
         }
 
         public async Task Update()
         {
-            var lastVersion = await _versionRepository.GetLastVersion<T>();
+            var lastVersion = await _versionRepository.GetLastVersion<T>(_isTempSync);
             var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
 
             while (nextEvents.Any())
@@ -37,10 +41,16 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 {
                     try
                     {
+                        if (lastVersion.IsStopped) return;
+                        // if (lastVersion.SyncState == SyncState.SyncStartRequested)
+                        // {
+                        //     await StartParallelThread();
+                        // }
+
                         if (nextEvent.match.season > lastVersion.Season)
                         {
-                            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
-                            lastVersion = await _versionRepository.GetLastVersion<T>();
+                            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, _isTempSync, nextEvent.match.season);
+                            lastVersion = await _versionRepository.GetLastVersion<T>(_isTempSync);
                         }
 
                         // Skip the cancel events for now
@@ -49,11 +59,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
                             await _innerHandler.Update(nextEvent);
                         }
 
-                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
+                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), _isTempSync, lastVersion.Season);
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
+                        _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
                         throw;
                     }
                 }
@@ -61,5 +71,23 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 nextEvents = await _eventRepository.Load(nextEvents.Last().Id.ToString());
             }
         }
+        //
+        // private async Task StartParallelThread()
+        // {
+        //     var serviceScope = _serviceScopeFactory.CreateScope();
+        //     var readModelHandler = serviceScope.ServiceProvider.GetService<ReadModelHandler<T>>();
+        //     readModelHandler.SetAsTempRepoPrefix();
+        //
+        //     await _versionRepository.SaveSyncState<T>(SyncState.Syncing, false);
+        //
+        //     // Run as new thread, fire and forget
+        //     Task.Run(() => readModelHandler.Update());
+        // }
+        //
+        // private void SetAsTempRepoPrefix()
+        // {
+        //     _isTempSync = true;
+        //     _innerHandler.SetAsTempRepoPrefix();
+        // }
     }
 }

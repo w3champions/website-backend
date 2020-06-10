@@ -17,9 +17,8 @@ namespace W3ChampionsStatisticService.PadEvents
         public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
         {
             lastObjectId ??= ObjectId.Empty.ToString();
-            var database = CreateClient();
 
-            var mongoCollection = database.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent));
+            var mongoCollection = CreateCollection<MatchFinishedEvent>();
 
             var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
                 .SortBy(s => s.Id)
