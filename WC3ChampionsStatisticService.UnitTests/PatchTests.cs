@@ -1,10 +1,6 @@
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 using NUnit.Framework;
-using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace WC3ChampionsStatisticService.UnitTests
