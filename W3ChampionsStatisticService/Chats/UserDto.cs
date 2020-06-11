@@ -4,13 +4,13 @@
     {
         public string Name { get; }
         public string BattleTag { get; }
-        public bool UnverifiedBattletag { get; }
+        public bool VerifiedBattletag { get; }
 
-        public UserDto(string name, string battleTag, bool unverifiedBattletag)
+        public UserDto(string name, string battleTag, bool verifiedBattletag)
         {
             Name = name;
             BattleTag = battleTag;
-            UnverifiedBattletag = unverifiedBattletag;
+            VerifiedBattletag = verifiedBattletag;
         }
     }
 }

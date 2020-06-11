@@ -17,9 +17,6 @@ namespace W3ChampionsStatisticService.Chats
         public string Name { get; set; }
         public string ApiKey { get; set; }
 
-        [BsonIgnore]
-        public bool UnverifiedBattletag { get; set; }
-
         public void CreatApiKey()
         {
             ApiKey = NewApiKey();

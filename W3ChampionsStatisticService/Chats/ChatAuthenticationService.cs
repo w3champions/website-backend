@@ -13,12 +13,12 @@ namespace W3ChampionsStatisticService.Chats
         public async Task<UserDto> GetUser(string chatApiKey, string battleTag)
         {
             var user = await LoadFirst<ChatUser>(c => c.ApiKey == chatApiKey);
-            if (user == null)
+            if (user != null)
             {
-                user = new ChatUser(battleTag);
-                user.UnverifiedBattletag = true;
+                return new UserDto(user.Name, user.BattleTag, true);
             }
-            return new UserDto(user.Name, user.BattleTag, user.UnverifiedBattletag);
+            user = new ChatUser(battleTag);
+            return new UserDto(user.Name, user.BattleTag, false);
         }
 
         public Task SaveUser(ChatUser user)
