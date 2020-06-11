@@ -5,10 +5,10 @@ namespace W3ChampionsStatisticService.Chats
 {
     public class ConnectionMapping
     {
-        private readonly Dictionary<string, Dictionary<string, ChatUser>> _connections =
-            new Dictionary<string, Dictionary<string, ChatUser>>();
+        private readonly Dictionary<string, Dictionary<string, UserDto>> _connections =
+            new Dictionary<string, Dictionary<string, UserDto>>();
 
-        public List<ChatUser> GetUsersOfRoom(string chatRoom)
+        public List<UserDto> GetUsersOfRoom(string chatRoom)
         {
             lock (_connections)
             {
@@ -16,13 +16,13 @@ namespace W3ChampionsStatisticService.Chats
             }
         }
 
-        public void Add(string connectionId, string chatRoom, ChatUser user)
+        public void Add(string connectionId, string chatRoom, UserDto user)
         {
             lock (_connections)
             {
                 if (!_connections.ContainsKey(chatRoom))
                 {
-                    var chatUsers = new Dictionary<string, ChatUser> {{connectionId, user}};
+                    var chatUsers = new Dictionary<string, UserDto> {{connectionId, user}};
                     _connections.Add(chatRoom, chatUsers);
                 }
                 else
@@ -36,7 +36,7 @@ namespace W3ChampionsStatisticService.Chats
             }
         }
 
-        public ChatUser GetUser(string connectionId)
+        public UserDto GetUser(string connectionId)
         {
             lock (_connections)
             {

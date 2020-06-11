@@ -17,14 +17,14 @@ namespace W3ChampionsStatisticService.Chats
             _connections = connections;
         }
 
-        public async Task SendMessage(string message, string chatApiKey)
+        public async Task SendMessage(string chatApiKey, string battleTag, string message)
         {
             var trimmedMessage = message.Trim();
-            var user = await _authenticationService.GetUser(chatApiKey);
-            if (user != null && !string.IsNullOrEmpty(trimmedMessage))
+            var user = await _authenticationService.GetUser(chatApiKey, battleTag);
+            if (!string.IsNullOrEmpty(trimmedMessage))
             {
                 var chatRoom = _connections.GetRoom(Context.ConnectionId);
-                await Clients.Group(chatRoom).SendAsync("ReceiveMessage", user.BattleTag, user.Name, trimmedMessage);
+                await Clients.Group(chatRoom).SendAsync("ReceiveMessage", new UserDto(user.Name, user.BattleTag, user.VerifiedBattletag), trimmedMessage);
             }
         }
 
@@ -35,54 +35,42 @@ namespace W3ChampionsStatisticService.Chats
             {
                 var chatRoom = _connections.GetRoom(Context.ConnectionId);
                 _connections.Remove(Context.ConnectionId);
-                await Clients.Group(chatRoom).SendAsync("UserLeft", user.BattleTag);
+                await Clients.Group(chatRoom).SendAsync("UserLeft", user);
             }
 
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SwitchRoom(string chatApiKey, string chatRoom)
+        public async Task SwitchRoom(string chatApiKey, string battleTag, string chatRoom)
         {
-            var user = await _authenticationService.GetUser(chatApiKey);
+            var user = await _authenticationService.GetUser(chatApiKey, battleTag);
 
-            if (user != null)
-            {
-                var oldRoom = _connections.GetRoom(Context.ConnectionId);
-                _connections.Remove(Context.ConnectionId);
-                _connections.Add(Context.ConnectionId, chatRoom, user);
+            var oldRoom = _connections.GetRoom(Context.ConnectionId);
+            _connections.Remove(Context.ConnectionId);
+            _connections.Add(Context.ConnectionId, chatRoom, user);
 
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldRoom);
-                await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, oldRoom);
+            await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
 
-                var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
-                await Clients.Group(oldRoom).SendAsync("UserLeft", user.BattleTag);
-                await Clients.Group(chatRoom).SendAsync("UserEntered", user.Name, user.BattleTag);
-                await Clients.Caller.SendAsync("StartChat", usersOfRoom);
-            }
-            else
-            {
-                await Clients.Caller.SendAsync("LoginFailed");
-            }
+            var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
+            await Clients.Group(oldRoom).SendAsync("UserLeft", user);
+            await Clients.Group(chatRoom).SendAsync("UserEntered", user);
+            await Clients.Caller.SendAsync("StartChat", usersOfRoom);
         }
 
-        public async Task LoginAs(string chatApiKey, string chatRoom)
+
+
+        public async Task LoginAs(string chatApiKey, string battleTag, string chatRoom)
         {
-            var user = await _authenticationService.GetUser(chatApiKey);
+            var user = await _authenticationService.GetUser(chatApiKey, battleTag);
 
-            if (user != null)
-            {
-                _connections.Add(Context.ConnectionId, chatRoom, user);
-                await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
+            _connections.Add(Context.ConnectionId, chatRoom, user);
+            await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
 
-                var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
+            var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
 
-                await Clients.Group(chatRoom).SendAsync("UserEntered", user.Name, user.BattleTag);
-                await Clients.Caller.SendAsync("StartChat", usersOfRoom);
-            }
-            else
-            {
-                await Clients.Caller.SendAsync("LoginFailed");
-            }
+            await Clients.Group(chatRoom).SendAsync("UserEntered", user);
+            await Clients.Caller.SendAsync("StartChat", usersOfRoom);
         }
     }
 }
