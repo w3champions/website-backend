@@ -16,7 +16,6 @@ namespace W3ChampionsStatisticService.Clans
         [JsonIgnore]
         public string Id => BattleTag;
         public string ClanName { get; set; }
-
         public void JoinClan(Clan clan)
         {
             if (ClanId != null) throw new ValidationException("User Allready in clan");

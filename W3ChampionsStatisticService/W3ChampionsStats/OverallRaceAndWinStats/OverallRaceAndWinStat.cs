@@ -11,21 +11,35 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
         public OverallRaceAndWinStat(int mmrRange)
         {
             MmrRange = mmrRange;
+            PatchToStatsPerModes = new Dictionary<string, List<MapToRaceVsRaceRatio>>();
         }
 
         public int Id => MmrRange;
 
+        public Dictionary<string, List<MapToRaceVsRaceRatio>> PatchToStatsPerModes { get; set; }
+
         public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();
 
-        public void Apply(string mapName, Race homeRace, Race enemyRas, bool won)
+        public void Apply(string mapName, Race homeRace, Race enemyRas, bool won, string patch)
         {
-            var stats = StatsPerModes.SingleOrDefault(s => s.MapName == mapName);
-            if (stats == null)
+            if (PatchToStatsPerModes == null)
             {
-                StatsPerModes.Add(MapToRaceVsRaceRatio.Create(mapName));
+                PatchToStatsPerModes = new Dictionary<string, List<MapToRaceVsRaceRatio>>();
             }
 
-            var statsForSure = StatsPerModes.Single(s => s.MapName == mapName);
+            if (!PatchToStatsPerModes.ContainsKey(patch))
+            {
+                PatchToStatsPerModes[patch] = new List<MapToRaceVsRaceRatio>();
+            }
+
+            var stats = PatchToStatsPerModes[patch].SingleOrDefault(s => s.MapName == mapName);
+
+            if (stats == null)
+            {
+                PatchToStatsPerModes[patch].Add(MapToRaceVsRaceRatio.Create(mapName));
+            }
+
+            var statsForSure = PatchToStatsPerModes[patch].Single(s => s.MapName == mapName);
             statsForSure.Ratio.RecordWin(homeRace, enemyRas, won);
         }
     }
