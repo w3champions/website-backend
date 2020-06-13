@@ -45,7 +45,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.players[1].won = true;
             matchFinishedEvent1.match.players[0].won = false;
             matchFinishedEvent1.match.gateway = GateWay.America;
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent2.match.gateway = GateWay.America;
+            matchFinishedEvent2.match.season = 1;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
@@ -63,6 +65,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[1].battleTag = "peter#123";
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
@@ -101,12 +104,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
 
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
 
+            matchFinishedEvent2.match.season = 1;
             matchFinishedEvent2.match.players[0].battleTag = "wolf#456";
             matchFinishedEvent2.match.players[1].battleTag = "peter#123";
 
+            matchFinishedEvent3.match.season = 1;
             matchFinishedEvent3.match.players[0].battleTag = "notFound";
             matchFinishedEvent3.match.players[1].battleTag = "notFound2";
 
@@ -128,9 +134,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
-
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
+            matchFinishedEvent2.match.season = 1;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
@@ -153,9 +160,11 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.gateway = GateWay.America;
             matchFinishedEvent2.match.gateway = GateWay.Europe;
 
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
 
+            matchFinishedEvent2.match.season = 1;
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
@@ -169,6 +178,31 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task SearchForPlayerAndOpponent_FilterBySeason()
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+            
+            matchFinishedEvent1.match.season = 0;
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
+
+            matchFinishedEvent2.match.season = 1;
+            matchFinishedEvent2.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
+
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+            var matches = await matchRepository.LoadFor("peter#123", null, season : 1);
+            var count = await matchRepository.CountFor("peter#123", null, season : 1);
+
+            Assert.AreEqual(1, count);
+            Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
+        }
+
+        [Test]
         public async Task SearchForPlayerAndOpponent_2v2_SameTeam()
         {
             var matchRepository = new MatchRepository(MongoClient);
@@ -176,11 +210,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
             matchFinishedEvent1.match.players[2].battleTag = "LostTeam1#456";
             matchFinishedEvent1.match.players[3].battleTag = "LostTeam2#456";
 
+            matchFinishedEvent2.match.season = 1;
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
@@ -199,7 +235,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
-
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[0].team = 0;
             matchFinishedEvent1.match.players[1].battleTag = "LostTeam1#456";
@@ -210,6 +246,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.players[3].battleTag = "LostTeam2#456";
             matchFinishedEvent1.match.players[3].team = 2;
 
+            matchFinishedEvent2.match.season = 1;
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "ANDERER#456";
 
@@ -231,6 +268,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
+            matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[0].team = 0;
             matchFinishedEvent1.match.players[1].battleTag = "LostTeam1#456";
@@ -241,6 +279,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent1.match.players[3].battleTag = "LostTeam2#456";
             matchFinishedEvent1.match.players[3].team = 1;
 
+            matchFinishedEvent2.match.season = 1;
             matchFinishedEvent2.match.players[0].battleTag = "peter#123";
             matchFinishedEvent2.match.players[1].battleTag = "wolf#456";
 
