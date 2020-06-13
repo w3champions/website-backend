@@ -25,11 +25,13 @@ namespace W3ChampionsStatisticService.Ports
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int pageSize = 100,
-            int offset = 0);
+            int offset = 0,
+            int season = 1);
         Task<long> CountFor(string playerId,
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
-            GameMode gameMode = GameMode.Undefined);
+            GameMode gameMode = GameMode.Undefined,
+            int season = 1);
 
         Task<MatchupDetail> LoadDetails(ObjectId id);
 
