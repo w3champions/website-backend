@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
         public async Task Update()
         {
-            var handlerVersion = await _versionRepository.GetLastVersion<PadSyncHandler>(false);
+            var handlerVersion = await _versionRepository.GetLastVersion<PadSyncHandler>();
             var lastVersion = handlerVersion.Version;
             if (lastVersion == null) lastVersion = "0";
 
@@ -33,7 +33,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             var events = await _padRepo.GetFrom(offset);
             if (!events.Any())
             {
-                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString(), false);
+                await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString());
                 Console.WriteLine("No events found anymore");
             }
 
@@ -48,7 +48,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 }
 
                 offset += 100;
-                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString(), false);
+                await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString());
                 events = await _padRepo.GetFrom(offset);
                 await Task.Delay(1000);
             }

@@ -103,7 +103,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
              await handler.Update();
 
-             var version = await versionRepository.GetLastVersion<MatchReadModelHandler>(false);
+             var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
 
              var matches = await matchRepository.Load();
 

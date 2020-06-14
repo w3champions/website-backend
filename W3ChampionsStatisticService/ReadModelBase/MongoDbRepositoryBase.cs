@@ -11,16 +11,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
     {
         private readonly MongoClient _mongoClient;
         private readonly string _databaseName = "W3Champions-Statistic-Service";
-        private string _collectionNameSuffix = "";
 
         public MongoDbRepositoryBase(MongoClient mongoClient)
         {
             _mongoClient = mongoClient;
-        }
-
-        public void SetAsTempRepo()
-        {
-            _collectionNameSuffix = "_temp";
         }
 
         protected IMongoDatabase CreateClient()
@@ -58,7 +52,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
         protected IMongoCollection<T> CreateCollection<T>(string collectionName = null)
         {
             var mongoDatabase = CreateClient();
-            var mongoCollection = mongoDatabase.GetCollection<T>((collectionName ?? typeof(T).Name) + _collectionNameSuffix);
+            var mongoCollection = mongoDatabase.GetCollection<T>((collectionName ?? typeof(T).Name));
             return mongoCollection;
         }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AutoFixture;
@@ -11,8 +12,8 @@ namespace WC3ChampionsStatisticService.UnitTests
     {
         public static MatchFinishedEvent CreateFakeEvent()
         {
-            var fixture = new Fixture {RepeatCount = 2};
-            var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id,  ObjectId.GenerateNewId()).Create();
+            var fixture = new Fixture { RepeatCount = 2 };
+            var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
             var name1 = "peter#123";
             var name2 = "wolf#456";
@@ -36,8 +37,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
         public static MatchFinishedEvent CreateFake2v2Event()
         {
-            var fixture = new Fixture {RepeatCount = 4};
-            var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id,  ObjectId.GenerateNewId()).Create();
+            var fixture = new Fixture { RepeatCount = 4 };
+            var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
             fakeEvent.WasFakeEvent = false;
             fakeEvent.WasFromSync = false;
@@ -133,8 +134,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
         public static MatchStartedEvent CreateFakeStartedEvent()
         {
-            var fixture = new Fixture {RepeatCount = 4};
-            var fakeEvent = fixture.Build<MatchStartedEvent>().With(e => e.Id,  ObjectId.GenerateNewId()).Create();
+            var fixture = new Fixture { RepeatCount = 4 };
+            var fakeEvent = fixture.Build<MatchStartedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
             var name1 = "peter#123";
             var name2 = "wolf#456";
@@ -153,6 +154,26 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.players[3].battleTag = name4;
 
             return fakeEvent;
+        }
+
+        public static List<Patch> CreateFakePatches()
+        {
+            var fixture = new Fixture { RepeatCount = 1 };
+            var fakePatch = fixture.Build<Patch>().Create();
+            var fakePatch2 = fixture.Build<Patch>().Create();
+
+            var patch1 = "1.32.5";
+            var patch1_date = new DateTime(2020, 4, 29);
+
+            var patch2 = "1.32.6";
+            var patch2_date = DateTime.SpecifyKind(new DateTime(2020, 6, 2, 17, 20, 0), DateTimeKind.Utc);
+
+            fakePatch.Version = patch1;
+            fakePatch.StartDate = patch1_date;
+            fakePatch2.Version = patch2;
+            fakePatch2.StartDate = patch2_date;
+
+            return new List<Patch>() { fakePatch, fakePatch2 };
         }
     }
 }
