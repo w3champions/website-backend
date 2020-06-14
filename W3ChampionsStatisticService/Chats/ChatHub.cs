@@ -58,8 +58,6 @@ namespace W3ChampionsStatisticService.Chats
             await Clients.Caller.SendAsync("StartChat", usersOfRoom);
         }
 
-
-
         public async Task LoginAs(string chatApiKey, string battleTag, string chatRoom)
         {
             var user = await _authenticationService.GetUser(chatApiKey, battleTag);
