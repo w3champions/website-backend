@@ -8,15 +8,11 @@ namespace W3ChampionsStatisticService.Clans
     {
         public string BattleTag { get; set; }
         public string ClanId { get; set; }
-        [JsonIgnore]
         public string PendingInviteFromClan { get; set; }
-
-        [JsonPropertyName("pendingInviteFromClan")]
-        public string PendingInviteFromClanRaw => PendingInviteFromClan;
-        [JsonIgnore]
-        public string Id => BattleTag;
         public string ClanName { get; set; }
 
+        [JsonIgnore]
+        public string Id => BattleTag;
         public void JoinClan(Clan clan)
         {
             if (ClanId != null) throw new ValidationException("User Allready in clan");
