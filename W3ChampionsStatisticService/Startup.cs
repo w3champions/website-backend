@@ -80,6 +80,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
             services.AddTransient<ITwitchAuthenticationService, TwitchAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
+            services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
             services.AddTransient<IPadServiceRepo, PadServiceRepo>();
             services.AddTransient<HeroStatsQueryHandler>();
             services.AddTransient<PersonalSettingsCommandHandler>();
