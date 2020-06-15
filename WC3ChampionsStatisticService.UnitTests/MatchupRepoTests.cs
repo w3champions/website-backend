@@ -177,14 +177,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
         }
 
-        [Test]
-        public async Task SearchForPlayerAndOpponent_FilterBySeason()
+        [TestCase(1, "ANDERER#456")]
+        [TestCase(0, "wolf#456")]
+        public async Task SearchForPlayerAndOpponent_FilterBySeason(int season, string playerTwo)
         {
             var matchRepository = new MatchRepository(MongoClient);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
-            
+
             matchFinishedEvent1.match.season = 0;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
@@ -195,11 +196,31 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-            var matches = await matchRepository.LoadFor("peter#123", null, season : 1);
-            var count = await matchRepository.CountFor("peter#123", null, season : 1);
+            var matches = await matchRepository.LoadFor("peter#123", null, season : season);
+            var count = await matchRepository.CountFor("peter#123", null, season : season);
 
             Assert.AreEqual(1, count);
             Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
+            Assert.AreEqual(playerTwo, matches.Single().Teams.Last().Players.Single().BattleTag);  
+        }
+
+        [TestCase(1)]
+        [TestCase(0)]
+        public async Task SearchForPlayerAndOpponent_FilterBySeason_NoResults(int season)
+        {
+            var matchRepository = new MatchRepository(MongoClient);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.season = season ^ 1;
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[1].battleTag = "ANDERER#456";
+
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            var matches = await matchRepository.LoadFor("peter#123", null, season : season);
+            var count = await matchRepository.CountFor("peter#123", null, season : season);
+
+            Assert.AreEqual(0, count);
         }
 
         [Test]
