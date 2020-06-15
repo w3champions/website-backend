@@ -64,6 +64,11 @@ namespace W3ChampionsStatisticService.Chats
         {
             var user = await _authenticationService.GetUser(chatApiKey, battleTag);
 
+            if (!user.VerifiedBattletag)
+            {
+                await Clients.Caller.SendAsync("ChatKeyInvalid");
+            }
+
             _connections.Add(Context.ConnectionId, chatRoom, user);
             await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
 
