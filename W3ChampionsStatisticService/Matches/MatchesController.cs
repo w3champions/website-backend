@@ -74,6 +74,11 @@ namespace W3ChampionsStatisticService.Matches
         {
             var onGoingMatch = await _matchRepository.LoadOnGoingMatchForPlayer(playerId);
 
+            if (onGoingMatch != null && onGoingMatch.GameMode == GameMode.FFA)
+            {
+                return Ok(null);
+            }
+
             PlayersObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
 
             return Ok(onGoingMatch);
