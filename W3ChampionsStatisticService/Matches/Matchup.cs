@@ -136,6 +136,7 @@ namespace W3ChampionsStatisticService.Matches
             {
                 case GameMode.GM_1v1:
                 case GameMode.GM_2v2_AT:
+                case GameMode.GM_2v2:
                 case GameMode.GM_4v4:
                     {
                         return 2;

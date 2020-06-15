@@ -17,6 +17,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
                     new HeroStatByMode { GameMode = GameMode.FFA },
                     new HeroStatByMode { GameMode = GameMode.GM_4v4 },
                     new HeroStatByMode { GameMode = GameMode.GM_2v2_AT },
+                    new HeroStatByMode { GameMode = GameMode.GM_2v2 },
                 }
             };
         }
