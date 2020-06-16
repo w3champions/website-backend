@@ -33,11 +33,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
 
                 PlayTimesPerModeTwoWeeks.Reverse();
+                AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_2v2, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.FFA, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_4v4, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_2v2_AT, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_1v1, 0, now);
-                AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_2v2, 0, now);
 
                 PlayTimesPerModeTwoWeeks.Reverse();
             }
