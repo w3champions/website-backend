@@ -40,6 +40,7 @@ namespace W3ChampionsStatisticService.Matches
         [HttpGet("search")]
         public async Task<IActionResult> GetMatchesPerPlayer(
             string playerId,
+            int season,
             string opponentId = null,
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
@@ -47,8 +48,8 @@ namespace W3ChampionsStatisticService.Matches
             int pageSize = 100)
         {
             if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, pageSize, offset);
-            var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode);
+            var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, pageSize, offset, season);
+            var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, season);
             return Ok(new { matches, count });
         }
 
