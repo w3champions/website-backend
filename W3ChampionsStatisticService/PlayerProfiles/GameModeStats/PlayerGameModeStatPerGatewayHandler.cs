@@ -43,29 +43,62 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
         private async Task RecordLosers(Match match, List<PlayerMMrChange> losers)
         {
-            foreach (var losingTeam in losers.GroupBy(x => x.team))
+            if (match.gameMode.IsRandomTeam())
             {
-                var loserId = new BattleTagIdCombined(
-                  losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
-                  match.gateway,
-                  match.gameMode,
-                  match.season);
-
-                var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
-
-                loser.RecordWin(false);
-
-                var firstLooser = losingTeam.First();
-
-                loser.RecordRanking(
-                    (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
-                    (int?)firstLooser.updatedRanking?.rp ?? (int?)firstLooser.ranking?.rp ?? 0);
-
-                await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
+                foreach (var losingPlayer in losers)
+                {
+                    await RecordLoss(match, new List<PlayerMMrChange>() { losingPlayer });
+                }
+            }
+            else
+            {
+                foreach (var losingTeam in losers.GroupBy(x => x.team))
+                {
+                    await RecordLoss(match, losingTeam.ToList());
+                }
             }
         }
 
+        private async Task RecordLoss(Match match, List<PlayerMMrChange> losingTeam)
+        {
+            var loserId = new BattleTagIdCombined(
+              losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
+              match.gateway,
+              match.gameMode,
+              match.season);
+
+            var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
+
+            loser.RecordWin(false);
+
+            var firstLooser = losingTeam.First();
+
+            loser.RecordRanking(
+                (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
+                (int?)firstLooser.updatedRanking?.rp ?? (int?)firstLooser.ranking?.rp ?? 0);
+
+            await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
+        }
+
         private async Task RecordWinners(Match match, List<PlayerMMrChange> winners)
+        {
+            if (match.gameMode.IsRandomTeam())
+            {
+                foreach (var winningPlayer in winners)
+                {
+                    await RecordWin(match, new List<PlayerMMrChange>() { winningPlayer });
+                }
+            }
+            else
+            {
+                foreach (var winningTeam in winners.GroupBy(x => x.team))
+                {
+                    await RecordWin(match, winningTeam.ToList());
+                }
+            }
+        }
+
+        private async Task RecordWin(Match match, List<PlayerMMrChange> winners)
         {
             var winnerId = new BattleTagIdCombined(
                 winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),

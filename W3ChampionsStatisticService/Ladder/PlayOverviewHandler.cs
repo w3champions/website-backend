@@ -33,18 +33,48 @@ namespace W3ChampionsStatisticService.Ladder
             // for broken events
             if (winners.Count == 0 || losers.Count == 0) return;
 
-            var winner = await UpdatePlayers(nextEvent, winners);
-            await _playerRepository.UpsertPlayerOverview(winner);
+            await UpdateWinners(nextEvent, winners);
 
             await UpdateLosers(nextEvent, losers);
         }
 
+        private async Task UpdateWinners(MatchFinishedEvent nextEvent, List<PlayerMMrChange> winners)
+        {
+            if (nextEvent.match.gameMode.IsRandomTeam())
+            {
+                foreach (var winningPlayer in winners)
+                {
+                    var winner = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { winningPlayer });
+                    await _playerRepository.UpsertPlayerOverview(winner);
+                }
+            }
+            else
+            {
+                foreach (var winningPlayer in winners.GroupBy(x => x.team))
+                {
+                    var winner = await UpdatePlayers(nextEvent, winningPlayer.ToList());
+                    await _playerRepository.UpsertPlayerOverview(winner);
+                }
+            }
+        }
+
         private async Task UpdateLosers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> losers)
         {
-            foreach (var losingTeam in losers.GroupBy(x => x.team))
+            if (nextEvent.match.gameMode.IsRandomTeam())
             {
-                var loser = await UpdatePlayers(nextEvent, losingTeam.ToList());
-                await _playerRepository.UpsertPlayerOverview(loser);
+                foreach (var losingPlayer in losers)
+                {
+                    var loser = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { losingPlayer });
+                    await _playerRepository.UpsertPlayerOverview(loser);
+                }
+            }
+            else
+            {
+                foreach (var losingTeam in losers.GroupBy(x => x.team))
+                {
+                    var loser = await UpdatePlayers(nextEvent, losingTeam.ToList());
+                    await _playerRepository.UpsertPlayerOverview(loser);
+                }
             }
         }
 
