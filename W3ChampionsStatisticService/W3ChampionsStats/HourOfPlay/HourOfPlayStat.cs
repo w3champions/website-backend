@@ -30,12 +30,15 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
                 PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
                 PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
+                PlayTimesPerModeTwoWeeks.Remove(PlayTimesPerModeTwoWeeks.Last());
 
                 PlayTimesPerModeTwoWeeks.Reverse();
+                AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_2v2, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.FFA, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_4v4, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_2v2_AT, 0, now);
                 AddDay(PlayTimesPerModeTwoWeeks, GameMode.GM_1v1, 0, now);
+
                 PlayTimesPerModeTwoWeeks.Reverse();
             }
 
@@ -80,6 +83,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             AddDay(average, GameMode.GM_2v2_AT, 0, time);
             AddDay(average, GameMode.GM_4v4, 0, time);
             AddDay(average, GameMode.FFA, 0, time);
+            AddDay(average, GameMode.GM_2v2, 0, time);
 
             return new HourOfPlayStat
             {
@@ -97,6 +101,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 AddDay(hours, GameMode.GM_2v2_AT, i, time);
                 AddDay(hours, GameMode.GM_4v4, i, time);
                 AddDay(hours, GameMode.FFA, i, time);
+                AddDay(hours, GameMode.GM_2v2, i, time);
             }
 
             return hours;

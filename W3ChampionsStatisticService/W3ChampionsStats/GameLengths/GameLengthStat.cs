@@ -42,7 +42,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
                     {
                         GameMode = GameMode.FFA,
                         Lengths = CreateLengths()
-                    }
+                    },
+                    new GameLengthPerMode
+                    {
+                        GameMode = GameMode.GM_2v2,
+                        Lengths = CreateLengths()
+                    },
                 }
             };
         }
