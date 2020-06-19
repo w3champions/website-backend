@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public async Task<List<Match>> GetFrom(long offset)
         {
             var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("https://api.w3champions.com");
+            httpClient.BaseAddress = new Uri("http://api.w3champions.com:25059");
             var result = await httpClient.GetAsync($"/match?limit=100&offset={offset}");
             var content = await result.Content.ReadAsStringAsync();
             var deserializeObject = JsonConvert.DeserializeObject<MatchesList>(content);
