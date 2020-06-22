@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
@@ -35,9 +36,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<GamesPerDay> LoadGamesPerDay(DateTime date)
+        public Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode gameMode)
         {
-            return LoadFirst<GamesPerDay>(date.Date.ToString("yyyy-MM-dd"));
+            return LoadFirst<GamesPerDay>($"{gameMode.ToString()}_{date:yyyy-MM-dd}");
         }
 
         public Task Save(GamesPerDay stat)
@@ -76,11 +77,14 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return stats;
         }
 
-        public async Task<List<GamesPerDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to)
+        public async Task<List<GamesPerDay>> LoadGamesPerDayBetween(
+            DateTimeOffset from,
+            DateTimeOffset to,
+            GameMode gameMode)
         {
             var mongoCollection = CreateCollection<GamesPerDay>();
 
-            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
+            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to && s.GameMode == gameMode)
                 .SortByDescending(s => s.Date)
                 .ToListAsync();
 

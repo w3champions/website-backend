@@ -27,9 +27,40 @@ namespace WC3ChampionsStatisticService.UnitTests
             await gamesPerDay.Update(fakeEvent);
             await gamesPerDay.Update(fakeEvent);
 
-            var gamesReloaded = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1));
+            var gamesReloaded = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.Undefined);
 
             Assert.AreEqual(2, gamesReloaded.GamesPlayed);
+        }
+
+        [Test]
+        public async Task LoadAndSave_DifferentMode()
+        {
+            var fakeEvent1 = TestDtoHelper.CreateFakeEvent();
+            var fakeEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            fakeEvent1.match.endTime = 1585701559200;
+            fakeEvent2.match.endTime = 1585701559200;
+
+            fakeEvent1.match.gameMode = GameMode.GM_1v1;
+            fakeEvent2.match.gameMode = GameMode.GM_2v2;
+
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
+            var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo);
+
+            await gamesPerDayHandler.Update(fakeEvent1);
+            await gamesPerDayHandler.Update(fakeEvent1);
+            await gamesPerDayHandler.Update(fakeEvent2);
+
+            var gamesReloaded1 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.Undefined);
+            var gamesReloaded2 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.GM_1v1);
+            var gamesReloaded3 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.GM_2v2);
+
+            Assert.AreEqual(3, gamesReloaded1.GamesPlayed);
+            Assert.AreEqual(GameMode.Undefined, gamesReloaded1.GameMode);
+            Assert.AreEqual(2, gamesReloaded2.GamesPlayed);
+            Assert.AreEqual(GameMode.GM_1v1, gamesReloaded2.GameMode);
+            Assert.AreEqual(1, gamesReloaded3.GamesPlayed);
+            Assert.AreEqual(GameMode.GM_2v2, gamesReloaded3.GameMode);
         }
 
         [Test]

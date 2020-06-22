@@ -1,4 +1,5 @@
 using System;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
@@ -7,13 +8,16 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
     {
         public DateTimeOffset Date { get; set; }
         public long GamesPlayed { get; set; }
-        public string Id => Date.ToString("yyyy-MM-dd");
+        public string Id => $"{GameMode}_{Date:yyyy-MM-dd}";
+        public GameMode GameMode { get; set; }
 
-        public static GamesPerDay Create(DateTimeOffset endTime)
+        public static GamesPerDay Create(DateTimeOffset endTime, GameMode gameMode)
         {
             return new GamesPerDay
             {
-                Date = endTime
+                Date = endTime,
+                GameMode = gameMode
+
             };
         }
 
