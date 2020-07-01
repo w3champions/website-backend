@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -39,16 +40,9 @@ namespace W3ChampionsStatisticService
 {
     public class Startup
     {
-        private readonly IConfiguration _configuration;
-
-        public Startup(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
-
         public void ConfigureServices(IServiceCollection services)
         {
-            var appInsightsKey = _configuration.GetValue<string>("appInsights");
+            var appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
             services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
 
             services.AddControllers(c =>
@@ -56,9 +50,10 @@ namespace W3ChampionsStatisticService
                 c.Filters.Add<ValidationExceptionFilter>();
             });
 
-            var startHandlers = _configuration.GetValue<string>("startHandlers");
-            var startPadSync = _configuration.GetValue<string>("startPadSync");
-            var mongoConnectionString = _configuration.GetValue<string>("mongoConnectionString") ?? "mongodb://localhost:27017";
+            var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
+            var startPadSync = Environment.GetEnvironmentVariable("START_PAD_SYNC");
+            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://localhost:27017";
+            var adminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET")  ?? "secret";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
