@@ -92,10 +92,12 @@ namespace W3ChampionsStatisticService
             services.AddTransient<ClanCommandHandler>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
+            services.AddTransient<CheckIfBattleTagIsAdminFilter>();
+
+            services.AddTransient<PadServiceRepo>();
 
             if (startPadSync == "true")
             {
-                services.AddTransient<PadServiceRepo>();
                 services.AddUnversionedReadModelService<PadSyncHandler>();
             }
 
