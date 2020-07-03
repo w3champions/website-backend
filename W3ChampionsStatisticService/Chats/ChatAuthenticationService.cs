@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Chats
@@ -13,12 +14,13 @@ namespace W3ChampionsStatisticService.Chats
         public async Task<UserDto> GetUser(string chatApiKey, string battleTag)
         {
             var user = await LoadFirst<ChatUser>(c => c.ApiKey == chatApiKey);
+            var userClan = await LoadFirst<ClanMembership>(c => c.Id == battleTag);
             if (user != null)
             {
-                return new UserDto(user.Name, user.BattleTag, true);
+                return new UserDto(user.Name, user.BattleTag, userClan?.ClanId, true);
             }
             user = new ChatUser(battleTag);
-            return new UserDto(user.Name, user.BattleTag, false);
+            return new UserDto(user.Name, user.BattleTag, userClan?.ClanId, false);
         }
 
         public Task SaveUser(ChatUser user)
