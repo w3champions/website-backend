@@ -19,10 +19,20 @@ namespace W3ChampionsStatisticService.Chats
             var userSettings = await LoadFirst<PersonalSetting>(c => c.Id == battleTag);
             if (user != null)
             {
-                return new UserDto(user.Name, user.BattleTag, userClan?.ClanId, userSettings?.ProfilePicture, true);
+                return new UserDto(
+                    user.Name,
+                    user.BattleTag,
+                    userClan?.ClanId,
+                    userSettings?.ProfilePicture ?? ProfilePicture.Default(),
+                true);
             }
             user = new ChatUser(battleTag);
-            return new UserDto(user.Name, user.BattleTag, userClan?.ClanId, userSettings?.ProfilePicture, false);
+            return new UserDto(
+                user.Name,
+                user.BattleTag,
+                userClan?.ClanId,
+                userSettings?.ProfilePicture ?? ProfilePicture.Default(),
+                false);
         }
 
         public Task SaveUser(ChatUser user)
