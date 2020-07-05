@@ -8,13 +8,16 @@ namespace W3ChampionsStatisticService.Chats
     {
         private readonly ChatAuthenticationService _authenticationService;
         private readonly ConnectionMapping _connections;
+        private readonly ChatHistory _chatHistory;
 
         public ChatHub(
             ChatAuthenticationService authenticationService,
-            ConnectionMapping connections)
+            ConnectionMapping connections,
+            ChatHistory chatHistory)
         {
             _authenticationService = authenticationService;
             _connections = connections;
+            _chatHistory = chatHistory;
         }
 
         public async Task SendMessage(string chatApiKey, string battleTag, string message)
@@ -24,6 +27,7 @@ namespace W3ChampionsStatisticService.Chats
             if (!string.IsNullOrEmpty(trimmedMessage))
             {
                 var chatRoom = _connections.GetRoom(Context.ConnectionId);
+                _chatHistory.AddMessage(chatRoom, user, trimmedMessage);
                 await Clients.Group(chatRoom).SendAsync("ReceiveMessage", user, trimmedMessage);
             }
         }
@@ -55,7 +59,7 @@ namespace W3ChampionsStatisticService.Chats
             var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
             await Clients.Group(oldRoom).SendAsync("UserLeft", user);
             await Clients.Group(chatRoom).SendAsync("UserEntered", user);
-            await Clients.Caller.SendAsync("StartChat", usersOfRoom);
+            await Clients.Caller.SendAsync("StartChat", usersOfRoom, _chatHistory.GetMessages(chatRoom));
         }
 
         public async Task LoginAs(string chatApiKey, string battleTag, string chatRoom)
@@ -73,7 +77,7 @@ namespace W3ChampionsStatisticService.Chats
             var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
 
             await Clients.Group(chatRoom).SendAsync("UserEntered", user);
-            await Clients.Caller.SendAsync("StartChat", usersOfRoom);
+            await Clients.Caller.SendAsync("StartChat", usersOfRoom, _chatHistory.GetMessages(chatRoom));
         }
     }
 }

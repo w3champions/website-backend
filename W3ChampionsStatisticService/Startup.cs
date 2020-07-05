@@ -63,6 +63,7 @@ namespace W3ChampionsStatisticService
 
             services.AddSingleton<TrackingService>();
             services.AddSingleton<ConnectionMapping>();
+            services.AddSingleton<ChatHistory>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
