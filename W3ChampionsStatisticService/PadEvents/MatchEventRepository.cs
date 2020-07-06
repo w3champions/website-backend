@@ -34,7 +34,7 @@ namespace W3ChampionsStatisticService.PadEvents
             return LoadAll<MatchStartedEvent>(m => m.Id < delay, 1000);
         }
 
-        public async Task InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent)
+        public async Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0)
         {
             matchFinishedEvent.WasFromSync = true;
             var mongoCollection = CreateCollection<MatchFinishedEvent>();
@@ -42,12 +42,12 @@ namespace W3ChampionsStatisticService.PadEvents
             if (foundEvent == null)
             {
                 await mongoCollection.InsertOneAsync(matchFinishedEvent);
-                Console.WriteLine($"INSERTED: {matchFinishedEvent.match.id}");
+                Console.WriteLine($"({i}) INSERTED: {matchFinishedEvent.match.id}");
+                return true;
             }
-            else
-            {
-                Console.WriteLine($"EVENT WAS PRESENT ALLREADY: {foundEvent.match.id}");
-            }
+
+            Console.WriteLine($"({i}) EVENT WAS PRESENT ALLREADY: {foundEvent.match.id}");
+            return false;
         }
 
         public async Task Insert(List<MatchFinishedEvent> matchFinishedEvent)

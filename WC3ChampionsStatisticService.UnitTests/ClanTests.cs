@@ -351,6 +351,35 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task ChieftainDeletesClanBeforeFinishing()
+        {
+            await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
+
+            await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+            await _handler.AcceptInvite("Wolf#456", "CS");
+            await _handler.DeleteClan("CS", "Peter#123");
+
+            var clan2 = await _handler.CreateClan("Cool Shit", "CS", "Wolf#456");
+
+            Assert.AreEqual("CS", clan2.ClanId);
+            Assert.AreEqual("Wolf#456", clan2.ChiefTain);
+        }
+
+        [Test]
+        public async Task ChieftainDeletesClanBeforeFinishing_FoundingFatherDidNotAccept()
+        {
+            await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
+
+            await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+            await _handler.DeleteClan("CS", "Peter#123");
+
+            var clan2 = await _handler.CreateClan("Cool Shit", "CS", "Wolf#456");
+
+            Assert.AreEqual("CS", clan2.ClanId);
+            Assert.AreEqual("Wolf#456", clan2.ChiefTain);
+        }
+
+        [Test]
         public async Task LoadClan_PopulateRanks()
         {
             var clan = await CreateFoundedClanForTest();

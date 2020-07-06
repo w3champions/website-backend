@@ -64,7 +64,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<List<PlayerOverallStats>> SearchForPlayer(string search)
         {
-            return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(search), 5);
+            var lower = search.ToLower();
+            return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(lower));
         }
 
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)

@@ -37,13 +37,22 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
                 Console.WriteLine("No events found anymore");
             }
 
+            int count = 0;
+
             while (events.Any())
             {
                 foreach (var finishedEvent in events)
                 {
                     if (finishedEvent.state == 2)
                     {
-                        await _matchEventRepository.InsertIfNotExisting(new MatchFinishedEvent { match = finishedEvent});
+                        var wasInserted = await _matchEventRepository.InsertIfNotExisting(
+                            new MatchFinishedEvent { match = finishedEvent},
+                            count);
+
+                        if (wasInserted)
+                        {
+                            count++;
+                        }
                     }
                 }
 

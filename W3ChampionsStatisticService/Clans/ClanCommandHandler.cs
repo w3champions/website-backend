@@ -71,8 +71,12 @@ namespace W3ChampionsStatisticService.Clans
             
             await _clanRepository.DeleteClan(clanId);
 
-            clan.Members.Add(clan.ChiefTain);
-            var memberShips = await _clanRepository.LoadMemberShips(clan.Members);
+            var allMembers = new List<string>();
+            allMembers.AddRange(clan.FoundingFathers);
+            allMembers.AddRange(clan.Members);
+            allMembers.Add(clan.ChiefTain);
+
+            var memberShips = await _clanRepository.LoadMemberShips(allMembers);
 
             foreach (var member in memberShips)
             {

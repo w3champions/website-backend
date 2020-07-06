@@ -40,6 +40,37 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task Search_DuplicateNameBug()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var player = PlayerOverallStats.Create("ThunderHorn#2481");
+            var player2 = PlayerOverallStats.Create("ThunderHorn#21132");
+            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayer(player2);
+            var playerLoaded = await playerRepository.SearchForPlayer("thunder");
+
+            Assert.AreEqual(player.BattleTag, playerLoaded[1].BattleTag);
+            Assert.AreEqual(player2.BattleTag, playerLoaded[0].BattleTag);
+            Assert.AreEqual(2, playerLoaded.Count);
+        }
+
+        [Test]
+        public async Task Search_DuplicateNameBug_RefineWithBtag()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var player = PlayerOverallStats.Create("ThunderHorn#2481");
+            var player2 = PlayerOverallStats.Create("ThunderHorn#21132");
+            await playerRepository.UpsertPlayer(player);
+            await playerRepository.UpsertPlayer(player2);
+            var playerLoaded = await playerRepository.SearchForPlayer("thunderhorn#2481");
+
+            Assert.AreEqual(player.BattleTag, playerLoaded[0].BattleTag);
+            Assert.AreEqual(1, playerLoaded.Count);
+        }
+
+        [Test]
         public async Task PlayerMapping()
         {
             var playerRepository = new PlayerRepository(MongoClient);
