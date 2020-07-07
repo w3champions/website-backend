@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -11,9 +13,12 @@ namespace W3ChampionsStatisticService.Admin
     {
         private readonly IMatchRepository _matchRepository;
 
-        public AdminController(IMatchRepository matchRepository)
+        private readonly PadServiceRepo _padServiceRepository;
+
+        public AdminController(IMatchRepository matchRepository, PadServiceRepo padServiceRepository)
         {
             _matchRepository = matchRepository;
+            _padServiceRepository = padServiceRepository;
         }
 
         [HttpGet("health-check")]
@@ -27,6 +32,29 @@ namespace W3ChampionsStatisticService.Admin
         {
             var countOnGoingMatches = await _matchRepository.CountOnGoingMatches();
             return Ok(countOnGoingMatches);
+        }
+
+        [HttpGet("bannedPlayers")]
+        public async Task<IActionResult> GetBannedPlayers()
+        {
+            var bannedPlayers = await _padServiceRepository.GetBannedPlayers();
+            return Ok(bannedPlayers);
+        }
+
+        [HttpPost("bannedPlayers")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayer bannedPlayer)
+        {
+            var bannedPlayers = await _padServiceRepository.PostBannedPlayers(bannedPlayer);
+            return Ok(bannedPlayers);
+        }
+
+        [HttpDelete("bannedPlayers")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayer bannedPlayer)
+        {
+            var bannedPlayers = await _padServiceRepository.DeleteBannedPlayers(bannedPlayer);
+            return Ok(bannedPlayers);
         }
     }
 }

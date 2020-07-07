@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
@@ -39,10 +40,37 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             return deserializeObject;
         }
 
+        public async Task<BannedPlayerResponse> GetBannedPlayers()
+        {
+            var httpClient = new HttpClient();
+            var result = await httpClient.GetAsync($"https://api.w3champions.com/admin/bannedPlayers?secret=yGBC1w5TcjAQSyOvGTlO4kPGCdJ7dGBKNPkEKQVnqHonGLet4DntoA7PwCgHAiSJ");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<System.Net.HttpStatusCode> PostBannedPlayers(BannedPlayer bannedPlayer)
+        {
+            var httpClient = new HttpClient();
+            var splitTag = bannedPlayer.battleTag.Split('#');
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayer), Encoding.UTF8, "application/json");
+            var result = await httpClient.PostAsync($"https://api.w3champions.com/admin/bannedPlayers/{splitTag[0] + "%23" + splitTag[1]}?secret=yGBC1w5TcjAQSyOvGTlO4kPGCdJ7dGBKNPkEKQVnqHonGLet4DntoA7PwCgHAiSJ", httpcontent);
+            return result.StatusCode;
+        }
+
+        public async Task<System.Net.HttpStatusCode> DeleteBannedPlayers(BannedPlayer bannedPlayer)
+        {
+            var httpClient = new HttpClient();
+            var splitTag = bannedPlayer.battleTag.Split('#');
+            var result = await httpClient.DeleteAsync($"https://api.w3champions.com/admin/bannedPlayers/{splitTag[0] + "%23" + splitTag[1]}?secret=yGBC1w5TcjAQSyOvGTlO4kPGCdJ7dGBKNPkEKQVnqHonGLet4DntoA7PwCgHAiSJ");
+            return result.StatusCode;
+        }
+
         public async Task<LeagueConstellation> GetLeague(GateWay gateWay, GameMode gameMode)
         {
             var httpClient = new HttpClient();
-            var result = await httpClient.GetAsync($"https://api.w3champions.com/leagues/{(int) gateWay}/{(int) gameMode}");
+            var result = await httpClient.GetAsync($"https://api.w3champions.com/leagues/{(int)gateWay}/{(int)gameMode}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<League>>(content);
@@ -86,5 +114,22 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     {
         public List<Match> items { get; set; }
         public long total { get; set; }
+    }
+
+    public class BannedPlayerResponse
+    {
+        public int total { get; set; }
+        public List<BannedPlayer> players { get; set; }
+    }
+
+    public class BannedPlayer
+    {
+        public string battleTag { get; set; }
+
+        public string endDate { get; set; }
+
+        public Boolean isIpBan { get; set; }
+
+        public string banReason { get; set; }
     }
 }
