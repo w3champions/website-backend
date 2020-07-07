@@ -27,8 +27,9 @@ namespace W3ChampionsStatisticService.Chats
             if (!string.IsNullOrEmpty(trimmedMessage))
             {
                 var chatRoom = _connections.GetRoom(Context.ConnectionId);
-                _chatHistory.AddMessage(chatRoom, user, trimmedMessage);
-                await Clients.Group(chatRoom).SendAsync("ReceiveMessage", user, trimmedMessage);
+                var chatMessage = new ChatMessage(user, trimmedMessage);
+                _chatHistory.AddMessage(chatRoom, chatMessage);
+                await Clients.Group(chatRoom).SendAsync("ReceiveMessage", chatMessage);
             }
         }
 

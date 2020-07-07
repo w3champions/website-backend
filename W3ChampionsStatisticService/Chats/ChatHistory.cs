@@ -4,15 +4,15 @@ namespace W3ChampionsStatisticService.Chats
 {
     public class ChatHistory : Dictionary<string, List<ChatMessage>>
     {
-        public void AddMessage(string chatRoom, UserDto userName, string message)
+        public void AddMessage(string chatRoom, ChatMessage message)
         {
             if (!ContainsKey(chatRoom))
             {
-                Add(chatRoom, new List<ChatMessage> { new ChatMessage(userName, message) });
+                Add(chatRoom, new List<ChatMessage> { message });
             }
             else
             {
-                this[chatRoom].Add(new ChatMessage(userName, message));
+                this[chatRoom].Add(message);
                 if (this[chatRoom].Count > 50)
                 {
                     this[chatRoom].RemoveAt(0);
