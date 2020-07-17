@@ -162,6 +162,82 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task RaceBasedMMRUpdate()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+            var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent();
+
+            matchFinishedEvent.match.players[0].battleTag = "peTer#123";
+            matchFinishedEvent.match.players[0].race = Race.NE;
+            matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
+            matchFinishedEvent.match.season = 2;
+            matchFinishedEvent.match.gateway = GateWay.America;
+
+            rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
+            rankingChangedEvent.ranks[0].race = Race.NE;
+            rankingChangedEvent.gateway = GateWay.America;
+            rankingChangedEvent.gameMode = GameMode.GM_1v1;
+            rankingChangedEvent.season = 2;
+
+            await InsertRankChangedEvent(rankingChangedEvent);
+            await matchEventRepository.InsertIfNotExisting(matchFinishedEvent);
+
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+            await rankHandler.Update();
+
+            var rank = await rankRepository.SearchPlayerOfLeague("peT", 2, GateWay.America, GameMode.GM_1v1);
+
+            Assert.AreEqual(1, rank.Count);
+            Assert.AreEqual(Race.NE, rank[0].Race);
+        }
+
+        [Test]
+        public async Task RaceBasedMMRUpdate_DifferentSeason()
+        {
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+            var rankingChangedEvent = TestDtoHelper.CreateRankChangedEvent();
+
+            matchFinishedEvent.match.players[0].battleTag = "peTer#123";
+            matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
+            matchFinishedEvent.match.season = 1;
+            matchFinishedEvent.match.gateway = GateWay.America;
+
+            rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
+            rankingChangedEvent.ranks[0].race = Race.NE;
+            rankingChangedEvent.gateway = GateWay.America;
+            rankingChangedEvent.gameMode = GameMode.GM_1v1;
+
+            await InsertRankChangedEvent(rankingChangedEvent);
+            await matchEventRepository.InsertIfNotExisting(matchFinishedEvent);
+
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+            await rankHandler.Update();
+
+            var rank = await rankRepository.SearchPlayerOfLeague("peT", 2, GateWay.America, GameMode.GM_1v1);
+
+            Assert.AreEqual(0, rank.Count);
+        }
+
+
+        [Test]
         public async Task ReturnRanks_WhenPlayersHavePersonalSettingsConfigured_MustHaveCorrectPersonalSettings()
         {
             // Arrange
