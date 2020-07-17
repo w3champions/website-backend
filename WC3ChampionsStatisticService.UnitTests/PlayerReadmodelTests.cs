@@ -18,7 +18,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.America,
                 GameMode.GM_1v1,
-                0);
+                0,
+                null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(90, 200);
             gameModeStatPerGateway.RecordRanking(100, 220);
@@ -36,7 +37,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.America,
                 GameMode.GM_1v1,
-                0);
+                0,
+                null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(0, 200);
@@ -55,7 +57,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.America,
                 GameMode.GM_1v1,
-                0);
+                0,
+                null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(0, 200);
@@ -74,7 +77,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.America,
                 GameMode.GM_1v1,
-                0);
+                0,
+                null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(0, 200);
@@ -93,7 +97,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.America,
                 GameMode.GM_1v1,
-                0);
+                0,
+                null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
             gameModeStatPerGateway.RecordRanking(100, 180);
@@ -111,7 +116,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.America,
                 GameMode.GM_1v1,
-                0);
+                0,
+                null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
 
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(0, 200);

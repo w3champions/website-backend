@@ -82,13 +82,16 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var playerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
+
             var match = nextEvent.match;
+            var playerRaceIfSingle = match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) players.Single().race : null;
             var winnerIdCombined = new BattleTagIdCombined(
                 players.Select(p =>
                     PlayerId.Create(p.battleTag)).ToList(),
-                    match.gateway,
-                    match.gameMode,
-                    match.season);
+                        match.gateway,
+                        match.gameMode,
+                        match.season,
+                        playerRaceIfSingle);
 
             var winner = await _playerRepository.LoadOverview(winnerIdCombined.Id)
                          ?? PlayerOverview.Create(
@@ -96,7 +99,7 @@ namespace W3ChampionsStatisticService.Ladder
                              match.gateway,
                              match.gameMode,
                              match.season,
-                             match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) players.Single().race : null);
+                             playerRaceIfSingle);
 
             winner.RecordWin(
                 players.First().won,

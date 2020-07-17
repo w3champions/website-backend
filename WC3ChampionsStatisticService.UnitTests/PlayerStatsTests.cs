@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
@@ -217,6 +218,38 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(2, enemyStatsVsPlayerRace.ParticipatedInSeasons.Count);
             Assert.AreEqual(1, enemyStatsVsPlayerRace.ParticipatedInSeasons[0].Id);
             Assert.AreEqual(0, enemyStatsVsPlayerRace.ParticipatedInSeasons[1].Id);
+        }
+
+        [Test]
+        public async Task PlayerStats_RaceBasedMMR()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playerHeroStatsHandler = new PlayOverviewHandler(playerRepository);
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.gateway = GateWay.Europe;
+            matchFinishedEvent2.match.gateway = GateWay.Europe;
+
+            matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
+            matchFinishedEvent2.match.gameMode = GameMode.GM_1v1;
+
+            matchFinishedEvent1.match.season = 2;
+            matchFinishedEvent2.match.season = 2;
+
+            matchFinishedEvent1.match.players[0].race = Race.NE;
+            matchFinishedEvent2.match.players[0].race = Race.NE;
+
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent2.match.players[0].battleTag = "peter#123";
+
+            await playerHeroStatsHandler.Update(matchFinishedEvent1);
+            await playerHeroStatsHandler.Update(matchFinishedEvent2);
+            var enemyStatsVsPlayerRace = await playerRepository.LoadOverview("2_peter#123@20_GM_1v1_NE");
+
+            Assert.AreEqual(2, enemyStatsVsPlayerRace.Wins);
+            Assert.AreEqual(0, enemyStatsVsPlayerRace.Losses);
         }
 
         private static WinLossesPerMap GetHeroStatsForRaceAndMap(PlayerHeroStats playerHeroStats, string heroId, Race race, string mapName)

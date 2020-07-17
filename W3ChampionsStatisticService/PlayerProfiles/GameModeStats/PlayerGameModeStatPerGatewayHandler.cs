@@ -65,7 +65,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
               losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
               match.gateway,
               match.gameMode,
-              match.season);
+              match.season,
+              match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) losingTeam.Single().race : null);
 
             var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
 
@@ -104,7 +105,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
                 match.gateway,
                 match.gameMode,
-                match.season);
+                match.season,
+                match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) winners.Single().race : null);
 
             var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
             winner.RecordWin(true);

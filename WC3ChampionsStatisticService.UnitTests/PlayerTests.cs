@@ -99,7 +99,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.Europe,
                 GameMode.GM_1v1,
-                1);
+                1,
+                null);
             var player = PlayerGameModeStatPerGateway.Create(battleTagIdCombined);
             player.RecordRanking(234, 123);
 
