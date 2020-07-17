@@ -405,7 +405,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 },
                 GateWay.Europe,
                 GameMode.GM_1v1,
-                1));
+                1,
+                null));
 
             var clanLoaded = await _handler.LoadClan(clan.ClanId);
 
