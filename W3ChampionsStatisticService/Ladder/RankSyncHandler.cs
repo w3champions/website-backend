@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Ladder
                         changedEvent.league,
                         i + 1,
                         (int) r.rp,
-                        changedEvent.race,
+                        r.race,
                         changedEvent.gateway,
                         changedEvent.gameMode,
                         changedEvent.season))
