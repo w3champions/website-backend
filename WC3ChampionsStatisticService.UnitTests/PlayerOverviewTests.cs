@@ -16,7 +16,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var playerRepository = new PlayerRepository(MongoClient);
 
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
             await playerRepository.UpsertPlayerOverview(player);
             var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
@@ -24,44 +24,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
         }
 
-
-        [Test]
-        public async Task LoadAndSearch()
-        {
-            var playerRepository = new PlayerRepository(MongoClient);
-
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
-            await playerRepository.UpsertPlayerOverview(player);
-            var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", GateWay.Europe)).Single();
-
-            Assert.AreEqual(player.Id, playerLoaded.Id);
-            Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
-        }
-
-        [Test]
-        public async Task LoadAndSearch_EmptyString()
-        {
-            var playerRepository = new PlayerRepository(MongoClient);
-
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
-            await playerRepository.UpsertPlayerOverview(player);
-            Assert.IsEmpty(await playerRepository.LoadOverviewLike("", GateWay.Europe));
-        }
-
-        [Test]
-        public async Task LoadAndSearch_NulLString()
-        {
-            var playerRepository = new PlayerRepository(MongoClient);
-
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
-            await playerRepository.UpsertPlayerOverview(player);
-            Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, GateWay.Europe));
-        }
-
         [Test]
         public void UpdateOverview()
         {
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
             player.RecordWin(true, 1230);
             player.RecordWin(false, 1240);
             player.RecordWin(false, 1250);
@@ -78,7 +44,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void UpdateOverview_2v2AT()
         {
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, GateWay.Europe, GameMode.GM_2v2_AT, 0);
+            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, GateWay.Europe, GameMode.GM_2v2_AT, 0, null);
             player.RecordWin(true, 1230);
 
             Assert.AreEqual(1, player.Games);
@@ -225,6 +191,42 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(3, playerProfile.Wins);
             Assert.AreEqual(0, playerProfile.Losses);
             Assert.AreEqual(GameMode.GM_1v1, playerProfile.GameMode);
+        }
+
+        [Test]
+        public async Task UpdateOverview_HandlerUpdate_RaceBasedMMR()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.season = 2;
+            matchFinishedEvent1.match.players[0].race = Race.HU;
+            matchFinishedEvent1.match.gateway = GateWay.America;
+            matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
+
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent2.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent2.match.season = 2;
+            matchFinishedEvent2.match.players[0].race = Race.NE;
+            matchFinishedEvent2.match.gateway = GateWay.America;
+            matchFinishedEvent2.match.gameMode = GameMode.GM_1v1;
+
+            await playOverviewHandler.Update(matchFinishedEvent1);
+            await playOverviewHandler.Update(matchFinishedEvent2);
+
+            var playerProfile1 = await playerRepository.LoadOverview("2_peter#123@10_GM_1v1_HU");
+            var playerProfile2 = await playerRepository.LoadOverview("2_peter#123@10_GM_1v1_NE");
+
+            Assert.AreEqual(1, playerProfile1.Wins);
+            Assert.AreEqual(0, playerProfile1.Losses);
+            Assert.AreEqual(1, playerProfile2.Wins);
+            Assert.AreEqual(0, playerProfile2.Losses);
+
+            Assert.AreEqual(Race.HU, playerProfile1.Race);
+            Assert.AreEqual(Race.NE, playerProfile2.Race);
         }
     }
 }

@@ -7,15 +7,27 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class PlayerOverview : WinLoss, IIdentifiable
     {
-        public static PlayerOverview Create(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, int season)
+        public static PlayerOverview Create(
+            List<PlayerId> playerIds,
+            GateWay gateWay,
+            GameMode gameMode,
+            int season,
+            Race? race)
         {
+            var id = $"{season}_{string.Join("_", playerIds.OrderBy(t => t.BattleTag).Select(t => $"{t.BattleTag}@{(int)gateWay}"))}_{gameMode}";
+            if (race != null)
+            {
+                id += $"_{race}";
+            }
+
             return new PlayerOverview
             {
-                Id = $"{season}_{string.Join("_", playerIds.OrderBy(t => t.BattleTag).Select(t => $"{t.BattleTag}@{(int)gateWay}"))}_{gameMode}",
+                Id = id,
                 PlayerIds = playerIds,
                 GateWay = gateWay,
                 GameMode = gameMode,
-                Season = season
+                Season = season,
+                Race = race
             };
         }
 
@@ -27,6 +39,7 @@ namespace W3ChampionsStatisticService.Ladder
         public GateWay GateWay { get; set; }
         public GameMode GameMode { get; set; }
         public int Season { get; set; }
+        public Race? Race { get; set; }
 
         public void RecordWin(bool won, int newMmr)
         {

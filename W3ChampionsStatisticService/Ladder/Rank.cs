@@ -15,6 +15,7 @@ namespace W3ChampionsStatisticService.Ladder
             int league,
             int rankNumber,
             int rankingPoints,
+            Race? race,
             GateWay gateway,
             GameMode gameMode,
             int season)
@@ -23,8 +24,13 @@ namespace W3ChampionsStatisticService.Ladder
             League = league;
             RankNumber = rankNumber;
             RankingPoints = rankingPoints;
+            Race = race;
             var btags = playerIds.Select(b => $"{b}@{(int) gateway}").OrderBy(t => t);
             var createPlayerId = $"{season}_{string.Join("_", btags)}_{gameMode}";
+            if (race != null)
+            {
+                createPlayerId += $"_{race}";
+            }
             PlayerId = createPlayerId;
             GameMode = gameMode;
             Season = season;
@@ -41,6 +47,7 @@ namespace W3ChampionsStatisticService.Ladder
         public int LeagueOrder { get; set; }
         public int RankNumber { get; set; }
         public int RankingPoints { get; set; }
+        public Race? Race { get; set; }
         public string PlayerId { get; set; }
         public string Player1Id { get; set; }
         public string Player2Id { get; set; }

@@ -37,6 +37,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public int season { get; set; }
         public GateWay gateway { get; set; }
         public int league { get; set; }
+        public Race? race { get; set; }
         public GameMode gameMode { get; set; }
         public RankRaw[] ranks { get; set; }
         public bool wasSyncedJustNow { get; set; }
