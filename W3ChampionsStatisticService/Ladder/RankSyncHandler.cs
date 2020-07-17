@@ -28,7 +28,14 @@ namespace W3ChampionsStatisticService.Ladder
                 .Select((r, i) =>
                     new Rank(r.battleTags,
                         changedEvent.league,
-                        i + 1, (int) r.rp, changedEvent.gateway, changedEvent.gameMode, changedEvent.season)).ToList()).ToList();
+                        i + 1,
+                        (int) r.rp,
+                        changedEvent.race,
+                        changedEvent.gateway,
+                        changedEvent.gameMode,
+                        changedEvent.season))
+                .ToList())
+                .ToList();
 
             await _rankRepository.InsertRanks(ranks);
         }
