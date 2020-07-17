@@ -80,20 +80,23 @@ namespace W3ChampionsStatisticService.Ladder
 
         private async Task<PlayerOverview> UpdatePlayers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> players)
         {
-            var winnerPlayerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
+            var playerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
             var match = nextEvent.match;
             var winnerIdCombined = new BattleTagIdCombined(
-                players.Select(p => PlayerId.Create(p.battleTag)).ToList(),
-                match.gateway,
-                match.gameMode, match.season);
+                players.Select(p =>
+                    PlayerId.Create(p.battleTag)).ToList(),
+                    match.gateway,
+                    match.gameMode,
+                    match.season);
 
             var winner = await _playerRepository.LoadOverview(winnerIdCombined.Id)
                          ?? PlayerOverview.Create(
-                             winnerPlayerIds,
+                             playerIds,
                              match.gateway,
                              match.gameMode,
-                             match.season);
+                             match.season,
+                             match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) players.Single().race : null);
 
             winner.RecordWin(
                 players.First().won,
