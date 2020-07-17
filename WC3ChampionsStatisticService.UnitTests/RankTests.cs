@@ -106,6 +106,28 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task LoadPlayersOfLeague_RaceBasedMMR()
+        {
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var ranks = new List<Rank>
+            {
+                new Rank(new List<string> { "peter#123" }, 1, 12, 1456, Race.HU, GateWay.Europe, GameMode.GM_1v1, 2),
+                new Rank(new List<string> { "peter#123" }, 1, 8, 1456, Race.NE, GateWay.Europe, GameMode.GM_1v1, 2)
+            };
+            await rankRepository.InsertRanks(ranks);
+            var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 2, Race.HU);
+            await playerRepository.UpsertPlayerOverview(player1);
+            var player2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 2, Race.NE);
+            await playerRepository.UpsertPlayerOverview(player2);
+
+            var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 2, GateWay.Europe, GameMode.GM_1v1);
+
+            Assert.AreEqual(2, playerLoaded.Count);
+        }
+
+        [Test]
         public async Task RankIntegrationWithMultipleIds()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
