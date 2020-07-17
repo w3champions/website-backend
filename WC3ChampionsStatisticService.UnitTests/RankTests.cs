@@ -278,5 +278,78 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("peter#123", playerLoaded[0].Player.PlayerIds.Single().BattleTag);
             Assert.AreEqual("peter#123", playerLoaded[1].Player.PlayerIds.Single().BattleTag);
         }
+
+        [Test]
+        public async Task SearchRanks_WithRaceSpecificRank()
+        {
+            // Arrange
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var ranks = new List<Rank>
+            {
+                new Rank(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
+                new Rank(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
+            };
+            await rankRepository.InsertRanks(ranks);
+
+            var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 2, Race.HU);
+            player1.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player1);
+            var player2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 2, Race.NE);
+            player2.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player2);
+
+            // Act
+            var playerLoaded = await rankRepository.SearchPlayerOfLeague("ete", 2, GateWay.America, GameMode.GM_1v1);
+
+            // Assert
+            Assert.AreEqual(2, playerLoaded.Count);
+
+            Assert.AreEqual("peter#123", playerLoaded[0].Player.PlayerIds.Single().BattleTag);
+            Assert.AreEqual("peter#123", playerLoaded[1].Player.PlayerIds.Single().BattleTag);
+        }
+
+        [Test]
+        public async Task SearchRanks_WithRaceSpecificRank_DifferentSeasons()
+        {
+            // Arrange
+            var rankRepository = new RankRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var ranks = new List<Rank>
+            {
+                //old one
+                new Rank(new List<string> { "peter#123" }, 1, 2, 1000, null, GateWay.America, GameMode.GM_1v1, 1),
+
+                //mmr based
+                new Rank(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
+                new Rank(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
+            };
+            await rankRepository.InsertRanks(ranks);
+
+            var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+            player1.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player1);
+
+            var player2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 2, Race.HU);
+            player2.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player2);
+            var player3 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 2, Race.NE);
+            player3.RecordWin(true, 1234);
+            await playerRepository.UpsertPlayerOverview(player3);
+
+            // Act
+            var playerLoaded = await rankRepository.SearchPlayerOfLeague("ete", 1, GateWay.America, GameMode.GM_1v1);
+
+            // Assert
+            Assert.AreEqual(1, playerLoaded.Count);
+
+            // Act
+            var playerLoaded2 = await rankRepository.SearchPlayerOfLeague("ete", 2, GateWay.America, GameMode.GM_1v1);
+
+            // Assert
+            Assert.AreEqual(2, playerLoaded2.Count);
+        }
     }
 }
