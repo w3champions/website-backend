@@ -24,40 +24,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
         }
 
-
-        [Test]
-        public async Task LoadAndSearch()
-        {
-            var playerRepository = new PlayerRepository(MongoClient);
-
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
-            await playerRepository.UpsertPlayerOverview(player);
-            var playerLoaded = (await playerRepository.LoadOverviewLike("PeT", GateWay.Europe)).Single();
-
-            Assert.AreEqual(player.Id, playerLoaded.Id);
-            Assert.AreEqual(GateWay.Europe, playerLoaded.GateWay);
-        }
-
-        [Test]
-        public async Task LoadAndSearch_EmptyString()
-        {
-            var playerRepository = new PlayerRepository(MongoClient);
-
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
-            await playerRepository.UpsertPlayerOverview(player);
-            Assert.IsEmpty(await playerRepository.LoadOverviewLike("", GateWay.Europe));
-        }
-
-        [Test]
-        public async Task LoadAndSearch_NulLString()
-        {
-            var playerRepository = new PlayerRepository(MongoClient);
-
-            var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
-            await playerRepository.UpsertPlayerOverview(player);
-            Assert.IsEmpty(await playerRepository.LoadOverviewLike(null, GateWay.Europe));
-        }
-
         [Test]
         public void UpdateOverview()
         {

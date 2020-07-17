@@ -78,7 +78,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Upsert(stat);
         }
 
-        public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag,
+        public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(
+            string battleTag,
             GateWay gateWay,
             int season)
         {
@@ -111,20 +112,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
             return LoadFirst<PlayerOverview>(battleTag);
-        }
-
-        public async Task<List<PlayerOverview>> LoadOverviewLike(string searchFor, GateWay gateWay)
-        {
-            if (string.IsNullOrEmpty(searchFor)) return new List<PlayerOverview>();
-            var mongoCollection = CreateCollection<PlayerOverview>();
-
-            var lower = searchFor.ToLower();
-            var playerOverviews = await mongoCollection
-                .Find(m => m.GateWay == gateWay && m.Id.Contains(lower))
-                .Limit(5)
-                .ToListAsync();
-
-            return playerOverviews;
         }
     }
 }
