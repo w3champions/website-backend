@@ -10,6 +10,7 @@ namespace W3ChampionsStatisticService.CommonValueObjects
         public GameMode GameMode { get; }
         public int Season { get; }
         public string Id { get; }
+        public Race? Race { get; }
 
         public BattleTagIdCombined(List<PlayerId> battleTags,
             GateWay gateWay,
@@ -21,6 +22,7 @@ namespace W3ChampionsStatisticService.CommonValueObjects
             GateWay = gateWay;
             GameMode = gameMode;
             Season = season;
+            Race = playerRaceIfSingle;
             Id = $"{season}_{string.Join("_", battleTags.OrderBy(t => t.BattleTag).Select(b => $"{b.BattleTag}@{(int)gateWay}"))}_{gameMode}";
             if (playerRaceIfSingle != null)
             {
