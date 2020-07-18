@@ -16,9 +16,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 Season = id.Season,
                 GateWay = id.GateWay,
                 GameMode = id.GameMode,
-                PlayerIds = id.BattleTags
+                PlayerIds = id.BattleTags,
+                Race = id.Race
             };
         }
+
+        public Race? Race { get; set; }
 
         public GameMode GameMode { get; set; }
 
