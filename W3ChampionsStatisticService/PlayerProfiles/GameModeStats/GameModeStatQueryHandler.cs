@@ -39,7 +39,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 PopulateLeague(player, allLeagues, rank);
             }
 
-            return player;
+            return player.OrderByDescending(r => r.RankingPoints).ToList();
         }
 
         private void PopulateLeague(
@@ -53,18 +53,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
                 var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
-                PlayerGameModeStatPerGateway gameModeStat;
-                // todo make this better an generic with other modes
-                if (rank.GameMode == GameMode.GM_1v1)
-                {
-                    var playerGameModeStatPerGateways = player.Where(p => p.GameMode == GameMode.GM_1v1).ToList();
-                    var max = playerGameModeStatPerGateways.Max(p => p.RankingPoints);
-                    gameModeStat = playerGameModeStatPerGateways.FirstOrDefault(p => p.RankingPoints == max);
-                }
-                else
-                {
-                    gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
-                }
+                var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
 
                 if (gameModeStat == null) return;
 
