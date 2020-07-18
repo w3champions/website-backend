@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.Chats
         {
             lock (_connections)
             {
-                return _connections[chatRoom].Values.Select(v => v).ToList();
+                return _connections[chatRoom].Values.Select(v => v).OrderBy(r => r.BattleTag).ToList();
             }
         }
 
