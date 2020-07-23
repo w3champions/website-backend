@@ -83,7 +83,15 @@ namespace W3ChampionsStatisticService.Clans
                 member.LeaveClan();
             }
 
+            var memberShipsInvites = await _clanRepository.LoadMemberShips(clan.PendingInvites);
+
+            foreach (var member in memberShipsInvites)
+            {
+                member.RevokeInvite();
+            }
+
             await _clanRepository.SaveMemberShips(memberShips);
+            await _clanRepository.SaveMemberShips(memberShipsInvites);
         }
 
         public async Task<Clan> GetClanForPlayer(string battleTag)
