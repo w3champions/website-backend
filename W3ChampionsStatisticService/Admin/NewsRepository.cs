@@ -15,7 +15,11 @@ namespace W3ChampionsStatisticService.Admin
 
         public Task<List<NewsMessage>> Get(int? limit = 5)
         {
-            return LoadAll<NewsMessage>(limit: limit);
+            var mongoCollection = CreateCollection<NewsMessage>();
+            return mongoCollection
+                .Find(r => true)
+                .SortByDescending(m => m.Id)
+                .Limit(limit).ToListAsync();
         }
 
         public Task Save(NewsMessage newsMessage)
