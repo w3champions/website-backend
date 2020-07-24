@@ -1,12 +1,13 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Admin
 {
-
     [ApiController]
     [Route("api/admin")]
     public class AdminController : ControllerBase
@@ -14,11 +15,16 @@ namespace W3ChampionsStatisticService.Admin
         private readonly IMatchRepository _matchRepository;
 
         private readonly PadServiceRepo _padServiceRepository;
+        private readonly INewsRepository _newsRepository;
 
-        public AdminController(IMatchRepository matchRepository, PadServiceRepo padServiceRepository)
+        public AdminController(
+            IMatchRepository matchRepository,
+            PadServiceRepo padServiceRepository,
+            INewsRepository newsRepository)
         {
             _matchRepository = matchRepository;
             _padServiceRepository = padServiceRepository;
+            _newsRepository = newsRepository;
         }
 
         [HttpGet("health-check")]
@@ -55,6 +61,38 @@ namespace W3ChampionsStatisticService.Admin
         {
             var bannedPlayers = await _padServiceRepository.DeleteBannedPlayers(bannedPlayer);
             return Ok(bannedPlayers);
+        }
+
+        [HttpGet("news")]
+        public async Task<IActionResult> GetNews(int? limit)
+        {
+            return Ok(await _newsRepository.Get(limit));
+        }
+
+        [HttpPut("news/{newsId}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UpdateNews(string newsId, [FromBody] NewsMessage newsMessage)
+        {
+            newsMessage.Id = new ObjectId(newsId);
+            await _newsRepository.UpsertNews(newsMessage);
+            return Ok();
+        }
+
+        [HttpPut("news")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UpdateNews([FromBody] NewsMessage newsMessage)
+        {
+            newsMessage.Id = ObjectId.GenerateNewId();
+            await _newsRepository.UpsertNews(newsMessage);
+            return Ok();
+        }
+
+        [HttpDelete("news/{newsId}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DeleteNews(string newsId)
+        {
+            await _newsRepository.DeleteNews(new ObjectId(newsId));
+            return Ok();
         }
     }
 }
