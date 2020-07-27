@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -8,12 +9,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     public class PlayerOverallStatsHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
+        private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
         public PlayerOverallStatsHandler(
-            IPlayerRepository playerRepository
-            )
+            IPlayerRepository playerRepository,
+            IPersonalSettingsRepository personalSettingsRepository)
         {
             _playerRepository = playerRepository;
+            _personalSettingsRepository = personalSettingsRepository;
         }
 
         public async Task Update(MatchFinishedEvent nextEvent)
@@ -26,6 +29,20 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                     playerRaw.race,
                     nextEvent.match.season, playerRaw.won);
                 await _playerRepository.UpsertPlayer(player);
+
+                await UpdateLocation(playerRaw);
+            }
+        }
+
+        public async Task UpdateLocation(PlayerMMrChange player)
+        {
+            if (!string.IsNullOrEmpty(player.country))
+            {
+                var setting = await _personalSettingsRepository.Load(player.battleTag) ?? new PersonalSetting(player.battleTag);
+
+                setting.Location = player.country;
+
+                await _personalSettingsRepository.Save(setting);
             }
         }
     }
