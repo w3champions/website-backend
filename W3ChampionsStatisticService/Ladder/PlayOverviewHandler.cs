@@ -82,7 +82,6 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var playerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
-
             var match = nextEvent.match;
             var playerRaceIfSingle = match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) players.Single().race : null;
             var winnerIdCombined = new BattleTagIdCombined(
