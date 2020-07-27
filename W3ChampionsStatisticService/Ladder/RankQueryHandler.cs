@@ -66,6 +66,7 @@ namespace W3ChampionsStatisticService.Ladder
                             PictureId = profilePicture?.PictureId,
                             SelectedRace = profilePicture?.Race,
                             Country = personalSettings?.Country,
+                            Location = personalSettings?.Location,
                             TwitchName = personalSettings?.Twitch,
                             ClanId = membership?.ClanId
                         });

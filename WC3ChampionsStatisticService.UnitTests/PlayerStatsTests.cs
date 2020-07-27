@@ -5,6 +5,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
@@ -200,7 +201,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerStats_PlayerParticipatedRaceIsCorrect()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var playerHeroStatsHandler = new PlayerOverallStatsHandler(playerRepository);
+            var personalSettingsRepo = new PersonalSettingsRepository(MongoClient);
+
+            var playerHeroStatsHandler = new PlayerOverallStatsHandler(playerRepository, personalSettingsRepo);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.season = 0;

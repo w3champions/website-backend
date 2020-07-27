@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
@@ -133,7 +134,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task PlayerMultipleWinRecords()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var handler = new PlayerOverallStatsHandler(playerRepository);
+            var personalSettingsRepo = new PersonalSettingsRepository(MongoClient);
+
+            var handler = new PlayerOverallStatsHandler(playerRepository, personalSettingsRepo);
             var handler2 = new PlayerGameModeStatPerGatewayHandler(playerRepository);
             var handler3 = new PlayerRaceStatPerGatewayHandler(playerRepository);
 
