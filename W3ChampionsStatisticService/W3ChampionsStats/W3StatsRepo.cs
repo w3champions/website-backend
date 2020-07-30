@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -77,18 +78,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return stats;
         }
 
-        public async Task<List<GamesPerDay>> LoadGamesPerDayBetween(
+        public async Task<List<GameDayGroup>> LoadGamesPerDayBetween(
             DateTimeOffset from,
-            DateTimeOffset to,
-            GameMode gameMode)
+            DateTimeOffset to)
         {
             var mongoCollection = CreateCollection<GamesPerDay>();
 
-            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to && s.GameMode == gameMode)
-                .SortByDescending(s => s.Date)
+            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
+                .SortBy(s => s.Date)
                 .ToListAsync();
 
-            return stats;
+            var grouped = stats.GroupBy(s => s.GameMode);
+            return grouped.Select(g => new GameDayGroup(g.Key, g.ToList())).ToList();
         }
 
         public Task<HourOfPlayStat> LoadHourOfPlay()
@@ -124,6 +125,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         public Task Save(OverallHeroWinRatePerHero overallHeroWinrate)
         {
             return Upsert(overallHeroWinrate);
+        }
+    }
+
+    public class GameDayGroup
+    {
+        public GameMode GameMode { get; }
+        public List<GamesPerDay> GameDays { get; }
+
+        public GameDayGroup(GameMode gameMode, List<GamesPerDay> gameDays)
+        {
+            GameMode = gameMode;
+            GameDays = gameDays;
         }
     }
 }

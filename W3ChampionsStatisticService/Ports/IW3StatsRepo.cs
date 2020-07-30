@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
@@ -24,7 +25,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<DistinctPlayersPerDay> LoadPlayersPerDay(DateTime date);
         Task Save(DistinctPlayersPerDay stat);
         Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
-        Task<List<GamesPerDay>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to, GameMode gameMode);
+        Task<List<GameDayGroup>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
         Task<HourOfPlayStat> LoadHourOfPlay();
         Task Save(HourOfPlayStat stat);
         Task<HeroPlayedStat> LoadHeroPlayedStat();
