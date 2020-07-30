@@ -89,7 +89,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
                 .ToListAsync();
 
             var grouped = stats.GroupBy(s => s.GameMode);
-            return grouped.Select(g => new GameDayGroup(g.Key, g.ToList())).ToList();
+            return grouped
+                .Select(g => new GameDayGroup(g.Key, g.ToList()))
+                .OrderBy(g => g.GameMode).ToList();
         }
 
         public Task<HourOfPlayStat> LoadHourOfPlay()
