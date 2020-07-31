@@ -78,20 +78,25 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return stats;
         }
 
-        public async Task<List<GameDayGroup>> LoadGamesPerDayBetween(
-            DateTimeOffset from,
+        public async Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(
+            DateTimeOffset @from,
             DateTimeOffset to)
         {
             var mongoCollection = CreateCollection<GamesPerDay>();
 
-            var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
+            var stats = await mongoCollection.Find(s =>
+                    s.Date >= from
+                    && s.Date <= to)
                 .SortBy(s => s.Date)
                 .ToListAsync();
 
-            var grouped = stats.GroupBy(s => s.GameMode);
-            return grouped
+            var americaStats = stats.Where(g => g.GateWay == GateWay.America).ToList();
+            var euStats = stats.Where(g => g.GateWay == GateWay.Europe).ToList();
+            var gamesPerDays = new [] { americaStats, euStats };
+            return gamesPerDays.Select(s =>
+                s.GroupBy(gamesPerDay => gamesPerDay.GameMode)
                 .Select(g => new GameDayGroup(g.Key, g.ToList()))
-                .OrderBy(g => g.GameMode).ToList();
+                .OrderBy(g => g.GameMode).ToList()).ToList();
         }
 
         public Task<HourOfPlayStat> LoadHourOfPlay()
