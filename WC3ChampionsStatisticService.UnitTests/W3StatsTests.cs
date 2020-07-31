@@ -90,14 +90,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             var gamesReloaded4 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.GM_2v2, GateWay.America);
             var gamesReloaded5 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.Undefined, GateWay.Undefined);
 
-            Assert.IsNull(gamesReloaded1);
+            Assert.AreEqual(0, gamesReloaded1.GamesPlayed);
             Assert.AreEqual(2, gamesReloaded2.GamesPlayed);
             Assert.AreEqual(GameMode.GM_1v1, gamesReloaded2.GameMode);
             Assert.AreEqual(GateWay.America, gamesReloaded2.GateWay);
             Assert.AreEqual(1, gamesReloaded3.GamesPlayed);
             Assert.AreEqual(GateWay.Europe, gamesReloaded3.GateWay);
             Assert.AreEqual(GameMode.GM_2v2, gamesReloaded3.GameMode);
-            Assert.IsNull(gamesReloaded4);
+            Assert.AreEqual(0, gamesReloaded4.GamesPlayed);
             Assert.AreEqual(3, gamesReloaded5.GamesPlayed);
         }
 
