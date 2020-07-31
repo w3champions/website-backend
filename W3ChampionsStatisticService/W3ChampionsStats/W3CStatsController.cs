@@ -35,12 +35,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         [HttpGet("games-per-day")]
         public async Task<IActionResult> GetGamesPerDay(
-            DateTimeOffset @from = default,
+            DateTimeOffset from = default,
             DateTimeOffset to = default)
         {
             from = from != default ? from : DateTimeOffset.MinValue;
             to = to != default ? to : DateTimeOffset.MaxValue;
-            var gameDays = await _w3StatsRepo.LoadGamesPerDayBetween(@from, to);
+            var gameDays = await _w3StatsRepo.LoadGamesPerDayBetween(from, to);
             return Ok(gameDays);
         }
 

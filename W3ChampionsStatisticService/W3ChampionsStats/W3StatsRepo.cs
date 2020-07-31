@@ -79,7 +79,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         }
 
         public async Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(
-            DateTimeOffset @from,
+            DateTimeOffset from,
             DateTimeOffset to)
         {
             var mongoCollection = CreateCollection<GamesPerDay>();
@@ -92,7 +92,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
             var americaStats = stats.Where(g => g.GateWay == GateWay.America).ToList();
             var euStats = stats.Where(g => g.GateWay == GateWay.Europe).ToList();
-            var gamesPerDays = new [] { americaStats, euStats };
+            var allStats = stats.Where(g => g.GateWay == GateWay.Undefined).ToList();
+            var gamesPerDays = new [] { allStats, americaStats, euStats };
             return gamesPerDays.Select(s =>
                 s.GroupBy(gamesPerDay => gamesPerDay.GameMode)
                 .Select(g => new GameDayGroup(g.Key, g.ToList()))
