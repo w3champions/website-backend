@@ -24,9 +24,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
             var match = nextEvent.match;
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime).Date;
 
-            var stat = await _w3Stats.LoadGamesPerDay(endTime, match.gameMode) ?? GamesPerDay.Create(endTime, match.gameMode);
-            var statOverall = await _w3Stats.LoadGamesPerDay(endTime, GameMode.Undefined) ?? GamesPerDay.Create(endTime,
-            GameMode.Undefined);
+            var stat = await _w3Stats.LoadGamesPerDay(endTime, match.gameMode, match.gateway)
+                       ?? GamesPerDay.Create(endTime, match.gameMode, match.gateway);
+            var statOverall = await _w3Stats.LoadGamesPerDay(endTime, GameMode.Undefined, match.gateway)
+                              ?? GamesPerDay.Create(endTime, GameMode.Undefined, match.gateway);
 
             stat.AddGame();
             statOverall.AddGame();

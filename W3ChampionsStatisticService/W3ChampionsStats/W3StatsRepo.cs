@@ -37,9 +37,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Upsert(stat, s => s.Id == stat.Id);
         }
 
-        public Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode gameMode)
+        public Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode gameMode, GateWay gateway)
         {
-            return LoadFirst<GamesPerDay>($"{gameMode.ToString()}_{date:yyyy-MM-dd}");
+            return LoadFirst<GamesPerDay>($"{gateway.ToString()}_{gameMode.ToString()}_{date:yyyy-MM-dd}");
         }
 
         public Task Save(GamesPerDay stat)

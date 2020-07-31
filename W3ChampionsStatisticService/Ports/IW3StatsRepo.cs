@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<OverallRaceAndWinStat>> LoadRaceVsRaceStats();
         Task<OverallRaceAndWinStat> LoadRaceVsRaceStat(int mmrRange);
         Task Save(OverallRaceAndWinStat stat);
-        Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode matchGameMode);
+        Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode matchGameMode, GateWay matchGateway);
         Task Save(GamesPerDay stat);
         Task<GameLengthStat> LoadGameLengths();
         Task Save(GameLengthStat stat);
