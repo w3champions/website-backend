@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
@@ -42,23 +43,28 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
             statOverallForGateway.AddGame();
             statForGameModeOnAllGateways.AddGame();
 
-            await _w3Stats.Save(stat);
-            await _w3Stats.Save(statOverall);
-            await _w3Stats.Save(statOverallForGateway);
-            await _w3Stats.Save(statForGameModeOnAllGateways);
+            await _w3Stats.Save(new List<GamesPerDay>
+            {
+                stat,
+                statOverall,
+                statOverallForGateway,
+                statForGameModeOnAllGateways
+            });
         }
 
         private async Task MakeSureEveryDayHasAStat(DateTime endTime)
         {
             foreach (GameMode mode in Enum.GetValues(typeof(GameMode)))
             {
+                var gamesPerDays = new List<GamesPerDay>();
                 foreach (GateWay gw in Enum.GetValues(typeof(GateWay)))
                 {
                     var stat = await _w3Stats.LoadGamesPerDay(endTime, mode, gw)
                                ?? GamesPerDay.Create(endTime, mode, gw);
-                    await _w3Stats.Save(stat);
-
+                    gamesPerDays.Add(stat);
                 }
+
+                await _w3Stats.Save(gamesPerDays);
             }
 
         }

@@ -42,9 +42,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return LoadFirst<GamesPerDay>($"{gateway.ToString()}_{gameMode.ToString()}_{date:yyyy-MM-dd}");
         }
 
-        public Task Save(GamesPerDay stat)
+        public Task Save(List<GamesPerDay> stat)
         {
-            return Upsert(stat);
+            return UpsertMany(stat);
         }
 
         public Task<GameLengthStat> LoadGameLengths()
