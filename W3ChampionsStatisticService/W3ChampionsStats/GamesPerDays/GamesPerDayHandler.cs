@@ -29,9 +29,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
             var statOverallForGateway = await _w3Stats.LoadGamesPerDay(endTime, GameMode.Undefined, match.gateway)
                               ?? GamesPerDay.Create(endTime, GameMode.Undefined, match.gateway);
 
-            var statForGameModeOnAllGateways = await _w3Stats.LoadGamesPerDay(endTime, GameMode.Undefined, match.gateway)
+            var statForGameModeOnAllGateways = await _w3Stats.LoadGamesPerDay(endTime, match.gameMode, GateWay.Undefined)
                                           ?? GamesPerDay.Create(endTime, match.gameMode, GateWay.Undefined);
-            var statOverall = await _w3Stats.LoadGamesPerDay(endTime, GameMode.Undefined, match.gateway)
+            var statOverall = await _w3Stats.LoadGamesPerDay(endTime, GameMode.Undefined, GateWay.Undefined)
                                           ?? GamesPerDay.Create(endTime, GameMode.Undefined, GateWay.Undefined);
 
             stat.AddGame();
