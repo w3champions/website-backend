@@ -4,7 +4,6 @@ namespace W3ChampionsStatisticService.CommonValueObjects
     {
         Undefined = 0,
         America = 10,
-        Europe = 20,
-        Asia = 30
+        Europe = 20
     }
 }

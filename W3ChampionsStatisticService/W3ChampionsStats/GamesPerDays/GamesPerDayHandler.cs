@@ -21,8 +21,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
+
             var match = nextEvent.match;
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime).Date;
+
+            await MakeSureEveryDayHasAStat(endTime);
 
             var stat = await _w3Stats.LoadGamesPerDay(endTime, match.gameMode, match.gateway)
                        ?? GamesPerDay.Create(endTime, match.gameMode, match.gateway);
@@ -43,6 +46,21 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
             await _w3Stats.Save(statOverall);
             await _w3Stats.Save(statOverallForGateway);
             await _w3Stats.Save(statForGameModeOnAllGateways);
+        }
+
+        private async Task MakeSureEveryDayHasAStat(DateTime endTime)
+        {
+            foreach (GameMode mode in Enum.GetValues(typeof(GameMode)))
+            {
+                foreach (GateWay gw in Enum.GetValues(typeof(GateWay)))
+                {
+                    var stat = await _w3Stats.LoadGamesPerDay(endTime, mode, gw)
+                               ?? GamesPerDay.Create(endTime, mode, gw);
+                    await _w3Stats.Save(stat);
+
+                }
+            }
+
         }
     }
 }
