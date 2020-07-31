@@ -77,7 +77,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public GameMode gameMode { get; set; }
         public GateWay gateway { get; set; }
         public string host { get; set; }
-        [BsonElement("id")]
+        [BsonElement("_id")]
         public string id { get; set; }
         public int mapId { get; set; }
         public string map { get; set; }
@@ -95,7 +95,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public GameMode gameMode { get; set; }
         public GateWay gateway { get; set; }
         public string host { get; set; }
-        [BsonElement("id")]
+        [BsonElement("_id")]
         public string id { get; set; }
         public int mapId { get; set; }
         public string map { get; set; }
