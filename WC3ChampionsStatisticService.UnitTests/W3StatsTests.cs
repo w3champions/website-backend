@@ -88,6 +88,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var gamesReloaded2 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.GM_1v1, GateWay.America);
             var gamesReloaded3 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.GM_2v2, GateWay.Europe);
             var gamesReloaded4 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.GM_2v2, GateWay.America);
+            var gamesReloaded5 = await w3StatsRepo.LoadGamesPerDay(new DateTime(2020, 4, 1), GameMode.Undefined, GateWay.Undefined);
 
             Assert.IsNull(gamesReloaded1);
             Assert.AreEqual(2, gamesReloaded2.GamesPlayed);
@@ -97,6 +98,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(GateWay.Europe, gamesReloaded3.GateWay);
             Assert.AreEqual(GameMode.GM_2v2, gamesReloaded3.GameMode);
             Assert.IsNull(gamesReloaded4);
+            Assert.AreEqual(3, gamesReloaded5.GamesPlayed);
         }
 
         [Test]
