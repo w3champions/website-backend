@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -24,8 +25,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
             var statCurrent = await _w3Stats.LoadMapsPerSeason(match.season) ?? MapsPerSeason.Create(match.season);
             var statOverall = await _w3Stats.LoadMapsPerSeason(-1) ?? MapsPerSeason.Create(-1);
 
-            statCurrent.Count(match.map, match.gameMode);
-            statOverall.Count(match.map, match.gameMode);
+            statCurrent.Count(new MapName(match.map).Name, match.gameMode);
+            statOverall.Count(new MapName(match.map).Name, match.gameMode);
 
             await _w3Stats.Save(statCurrent);
             await _w3Stats.Save(statOverall);

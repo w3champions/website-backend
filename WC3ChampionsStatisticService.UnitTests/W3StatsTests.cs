@@ -210,9 +210,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent2.match.gameMode = GameMode.GM_1v1;
             fakeEvent3.match.gameMode = GameMode.GM_1v1;
 
-            fakeEvent1.match.map = "Map1";
-            fakeEvent2.match.map = "Map1";
-            fakeEvent3.match.map = "Map2";
+            fakeEvent1.match.map = "(2)Map1.w3x";
+            fakeEvent2.match.map = "(2)Map1.w3x";
+            fakeEvent3.match.map = "(2)Map2.w3x";
 
             fakeEvent1.match.season = 0;
             fakeEvent2.match.season = 1;
