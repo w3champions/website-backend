@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
@@ -91,6 +90,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         public async Task<IActionResult> GetMmrDistribution(int season)
         {
             var mmrs = await _mmrDistributionHandler.GetDistributions(season);
+            return Ok(mmrs);
+        }
+
+        [HttpGet("matches-on-map")]
+        public async Task<IActionResult> GetMatchesOnMap()
+        {
+            var mmrs = await _w3StatsRepo.LoadMatchesOnMap();
             return Ok(mmrs);
         }
     }

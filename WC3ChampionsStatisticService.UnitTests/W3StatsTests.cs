@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Driver;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PadEvents;
@@ -8,6 +10,7 @@ using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
+using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -191,6 +194,45 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(0, result[0].MmrRange);
             Assert.AreEqual(1200, result[1].MmrRange);
             Assert.AreEqual(1800, result[2].MmrRange);
+        }
+
+        [Test]
+        public async Task MatchesOnMap()
+        {
+            var w3StatsRepo = new W3StatsRepo(MongoClient);
+            var mapsPerSeasonHandler = new MapsPerSeasonHandler(w3StatsRepo);
+
+            var fakeEvent1 = TestDtoHelper.CreateFakeEvent();
+            var fakeEvent2 = TestDtoHelper.CreateFakeEvent();
+            var fakeEvent3 = TestDtoHelper.CreateFakeEvent();
+
+            fakeEvent1.match.gameMode = GameMode.GM_1v1;
+            fakeEvent2.match.gameMode = GameMode.GM_1v1;
+            fakeEvent3.match.gameMode = GameMode.GM_1v1;
+
+            fakeEvent1.match.map = "Map1";
+            fakeEvent2.match.map = "Map1";
+            fakeEvent3.match.map = "Map2";
+
+            fakeEvent1.match.season = 0;
+            fakeEvent2.match.season = 1;
+            fakeEvent3.match.season = 1;
+
+            await mapsPerSeasonHandler.Update(fakeEvent1);
+            await mapsPerSeasonHandler.Update(fakeEvent2);
+            await mapsPerSeasonHandler.Update(fakeEvent3);
+
+            var loadMapsPerSeasonOverall = await w3StatsRepo.LoadMapsPerSeason(-1);
+            var loadMapsPerSeason1 = await w3StatsRepo.LoadMapsPerSeason(0);
+            var loadMapsPerSeason2 = await w3StatsRepo.LoadMapsPerSeason(1);
+            var loadMapsPerSeason3 = await w3StatsRepo.LoadMapsPerSeason(2);
+
+            Assert.AreEqual(2, loadMapsPerSeasonOverall.MatchesOnMap.Single(m => m.Map == "Map1").GamesOnModes[0].Count);
+            Assert.AreEqual(1, loadMapsPerSeason1.MatchesOnMap.Single(m => m.Map == "Map1").GamesOnModes[0].Count);
+            Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMap.Single(m => m.Map == "Map1").GamesOnModes[0].Count);
+            Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMap.Single(m => m.Map == "Map2").GamesOnModes[0].Count);
+            Assert.IsNull(loadMapsPerSeason3);
+
         }
     }
 }

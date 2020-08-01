@@ -9,6 +9,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
 namespace W3ChampionsStatisticService.Ports
@@ -33,5 +34,8 @@ namespace W3ChampionsStatisticService.Ports
         Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId);
         Task<List<OverallHeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId);
         Task Save(OverallHeroWinRatePerHero overallHeroWinrate);
+        Task<MapsPerSeason> LoadMapsPerSeason(int matchSeason);
+        Task Save(MapsPerSeason mapsPerSeason);
+        Task<List<MapsPerSeason>> LoadMatchesOnMap();
     }
 }

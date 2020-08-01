@@ -12,6 +12,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
@@ -134,17 +135,20 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
             return Upsert(overallHeroWinrate);
         }
-    }
 
-    public class GameDayGroup
-    {
-        public GameMode GameMode { get; }
-        public List<GamesPerDay> GameDays { get; }
-
-        public GameDayGroup(GameMode gameMode, List<GamesPerDay> gameDays)
+        public Task<MapsPerSeason> LoadMapsPerSeason(int matchSeason)
         {
-            GameMode = gameMode;
-            GameDays = gameDays;
+            return LoadFirst<MapsPerSeason>(matchSeason.ToString());
+        }
+
+        public Task Save(MapsPerSeason mapsPerSeason)
+        {
+            return Upsert(mapsPerSeason);
+        }
+
+        public Task<List<MapsPerSeason>> LoadMatchesOnMap()
+        {
+            return LoadAll<MapsPerSeason>();
         }
     }
 }
