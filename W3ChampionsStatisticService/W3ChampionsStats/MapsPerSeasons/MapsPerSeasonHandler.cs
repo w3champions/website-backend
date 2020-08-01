@@ -20,16 +20,17 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
-            var match = nextEvent.match;
 
-            var statCurrent = await _w3Stats.LoadMapsPerSeason(match.season) ?? MapsPerSeason.Create(match.season);
+            var match = nextEvent.match;
             var statOverall = await _w3Stats.LoadMapsPerSeason(-1) ?? MapsPerSeason.Create(-1);
 
-            statCurrent.Count(new MapName(match.map).Name, match.gameMode);
-            statOverall.Count(new MapName(match.map).Name, match.gameMode);
+            var statCurrent = await _w3Stats.LoadMapsPerSeason(match.season) ?? MapsPerSeason.Create(match.season);
 
-            await _w3Stats.Save(statCurrent);
+            statOverall.Count(new MapName(match.map).Name, match.gameMode);
+            statCurrent.Count(new MapName(match.map).Name, match.gameMode);
+
             await _w3Stats.Save(statOverall);
+            await _w3Stats.Save(statCurrent);
         }
     }
 }
