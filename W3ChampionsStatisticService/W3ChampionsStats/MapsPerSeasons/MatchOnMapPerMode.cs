@@ -25,6 +25,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
             }
 
             gamesOnMode = Maps.Single(g => g.Map == map);
+            Maps = Maps.OrderBy(m => m.Map).ToList();
             gamesOnMode.CountMatch();
         }
 
