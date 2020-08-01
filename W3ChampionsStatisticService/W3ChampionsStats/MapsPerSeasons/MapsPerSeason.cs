@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
 {
     public class MapsPerSeason : IIdentifiable
     {
-        public List<MatchOnMap> MatchesOnMap { get; set; } = new List<MatchOnMap>();
+        public List<MatchOnMapPerMode> MatchesOnMapPerModes { get; set; } = new List<MatchOnMapPerMode>();
 
         [JsonIgnore]
         public string Id => Season.ToString();
@@ -25,14 +25,23 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
 
         public void Count(string map, GameMode gameMode)
         {
-            var matchOnMap = MatchesOnMap.SingleOrDefault(m => m.Map == map);
-            if (matchOnMap == null)
+            var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);
+            if (matchOnMapOverall == null)
             {
-                MatchesOnMap.Add(MatchOnMap.Create(map));
+                MatchesOnMapPerModes.Add(MatchOnMapPerMode.Create(GameMode.Undefined));
             }
 
-            matchOnMap = MatchesOnMap.Single(m => m.Map == map);
-            matchOnMap.CountMatch(gameMode);
+            matchOnMapOverall = MatchesOnMapPerModes.Single(m => m.GameMode == GameMode.Undefined);
+            matchOnMapOverall.CountMatch(map);
+
+            var matchOnMap = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == gameMode);
+            if (matchOnMap == null)
+            {
+                MatchesOnMapPerModes.Add(MatchOnMapPerMode.Create(gameMode));
+            }
+
+            matchOnMap = MatchesOnMapPerModes.Single(m => m.GameMode == gameMode);
+            matchOnMap.CountMatch(map);
         }
     }
 }

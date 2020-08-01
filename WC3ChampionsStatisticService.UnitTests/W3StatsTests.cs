@@ -227,10 +227,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var loadMapsPerSeason2 = await w3StatsRepo.LoadMapsPerSeason(1);
             var loadMapsPerSeason3 = await w3StatsRepo.LoadMapsPerSeason(2);
 
-            Assert.AreEqual(2, loadMapsPerSeasonOverall.MatchesOnMap.Single(m => m.Map == "Map1").GamesOnModes[0].Count);
-            Assert.AreEqual(1, loadMapsPerSeason1.MatchesOnMap.Single(m => m.Map == "Map1").GamesOnModes[0].Count);
-            Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMap.Single(m => m.Map == "Map1").GamesOnModes[0].Count);
-            Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMap.Single(m => m.Map == "Map2").GamesOnModes[0].Count);
+            Assert.AreEqual(2, loadMapsPerSeasonOverall.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
+            Assert.AreEqual(1, loadMapsPerSeason1.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
+            Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
+            Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map2").Count);
             Assert.IsNull(loadMapsPerSeason3);
 
         }
