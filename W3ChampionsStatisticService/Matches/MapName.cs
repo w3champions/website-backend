@@ -58,6 +58,7 @@ namespace W3ChampionsStatisticService.Matches
                 case "_ffa_sanctuary lv_anon_cd": return "_ffa_sanctuary lv_anon";
                 case "_ffa_rockslide_anon_cd": return "_ffa_rockslide_anon";
                 case "_ffa_ferocity_anon_cd": return "_ffa_ferocity_anon";
+                case "_ffa_frozenmarshlands_anon_cd": return "_ffa_frozenmarshlands_anon";
 
                 default: return mapName;
             }
