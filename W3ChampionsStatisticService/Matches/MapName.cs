@@ -44,8 +44,20 @@ namespace W3ChampionsStatisticService.Matches
                 case "_sanctuary_lv_anon": return "sanctuary";
                 case "_tidewaterglades_lv_anon": return "tidewaterglades";
                 case "_turtlerock_anon": return "turtlerock";
-                case "_twilightruins_lv_anon": return "twilightruins";
                 case "_twilightruins_anon": return "twilightruins";
+
+                case "_ffa_marketsquare_anon_cd": return "_ffa_marketsquare_anon";
+                case "_ffa_deathrose_anon_cd": return "_ffa_deathrose_anon";
+                case "_ffa_fountainofmanipulation_anon_cd": return "_ffa_fountainofmanipulation_anon";
+                case "_ffa_anarchycastle_anon_cd": return "_ffa_anarchycastle_anon";
+                case "_ffa_silverpineforest_anon_cd": return "_ffa_silverpineforest_anon";
+                case "_ffa_neoncity_anon_cd": return "_ffa_neoncity_anon";
+                case "_ffa_harvestofsorrow_anon_cd": return "_ffa_harvestofsorrow_anon";
+                case "_ffa_twilightruins_anon_cd": return "_ffa_twilightruins_anon";
+                case "_ffa_deadlock lv_anon_cd": return "_ffa_deadlock lv_anon";
+                case "_ffa_sanctuary lv_anon_cd": return "_ffa_sanctuary lv_anon";
+                case "_ffa_rockslide_anon_cd": return "_ffa_rockslide_anon";
+                case "_ffa_ferocity_anon_cd": return "_ffa_ferocity_anon";
 
                 default: return mapName;
             }
