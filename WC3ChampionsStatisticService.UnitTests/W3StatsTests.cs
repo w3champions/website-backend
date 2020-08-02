@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
@@ -232,7 +233,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
             Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map2").Count);
             Assert.IsNull(loadMapsPerSeason3);
+        }
 
+        [Test]
+        public void MapName()
+        {
+            var mapName = new MapName("path/w3c_ffa_marketsquare_anon_cd");
+            Assert.AreEqual("_ffa_marketsquare_anon", mapName.Name);
         }
     }
 }
