@@ -17,6 +17,9 @@ namespace W3ChampionsStatisticService.Matches
                 .Replace("1v1_", "")
                 .Replace("2v2_", "")
                 .Replace("4v4_", "")
+                .Replace("mur'galoasis", "mur'guloasis")
+                .Replace("battlegrounds", "battleground")
+                .Replace("goleminthemist", "golemsinthemist")
                 .Replace("_cd", "")
                 .Replace("_", "");
         }
