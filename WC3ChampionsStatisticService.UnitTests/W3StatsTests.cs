@@ -236,10 +236,17 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public void MapName()
+        [TestCase("path/w3c_1v1_autumnleaves_anon", "autumnleaves")]
+        [TestCase("path/w3c_1v1_terenasstand_anon", "terenasstand")]
+        [TestCase("path/w3c_gnollwood_anon", "gnollwood")]
+        [TestCase("path/w3c_tidewaterglades_lv_anon", "tidewaterglades")]
+        [TestCase("path/w3c_tidewaterglades_anon", "tidewaterglades")]
+        [TestCase("path/w3c_ffa_marketsquare_anon_cd", "marketsquare")]
+        [TestCase("path/w3c_ffa_marketsquare_cd", "marketsquare")]
+        public void MapName(string input, string expected)
         {
-            var mapName = new MapName("path/w3c_ffa_marketsquare_anon_cd");
-            Assert.AreEqual("_ffa_marketsquare_anon", mapName.Name);
+            var mapName = new MapName(input);
+            Assert.AreEqual(expected, mapName.Name);
         }
     }
 }
