@@ -9,13 +9,16 @@ namespace W3ChampionsStatisticService.Matches
     {
         private readonly IMatchEventRepository _eventRepository;
         private readonly IMatchRepository _matchRepository;
+        private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
         public OngoingMatchesHandler(
             IMatchEventRepository eventRepository,
-            IMatchRepository matchRepository)
+            IMatchRepository matchRepository,
+            IPersonalSettingsRepository personalSettingsRepository)
         {
             _eventRepository = eventRepository;
             _matchRepository = matchRepository;
+            _personalSettingsRepository = personalSettingsRepository;
         }
 
         public async Task Update()
@@ -33,10 +36,15 @@ namespace W3ChampionsStatisticService.Matches
                         foreach (var player in team.Players)
                         {
                             var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
-
                             if (foundMatchForPlayer != null)
                             {
                                 await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
+                            }
+
+                            var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
+                            if (personalSettings != null)
+                            {
+                                player.Country = personalSettings.Country;
                             }
                         }
                     }

@@ -49,7 +49,8 @@ namespace W3ChampionsStatisticService.Matches
                 Name = w.battleTag.Split("#")[0],
                 BattleTag = w.battleTag,
                 OldMmr = (int)w.mmr.rating,
-                Race = w.race
+                Race = w.race,
+                Location = w.country
             });
         }
     }

@@ -11,5 +11,7 @@ namespace W3ChampionsStatisticService.Matches
         public string Name { get; set; }
         public int MmrGain => CurrentMmr - OldMmr;
         public bool Won { get; set; }
+        public string Location { get; set; }
+        public string Country { get; set; }
     }
 }
