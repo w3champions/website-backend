@@ -21,7 +21,6 @@ namespace W3ChampionsStatisticService.PadEvents
         public bool won { get; set; }
         public Mmr updatedMmr { get; set; }
         public Ranking updatedRanking { get; set; }
-        public string country { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -35,6 +34,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
         public Mmr mmr { get; set; }
         public Ranking ranking { get; set; }
+        public string country { get; set; }
     }
 
     [BsonIgnoreExtraElements]

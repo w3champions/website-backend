@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
@@ -24,6 +26,16 @@ namespace W3ChampionsStatisticService.PersonalSettings
                     player => player.BattleTag,
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
+            return result;
+        }
+
+        public async Task<List<PersonalSetting>> LoadMany(string[] battletags)
+        {
+            var settings = CreateCollection<PersonalSetting>();
+            var result = await settings
+                .Aggregate()
+                .Match(p => battletags.Contains(p.Id))
+                .ToListAsync();
             return result;
         }
 
