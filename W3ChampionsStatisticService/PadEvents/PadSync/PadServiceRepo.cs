@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     public class PadServiceRepo : IPadServiceRepo
     {
         private static string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
-        private static string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "secret";
+        private static string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
         public async Task<List<Match>> GetFrom(long offset)
         {
