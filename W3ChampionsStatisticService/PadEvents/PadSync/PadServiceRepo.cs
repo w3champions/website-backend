@@ -22,11 +22,6 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         private static string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
         private static string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "secret";
 
-        public PadServiceRepo()
-        {
-
-        }
-
         public async Task<List<Match>> GetFrom(long offset)
         {
             var httpClient = new HttpClient();
