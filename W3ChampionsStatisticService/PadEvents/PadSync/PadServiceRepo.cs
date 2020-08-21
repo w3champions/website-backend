@@ -19,10 +19,18 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
     public class PadServiceRepo : IPadServiceRepo
     {
+        private static string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
+        private static string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "secret";
+
+        public PadServiceRepo()
+        {
+
+        }
+
         public async Task<List<Match>> GetFrom(long offset)
         {
             var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://api.w3champions.com:25059");
+            httpClient.BaseAddress = new Uri(MatchmakingApiUrl);
             var result = await httpClient.GetAsync($"/match?limit=100&offset={offset}");
             var content = await result.Content.ReadAsStringAsync();
             var deserializeObject = JsonConvert.DeserializeObject<MatchesList>(content);
@@ -33,7 +41,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         {
             var httpClient = new HttpClient();
             var encode = HttpUtility.UrlEncode(battleTag);
-            var result = await httpClient.GetAsync($"https://api.w3champions.com/player/{encode}/stats");
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/player/{encode}/stats");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<PlayerStatePad>(content);
@@ -43,7 +51,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public async Task<BannedPlayerResponse> GetBannedPlayers()
         {
             var httpClient = new HttpClient();
-            var result = await httpClient.GetAsync($"https://api.w3champions.com/admin/bannedPlayers?secret=yGBC1w5TcjAQSyOvGTlO4kPGCdJ7dGBKNPkEKQVnqHonGLet4DntoA7PwCgHAiSJ");
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={MatchmakingAdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
@@ -53,24 +61,24 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public async Task<System.Net.HttpStatusCode> PostBannedPlayers(BannedPlayer bannedPlayer)
         {
             var httpClient = new HttpClient();
-            var splitTag = bannedPlayer.battleTag.Split('#');
+            var encodedTag = HttpUtility.UrlEncode(bannedPlayer.battleTag);
             var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayer), Encoding.UTF8, "application/json");
-            var result = await httpClient.PostAsync($"https://api.w3champions.com/admin/bannedPlayers/{splitTag[0] + "%23" + splitTag[1]}?secret=yGBC1w5TcjAQSyOvGTlO4kPGCdJ7dGBKNPkEKQVnqHonGLet4DntoA7PwCgHAiSJ", httpcontent);
+            var result = await httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}", httpcontent);
             return result.StatusCode;
         }
 
         public async Task<System.Net.HttpStatusCode> DeleteBannedPlayers(BannedPlayer bannedPlayer)
         {
             var httpClient = new HttpClient();
-            var splitTag = bannedPlayer.battleTag.Split('#');
-            var result = await httpClient.DeleteAsync($"https://api.w3champions.com/admin/bannedPlayers/{splitTag[0] + "%23" + splitTag[1]}?secret=yGBC1w5TcjAQSyOvGTlO4kPGCdJ7dGBKNPkEKQVnqHonGLet4DntoA7PwCgHAiSJ");
+            var encodedTag = HttpUtility.UrlEncode(bannedPlayer.battleTag);
+            var result = await httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}");
             return result.StatusCode;
         }
 
         public async Task<LeagueConstellation> GetLeague(GateWay gateWay, GameMode gameMode)
         {
             var httpClient = new HttpClient();
-            var result = await httpClient.GetAsync($"https://api.w3champions.com/leagues/{(int)gateWay}/{(int)gameMode}");
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/leagues/{(int)gateWay}/{(int)gameMode}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<League>>(content);
