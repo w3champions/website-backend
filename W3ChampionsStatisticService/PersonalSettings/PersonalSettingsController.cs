@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Chats;
@@ -42,6 +43,26 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 return Ok(new PersonalSetting(battleTag) { Players = new List<PlayerOverallStats> { player } });
             }
             return Ok(setting);
+        }
+
+        [HttpGet("{commaSeparatedBattleTags}/many")]
+        public async Task<IActionResult> GetPersonalSettings(string commaSeparatedBattleTags)
+        {
+            var splitBattleTags = commaSeparatedBattleTags.Split(new string[] { "," }, System.StringSplitOptions.RemoveEmptyEntries);
+
+            var settings = await _personalSettingsRepository.LoadMany(splitBattleTags);
+
+            if (settings != null)
+            {
+                return Ok(settings.Select(x => new {
+                    x.Id,
+                    x.Country,
+                    x.Location,
+                    x.ProfilePicture
+                }));
+            }
+
+            return Ok(new object[0]);
         }
 
         [HttpPut("{battleTag}")]
