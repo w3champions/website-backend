@@ -30,6 +30,13 @@ namespace W3ChampionsStatisticService.Ladder
                 return;
             }
 
+            if ((nextEvent.match.gameMode == GameMode.GM_2v2
+                 || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
+                && winners.Count != 2 && losers.Count != 2)
+            {
+                return;
+            }
+
             // for broken events
             if (winners.Count == 0 || losers.Count == 0) return;
 

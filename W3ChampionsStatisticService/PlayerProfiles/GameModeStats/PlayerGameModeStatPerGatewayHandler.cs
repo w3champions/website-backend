@@ -33,6 +33,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 return;
             }
 
+            if ((nextEvent.match.gameMode == GameMode.GM_2v2
+                 || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
+                && winners.Count != 2 && losers.Count != 2 )
+            {
+                return;
+            }
+
             // some events are buggy
             if (winners.Count != losers.Count && match.gameMode != GameMode.FFA) return;
 
