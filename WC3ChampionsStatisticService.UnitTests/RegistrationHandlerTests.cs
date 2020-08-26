@@ -1,5 +1,4 @@
 using System.Threading.Tasks;
-using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Authorization;
@@ -9,7 +8,7 @@ using W3ChampionsStatisticService.Ports;
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class RegistrationHandlerTests
+    public class RegistrationHandlerTests : IntegrationTestBase
     {
         private string _notfounduser = "NotFoundUser#123";
         private Mock<IBlizzardAuthenticationService> _authMock;
@@ -20,13 +19,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             _authMock = new Mock<IBlizzardAuthenticationService>();
             _authMock.Setup(m => m.GetUser(_notfounduser))
                 .ReturnsAsync(new BlizzardUserInfo {battletag = _notfounduser});
-
         }
 
         [Test]
         public async Task OverviewGetsCreatedForClanSearch()
         {
-            var playerRepository = new PlayerRepository(new MongoClient());
+            var playerRepository = new PlayerRepository(MongoClient);
             var registrationHandler = new RegistrationHandler(_authMock.Object, playerRepository);
 
             await registrationHandler.GetUserOrRegister(_notfounduser);
