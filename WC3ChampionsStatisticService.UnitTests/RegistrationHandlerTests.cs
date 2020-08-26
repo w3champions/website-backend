@@ -13,7 +13,6 @@ namespace WC3ChampionsStatisticService.UnitTests
     {
         private string _notfounduser = "NotFoundUser#123";
         private Mock<IBlizzardAuthenticationService> _authMock;
-        private IPlayerRepository _playerRepository = new PlayerRepository(new MongoClient());
 
         [SetUp]
         public void SetUp()
@@ -27,11 +26,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task OverviewGetsCreatedForClanSearch()
         {
-            var registrationHandler = new RegistrationHandler(_authMock.Object, _playerRepository);
+            var playerRepository = new PlayerRepository(new MongoClient());
+            var registrationHandler = new RegistrationHandler(_authMock.Object, playerRepository);
 
             await registrationHandler.GetUserOrRegister(_notfounduser);
 
-            var playerOverview = await _playerRepository.LoadPlayerProfile(_notfounduser);
+            var playerOverview = await playerRepository.LoadPlayerProfile(_notfounduser);
 
             Assert.AreEqual(_notfounduser, playerOverview.BattleTag);
             Assert.AreEqual(0, playerOverview.WinLosses[0].Games);
