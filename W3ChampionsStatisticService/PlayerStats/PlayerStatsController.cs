@@ -1,5 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.PlayerStats.HeroStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerStats
@@ -19,14 +21,14 @@ namespace W3ChampionsStatisticService.PlayerStats
         public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag, int season)
         {
             var matches = await _playerRepository.LoadMapAndRaceStat(battleTag, season);
-            return Ok(matches);
+            return Ok(matches ?? PlayerRaceOnMapVersusRaceRatio.Create(battleTag, season));
         }
 
         [HttpGet("{battleTag}/hero-on-map-versus-race")]
         public async Task<IActionResult> GetHeroOnMapVersusRaceStat([FromRoute] string battleTag, int season)
         {
             var matches = await _playerRepository.LoadHeroStat(battleTag, season);
-            return Ok(matches);
+            return Ok(matches ?? PlayerHeroStats.Create(battleTag, season));
         }
     }
 }

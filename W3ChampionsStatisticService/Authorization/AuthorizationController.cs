@@ -12,13 +12,16 @@ namespace W3ChampionsStatisticService.Authorization
         private readonly IBlizzardAuthenticationService _authenticationService;
 
         private readonly ITwitchAuthenticationService _twitchAuthenticationService;
+        private readonly RegistrationHandler _registrationHandler;
 
-        private OAuthToken _cachedToken { get; set; }
-
-        public AuthorizationController(IBlizzardAuthenticationService authenticationService, ITwitchAuthenticationService twitchAuthenticationService)
+        public AuthorizationController(
+            IBlizzardAuthenticationService authenticationService,
+            ITwitchAuthenticationService twitchAuthenticationService,
+            RegistrationHandler registrationHandler)
         {
             _authenticationService = authenticationService;
             _twitchAuthenticationService = twitchAuthenticationService;
+            _registrationHandler = registrationHandler;
         }
 
         [HttpGet("token")]
@@ -31,8 +34,9 @@ namespace W3ChampionsStatisticService.Authorization
         [HttpGet("battleTag")]
         public async Task<IActionResult> GetUserInfo([FromQuery] string bearer)
         {
-            var userInfo = await _authenticationService.GetUser(bearer);
-            return userInfo == null ? (IActionResult)Unauthorized("Sorry H4ckerb0i") : Ok(userInfo);
+            var userInfo = await _registrationHandler.GetUserOrRegister(bearer);
+
+            return userInfo == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(userInfo);
         }
 
         [HttpGet("twitch")]
