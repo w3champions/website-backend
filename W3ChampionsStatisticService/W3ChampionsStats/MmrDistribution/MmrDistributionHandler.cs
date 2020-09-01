@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
         {
             var mmrs = await _playerRepository.LoadMmrs(season);
             var orderedMMrs = mmrs.OrderByDescending(m => m).ToList();
-            var ranges = Ranges(2325, 575, 25).ToList();
+            var ranges = Ranges(2300, 550, 50).ToList();
             var highest = ranges.First();
             var grouped = ranges.Select(r => new MmrCount(r, orderedMMrs.Count(x => Math.Abs(x - r) < 25 || x > highest))).ToList();
             grouped.Remove(grouped.Last());
