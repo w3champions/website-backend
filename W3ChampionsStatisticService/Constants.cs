@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService
                 "floss2xdaily#1987",
                 "setcho#2271",
                 "modmoto#2809",
-                "Toxi#21818"
+                "toxi#21818"
             };
     }
 }
