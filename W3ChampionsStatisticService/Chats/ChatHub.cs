@@ -75,7 +75,7 @@ namespace W3ChampionsStatisticService.Chats
 
             if (ban != null)
             {
-                await Clients.Caller.SendAsync("PlayerBannedFromChat");
+                await Clients.Caller.SendAsync("PlayerBannedFromChat", ban);
             }
 
             if (!user.VerifiedBattletag)
