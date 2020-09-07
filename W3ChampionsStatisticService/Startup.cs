@@ -79,7 +79,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<ITwitchAuthenticationService, TwitchAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
-            services.AddTransient<IPadServiceRepo, PadServiceRepo>();
+            services.AddTransient<BanReadmodelRepository>();
             services.AddTransient<HeroStatsQueryHandler>();
             services.AddTransient<PersonalSettingsCommandHandler>();
             services.AddTransient<MmrDistributionHandler>();
@@ -93,7 +93,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
-
             services.AddTransient<PadServiceRepo>();
 
             if (startPadSync == "true")
@@ -134,6 +133,7 @@ namespace W3ChampionsStatisticService
 
                 services.AddUnversionedReadModelService<RankSyncHandler>();
                 services.AddUnversionedReadModelService<LeagueSyncHandler>();
+                services.AddUnversionedReadModelService<BanSyncHandler>();
             }
         }
 

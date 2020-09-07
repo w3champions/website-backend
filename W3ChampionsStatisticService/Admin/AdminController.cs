@@ -12,16 +12,18 @@ namespace W3ChampionsStatisticService.Admin
     public class AdminController : ControllerBase
     {
         private readonly IMatchRepository _matchRepository;
-
+        private readonly BanReadmodelRepository _banRepository;
         private readonly PadServiceRepo _padServiceRepository;
         private readonly INewsRepository _newsRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
             PadServiceRepo padServiceRepository,
+            BanReadmodelRepository banRepository,
             INewsRepository newsRepository)
         {
             _matchRepository = matchRepository;
+            _banRepository = banRepository;
             _padServiceRepository = padServiceRepository;
             _newsRepository = newsRepository;
         }
@@ -42,8 +44,8 @@ namespace W3ChampionsStatisticService.Admin
         [HttpGet("bannedPlayers")]
         public async Task<IActionResult> GetBannedPlayers()
         {
-            var bannedPlayers = await _padServiceRepository.GetBannedPlayers();
-            return Ok(bannedPlayers);
+            var bannedPlayers = await _banRepository.GetBans();
+            return Ok(new BannedPlayerResponse { total = bannedPlayers.Count, players = bannedPlayers });
         }
 
         [HttpPost("bannedPlayers")]

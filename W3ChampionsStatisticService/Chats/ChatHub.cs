@@ -1,21 +1,26 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using W3ChampionsStatisticService.Admin;
+using W3ChampionsStatisticService.PadEvents.PadSync;
 
 namespace W3ChampionsStatisticService.Chats
 {
     public class ChatHub : Hub
     {
         private readonly ChatAuthenticationService _authenticationService;
+        private readonly BanReadmodelRepository _banRepository;
         private readonly ConnectionMapping _connections;
         private readonly ChatHistory _chatHistory;
 
         public ChatHub(
             ChatAuthenticationService authenticationService,
+            BanReadmodelRepository banRepository,
             ConnectionMapping connections,
             ChatHistory chatHistory)
         {
             _authenticationService = authenticationService;
+            _banRepository = banRepository;
             _connections = connections;
             _chatHistory = chatHistory;
         }
@@ -66,6 +71,12 @@ namespace W3ChampionsStatisticService.Chats
         public async Task LoginAs(string chatApiKey, string battleTag, string chatRoom)
         {
             var user = await _authenticationService.GetUser(chatApiKey, battleTag);
+            var ban = await _banRepository.GetBan(battleTag);
+
+            if (ban != null)
+            {
+                await Clients.Caller.SendAsync("PlayerBannedFromChat");
+            }
 
             if (!user.VerifiedBattletag)
             {

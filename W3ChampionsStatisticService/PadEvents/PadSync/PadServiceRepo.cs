@@ -8,17 +8,11 @@ using System.Web;
 using Newtonsoft.Json;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
-    public interface IPadServiceRepo
-    {
-        Task<List<Match>> GetFrom(long offset);
-        Task<PlayerStatePad> GetPlayer(string battleTag);
-        Task<LeagueConstellation> GetLeague(GateWay gateWay, GameMode gameMode);
-    }
-
-    public class PadServiceRepo : IPadServiceRepo
+    public class PadServiceRepo
     {
         private static string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
         private static string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
@@ -51,7 +45,6 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
-            deserializeObject.players = deserializeObject.players.OrderByDescending(s => s.endDate).ToList();
             return deserializeObject;
         }
 
@@ -127,14 +120,16 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public List<BannedPlayer> players { get; set; }
     }
 
-    public class BannedPlayer
+    public class BannedPlayer : IIdentifiable
     {
         public string battleTag { get; set; }
 
         public string endDate { get; set; }
 
         public Boolean isIpBan { get; set; }
+        public Boolean onlyChatBanned { get; set; }
 
         public string banReason { get; set; }
+        public string Id => battleTag;
     }
 }
