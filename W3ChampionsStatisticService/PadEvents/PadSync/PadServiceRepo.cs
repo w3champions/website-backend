@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -50,6 +51,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
+            deserializeObject.players = deserializeObject.players.OrderByDescending(s => s.endDate).ToList();
             return deserializeObject;
         }
 
