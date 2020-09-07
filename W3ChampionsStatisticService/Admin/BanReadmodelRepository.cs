@@ -24,7 +24,8 @@ namespace W3ChampionsStatisticService.Admin
 
         public Task<List<BannedPlayer>> GetBans()
         {
-            return LoadAll<BannedPlayer>();
+            var mongoCollection = CreateCollection<BannedPlayer>();
+            return mongoCollection.Find(s => true).SortByDescending(s => s.endDate).ToListAsync();
         }
     }
 }
