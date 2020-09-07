@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
@@ -26,7 +27,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 if (
                     res != null
                     && !string.IsNullOrEmpty(res.battletag)
-                    && Constants.ApprovedAdmins.Any(x => x.ToLower() == res.battletag.ToLower()))
+                    && Admins.ApprovedAdmins.Any(x => x.ToLower() == res.battletag.ToLower()))
                 {
                     context.ActionArguments["battleTag"] = res.battletag;
                     await next.Invoke();
