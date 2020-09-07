@@ -77,19 +77,21 @@ namespace W3ChampionsStatisticService.Chats
             {
                 await Clients.Caller.SendAsync("PlayerBannedFromChat", ban);
             }
-
-            if (!user.VerifiedBattletag)
+            else
             {
-                await Clients.Caller.SendAsync("ChatKeyInvalid");
+                if (!user.VerifiedBattletag)
+                {
+                    await Clients.Caller.SendAsync("ChatKeyInvalid");
+                }
+
+                _connections.Add(Context.ConnectionId, chatRoom, user);
+                await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
+
+                var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
+
+                await Clients.Group(chatRoom).SendAsync("UserEntered", user);
+                await Clients.Caller.SendAsync("StartChat", usersOfRoom, _chatHistory.GetMessages(chatRoom));
             }
-
-            _connections.Add(Context.ConnectionId, chatRoom, user);
-            await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
-
-            var usersOfRoom = _connections.GetUsersOfRoom(chatRoom);
-
-            await Clients.Group(chatRoom).SendAsync("UserEntered", user);
-            await Clients.Caller.SendAsync("StartChat", usersOfRoom, _chatHistory.GetMessages(chatRoom));
         }
     }
 }
