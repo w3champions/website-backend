@@ -73,7 +73,8 @@ namespace W3ChampionsStatisticService.Chats
             var user = await _authenticationService.GetUser(chatApiKey, battleTag);
             var ban = await _banRepository.GetBan(battleTag.ToLower());
 
-            if (ban != null && string.Compare(ban.endDate, DateTime.Now.ToString("YYYY-MM-dd"), StringComparison.Ordinal) < 0)
+            var nowDate = DateTime.Now.ToString("yyyy-MM-dd");
+            if (ban != null && string.Compare(ban.endDate, nowDate, StringComparison.Ordinal) > 0)
             {
                 await Clients.Caller.SendAsync("PlayerBannedFromChat", ban);
             }

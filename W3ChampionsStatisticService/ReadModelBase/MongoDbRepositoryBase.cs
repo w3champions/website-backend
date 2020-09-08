@@ -23,11 +23,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return database;
         }
 
-        protected async Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
+        protected Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
         {
             var mongoCollection = CreateCollection<T>();
-            var elements = await mongoCollection.FindAsync(expression);
-            return elements.FirstOrDefault();
+            return mongoCollection.FindSync(expression).FirstOrDefaultAsync();
         }
 
         protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
