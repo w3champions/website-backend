@@ -16,6 +16,7 @@ namespace W3ChampionsStatisticService.Matches
 
         [JsonPropertyName("id")]
         public string ObjectId => Id.ToString();
+        [JsonPropertyName("original-ongoing-match-id")]
         public string MatchId { get; set; }
         [JsonIgnore]
         public TimeSpan Duration { get; set; }
