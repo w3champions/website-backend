@@ -95,6 +95,18 @@ namespace W3ChampionsStatisticService.Matches
             };
         }
 
+        public async Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id)
+        {
+            var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.match.id == id);
+            var match = await LoadFirst<Matchup>(t => t.MatchId == id);
+
+            return new MatchupDetail
+            {
+                Match = match,
+                PlayerScores = originalMatch?.result?.players.Select(p => CreateDetail(p)).ToList()
+            };
+        }
+
         public Task EnsureIndices()
         {
             var collection = CreateCollection<Matchup>();

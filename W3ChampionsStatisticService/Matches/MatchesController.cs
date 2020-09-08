@@ -37,6 +37,13 @@ namespace W3ChampionsStatisticService.Matches
             return Ok(match);
         }
 
+        [HttpGet("by-ongoing-match-id/{id}")]
+        public async Task<IActionResult> GetMatcheDetailsByOngoingMatchId(string id)
+        {
+            var match = await _matchRepository.LoadDetailsByOngoingMatchId(id);
+            return Ok(match);
+        }
+
         [HttpGet("search")]
         public async Task<IActionResult> GetMatchesPerPlayer(
             string playerId,

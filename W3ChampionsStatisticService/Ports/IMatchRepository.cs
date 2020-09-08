@@ -34,6 +34,7 @@ namespace W3ChampionsStatisticService.Ports
             int season = 1);
 
         Task<MatchupDetail> LoadDetails(ObjectId id);
+        Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id);
 
         Task InsertOnGoingMatch(OnGoingMatchup matchup);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
