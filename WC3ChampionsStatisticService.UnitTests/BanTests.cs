@@ -46,7 +46,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual("user#2", bans[0].battleTag);
             Assert.AreEqual("user#1", bans[1].battleTag);
-            Assert.AreEqual(2, bans.Count);
+            Assert.AreEqual("user#1", (await _banRepo.GetBan("user#1")).battleTag);
         }
     }
 }
