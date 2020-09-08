@@ -127,7 +127,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
         public string endDate { get; set; }
 
         public Boolean isIpBan { get; set; }
-        public Boolean onlyChatBanned { get; set; }
+        public Boolean isOnlyChatBan { get; set; }
 
         public string banReason { get; set; }
         public string Id => battleTag;
