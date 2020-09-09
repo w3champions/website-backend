@@ -18,6 +18,8 @@ namespace W3ChampionsStatisticService.Matches
                         player.Name = "*";
                         player.CurrentMmr = 0;
                         player.OldMmr = 0;
+                        player.Country = null;
+                        player.Location = null;
                     }
                 }
             }
