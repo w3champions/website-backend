@@ -11,7 +11,9 @@ namespace W3ChampionsStatisticService.Authorization
     {
         private OAuthToken _cachedToken { get; set; }
 
-        public async Task<OAuthToken> GetToken(string clientId, string clientSecret)
+        private readonly string _twitchApiSecret = Environment.GetEnvironmentVariable("TWITCH_API_SECRET");
+
+        public async Task<OAuthToken> GetToken()
         {
             // Twitch token expires after 60 days, so this cache will save many calls to the twitch API
             if (Cache.TwitchToken != null && !Cache.TwitchToken.hasExpired())
@@ -21,7 +23,7 @@ namespace W3ChampionsStatisticService.Authorization
 
             var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("https://id.twitch.tv/oauth2/token");
-            var result = await httpClient.PostAsync($"?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials", null);
+            var result = await httpClient.PostAsync($"?client_id=38ac0gifyt5khcuq23h2p8zpcqosbc&client_secret={_twitchApiSecret}&grant_type=client_credentials", null);
             if (result.StatusCode == HttpStatusCode.OK)
             {
                 var content = await result.Content.ReadAsStringAsync();
@@ -30,10 +32,8 @@ namespace W3ChampionsStatisticService.Authorization
                 Cache.TwitchToken = _cachedToken;
                 return _cachedToken;
             }
-            else
-            {
-                throw new Exception("Could not retrieve Twitch Token");
-            }
+
+            throw new Exception("Could not retrieve Twitch Token");
         }
 
     }

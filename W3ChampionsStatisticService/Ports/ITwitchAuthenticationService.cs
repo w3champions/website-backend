@@ -5,6 +5,6 @@ namespace W3ChampionsStatisticService.Ports
 {
     public interface ITwitchAuthenticationService
     {
-        Task<OAuthToken> GetToken(string clientId, string clientSecret);
+        Task<OAuthToken> GetToken();
     }
 }

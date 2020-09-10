@@ -76,7 +76,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IPatchRepository, PatchRepository>();
             services.AddSingleton<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
-            services.AddTransient<ITwitchAuthenticationService, TwitchAuthenticationService>();
+            services.AddSingleton<ITwitchAuthenticationService, TwitchAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
             services.AddTransient<BanReadmodelRepository>();

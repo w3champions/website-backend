@@ -42,10 +42,7 @@ namespace W3ChampionsStatisticService.Authorization
         [HttpGet("twitch")]
         public async Task<IActionResult> GetTwitchToken()
         {
-            const string CLIENT_ID = "38ac0gifyt5khcuq23h2p8zpcqosbc";
-            const string CLIENT_SECRET = "0kec9qsb8otc3q0ibs3w2cjtiwaiez";
-           
-            var token = await _twitchAuthenticationService.GetToken(CLIENT_ID, CLIENT_SECRET);
+            var token = await _twitchAuthenticationService.GetToken();
             return Ok(token);
         }
     }
