@@ -12,19 +12,19 @@ namespace W3ChampionsStatisticService.Admin
         {
         }
 
-        public Task<BannedPlayer> GetBan(string battleTag)
+        public Task<BannedPlayerReadmodel> GetBan(string battleTag)
         {
-            return LoadFirst<BannedPlayer>(battleTag);
+            return LoadFirst<BannedPlayerReadmodel>(battleTag);
         }
 
-        public Task UpdateBans(List<BannedPlayer> bans)
+        public Task UpdateBans(List<BannedPlayerReadmodel> bans)
         {
             return UpsertMany(bans);
         }
 
-        public Task<List<BannedPlayer>> GetBans()
+        public Task<List<BannedPlayerReadmodel>> GetBans()
         {
-            var mongoCollection = CreateCollection<BannedPlayer>();
+            var mongoCollection = CreateCollection<BannedPlayerReadmodel>();
             return mongoCollection.Find(s => true).SortByDescending(s => s.endDate).ToListAsync();
         }
     }

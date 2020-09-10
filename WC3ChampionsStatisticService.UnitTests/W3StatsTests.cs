@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Driver;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;

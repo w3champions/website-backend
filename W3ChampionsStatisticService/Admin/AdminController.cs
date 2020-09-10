@@ -50,17 +50,17 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpPost("bannedPlayers")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayer bannedPlayer)
+        public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _padServiceRepository.PostBannedPlayers(bannedPlayer);
+            var bannedPlayers = await _padServiceRepository.PostBannedPlayers(bannedPlayerReadmodel);
             return Ok(bannedPlayers);
         }
 
         [HttpDelete("bannedPlayers")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayer bannedPlayer)
+        public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _padServiceRepository.DeleteBannedPlayers(bannedPlayer);
+            var bannedPlayers = await _padServiceRepository.DeleteBannedPlayers(bannedPlayerReadmodel);
             return Ok(bannedPlayers);
         }
 

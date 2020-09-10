@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;

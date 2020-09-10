@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using W3ChampionsStatisticService.Admin;
-using W3ChampionsStatisticService.PadEvents.PadSync;
 
 namespace W3ChampionsStatisticService.Chats
 {

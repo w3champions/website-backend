@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,8 +13,8 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
     public class PadServiceRepo
     {
-        private static string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
-        private static string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+        private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
+        private static readonly string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
         public async Task<List<Match>> GetFrom(long offset)
         {
@@ -48,19 +47,19 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             return deserializeObject;
         }
 
-        public async Task<System.Net.HttpStatusCode> PostBannedPlayers(BannedPlayer bannedPlayer)
+        public async Task<System.Net.HttpStatusCode> PostBannedPlayers(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var httpClient = new HttpClient();
-            var encodedTag = HttpUtility.UrlEncode(bannedPlayer.battleTag);
-            var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayer), Encoding.UTF8, "application/json");
+            var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
             var result = await httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}", httpcontent);
             return result.StatusCode;
         }
 
-        public async Task<System.Net.HttpStatusCode> DeleteBannedPlayers(BannedPlayer bannedPlayer)
+        public async Task<System.Net.HttpStatusCode> DeleteBannedPlayers(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var httpClient = new HttpClient();
-            var encodedTag = HttpUtility.UrlEncode(bannedPlayer.battleTag);
+            var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
             var result = await httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}");
             return result.StatusCode;
         }
@@ -117,10 +116,10 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
     public class BannedPlayerResponse
     {
         public int total { get; set; }
-        public List<BannedPlayer> players { get; set; }
+        public List<BannedPlayerReadmodel> players { get; set; }
     }
 
-    public class BannedPlayer : IIdentifiable
+    public class BannedPlayerReadmodel : IIdentifiable
     {
         public string battleTag { get; set; }
 

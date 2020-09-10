@@ -9,6 +9,8 @@ namespace W3ChampionsStatisticService.Authorization
 {
     public class BlizzardAuthenticationService : IBlizzardAuthenticationService
     {
+        private static readonly string BnetApiSecret = Environment.GetEnvironmentVariable("BNET_API_SECRET");
+
         public async Task<BlizzardUserInfo> GetUser(string bearer)
         {
             var httpClient = new HttpClient();
@@ -30,7 +32,7 @@ namespace W3ChampionsStatisticService.Authorization
             var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("https://eu.battle.net/oauth/token");
             var res = await httpClient.GetAsync(
-                $"?region=eu&code={code}&grant_type=authorization_code&redirect_uri={redirectUri}&client_id=d7bd6dd46e2842c8a680866759ad34c2&client_secret=7qs8iu2dcX4ZrURpIpezwZJHNM7OJmXg");
+                $"?region=eu&code={code}&grant_type=authorization_code&redirect_uri={redirectUri}&client_id=d7bd6dd46e2842c8a680866759ad34c2&client_secret={BnetApiSecret}");
             if (!res.IsSuccessStatusCode)
             {
                 return null;
