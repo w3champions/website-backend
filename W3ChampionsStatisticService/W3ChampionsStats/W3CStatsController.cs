@@ -102,7 +102,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
 
         private DateTimeOffset GetDefaultMinDateOffset()
         {
-            DateTime ThreeMonthsInThePast = DateTime.UtcNow.AddMonths(-3);
+            DateTime ThreeMonthsInThePast = DateTime.UtcNow.AddMonths(-2);
             return DateTime.SpecifyKind(ThreeMonthsInThePast, DateTimeKind.Utc);
         }
     }
