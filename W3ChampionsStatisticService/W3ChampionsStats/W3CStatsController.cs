@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             DateTimeOffset from = default,
             DateTimeOffset to = default)
         {
-            from = from != default ? from : DateTimeOffset.MinValue;
+            from = from != default ? from : GetDefaultMinDateOffset();
             to = to != default ? to : DateTimeOffset.MaxValue;
             var gameDays = await _w3StatsRepo.LoadGamesPerDayBetween(from, to);
             return Ok(gameDays);
@@ -80,7 +80,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         [HttpGet("distinct-players-per-day")]
         public async Task<IActionResult> DistinctPlayersPerDay(DateTimeOffset from = default, DateTimeOffset to = default)
         {
-            from = from != default ? from : DateTimeOffset.MinValue;
+            from = from != default ? from : GetDefaultMinDateOffset();
             to = to != default ? to : DateTimeOffset.MaxValue;
             var stats = await _w3StatsRepo.LoadPlayersPerDayBetween(from, to);
             return Ok(stats);
@@ -98,6 +98,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         {
             var mmrs = await _w3StatsRepo.LoadMatchesOnMap();
             return Ok(mmrs);
+        }
+
+        private DateTimeOffset GetDefaultMinDateOffset()
+        {
+            DateTime ThreeMonthsInThePast = DateTime.UtcNow.AddMonths(-3);
+            return DateTime.SpecifyKind(ThreeMonthsInThePast, DateTimeKind.Utc);
         }
     }
 }
