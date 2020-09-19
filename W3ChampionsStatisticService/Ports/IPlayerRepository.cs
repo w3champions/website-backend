@@ -4,6 +4,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 
 namespace W3ChampionsStatisticService.Ports
@@ -25,5 +26,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season);
         Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season);
         Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat);
+        float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season);
     }
 }

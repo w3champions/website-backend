@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -13,6 +17,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
+        private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
+
         public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
@@ -86,7 +92,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerGameModeStatPerGateway>(t =>
                 t.Id.Contains(battleTag) &&
                 t.GateWay == gateWay &&
-                t.Season == season );
+                t.Season == season);
         }
 
         public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
@@ -112,6 +118,83 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
             return LoadFirst<PlayerOverview>(battleTag);
+        }
+
+        public float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
+        {
+            if (!MmrRanksCacheBySeason.ContainsKey(season))
+            {
+                MmrRanksCacheBySeason[season] = new CachedData<List<MmrRank>>(() => FetchMmrRanks(season).GetAwaiter().GetResult(), TimeSpan.FromMinutes(5));
+            }
+
+            var seasonRanks = MmrRanksCacheBySeason[season].GetCachedData();
+            var gatewayGameModeRanks = seasonRanks.FirstOrDefault(x => x.Gateway == gateWay && x.GameMode == gameMode);
+
+            var rankKey = GetRankKey(playerIds, gameMode, race);
+            if (gatewayGameModeRanks.Ranks.ContainsKey(rankKey))
+            {
+                var foundRank = gatewayGameModeRanks.Ranks[rankKey];
+
+                var numberOfPlayersAfter = gatewayGameModeRanks.Ranks.Count - foundRank.Rank;
+                return numberOfPlayersAfter / gatewayGameModeRanks.Ranks.Count;
+            }
+
+            return null;
+        }
+
+        public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
+        {
+            if (gameMode != GameMode.GM_2v2_AT)
+            {
+                if (gameMode == GameMode.GM_1v1)
+                {
+                    return $"{ playerIds[0].BattleTag}_{ race}";
+                }
+
+                return playerIds[0].BattleTag;
+            }
+            else
+            {
+                return string.Join("_", playerIds.Select(x => x.BattleTag).OrderBy(x => x));
+            }
+        }
+
+        private Task<List<PlayerOverview>> LoadOverviews(int season)
+        {
+            return LoadAll<PlayerOverview>(t => t.Season == season);
+        }
+
+        private async Task<List<MmrRank>> FetchMmrRanks(int season)
+        {
+            var overviews = await LoadOverviews(season);
+            List<MmrRank> result = new List<MmrRank>();
+            foreach (var overViewsByGateway in overviews.GroupBy(x => x.GateWay))
+            {
+                foreach (var overViewsByGatewayGameMode in overViewsByGateway.GroupBy(x => x.GameMode))
+                {
+                    var mmrRanks = new MmrRank
+                    {
+                        Gateway = overViewsByGateway.Key,
+                        GameMode = overViewsByGatewayGameMode.Key,
+                    };
+
+                    for (int i = 0; i < overViewsByGatewayGameMode.Count(); i++)
+                    {
+                        var overView = overViewsByGatewayGameMode.ElementAt(i);
+                        var rankKey = GetRankKey(overView.PlayerIds, overViewsByGatewayGameMode.Key, overView.Race);
+
+                        mmrRanks.Ranks[rankKey] = new PlayerMmrRank()
+                        {
+                            Mmr = overView.MMR,
+                            Rank = i,
+                        };
+                    }
+
+                    result.Add(mmrRanks);
+                }
+            }
+
+            return result;
         }
     }
 }
