@@ -30,16 +30,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             GateWay gateWay,
             int season)
         {
-            var player = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
+            var playerGameModeStats = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
             var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
             var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
 
             foreach (var rank in leaguesOfPlayer)
             {
-                PopulateLeague(player, allLeagues, rank);
+                PopulateLeague(playerGameModeStats, allLeagues, rank);
             }
 
-            return player.OrderByDescending(r => r.RankingPoints).ToList();
+            PopulateQuantiles(playerGameModeStats, season);
+
+            return playerGameModeStats.OrderByDescending(r => r.RankingPoints).ToList();
         }
 
         private void PopulateLeague(
@@ -67,6 +69,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             catch (Exception e)
             {
                 _trackingService.TrackException(e, $"A League was not found for {rank.Id} RN: {rank.RankNumber} LE:{rank.League}");
+            }
+        }
+
+        private void PopulateQuantiles(List<PlayerGameModeStatPerGateway> playerGameModeStats, int season)
+        {
+            foreach (var gameModeStat in playerGameModeStats)
+            {
+                gameModeStat.Quantile = _playerRepository.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
             }
         }
     }

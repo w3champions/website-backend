@@ -39,6 +39,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
         public int LeagueId { get; set; }
         public int LeagueOrder { get; set; }
         public int Division { get; set; }
+        public float? Quantile { get; set; }
 
         public RankProgression RankingPointsProgress
         {
