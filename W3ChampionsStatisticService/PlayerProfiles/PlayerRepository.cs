@@ -178,9 +178,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                         GameMode = overViewsByGatewayGameMode.Key,
                     };
 
-                    for (int i = 0; i < overViewsByGatewayGameMode.Count(); i++)
+                    var orderedByMmr = overViewsByGatewayGameMode.OrderByDescending(x => x.MMR).ToList();
+
+                    for (int i = 0; i < orderedByMmr.Count; i++)
                     {
-                        var overView = overViewsByGatewayGameMode.ElementAt(i);
+                        var overView = orderedByMmr[i];
                         var rankKey = GetRankKey(overView.PlayerIds, overViewsByGatewayGameMode.Key, overView.Race);
 
                         mmrRanks.Ranks[rankKey] = new PlayerMmrRank()
