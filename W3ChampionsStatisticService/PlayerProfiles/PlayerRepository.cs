@@ -136,7 +136,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 var foundRank = gatewayGameModeRanks.Ranks[rankKey];
 
                 var numberOfPlayersAfter = gatewayGameModeRanks.Ranks.Count - foundRank.Rank;
-                return numberOfPlayersAfter / gatewayGameModeRanks.Ranks.Count;
+                return numberOfPlayersAfter / (float)gatewayGameModeRanks.Ranks.Count;
             }
 
             return null;
