@@ -13,7 +13,8 @@ namespace W3ChampionsStatisticService.Admin
                 "setcho#2271",
                 "askelange#2705",
                 "toxi#21818",
-                "modmoto#2809"
+                "modmoto#2809",
+                "cepheid#1467"
             };
     }
 }
