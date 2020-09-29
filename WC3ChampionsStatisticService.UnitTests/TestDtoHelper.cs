@@ -35,7 +35,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             return fakeEvent;
         }
 
-        public static MatchFinishedEvent CreateFake2v2Event()
+        public static MatchFinishedEvent CreateFake2v2AtEvent()
         {
             var fixture = new Fixture { RepeatCount = 4 };
             var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
@@ -51,24 +51,28 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
 
             fakeEvent.match.gateway = GateWay.America;
-            fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
+            fakeEvent.match.gameMode = GameMode.GM_2v2;
             fakeEvent.match.season = 0;
 
             fakeEvent.match.players[0].battleTag = name1;
             fakeEvent.match.players[0].won = true;
             fakeEvent.match.players[0].team = 0;
+            fakeEvent.match.players[0].atTeamId = "t1";
 
             fakeEvent.match.players[1].battleTag = name2;
             fakeEvent.match.players[1].won = true;
             fakeEvent.match.players[1].team = 0;
+            fakeEvent.match.players[1].atTeamId = "t1";
 
             fakeEvent.match.players[2].battleTag = name3;
             fakeEvent.match.players[2].won = false;
             fakeEvent.match.players[2].team = 1;
+            fakeEvent.match.players[2].atTeamId = "t2";
 
             fakeEvent.match.players[3].battleTag = name4;
             fakeEvent.match.players[3].won = false;
             fakeEvent.match.players[3].team = 1;
+            fakeEvent.match.players[3].atTeamId = "t2";
 
             return fakeEvent;
         }

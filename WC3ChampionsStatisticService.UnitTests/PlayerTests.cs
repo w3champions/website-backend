@@ -196,7 +196,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepository = new PlayerRepository(MongoClient);
             var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
-            var ev = TestDtoHelper.CreateFake2v2Event();
+            var ev = TestDtoHelper.CreateFake2v2AtEvent();
             ev.match.season = 1;
 
             ev.match.players[0].battleTag = "peter#123";
@@ -218,6 +218,45 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, winners.First(x => x.GameMode == GameMode.GM_2v2_AT).Wins);
             Assert.AreEqual(0, winners.First(x => x.GameMode == GameMode.GM_2v2_AT).Losses);
+
+            Assert.AreEqual(1, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Losses);
+            Assert.AreEqual(0, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Wins);
+        }
+
+        [Test]
+        public async Task PlayersFromAn2v2AT_vs_RTMatch_GameModeHandler_Test()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
+
+            var ev = TestDtoHelper.CreateFake2v2AtEvent();
+            ev.match.season = 1;
+
+            ev.match.players[0].battleTag = "peter#123";
+            ev.match.players[0].won = true;
+            ev.match.players[0].atTeamId = null;
+
+            ev.match.players[1].battleTag = "wolf#456";
+            ev.match.players[1].won = true;
+            ev.match.players[1].atTeamId = null;
+
+            ev.match.players[2].battleTag = "TEAM2#123";
+            ev.match.players[2].won = false;
+
+            ev.match.players[3].battleTag = "TEAM2#456";
+            ev.match.players[3].won = false;
+
+            await handler.Update(ev);
+
+            var winnerP1 = await playerRepository.LoadGameModeStatPerGateway($"1_peter#123@10_GM_2v2", GateWay.America, 1);
+            var winnerP2 = await playerRepository.LoadGameModeStatPerGateway($"1_wolf#456@10_GM_2v2", GateWay.America, 1);
+            var losers = await playerRepository.LoadGameModeStatPerGateway("1_TEAM2#123@10_TEAM2#456@10_GM_2v2_AT", GateWay.America, 1);
+
+            Assert.AreEqual(1, winnerP1.First(x => x.GameMode == GameMode.GM_2v2).Wins);
+            Assert.AreEqual(0, winnerP1.First(x => x.GameMode == GameMode.GM_2v2).Losses);
+
+            Assert.AreEqual(1, winnerP2.First(x => x.GameMode == GameMode.GM_2v2).Wins);
+            Assert.AreEqual(0, winnerP2.First(x => x.GameMode == GameMode.GM_2v2).Losses);
 
             Assert.AreEqual(1, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Losses);
             Assert.AreEqual(0, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Wins);

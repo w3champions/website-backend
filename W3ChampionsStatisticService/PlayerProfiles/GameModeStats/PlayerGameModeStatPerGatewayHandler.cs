@@ -112,10 +112,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
         private async Task RecordWin(Match match, List<PlayerMMrChange> winners)
         {
+            var gameMode = GetGameModeStatGameMode(match.gameMode, winners[0]);
+
             var winnerId = new BattleTagIdCombined(
                 winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
                 match.gateway,
-                match.gameMode,
+                gameMode,
                 match.season,
                 match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) winners.Single().race : null);
 
