@@ -6,8 +6,8 @@ namespace W3ChampionsStatisticService.CommonValueObjects
     {
         public static GameMode[] RtModes = new GameMode[]
             {
-                GameMode.GM_2v2,
-                GameMode.GM_4v4
+                GameMode.GM_4v4,
+                GameMode.GM_2v2
         };
 
         public static bool IsRandomTeam(this GameMode gameMode)

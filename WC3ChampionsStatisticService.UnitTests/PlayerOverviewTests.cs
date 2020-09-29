@@ -86,7 +86,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent.match.players[0].atTeamId = "t1";
+
             matchFinishedEvent.match.players[1].battleTag = "wolf#123";
+            matchFinishedEvent.match.players[1].atTeamId = "t1";
             matchFinishedEvent.match.gateway = GateWay.America;
             matchFinishedEvent.match.gameMode = GameMode.GM_2v2_AT;
 
@@ -168,6 +171,41 @@ namespace WC3ChampionsStatisticService.UnitTests
                 Assert.AreEqual(1, playerProfile.Losses);
                 Assert.AreEqual(GameMode.GM_2v2, playerProfile.GameMode);
             }
+        }
+
+        [Test]
+        public async Task UpdateOverview_HandlerUpdate_2v2RTvsAT()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFake2v2RTEvent();
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+            matchFinishedEvent.match.players[2].atTeamId = "t2";
+            matchFinishedEvent.match.players[3].atTeamId = "t2";
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var winners = matchFinishedEvent.match.players.Where(x => x.won);
+            Assert.AreEqual(2, winners.Count());
+
+            foreach (var player in winners)
+            {
+                var playerProfile = await playerRepository.LoadOverview($"0_{player.battleTag}@20_GM_2v2");
+
+                Assert.AreEqual(1, playerProfile.Wins);
+                Assert.AreEqual(0, playerProfile.Losses);
+                Assert.AreEqual(GameMode.GM_2v2, playerProfile.GameMode);
+            }
+
+            var losers = matchFinishedEvent.match.players.Where(x => !x.won);
+
+            Assert.AreEqual(2, losers.Count());
+
+            var playerProfileTeam = await playerRepository.LoadOverview($"0_{matchFinishedEvent.match.players[2].battleTag}@20_{matchFinishedEvent.match.players[3].battleTag}@20_GM_2v2_AT");
+
+            Assert.AreEqual(0, playerProfileTeam.Wins);
+            Assert.AreEqual(1, playerProfileTeam.Losses);
+            Assert.AreEqual(GameMode.GM_2v2_AT, playerProfileTeam.GameMode);
         }
 
 

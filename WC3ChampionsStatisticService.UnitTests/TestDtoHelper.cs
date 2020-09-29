@@ -134,18 +134,22 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.players[0].battleTag = name1;
             fakeEvent.match.players[0].won = true;
             fakeEvent.match.players[0].team = 0;
+            fakeEvent.match.players[0].atTeamId = null;
 
             fakeEvent.match.players[1].battleTag = name2;
             fakeEvent.match.players[1].won = true;
             fakeEvent.match.players[1].team = 0;
+            fakeEvent.match.players[1].atTeamId = null;
 
             fakeEvent.match.players[2].battleTag = name3;
             fakeEvent.match.players[2].won = false;
             fakeEvent.match.players[2].team = 1;
+            fakeEvent.match.players[2].atTeamId = null;
 
             fakeEvent.match.players[3].battleTag = name4;
             fakeEvent.match.players[3].won = false;
             fakeEvent.match.players[3].team = 1;
+            fakeEvent.match.players[3].atTeamId = null;
 
             return fakeEvent;
         }

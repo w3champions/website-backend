@@ -47,41 +47,43 @@ namespace W3ChampionsStatisticService.Ladder
 
         private async Task UpdateWinners(MatchFinishedEvent nextEvent, List<PlayerMMrChange> winners)
         {
+            List<PlayerMMrChange> processed = new List<PlayerMMrChange>();
+
             if (nextEvent.match.gameMode.IsRandomTeam())
             {
-                foreach (var winningPlayer in winners)
+                foreach (var winningPlayer in winners.Where(x => !x.IsAt))
                 {
                     var winner = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { winningPlayer });
                     await _playerRepository.UpsertPlayerOverview(winner);
+                    processed.Add(winningPlayer);
                 }
             }
-            else
+
+            foreach (var winningPlayer in winners.Where(x => !processed.Contains(x)).GroupBy(x => x.team))
             {
-                foreach (var winningPlayer in winners.GroupBy(x => x.team))
-                {
-                    var winner = await UpdatePlayers(nextEvent, winningPlayer.ToList());
-                    await _playerRepository.UpsertPlayerOverview(winner);
-                }
+                var winner = await UpdatePlayers(nextEvent, winningPlayer.ToList());
+                await _playerRepository.UpsertPlayerOverview(winner);
             }
+
         }
 
         private async Task UpdateLosers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> losers)
         {
+            List<PlayerMMrChange> processed = new List<PlayerMMrChange>();
             if (nextEvent.match.gameMode.IsRandomTeam())
             {
-                foreach (var losingPlayer in losers)
+                foreach (var losingPlayer in losers.Where(x => !x.IsAt))
                 {
                     var loser = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { losingPlayer });
                     await _playerRepository.UpsertPlayerOverview(loser);
+                    processed.Add(losingPlayer);
                 }
             }
-            else
+
+            foreach (var losingTeam in losers.Where(x => !processed.Contains(x)).GroupBy(x => x.team))
             {
-                foreach (var losingTeam in losers.GroupBy(x => x.team))
-                {
-                    var loser = await UpdatePlayers(nextEvent, losingTeam.ToList());
-                    await _playerRepository.UpsertPlayerOverview(loser);
-                }
+                var loser = await UpdatePlayers(nextEvent, losingTeam.ToList());
+                await _playerRepository.UpsertPlayerOverview(loser);
             }
         }
 
@@ -90,12 +92,15 @@ namespace W3ChampionsStatisticService.Ladder
             var playerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
             var match = nextEvent.match;
-            var playerRaceIfSingle = match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) players.Single().race : null;
+            var playerRaceIfSingle = match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?)players.Single().race : null;
+
+            var gameMode = GetOverviewGameMode(match.gameMode, players[0]);
+
             var winnerIdCombined = new BattleTagIdCombined(
                 players.Select(p =>
                     PlayerId.Create(p.battleTag)).ToList(),
                         match.gateway,
-                        match.gameMode,
+                        gameMode,
                         match.season,
                         playerRaceIfSingle);
 
@@ -103,15 +108,25 @@ namespace W3ChampionsStatisticService.Ladder
                          ?? PlayerOverview.Create(
                              playerIds,
                              match.gateway,
-                             match.gameMode,
+                             gameMode,
                              match.season,
                              playerRaceIfSingle);
 
             winner.RecordWin(
                 players.First().won,
-                (int?) players.First().updatedMmr?.rating ?? (int?) players.First().mmr?.rating ?? 0);
+                (int?)players.First().updatedMmr?.rating ?? (int?)players.First().mmr?.rating ?? 0);
 
             return winner;
+        }
+
+        private GameMode GetOverviewGameMode(GameMode gameMode, PlayerMMrChange player)
+        {
+            if (gameMode == GameMode.GM_2v2 && player.IsAt)
+            {
+                return GameMode.GM_2v2_AT;
+            }
+
+            return gameMode;
         }
     }
 }

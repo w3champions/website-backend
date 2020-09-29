@@ -21,6 +21,15 @@ namespace W3ChampionsStatisticService.PadEvents
         public bool won { get; set; }
         public Mmr updatedMmr { get; set; }
         public Ranking updatedRanking { get; set; }
+        public string atTeamId { get; set; }
+
+        public bool IsAt
+        {
+           get
+            {
+                return !string.IsNullOrEmpty(atTeamId);
+            }
+        }
     }
 
     [BsonIgnoreExtraElements]
