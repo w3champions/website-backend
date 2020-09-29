@@ -81,7 +81,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task UpdateOverview_HandlerUpdate_2v2AT()
         {
-            var matchFinishedEvent = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent = TestDtoHelper.CreateFake2v2AtEvent();
             var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 

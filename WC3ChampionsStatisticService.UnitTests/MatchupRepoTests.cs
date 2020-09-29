@@ -228,7 +228,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
 
-            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2AtEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
             matchFinishedEvent1.match.season = 1;
@@ -254,7 +254,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
 
-            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2AtEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent1.match.season = 1;
             matchFinishedEvent1.match.players[0].battleTag = "peter#123";
@@ -286,7 +286,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var matchRepository = new MatchRepository(MongoClient);
 
-            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2Event();
+            var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2AtEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
             matchFinishedEvent1.match.season = 1;
