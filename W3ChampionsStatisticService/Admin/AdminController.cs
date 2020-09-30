@@ -41,6 +41,14 @@ namespace W3ChampionsStatisticService.Admin
             return Ok(countOnGoingMatches);
         }
 
+        [HttpGet("broken-route")]
+        public async Task<IActionResult> BrokenRouteTest()
+        {
+            BannedPlayerReadmodel bp = null;
+            return Ok(bp.banReason);
+        }
+
+
         [HttpGet("bannedPlayers")]
         public async Task<IActionResult> GetBannedPlayers()
         {
