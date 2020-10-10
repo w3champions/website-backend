@@ -38,6 +38,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }
 
+        public SpecialPicture[] SpecialPictures { get; set; } = new SpecialPicture[0];
+
         public bool SetProfilePicture(Race race, long pictureId)
         {
             var winsPerRace = RaceWins?.GetWinsPerRace(race);
