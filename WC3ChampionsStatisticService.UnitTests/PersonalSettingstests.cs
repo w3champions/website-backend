@@ -23,10 +23,15 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             personalSetting.Players = new List<PlayerOverallStats> {player };
-            var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
+            SetPictureCommand cmd = new SetPictureCommand()
+            {
+                avatarCategory = AvatarCategory.HU,
+                pictureId = 2
+            };
+            var profilePicture = personalSetting.SetProfilePicture(cmd);
 
             Assert.IsTrue(profilePicture);
-            Assert.AreEqual(Race.HU, personalSetting.ProfilePicture.Race);
+            Assert.AreEqual(AvatarCategory.HU, personalSetting.ProfilePicture.Race);
             Assert.AreEqual(2, personalSetting.ProfilePicture.PictureId);
         }
 
@@ -42,11 +47,22 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
 
             personalSetting.Players = new List<PlayerOverallStats> {player };
-            personalSetting.SetProfilePicture(Race.HU, 1);
-            var profilePicture = personalSetting.SetProfilePicture(Race.HU, 2);
+            SetPictureCommand cmd1 = new SetPictureCommand()
+            {
+                avatarCategory = AvatarCategory.HU,
+                pictureId = 1
+            };
+            personalSetting.SetProfilePicture(cmd1);
+
+            SetPictureCommand cmd2 = new SetPictureCommand()
+            {
+                avatarCategory = AvatarCategory.HU,
+                pictureId = 2
+            };
+            var profilePicture = personalSetting.SetProfilePicture(cmd2);
 
             Assert.IsFalse(profilePicture);
-            Assert.AreEqual(Race.HU, personalSetting.ProfilePicture.Race);
+            Assert.AreEqual(AvatarCategory.HU, personalSetting.ProfilePicture.Race);
             Assert.AreEqual(1, personalSetting.ProfilePicture.PictureId);
         }
 
@@ -119,7 +135,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepo.UpsertPlayer(player);
 
             var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
-                new SetPictureCommand {Race = Race.NE, PictureId = 2});
+                new SetPictureCommand {avatarCategory = AvatarCategory.NE, pictureId = 2});
 
             Assert.IsTrue(result);
             var settings = await personalSettingsRepository.Load("modmoto#123");

@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 setting = new PersonalSetting(battleTag, new List<PlayerOverallStats> { playerProfile });
             }
 
-            var result = setting.SetProfilePicture(command.Race, command.PictureId);
+            var result = setting.SetProfilePicture(command);
 
             if (!result) return false;
 
