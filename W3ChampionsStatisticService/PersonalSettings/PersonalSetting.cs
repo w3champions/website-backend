@@ -39,6 +39,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
         public string Id { get; set; }
 
+        [BsonIgnoreIfNull]
         public SpecialPicture[] SpecialPictures { get; set; } = new SpecialPicture[0];
 
         public bool SetProfilePicture(SetPictureCommand cmd)
@@ -57,7 +58,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
            
             if (isValid)
             {
-                ProfilePicture = new ProfilePicture(cmd.avatarCategory, cmd.pictureId, cmd.description);
+                ProfilePicture = new ProfilePicture(cmd.avatarCategory, cmd.pictureId);
             }
 
             return isValid;

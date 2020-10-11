@@ -7,18 +7,16 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         public static ProfilePicture Default()
         {
-            return new ProfilePicture(AvatarCategory.Total, 0, null);
+            return new ProfilePicture(AvatarCategory.Total, 0);
         }
 
         public AvatarCategory Race { get; }
-        public int PictureId { get; }
-        public string Description { get; }
+        public long PictureId { get; }
 
-        public ProfilePicture(AvatarCategory race, int pictureId, string description)
+        public ProfilePicture(AvatarCategory race, long pictureId)
         {
             Race = race;
             PictureId = pictureId;
-            Description = description;
         }
     }
 }
