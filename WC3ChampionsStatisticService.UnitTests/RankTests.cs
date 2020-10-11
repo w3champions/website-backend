@@ -275,7 +275,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var playerRank = playerLoaded[0];
             Assert.AreEqual("1_peter#123@10_GM_1v1", playerRank.Players.First().Id);
-            Assert.AreEqual(playerRank.PlayersInfo[0].SelectedRace, Race.HU);
+            Assert.AreEqual(playerRank.PlayersInfo[0].SelectedRace, AvatarCategory.HU);
             Assert.AreEqual(playerRank.PlayersInfo[0].PictureId, 5);
             Assert.AreEqual(playerRank.PlayersInfo[0].Country, "BG");
         }
