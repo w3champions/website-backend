@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public Race CalculatedRace { get; set; }
 
-        public Race? SelectedRace { get; set; }
+        public AvatarCategory? SelectedRace { get; set; }
 
         public long? PictureId { get; set; }
 

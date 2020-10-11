@@ -119,7 +119,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepo.UpsertPlayer(player);
 
             var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
-                new SetPictureCommand {Race = Race.NE, PictureId = 2});
+                new SetPictureCommand {avatarCategory = Race.NE, pictureId = 2});
 
             Assert.IsTrue(result);
             var settings = await personalSettingsRepository.Load("modmoto#123");

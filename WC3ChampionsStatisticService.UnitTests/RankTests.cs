@@ -262,7 +262,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var settings = new PersonalSetting("peter#123")
             {
-                ProfilePicture = new ProfilePicture(Race.HU, 5),
+                ProfilePicture = new ProfilePicture(AvatarCategory.HU, 5, null),
                 Country = "BG"
             };
             await personalSettingsRepository.Save(settings);

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -40,16 +41,26 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public SpecialPicture[] SpecialPictures { get; set; } = new SpecialPicture[0];
 
-        public bool SetProfilePicture(Race race, long pictureId)
+        public bool SetProfilePicture(SetPictureCommand cmd)
         {
-            var winsPerRace = RaceWins?.GetWinsPerRace(race);
-            if (winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == pictureId)?.NeededWins)
+            bool isValid = false;
+
+            if (cmd.avatarCategory == AvatarCategory.Special)
             {
-                ProfilePicture = new ProfilePicture(race, pictureId);
-                return true;
+                isValid = SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
+            }
+            else
+            {
+                var winsPerRace = RaceWins?.GetWinsPerRace((Race)cmd.avatarCategory);
+                isValid = winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
+            }
+           
+            if (isValid)
+            {
+                ProfilePicture = new ProfilePicture(cmd.avatarCategory, cmd.pictureId, cmd.description);
             }
 
-            return false;
+            return isValid;
         }
 
         public List<RaceToMaxPicture> PickablePictures => new List<RaceToMaxPicture>
