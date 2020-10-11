@@ -12,6 +12,8 @@ namespace W3ChampionsStatisticService.Ladder
 
         public long? PictureId { get; set; }
 
+        public bool isClassicPicture { get; set; }
+
         public string Country { get; set; }
 
         public string Location { get; set; }

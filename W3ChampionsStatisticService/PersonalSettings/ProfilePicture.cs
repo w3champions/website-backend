@@ -1,5 +1,4 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
-using W3ChampionsStatisticService.CommonValueObjects;
+﻿using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
@@ -7,16 +6,15 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         public static ProfilePicture Default()
         {
-            return new ProfilePicture(AvatarCategory.Total, 0);
+            return new ProfilePicture()
+            {
+                Race = AvatarCategory.Total,
+                PictureId = 0
+            };
         }
 
-        public AvatarCategory Race { get; }
-        public long PictureId { get; }
-
-        public ProfilePicture(AvatarCategory race, long pictureId)
-        {
-            Race = race;
-            PictureId = pictureId;
-        }
+        public AvatarCategory Race { get; set; }
+        public long PictureId { get; set; }
+        public bool IsClassic { get; set; }
     }
 }

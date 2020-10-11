@@ -64,6 +64,7 @@ namespace W3ChampionsStatisticService.Ladder
                             BattleTag = playerId.BattleTag,
                             CalculatedRace = playerDetails.GetMainRace(),
                             PictureId = profilePicture?.PictureId,
+                            isClassicPicture = profilePicture?.IsClassic ?? false,
                             SelectedRace = profilePicture?.Race,
                             Country = personalSettings?.Country,
                             Location = personalSettings?.Location,

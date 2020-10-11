@@ -58,7 +58,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
            
             if (isValid)
             {
-                ProfilePicture = new ProfilePicture(cmd.avatarCategory, cmd.pictureId);
+                ProfilePicture = new ProfilePicture()
+                {
+                    Race = cmd.avatarCategory,
+                    PictureId = cmd.pictureId,
+                    IsClassic = cmd.isClassic
+                };
             }
 
             return isValid;

@@ -7,5 +7,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public int pictureId { get; set; }
         public AvatarCategory avatarCategory { get; set; }
         public string description { get; set; }
+        public bool isClassic { get; set; }
     }
 }
