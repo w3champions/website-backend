@@ -13,6 +13,7 @@ namespace W3ChampionsStatisticService.Matches
                 .Substring(3)
                 .Replace("_lv_anon", "")
                 .Replace("_anon", "")
+                .Replace(".anon", "")
                 .Replace("ffa_", "")
                 .Replace("1v1_", "")
                 .Replace("2v2_", "")
