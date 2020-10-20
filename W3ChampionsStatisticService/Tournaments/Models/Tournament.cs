@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 
@@ -16,5 +17,10 @@ namespace W3ChampionsStatisticService.Tournaments.Models
 
         public List<TournamentRound> WinnerBracketRounds { get; set; }
         public List<TournamentRound> LoserBracketRounds { get; set; }
+
+        public DateTime CreatedOn { get; set; }
+        public DateTime StartsOn { get; set; }
+
+        public string MatcherinoLink { get; set; }
     }
 }
