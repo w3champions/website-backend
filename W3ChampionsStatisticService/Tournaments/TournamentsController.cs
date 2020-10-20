@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Tournaments.Models;
@@ -21,7 +22,11 @@ namespace W3ChampionsStatisticService.Tournaments
         {
             List<Tournament> result = await _tournamentsRepository.GetAll();
 
-            return Ok(new { tournaments = result ?? new List<Tournament>() });
+            result = result ?? new List<Tournament>();
+
+            result = result.OrderByDescending(x => x.CreatedOn).ToList();
+
+            return Ok(new { tournaments = result });
         }
 
         [HttpPut("{id}")]
