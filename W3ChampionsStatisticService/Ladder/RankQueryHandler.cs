@@ -67,6 +67,7 @@ namespace W3ChampionsStatisticService.Ladder
                             isClassicPicture = profilePicture?.IsClassic ?? false,
                             SelectedRace = profilePicture?.Race,
                             Country = personalSettings?.Country,
+                            CountryCode = personalSettings?.CountryCode,
                             Location = personalSettings?.Location,
                             TwitchName = personalSettings?.Twitch,
                             ClanId = membership?.ClanId

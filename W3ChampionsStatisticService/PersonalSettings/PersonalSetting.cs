@@ -33,6 +33,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public string Country { get; set; }
 
+        public string CountryCode { get; set; }
+
         public string Location { get; set; }
 
         public string HomePage { get; set; }
@@ -107,6 +109,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             Twitter = dto.Twitter;
             HomePage = dto.HomePage;
             Country = dto.Country;
+            CountryCode = dto.CountryCode;
         }
     }
 }

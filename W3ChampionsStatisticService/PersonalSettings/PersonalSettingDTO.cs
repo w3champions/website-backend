@@ -17,5 +17,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string HomePage { get; set; }
 
         public string Country { get; set; }
+
+        public string CountryCode { get; set; }
     }
 }

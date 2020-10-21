@@ -8,6 +8,7 @@ namespace W3ChampionsStatisticService.Ports
     {
         Task<PersonalSetting> Load(string battletag);
         Task<List<PersonalSetting>> LoadMany(string[] battletags);
+        Task<List<PersonalSetting>> LoadAll();
         Task Save(PersonalSetting setting);
     }
 }

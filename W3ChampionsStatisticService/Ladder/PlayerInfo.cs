@@ -16,6 +16,8 @@ namespace W3ChampionsStatisticService.Ladder
 
         public string Country { get; set; }
 
+        public string CountryCode { get; set; }
+
         public string Location { get; set; }
 
         public string TwitchName { get; set; }

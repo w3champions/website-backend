@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson.IO;
 using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
@@ -57,13 +59,33 @@ namespace W3ChampionsStatisticService.PersonalSettings
             {
                 return Ok(settings.Select(x => new {
                     x.Id,
-                    x.Country,
+                    x.CountryCode,
                     x.Location,
                     x.ProfilePicture
                 }));
             }
 
             return Ok(new object[0]);
+        }
+
+        [HttpPost("populate-country-codes")]
+        public async Task<IActionResult> MigrateCountry()
+        {
+            var settings = await _personalSettingsRepository.LoadAll();
+            var countriesJson = System.IO.File.ReadAllText("countries.json");
+            var countries = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(countriesJson);
+
+            foreach (var setting in settings)
+            {
+                if (!string.IsNullOrEmpty(setting.Country) && countries.ContainsKey(setting.Country))
+                {
+                    var foundCountryCode = countries[setting.Country];
+                    setting.CountryCode = foundCountryCode;
+                    await _personalSettingsRepository.Save(setting);
+                }
+            }
+
+            return Ok();
         }
 
         [HttpPut("{battleTag}")]

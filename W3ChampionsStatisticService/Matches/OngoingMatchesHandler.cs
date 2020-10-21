@@ -44,7 +44,7 @@ namespace W3ChampionsStatisticService.Matches
                             var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
                             if (personalSettings != null)
                             {
-                                player.Country = personalSettings.Country;
+                                player.CountryCode = personalSettings.CountryCode;
                             }
                         }
                     }

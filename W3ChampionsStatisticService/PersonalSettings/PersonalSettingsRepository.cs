@@ -39,6 +39,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return result;
         }
 
+        public Task<List<PersonalSetting>> LoadAll()
+        {
+            return LoadAll<PersonalSetting>();
+        }
+
         public Task Save(PersonalSetting setting)
         {
             setting.Players = null;
