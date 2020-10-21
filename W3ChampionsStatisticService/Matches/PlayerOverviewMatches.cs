@@ -13,5 +13,6 @@ namespace W3ChampionsStatisticService.Matches
         public bool Won { get; set; }
         public string Location { get; set; }
         public string CountryCode { get; set; }
+        public string Country { get; set; }
     }
 }
