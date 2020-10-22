@@ -14,7 +14,8 @@ namespace W3ChampionsStatisticService.Admin
                 "askelange#2705",
                 "toxi#21818",
                 "modmoto#2809",
-                "cepheid#1467"
+                "cepheid#1467",
+                "leeoku#1110"
             };
     }
 }
