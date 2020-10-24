@@ -26,36 +26,37 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
                     new GameLengthPerMode
                     {
                         GameMode = GameMode.GM_1v1,
-                        Lengths = CreateLengths()
+                        Lengths = CreateLengths(GameMode.GM_1v1)
                     },
                     new GameLengthPerMode
                     {
                         GameMode = GameMode.GM_2v2_AT,
-                        Lengths = CreateLengths()
+                        Lengths = CreateLengths(GameMode.GM_2v2_AT)
                     },
                     new GameLengthPerMode
                     {
                         GameMode = GameMode.GM_4v4,
-                        Lengths = CreateLengths()
+                        Lengths = CreateLengths(GameMode.GM_4v4)
                     },
                     new GameLengthPerMode
                     {
                         GameMode = GameMode.FFA,
-                        Lengths = CreateLengths()
+                        Lengths = CreateLengths(GameMode.FFA)
                     },
                     new GameLengthPerMode
                     {
                         GameMode = GameMode.GM_2v2,
-                        Lengths = CreateLengths()
+                        Lengths = CreateLengths(GameMode.GM_2v2)
                     },
                 }
             };
         }
 
-        private static List<GameLength> CreateLengths()
+        private static List<GameLength> CreateLengths(GameMode gameMode)
         {
             var lengths = new List<GameLength>();
-            for (var i = 0; i <= 120; i++)
+            var iterations = gameMode != GameMode.FFA ? 120 : 360;
+            for (var i = 0; i <= iterations; i++)
             {
                 lengths.Add(new GameLength {passedTimeInSeconds = i * 30});
             }
