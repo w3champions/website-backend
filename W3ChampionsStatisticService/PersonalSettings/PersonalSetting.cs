@@ -44,6 +44,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [BsonIgnoreIfNull]
         public SpecialPicture[] SpecialPictures { get; set; } = new SpecialPicture[0];
 
+        public string ChatAlias { get; set; }
+        public string ChatColor { get; set; }
+
         public bool SetProfilePicture(SetPictureCommand cmd)
         {
             bool isValid = false;

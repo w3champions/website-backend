@@ -10,18 +10,27 @@ namespace W3ChampionsStatisticService.Chats
         public ProfilePicture ProfilePicture { get; }
         public bool VerifiedBattletag { get; }
 
+        public string Alias { get; set; }
+        public string Color { get; set; }
+
         public UserDto(
             string name,
             string battleTag,
             string clanTag,
-            ProfilePicture profilePicture,
+            PersonalSetting personalSettings,
             bool verifiedBattletag)
         {
             Name = name;
             BattleTag = battleTag;
             VerifiedBattletag = verifiedBattletag;
             ClanTag = clanTag;
-            ProfilePicture = profilePicture;
+            ProfilePicture = personalSettings?.ProfilePicture ?? ProfilePicture.Default();
+
+            if (personalSettings != null)
+            {
+                Alias = personalSettings.ChatAlias;
+                Color = personalSettings.ChatColor;
+            }
         }
     }
 }

@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.Chats
                     user.Name,
                     user.BattleTag,
                     userClan?.ClanId,
-                    userSettings?.ProfilePicture ?? ProfilePicture.Default(),
+                    userSettings,
                 true);
             }
             user = new ChatUser(battleTag);
@@ -31,7 +31,7 @@ namespace W3ChampionsStatisticService.Chats
                 user.Name,
                 user.BattleTag,
                 userClan?.ClanId,
-                userSettings?.ProfilePicture ?? ProfilePicture.Default(),
+                userSettings,
                 false);
         }
 
