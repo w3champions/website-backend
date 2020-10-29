@@ -5,7 +5,7 @@ the website it also provides the chat backend that is used from the ingame clien
 
 ## Setup
 You will need a mongodb to run the service. If you do not have a local mongo container you can use the mongo db
-connectionstring "mongodb://176.28.16.249:3513" (Right now the DB is empty, but I will fill it soon).
+connectionstring "mongodb://176.28.16.249:3513".
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
 set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
@@ -67,3 +67,19 @@ As you can see you need to make the transformation and save the readmodel in our
   our readmodel db. That is usually not needed, but the interface for that is `IAsyncUpdatable`. This function is
   called every 5 seconds aswell and you can do whatever you want in there periodically. Like a chron job for poor
   people ;)
+
+## Import Export Mongodata
+You need mongodb installed to have the mentioned toole here.
+
+Export with (use the complete connection string here ofc)
+```
+mongodump --uri="mongodb://w3champions....."
+```
+creates a dump folder with the data.
+
+Import to Test DB
+```
+mongorestore --uri="mongodb://176.28.16.249:3513" dump/
+```
+
+This takes quite some time, an hour or so btw.
