@@ -242,6 +242,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [TestCase("path/w3c_tidewaterglades_anon", "tidewaterglades")]
         [TestCase("path/w3c_ffa_marketsquare_anon_cd", "marketsquare")]
         [TestCase("path/w3c_ffa_marketsquare_cd", "marketsquare")]
+        [TestCase("path/w3c_1v1_lastrefuge.anon.w3x", "lastrefuge")]
         public void MapName(string input, string expected)
         {
             var mapName = new MapName(input);

@@ -10,6 +10,7 @@ ProjectSection(SolutionItems) = preProject
 	docker-compose.yml = docker-compose.yml
 	.dockerignore = .dockerignore
 	.gitignore = .gitignore
+	README.md = README.md
 EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WC3ChampionsStatisticService.UnitTests", "WC3ChampionsStatisticService.UnitTests\WC3ChampionsStatisticService.UnitTests.csproj", "{861D57A0-C360-406B-B5E2-B6B86C103BED}"
