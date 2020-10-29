@@ -4,8 +4,12 @@ The statisticservice is the Backend for the https://github.com/w3champions/w3cha
 the website it also provides the chat backend that is used from the ingame client and the clan functions.
 
 ## Setup
-You will need a mongodb to run the service. If you do not have a local mongo container you can use the mongo db
-connectionstring "mongodb://176.28.16.249:3513".
+You will need a mongodb to run the service. If you do not have a local mongo container, spin one up with
+
+```
+docker run mongo
+```
+and your local service should be able to connect to this default mongo adress.
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
 set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
@@ -79,11 +83,9 @@ creates a dump folder with the data.
 
 Import to Test DB
 ```
-mongorestore --uri="mongodb://176.28.16.249:3513" dump/
+mongorestore --uri="mongodb://localhost:27081" dump/
 ```
 I also have a dump for the stat service here:
 https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
 
-Just download the folder, name it dump and run the import command to get the test env back up
-
-This takes quite some time, an hour or so btw.
+Just download the folder, name it dump and run the import command to get your test env up
