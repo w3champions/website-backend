@@ -81,5 +81,9 @@ Import to Test DB
 ```
 mongorestore --uri="mongodb://176.28.16.249:3513" dump/
 ```
+I also have a dump for the stat service here:
+https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
+
+Just download the folder, name it dump and run the import command to get the test env back up
 
 This takes quite some time, an hour or so btw.
