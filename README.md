@@ -33,6 +33,9 @@ When running locally, the readmodel handling is turned off, unless you set the c
 do that, if you know what you are doing. You can end up overwriting data from prod/test, depending where you are
 connected. So always make sure the handlers are turned off, or you have breakpoints set before you save any data.
 
+## Fixing Readmodels
+The easiest way to fix models is to just recreate them from scratch. There is a flag in the `HandlerVersion` collection called `Stopped` for each handler, that you can put to `true` if you want the handler to stop. After that delete the corresponding collection and the handler version. Within the next 5 seconds the service should start from 0 again. Depending on the readmodel this might take a while (max 1h), so do this during off times, because the data will be bad within this time. You can not just delete the `HandlerVersion`, as for many statistics, we count the events. For example, if you replay the model for Player Games and you just delete the `HandlerVersion`, you will count old games twice. You can also delete data from one season only and then set the `HandlerVersion` to the first event within a season, to save some time. But this obviously is more hassle and deleting works just fine.
+
 ### Versioned Handlers
 Those are the default Handlers and you can implement one like so
 ```
