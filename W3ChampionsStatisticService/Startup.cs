@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
             var startPadSync = Environment.GetEnvironmentVariable("START_PAD_SYNC");
-            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://localhost:27017";
+            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://176.28.16.249:3513";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
