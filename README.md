@@ -9,7 +9,7 @@ You will need a mongodb to run the service. If you do not have a local mongo con
 ```
 docker run mongo
 ```
-and your local service should be able to connect to this default mongo adress.
+and your local service should be able to connect to this default mongo adress. The default is our open test db with connectionstring mongodb://176.28.16.249:3513
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
 set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
