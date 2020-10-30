@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
@@ -87,9 +88,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         }
 
         [HttpGet("mmr-distribution")]
-        public async Task<IActionResult> GetMmrDistribution(int season)
+        public async Task<IActionResult> GetMmrDistribution(int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
         {
-            var mmrs = await _mmrDistributionHandler.GetDistributions(season);
+            var mmrs = await _mmrDistributionHandler.GetDistributions(season, gateWay, gameMode);
             return Ok(mmrs);
         }
 
