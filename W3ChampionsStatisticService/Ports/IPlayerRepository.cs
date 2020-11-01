@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season);
         Task<List<PlayerDetails>> LoadPlayersRaceWins(List<string> playerIds);
         Task UpsertWins(List<PlayerWinLoss> winrate);
-        Task<List<int>> LoadMmrs(int season);
+        Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode);
         Task<List<PlayerOverallStats>> SearchForPlayer(string search);
         Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id);
         Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat);

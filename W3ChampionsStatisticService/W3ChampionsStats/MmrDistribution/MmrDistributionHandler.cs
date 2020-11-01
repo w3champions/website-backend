@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
@@ -14,9 +15,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
             _playerRepository = playerRepository;
         }
 
-        public async Task<MmrStats> GetDistributions(int season)
+        public async Task<MmrStats> GetDistributions(int season, GateWay gateWay, GameMode gameMode)
         {
-            var mmrs = await _playerRepository.LoadMmrs(season);
+            var mmrs = await _playerRepository.LoadMmrs(season, gateWay, gameMode);
             var orderedMMrs = mmrs.OrderByDescending(m => m).ToList();
             var ranges = Ranges(2325, 575, 25).ToList();
             var highest = ranges.First();
