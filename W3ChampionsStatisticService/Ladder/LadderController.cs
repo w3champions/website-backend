@@ -11,13 +11,16 @@ namespace W3ChampionsStatisticService.Ladder
     public class LadderController : ControllerBase
     {
         private readonly IRankRepository _rankRepository;
+        private readonly IPlayerRepository _playerRepository;
         private readonly RankQueryHandler _rankQueryHandler;
 
         public LadderController(
             IRankRepository rankRepository,
+            IPlayerRepository playerRepository,
             RankQueryHandler rankQueryHandler)
         {
             _rankRepository = rankRepository;
+            _playerRepository = playerRepository;
             _rankQueryHandler = rankQueryHandler;
         }
 
@@ -25,8 +28,13 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
         gameMode = GameMode.GM_1v1)
         {
-            var players = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
-            return Ok(players);
+            var playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
+
+            if (playerRanks.Any()) return Ok(playerRanks);
+
+            var playerStats = await _playerRepository.SearchForPlayer(searchFor);
+
+            return Ok(playerStats.Select(s => s.CreateUnrankedResponse()));
         }
 
         [HttpGet("{leagueId}")]
