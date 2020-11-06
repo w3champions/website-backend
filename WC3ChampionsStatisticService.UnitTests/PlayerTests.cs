@@ -334,7 +334,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update(ev);
 
-            var playerMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 1);
+            var playerMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0);
             // Todo: add some more content based asserts for the timeline
             Assert.IsNotNull(playerMmrTimeline);
         }
