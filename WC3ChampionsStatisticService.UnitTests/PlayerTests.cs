@@ -3,9 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -300,6 +302,65 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, loser3.First(x => x.GameMode == GameMode.FFA).Losses);
             Assert.AreEqual(0, loser3.First(x => x.GameMode == GameMode.FFA).Wins);
+        }
+
+        [Test]
+        public async Task Player_UpdateMmrTimeline()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+            var matchRepository = new MatchRepository(MongoClient);
+            await matchRepository.EnsureIndices();
+            var handler = new PlayerMmrTimelineHandler(playerRepository, matchRepository);
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            matchFinishedEvent1.match.endTime = 1585701559200; 
+            matchFinishedEvent1.match.season = 1;
+            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent1.match.players[0].race = Race.OC;
+            matchFinishedEvent1.match.players[1].race = Race.NE;
+            matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
+
+            matchFinishedEvent2.match.endTime = 1585692047363;
+            matchFinishedEvent2.match.season = 1;
+            matchFinishedEvent2.match.players[0].battleTag = "peter#123";
+            matchFinishedEvent2.match.players[1].battleTag = "wolf#456";
+            matchFinishedEvent2.match.players[0].won = false;
+            matchFinishedEvent2.match.players[0].race = Race.OC;
+            matchFinishedEvent2.match.players[1].won = true;
+            matchFinishedEvent2.match.players[1].race = Race.NE;
+
+            // Needed?
+            //await InsertMatchEvent(matchFinishedEvent1);
+            //await InsertMatchEvent(matchFinishedEvent2);
+
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+
+            var matches = await matchRepository.LoadFor("peter#123");
+
+            var ev = TestDtoHelper.CreateFakeEvent();
+            ev.match.endTime = 1604612998269;
+            ev.match.season = 1;
+            ev.match.players[0].battleTag = "peter#123";
+            ev.match.players[0].won = true;
+            ev.match.players[0].race = Race.OC;
+
+            ev.match.players[1].battleTag = "wolf#456";
+            ev.match.players[1].won = false;
+            ev.match.players[1].race = Race.NE;
+
+            await handler.Update(ev);
+
+            var playerMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 1);
+
+            Assert.IsNotNull(playerMmrTimeline);
+
+            //var loser = await playerRepository.LoadGameModeStatPerGateway("wolf#456", GateWay.Europe, 1);
+            //Assert.AreEqual(1, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_1v1).Wins);
+
+            //Assert.AreEqual(1, loser.First(x => x.GameMode == GameMode.GM_1v1).Losses);
+            //Assert.AreEqual(0, loser.First(x => x.GameMode == GameMode.GM_1v1).Wins);
         }
     }
 }

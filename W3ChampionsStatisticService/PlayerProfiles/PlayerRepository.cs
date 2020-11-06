@@ -201,5 +201,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
             return result;
         }
+
+        public Task<PlayerMmrTimeline> LoadPlayerMmrTimeline(string battleTag, Race race, GateWay gateWay, int season)
+        {
+            return LoadFirst<PlayerMmrTimeline>($"{season}_{battleTag}_@{gateWay}_{race}");
+        }
+
+        public Task UpsertPlayerMmrTimeline(PlayerMmrTimeline mmrTimeline)
+        {
+            return Upsert(mmrTimeline);
+        }
     }
 }
