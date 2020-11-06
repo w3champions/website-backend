@@ -17,6 +17,7 @@ using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
@@ -112,6 +113,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerHeroStatsHandler>();
                 services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
                 services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
+                services.AddReadModelService<PlayerMmrTimelineHandler>();
 
                 // Generell Stats
                 services.AddReadModelService<GamesPerDayHandler>();
