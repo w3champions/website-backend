@@ -9,7 +9,7 @@ You will need a mongodb to run the service. If you do not have a local mongo con
 ```
 docker run mongo
 ```
-and your local service should be able to connect to this default mongo adress. The default is our open test db with connectionstring mongodb://176.28.16.249:3513
+and your local service should be able to connect to this default mongo adress. The default is our open test db with connectionstring `mongodb://176.28.16.249:3513`
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
 set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
@@ -91,4 +91,4 @@ mongorestore --uri="mongodb://localhost:27081" dump/
 I also have a dump for the stat service here:
 https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
 
-Just download the folder, name it dump and run the import command to get your test env up
+Just download the folder, name it dump and run the import command to get your test env up. Like mentioned above, we have an open test db here `mongodb://176.28.16.249:3513`
