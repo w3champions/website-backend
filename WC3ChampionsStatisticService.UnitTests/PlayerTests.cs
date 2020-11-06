@@ -334,9 +334,21 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update(ev);
 
-            var playerMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0);
+            var peterMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0);
+            var wolfMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("wolf#456", Race.NE, GateWay.Europe, 0);
             // Todo: add some more content based asserts for the timeline
-            Assert.IsNotNull(playerMmrTimeline);
+            Assert.IsNotNull(peterMmrTimeline);
+            Assert.IsNotNull(wolfMmrTimeline);
+
+            // Second game ([1]) is the only loss, so first and third mmr should be higher.
+            Assert.IsTrue(peterMmrTimeline.MmrAtTimes[1].Mmr < peterMmrTimeline.MmrAtTimes[0].Mmr);
+            Assert.IsTrue(peterMmrTimeline.MmrAtTimes[1].Mmr < peterMmrTimeline.MmrAtTimes[2].Mmr);
+
+            // Second game ([1]) is the only win, so first and third mmr should be lower.
+            Assert.IsTrue(wolfMmrTimeline.MmrAtTimes[1].Mmr > wolfMmrTimeline.MmrAtTimes[0].Mmr);
+            Assert.IsTrue(wolfMmrTimeline.MmrAtTimes[1].Mmr > wolfMmrTimeline.MmrAtTimes[2].Mmr);
+
+
         }
     }
 }

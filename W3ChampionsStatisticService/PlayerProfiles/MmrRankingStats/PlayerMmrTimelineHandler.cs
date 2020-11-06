@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
 
                 // Unclear: When previous line used CreateMmrTimeline(), is the new match already added to the timeline or not?
                 mmrTimeline.MmrAtTimes.Add(new MmrAtTime(
-                    mmr: (int)player.mmr.rating,
+                    mmr: (int)player.updatedMmr.rating,
                     mmrTime: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
 
                 await _playerRepository.UpsertPlayerMmrTimeline(mmrTimeline);
