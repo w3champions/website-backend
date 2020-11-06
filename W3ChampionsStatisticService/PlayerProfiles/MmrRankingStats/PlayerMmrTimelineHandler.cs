@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
                 var mmrTimeline = await _playerRepository.LoadPlayerMmrTimeline(player.battleTag, player.race, match.gateway, match.season)
                            ?? await CreateMmrTimeline(match, player);
 
-                // Unclear: When previous line used CreateMmrTimeline, is the new match already added to the timeline or not???
+                // Unclear: When previous line used CreateMmrTimeline(), is the new match already added to the timeline or not?
                 mmrTimeline.MmrAtTimes.Add(new MmrAtTime(
                     mmr: (int)player.mmr.rating,
                     mmrTime: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
                     {
                         if (p.BattleTag == player.battleTag)
                         {
-                            // Correct sorting?
+                            // Is this the correct sorting?
                             mmrTimeline.MmrAtTimes.Add(new MmrAtTime(p.CurrentMmr, m.EndTime));
                         }
                     }

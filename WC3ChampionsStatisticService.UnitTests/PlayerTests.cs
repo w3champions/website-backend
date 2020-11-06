@@ -315,52 +315,28 @@ namespace WC3ChampionsStatisticService.UnitTests
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
             matchFinishedEvent1.match.endTime = 1585701559200; 
-            matchFinishedEvent1.match.season = 1;
-            matchFinishedEvent1.match.players[0].battleTag = "peter#123";
             matchFinishedEvent1.match.players[0].race = Race.OC;
             matchFinishedEvent1.match.players[1].race = Race.NE;
-            matchFinishedEvent1.match.players[1].battleTag = "wolf#456";
 
             matchFinishedEvent2.match.endTime = 1585692047363;
-            matchFinishedEvent2.match.season = 1;
-            matchFinishedEvent2.match.players[0].battleTag = "peter#123";
-            matchFinishedEvent2.match.players[1].battleTag = "wolf#456";
             matchFinishedEvent2.match.players[0].won = false;
             matchFinishedEvent2.match.players[0].race = Race.OC;
             matchFinishedEvent2.match.players[1].won = true;
             matchFinishedEvent2.match.players[1].race = Race.NE;
 
-            // Needed?
-            //await InsertMatchEvent(matchFinishedEvent1);
-            //await InsertMatchEvent(matchFinishedEvent2);
-
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
 
-            var matches = await matchRepository.LoadFor("peter#123");
-
             var ev = TestDtoHelper.CreateFakeEvent();
             ev.match.endTime = 1604612998269;
-            ev.match.season = 1;
-            ev.match.players[0].battleTag = "peter#123";
-            ev.match.players[0].won = true;
             ev.match.players[0].race = Race.OC;
-
-            ev.match.players[1].battleTag = "wolf#456";
-            ev.match.players[1].won = false;
             ev.match.players[1].race = Race.NE;
 
             await handler.Update(ev);
 
             var playerMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 1);
-
+            // Todo: add some more content based asserts for the timeline
             Assert.IsNotNull(playerMmrTimeline);
-
-            //var loser = await playerRepository.LoadGameModeStatPerGateway("wolf#456", GateWay.Europe, 1);
-            //Assert.AreEqual(1, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_1v1).Wins);
-
-            //Assert.AreEqual(1, loser.First(x => x.GameMode == GameMode.GM_1v1).Losses);
-            //Assert.AreEqual(0, loser.First(x => x.GameMode == GameMode.GM_1v1).Wins);
         }
     }
 }
