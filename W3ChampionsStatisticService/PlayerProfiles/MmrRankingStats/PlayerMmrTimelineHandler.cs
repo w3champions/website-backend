@@ -35,6 +35,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
                     mmr: (int)player.updatedMmr.rating,
                     mmrTime: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
 
+                mmrTimeline.MmrAtTimes.Sort((a, b) => (a.MmrTime.CompareTo(b.MmrTime)));
+
                 await _playerRepository.UpsertPlayerMmrTimeline(mmrTimeline);
             }
         }
