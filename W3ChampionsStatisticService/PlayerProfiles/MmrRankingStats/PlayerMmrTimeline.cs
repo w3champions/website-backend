@@ -18,8 +18,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
             GateWay = gateWay;
             Season = season;
             GameMode = gameMode;
+            MmrAtTimes = new List<MmrAtTime>();
         }
-        public List<MmrAtTime> MmrAtTimes = new List<MmrAtTime>();
+        public List<MmrAtTime> MmrAtTimes { get; set; }
         public string BattleTag { get; set; }
         public Race Race { get; set; }
         public GateWay GateWay { get; set; }
@@ -57,8 +58,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
             Mmr = mmr;
             MmrTime = mmrTime;
         }
-        public int Mmr;
-        public DateTimeOffset MmrTime;
+        public int Mmr { get; set; }
+        public DateTimeOffset MmrTime { get; set; }
 
         public int CompareTo(object obj)
         {
