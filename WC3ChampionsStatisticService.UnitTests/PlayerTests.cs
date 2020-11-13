@@ -308,9 +308,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task Player_UpdateMmrTimeline()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var matchRepository = new MatchRepository(MongoClient);
-            await matchRepository.EnsureIndices();
-            var handler = new PlayerMmrTimelineHandler(playerRepository, matchRepository);
+            var handler = new PlayerMmrTimelineHandler(playerRepository);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
@@ -341,11 +339,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent3.match.players[0].updatedMmr.rating = 80;
             matchFinishedEvent3.match.players[1].updatedMmr.rating = 120;
 
-
-            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-            await matchRepository.Insert(Matchup.Create(matchFinishedEvent3));
-
             // P1 Win
             matchFinishedEvent4.match.endTime = 1604612998269;
             matchFinishedEvent4.match.players[0].race = Race.OC;
@@ -353,7 +346,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent4.match.players[0].updatedMmr.rating = 102;
             matchFinishedEvent4.match.players[1].updatedMmr.rating = 98;
 
+            // Wrong order on purpose!
             await handler.Update(matchFinishedEvent4);
+            await handler.Update(matchFinishedEvent2);
+            await handler.Update(matchFinishedEvent1);
+            await handler.Update(matchFinishedEvent3);
+
 
             var peterMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
             var wolfMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("wolf#456", Race.NE, GateWay.Europe, 0, GameMode.GM_1v1);

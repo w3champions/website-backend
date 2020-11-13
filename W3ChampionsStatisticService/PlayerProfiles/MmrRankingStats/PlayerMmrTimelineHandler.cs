@@ -12,15 +12,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
     public class PlayerMmrTimelineHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
-        private readonly IMatchRepository _matchRepository;
 
         public PlayerMmrTimelineHandler(
-            IPlayerRepository playerRepository,
-            IMatchRepository matchRepository
+            IPlayerRepository playerRepository
             )
         {
             _playerRepository = playerRepository;
-            _matchRepository = matchRepository;
         }
 
         public async Task Update(MatchFinishedEvent nextEvent) 
