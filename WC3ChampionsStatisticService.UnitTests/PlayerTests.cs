@@ -355,8 +355,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update(matchFinishedEvent4);
 
-            var peterMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0);
-            var wolfMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("wolf#456", Race.NE, GateWay.Europe, 0);
+            var peterMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+            var wolfMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("wolf#456", Race.NE, GateWay.Europe, 0, GameMode.GM_1v1);
 
             Assert.IsNotNull(peterMmrTimeline);
             Assert.IsNotNull(wolfMmrTimeline);
