@@ -14,7 +14,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
         {
             Id = $"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}";
             BattleTag = battleTag;
-            Race = Race;
+            Race = race;
             GateWay = gateWay;
             Season = season;
             GameMode = gameMode;
