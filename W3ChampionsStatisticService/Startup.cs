@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Authorization;
@@ -51,6 +52,12 @@ namespace W3ChampionsStatisticService
             services.AddControllers(c =>
             {
                 c.Filters.Add<ValidationExceptionFilter>();
+            });
+
+            services.AddLogging(config =>
+            {
+                // no logging to test performance benefit
+                config.ClearProviders();
             });
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
@@ -113,7 +120,9 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerHeroStatsHandler>();
                 services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
                 services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
-                services.AddReadModelService<PlayerMmrTimelineHandler>();
+                
+                // comment in again, when needed
+                //services.AddReadModelService<PlayerMmrTimelineHandler>();
 
                 // Generell Stats
                 services.AddReadModelService<GamesPerDayHandler>();
