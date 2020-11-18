@@ -54,12 +54,6 @@ namespace W3ChampionsStatisticService
                 c.Filters.Add<ValidationExceptionFilter>();
             });
 
-            //services.AddLogging(config =>
-            //{
-            //    // no logging to test performance benefit
-            //    config.ClearProviders();
-            //});
-
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
             var startPadSync = Environment.GetEnvironmentVariable("START_PAD_SYNC");
             var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://176.28.16.249:3513";
@@ -142,8 +136,8 @@ namespace W3ChampionsStatisticService
                 // On going matches
                 services.AddUnversionedReadModelService<OngoingMatchesHandler>();
 
-                //services.AddUnversionedReadModelService<RankSyncHandler>();
-                //services.AddUnversionedReadModelService<LeagueSyncHandler>();
+                services.AddUnversionedReadModelService<RankSyncHandler>();
+                services.AddUnversionedReadModelService<LeagueSyncHandler>();
                 services.AddUnversionedReadModelService<BanSyncHandler>();
             }
         }
