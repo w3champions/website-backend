@@ -380,6 +380,54 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task UserLeavesClanAndGetsInvitedAgain()
+        {
+            await CreateFoundedClanForTest();
+
+            await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+            await _handler.AcceptInvite("Wolf#456", "CS");
+            await _handler.LeaveClan("CS", "Wolf#456");
+
+            await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+
+            var member1 = await _clanRepository.LoadMemberShip("Wolf#456");
+            
+            Assert.AreEqual(null, member1.ClanId);
+            Assert.AreEqual("CS", member1.PendingInviteFromClan);
+
+            await _handler.AcceptInvite("Wolf#456", "CS");
+
+            var member = await _clanRepository.LoadMemberShip("Wolf#456");
+
+            Assert.AreEqual("CS", member.ClanId);
+            Assert.AreEqual(null, member.PendingInviteFromClan);
+        }
+
+        [Test]
+        public async Task UserGetsKickedAndGetsInvitedAgain()
+        {
+            await CreateFoundedClanForTest();
+
+            await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+            await _handler.AcceptInvite("Wolf#456", "CS");
+            await _handler.KickPlayer("Wolf#456", "CS", "Peter#123");
+
+            await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+
+            var member1 = await _clanRepository.LoadMemberShip("Wolf#456");
+            
+            Assert.AreEqual(null, member1.ClanId);
+            Assert.AreEqual("CS", member1.PendingInviteFromClan);
+
+            await _handler.AcceptInvite("Wolf#456", "CS");
+
+            var member = await _clanRepository.LoadMemberShip("Wolf#456");
+
+            Assert.AreEqual("CS", member.ClanId);
+            Assert.AreEqual(null, member.PendingInviteFromClan);
+        }
+
+        [Test]
         public async Task LoadClan_PopulateRanks()
         {
             var clan = await CreateFoundedClanForTest();
