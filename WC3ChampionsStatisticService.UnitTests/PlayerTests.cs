@@ -305,10 +305,10 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task Player_UpdateMmrTimeline()
+        public async Task Player_UpdateMmrRpTimeline()
         {
             var playerRepository = new PlayerRepository(MongoClient);
-            var handler = new PlayerMmrTimelineHandler(playerRepository);
+            var handler = new PlayerMmrRpTimelineHandler(playerRepository);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
@@ -330,8 +330,10 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent2.match.players[0].updatedMmr.rating = 98;
             matchFinishedEvent2.match.players[1].updatedMmr.rating = 102;
 
+            // matchFinishedEvent2 and 3 on the same day, so only the one with later date should appear in MmrRpTimeline
+
             // P1 Lose
-            matchFinishedEvent3.match.endTime = 1585792047363;
+            matchFinishedEvent3.match.endTime = 1585702659200;
             matchFinishedEvent3.match.players[0].won = false;
             matchFinishedEvent3.match.players[1].won = true;
             matchFinishedEvent3.match.players[0].race = Race.OC;
@@ -353,20 +355,17 @@ namespace WC3ChampionsStatisticService.UnitTests
             await handler.Update(matchFinishedEvent3);
 
 
-            var peterMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
-            var wolfMmrTimeline = await playerRepository.LoadPlayerMmrTimeline("wolf#456", Race.NE, GateWay.Europe, 0, GameMode.GM_1v1);
+            var peterMmrRpTimeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+            var wolfMmrRpTimeline = await playerRepository.LoadPlayerMmrRpTimeline("wolf#456", Race.NE, GateWay.Europe, 0, GameMode.GM_1v1);
 
-            Assert.IsNotNull(peterMmrTimeline);
-            Assert.IsNotNull(wolfMmrTimeline);
+            Assert.IsNotNull(peterMmrRpTimeline);
+            Assert.IsNotNull(wolfMmrRpTimeline);
 
-            Assert.IsTrue(peterMmrTimeline.MmrAtTimes[0].Mmr > peterMmrTimeline.MmrAtTimes[1].Mmr);
-            Assert.IsTrue(peterMmrTimeline.MmrAtTimes[1].Mmr > peterMmrTimeline.MmrAtTimes[2].Mmr);
-            Assert.IsTrue(peterMmrTimeline.MmrAtTimes[2].Mmr < peterMmrTimeline.MmrAtTimes[3].Mmr);
+            Assert.IsTrue(peterMmrRpTimeline.MmrRpAtDates[0].Mmr > peterMmrRpTimeline.MmrRpAtDates[1].Mmr);
+            Assert.IsTrue(peterMmrRpTimeline.MmrRpAtDates[1].Mmr < peterMmrRpTimeline.MmrRpAtDates[2].Mmr);
 
-            // Second game ([1]) is the only win, so first and third mmr should be lower.
-            Assert.IsTrue(wolfMmrTimeline.MmrAtTimes[0].Mmr < wolfMmrTimeline.MmrAtTimes[1].Mmr);
-            Assert.IsTrue(wolfMmrTimeline.MmrAtTimes[1].Mmr < wolfMmrTimeline.MmrAtTimes[2].Mmr);
-            Assert.IsTrue(wolfMmrTimeline.MmrAtTimes[2].Mmr > wolfMmrTimeline.MmrAtTimes[3].Mmr);
+            Assert.IsTrue(wolfMmrRpTimeline.MmrRpAtDates[0].Mmr < wolfMmrRpTimeline.MmrRpAtDates[1].Mmr);
+            Assert.IsTrue(wolfMmrRpTimeline.MmrRpAtDates[1].Mmr > wolfMmrRpTimeline.MmrRpAtDates[2].Mmr);
         }
     }
 }

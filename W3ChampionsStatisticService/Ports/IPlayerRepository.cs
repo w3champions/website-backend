@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.Ports
         Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season);
         Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat);
         float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season);
-        Task<PlayerMmrTimeline> LoadPlayerMmrTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode);
-        Task UpsertPlayerMmrTimeline(PlayerMmrTimeline mmrTimeline);
+        Task<PlayerMmrRpTimeline> LoadPlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode);
+        Task UpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline);
     }
 }
