@@ -69,16 +69,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return Ok(ordered);
         }
 
-        [HttpGet("{battleTag}/mmr-timeline")]
-        public async Task<IActionResult> GetPlayerMmrTimeline(
+        [HttpGet("{battleTag}/mmr-rp-timeline")]
+        public async Task<IActionResult> GetPlayerMmrRpTimeline(
             [FromRoute] string battleTag,
             Race race,
             GateWay gateWay,
             int season,
             GameMode gameMode)
         {
-            var playerMmrTimeline = await _playerRepository.LoadPlayerMmrTimeline(battleTag, race, gateWay, season, gameMode);
-            return Ok(playerMmrTimeline);
+            var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
+            return Ok(playerMmrRpTimeline);
         }
     }
 }

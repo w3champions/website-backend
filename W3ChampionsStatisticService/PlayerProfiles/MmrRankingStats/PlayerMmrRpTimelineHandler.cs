@@ -9,11 +9,11 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
 {
-    public class PlayerMmrTimelineHandler : IReadModelHandler
+    public class PlayerMmrRpTimelineHandler : IReadModelHandler
     {
         private readonly IPlayerRepository _playerRepository;
 
-        public PlayerMmrTimelineHandler(
+        public PlayerMmrRpTimelineHandler(
             IPlayerRepository playerRepository
             )
         {
@@ -27,12 +27,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
             foreach (var player in match.players)
             {
                 if (player.updatedMmr == null || match.endTime == 0) { return; }
-                var mmrTimeline = await _playerRepository.LoadPlayerMmrTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
-                           ?? new PlayerMmrTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
-            mmrTimeline.AddSorted(new MmrAtTime(
-            mmr: (int)player.updatedMmr.rating,
-                    mmrTime: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
-                await _playerRepository.UpsertPlayerMmrTimeline(mmrTimeline);
+                var mmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
+                           ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
+                mmrRpTimeline.UpdateTimeline(new MmrRpAtDate(
+                    mmr: (int)player.updatedMmr.rating,
+                    rp: (int?)player.ranking?.rp,
+                    date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
+                await _playerRepository.UpsertPlayerMmrRpTimeline(mmrRpTimeline);
             }
         }
     }
