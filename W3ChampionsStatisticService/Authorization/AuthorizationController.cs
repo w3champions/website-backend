@@ -10,16 +10,19 @@ namespace W3ChampionsStatisticService.Authorization
     public class AuthorizationController : ControllerBase
     {
         private readonly IBlizzardAuthenticationService _authenticationService;
+        private readonly IW3CAuthenticationService _w3CAuthenticationService;
 
         private readonly ITwitchAuthenticationService _twitchAuthenticationService;
         private readonly RegistrationHandler _registrationHandler;
 
         public AuthorizationController(
             IBlizzardAuthenticationService authenticationService,
+            IW3CAuthenticationService w3CAuthenticationService,
             ITwitchAuthenticationService twitchAuthenticationService,
             RegistrationHandler registrationHandler)
         {
             _authenticationService = authenticationService;
+            _w3CAuthenticationService = w3CAuthenticationService;
             _twitchAuthenticationService = twitchAuthenticationService;
             _registrationHandler = registrationHandler;
         }
@@ -28,13 +31,22 @@ namespace W3ChampionsStatisticService.Authorization
         public async Task<IActionResult> GetBlizzardToken([FromQuery] string code, [FromQuery] string redirectUri)
         {
             var token = await _authenticationService.GetToken(code, redirectUri);
-            return token == null ? (IActionResult)Unauthorized("Sorry H4ckerb0i") : Ok(token);
+            var userInfo = await _registrationHandler.GetUserOrRegister(token.access_token);
+            if (userInfo == null)
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
+            var w3CUserAuthentication = W3CUserAuthentication.Create(userInfo.battletag);
+            await _w3CAuthenticationService.Save(w3CUserAuthentication);
+
+            return Ok(w3CUserAuthentication);
         }
 
         [HttpGet("battleTag")]
         public async Task<IActionResult> GetUserInfo([FromQuery] string bearer)
         {
-            var userInfo = await _registrationHandler.GetUserOrRegister(bearer);
+            var userInfo = await _w3CAuthenticationService.GetUser(bearer);
 
             return userInfo == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(userInfo);
         }

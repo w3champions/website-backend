@@ -12,37 +12,15 @@ namespace W3ChampionsStatisticService.Chats
         {
         }
 
-        public async Task<UserDto> GetUser(string chatApiKey, string battleTag)
+        public async Task<UserDto> GetUser(string battleTag)
         {
-            var user = await LoadFirst<ChatUser>(c => c.ApiKey == chatApiKey);
             var userClan = await LoadFirst<ClanMembership>(c => c.Id == battleTag);
             var userSettings = await LoadFirst<PersonalSetting>(c => c.Id == battleTag);
-            if (user != null)
-            {
-                return new UserDto(
-                    user.Name,
-                    user.BattleTag,
-                    userClan?.ClanId,
-                    userSettings,
-                true);
-            }
-            user = new ChatUser(battleTag);
             return new UserDto(
-                user.Name,
-                user.BattleTag,
+                battleTag.Split("#")[1],
+                battleTag,
                 userClan?.ClanId,
-                userSettings,
-                false);
-        }
-
-        public Task SaveUser(ChatUser user)
-        {
-            return Upsert(user, c => c.BattleTag == user.BattleTag);
-        }
-
-        public Task<ChatUser> GetUserByBattleTag(string battleTag)
-        {
-            return LoadFirst<ChatUser>(c => c.BattleTag == battleTag);
+                userSettings);
         }
     }
 }

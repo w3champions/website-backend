@@ -102,32 +102,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return Ok();
         }
 
-        [HttpPut("{battleTag}/api-key")]
-        public async Task<IActionResult> SetApiKey(
-            string battleTag)
-        {
-            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(battleTag) ?? new ChatUser(battleTag);
-            chatUser.CreatApiKey();
-            await _chatAuthenticationService.SaveUser(chatUser);
-
-            return Ok(chatUser);
-        }
-
-        [HttpGet("{battleTag}/api-key")]
-        [CheckIfBattleTagBelongsToAuthCode]
-        public async Task<IActionResult> GetApiKey(
-            string battleTag)
-        {
-            var chatUser = await _chatAuthenticationService.GetUserByBattleTag(battleTag);
-            if (chatUser == null)
-            {
-                chatUser = new ChatUser(battleTag);
-                await _chatAuthenticationService.SaveUser(chatUser);
-            }
-
-            return Ok(chatUser);
-        }
-
         [HttpPut("{battleTag}/profile-picture")]
         [CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> SetProfilePicture(
