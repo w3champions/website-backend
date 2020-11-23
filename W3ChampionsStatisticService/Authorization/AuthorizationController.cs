@@ -31,6 +31,11 @@ namespace W3ChampionsStatisticService.Authorization
         public async Task<IActionResult> GetBlizzardToken([FromQuery] string code, [FromQuery] string redirectUri)
         {
             var token = await _authenticationService.GetToken(code, redirectUri);
+            if (token == null)
+            {
+                return Unauthorized("Sorry H4ckerb0i");
+            }
+
             var userInfo = await _registrationHandler.GetUserOrRegister(token.access_token);
             if (userInfo == null)
             {

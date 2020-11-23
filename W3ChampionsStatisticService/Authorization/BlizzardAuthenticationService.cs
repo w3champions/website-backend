@@ -9,8 +9,8 @@ namespace W3ChampionsStatisticService.Authorization
 {
     public class BlizzardAuthenticationService : IBlizzardAuthenticationService
     {
-        private readonly string _bnetClientId = Environment.GetEnvironmentVariable("BNET_API_CLIENT_ID") ?? "6da84149578f4566a4d0224a2264a54d";
-        private readonly string _bnetApiSecret = Environment.GetEnvironmentVariable("BNET_API_SECRET") ?? "m112C7BJql48WOSLUPmWLbND4ZvhwN1V";
+        private readonly string _bnetClientId = Environment.GetEnvironmentVariable("BNET_API_CLIENT_ID");
+        private readonly string _bnetApiSecret = Environment.GetEnvironmentVariable("BNET_API_SECRET");
 
         public async Task<BlizzardUserInfo> GetUser(string bearer)
         {
