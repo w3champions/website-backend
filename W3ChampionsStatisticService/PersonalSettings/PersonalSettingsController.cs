@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson.IO;
-using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -16,23 +12,17 @@ namespace W3ChampionsStatisticService.PersonalSettings
     [Route("api/personal-settings")]
     public class PersonalSettingsController : ControllerBase
     {
-        private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IPlayerRepository _playerRepository;
-        private readonly ChatAuthenticationService _chatAuthenticationService;
         private readonly PersonalSettingsCommandHandler _commandHandler;
 
         public PersonalSettingsController(
-            IBlizzardAuthenticationService authenticationService,
             IPersonalSettingsRepository personalSettingsRepository,
             IPlayerRepository playerRepository,
-            ChatAuthenticationService chatAuthenticationService,
             PersonalSettingsCommandHandler commandHandler)
         {
-            _authenticationService = authenticationService;
             _personalSettingsRepository = personalSettingsRepository;
             _playerRepository = playerRepository;
-            _chatAuthenticationService = chatAuthenticationService;
             _commandHandler = commandHandler;
         }
 

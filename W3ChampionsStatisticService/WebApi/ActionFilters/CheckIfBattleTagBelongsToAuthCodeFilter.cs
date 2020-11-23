@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     public class CheckIfBattleTagBelongsToAuthCodeFilter : IAsyncActionFilter {
-        private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
+        private readonly IW3CAuthenticationService _authService;
 
-        public CheckIfBattleTagBelongsToAuthCodeFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public CheckIfBattleTagBelongsToAuthCodeFilter(IW3CAuthenticationService authService)
         {
-            _blizzardAuthenticationService = blizzardAuthenticationService;
+            _authService = authService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -23,15 +23,15 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             if (queryString.AllKeys.Contains("authorization"))
             {
                 var auth = queryString["authorization"];
-                var res = await _blizzardAuthenticationService.GetUser(auth);
+                var res = await _authService.GetUser(auth);
 
                 var btagString = battleTag?.ToString();
                 if (
                     res != null
                     && !string.IsNullOrEmpty(btagString)
-                    && btagString.Equals(res.battletag))
+                    && btagString.Equals(res.Battletag))
                 {
-                    context.ActionArguments["battleTag"] = res.battletag;
+                    context.ActionArguments["battleTag"] = res.Battletag;
                     await next.Invoke();
                 }
             }
