@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.Chats
             _chatHistory = chatHistory;
         }
 
-        public async Task SendMessage(string battleTag, string message)
+        public async Task SendMessage(string chatKey, string battleTag, string message)
         {
             var trimmedMessage = message.Trim();
             var user = await _authenticationService.GetUser(battleTag);
@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.Chats
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SwitchRoom(string battleTag, string chatRoom)
+        public async Task SwitchRoom(string chatKey, string battleTag, string chatRoom)
         {
             var user = await _authenticationService.GetUser(battleTag);
 
@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.Chats
             await Clients.Caller.SendAsync("StartChat", usersOfRoom, _chatHistory.GetMessages(chatRoom));
         }
 
-        public async Task LoginAs(string battleTag, string chatRoom)
+        public async Task LoginAs(string chatKey, string battleTag, string chatRoom)
         {
             var user = await _authenticationService.GetUser(battleTag);
             var ban = await _banRepository.GetBan(battleTag.ToLower());
