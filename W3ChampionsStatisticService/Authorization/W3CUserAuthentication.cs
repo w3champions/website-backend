@@ -12,14 +12,14 @@ namespace W3ChampionsStatisticService.Authorization
             return new W3CUserAuthentication
             {
                 Token = Guid.NewGuid().ToString(),
-                Battletag = battletag
+                BattleTag = battletag
             };
         }
 
         public string Token { get; set; }
-        public string Battletag { get; set; }
-        public string Name => Battletag.Split("#")[0];
-        public Boolean isAdmin { get { return Admins.ApprovedAdmins.Any(p => p == Battletag.ToLower()); } }
-        public string Id => Battletag;
+        public string BattleTag { get; set; }
+        public string Name => BattleTag.Split("#")[0];
+        public Boolean isAdmin { get { return Admins.ApprovedAdmins.Any(p => p == BattleTag.ToLower()); } }
+        public string Id => BattleTag;
     }
 }

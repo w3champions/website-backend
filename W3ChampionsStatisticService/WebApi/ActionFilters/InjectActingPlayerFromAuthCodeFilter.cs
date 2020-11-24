@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
                 if (actingPlayerContent != null)
                 {
-                    context.ActionArguments["actingPlayer"] = res.Battletag;
+                    context.ActionArguments["actingPlayer"] = res.BattleTag;
                     await next.Invoke();
                 }
             }

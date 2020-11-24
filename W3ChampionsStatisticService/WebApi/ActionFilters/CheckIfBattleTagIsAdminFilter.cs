@@ -26,10 +26,10 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 var res = await _authService.GetUserByToken(auth);
                 if (
                     res != null
-                    && !string.IsNullOrEmpty(res.Battletag)
-                    && Admins.ApprovedAdmins.Any(x => x.ToLower() == res.Battletag.ToLower()))
+                    && !string.IsNullOrEmpty(res.BattleTag)
+                    && Admins.ApprovedAdmins.Any(x => x.ToLower() == res.BattleTag.ToLower()))
                 {
-                    context.ActionArguments["battleTag"] = res.Battletag;
+                    context.ActionArguments["battleTag"] = res.BattleTag;
                     await next.Invoke();
                 }
             }

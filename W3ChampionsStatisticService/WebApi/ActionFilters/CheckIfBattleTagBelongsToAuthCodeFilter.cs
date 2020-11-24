@@ -29,9 +29,9 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 if (
                     res != null
                     && !string.IsNullOrEmpty(btagString)
-                    && btagString.Equals(res.Battletag))
+                    && btagString.Equals(res.BattleTag))
                 {
-                    context.ActionArguments["battleTag"] = res.Battletag;
+                    context.ActionArguments["battleTag"] = res.BattleTag;
                     await next.Invoke();
                 }
             }
