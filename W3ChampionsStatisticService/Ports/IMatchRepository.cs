@@ -38,7 +38,7 @@ namespace W3ChampionsStatisticService.Ports
 
         void InsertOnGoingMatch(OnGoingMatchup matchup);
         OnGoingMatchup? LoadOnGoingMatchForPlayer(string playerId);
-        void DeleteOnGoingMatch(string matchId);
+        bool DeleteOnGoingMatch(string matchId);
 
         List<OnGoingMatchup> LoadOnGoingMatches(GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,

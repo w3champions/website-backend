@@ -185,9 +185,9 @@ namespace W3ChampionsStatisticService.Matches
                 );
         }
 
-        public void DeleteOnGoingMatch(string matchId)
+        public bool DeleteOnGoingMatch(string matchId)
         {
-            _onGoingMatchups.Remove(_onGoingMatchups.Find(x => x.MatchId == matchId));
+            return _onGoingMatchups.Remove(_onGoingMatchups.Find(x => x.MatchId == matchId));
         }
 
         public List<OnGoingMatchup> LoadOnGoingMatches(
