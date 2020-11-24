@@ -36,8 +36,8 @@ namespace W3ChampionsStatisticService.Ports
         Task<MatchupDetail> LoadDetails(ObjectId id);
         Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id);
 
-        Task InsertOnGoingMatch(OnGoingMatchup matchup);
-        Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
+        void InsertOnGoingMatch(OnGoingMatchup matchup);
+        OnGoingMatchup? LoadOnGoingMatchForPlayer(string playerId);
         Task DeleteOnGoingMatch(string matchId);
 
         Task<List<OnGoingMatchup>> LoadOnGoingMatches(

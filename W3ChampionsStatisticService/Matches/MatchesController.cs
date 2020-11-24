@@ -78,9 +78,9 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         [HttpGet("ongoing/{playerId}")]
-        public async Task<IActionResult> GetOnGoingMatches(string playerId)
+        public IActionResult GetOnGoingMatches(string playerId)
         {
-            var onGoingMatch = await _matchRepository.LoadOnGoingMatchForPlayer(playerId);
+            var onGoingMatch = _matchRepository.LoadOnGoingMatchForPlayer(playerId);
 
             if (onGoingMatch != null && onGoingMatch.GameMode == GameMode.FFA)
             {
