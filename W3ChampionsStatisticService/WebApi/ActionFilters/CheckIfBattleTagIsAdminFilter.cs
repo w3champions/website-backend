@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             if (queryString.AllKeys.Contains("authorization"))
             {
                 var auth = queryString["authorization"];
-                var res = await _authService.GetUser(auth);
+                var res = await _authService.GetUserByToken(auth);
                 if (
                     res != null
                     && !string.IsNullOrEmpty(res.Battletag)

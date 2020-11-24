@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Authorization
 {
@@ -42,16 +43,30 @@ namespace W3ChampionsStatisticService.Authorization
                 return Unauthorized("Sorry H4ckerb0i");
             }
 
-            var w3CUserAuthentication = W3CUserAuthentication.Create(userInfo.battletag);
-            await _w3CAuthenticationService.Save(w3CUserAuthentication);
+            var w3User = await _w3CAuthenticationService.GetUserById(userInfo.battletag);
 
-            return Ok(w3CUserAuthentication);
+            if (w3User == null)
+            {
+                var w3CUserAuthentication = W3CUserAuthentication.Create(userInfo.battletag);
+                await _w3CAuthenticationService.Save(w3CUserAuthentication);
+                return Ok(w3CUserAuthentication);
+            }
+
+            return Ok(w3User);
+        }
+
+        [HttpDelete("token")]
+        [InjectActingPlayerAuthCode]
+        public async Task<IActionResult> Logout([FromQuery] string actingPlayer)
+        {
+            await _w3CAuthenticationService.Delete(actingPlayer);
+            return Ok();
         }
 
         [HttpGet("battleTag")]
         public async Task<IActionResult> GetUserInfo([FromQuery] string bearer)
         {
-            var userInfo = await _w3CAuthenticationService.GetUser(bearer);
+            var userInfo = await _w3CAuthenticationService.GetUserByToken(bearer);
 
             return userInfo == null ? (IActionResult) Unauthorized("Sorry H4ckerb0i") : Ok(userInfo);
         }
