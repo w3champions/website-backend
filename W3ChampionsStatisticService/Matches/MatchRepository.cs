@@ -10,7 +10,7 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Matches
-{    
+{
     public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
     {
         private readonly List<OnGoingMatchup> _onGoingMatchups;
@@ -185,37 +185,43 @@ namespace W3ChampionsStatisticService.Matches
                 );
         }
 
-        public Task DeleteOnGoingMatch(string matchId)
+        public void DeleteOnGoingMatch(string matchId)
         {
-            return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
+            _onGoingMatchups.Remove(_onGoingMatchups.Find(x => x.MatchId == matchId));
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+        public List<OnGoingMatchup> LoadOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100)
         {
-            var mongoCollection = CreateCollection<OnGoingMatchup>();
-
-            var events = await mongoCollection
-                .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                           && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
-                .SortByDescending(s => s.Id)
+            var events = _onGoingMatchups
+                .FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                              && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
+                .OrderByDescending(s => s.Id)
                 .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
+                .Take(pageSize)
+                .ToList();
 
             return events;
         }
 
-        public Task<long> CountOnGoingMatches(
+        public long CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined)
         {
-            return CreateCollection<OnGoingMatchup>()
-                .CountDocumentsAsync(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                                          && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
+            return _onGoingMatchups.FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                                                 && (gateWay == GateWay.Undefined || m.GateWay == gateWay)).Count;
         }
+    }
+
+    internal static class OnGoingMatchUps
+    {
+        static OnGoingMatchUps()
+        {
+        }
+
+        public static List<OnGoingMatchup> Instance { get; } = new List<OnGoingMatchup>();
     }
 }
