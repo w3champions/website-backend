@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Chats
             var userClan = await LoadFirst<ClanMembership>(c => c.Id == battleTag);
             var userSettings = await LoadFirst<PersonalSetting>(c => c.Id == battleTag);
             return new UserDto(
-                battleTag.Split("#")[1],
+                battleTag.Split("#")[0],
                 battleTag,
                 userClan?.ClanId,
                 userSettings);
