@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.Matches
             if (nextEvent.WasFakeEvent) return;
             var matchup = Matchup.Create(nextEvent);
             await _matchRepository.Insert(matchup);
-            await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
+            _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
         }
     }
 }

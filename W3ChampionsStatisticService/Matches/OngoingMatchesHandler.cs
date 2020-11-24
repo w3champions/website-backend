@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -33,21 +32,14 @@ namespace W3ChampionsStatisticService.Matches
                     var matchup = OnGoingMatchup.Create(nextEvent);
 
                     foreach (var team in matchup.Teams)
+                    foreach (var player in team.Players)
                     {
-                        foreach (var player in team.Players)
-                        {
-                            var foundMatchForPlayer = _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
-                            if (foundMatchForPlayer != null)
-                            {
-                                await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
-                            }
+                        var foundMatchForPlayer = _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
+                        if (foundMatchForPlayer != null)
+                            _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
 
-                            var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
-                            if (personalSettings != null)
-                            {
-                                player.CountryCode = personalSettings.CountryCode;
-                            }
-                        }
+                        var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
+                        if (personalSettings != null) player.CountryCode = personalSettings.CountryCode;
                     }
 
                     _matchRepository.InsertOnGoingMatch(matchup);
