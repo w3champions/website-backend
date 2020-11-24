@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     public class InjectActingPlayerFromAuthCodeFilter : IAsyncActionFilter {
-        private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
+        private readonly IW3CAuthenticationService _authService;
 
-        public InjectActingPlayerFromAuthCodeFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService authService)
         {
-            _blizzardAuthenticationService = blizzardAuthenticationService;
+            _authService = authService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -22,12 +22,12 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             if (queryString.AllKeys.Contains("authorization"))
             {
                 var auth = queryString["authorization"];
-                var res = await _blizzardAuthenticationService.GetUser(auth);
+                var res = await _authService.GetUserByToken(auth);
 
                 var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
                 if (actingPlayerContent != null)
                 {
-                    context.ActionArguments["actingPlayer"] = res.battletag;
+                    context.ActionArguments["actingPlayer"] = res.Battletag;
                     await next.Invoke();
                 }
             }

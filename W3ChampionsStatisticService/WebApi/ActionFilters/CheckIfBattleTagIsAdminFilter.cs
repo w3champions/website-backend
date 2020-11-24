@@ -4,17 +4,17 @@ using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using W3ChampionsStatisticService.Admin;
-using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     public class CheckIfBattleTagIsAdminFilter : IAsyncActionFilter {
-        private readonly IBlizzardAuthenticationService _blizzardAuthenticationService;
+        private readonly IW3CAuthenticationService _authService;
 
-        public CheckIfBattleTagIsAdminFilter(IBlizzardAuthenticationService blizzardAuthenticationService)
+        public CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService)
         {
-            _blizzardAuthenticationService = blizzardAuthenticationService;
+            _authService = authService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -23,13 +23,13 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             if (queryString.AllKeys.Contains("authorization"))
             {
                 var auth = queryString["authorization"];
-                var res = await _blizzardAuthenticationService.GetUser(auth);
+                var res = await _authService.GetUserByToken(auth);
                 if (
                     res != null
-                    && !string.IsNullOrEmpty(res.battletag)
-                    && Admins.ApprovedAdmins.Any(x => x.ToLower() == res.battletag.ToLower()))
+                    && !string.IsNullOrEmpty(res.Battletag)
+                    && Admins.ApprovedAdmins.Any(x => x.ToLower() == res.Battletag.ToLower()))
                 {
-                    context.ActionArguments["battleTag"] = res.battletag;
+                    context.ActionArguments["battleTag"] = res.Battletag;
                     await next.Invoke();
                 }
             }

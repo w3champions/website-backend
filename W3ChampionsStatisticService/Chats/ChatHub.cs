@@ -24,10 +24,10 @@ namespace W3ChampionsStatisticService.Chats
             _chatHistory = chatHistory;
         }
 
-        public async Task SendMessage(string chatApiKey, string battleTag, string message)
+        public async Task SendMessage(string chatKey, string battleTag, string message)
         {
             var trimmedMessage = message.Trim();
-            var user = await _authenticationService.GetUser(chatApiKey, battleTag);
+            var user = await _authenticationService.GetUser(battleTag);
             if (!string.IsNullOrEmpty(trimmedMessage))
             {
                 var chatRoom = _connections.GetRoom(Context.ConnectionId);
@@ -50,9 +50,9 @@ namespace W3ChampionsStatisticService.Chats
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task SwitchRoom(string chatApiKey, string battleTag, string chatRoom)
+        public async Task SwitchRoom(string chatKey, string battleTag, string chatRoom)
         {
-            var user = await _authenticationService.GetUser(chatApiKey, battleTag);
+            var user = await _authenticationService.GetUser(battleTag);
 
             var oldRoom = _connections.GetRoom(Context.ConnectionId);
             _connections.Remove(Context.ConnectionId);
@@ -67,9 +67,9 @@ namespace W3ChampionsStatisticService.Chats
             await Clients.Caller.SendAsync("StartChat", usersOfRoom, _chatHistory.GetMessages(chatRoom));
         }
 
-        public async Task LoginAs(string chatApiKey, string battleTag, string chatRoom)
+        public async Task LoginAs(string chatKey, string battleTag, string chatRoom)
         {
-            var user = await _authenticationService.GetUser(chatApiKey, battleTag);
+            var user = await _authenticationService.GetUser(battleTag);
             var ban = await _banRepository.GetBan(battleTag.ToLower());
 
             var nowDate = DateTime.Now.ToString("yyyy-MM-dd");
@@ -79,11 +79,6 @@ namespace W3ChampionsStatisticService.Chats
             }
             else
             {
-                if (!user.VerifiedBattletag)
-                {
-                    await Clients.Caller.SendAsync("ChatKeyInvalid");
-                }
-
                 _connections.Add(Context.ConnectionId, chatRoom, user);
                 await Groups.AddToGroupAsync(Context.ConnectionId, chatRoom);
 

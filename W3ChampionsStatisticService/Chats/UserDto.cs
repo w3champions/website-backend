@@ -8,7 +8,6 @@ namespace W3ChampionsStatisticService.Chats
         public string BattleTag { get; }
         public string ClanTag { get; }
         public ProfilePicture ProfilePicture { get; }
-        public bool VerifiedBattletag { get; }
 
         public string Alias { get; set; }
         public string Color { get; set; }
@@ -17,12 +16,10 @@ namespace W3ChampionsStatisticService.Chats
             string name,
             string battleTag,
             string clanTag,
-            PersonalSetting personalSettings,
-            bool verifiedBattletag)
+            PersonalSetting personalSettings)
         {
             Name = name;
             BattleTag = battleTag;
-            VerifiedBattletag = verifiedBattletag;
             ClanTag = clanTag;
             ProfilePicture = personalSettings?.ProfilePicture ?? ProfilePicture.Default();
 

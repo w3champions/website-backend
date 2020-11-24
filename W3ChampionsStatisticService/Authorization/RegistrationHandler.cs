@@ -9,7 +9,9 @@ namespace W3ChampionsStatisticService.Authorization
         private readonly IBlizzardAuthenticationService _authenticationService;
         private readonly IPlayerRepository _playerRepository;
 
-        public RegistrationHandler(IBlizzardAuthenticationService authenticationService, IPlayerRepository playerRepository)
+        public RegistrationHandler(
+            IBlizzardAuthenticationService authenticationService,
+            IPlayerRepository playerRepository)
         {
             _authenticationService = authenticationService;
             _playerRepository = playerRepository;
