@@ -169,6 +169,7 @@ namespace W3ChampionsStatisticService.Matches
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)
         {
+            _cache.Upsert(matchup);
             return Upsert(matchup, m => m.MatchId == matchup.MatchId);
         }
 

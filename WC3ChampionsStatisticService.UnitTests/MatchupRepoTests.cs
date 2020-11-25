@@ -401,8 +401,8 @@ namespace WC3ChampionsStatisticService.UnitTests
                 notCachedEvent.match.gameMode,
                 notCachedEvent.match.gateway);
 
-            Assert.AreEqual(1, result2.Count);
-            Assert.AreEqual(storedEvent.match.id, result2[0].MatchId);
+            Assert.AreEqual(2, result2.Count);
+            Assert.AreEqual(storedEvent.match.id, result[0].MatchId);
         }
 
         [Test]
@@ -428,7 +428,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var result2 = await matchRepository.TryLoadOnGoingMatchForPlayer(storedEvent.match.players[0].battleTag);
 
             Assert.IsNotNull(result2);
-            Assert.AreEqual(storedEvent.match.id, result2.MatchId);
+            Assert.AreEqual(storedEvent.match.id, result.MatchId);
+            Assert.AreEqual(notCachedEvent.match.id, result2.MatchId);
         }
 
         [Test]
@@ -455,7 +456,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             var result2 = await matchRepository.TryLoadOnGoingMatchForPlayer(storedEvent.match.players[0].battleTag);
 
             Assert.IsNotNull(result2);
-            Assert.AreEqual(storedEvent.match.id, result2.MatchId);
+            Assert.AreEqual(storedEvent.match.id, result.MatchId);
+            Assert.AreEqual(notCachedEvent.match.id, result2.MatchId);
         }
 
 

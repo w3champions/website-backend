@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Matches
     public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
     {
         private List<OnGoingMatchup> _values = new List<OnGoingMatchup>();
-        private DateTimeOffset _lastUpdate = DateTimeOffset.MinValue;
+        private Object _lock = new Object();
 
         public async Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay)
         {
@@ -37,12 +37,20 @@ namespace W3ChampionsStatisticService.Matches
                                            || m.Team4Players != null && m.Team4Players.Contains(playerId));
         }
 
+        public void Upsert(OnGoingMatchup matchup)
+        {
+            lock (_lock)
+            {
+                var orderByDescending = _values.Where(m => m.MatchId != matchup.MatchId);
+                _values = orderByDescending.Append(matchup).OrderByDescending(s => s.Id).ToList();
+            }
+
+        }
+
         private async Task UpdateCacheIfNeeded()
         {
-            var difference = DateTimeOffset.Now - _lastUpdate;
-            if (difference > TimeSpan.FromSeconds(120))
+            if (_values.Count == 0)
             {
-                _lastUpdate = DateTimeOffset.Now;
                 var mongoCollection = CreateCollection<OnGoingMatchup>();
                 _values = await mongoCollection.Find(r => true).SortByDescending(s => s.Id).ToListAsync();
             }
@@ -58,5 +66,6 @@ namespace W3ChampionsStatisticService.Matches
         Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay);
         Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
+        void Upsert(OnGoingMatchup matchup);
     }
 }
