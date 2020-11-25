@@ -62,15 +62,15 @@ namespace W3ChampionsStatisticService.Matches
 
 
         [HttpGet("ongoing")]
-        public IActionResult GetOnGoingMatches(
+        public async Task<IActionResult> GetOnGoingMatches(
             int offset = 0,
             int pageSize = 100,
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined)
         {
             if (pageSize > 200) pageSize = 200;
-            var matches = _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
-            var count = _matchRepository.CountOnGoingMatches(gameMode, gateWay);
+            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
+            var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay);
 
             PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
@@ -78,9 +78,9 @@ namespace W3ChampionsStatisticService.Matches
         }
 
         [HttpGet("ongoing/{playerId}")]
-        public IActionResult GetOnGoingMatches(string playerId)
+        public async Task<IActionResult> GetOnGoingMatches(string playerId)
         {
-            var onGoingMatch = _matchRepository.LoadOnGoingMatchForPlayer(playerId);
+            var onGoingMatch = await _matchRepository.TryLoadOnGoingMatchForPlayer(playerId);
 
             if (onGoingMatch != null && onGoingMatch.GameMode == GameMode.FFA)
             {

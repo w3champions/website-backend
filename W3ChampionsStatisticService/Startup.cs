@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Authorization;
@@ -82,6 +81,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
+            services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
             services.AddTransient<BanReadmodelRepository>();
             services.AddTransient<HeroStatsQueryHandler>();
             services.AddTransient<PersonalSettingsCommandHandler>();

@@ -34,15 +34,15 @@ namespace W3ChampionsStatisticService.Matches
                     foreach (var team in matchup.Teams)
                     foreach (var player in team.Players)
                     {
-                        var foundMatchForPlayer = _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
+                        var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
                         if (foundMatchForPlayer != null)
-                            _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
+                            await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
 
                         var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
                         if (personalSettings != null) player.CountryCode = personalSettings.CountryCode;
                     }
 
-                    _matchRepository.InsertOnGoingMatch(matchup);
+                    await _matchRepository.InsertOnGoingMatch(matchup);
                     await _eventRepository.DeleteStartedEvent(nextEvent.Id);
                 }
 

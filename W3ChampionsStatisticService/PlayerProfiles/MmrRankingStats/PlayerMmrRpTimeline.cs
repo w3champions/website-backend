@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using W3ChampionsStatisticService.CommonValueObjects;
-using System.Linq;
-using System.Threading.Tasks;
 using W3ChampionsStatisticService.ReadModelBase;
-using System.Collections;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
 {
