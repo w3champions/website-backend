@@ -39,7 +39,8 @@ namespace W3ChampionsStatisticService.Matches
 
         private async Task UpdateCacheIfNeeded()
         {
-            if (_lastUpdate - DateTimeOffset.Now < TimeSpan.FromSeconds(120))
+            var difference = DateTimeOffset.Now - _lastUpdate;
+            if (difference > TimeSpan.FromSeconds(120))
             {
                 _lastUpdate = DateTimeOffset.Now;
                 var mongoCollection = CreateCollection<OnGoingMatchup>();

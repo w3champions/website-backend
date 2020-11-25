@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -371,6 +373,36 @@ namespace WC3ChampionsStatisticService.UnitTests
             var result = await matchRepository.LoadDetails(matchFinishedEvent1.Id);
 
             Assert.AreEqual("archmage", result.PlayerScores[0].Heroes[0].icon);
+        }
+
+        [Test]
+        public async Task Cache()
+        {
+            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+            var storedEvent = TestDtoHelper.CreateFakeStartedEvent();
+            await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
+
+            await Task.Delay(100);
+
+            var result = await matchRepository.LoadOnGoingMatches(
+                storedEvent.match.gameMode,
+                storedEvent.match.gateway);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual(storedEvent.match.id, result[0].MatchId);
+
+            var notCachedEvent = TestDtoHelper.CreateFakeStartedEvent();
+            await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(notCachedEvent));
+
+            await Task.Delay(100);
+
+            var result2 = await matchRepository.LoadOnGoingMatches(
+                notCachedEvent.match.gameMode,
+                notCachedEvent.match.gateway);
+
+            Assert.AreEqual(1, result2.Count);
+            Assert.AreEqual(storedEvent.match.id, result2[0].MatchId);
         }
     }
 }
