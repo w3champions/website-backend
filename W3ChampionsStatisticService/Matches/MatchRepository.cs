@@ -37,9 +37,9 @@ namespace W3ChampionsStatisticService.Matches
             {
                 return await mongoCollection
                     .Find(m => Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
-                        && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                        && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                        && (m.Season == season))
+                               && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                               && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                               && (m.Season == season))
                     .SortByDescending(s => s.Id)
                     .Skip(offset)
                     .Limit(pageSize)
@@ -115,10 +115,10 @@ namespace W3ChampionsStatisticService.Matches
 
             var textIndex = new CreateIndexModel<Matchup>(
                 matchUpLogBuilder
-                .Text(x => x.Team1Players)
-                .Text(x => x.Team2Players)
-                .Text(x => x.Team3Players)
-                .Text(x => x.Team4Players)
+                    .Text(x => x.Team1Players)
+                    .Text(x => x.Team2Players)
+                    .Text(x => x.Team3Players)
+                    .Text(x => x.Team4Players)
             );
             return collection.Indexes.CreateOneAsync(textIndex);
         }
@@ -144,11 +144,11 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100)
         {
-            var mongoCollection =CreateCollection<Matchup>();
+            var mongoCollection = CreateCollection<Matchup>();
 
             var events = await mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
+                           && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -162,60 +162,64 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined)
         {
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                    (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
+                (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
         }
 
-        public Task InsertOnGoingMatch(OnGoingMatchup matchup)
+        public void InsertOnGoingMatch(OnGoingMatchup matchup)
         {
-            return Upsert(matchup, m => m.MatchId == matchup.MatchId);
+            OnGoingMatchesMemoryStore.Matches.Add(matchup);
         }
 
 
-        public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+        public OnGoingMatchup? LoadOnGoingMatchForPlayer(string playerId)
         {
-            var mongoCollection = CreateCollection<OnGoingMatchup>();
-
-            return await mongoCollection
-                .Find(m => m.Team1Players.Contains(playerId) 
-                        || m.Team2Players.Contains(playerId)
-                        || m.Team3Players.Contains(playerId)
-                        || m.Team4Players.Contains(playerId)
-                )
-                .FirstOrDefaultAsync();
+            return OnGoingMatchesMemoryStore.Matches
+                .Find(m => m.Team1Players.Contains(playerId)
+                           || m.Team2Players.Contains(playerId)
+                           || m.Team3Players.Contains(playerId)
+                           || m.Team4Players.Contains(playerId)
+                );
         }
 
-        public Task DeleteOnGoingMatch(string matchId)
+        public bool DeleteOnGoingMatch(string matchId)
         {
-            return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
+            var onGoingMatchups = OnGoingMatchesMemoryStore.Matches;
+            return onGoingMatchups.Remove(onGoingMatchups.Find(x => x.MatchId == matchId));
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+        public List<OnGoingMatchup> LoadOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100)
         {
-            var mongoCollection = CreateCollection<OnGoingMatchup>();
-
-            var events = await mongoCollection
-                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
-                .SortByDescending(s => s.Id)
+            var events = OnGoingMatchesMemoryStore.Matches
+                .FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                              && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
+                .OrderByDescending(s => s.Id)
                 .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
+                .Take(pageSize)
+                .ToList();
 
             return events;
         }
 
-        public Task<long> CountOnGoingMatches(
+        public long CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined)
         {
-            return CreateCollection<OnGoingMatchup>()
-                .CountDocumentsAsync(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
+            return OnGoingMatchesMemoryStore.Matches.FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                                                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)).Count;
         }
+    }
+
+    internal static class OnGoingMatchesMemoryStore
+    {
+        static OnGoingMatchesMemoryStore()
+        {
+        }
+
+        public static List<OnGoingMatchup> Matches { get; } = new List<OnGoingMatchup>();
     }
 }
