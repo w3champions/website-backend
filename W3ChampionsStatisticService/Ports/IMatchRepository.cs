@@ -38,6 +38,7 @@ namespace W3ChampionsStatisticService.Ports
 
         Task InsertOnGoingMatch(OnGoingMatchup matchup);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
+        Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId);
         Task DeleteOnGoingMatch(string matchId);
 
         Task<List<OnGoingMatchup>> LoadOnGoingMatches(

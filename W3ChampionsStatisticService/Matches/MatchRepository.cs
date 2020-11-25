@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
@@ -13,8 +15,11 @@ namespace W3ChampionsStatisticService.Matches
 {
     public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
     {
-        public MatchRepository(MongoClient mongoClient) : base(mongoClient)
+        private readonly IOngoingMatchesCache _cache;
+
+        public MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : base(mongoClient)
         {
+            _cache = cache;
         }
 
         public Task Insert(Matchup matchup)
@@ -138,7 +143,7 @@ namespace W3ChampionsStatisticService.Matches
                 playerBlizzard.resourceScore);
         }
 
-        public async Task<List<Matchup>> Load(
+        public Task<List<Matchup>> Load(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
@@ -146,15 +151,13 @@ namespace W3ChampionsStatisticService.Matches
         {
             var mongoCollection =CreateCollection<Matchup>();
 
-            var events = await mongoCollection
+            return mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
-
-            return events;
         }
 
         public Task<long> Count(
@@ -172,11 +175,11 @@ namespace W3ChampionsStatisticService.Matches
         }
 
 
-        public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+        public Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
         {
             var mongoCollection = CreateCollection<OnGoingMatchup>();
 
-            return await mongoCollection
+            return mongoCollection
                 .Find(m => m.Team1Players.Contains(playerId) 
                         || m.Team2Players.Contains(playerId)
                         || m.Team3Players.Contains(playerId)
@@ -185,37 +188,30 @@ namespace W3ChampionsStatisticService.Matches
                 .FirstOrDefaultAsync();
         }
 
+        public Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId)
+        {
+            return _cache.LoadOnGoingMatchForPlayer(playerId);
+        }
+
         public Task DeleteOnGoingMatch(string matchId)
         {
             return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+        public Task<List<OnGoingMatchup>> LoadOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100)
         {
-            var mongoCollection = CreateCollection<OnGoingMatchup>();
-
-            var events = await mongoCollection
-                    .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
-                .SortByDescending(s => s.Id)
-                .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
-
-            return events;
+            return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
         }
 
         public Task<long> CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined)
         {
-            return CreateCollection<OnGoingMatchup>()
-                .CountDocumentsAsync(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
+            return _cache.Count(gameMode, gateWay);
         }
     }
 }

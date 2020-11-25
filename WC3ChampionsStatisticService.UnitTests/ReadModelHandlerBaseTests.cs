@@ -93,7 +93,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
              await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
 
-             var matchRepository = new MatchRepository(MongoClient);
+             var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
              var versionRepository = new VersionRepository(MongoClient);
 
              var handler = new ReadModelHandler<MatchReadModelHandler>(

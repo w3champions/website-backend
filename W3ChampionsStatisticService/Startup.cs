@@ -82,6 +82,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
+            services.AddTransient<IOngoingMatchesCache, OngoingMatchesCache>();
             services.AddTransient<BanReadmodelRepository>();
             services.AddTransient<HeroStatsQueryHandler>();
             services.AddTransient<PersonalSettingsCommandHandler>();
