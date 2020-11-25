@@ -32,7 +32,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
                 versionRepository,
-                new MatchReadModelHandler(mockMatchRepo.Object));
+                new MatchReadModelHandler(mockMatchRepo.Object, mockEvents.Object));
 
             await handler.Update();
 
@@ -58,7 +58,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
                 versionRepository,
-                new MatchReadModelHandler(mockMatchRepo.Object));
+                new MatchReadModelHandler(mockMatchRepo.Object, mockEvents.Object));
 
             await handler.Update();
 
@@ -96,10 +96,11 @@ namespace WC3ChampionsStatisticService.UnitTests
              var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
              var versionRepository = new VersionRepository(MongoClient);
 
+             var mockEvents = new Mock<IMatchEventRepository>();
              var handler = new ReadModelHandler<MatchReadModelHandler>(
                  new MatchEventRepository(MongoClient),
                  versionRepository,
-                 new MatchReadModelHandler(matchRepository));
+                 new MatchReadModelHandler(matchRepository, mockEvents.Object));
 
              await handler.Update();
 

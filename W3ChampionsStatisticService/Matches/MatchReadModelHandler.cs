@@ -8,12 +8,15 @@ namespace W3ChampionsStatisticService.Matches
     public class MatchReadModelHandler : IReadModelHandler
     {
         private readonly IMatchRepository _matchRepository;
+        private readonly IMatchEventRepository _matchEventRepository;
 
         public MatchReadModelHandler(
-            IMatchRepository matchRepository
+            IMatchRepository matchRepository,
+            IMatchEventRepository matchEventRepository
             )
         {
             _matchRepository = matchRepository;
+            _matchEventRepository = matchEventRepository;
         }
 
         public async Task Update(MatchFinishedEvent nextEvent)
@@ -21,7 +24,10 @@ namespace W3ChampionsStatisticService.Matches
             if (nextEvent.WasFakeEvent) return;
             var count = await _matchRepository.Count();
             var matchup = Matchup.Create(nextEvent);
-            matchup.Number = count;
+
+            nextEvent.match.number = count + 1;
+
+            await _matchEventRepository.Upsert(nextEvent);
             await _matchRepository.Insert(matchup);
             await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
         }

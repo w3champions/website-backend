@@ -50,12 +50,6 @@ namespace W3ChampionsStatisticService.PadEvents
             return false;
         }
 
-        public async Task Insert(List<MatchFinishedEvent> matchFinishedEvent)
-        {
-            var mongoCollection = CreateCollection<MatchFinishedEvent>();
-            await mongoCollection.InsertManyAsync(matchFinishedEvent);
-        }
-
         public Task<List<RankingChangedEvent>> CheckoutForRead()
         {
             return Checkout<RankingChangedEvent>();
@@ -83,6 +77,11 @@ namespace W3ChampionsStatisticService.PadEvents
         public Task DeleteStartedEvent(ObjectId nextEventId)
         {
             return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
+        }
+
+        public Task Upsert(MatchFinishedEvent matchFinishedEvent)
+        {
+            return Upsert(matchFinishedEvent, m => m.Id == matchFinishedEvent.Id);
         }
     }
 }

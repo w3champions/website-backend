@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using NUnit.Framework;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 
 namespace WC3ChampionsStatisticService.UnitTests
@@ -70,6 +71,31 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, events.Count);
             Assert.AreEqual(startEvent1.match.id, events[0].match.id);
+        }
+
+        [Test]
+        public async Task SaveWithNewNumber()
+        {
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+            await InsertMatchEvent(matchFinishedEvent1);
+
+            var matchEventRepository = new MatchEventRepository(MongoClient);
+            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchReadModelHandler = new MatchReadModelHandler(
+                matchRepository,
+                matchEventRepository);
+
+            await matchReadModelHandler.Update(matchFinishedEvent1);
+            await matchReadModelHandler.Update(matchFinishedEvent2);
+
+            var events = await matchEventRepository.Load();
+
+            Assert.AreEqual(2, events.Count);
+
+            Assert.AreEqual(1, events[0].match.number);
+            Assert.AreEqual(2, events[1].match.number);
         }
     }
 }

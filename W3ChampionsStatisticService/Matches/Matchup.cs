@@ -38,8 +38,6 @@ namespace W3ChampionsStatisticService.Matches
         [JsonIgnore]
         public string Team4Players { get; set; }
 
-        public long Number { get; set; }
-
         public Matchup()
         {
         }
