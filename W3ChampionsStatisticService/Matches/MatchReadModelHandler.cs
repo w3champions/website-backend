@@ -19,9 +19,11 @@ namespace W3ChampionsStatisticService.Matches
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
+            var count = await _matchRepository.Count();
             var matchup = Matchup.Create(nextEvent);
+            matchup.Number = count;
             await _matchRepository.Insert(matchup);
-            _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
+            await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
         }
     }
 }
