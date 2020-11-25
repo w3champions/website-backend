@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoFixture;
+using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
@@ -428,5 +430,34 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.IsNotNull(result2);
             Assert.AreEqual(storedEvent.match.id, result2.MatchId);
         }
+
+        [Test]
+        public async Task Cache_ByPlayerId_OneTeamEmpty()
+        {
+            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+            var storedEvent = TestDtoHelper.Create1v1StartedEvent();
+
+            await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
+
+            await Task.Delay(100);
+
+            var result = await matchRepository.TryLoadOnGoingMatchForPlayer(storedEvent.match.players[0].battleTag);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(storedEvent.match.id, result.MatchId);
+
+            var notCachedEvent = TestDtoHelper.Create1v1StartedEvent();
+            await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(notCachedEvent));
+
+            await Task.Delay(100);
+
+            var result2 = await matchRepository.TryLoadOnGoingMatchForPlayer(storedEvent.match.players[0].battleTag);
+
+            Assert.IsNotNull(result2);
+            Assert.AreEqual(storedEvent.match.id, result2.MatchId);
+        }
+
+
     }
 }

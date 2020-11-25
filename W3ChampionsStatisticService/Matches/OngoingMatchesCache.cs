@@ -31,10 +31,10 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
         {
             await UpdateCacheIfNeeded();
-            return _values.FirstOrDefault(m => m.Team1Players.Contains(playerId)
-                                      || m.Team2Players.Contains(playerId)
-                                      || m.Team3Players.Contains(playerId)
-                                      || m.Team4Players.Contains(playerId));
+            return _values.FirstOrDefault(m => m.Team1Players != null && m.Team1Players.Contains(playerId)
+                                           || m.Team2Players != null && m.Team2Players.Contains(playerId)
+                                           || m.Team3Players != null && m.Team3Players.Contains(playerId)
+                                           || m.Team4Players != null && m.Team4Players.Contains(playerId));
         }
 
         private async Task UpdateCacheIfNeeded()
