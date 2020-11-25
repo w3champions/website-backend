@@ -13,11 +13,8 @@ namespace W3ChampionsStatisticService.Matches
 {
     public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
     {
-        private readonly List<OnGoingMatchup> _onGoingMatchups;
-
         public MatchRepository(MongoClient mongoClient) : base(mongoClient)
         {
-            _onGoingMatchups = OnGoingMatchUps.Instance;
         }
 
         public Task Insert(Matchup matchup)
@@ -171,13 +168,13 @@ namespace W3ChampionsStatisticService.Matches
 
         public void InsertOnGoingMatch(OnGoingMatchup matchup)
         {
-            _onGoingMatchups.Add(matchup);
+            OnGoingMatchesMemoryStore.Matches.Add(matchup);
         }
 
 
         public OnGoingMatchup? LoadOnGoingMatchForPlayer(string playerId)
         {
-            return _onGoingMatchups
+            return OnGoingMatchesMemoryStore.Matches
                 .Find(m => m.Team1Players.Contains(playerId)
                            || m.Team2Players.Contains(playerId)
                            || m.Team3Players.Contains(playerId)
@@ -187,7 +184,8 @@ namespace W3ChampionsStatisticService.Matches
 
         public bool DeleteOnGoingMatch(string matchId)
         {
-            return _onGoingMatchups.Remove(_onGoingMatchups.Find(x => x.MatchId == matchId));
+            var onGoingMatchups = OnGoingMatchesMemoryStore.Matches;
+            return onGoingMatchups.Remove(onGoingMatchups.Find(x => x.MatchId == matchId));
         }
 
         public List<OnGoingMatchup> LoadOnGoingMatches(
@@ -196,7 +194,7 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100)
         {
-            var events = _onGoingMatchups
+            var events = OnGoingMatchesMemoryStore.Matches
                 .FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                               && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
                 .OrderByDescending(s => s.Id)
@@ -211,17 +209,17 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined)
         {
-            return _onGoingMatchups.FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                                                 && (gateWay == GateWay.Undefined || m.GateWay == gateWay)).Count;
+            return OnGoingMatchesMemoryStore.Matches.FindAll(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                                                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)).Count;
         }
     }
 
-    internal static class OnGoingMatchUps
+    internal static class OnGoingMatchesMemoryStore
     {
-        static OnGoingMatchUps()
+        static OnGoingMatchesMemoryStore()
         {
         }
 
-        public static List<OnGoingMatchup> Instance { get; } = new List<OnGoingMatchup>();
+        public static List<OnGoingMatchup> Matches { get; } = new List<OnGoingMatchup>();
     }
 }
