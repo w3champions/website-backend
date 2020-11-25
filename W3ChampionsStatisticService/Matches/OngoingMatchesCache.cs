@@ -47,6 +47,14 @@ namespace W3ChampionsStatisticService.Matches
 
         }
 
+        public void Delete(string matchId)
+        {
+            lock (_lock)
+            {
+                _values = _values.Where(m => m.MatchId != matchId).ToList();
+            }
+        }
+
         private async Task UpdateCacheIfNeeded()
         {
             if (_values.Count == 0)
@@ -67,5 +75,6 @@ namespace W3ChampionsStatisticService.Matches
         Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
         void Upsert(OnGoingMatchup matchup);
+        void Delete(string matchId);
     }
 }

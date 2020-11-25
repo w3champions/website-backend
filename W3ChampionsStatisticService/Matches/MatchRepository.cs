@@ -194,6 +194,7 @@ namespace W3ChampionsStatisticService.Matches
 
         public Task DeleteOnGoingMatch(string matchId)
         {
+            _cache.Delete(matchId);
             return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
         }
 
