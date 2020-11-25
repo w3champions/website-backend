@@ -211,7 +211,7 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined)
         {
-            return _cache.Count(gameMode, gateWay);
+            return _cache.CountOnGoingMatches(gameMode, gateWay);
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -8,36 +10,41 @@ namespace W3ChampionsStatisticService.Matches
 {
     public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
     {
-        public Task<long> Count(GameMode gameMode, GateWay gateWay)
+        private List<OnGoingMatchup> _values = new List<OnGoingMatchup>();
+        private DateTimeOffset lastUpdate = DateTimeOffset.MinValue;
+
+        public async Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay)
         {
-            return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
+            await UpdateCacheIfNeeded();
+            return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                                      && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
         }
 
-        public Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, in int offset, in int pageSize)
+        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize)
         {
-            var mongoCollection = CreateCollection<OnGoingMatchup>();
+            await UpdateCacheIfNeeded();
 
-            return mongoCollection
-                .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                           && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
-                .SortByDescending(s => s.Id)
-                .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
+            return _values.Where(m => gameMode == GameMode.Undefined || m.GameMode == gameMode
+                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)).Skip(offset).Take(pageSize).ToList();
         }
 
-        public Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+        public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
         {
-            var mongoCollection = CreateCollection<OnGoingMatchup>();
-            return mongoCollection
-                .Find(m => m.Team1Players.Contains(playerId)
-                           || m.Team2Players.Contains(playerId)
-                           || m.Team3Players.Contains(playerId)
-                           || m.Team4Players.Contains(playerId)
-                )
-                .FirstOrDefaultAsync();
+            await UpdateCacheIfNeeded();
+            return _values.FirstOrDefault(m => m.Team1Players.Contains(playerId)
+                                      || m.Team2Players.Contains(playerId)
+                                      || m.Team3Players.Contains(playerId)
+                                      || m.Team4Players.Contains(playerId));
+        }
+
+        private async Task UpdateCacheIfNeeded()
+        {
+            if (lastUpdate - DateTimeOffset.Now < TimeSpan.FromSeconds(90))
+            {
+                lastUpdate = DateTimeOffset.Now;
+                var mongoCollection = CreateCollection<OnGoingMatchup>();
+                _values = await mongoCollection.Find(r => true).SortByDescending(s => s.Id).ToListAsync();
+            }
         }
 
         public OngoingMatchesCache(MongoClient mongoClient) : base(mongoClient)
@@ -47,8 +54,8 @@ namespace W3ChampionsStatisticService.Matches
 
     public interface IOngoingMatchesCache
     {
-        Task<long> Count(GameMode gameMode, GateWay gateWay);
-        Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, in int offset, in int pageSize);
+        Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay);
+        Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
     }
 }
