@@ -13,6 +13,5 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<RankingChangedEvent>> CheckoutForRead();
         Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
         Task DeleteStartedEvent(ObjectId nextEventId);
-        Task Upsert(MatchFinishedEvent matchFinishedEvent);
     }
 }

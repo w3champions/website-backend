@@ -81,21 +81,19 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await InsertMatchEvent(matchFinishedEvent1);
 
-            var matchEventRepository = new MatchEventRepository(MongoClient);
             var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
             var matchReadModelHandler = new MatchReadModelHandler(
-                matchRepository,
-                matchEventRepository);
+                matchRepository);
 
             await matchReadModelHandler.Update(matchFinishedEvent1);
             await matchReadModelHandler.Update(matchFinishedEvent2);
 
-            var events = await matchEventRepository.Load();
+            var events = await matchRepository.Load();
 
             Assert.AreEqual(2, events.Count);
 
-            Assert.AreEqual(1, events[0].match.number);
-            Assert.AreEqual(2, events[1].match.number);
+            Assert.AreEqual(2, events[1].Number);
+            Assert.AreEqual(1, events[0].Number);
         }
     }
 }

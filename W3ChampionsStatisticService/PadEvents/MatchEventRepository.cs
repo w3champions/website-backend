@@ -78,10 +78,5 @@ namespace W3ChampionsStatisticService.PadEvents
         {
             return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
         }
-
-        public Task Upsert(MatchFinishedEvent matchFinishedEvent)
-        {
-            return Upsert(matchFinishedEvent, m => m.Id == matchFinishedEvent.Id);
-        }
     }
 }
