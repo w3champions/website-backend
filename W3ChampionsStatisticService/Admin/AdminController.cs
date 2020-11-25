@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.Admin
         [HttpGet("db-health-check")]
         public async Task<IActionResult> DatabaseHealthCheck()
         {
-            var countOnGoingMatches = await _matchRepository.CountOnGoingMatches();
+            var countOnGoingMatches = await _matchRepository.Count();
             return Ok(countOnGoingMatches);
         }
 
