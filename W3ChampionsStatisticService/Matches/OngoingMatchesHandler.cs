@@ -34,7 +34,7 @@ namespace W3ChampionsStatisticService.Matches
                     foreach (var team in matchup.Teams)
                     foreach (var player in team.Players)
                     {
-                        var foundMatchForPlayer = _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
+                        var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
                         if (foundMatchForPlayer != null)
                             _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
 
