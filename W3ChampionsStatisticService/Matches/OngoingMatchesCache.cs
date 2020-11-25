@@ -11,7 +11,7 @@ namespace W3ChampionsStatisticService.Matches
     public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
     {
         private List<OnGoingMatchup> _values = new List<OnGoingMatchup>();
-        private DateTimeOffset lastUpdate = DateTimeOffset.MinValue;
+        private DateTimeOffset _lastUpdate = DateTimeOffset.MinValue;
 
         public async Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay)
         {
@@ -39,9 +39,9 @@ namespace W3ChampionsStatisticService.Matches
 
         private async Task UpdateCacheIfNeeded()
         {
-            if (lastUpdate - DateTimeOffset.Now < TimeSpan.FromSeconds(90))
+            if (_lastUpdate - DateTimeOffset.Now < TimeSpan.FromSeconds(90))
             {
-                lastUpdate = DateTimeOffset.Now;
+                _lastUpdate = DateTimeOffset.Now;
                 var mongoCollection = CreateCollection<OnGoingMatchup>();
                 _values = await mongoCollection.Find(r => true).SortByDescending(s => s.Id).ToListAsync();
             }
