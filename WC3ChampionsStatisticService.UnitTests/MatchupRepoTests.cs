@@ -374,7 +374,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task Cache()
+        public async Task Cache_AllOngoingMatches()
         {
             var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
@@ -401,6 +401,32 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, result2.Count);
             Assert.AreEqual(storedEvent.match.id, result2[0].MatchId);
+        }
+
+        [Test]
+        public async Task Cache_ByPlayerId()
+        {
+            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+            var storedEvent = TestDtoHelper.CreateFakeStartedEvent();
+            await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
+
+            await Task.Delay(100);
+
+            var result = await matchRepository.TryLoadOnGoingMatchForPlayer(storedEvent.match.players[0].battleTag);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(storedEvent.match.id, result.MatchId);
+
+            var notCachedEvent = TestDtoHelper.CreateFakeStartedEvent();
+            await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(notCachedEvent));
+
+            await Task.Delay(100);
+
+            var result2 = await matchRepository.TryLoadOnGoingMatchForPlayer(storedEvent.match.players[0].battleTag);
+
+            Assert.IsNotNull(result2);
+            Assert.AreEqual(storedEvent.match.id, result2.MatchId);
         }
     }
 }
