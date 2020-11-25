@@ -92,8 +92,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(2, events.Count);
 
-            // Assert.AreEqual(1, events[0].Number);
-            Assert.AreEqual(2, events[1].Number);
+            Assert.AreEqual(1, events[1].Number);
+            Assert.AreEqual(2, events[0].Number);
         }
     }
 }
