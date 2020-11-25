@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.Ports;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

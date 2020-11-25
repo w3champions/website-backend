@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
