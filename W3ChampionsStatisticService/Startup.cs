@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Admin;
-using W3ChampionsStatisticService.Authorization;
 using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -76,8 +75,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IPatchRepository, PatchRepository>();
-            services.AddSingleton<IBlizzardAuthenticationService, BlizzardAuthenticationService>();
-            services.AddSingleton<ITwitchAuthenticationService, TwitchAuthenticationService>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
@@ -92,7 +89,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IClanRepository, ClanRepository>();
             services.AddTransient<INewsRepository, NewsRepository>();
             services.AddTransient<ClanCommandHandler>();
-            services.AddTransient<RegistrationHandler>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
