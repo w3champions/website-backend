@@ -26,7 +26,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 if (
                     res != null
                     && !string.IsNullOrEmpty(res.BattleTag)
-                    && Admins.ApprovedAdmins.Any(x => x.ToLower() == res.BattleTag.ToLower()))
+                    && res.isAdmin)
                 {
                     context.ActionArguments["battleTag"] = res.BattleTag;
                     await next.Invoke();
