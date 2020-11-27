@@ -3,7 +3,7 @@
     public class W3CUserAuthenticationDto
     {
         public string BattleTag { get; set; }
-        public string Name => BattleTag.Split("#")[0];
+        public string Name { get; set; }
         public bool isAdmin { get; set; }
     }
 }

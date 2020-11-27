@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -13,19 +14,34 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     {
         private readonly IPlayerRepository _playerRepository;
         private readonly GameModeStatQueryHandler _queryHandler;
+        private readonly IW3CAuthenticationService _authenticationService;
 
         public PlayersController(
             IPlayerRepository playerRepository,
-            GameModeStatQueryHandler queryHandler)
+            GameModeStatQueryHandler queryHandler,
+            IW3CAuthenticationService authenticationService)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
+            _authenticationService = authenticationService;
         }
 
         [HttpGet("{battleTag}")]
-        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
+        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, [FromQuery] string authorization)
         {
             var player = await _playerRepository.LoadPlayerProfile(battleTag);
+            if (player == null && authorization != null)
+            {
+                var user = await _authenticationService.GetUserByToken(authorization);
+                if (user == null)
+                {
+                    return Unauthorized("Sorry Hackerboi");
+                }
+
+                player = PlayerOverallStats.Create(battleTag);
+                await _playerRepository.UpsertPlayer(player);
+            }
+
             return Ok(player);
         }
 

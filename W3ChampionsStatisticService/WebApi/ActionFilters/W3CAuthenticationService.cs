@@ -14,9 +14,14 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri(IdentificationApiUrl);
             var result = await httpClient.GetAsync($"/api/oauth/battleTag?bearer={bearer}");
-            var content = await result.Content.ReadAsStringAsync();
-            var deserializeObject = JsonConvert.DeserializeObject<W3CUserAuthenticationDto>(content);
-            return deserializeObject;
+            if (result.IsSuccessStatusCode)
+            {
+                var content = await result.Content.ReadAsStringAsync();
+                var deserializeObject = JsonConvert.DeserializeObject<W3CUserAuthenticationDto>(content);
+                return deserializeObject;
+            }
+
+            return null;
         }
     }
 
