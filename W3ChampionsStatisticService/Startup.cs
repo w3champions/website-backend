@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Admin;
-using W3ChampionsStatisticService.Chats;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
@@ -63,8 +62,6 @@ namespace W3ChampionsStatisticService
             services.AddSpecialBsonRegistrations();
 
             services.AddSingleton<TrackingService>();
-            services.AddSingleton<ConnectionMapping>();
-            services.AddSingleton<ChatHistory>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -76,7 +73,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IPatchRepository, PatchRepository>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
-            services.AddTransient<IChatSettingsRepository, ChatSettingsRepository>();
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
             services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
             services.AddTransient<BanReadmodelRepository>();
@@ -85,7 +81,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<MmrDistributionHandler>();
             services.AddTransient<RankQueryHandler>();
             services.AddTransient<GameModeStatQueryHandler>();
-            services.AddTransient<ChatAuthenticationService>();
             services.AddTransient<IClanRepository, ClanRepository>();
             services.AddTransient<INewsRepository, NewsRepository>();
             services.AddTransient<ClanCommandHandler>();
@@ -158,7 +153,6 @@ namespace W3ChampionsStatisticService
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
-                endpoints.MapHub<ChatHub>("/chatHub");
             });
         }
     }
