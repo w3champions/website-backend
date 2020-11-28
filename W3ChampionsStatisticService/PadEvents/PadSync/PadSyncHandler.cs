@@ -8,17 +8,17 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
     public class PadSyncHandler : IAsyncUpdatable
     {
-        private readonly PadServiceRepo _padRepo;
+        private readonly MatchmakingServiceRepo _matchmakingRepo;
         private readonly IVersionRepository _versionRepository;
         private readonly IMatchEventRepository _matchEventRepository;
 
         public PadSyncHandler(
-            PadServiceRepo padRepo,
+            MatchmakingServiceRepo matchmakingRepo,
             IVersionRepository versionRepository,
             IMatchEventRepository matchEventRepository
             )
         {
-            _padRepo = padRepo;
+            _matchmakingRepo = matchmakingRepo;
             _versionRepository = versionRepository;
             _matchEventRepository = matchEventRepository;
         }
@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             if (lastVersion == null) lastVersion = "0";
 
             var offset = long.Parse(lastVersion);
-            var events = await _padRepo.GetFrom(offset);
+            var events = await _matchmakingRepo.GetFrom(offset);
             if (!events.Any())
             {
                 await _versionRepository.SaveLastVersion<PadSyncHandler>((offset + 100).ToString());
@@ -58,7 +58,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
 
                 offset += 100;
                 await _versionRepository.SaveLastVersion<PadSyncHandler>(offset.ToString());
-                events = await _padRepo.GetFrom(offset);
+                events = await _matchmakingRepo.GetFrom(offset);
                 await Task.Delay(1000);
             }
         }

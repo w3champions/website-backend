@@ -12,19 +12,16 @@ namespace W3ChampionsStatisticService.Admin
     public class AdminController : ControllerBase
     {
         private readonly IMatchRepository _matchRepository;
-        private readonly BanReadmodelRepository _banRepository;
-        private readonly PadServiceRepo _padServiceRepository;
+        private readonly MatchmakingServiceRepo _matchmakingServiceRepository;
         private readonly INewsRepository _newsRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
-            PadServiceRepo padServiceRepository,
-            BanReadmodelRepository banRepository,
+            MatchmakingServiceRepo matchmakingServiceRepository,
             INewsRepository newsRepository)
         {
             _matchRepository = matchRepository;
-            _banRepository = banRepository;
-            _padServiceRepository = padServiceRepository;
+            _matchmakingServiceRepository = matchmakingServiceRepository;
             _newsRepository = newsRepository;
         }
 
@@ -44,15 +41,15 @@ namespace W3ChampionsStatisticService.Admin
         [HttpGet("bannedPlayers")]
         public async Task<IActionResult> GetBannedPlayers()
         {
-            var bannedPlayers = await _banRepository.GetBans();
-            return Ok(new BannedPlayerResponse { total = bannedPlayers.Count, players = bannedPlayers });
+            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+            return Ok(bannedPlayers);
         }
 
         [HttpPost("bannedPlayers")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _padServiceRepository.PostBannedPlayers(bannedPlayerReadmodel);
+            var bannedPlayers = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
             return Ok(bannedPlayers);
         }
 
@@ -60,7 +57,7 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _padServiceRepository.DeleteBannedPlayers(bannedPlayerReadmodel);
+            var bannedPlayers = await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
             return Ok(bannedPlayers);
         }
 
