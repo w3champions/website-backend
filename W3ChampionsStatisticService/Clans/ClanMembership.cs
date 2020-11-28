@@ -33,6 +33,9 @@ namespace W3ChampionsStatisticService.Clans
 
         public void Invite(Clan clan)
         {
+            if (PendingInviteFromClan != null) throw new ValidationException("Player already invited to different clan");
+            if (ClanId != null) throw new ValidationException("Player already part of a different clan");
+
             PendingInviteFromClan = clan.ClanId;
             ClanName = clan.ClanName;
         }

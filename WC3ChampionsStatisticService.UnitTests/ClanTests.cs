@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -428,6 +429,55 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task UserWithPendingInviteGetsNoInvite()
+        {
+            await CreateFoundedClanForTest("AB", "Crank#123");
+            await CreateFoundedClanForTest("CD", "Wolf#456");
+
+            await _handler.InviteToClan("Merlin#123", "AB", "Crank#123");
+            var exception = Assert.ThrowsAsync<ValidationException>(async () =>
+                await _handler.InviteToClan(
+                    "Merlin#123",
+                    "CD",
+                    "Wolf#456"));
+
+            Assert.AreEqual("Player already invited to different clan", exception.Message);
+
+            var loadMemberShip = await _clanRepository.LoadMemberShip("Merlin#123");
+            var clanWithMember = await _clanRepository.LoadClan("AB");
+            var clanNotWithMember = await _clanRepository.LoadClan("CD");
+
+            Assert.AreEqual("AB", loadMemberShip.PendingInviteFromClan);
+            Assert.AreEqual("Merlin#123", clanWithMember.PendingInvites.Single());
+            Assert.AreEqual(0, clanNotWithMember.PendingInvites.Count);
+        }
+
+        [Test]
+        public async Task UserInActiveClanGetsNoInvite()
+        {
+            await CreateFoundedClanForTest("AB", "Crank#123");
+            await CreateFoundedClanForTest("CD", "Wolf#456");
+
+            await _handler.InviteToClan("Merlin#123", "AB", "Crank#123");
+            await _handler.AcceptInvite("Merlin#123", "AB");
+            var exception = Assert.ThrowsAsync<ValidationException>(async () =>
+                await _handler.InviteToClan(
+                    "Merlin#123",
+                    "CD",
+                    "Wolf#456"));
+
+            Assert.AreEqual("Player already part of a different clan", exception.Message);
+
+            var loadMemberShip = await _clanRepository.LoadMemberShip("Merlin#123");
+            var clanWithMember = await _clanRepository.LoadClan("AB");
+            var clanNotWithMember = await _clanRepository.LoadClan("CD");
+
+            Assert.IsNull(loadMemberShip.PendingInviteFromClan);
+            Assert.AreEqual(0, clanWithMember.PendingInvites.Count);
+            Assert.AreEqual(0, clanNotWithMember.PendingInvites.Count);
+        }
+
+        [Test]
         public async Task LoadClan_PopulateRanks()
         {
             var clan = await CreateFoundedClanForTest();
@@ -464,13 +514,14 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(5, clanLoaded.Ranks.First().LeagueDivision);
         }
 
-        private async Task<Clan> CreateFoundedClanForTest()
+        private async Task<Clan> CreateFoundedClanForTest(string clanId = "CS", string warchief = "Peter#123")
         {
-            var clan = await _handler.CreateClan("Cool Stuff", "CS", "Peter#123");
+            var clan = await _handler.CreateClan("Cool Stuff", clanId, warchief);
             for (int i = 0; i < 6; i++)
             {
-                await _handler.InviteToClan($"btag#{i}", clan.ClanId, "Peter#123");
-                await _handler.AcceptInvite($"btag#{i}", clan.ClanId);
+                var newGuid = Guid.NewGuid();
+                await _handler.InviteToClan($"btag#{newGuid}", clan.ClanId, warchief);
+                await _handler.AcceptInvite($"btag#{newGuid}", clan.ClanId);
             }
 
             return await _clanRepository.LoadClan(clan.ClanId);
