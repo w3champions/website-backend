@@ -29,4 +29,11 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
     {
         Task<W3CUserAuthenticationDto> GetUserByToken(string bearer);
     }
+
+    public class W3CUserAuthenticationDto
+    {
+        public string BattleTag { get; set; }
+        public string Name { get; set; }
+        public bool isAdmin { get; set; }
+    }
 }
