@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -14,15 +15,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     {
         private readonly IPlayerRepository _playerRepository;
         private readonly GameModeStatQueryHandler _queryHandler;
+        private readonly IPersonalSettingsRepository _personalSettingsRepository;
+        private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
 
         public PlayersController(
             IPlayerRepository playerRepository,
             GameModeStatQueryHandler queryHandler,
+            IPersonalSettingsRepository personalSettingsRepository,
+            IClanRepository clanRepository,
             IW3CAuthenticationService authenticationService)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
+            _personalSettingsRepository = personalSettingsRepository;
+            _clanRepository = clanRepository;
             _authenticationService = authenticationService;
         }
 
@@ -43,6 +50,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             }
 
             return Ok(player);
+        }
+
+        [HttpGet("{battleTag}/clan-and-picture")]
+        public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
+        {
+            var playersClan = await _clanRepository.LoadMemberShip(battleTag);
+            var settings = await _personalSettingsRepository.Load(battleTag);
+
+            return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture));
         }
 
         [HttpGet]
@@ -95,6 +111,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
             return Ok(playerMmrRpTimeline);
+        }
+    }
+
+    public class ChatDetailsDto
+    {
+        public string ClanId { get; }
+        public ProfilePicture ProfilePicture { get; }
+
+        public ChatDetailsDto(string clanId, ProfilePicture profilePicture)
+        {
+            ClanId = clanId;
+            ProfilePicture = profilePicture;
         }
     }
 }
