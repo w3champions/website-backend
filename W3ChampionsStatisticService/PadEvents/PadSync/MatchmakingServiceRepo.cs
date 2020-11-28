@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents.PadSync
 {
-    public class PadServiceRepo
+    public class MatchmakingServiceRepo
     {
         private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
         private static readonly string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
@@ -47,7 +48,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             return deserializeObject;
         }
 
-        public async Task<System.Net.HttpStatusCode> PostBannedPlayers(BannedPlayerReadmodel bannedPlayerReadmodel)
+        public async Task<HttpStatusCode> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var httpClient = new HttpClient();
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
@@ -56,7 +57,7 @@ namespace W3ChampionsStatisticService.PadEvents.PadSync
             return result.StatusCode;
         }
 
-        public async Task<System.Net.HttpStatusCode> DeleteBannedPlayers(BannedPlayerReadmodel bannedPlayerReadmodel)
+        public async Task<HttpStatusCode> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var httpClient = new HttpClient();
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);

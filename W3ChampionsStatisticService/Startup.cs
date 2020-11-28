@@ -75,7 +75,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
             services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
-            services.AddTransient<BanReadmodelRepository>();
             services.AddTransient<HeroStatsQueryHandler>();
             services.AddTransient<PersonalSettingsCommandHandler>();
             services.AddTransient<MmrDistributionHandler>();
@@ -87,7 +86,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
-            services.AddTransient<PadServiceRepo>();
+            services.AddTransient<MatchmakingServiceRepo>();
 
             if (startPadSync == "true")
             {
@@ -128,7 +127,6 @@ namespace W3ChampionsStatisticService
 
                 services.AddUnversionedReadModelService<RankSyncHandler>();
                 services.AddUnversionedReadModelService<LeagueSyncHandler>();
-                services.AddUnversionedReadModelService<BanSyncHandler>();
             }
         }
 
