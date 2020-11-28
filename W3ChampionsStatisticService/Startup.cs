@@ -132,8 +132,7 @@ namespace W3ChampionsStatisticService
 
         public void Configure(
             IApplicationBuilder app,
-            IWebHostEnvironment env,
-            IMatchRepository matchRepository)
+            IWebHostEnvironment env)
         {
             // without that, nginx forwarding in docker wont work
             app.UseForwardedHeaders(new ForwardedHeadersOptions
