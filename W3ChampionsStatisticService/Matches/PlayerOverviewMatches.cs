@@ -14,5 +14,6 @@ namespace W3ChampionsStatisticService.Matches
         public string Location { get; set; }
         public string CountryCode { get; set; }
         public string Country { get; set; }
+        public string Twitch { get; set; }
     }
 }

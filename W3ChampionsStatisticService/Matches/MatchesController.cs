@@ -11,10 +11,12 @@ namespace W3ChampionsStatisticService.Matches
     public class MatchesController : ControllerBase
     {
         private readonly IMatchRepository _matchRepository;
+        private readonly MatchQueryHandler _matchQueryHandler;
 
-        public MatchesController(IMatchRepository matchRepository)
+        public MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler)
         {
             _matchRepository = matchRepository;
+            _matchQueryHandler = matchQueryHandler;
         }
 
         [HttpGet("")]
@@ -72,6 +74,8 @@ namespace W3ChampionsStatisticService.Matches
             var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
             var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay);
 
+            await _matchQueryHandler.PopulatePlayerInfos(matches);
+            
             PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
             return Ok(new { matches, count });
