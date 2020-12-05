@@ -12,6 +12,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string Youtube { get; set; }
 
         public string Twitter { get; set; }
+        
+        public string Trovo { get; set; }
+        
+        public string Douyu { get; set; }
 
         [MaxLength(50)]
         public string HomePage { get; set; }

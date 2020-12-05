@@ -30,6 +30,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public string Twitter { get; set; }
 
+        public string Trovo { get; set; }
+        
+        public string Douyu { get; set; }
+        
         public string Country { get; set; }
 
         public string CountryCode { get; set; }
@@ -109,6 +113,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
             Twitch = dto.Twitch;
             YouTube = dto.Youtube;
             Twitter = dto.Twitter;
+            Trovo = dto.Trovo;
+            Douyu = dto.Douyu;
             HomePage = dto.HomePage;
             Country = dto.Country;
             CountryCode = dto.CountryCode;
