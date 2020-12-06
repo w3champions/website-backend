@@ -82,6 +82,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<GameModeStatQueryHandler>();
             services.AddTransient<IClanRepository, ClanRepository>();
             services.AddTransient<INewsRepository, NewsRepository>();
+            services.AddTransient<ILoadingScreenTipsRepository, LoadingScreenTipsRepository>();
             services.AddTransient<ClanCommandHandler>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();

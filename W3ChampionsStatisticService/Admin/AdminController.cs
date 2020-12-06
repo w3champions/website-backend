@@ -14,15 +14,18 @@ namespace W3ChampionsStatisticService.Admin
         private readonly IMatchRepository _matchRepository;
         private readonly MatchmakingServiceRepo _matchmakingServiceRepository;
         private readonly INewsRepository _newsRepository;
+        private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
             MatchmakingServiceRepo matchmakingServiceRepository,
-            INewsRepository newsRepository)
+            INewsRepository newsRepository,
+            ILoadingScreenTipsRepository loadingScreenTipsRepository)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
             _newsRepository = newsRepository;
+            _loadingScreenTipsRepository = loadingScreenTipsRepository;
         }
 
         [HttpGet("health-check")]
@@ -92,5 +95,54 @@ namespace W3ChampionsStatisticService.Admin
             await _newsRepository.DeleteNews(new ObjectId(newsId));
             return Ok();
         }
+
+        [HttpGet("loadingScreenTips")]
+        public async Task<IActionResult> GetTips(int? limit)
+        {
+            return Ok(await _loadingScreenTipsRepository.Get(limit));
+        }
+
+        [HttpGet("loadingScreenTips/randomTip")]
+        public async Task<IActionResult> GetRandomTip()
+        {
+            return Ok(await _loadingScreenTipsRepository.GetRandomTip());
+        }
+
+        [HttpPut("loadingScreenTips/{tipId}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UpdateTips(string tipId, [FromBody] LoadingScreenTip loadingScreenTip)
+        {
+            if (loadingScreenTip.Message.Length > 200)
+            {
+                return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
+            }
+            loadingScreenTip.Id = new ObjectId(tipId);
+            await _loadingScreenTipsRepository.UpsertTip(loadingScreenTip);
+            return Ok();
+        }
+
+        [HttpPut("loadingScreenTips")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UpdateTips([FromBody] LoadingScreenTip loadingScreenTip)
+        {
+            if (loadingScreenTip.Message.Length > 200)
+            {
+                return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
+            }
+            loadingScreenTip.Id = ObjectId.GenerateNewId();
+            await _loadingScreenTipsRepository.UpsertTip(loadingScreenTip);
+            return Ok();
+        }
+
+        [HttpDelete("loadingScreenTips/{tipId}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DeleteTip(string tipId)
+        {
+            await _loadingScreenTipsRepository.DeleteTip(new ObjectId(tipId));
+            return Ok();
+        }
+
+
+
     }
 }
