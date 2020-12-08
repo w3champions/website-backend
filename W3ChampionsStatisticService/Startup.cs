@@ -88,6 +88,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
             services.AddTransient<MatchmakingServiceRepo>();
+            services.AddTransient<MatchQueryHandler>();
 
             if (startPadSync == "true")
             {
