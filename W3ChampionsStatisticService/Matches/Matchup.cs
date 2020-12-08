@@ -68,6 +68,15 @@ namespace W3ChampionsStatisticService.Matches
                 .ThenBy(x => x.team)
                 .ToList();
 
+            foreach (var player in matchFinishedEvent.result.players)
+            {
+                var matchPlayer = players.First(p => p.battleTag == player.battleTag);
+
+                Race? rndRace = determineRandomRace(player, matchPlayer);
+
+                matchPlayer.rndRace = rndRace;
+            }
+
             var teamGroups = SplitPlayersIntoTeams(players, match.gameMode);
 
             foreach (var team in teamGroups)
@@ -81,6 +90,44 @@ namespace W3ChampionsStatisticService.Matches
             SetTeamPlayers(result);
 
             return result;
+        }
+
+        private static Race? determineRandomRace(PlayerBlizzard player, PlayerMMrChange matchPlayer)
+        {
+            Race? rndRace = null;
+            if (matchPlayer.race == Race.RnD)
+            {
+                var huHeroes = new List<string> { "archmage", "mountainking", "paladin", "sorceror" };
+                var ocHeroes = new List<string> { "beastmaster", "blademaster", "taurenchieftain", "shadowhunter" };
+                var neHeroes = new List<string> { "priestessofthemoon", "keeperofthegrove", "demonhunter", "warden" };
+                var udHeroes = new List<string> { "lich", "deathknight", "cryptlord", "dreadlords" };
+
+                foreach (var hero in player.heroes.Select(h => h.icon.ParseReforgedName()))
+                {
+                    if (huHeroes.Any(humanHero => humanHero == hero))
+                    {
+                        rndRace = Race.HU;
+                    }
+                    else if (ocHeroes.Any(orcHero => orcHero == hero))
+                    {
+                        rndRace = Race.OC;
+                    }
+                    else if (neHeroes.Any(neHero => neHero == hero))
+                    {
+                        rndRace = Race.NE;
+                    }
+                    else if (udHeroes.Any(udHero => udHero == hero))
+                    {
+                        rndRace = Race.UD;
+                    }
+                    else
+                    {
+                        rndRace = Race.RnD;
+                    }
+                }
+            }
+
+            return rndRace;
         }
 
         protected static Dictionary<int, List<T>> SplitPlayersIntoTeams<T>(List<T> players, GameMode gameMode)
@@ -169,7 +216,8 @@ namespace W3ChampionsStatisticService.Matches
                 CurrentMmr = (int?)w.updatedMmr?.rating ?? (int)w.mmr.rating,
                 OldMmr = (int)w.mmr.rating,
                 Won = w.won,
-                Race = w.race
+                Race = w.race,
+                RndRace = w.rndRace
             });
         }
     }

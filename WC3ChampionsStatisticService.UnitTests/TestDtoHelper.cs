@@ -32,6 +32,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent.match.players.Last().battleTag = name2;
             fakeEvent.match.players.Last().won = false;
 
+            fakeEvent.result.players.First().battleTag = name1;
+            fakeEvent.result.players.Last().battleTag = name2;
+
             return fakeEvent;
         }
 

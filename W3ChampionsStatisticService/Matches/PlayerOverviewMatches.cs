@@ -5,6 +5,7 @@ namespace W3ChampionsStatisticService.Matches
     public class PlayerOverviewMatches
     {
         public Race Race { get; set; }
+        public Race? RndRace { get; set; }
         public int OldMmr { get; set; }
         public int CurrentMmr { get; set; }
         public string BattleTag { get; set; }
