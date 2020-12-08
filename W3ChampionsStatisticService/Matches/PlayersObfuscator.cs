@@ -20,6 +20,7 @@ namespace W3ChampionsStatisticService.Matches
                         player.OldMmr = 0;
                         player.CountryCode = null;
                         player.Location = null;
+                        player.Twitch = null;
                     }
                 }
             }
