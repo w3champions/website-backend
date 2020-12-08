@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -29,6 +30,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return result;
         }
 
+        public Task<List<PersonalSetting>> LoadSince(DateTimeOffset from)
+        {
+            return LoadSince<PersonalSetting>(from);
+        }
+
         public async Task<List<PersonalSetting>> LoadMany(string[] battletags)
         {
             var settings = CreateCollection<PersonalSetting>();
@@ -47,7 +53,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public Task Save(PersonalSetting setting)
         {
             setting.Players = null;
-            return Upsert(setting, p => p.Id == setting.Id);
+            return UpsertTimed(setting, p => p.Id == setting.Id);
         }
     }
 }

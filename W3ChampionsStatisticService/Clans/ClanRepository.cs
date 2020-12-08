@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Ports;
@@ -33,7 +34,7 @@ namespace W3ChampionsStatisticService.Clans
 
         public Task UpsertMemberShip(ClanMembership clanMemberShip)
         {
-            return Upsert(clanMemberShip, c => c.BattleTag == clanMemberShip.BattleTag);
+            return UpsertTimed(clanMemberShip, c => c.BattleTag == clanMemberShip.BattleTag);
         }
 
         public Task DeleteClan(string clanId)
@@ -44,6 +45,11 @@ namespace W3ChampionsStatisticService.Clans
         public Task<List<ClanMembership>> LoadMemberShips(List<string> clanMembers)
         {
             return LoadAll<ClanMembership>(m => clanMembers.Contains(m.BattleTag));
+        }
+
+        public Task<List<ClanMembership>> LoadMemberShipsSince(DateTimeOffset from)
+        {
+            return LoadSince<ClanMembership>(from);
         }
 
         public Task SaveMemberShips(List<ClanMembership> clanMembers)

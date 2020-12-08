@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Clans;
 
@@ -13,6 +14,7 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertMemberShip(ClanMembership clanMemberShip);
         Task DeleteClan(string clanId);
         Task<List<ClanMembership>> LoadMemberShips(List<string> clanMembers);
+        Task<List<ClanMembership>> LoadMemberShipsSince(DateTimeOffset from);
         Task SaveMemberShips(List<ClanMembership> clanMembers);
     }
 }

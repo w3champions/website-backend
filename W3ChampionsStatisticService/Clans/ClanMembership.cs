@@ -1,15 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Clans
 {
-    public class ClanMembership : IIdentifiable
+    public class ClanMembership : IIdentifiable, IVersionable
     {
         public string BattleTag { get; set; }
         public string ClanId { get; set; }
         public string PendingInviteFromClan { get; set; }
         public string ClanName { get; set; }
+        public DateTimeOffset LastUpdated  { get; set; }
 
         [JsonIgnore]
         public string Id => BattleTag;

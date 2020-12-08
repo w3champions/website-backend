@@ -48,6 +48,11 @@ namespace W3ChampionsStatisticService.ReadModelBase
             return elements;
         }
 
+        protected Task<List<T>> LoadSince<T>(DateTimeOffset since) where T : IVersionable
+        {
+            return LoadAll<T>(m => m.LastUpdated > since);
+        }
+
         protected IMongoCollection<T> CreateCollection<T>(string collectionName = null)
         {
             var mongoDatabase = CreateClient();
@@ -63,6 +68,12 @@ namespace W3ChampionsStatisticService.ReadModelBase
                 identityQuerry,
                 insertObject,
                 new FindOneAndReplaceOptions<T> {IsUpsert = true});
+        }
+
+        protected Task UpsertTimed<T>(T insertObject, Expression<Func<T, bool>> identityQuerry) where T : IVersionable
+        {
+            insertObject.LastUpdated = DateTimeOffset.UtcNow;
+            return Upsert(insertObject, identityQuerry);
         }
 
         protected Task Upsert<T>(T insertObject)  where T : IIdentifiable
@@ -98,5 +109,10 @@ namespace W3ChampionsStatisticService.ReadModelBase
     public interface IIdentifiable
     {
         public string Id { get; }
+    }
+
+    public interface IVersionable
+    {
+        public DateTimeOffset LastUpdated { get; set; }
     }
 }

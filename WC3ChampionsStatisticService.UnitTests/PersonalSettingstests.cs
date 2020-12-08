@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -141,6 +142,32 @@ namespace WC3ChampionsStatisticService.UnitTests
             var settings = await personalSettingsRepository.Load("modmoto#123");
 
             Assert.AreEqual(2, settings.ProfilePicture.PictureId);
+        }
+
+        [Test]
+        public async Task LoadProfileSince_LastUpdateDateReturnsNothing()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var personalSetting = new PersonalSetting("peter#123");
+            await personalSettingsRepository.Save(personalSetting);
+
+            var result = await personalSettingsRepository.LoadSince(personalSetting.LastUpdated);
+
+            Assert.AreEqual(0, result.Count);
+        }
+
+        [Test]
+        public async Task LoadProfileSince_LastUpdateDateMinusAMsReturnsSomething()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var personalSetting = new PersonalSetting("peter#123");
+            await personalSettingsRepository.Save(personalSetting);
+
+            var personalSettingLastUpdated = personalSetting.LastUpdated.Subtract(TimeSpan.FromMilliseconds(1));
+            var result = await personalSettingsRepository.LoadSince(personalSettingLastUpdated);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual("peter#123", result[0].Id);
         }
     }
 }

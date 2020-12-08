@@ -1,13 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
-    public class PersonalSetting
+    public class PersonalSetting : IVersionable
     {
         public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
         {
@@ -119,5 +121,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             Country = dto.Country;
             CountryCode = dto.CountryCode;
         }
+
+        public DateTimeOffset LastUpdated { get; set; }
     }
 }

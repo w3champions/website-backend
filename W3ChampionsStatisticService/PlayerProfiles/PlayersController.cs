@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -53,12 +54,27 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}/clan-and-picture")]
+        [Obsolete("Should be removed when correct sync is done")]
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
         {
             var playersClan = await _clanRepository.LoadMemberShip(battleTag);
             var settings = await _personalSettingsRepository.Load(battleTag);
 
             return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture));
+        }
+
+        [HttpGet("clan-memberships")]
+        public async Task<IActionResult> GetPlayerClanSince([FromRoute] DateTimeOffset from)
+        {
+            var playersClan = await _clanRepository.LoadMemberShipsSince(from);
+            return Ok(playersClan.Select(c => new ClanMemberhipDto(c.BattleTag, c.ClanId, c.LastUpdated)));
+        }
+
+        [HttpGet("profile-pictures")]
+        public async Task<IActionResult> GetPlayerPictureSince([FromRoute] DateTimeOffset from)
+        {
+            var settings = await _personalSettingsRepository.LoadSince(from);
+            return Ok(settings.Select(s => new ProfilePictureDto(s.LastUpdated, s.ProfilePicture)));
         }
 
         [HttpGet]
@@ -111,6 +127,32 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
             return Ok(playerMmrRpTimeline);
+        }
+    }
+
+    public class ProfilePictureDto
+    {
+        public DateTimeOffset LastUpdated { get; }
+        public ProfilePicture ProfilePicture { get; }
+
+        public ProfilePictureDto(DateTimeOffset lastUpdated, ProfilePicture profilePicture)
+        {
+            LastUpdated = lastUpdated;
+            ProfilePicture = profilePicture;
+        }
+    }
+
+    public class ClanMemberhipDto
+    {
+        public string BattleTag { get; }
+        public string ClanId { get; }
+        public DateTimeOffset LastUpdated { get; }
+
+        public ClanMemberhipDto(string battleTag, string clanId, in DateTimeOffset lastUpdated)
+        {
+            BattleTag = battleTag;
+            ClanId = clanId;
+            LastUpdated = lastUpdated;
         }
     }
 
