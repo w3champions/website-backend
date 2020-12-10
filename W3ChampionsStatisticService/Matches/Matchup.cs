@@ -68,16 +68,30 @@ namespace W3ChampionsStatisticService.Matches
                 .ThenBy(x => x.team)
                 .ToList();
 
-            foreach (var resultPlayer in matchFinishedEvent.result.players)
+            if (matchFinishedEvent.result == null)
             {
-                var matchPlayer = players.First(p => p.battleTag == resultPlayer.battleTag); 
-
-                // If the player chose random for the match,
-                // set their actual randomized race from the result.
-                matchPlayer.rndRace = matchPlayer.race == Race.RnD
-                    ? matchPlayer.race.FromRaceId((RaceId)resultPlayer.raceId)
-                    : null;
+                foreach (var matchPlayer in players)
+                {
+                    // If no result, set each random players random race
+                    // to random, as we have no way to determine their played
+                    // race.
+                    matchPlayer.rndRace = matchPlayer.race == Race.RnD ? Race.RnD : null;
+                }
             }
+            else
+            {
+                foreach (var resultPlayer in matchFinishedEvent.result.players)
+                {
+                    var matchPlayer = players.First(p => p.battleTag == resultPlayer.battleTag);
+
+                    // If the player chose random for the match,
+                    // set their actual randomized race from the result.
+                    matchPlayer.rndRace = matchPlayer.race == Race.RnD
+                        ? matchPlayer.race.FromRaceId((RaceId)resultPlayer.raceId)
+                        : null;
+                }
+            }
+
 
             var teamGroups = SplitPlayersIntoTeams(players, match.gameMode);
 
