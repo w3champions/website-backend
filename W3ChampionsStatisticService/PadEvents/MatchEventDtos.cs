@@ -93,6 +93,8 @@ namespace W3ChampionsStatisticService.PadEvents
         public List<PlayerMMrChange> players { get; set; }
         public long endTime { get; set; }
         public long number { get; set; }
+        public FloNode floNode { get; set; }
+        public string serverProvider { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -110,6 +112,8 @@ namespace W3ChampionsStatisticService.PadEvents
         public int mapId { get; set; }
         public string map { get; set; }
         public List<UnfinishedMatchPlayer> players { get; set; }
+        public FloNode floNode { get; set; }
+        public string serverProvider { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -247,5 +251,19 @@ namespace W3ChampionsStatisticService.PadEvents
     public class PadEvent
     {
         public ObjectId Id { get; set; }
+    }
+
+    [BsonIgnoreExtraElements]
+    [BsonNoId]
+    public class FloNode
+    {
+        [BsonElement("country_id")]
+        public string countryId { get; set; }
+
+        public int id { get; set; }
+
+        public string location { get; set; }
+
+        public string name { get; set; }
     }
 }

@@ -30,6 +30,8 @@ namespace W3ChampionsStatisticService.Matches
         public int Season { get; set; }
         public long? Number { get; set; }
 
+        public ServerInfo ServerInfo { get; set; } = new ServerInfo();
+
         [JsonIgnore]
         public string Team1Players { get; set; }
         [JsonIgnore]
@@ -62,6 +64,16 @@ namespace W3ChampionsStatisticService.Matches
                 Duration = endTime - startTime,
                 Season = match.season
             };
+
+            result.ServerInfo.Provider = match.serverProvider;
+
+            if (match.floNode != null)
+            {
+                result.ServerInfo.NodeId = match.floNode.id;
+                result.ServerInfo.Name = match.floNode.name;
+                result.ServerInfo.CountryCode = match.floNode.countryId;
+                result.ServerInfo.Location = match.floNode.location;
+            }
 
             var players = match.players
                 .OrderByDescending(x => x.won)

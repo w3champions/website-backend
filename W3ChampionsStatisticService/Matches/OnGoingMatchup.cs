@@ -23,6 +23,16 @@ namespace W3ChampionsStatisticService.Matches
                 StartTime = startTime,
             };
 
+            result.ServerInfo.Provider = match.serverProvider;
+
+            if (match.floNode != null)
+            {
+                result.ServerInfo.NodeId = match.floNode.id;
+                result.ServerInfo.Name = match.floNode.name;
+                result.ServerInfo.CountryCode = match.floNode.countryId;
+                result.ServerInfo.Location = match.floNode.location;
+            }
+
             var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
 
             foreach (var team in teamGroups)
