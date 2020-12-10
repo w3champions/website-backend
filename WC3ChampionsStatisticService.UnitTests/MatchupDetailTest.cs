@@ -76,7 +76,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.match.id = "nmhcCLaRc7";
             matchFinishedEvent.Id = ObjectId.GenerateNewId();
 
-            // Set race to random.
+            // Set race to non-random.
             matchFinishedEvent.result.players[0].raceId = (int)RaceId.HU;
             matchFinishedEvent.match.players.Find(p => p.battleTag == matchFinishedEvent.result.players[0].battleTag).race = Race.HU;
 
@@ -91,6 +91,32 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
             Assert.AreEqual(Race.HU, result.Match.Teams[0].Players[0].Race);
             Assert.AreEqual(null, result.Match.Teams[0].Players[0].RndRace);
+        }
+
+        [Test]
+        public async Task LoadDetails_RandomRaceSetToRandomWhenNullResult()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+            matchFinishedEvent.match.id = "nmhcCLaRc7";
+            matchFinishedEvent.Id = ObjectId.GenerateNewId();
+            matchFinishedEvent.result = null;
+
+            var player = matchFinishedEvent.match.players[0];
+
+            // Set race to random.
+            matchFinishedEvent.match.players[0].race = Race.RnD;
+
+            await InsertMatchEvent(matchFinishedEvent);
+
+            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
+
+            var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
+
+            Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
+            Assert.AreEqual(Race.RnD, result.Match.Teams[0].Players.Find(p => p.BattleTag == player.battleTag).Race);
+            Assert.AreEqual(Race.RnD, result.Match.Teams[0].Players.Find(p => p.BattleTag == player.battleTag).RndRace);
         }
     }
 }
