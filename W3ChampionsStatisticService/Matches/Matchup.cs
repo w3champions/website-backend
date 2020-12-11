@@ -30,6 +30,8 @@ namespace W3ChampionsStatisticService.Matches
         public int Season { get; set; }
         public long? Number { get; set; }
 
+        public ServerInfo ServerInfo { get; set; } = new ServerInfo();
+
         [JsonIgnore]
         public string Team1Players { get; set; }
         [JsonIgnore]
@@ -63,6 +65,8 @@ namespace W3ChampionsStatisticService.Matches
                 Season = match.season
             };
 
+            result.SetServerInfo(match);
+
             var players = match.players
                 .OrderByDescending(x => x.won)
                 .ThenBy(x => x.team)
@@ -81,6 +85,37 @@ namespace W3ChampionsStatisticService.Matches
             SetTeamPlayers(result);
 
             return result;
+        }
+
+        protected void SetServerInfo(IMatchServerInfo matchServerInfo)
+        {
+            ServerInfo.Provider = matchServerInfo.serverProvider;
+
+            if (matchServerInfo.floNode != null)
+            {
+                ServerInfo.NodeId = matchServerInfo.floNode.id;
+                ServerInfo.Name = matchServerInfo.floNode.name;
+                ServerInfo.CountryCode = matchServerInfo.floNode.countryId;
+                ServerInfo.Location = matchServerInfo.floNode.location;
+
+                foreach (var matchPlayer in matchServerInfo.PlayersServerInfo)
+                {
+                    if (matchPlayer.floPings != null)
+                    {
+                        var nodePing = matchPlayer.floPings.FirstOrDefault(x => x.nodeId == ServerInfo.NodeId);
+                        if (nodePing != null)
+                        {
+                            var playerServerInfo = new PlayerServerInfo()
+                            {
+                                BattleTag = matchPlayer.battleTag,
+                                CurrentPing = nodePing.currentPing,
+                                AveragePing = nodePing.avgPing
+                            };
+                            ServerInfo.PlayerServerInfos.Add(playerServerInfo);
+                        }
+                    }
+                }
+            }
         }
 
         protected static Dictionary<int, List<T>> SplitPlayersIntoTeams<T>(List<T> players, GameMode gameMode)
