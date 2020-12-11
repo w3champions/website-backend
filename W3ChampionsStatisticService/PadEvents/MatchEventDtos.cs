@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
@@ -34,7 +35,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
     [BsonIgnoreExtraElements]
     [BsonNoId]
-    public class UnfinishedMatchPlayer
+    public class UnfinishedMatchPlayer : IMatchPlayerServerInfo
     {
         public int team { get; set; }
         public string id { get; set; }
@@ -44,6 +45,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public Mmr mmr { get; set; }
         public Ranking ranking { get; set; }
         public string country { get; set; }
+        public FloPing[] floPings { get; set; }
     }
 
     [BsonIgnoreExtraElements]
@@ -78,7 +80,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
     [BsonIgnoreExtraElements]
     [BsonNoId]
-    public class Match
+    public class Match : IMatchServerInfo
     {
         public int season { get; set; }
         public int state { get; set; }
@@ -95,11 +97,19 @@ namespace W3ChampionsStatisticService.PadEvents
         public long number { get; set; }
         public FloNode floNode { get; set; }
         public string serverProvider { get; set; }
+
+        public List<IMatchPlayerServerInfo> PlayersServerInfo
+        {
+            get
+            {
+                return players?.Cast<IMatchPlayerServerInfo>().ToList();
+            }
+        }
     }
 
     [BsonIgnoreExtraElements]
     [BsonNoId]
-    public class UnfinishedMatch
+    public class UnfinishedMatch : IMatchServerInfo
     {
         public int season { get; set; }
         public int state { get; set; }
@@ -114,6 +124,14 @@ namespace W3ChampionsStatisticService.PadEvents
         public List<UnfinishedMatchPlayer> players { get; set; }
         public FloNode floNode { get; set; }
         public string serverProvider { get; set; }
+
+        public List<IMatchPlayerServerInfo> PlayersServerInfo
+        {
+            get
+            {
+                return players?.Cast<IMatchPlayerServerInfo>().ToList();
+            }
+        }
     }
 
     [BsonIgnoreExtraElements]
@@ -265,5 +283,29 @@ namespace W3ChampionsStatisticService.PadEvents
         public string location { get; set; }
 
         public string name { get; set; }
+    }
+
+    [BsonIgnoreExtraElements]
+    [BsonNoId]
+    public class FloPing
+    {
+        public int nodeId { get; set; }
+
+        public int currentPing { get; set; }
+
+        public int avgPing { get; set; }
+    }
+
+    public interface IMatchPlayerServerInfo
+    {
+        string battleTag { get; }
+        FloPing[] floPings { get; }
+    }
+
+    public interface IMatchServerInfo
+    {
+        FloNode floNode { get; }
+        string serverProvider { get; }
+        List<IMatchPlayerServerInfo> PlayersServerInfo { get; }
     }
 }
