@@ -183,19 +183,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             //List<Akas> result = new List<Akas>();
 
-            var result = RequestPlayerAkas();
+            var akasResponse = await RequestPlayerAkas();
             
-            Console.WriteLine("Cepheid");
-            Console.WriteLine(result);
+            Console.WriteLine(akasResponse);
 
         }
 
-        private static async Task RequestPlayerAkas()
+        private static async Task<Akas> RequestPlayerAkas()
         {
 
-            HttpClient HttpClient = new HttpClient();
+            HttpClient httpClient = new HttpClient();
 
-            var httpResponse = await HttpClient.getAsync("https://statistic-service.w3champions.com/api/admin/news");
+            var response = await httpClient.GetFromJsonAsync<Akas>("https://statistic-service.w3champions.com/api/admin/news");
+
+            return response;
+            
         }
 
         private async Task<List<MmrRank>> FetchMmrRanks(int season)
