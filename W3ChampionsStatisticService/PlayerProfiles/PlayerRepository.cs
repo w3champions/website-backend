@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Cache;
@@ -10,6 +12,7 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -18,6 +21,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
         private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
+
+        private static Dictionary<int, CachedData<List<Akas>>> PlayerAkasCache = new Dictionary<int, CachedData<List<Akas>>>();
 
         public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
@@ -123,6 +128,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerOverview>(battleTag);
         }
 
+        public string getAkaForPlayer(string playerBnetTag)
+        {
+
+
+            return "placeholder";
+        }
+
         public float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
         {
             if (!MmrRanksCacheBySeason.ContainsKey(season))
@@ -167,8 +179,28 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerOverview>(t => t.Season == season);
         }
 
+        private async Task FetchPlayerAkas()
+        {
+            //List<Akas> result = new List<Akas>();
+
+            var result = RequestPlayerAkas();
+            
+            Console.WriteLine("Cepheid");
+            Console.WriteLine(result);
+
+        }
+
+        private static async Task RequestPlayerAkas()
+        {
+
+            HttpClient HttpClient = new HttpClient();
+
+            var httpResponse = await HttpClient.getAsync("https://statistic-service.w3champions.com/api/admin/news");
+        }
+
         private async Task<List<MmrRank>> FetchMmrRanks(int season)
         {
+            await FetchPlayerAkas();
             var overviews = await LoadOverviews(season);
             List<MmrRank> result = new List<MmrRank>();
             foreach (var overViewsByGateway in overviews.GroupBy(x => x.GateWay))
