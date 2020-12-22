@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Cache;
@@ -31,6 +30,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
             await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
+        }
+
+        public async Task LoadAka(string battleTag)
+        {
+            return 
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -179,30 +183,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerOverview>(t => t.Season == season);
         }
 
-        private async Task FetchPlayerAkas()
-        {
-            //List<Akas> result = new List<Akas>();
-
-            var akasResponse = await RequestPlayerAkas();
-            
-            Console.WriteLine(akasResponse);
-
-        }
-
-        private static async Task<Akas> RequestPlayerAkas()
-        {
-
-            HttpClient httpClient = new HttpClient();
-
-            var response = await httpClient.GetFromJsonAsync<Akas>("https://statistic-service.w3champions.com/api/admin/news");
-
-            return response;
-            
-        }
-
         private async Task<List<MmrRank>> FetchMmrRanks(int season)
         {
-            await FetchPlayerAkas();
             var overviews = await LoadOverviews(season);
             List<MmrRank> result = new List<MmrRank>();
             foreach (var overViewsByGateway in overviews.GroupBy(x => x.GateWay))

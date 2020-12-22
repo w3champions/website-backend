@@ -128,6 +128,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
             return Ok(playerMmrRpTimeline);
         }
+
+        [HttpGet("{battleTag}/aka")]
+        public async Task<IActionResult> GetPlayerAka([FromRoute] string battleTag)
+        {
+            var playerAka = await _playerRepository.LoadAka(battleTag);
+            return Ok(playerAka);
+        }
     }
 
     public class ProfilePictureDto
