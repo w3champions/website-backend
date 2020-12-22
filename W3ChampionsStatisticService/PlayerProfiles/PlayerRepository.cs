@@ -34,7 +34,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public async Task LoadAka(string battleTag)
         {
-            return 
+            return "Placeholder";
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -130,13 +130,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task<PlayerOverview> LoadOverview(string battleTag)
         {
             return LoadFirst<PlayerOverview>(battleTag);
-        }
-
-        public string getAkaForPlayer(string playerBnetTag)
-        {
-
-
-            return "placeholder";
         }
 
         public float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
