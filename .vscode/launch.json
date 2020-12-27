@@ -9,13 +9,14 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/W3ChampionsStatisticService/bin/Debug/netcoreapp3.1/W3ChampionsStatisticService.dll",
+            "program": "${workspaceFolder}/W3ChampionsStatisticService/bin/Debug/net5.0/W3ChampionsStatisticService.dll",
             "args": [],
             "cwd": "${workspaceFolder}/W3ChampionsStatisticService",
             "stopAtEntry": false,
             "serverReadyAction": {
                 "action": "openExternally",
-                "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)"
+                "pattern": "^\\s*Now listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/swagger"
             },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
