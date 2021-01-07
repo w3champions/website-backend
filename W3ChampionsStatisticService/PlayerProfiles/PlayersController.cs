@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -130,10 +131,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}/aka")]
-        public async Task<IActionResult> GetPlayerAka([FromRoute] string battleTag)
+        public Player GetPlayerAka([FromRoute] string battleTag)
         {
-            var playerAka = await _playerRepository.LoadAka(battleTag);
-            return Ok(playerAka);
+            var player = _playerRepository.LoadAka(battleTag);
+            return player;
         }
     }
 

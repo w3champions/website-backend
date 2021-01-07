@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Cache;
@@ -21,7 +24,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     {
         private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
 
-        private static Dictionary<int, CachedData<List<Akas>>> PlayerAkasCache = new Dictionary<int, CachedData<List<Akas>>>();
+        private static CachedData<List<PlayerAka>> PlayerAkasCache;
 
         public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
@@ -30,11 +33,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
         {
             await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
-        }
-
-        public async Task LoadAka(string battleTag)
-        {
-            return "Placeholder";
         }
 
         public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -66,7 +64,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             return UpsertMany(winrate);
         }
-
 
         public async Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode)
         {
@@ -154,6 +151,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return null;
         }
 
+        public Player LoadAka(string battleTag) {
+
+            if (PlayerAkasCache == null) {
+                PlayerAkasCache = new CachedData<List<PlayerAka>>(() => FetchAkas().GetAwaiter().GetResult(), TimeSpan.FromHours(1));
+            }
+
+            var akas = PlayerAkasCache.GetCachedData();
+            var aka = akas.Find(x => x.aka == battleTag);
+
+            return aka.player;
+        }
+
         public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
         {
             if (gameMode != GameMode.GM_2v2_AT)
@@ -174,6 +183,26 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private Task<List<PlayerOverview>> LoadOverviews(int season)
         {
             return LoadAll<PlayerOverview>(t => t.Season == season);
+        }
+
+        private static async Task<List<PlayerAka>> FetchAkas() {
+
+            // list of all Akas
+            var war3infoApiKey = Environment.GetEnvironmentVariable("WAR3_INFO_API_KEY"); // CHANGE THIS TO SECRET FOR DEV
+            var war3infoApiUrl = "https://warcraft3.info/api/v1/aka/battle_net";
+
+            var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
+
+            var response = await httpClient.GetAsync(war3infoApiUrl);
+            string data = await response.Content.ReadAsStringAsync();
+
+            var stringData = JsonSerializer.Deserialize<List<PlayerAka>>(data);
+
+            // Console.WriteLine("W3INFO RESPONSE:");
+            // Console.WriteLine(stringData.First().aka);
+            
+            return stringData;
         }
 
         private async Task<List<MmrRank>> FetchMmrRanks(int season)
