@@ -25,6 +25,32 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Season == season);
         }
 
+        public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
+        {
+            var ranks = CreateCollection<Rank>();
+            var players = CreateCollection<PlayerOverview>();
+            var settings = CreateCollection<PersonalSettings.PersonalSetting>();
+            var result = await ranks
+                .Aggregate()
+                .Match(rank =>
+                    rank.Gateway == gateWay
+                    && rank.GameMode == gameMode
+                    && rank.Season == season)
+                .SortBy(rank => rank.RankNumber)
+                .Lookup<Rank, PlayerOverview, Rank>(players,
+                    rank => rank.PlayerId,
+                    player => player.Id,
+                    rank => rank.Players)
+                .Lookup<Rank, PersonalSettings.PersonalSetting, Rank>(settings,
+                    rank => rank.Player1Id,
+                    setting => setting.Id,
+                    rank => rank.PlayerSettings)
+                .ToListAsync();
+            return result.Where(r => r.Player != null)
+                .Where(rank => rank.PlayerSettings.Select(ps => ps.CountryCode != null ? ps.CountryCode : ps.Location).Contains(countryCode))
+                .ToList();
+        }
+
         public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
         {
             var search = searchFor.ToLower();
