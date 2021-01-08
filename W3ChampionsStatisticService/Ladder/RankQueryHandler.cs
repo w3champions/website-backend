@@ -37,6 +37,10 @@ namespace W3ChampionsStatisticService.Ladder
 
             await PopulatePlayerInfos(playerRanks);
             await PopulateLeagueInfo(playerRanks, season, gateWay, gameMode);
+            if (gameMode == GameMode.GM_2v2_AT)
+            {
+                SortTeamsByCountry(playerRanks, countryCode);
+            }
 
             return playerRanks.OrderBy(r => r.LeagueOrder)
                 .ThenBy(r => r.LeagueDivision)
@@ -106,6 +110,23 @@ namespace W3ChampionsStatisticService.Ladder
                     rank.LeagueOrder = league.Order;
                 }                
             }
+        }
+
+        private void SortTeamsByCountry(List<Rank> ranks, string countryCode)
+        {
+            ranks.ForEach(pr =>
+            {
+                pr.PlayersInfo = pr.PlayersInfo.OrderBy(info =>
+                {
+                    string code = (info.CountryCode != null ? info.CountryCode : info.Location);
+                    return code != countryCode;
+                }).ToList();
+                pr.Player.PlayerIds = pr.Player.PlayerIds
+                    .OrderBy(pi => pr.PlayersInfo.Select(info => info.BattleTag)
+                    .ToList()
+                    .IndexOf(pi.BattleTag))
+                    .ToList();
+            });
         }
     }
 }
