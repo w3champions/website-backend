@@ -133,7 +133,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}/aka")]
         public Player GetPlayerAka([FromRoute] string battleTag)
         {
-            var player = _playerRepository.LoadAka(battleTag);
+            var player = _playerRepository.LoadAka(battleTag.ToLower());
             return player;
         }
     }

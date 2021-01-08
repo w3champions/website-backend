@@ -24,7 +24,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     {
         private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
 
-        private static CachedData<List<PlayerAka>> PlayerAkasCache;
+        private static CachedData<List<PlayerAka>> PlayerAkasCache = new CachedData<List<PlayerAka>>(() => FetchAkas().GetAwaiter().GetResult(), TimeSpan.FromMinutes(60));
 
         public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
@@ -153,6 +153,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Player LoadAka(string battleTag) {
 
+            // string should be received all lower-case if the script it's written is permits lower case.
             if (PlayerAkasCache == null) {
                 PlayerAkasCache = new CachedData<List<PlayerAka>>(() => FetchAkas().GetAwaiter().GetResult(), TimeSpan.FromHours(1));
             }
@@ -193,6 +194,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
+
+            Console.WriteLine("Requesting Data from Warcraft3.Info aka API...");
 
             var response = await httpClient.GetAsync(war3infoApiUrl);
             string data = await response.Content.ReadAsStringAsync();
