@@ -154,9 +154,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Player LoadAka(string battleTag) {
 
             // string should be received all lower-case if the script it's written is permits lower case.
-            if (PlayerAkasCache == null) {
-                PlayerAkasCache = new CachedData<List<PlayerAka>>(() => FetchAkas().GetAwaiter().GetResult(), TimeSpan.FromHours(1));
-            }
 
             var akas = PlayerAkasCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
@@ -199,15 +196,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
 
-            Console.WriteLine("Requesting Data from Warcraft3.Info aka API...");
-
             var response = await httpClient.GetAsync(war3infoApiUrl);
             string data = await response.Content.ReadAsStringAsync();
 
             var stringData = JsonSerializer.Deserialize<List<PlayerAka>>(data);
-
-            // Console.WriteLine("W3INFO RESPONSE:");
-            // Console.WriteLine(stringData.First().aka);
             
             return stringData;
         }
