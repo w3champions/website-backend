@@ -134,7 +134,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public IActionResult GetPlayerAka([FromRoute] string battleTag)
         {
             var player = _playerRepository.LoadAka(battleTag.ToLower());
-
             return Ok(player);
         }
     }

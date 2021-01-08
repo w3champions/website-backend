@@ -151,17 +151,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return null;
         }
 
-        public Player LoadAka(string battleTag) {
-
-            // string should be received all lower-case if the script it's written is permits lower case.
-
+        public Player LoadAka(string battleTag) // string should be received all lower-case.
+        { 
             var akas = PlayerAkasCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
 
             if (aka != null) {
                 return aka.player;
             }
-
             return null;
         }
 
@@ -187,9 +184,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerOverview>(t => t.Season == season);
         }
 
-        private static async Task<List<PlayerAka>> FetchAkas() {
-
-            // list of all Akas
+        private static async Task<List<PlayerAka>> FetchAkas() // list of all Akas requested from W3info
+        { 
             var war3infoApiKey = Environment.GetEnvironmentVariable("WAR3_INFO_API_KEY"); // CHANGE THIS TO SECRET FOR DEV
             var war3infoApiUrl = "https://warcraft3.info/api/v1/aka/battle_net";
 
