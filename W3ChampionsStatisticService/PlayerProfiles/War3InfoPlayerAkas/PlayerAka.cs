@@ -2,7 +2,6 @@
 {
     public class PlayerAka
     {
-        
         public int id { get; set; } // id Warcraft3.info uses for their URL link, 
         // e.g. warcraft3.info/stats/player/204 => Lyn's Warcraft3.info profile
         public int stats_player_id { get; set; }
