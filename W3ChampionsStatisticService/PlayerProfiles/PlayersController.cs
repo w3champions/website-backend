@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -127,6 +128,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
             return Ok(playerMmrRpTimeline);
+        }
+
+        [HttpGet("{battleTag}/aka")]
+        public IActionResult GetPlayerAka([FromRoute] string battleTag)
+        {
+            var player = _playerRepository.LoadAka(battleTag.ToLower());
+            return Ok(player);
         }
     }
 
