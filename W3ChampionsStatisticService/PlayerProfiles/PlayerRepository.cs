@@ -161,7 +161,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var akas = PlayerAkasCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
 
-            return aka.player;
+            if (aka != null) {
+                return aka.player;
+            }
+
+            return null;
         }
 
         public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)

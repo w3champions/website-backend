@@ -131,10 +131,17 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}/aka")]
-        public Player GetPlayerAka([FromRoute] string battleTag)
+        public IActionResult GetPlayerAka([FromRoute] string battleTag)
         {
             var player = _playerRepository.LoadAka(battleTag.ToLower());
-            return player;
+
+            return Ok(player);
+
+            // if (player != null) {
+            //     return Ok(player);
+            // }
+
+            // return NotFound();
         }
     }
 
