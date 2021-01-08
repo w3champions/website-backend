@@ -136,12 +136,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var player = _playerRepository.LoadAka(battleTag.ToLower());
 
             return Ok(player);
-
-            // if (player != null) {
-            //     return Ok(player);
-            // }
-
-            // return NotFound();
         }
     }
 
