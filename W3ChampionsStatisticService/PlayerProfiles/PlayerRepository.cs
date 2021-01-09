@@ -24,7 +24,19 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     {
         private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
 
-        private static CachedData<List<PlayerAka>> PlayerAkasCache = new CachedData<List<PlayerAka>>(() => FetchAkas().GetAwaiter().GetResult(), TimeSpan.FromMinutes(60));
+        private static CachedData<List<PlayerAka>> PlayerAkasCache = new CachedData<List<PlayerAka>>(() => FetchAkasSync(), TimeSpan.FromMinutes(60));
+
+        private static List<PlayerAka> FetchAkasSync()
+        {
+            try
+            {
+               return FetchAkas().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                return new List<PlayerAka>();
+            }
+        }
 
         public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
