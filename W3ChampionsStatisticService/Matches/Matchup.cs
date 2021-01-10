@@ -127,7 +127,7 @@ namespace W3ChampionsStatisticService.Matches
             if (teams.Count() == 1)
             {
                 var totalPlayers = players.Count;
-                var playersInTeam = totalPlayers / GetNumberOfTeamsFromGameMode(gameMode);
+                var playersInTeam = Math.Max(totalPlayers / GetNumberOfTeamsFromGameMode(gameMode), 1);
 
                 int team = 0;
                 for (int i = 0; i < totalPlayers; i += playersInTeam)
