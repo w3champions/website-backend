@@ -77,6 +77,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             matchFinishedEvent.Id = ObjectId.GenerateNewId();
 
             // Set race to non-random.
+            matchFinishedEvent.match.players[0].race = Race.HU;
+            matchFinishedEvent.match.players[0].rndRace = null;
             matchFinishedEvent.result.players[0].raceId = (int)RaceId.HU;
             matchFinishedEvent.match.players.Find(p => p.battleTag == matchFinishedEvent.result.players[0].battleTag).race = Race.HU;
 
