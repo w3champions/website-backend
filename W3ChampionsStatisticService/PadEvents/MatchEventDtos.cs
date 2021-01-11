@@ -23,6 +23,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public Mmr updatedMmr { get; set; }
         public Ranking updatedRanking { get; set; }
         public string atTeamId { get; set; }
+        public Race? rndRace { get; set; }
 
         public bool IsAt
         {
