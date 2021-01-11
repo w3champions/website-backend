@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Clans;
@@ -49,6 +50,10 @@ namespace W3ChampionsStatisticService
             services.AddControllers(c =>
             {
                 c.Filters.Add<ValidationExceptionFilter>();
+            });
+
+            services.AddSwaggerGen(f => {
+                f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1"});
             });
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
@@ -152,6 +157,11 @@ namespace W3ChampionsStatisticService
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+            });
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "w3champions");
             });
         }
     }
