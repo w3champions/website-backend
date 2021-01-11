@@ -59,5 +59,8 @@ namespace W3ChampionsStatisticService.Ladder
 
         [BsonIgnore]
         public List<PlayerInfo> PlayersInfo { get; set; } = new List<PlayerInfo>();
+        [JsonIgnore]
+        [BsonIgnoreIfNull]
+        public List<PersonalSettings.PersonalSetting> PlayerSettings { get; set; } = new List<PersonalSettings.PersonalSetting>();
     }
 }

@@ -50,6 +50,19 @@ namespace W3ChampionsStatisticService.Ladder
             return Ok(playersInLadder);
         }
 
+        [HttpGet("country/{countryCode}")]
+        public async Task<IActionResult> GetCountryLadder([FromRoute] string countryCode, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+        {
+            var playersByCountry = await _rankQueryHandler.LoadPlayersOfCountry(countryCode, season, gateWay, gameMode);
+
+            if (playersByCountry == null)
+            {
+                return NoContent();
+            }
+
+            return Ok(playersByCountry);
+        }
+
         [HttpGet("league-constellation")]
         public async Task<IActionResult> GetLeagueConstellation(int season)
         {
