@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -20,19 +20,22 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
+        private readonly PlayerAkaProvider _playerAkaProvider;
 
         public PlayersController(
             IPlayerRepository playerRepository,
             GameModeStatQueryHandler queryHandler,
             IPersonalSettingsRepository personalSettingsRepository,
             IClanRepository clanRepository,
-            IW3CAuthenticationService authenticationService)
+            IW3CAuthenticationService authenticationService,
+            PlayerAkaProvider playerAkaProvider)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
             _personalSettingsRepository = personalSettingsRepository;
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
+            _playerAkaProvider = playerAkaProvider;
         }
 
         [HttpGet("{battleTag}")]
@@ -50,6 +53,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 player = PlayerOverallStats.Create(battleTag);
                 await _playerRepository.UpsertPlayer(player);
             }
+
+            player.PlayerAkaData = _playerAkaProvider.getAkaData(battleTag.ToLower());
 
             return Ok(player);
         }
@@ -133,7 +138,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}/aka")]
         public IActionResult GetPlayerAka([FromRoute] string battleTag)
         {
-            var player = _playerRepository.LoadAka(battleTag.ToLower());
+            var player = _playerAkaProvider.getAkaData(battleTag.ToLower());
             return Ok(player);
         }
     }

@@ -30,6 +30,5 @@ namespace W3ChampionsStatisticService.Ports
         float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season);
         Task<PlayerMmrRpTimeline> LoadPlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode);
         Task UpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline);
-        Player LoadAka(string BattleTag);
     }
 }
