@@ -78,15 +78,15 @@ As you can see you need to make the transformation and save the readmodel in our
 ## Import Export Mongodata
 You need mongodb installed to have the mentioned toole here.
 
-Export with (use the complete connection string here ofc)
+Export with (this is the open test db, so it might be broken, ask a dev for the connection string to the test db)
 ```
-mongodump --uri="mongodb://w3champions....."
+mongodump --uri="mongodb://157.90.1.251:3513"
 ```
-creates a dump folder with the data.
+creates a `./dump` folder with the data.
 
 Import to Test DB
 ```
-mongorestore --uri="mongodb://localhost:27081" dump/
+mongorestore --uri="mongodb://localhost:27017" dump/
 ```
 I also have a dump for the stat service here:
 https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
