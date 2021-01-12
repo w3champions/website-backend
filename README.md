@@ -9,7 +9,7 @@ You will need a mongodb to run the service. If you do not have a local mongo con
 ```
 docker run mongo
 ```
-and your local service should be able to connect to this default mongo adress. The default is our open test db with connectionstring `mongodb://176.28.16.249:3513`
+and your local service should be able to connect to this default mongo adress. The default is our open test db with connectionstring `mongodb://157.90.1.251:3513`
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
 set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
@@ -78,17 +78,17 @@ As you can see you need to make the transformation and save the readmodel in our
 ## Import Export Mongodata
 You need mongodb installed to have the mentioned toole here.
 
-Export with (use the complete connection string here ofc)
+Export with (this is the open test db, so it might be broken, ask a dev for the connection string to the test db)
 ```
-mongodump --uri="mongodb://w3champions....."
+mongodump --uri="mongodb://157.90.1.251:3513"
 ```
-creates a dump folder with the data.
+creates a `./dump` folder with the data.
 
 Import to Test DB
 ```
-mongorestore --uri="mongodb://localhost:27081" dump/
+mongorestore --uri="mongodb://localhost:27017" dump/
 ```
 I also have a dump for the stat service here:
 https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
 
-Just download the folder, name it dump and run the import command to get your test env up. Like mentioned above, we have an open test db here `mongodb://176.28.16.249:3513`
+Just download the folder, name it dump and run the import command to get your test env up. Like mentioned above, we have an open test db here `mongodb://157.90.1.251:3513`
