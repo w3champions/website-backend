@@ -12,7 +12,6 @@ using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
-using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
