@@ -92,3 +92,10 @@ I also have a dump for the stat service here:
 https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
 
 Just download the folder, name it dump and run the import command to get your test env up. Like mentioned above, we have an open test db here `mongodb://157.90.1.251:3513`
+
+### Deploying to a Pull Request Environment
+If you branch starts with "DEPLOY_" azure will create a automatic deployment for your pull request, so you can test it in an isolated environment. It will be deployed to whatever comes after "DEPLOY_". For example, if my branch is called DEPLOY_add-new-language the pr will be published to https://statistic-service.pr.add-new-language.w3champions.com. The https certificate will be generated after the deployment, but this can take some time.
+
+If you need any other connection strings, just update the `docker-dompose.token.yaml` file accordingliy, for example if you want to use a different backend for the identification for example (which can also be deployed by a PR just like this repo).
+
+When you are done, please contact one of the older devs, because they can delete the unused containers again.
