@@ -7,8 +7,8 @@ services:
     expose:
       - 80
     environment:
-      - VIRTUAL_HOST=statistic-service.test.w3champions.com
-      - LETSENCRYPT_HOST=statistic-service.test.w3champions.com
+      - VIRTUAL_HOST=statistic-service.pr.#{PR_NAME}#.w3champions.com
+      - LETSENCRYPT_HOST=statistic-service.pr.#{PR_NAME}#.w3champions.com
       - LETSENCRYPT_EMAIL=simonheiss87@gmail.com
       - MONGO_CONNECTION_STRING='mongodb://157.90.1.251:3513'
       - ADMIN_SECRET=#{ADMIN_SECRET}#
