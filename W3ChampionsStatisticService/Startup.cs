@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService
             services.AddSpecialBsonRegistrations();
 
             services.AddSingleton<TrackingService>();
-            services.AddSingleton<PlayerAkaProvider>();
+            // services.AddSingleton<PlayerAkaProvider>(); // Warcraft3.info Aka support - not currently implemented in any endpoint
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -115,7 +115,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
                 services.AddReadModelService<PlayerMmrRpTimelineHandler>();
 
-                // Generell Stats
+                // General Stats
                 services.AddReadModelService<GamesPerDayHandler>();
                 services.AddReadModelService<GameLengthStatHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();

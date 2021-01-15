@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
+// This class is for the Warcraft3.info AKA feature - currently not implemented for any endpoint but left for future requirements.
 namespace W3ChampionsStatisticService.Services
 {
     public class PlayerAkaProvider
@@ -40,16 +41,17 @@ namespace W3ChampionsStatisticService.Services
             return stringData;
         }
 
-        
         public Player getAkaData(string battleTag) // string should be received all lower-case.
         {
             var akas = PlayersAkaCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
 
-            if (aka != null) {
+            if (aka != null) // Player exists in the aka db
+            {
                 return aka.player;
             }
-            return null; // returns null if the player is not in the database
+
+            return null;
         }
     }
 }

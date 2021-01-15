@@ -3,7 +3,6 @@ using System.Linq;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -14,7 +13,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public string Name { get; set; }
         public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
         public List<RaceWinLoss> WinLosses { get; set; }
-        public Player PlayerAkaData { get; set; }
 
         public static PlayerOverallStats Create(string battleTag)
         {

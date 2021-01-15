@@ -1,5 +1,4 @@
 ﻿using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -24,7 +23,5 @@ namespace W3ChampionsStatisticService.Ladder
         public string TwitchName { get; set; }
 
         public string ClanId { get; set; }
-
-        public Player PlayerAkaData { get; set; }
     }
 }

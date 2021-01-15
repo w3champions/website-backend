@@ -1,5 +1,6 @@
 ﻿namespace W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas
 {
+    // Not currently implemented for any endpoint - for future potential use
     public class PlayerAka
     {
         public int id { get; set; } // id Warcraft3.info uses for their URL link, 

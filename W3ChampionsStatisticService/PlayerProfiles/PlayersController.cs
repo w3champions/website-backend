@@ -20,22 +20,19 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
-        private readonly PlayerAkaProvider _playerAkaProvider;
 
         public PlayersController(
             IPlayerRepository playerRepository,
             GameModeStatQueryHandler queryHandler,
             IPersonalSettingsRepository personalSettingsRepository,
             IClanRepository clanRepository,
-            IW3CAuthenticationService authenticationService,
-            PlayerAkaProvider playerAkaProvider)
+            IW3CAuthenticationService authenticationService)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
             _personalSettingsRepository = personalSettingsRepository;
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
-            _playerAkaProvider = playerAkaProvider;
         }
 
         [HttpGet("{battleTag}")]
@@ -53,8 +50,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 player = PlayerOverallStats.Create(battleTag);
                 await _playerRepository.UpsertPlayer(player);
             }
-
-            player.PlayerAkaData = _playerAkaProvider.getAkaData(battleTag.ToLower());
 
             return Ok(player);
         }
@@ -133,13 +128,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
             return Ok(playerMmrRpTimeline);
-        }
-
-        [HttpGet("{battleTag}/aka")]
-        public IActionResult GetPlayerAka([FromRoute] string battleTag)
-        {
-            var player = _playerAkaProvider.getAkaData(battleTag.ToLower());
-            return Ok(player);
         }
     }
 

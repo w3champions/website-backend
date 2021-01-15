@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -74,7 +76,7 @@ namespace W3ChampionsStatisticService.Ladder
 
                         var personalSettings = playerDetails.PersonalSettings?.FirstOrDefault();
                         var profilePicture = personalSettings?.ProfilePicture;
-
+                        
                         rank.PlayersInfo.Add(new PlayerInfo()
                         {
                             BattleTag = playerId.BattleTag,
