@@ -33,16 +33,10 @@ namespace W3ChampionsStatisticService.Services
             }
         }
 
-        private async Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings(Expression<Func<PersonalSettings.PersonalSetting, bool>> expression = null, int? limit = null)
+        private static Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
         {
-            var mongoCollection = CreateCollection<PersonalSettings.PersonalSetting>();
-            var elements = await mongoCollection.Find(expression).Limit(limit).ToListAsync();
-            return elements;
+            return LoadAll<PersonalSettings.PersonalSetting>();
         }
-        // private static Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
-        // {
-        //     //return LoadAll<PersonalSettings.PersonalSetting>();
-        // }
     
     }
 }
