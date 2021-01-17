@@ -4,7 +4,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -14,10 +13,11 @@ namespace W3ChampionsStatisticService.Ladder
 {
     public class RankRepository : MongoDbRepositoryBase, IRankRepository
     {
-        public RankRepository(MongoClient mongoClient) : base(mongoClient)
+        public RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : base(mongoClient)
         {
+            _personalSettingsProvider = personalSettingsProvider;
         }
-        private readonly PersonalSettingsProvider personalSettingsProvider;
+        private PersonalSettingsProvider _personalSettingsProvider;
         // private static CachedData<List<PersonalSettings.PersonalSetting>> personalSettingsCache;
 
         // public RankRepository(MongoClient mongoClient) : base(mongoClient)
@@ -40,7 +40,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
         {
-            var personalSettings = personalSettingsProvider.getPersonalSettingsCache().GetCachedData();
+            var personalSettings = _personalSettingsProvider.getPersonalSettings();
 
             var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
 
