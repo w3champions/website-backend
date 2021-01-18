@@ -52,6 +52,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string ChatAlias { get; set; }
         public string ChatColor { get; set; }
 
+        public AkaSettings AliasSettings { get; set; }
+
         public bool SetProfilePicture(SetPictureCommand cmd)
         {
             bool isValid = false;
@@ -77,6 +79,17 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             return isValid;
+        }
+
+        public AkaSettings SetAkaSettings(SetAkaSettingsCommand cmd)
+        {
+            AliasSettings = new AkaSettings() {
+                showAka = cmd.showAka,
+                showW3info = cmd.showW3info,
+                showLiquipedia = cmd.showLiquipedia
+            };
+
+            return AliasSettings;
         }
 
         public List<RaceToMaxPicture> PickablePictures => new List<RaceToMaxPicture>
@@ -120,6 +133,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             HomePage = dto.HomePage;
             Country = dto.Country;
             CountryCode = dto.CountryCode;
+            AliasSettings = dto.AliasSettings;
         }
 
         public DateTimeOffset LastUpdated { get; set; }

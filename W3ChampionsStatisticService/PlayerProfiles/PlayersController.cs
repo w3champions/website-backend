@@ -54,8 +54,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 await _playerRepository.UpsertPlayer(player);
             }
 
-            player.PlayerAkaData = _playerAkaProvider.getAkaData(battleTag.ToLower());
-
             return Ok(player);
         }
 

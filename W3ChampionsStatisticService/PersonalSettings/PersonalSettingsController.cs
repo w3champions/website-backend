@@ -93,12 +93,25 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         [HttpPut("{battleTag}/profile-picture")]
-        [CheckIfBattleTagBelongsToAuthCode]
+        //[CheckIfBattleTagBelongsToAuthCode]
         public async Task<IActionResult> SetProfilePicture(
             string battleTag,
             [FromBody] SetPictureCommand command)
         {
             var result = await _commandHandler.UpdatePicture(battleTag, command);
+
+            if (!result) return BadRequest();
+
+            return Ok();
+        }
+
+        [HttpPut("{battleTag}/aka-options")]
+        //[CheckIfBattleTagBelongsToAuthCode]
+        public async Task<IActionResult> SetAkaSettings(
+            string battleTag,
+            [FromBody] SetAkaSettingsCommand command)
+        {
+            var result = await _commandHandler.UpdateAkaSettings(battleTag, command);
 
             if (!result) return BadRequest();
 

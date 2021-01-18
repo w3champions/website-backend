@@ -116,7 +116,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
                 services.AddReadModelService<PlayerMmrRpTimelineHandler>();
 
-                // Generell Stats
+                // General Stats
                 services.AddReadModelService<GamesPerDayHandler>();
                 services.AddReadModelService<GameLengthStatHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();

@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
     public class W3CAuthenticationService : IW3CAuthenticationService
     {
-        private static readonly string IdentificationApiUrl = Environment.GetEnvironmentVariable("IDENTIFICATION_SERVICE_URI") ?? "https://identification-service.test.w3champions.com";
+        private static readonly string IdentificationApiUrl = "http://localhost:5001"; // Environment.GetEnvironmentVariable("IDENTIFICATION_SERVICE_URI") ?? "https://identification-service.test.w3champions.com";
 
         public async Task<W3CUserAuthenticationDto> GetUserByToken(string bearer)
         {
