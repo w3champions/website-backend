@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -49,11 +50,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 {
                     return Unauthorized("Sorry Hackerboi");
                 }
-
+                
                 player = PlayerOverallStats.Create(battleTag);
-                await _playerRepository.UpsertPlayer(player);
             }
+            
+            var settings = await _personalSettingsRepository.Load(battleTag);
+            player.PlayerAkaData = _playerAkaProvider.GetAkaDataByPreferences(battleTag, settings);
 
+            await _playerRepository.UpsertPlayer(player);
+            
             return Ok(player);
         }
 

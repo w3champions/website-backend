@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Collections.Generic;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
+using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.Services
 {
@@ -50,6 +51,36 @@ namespace W3ChampionsStatisticService.Services
                 return aka.player;
             }
             return null; // returns null if the player is not in the database
+        }
+
+        public Player GetAkaDataByPreferences(string battletag, PersonalSetting settings)
+        {
+            if (settings == null)
+            {
+                return new Player();
+            }
+
+            var playerAkaData = getAkaData(battletag.ToLower()) ?? new Player();
+
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(playerAkaData));
+
+            if (!settings.AliasSettings.showAka) {
+                playerAkaData.name = null; 
+                playerAkaData.main_race = null; 
+                playerAkaData.country = null;
+            }
+            
+            if (!settings.AliasSettings.showW3info) 
+            {
+                playerAkaData.id = 0;
+            }
+            
+            if (!settings.AliasSettings.showLiquipedia) 
+            {
+                playerAkaData.liquipedia = null;
+            }
+
+            return playerAkaData;
         }
     }
 }
