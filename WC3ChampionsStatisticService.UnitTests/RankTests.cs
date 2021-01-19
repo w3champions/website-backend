@@ -10,6 +10,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -40,7 +41,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task EmptyRanksDoesNotThrwoBulkWriteException()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
-            var rankHandler = new RankSyncHandler(new RankRepository(MongoClient), matchEventRepository);
+            var rankHandler = new RankSyncHandler(new RankRepository(MongoClient, personalSettingsProvider), matchEventRepository);
 
             await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
 
@@ -51,7 +52,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave()
         {
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America,
@@ -75,7 +76,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave_NotFound()
         {
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.Europe, GameMode.GM_1v1, 0)};
@@ -90,7 +91,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadAndSave_NotDuplicatingWhenGoingUp()
         {
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks1 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.Europe, GameMode.GM_1v1, 0)};
@@ -108,7 +109,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task LoadPlayersOfLeague_RaceBasedMMR()
         {
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank>
@@ -131,7 +132,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task RankIntegrationWithMultipleIds()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
@@ -165,7 +166,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task RaceBasedMMRUpdate()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
@@ -204,7 +205,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task RaceBasedMMRUpdate_DifferentSeason()
         {
             var matchEventRepository = new MatchEventRepository(MongoClient);
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
@@ -241,7 +242,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task ReturnRanks_WhenPlayersHavePersonalSettingsConfigured_MustHaveCorrectPersonalSettings()
         {
             // Arrange
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
             var clanRepository = new ClanRepository(MongoClient);
@@ -284,7 +285,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task ReturnRanks_WhenPlayersDoNotHavePersonalSettingsConfigured_MustHaveNotThrowError()
         {
             // Arrange
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
@@ -316,7 +317,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task ReturnRanks_ClanGetsResolved()
         {
             // Arrange
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
             var clanRepository = new ClanRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
@@ -349,7 +350,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task ReturnRanks_WithRaceSpecificRank()
         {
             // Arrange
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
             var queryHandler = new RankQueryHandler(rankRepository, playerRepository, new ClanRepository(MongoClient));
 
@@ -381,7 +382,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task SearchRanks_WithRaceSpecificRank()
         {
             // Arrange
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank>
@@ -412,7 +413,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         public async Task SearchRanks_WithRaceSpecificRank_DifferentSeasons()
         {
             // Arrange
-            var rankRepository = new RankRepository(MongoClient);
+            var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
             var playerRepository = new PlayerRepository(MongoClient);
 
             var ranks = new List<Rank>

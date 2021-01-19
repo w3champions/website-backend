@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using NUnit.Framework;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -13,10 +14,13 @@ namespace WC3ChampionsStatisticService.UnitTests
         // protected readonly MongoClient MongoClient = new MongoClient("mongodb://localhost:27017/");
         protected readonly MongoClient MongoClient = new MongoClient("mongodb://157.90.1.251:3512/");
 
+        protected PersonalSettingsProvider personalSettingsProvider;
+
         [SetUp]
         public async Task Setup()
         {
             await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service");
+            personalSettingsProvider= new PersonalSettingsProvider(MongoClient);
         }
 
         protected async Task InsertMatchEvents(List<MatchFinishedEvent> newEvents)

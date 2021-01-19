@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
@@ -13,15 +15,18 @@ namespace W3ChampionsStatisticService.Ladder
         private readonly IRankRepository _rankRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly RankQueryHandler _rankQueryHandler;
+        private readonly PlayerAkaProvider _playerAkaProvider;
 
         public LadderController(
             IRankRepository rankRepository,
             IPlayerRepository playerRepository,
-            RankQueryHandler rankQueryHandler)
+            RankQueryHandler rankQueryHandler,
+            PlayerAkaProvider playerAkaProvider)
         {
             _rankRepository = rankRepository;
             _playerRepository = playerRepository;
             _rankQueryHandler = rankQueryHandler;
+            _playerAkaProvider = playerAkaProvider;
         }
 
         [HttpGet("search")]
@@ -45,6 +50,14 @@ namespace W3ChampionsStatisticService.Ladder
             if (playersInLadder == null)
             {
                 return NoContent();
+            }
+
+            foreach (var entityInLadder in playersInLadder)
+            {
+                foreach (var playerInLadder in entityInLadder.PlayersInfo)
+                {
+                    playerInLadder.PlayerAkaData = _playerAkaProvider.getAkaData(playerInLadder.BattleTag.ToLower());
+                }
             }
 
             return Ok(playersInLadder);

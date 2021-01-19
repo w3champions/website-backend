@@ -34,5 +34,20 @@ namespace W3ChampionsStatisticService.PersonalSettings
             await _personalSettingsRepository.Save(setting);
             return true;
         }
+
+        public async Task<bool> UpdateAkaSettings(string battleTag, SetAkaSettingsCommand command)
+        {
+            var setting = await _personalSettingsRepository.Load(battleTag);
+            if (setting == null)
+            {
+                var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
+                setting = new PersonalSetting(battleTag, new List<PlayerOverallStats> { playerProfile });
+            }
+
+            var result = setting.SetAkaSettings(command);
+
+            await _personalSettingsRepository.Save(setting);
+            return true;
+        }
     }
 }

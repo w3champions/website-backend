@@ -4,21 +4,30 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
     public class RankRepository : MongoDbRepositoryBase, IRankRepository
     {
-        private static CachedData<List<PersonalSettings.PersonalSetting>> personalSettingsCache;
-
-        public RankRepository(MongoClient mongoClient) : base(mongoClient)
+        public RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : base(mongoClient)
         {
-            personalSettingsCache = new CachedData<List<PersonalSettings.PersonalSetting>>(() => FetchPersonalSettings().GetAwaiter().GetResult(), TimeSpan.FromMinutes(10));
+            _personalSettingsProvider = personalSettingsProvider;
         }
+        private PersonalSettingsProvider _personalSettingsProvider;
+        // private static CachedData<List<PersonalSettings.PersonalSetting>> personalSettingsCache;
+
+        // public RankRepository(MongoClient mongoClient) : base(mongoClient)
+        // {
+        //     personalSettingsCache = new CachedData<List<PersonalSettings.PersonalSetting>>(() => FetchPersonalSettings().GetAwaiter().GetResult(), TimeSpan.FromMinutes(10));
+        // }
+        // public Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
+        // {
+        //     return LoadAll<PersonalSettings.PersonalSetting>();
+        // }
 
         public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
         {
@@ -31,7 +40,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
         {
-            var personalSettings = personalSettingsCache.GetCachedData();
+            var personalSettings = _personalSettingsProvider.getPersonalSettings();
 
             var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
 
@@ -103,9 +112,5 @@ namespace W3ChampionsStatisticService.Ladder
             return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
         }
 
-        public Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
-        {
-            return LoadAll<PersonalSettings.PersonalSetting>();
-        }
     }
 }
