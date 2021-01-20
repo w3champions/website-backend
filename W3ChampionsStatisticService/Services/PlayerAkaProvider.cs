@@ -50,34 +50,52 @@ namespace W3ChampionsStatisticService.Services
             if (aka != null) {
                 return aka.player;
             }
-            return null; // returns null if the player is not in the database
+            return new Player(); // returns an default values if they are not in the database
         }
 
         public Player GetAkaDataByPreferences(string battletag, PersonalSetting settings)
         {
-            var playerAkaData = GetPlayerAkaData(battletag.ToLower()) ?? new Player();
-
-            if (settings == null || settings.AliasSettings == null)
+            var playerAkaData = getAkaData(battletag.ToLower());
+            var cleanAkaData = getAkaData(battletag.ToLower());;
+            
+            if (settings != null && settings.AliasSettings != null)  // Strip the data if the player doesn't want it shown.
             {
-                return playerAkaData;
-            }
+                Console.WriteLine("Settings not null");
+                if (!settings.AliasSettings.showAka) {
+                    playerAkaData.name = null; 
+                    playerAkaData.main_race = null; 
+                    playerAkaData.country = null;
+                    Console.WriteLine("ShowAka was false");
+                } else 
+                {
+                    playerAkaData.name = cleanAkaData.name;
+                    playerAkaData.main_race = cleanAkaData.main_race;
+                    playerAkaData.country = cleanAkaData.country;
+                    Console.WriteLine("ShowAka was true");
+                }
+            
+                if (!settings.AliasSettings.showW3info) 
+                {
+                    playerAkaData.id = 0;
+                    Console.WriteLine("ShowW3info was false");
+                } else 
+                {
+                    playerAkaData.id = cleanAkaData.id;
+                    Console.WriteLine("ShowW3info was true");
+                }
+            
+                if (!settings.AliasSettings.showLiquipedia) 
+                {
+                    playerAkaData.liquipedia = null;
+                    Console.WriteLine("ShowLiquipedia was false");
+                } else 
+                {
+                    playerAkaData.liquipedia = cleanAkaData.liquipedia;
+                    Console.WriteLine("ShowLiquipedia was true");
+                }
 
-            if (!settings.AliasSettings.showAka) {
-                playerAkaData.name = null; 
-                playerAkaData.main_race = null; 
-                playerAkaData.country = null;
             }
             
-            if (!settings.AliasSettings.showW3info) 
-            {
-                playerAkaData.id = 0;
-            }
-            
-            if (!settings.AliasSettings.showLiquipedia) 
-            {
-                playerAkaData.liquipedia = null;
-            }
-
             return playerAkaData;
         }
     }
