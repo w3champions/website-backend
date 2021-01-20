@@ -55,45 +55,29 @@ namespace W3ChampionsStatisticService.Services
 
         public Player GetAkaDataByPreferences(string battletag, PersonalSetting settings)
         {
-            var playerAkaData = getAkaData(battletag.ToLower());
-            var cleanAkaData = getAkaData(battletag.ToLower());;
+            var playerAkaData = GetPlayerAkaData(battletag.ToLower());
             
             if (settings != null && settings.AliasSettings != null)  // Strip the data if the player doesn't want it shown.
             {
-                Console.WriteLine("Settings not null");
-                if (!settings.AliasSettings.showAka) {
-                    playerAkaData.name = null; 
-                    playerAkaData.main_race = null; 
-                    playerAkaData.country = null;
-                    Console.WriteLine("ShowAka was false");
-                } else 
-                {
-                    playerAkaData.name = cleanAkaData.name;
-                    playerAkaData.main_race = cleanAkaData.main_race;
-                    playerAkaData.country = cleanAkaData.country;
-                    Console.WriteLine("ShowAka was true");
+                var modifiedAka = new Player();
+
+                if (settings.AliasSettings.showAka) {
+                    modifiedAka.name = playerAkaData.name;
+                    modifiedAka.main_race = playerAkaData.main_race;
+                    modifiedAka.country = playerAkaData.country;
                 }
             
-                if (!settings.AliasSettings.showW3info) 
+                if (settings.AliasSettings.showW3info) 
                 {
-                    playerAkaData.id = 0;
-                    Console.WriteLine("ShowW3info was false");
-                } else 
-                {
-                    playerAkaData.id = cleanAkaData.id;
-                    Console.WriteLine("ShowW3info was true");
+                    modifiedAka.id = playerAkaData.id;
                 }
             
-                if (!settings.AliasSettings.showLiquipedia) 
+                if (settings.AliasSettings.showLiquipedia) 
                 {
-                    playerAkaData.liquipedia = null;
-                    Console.WriteLine("ShowLiquipedia was false");
-                } else 
-                {
-                    playerAkaData.liquipedia = cleanAkaData.liquipedia;
-                    Console.WriteLine("ShowLiquipedia was true");
+                    modifiedAka.liquipedia = playerAkaData.liquipedia;
                 }
 
+                return modifiedAka;
             }
             
             return playerAkaData;
