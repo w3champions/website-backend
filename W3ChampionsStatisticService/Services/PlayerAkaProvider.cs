@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.Services
         }
 
         
-        public Player getAkaData(string battleTag) // string should be received all lower-case.
+        public Player GetPlayerAkaData(string battleTag) // string should be received all lower-case.
         {
             var akas = PlayersAkaCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
@@ -55,14 +55,12 @@ namespace W3ChampionsStatisticService.Services
 
         public Player GetAkaDataByPreferences(string battletag, PersonalSetting settings)
         {
-            if (settings == null)
+            var playerAkaData = GetPlayerAkaData(battletag.ToLower()) ?? new Player();
+
+            if (settings == null || settings.AliasSettings == null)
             {
-                return new Player();
+                return playerAkaData;
             }
-
-            var playerAkaData = getAkaData(battletag.ToLower()) ?? new Player();
-
-            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(playerAkaData));
 
             if (!settings.AliasSettings.showAka) {
                 playerAkaData.name = null; 
