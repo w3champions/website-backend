@@ -15,6 +15,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         {
             Id = battleTag;
             Players = players ?? new List<PlayerOverallStats>();
+            AliasSettings = new AkaSettings();
         }
 
         public string ProfileMessage { get; set; }

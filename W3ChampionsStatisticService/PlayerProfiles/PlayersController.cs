@@ -54,6 +54,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 player = PlayerOverallStats.Create(battleTag);
             }
             
+            // Akas are stored in cache - preferences for showing akas are stored in DB
             var settings = await _personalSettingsRepository.Load(battleTag);
             player.PlayerAkaData = _playerAkaProvider.GetAkaDataByPreferences(battleTag, settings);
 
@@ -141,7 +142,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         [HttpGet("{battleTag}/aka")]
         public IActionResult GetPlayerAka([FromRoute] string battleTag)
         {
-            var player = _playerAkaProvider.getAkaData(battleTag.ToLower());
+            var player = _playerAkaProvider.GetPlayerAkaData(battleTag.ToLower());
             return Ok(player);
         }
     }

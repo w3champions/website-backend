@@ -56,7 +56,7 @@ namespace W3ChampionsStatisticService.Ladder
             {
                 foreach (var playerInLadder in entityInLadder.PlayersInfo)
                 {
-                    playerInLadder.PlayerAkaData = _playerAkaProvider.getAkaData(playerInLadder.BattleTag.ToLower());
+                    playerInLadder.PlayerAkaData = _playerAkaProvider.GetPlayerAkaData(playerInLadder.BattleTag.ToLower());
                 }
             }
 

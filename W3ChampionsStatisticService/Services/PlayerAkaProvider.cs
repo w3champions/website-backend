@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.Services
         }
 
         
-        public Player getAkaData(string battleTag) // string should be received all lower-case.
+        public Player GetPlayerAkaData(string battleTag) // string should be received all lower-case.
         {
             var akas = PlayersAkaCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
@@ -50,36 +50,36 @@ namespace W3ChampionsStatisticService.Services
             if (aka != null) {
                 return aka.player;
             }
-            return null; // returns null if the player is not in the database
+            return new Player(); // returns an default values if they are not in the database
         }
 
         public Player GetAkaDataByPreferences(string battletag, PersonalSetting settings)
         {
-            if (settings == null)
+            var playerAkaData = GetPlayerAkaData(battletag.ToLower());
+            
+            if (settings != null && settings.AliasSettings != null)  // Strip the data if the player doesn't want it shown.
             {
-                return new Player();
-            }
+                var modifiedAka = new Player();
 
-            var playerAkaData = getAkaData(battletag.ToLower()) ?? new Player();
+                if (settings.AliasSettings.showAka) {
+                    modifiedAka.name = playerAkaData.name;
+                    modifiedAka.main_race = playerAkaData.main_race;
+                    modifiedAka.country = playerAkaData.country;
+                }
+            
+                if (settings.AliasSettings.showW3info) 
+                {
+                    modifiedAka.id = playerAkaData.id;
+                }
+            
+                if (settings.AliasSettings.showLiquipedia) 
+                {
+                    modifiedAka.liquipedia = playerAkaData.liquipedia;
+                }
 
-            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(playerAkaData));
-
-            if (!settings.AliasSettings.showAka) {
-                playerAkaData.name = null; 
-                playerAkaData.main_race = null; 
-                playerAkaData.country = null;
+                return modifiedAka;
             }
             
-            if (!settings.AliasSettings.showW3info) 
-            {
-                playerAkaData.id = 0;
-            }
-            
-            if (!settings.AliasSettings.showLiquipedia) 
-            {
-                playerAkaData.liquipedia = null;
-            }
-
             return playerAkaData;
         }
     }
