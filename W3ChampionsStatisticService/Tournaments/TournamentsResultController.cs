@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Tournaments.TournamentResults;
 
@@ -20,17 +21,49 @@ namespace W3ChampionsStatisticService.Tournaments
             var tournaments = await _tournamentsRepository.GetAll();
 
             var playerParticipation = new PlayerParticipation(battleTag);
+            
             foreach (var tournament in tournaments)
             {
-                foreach (var loserBracketRound in tournament.LoserBracketRounds)
+                if (tournament.First == battleTag)
                 {
-                    foreach (var tournamentMatch in loserBracketRound.Matches)
-                    {
-                    }
+                    var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.First);
+                    playerParticipation.ParticipatedIn.Add(participation);
+                    continue;
+                }
+                
+                if (tournament.Second == battleTag)
+                {
+                    var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.Second);
+                    playerParticipation.ParticipatedIn.Add(participation);
+                    continue;
+                }
+                
+                if (tournament.Third == battleTag)
+                {
+                    var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.Third);
+                    playerParticipation.ParticipatedIn.Add(participation);
+                    continue;
+                }
+                
+                if (tournament.Forth == battleTag)
+                {
+                    var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.Forth);
+                    playerParticipation.ParticipatedIn.Add(participation);
+                    continue;
+                }
+                
+                if (tournament.ThirdAndForth?.Contains(battleTag) == true)
+                {
+                    var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.ThirdAndForth);
+                    playerParticipation.ParticipatedIn.Add(participation);
+                    continue;
                 }
 
-                var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.First);
-                playerParticipation.ParticipatedIn.Add(participation);
+                if (tournament.Participants?.Contains(battleTag) == true)
+                {
+                    var participation = new PlayerTournamentParticipation(tournament.ObjectId, TournamentPlacement.Participated);
+                    playerParticipation.ParticipatedIn.Add(participation);
+                }
             }
 
             return Ok(playerParticipation);

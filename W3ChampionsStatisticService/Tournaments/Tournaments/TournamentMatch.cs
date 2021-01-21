@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.Tournaments.Tournaments
@@ -12,6 +13,7 @@ namespace W3ChampionsStatisticService.Tournaments.Tournaments
         public List<TournamentPlayer> Players { get; set; }
 
         [BsonIgnore]
+        [JsonIgnore]
         public string Winner
         {
             get
@@ -22,5 +24,9 @@ namespace W3ChampionsStatisticService.Tournaments.Tournaments
                 return Players.OrderByDescending(p => p.Score).FirstOrDefault()?.BattleTag;
             }
         }
+
+        [BsonIgnore]
+        [JsonIgnore]
+        public string Looser => Players.FirstOrDefault(p => p.BattleTag != Winner)?.BattleTag;
     }
 }

@@ -10,7 +10,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void TournamentMatch_WinnerProp_NoWinnerYet()
         {
-            var tournamentMatch = new TournamentMatch()
+            var tournamentMatch = new TournamentMatch
             {
                 Players = new List<TournamentPlayer>
                 {
@@ -30,7 +30,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void TournamentMatch_WinnerProp_NoWinnerYetWithNumbers()
         {
-            var tournamentMatch = new TournamentMatch()
+            var tournamentMatch = new TournamentMatch
             {
                 Players = new List<TournamentPlayer>
                 {
@@ -53,7 +53,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void TournamentMatch_WinnerProp_Winner()
         {
-            var tournamentMatch = new TournamentMatch()
+            var tournamentMatch = new TournamentMatch
             {
                 Players = new List<TournamentPlayer>
                 {
@@ -71,12 +71,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             };
 
             Assert.AreEqual("peter#123", tournamentMatch.Winner);
+            Assert.AreEqual("wolf#456", tournamentMatch.Looser);
         }
 
         [Test]
         public void TournamentMatch_WinnerProp_PlayerForfeit()
         {
-            var tournamentMatch = new TournamentMatch()
+            var tournamentMatch = new TournamentMatch
             {
                 Players = new List<TournamentPlayer>
                 {
@@ -94,6 +95,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             };
 
             Assert.AreEqual("wolf#456", tournamentMatch.Winner);
+            Assert.AreEqual("peter#123", tournamentMatch.Looser);
         }
 
         [Test]
@@ -122,7 +124,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void TournamentMatch_WinnerProp_AdminMadeABooboo()
         {
-            var tournamentMatch = new TournamentMatch()
+            var tournamentMatch = new TournamentMatch
             {
                 Players = new List<TournamentPlayer>
                 {

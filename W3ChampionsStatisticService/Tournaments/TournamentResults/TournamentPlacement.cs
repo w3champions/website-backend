@@ -2,6 +2,7 @@
 {
     public enum TournamentPlacement
     {
-        First, Second, Third, Forth, Participated
+        First, Second, Third, Forth, Participated,
+        ThirdAndForth
     }
 }
