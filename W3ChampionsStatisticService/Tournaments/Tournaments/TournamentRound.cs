@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace W3ChampionsStatisticService.Tournaments.Models
+namespace W3ChampionsStatisticService.Tournaments.Tournaments
 {
     public class TournamentRound
     {

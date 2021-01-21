@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using W3ChampionsStatisticService.Tournaments.Models;
+using W3ChampionsStatisticService.Tournaments.Tournaments;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {

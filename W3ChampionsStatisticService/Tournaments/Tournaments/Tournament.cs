@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 
-namespace W3ChampionsStatisticService.Tournaments.Models
+namespace W3ChampionsStatisticService.Tournaments.Tournaments
 {
     public class Tournament
     {

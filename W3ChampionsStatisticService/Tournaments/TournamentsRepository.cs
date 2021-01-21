@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.ReadModelBase;
-using W3ChampionsStatisticService.Tournaments.Models;
+using W3ChampionsStatisticService.Tournaments.Tournaments;
 
 namespace W3ChampionsStatisticService.Tournaments
 {

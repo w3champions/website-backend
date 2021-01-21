@@ -1,4 +1,4 @@
-﻿namespace W3ChampionsStatisticService.Tournaments.Models
+﻿namespace W3ChampionsStatisticService.Tournaments.Tournaments
 {
     public enum RoundsConnectionType
     {
