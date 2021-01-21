@@ -5,7 +5,7 @@ using W3ChampionsStatisticService.Tournaments.Tournaments;
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class TournamentTests : IntegrationTestBase
+    public class TournamentTests
     {
         [Test]
         public void TournamentMatch_WinnerProp_NoWinnerYet()
