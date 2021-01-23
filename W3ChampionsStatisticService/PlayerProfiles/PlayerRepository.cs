@@ -58,7 +58,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return UpsertMany(winrate);
         }
 
-
         public async Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode)
         {
             var mongoCollection = CreateCollection<PlayerOverview>();

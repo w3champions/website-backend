@@ -7,6 +7,7 @@
         GM_2v2 = 2,
         GM_4v4 = 4,
         FFA = 5,
-        GM_2v2_AT = 6
+        GM_2v2_AT = 6,
+        CUSTOM = 9
     }
 }

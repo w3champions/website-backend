@@ -7,6 +7,8 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -19,19 +21,22 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
+        private readonly PlayerAkaProvider _playerAkaProvider;
 
         public PlayersController(
             IPlayerRepository playerRepository,
             GameModeStatQueryHandler queryHandler,
             IPersonalSettingsRepository personalSettingsRepository,
             IClanRepository clanRepository,
-            IW3CAuthenticationService authenticationService)
+            IW3CAuthenticationService authenticationService,
+            PlayerAkaProvider playerAkaProvider)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
             _personalSettingsRepository = personalSettingsRepository;
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
+            _playerAkaProvider = playerAkaProvider;
         }
 
         [HttpGet("{battleTag}")]
@@ -45,11 +50,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 {
                     return Unauthorized("Sorry Hackerboi");
                 }
-
+                
                 player = PlayerOverallStats.Create(battleTag);
-                await _playerRepository.UpsertPlayer(player);
             }
+            
+            // Akas are stored in cache - preferences for showing akas are stored in DB
+            var settings = await _personalSettingsRepository.Load(battleTag);
+            player.PlayerAkaData = _playerAkaProvider.GetAkaDataByPreferences(battleTag, settings);
 
+            await _playerRepository.UpsertPlayer(player);
+            
             return Ok(player);
         }
 
@@ -127,6 +137,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
             return Ok(playerMmrRpTimeline);
+        }
+
+        [HttpGet("{battleTag}/aka")]
+        public IActionResult GetPlayerAka([FromRoute] string battleTag)
+        {
+            var player = _playerAkaProvider.GetPlayerAkaData(battleTag.ToLower());
+            return Ok(player);
         }
     }
 

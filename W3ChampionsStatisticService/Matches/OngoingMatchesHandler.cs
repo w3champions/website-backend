@@ -29,20 +29,24 @@ namespace W3ChampionsStatisticService.Matches
             {
                 foreach (var nextEvent in nextEvents)
                 {
-                    var matchup = OnGoingMatchup.Create(nextEvent);
-
-                    foreach (var team in matchup.Teams)
-                    foreach (var player in team.Players)
+                    if (nextEvent.match.gameMode != CommonValueObjects.GameMode.CUSTOM)
                     {
-                        var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
-                        if (foundMatchForPlayer != null)
-                            await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
+                        var matchup = OnGoingMatchup.Create(nextEvent);
 
-                        var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
-                        if (personalSettings != null) player.CountryCode = personalSettings.CountryCode;
+                        foreach (var team in matchup.Teams)
+                            foreach (var player in team.Players)
+                            {
+                                var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
+                                if (foundMatchForPlayer != null)
+                                    await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
+
+                                var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
+                                if (personalSettings != null) player.CountryCode = personalSettings.CountryCode;
+                            }
+
+                        await _matchRepository.InsertOnGoingMatch(matchup);
                     }
-
-                    await _matchRepository.InsertOnGoingMatch(matchup);
+ 
                     await _eventRepository.DeleteStartedEvent(nextEvent.Id);
                 }
 

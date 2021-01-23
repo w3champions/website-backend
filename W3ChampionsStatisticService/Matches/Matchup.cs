@@ -30,6 +30,8 @@ namespace W3ChampionsStatisticService.Matches
         public int Season { get; set; }
         public long? Number { get; set; }
 
+        public ServerInfo ServerInfo { get; set; } = new ServerInfo();
+
         [JsonIgnore]
         public string Team1Players { get; set; }
         [JsonIgnore]
@@ -63,10 +65,33 @@ namespace W3ChampionsStatisticService.Matches
                 Season = match.season
             };
 
+            result.SetServerInfo(match);
+
             var players = match.players
                 .OrderByDescending(x => x.won)
                 .ThenBy(x => x.team)
                 .ToList();
+
+            foreach (var player in players)
+            {
+                if (player.race == Race.RnD)
+                {
+                    PlayerBlizzard resultPlayer = null;
+                    player.rndRace = Race.RnD;
+
+                    if (matchFinishedEvent.result != null)
+                    {
+                        resultPlayer = matchFinishedEvent.result.players?.FirstOrDefault(p => p.battleTag == player.battleTag);
+                    }
+
+                    if (resultPlayer != null)
+                    {
+                        // If the player chose random for the match,
+                        // set their actual randomized race from the result.
+                        player.rndRace = player.race.FromRaceId((RaceId)resultPlayer.raceId);
+                    }
+                }
+            }
 
             var teamGroups = SplitPlayersIntoTeams(players, match.gameMode);
 
@@ -83,6 +108,37 @@ namespace W3ChampionsStatisticService.Matches
             return result;
         }
 
+        protected void SetServerInfo(IMatchServerInfo matchServerInfo)
+        {
+            ServerInfo.Provider = matchServerInfo.serverProvider;
+
+            if (matchServerInfo.floNode != null)
+            {
+                ServerInfo.NodeId = matchServerInfo.floNode.id;
+                ServerInfo.Name = matchServerInfo.floNode.name;
+                ServerInfo.CountryCode = matchServerInfo.floNode.countryId;
+                ServerInfo.Location = matchServerInfo.floNode.location;
+
+                foreach (var matchPlayer in matchServerInfo.PlayersServerInfo)
+                {
+                    if (matchPlayer.floPings != null)
+                    {
+                        var nodePing = matchPlayer.floPings.FirstOrDefault(x => x.nodeId == ServerInfo.NodeId);
+                        if (nodePing != null)
+                        {
+                            var playerServerInfo = new PlayerServerInfo()
+                            {
+                                BattleTag = matchPlayer.battleTag,
+                                CurrentPing = nodePing.currentPing,
+                                AveragePing = nodePing.avgPing
+                            };
+                            ServerInfo.PlayerServerInfos.Add(playerServerInfo);
+                        }
+                    }
+                }
+            }
+        }
+
         protected static Dictionary<int, List<T>> SplitPlayersIntoTeams<T>(List<T> players, GameMode gameMode)
             where T: UnfinishedMatchPlayer
         {
@@ -92,7 +148,7 @@ namespace W3ChampionsStatisticService.Matches
             if (teams.Count() == 1)
             {
                 var totalPlayers = players.Count;
-                var playersInTeam = totalPlayers / GetNumberOfTeamsFromGameMode(gameMode);
+                var playersInTeam = Math.Max(totalPlayers / GetNumberOfTeamsFromGameMode(gameMode), 1);
 
                 int team = 0;
                 for (int i = 0; i < totalPlayers; i += playersInTeam)
@@ -169,7 +225,8 @@ namespace W3ChampionsStatisticService.Matches
                 CurrentMmr = (int?)w.updatedMmr?.rating ?? (int)w.mmr.rating,
                 OldMmr = (int)w.mmr.rating,
                 Won = w.won,
-                Race = w.race
+                Race = w.race,
+                RndRace = w.rndRace
             });
         }
     }

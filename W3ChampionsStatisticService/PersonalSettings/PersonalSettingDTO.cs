@@ -23,5 +23,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string Country { get; set; }
 
         public string CountryCode { get; set; }
+
+        public AkaSettings AliasSettings { get; set; }
     }
 }

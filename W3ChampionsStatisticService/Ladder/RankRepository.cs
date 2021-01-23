@@ -7,14 +7,27 @@ using MongoDB.Driver;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder
 {
     public class RankRepository : MongoDbRepositoryBase, IRankRepository
     {
-        public RankRepository(MongoClient mongoClient) : base(mongoClient)
+        public RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : base(mongoClient)
         {
+            _personalSettingsProvider = personalSettingsProvider;
         }
+        private PersonalSettingsProvider _personalSettingsProvider;
+        // private static CachedData<List<PersonalSettings.PersonalSetting>> personalSettingsCache;
+
+        // public RankRepository(MongoClient mongoClient) : base(mongoClient)
+        // {
+        //     personalSettingsCache = new CachedData<List<PersonalSettings.PersonalSetting>>(() => FetchPersonalSettings().GetAwaiter().GetResult(), TimeSpan.FromMinutes(10));
+        // }
+        // public Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
+        // {
+        //     return LoadAll<PersonalSettings.PersonalSetting>();
+        // }
 
         public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
         {
@@ -23,6 +36,18 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Gateway == gateWay
                 && rank.GameMode == gameMode
                 && rank.Season == season);
+        }
+
+        public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
+        {
+            var personalSettings = _personalSettingsProvider.getPersonalSettings();
+
+            var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
+
+            return await JoinWith(rank => rank.Gateway == gateWay
+                    && rank.GameMode == gameMode
+                    && rank.Season == season
+                    && (battleTags.Contains(rank.Player1Id) || battleTags.Contains(rank.Player2Id)));
         }
 
         public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
@@ -86,5 +111,6 @@ namespace W3ChampionsStatisticService.Ladder
         {
             return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
         }
+
     }
 }

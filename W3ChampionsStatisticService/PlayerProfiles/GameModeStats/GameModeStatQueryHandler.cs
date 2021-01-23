@@ -53,11 +53,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             {
                 if (rank.RankNumber == 0) return;
                 var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
-                var league = leagueConstellation.Leagues.Single(l => l.Id == rank.League);
+
+                // There are some Ranks with Leagues that do not exist in
+                // Season 0 LeagueConstellations, which we should ignore.
+                // (Data integrity issue)
+                var league = leagueConstellation.Season == 0
+                    ? leagueConstellation.Leagues.SingleOrDefault(l => l.Id == rank.League)
+                    : leagueConstellation.Leagues.Single(l => l.Id == rank.League);
+
+                if (league == null) return;
+
 
                 var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
 
                 if (gameModeStat == null) return;
+            
 
                 gameModeStat.Division = league.Division;
                 gameModeStat.LeagueOrder = league.Order;

@@ -23,6 +23,8 @@ namespace W3ChampionsStatisticService.Matches
                 StartTime = startTime,
             };
 
+            result.SetServerInfo(match);
+
             var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
 
             foreach (var team in teamGroups)

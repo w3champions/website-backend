@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Clans;
@@ -51,9 +52,13 @@ namespace W3ChampionsStatisticService
                 c.Filters.Add<ValidationExceptionFilter>();
             });
 
+            services.AddSwaggerGen(f => {
+                f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1"});
+            });
+
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
             var startPadSync = Environment.GetEnvironmentVariable("START_PAD_SYNC");
-            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://176.28.16.249:3513";
+            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27018";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
@@ -62,12 +67,14 @@ namespace W3ChampionsStatisticService
             services.AddSpecialBsonRegistrations();
 
             services.AddSingleton<TrackingService>();
+            services.AddSingleton<PlayerAkaProvider>();
+            services.AddSingleton<PersonalSettingsProvider>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<TournamentsRepository, TournamentsRepository>();
-            services.AddTransient<IPlayerRepository, PlayerRepository>();
+            services.AddSingleton<IPlayerRepository, PlayerRepository>();
             services.AddTransient<IRankRepository, RankRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
@@ -109,7 +116,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
                 services.AddReadModelService<PlayerMmrRpTimelineHandler>();
 
-                // Generell Stats
+                // General Stats
                 services.AddReadModelService<GamesPerDayHandler>();
                 services.AddReadModelService<GameLengthStatHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
@@ -152,6 +159,11 @@ namespace W3ChampionsStatisticService
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+            });
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "w3champions");
             });
         }
     }

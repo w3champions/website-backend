@@ -1,64 +1,72 @@
 name: $(Build.BuildID)
 
 pool:
-  vmImage: 'ubuntu-18.04'
+  vmImage: "ubuntu-18.04"
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+  - group: Secrets
 
 steps:
+  - task: PowerShell@2
+    displayName: set docker and pipeline tag
+    env:
+      AZURE_DEVOPS_EXT_PAT: $(AZURE_CLI)
+    inputs:
+      targetType: "inline"
+      script: |
+        if(!("$(Build.Reason)".Equals("PullRequest"))){
+          Write-Host "##vso[task.setvariable variable=TAG]$(Build.BuildID)"
+          Write-Host "##vso[task.setvariable variable=IS_LATEST]latest"
+          Write-Host "Masterversion: $(Build.BuildID)"
+        } else {
+          Write-Host "##vso[task.setvariable variable=TAG]dev-$(System.PullRequest.PullRequestNumber)"
+          Write-Host "##vso[task.setvariable variable=IS_LATEST]"
+          Write-Host "PR-Version: dev-$(System.PullRequest.PullRequestNumber)"
+          if("$(System.PullRequest.SourceBranch)".StartsWith("DEPLOY_")) {
+            $pr_name = "$(System.PullRequest.SourceBranch)".Split("_")[1]
+            Write-Host "##vso[task.setvariable variable=PR_NAME]$pr_name"
 
-- task: PowerShell@2
-  inputs:
-    targetType: 'inline'
-    script: |
-      if(!("$(Build.Reason)".Equals("PullRequest"))){
-        Write-Host "##vso[task.setvariable variable=BuildVersioning]$(Build.BuildID)"
-        Write-Host "##vso[task.setvariable variable=IsLatest]latest"
-        Write-Host "Masterversion: $(Build.BuildID)"
-      } else {
-        Write-Host "##vso[task.setvariable variable=BuildVersioning]dev-$(System.PullRequest.PullRequestNumber)"
-        Write-Host "##vso[task.setvariable variable=IsLatest]"
-        Write-Host "PR-Version: dev-$(System.PullRequest.PullRequestNumber)"
-      }
+            az pipelines build tag add --build-id $(Build.BuildID) --tags pr-deployment --organization https://dev.azure.com/w3champions/ --project w3champions
+          }
+        }
 
-- task: UseDotNet@2
-  inputs:
-    packageType: 'sdk'
-    version: '5.0.x'
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'restore'
-    feedsToUse: 'select'
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'build'
-- task: DotNetCoreCLI@2
-  inputs:
-    command: 'test'
+  - task: qetza.replacetokens.replacetokens-task.replacetokens@3
+    displayName: 'Replace tokens'
+    inputs:
+      targetFiles: |
+        **/*.token.yml => *.yml
 
-- task: Docker@2
-  inputs:
-    containerRegistry: 'official-docker-modmoto'
-    repository: 'modmoto/w3champions-statistic-service'
-    command: 'buildAndPush'
-    Dockerfile: '**/Dockerfile'
-    buildContext: '.'
-    tags: |
-      $(BuildVersioning)
-      $(IsLatest)
+  - task: UseDotNet@2
+    inputs:
+      packageType: 'sdk'
+      version: '5.0.x'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'restore'
+      feedsToUse: 'select'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'build'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
 
-- task: CopyFiles@2
-  inputs:
-    Contents: 'test.env'
-    TargetFolder: '$(build.artifactstagingdirectory)'
-    OverWrite: true
-    flattenFolders: true
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'official-docker-modmoto'
+      repository: 'modmoto/w3champions-statistic-service'
+      command: 'buildAndPush'
+      Dockerfile: '**/Dockerfile'
+      buildContext: '.'
+      tags: |
+        $(TAG)
 
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
-    publishLocation: 'Container'
+  - task: CopyFiles@2
+    displayName: publish docker-compose files
+    inputs:
+      contents: '**/*docker-compose.yml'
+      targetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
