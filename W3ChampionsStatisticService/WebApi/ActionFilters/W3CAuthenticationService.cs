@@ -13,7 +13,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
         {
             var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri(IdentificationApiUrl);
-            var result = await httpClient.GetAsync($"/api/oauth/battleTag?bearer={bearer}");
+            var result = await httpClient.GetAsync($"/api/oauth/user-info?jwt={bearer}");
             if (result.IsSuccessStatusCode)
             {
                 var content = await result.Content.ReadAsStringAsync();
