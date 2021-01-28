@@ -104,5 +104,13 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
             return Ok();
         }
+
+        [HttpPost("{battleTag}/upvote")]
+        public async Task<int> UpvotePlayer(string battleTag)
+        {
+            var result = await _personalSettingsRepository.Upvote(battleTag);
+
+            return result.Upvotes;
+        }
     }
 }

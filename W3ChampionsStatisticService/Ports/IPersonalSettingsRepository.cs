@@ -8,6 +8,7 @@ namespace W3ChampionsStatisticService.Ports
     public interface IPersonalSettingsRepository
     {
         Task<PersonalSetting> Load(string battletag);
+        Task<PersonalSetting> Upvote(string battletag);
         Task<List<PersonalSetting>> LoadSince(DateTimeOffset from);
         Task<List<PersonalSetting>> LoadMany(string[] battletags);
         Task<List<PersonalSetting>> LoadAll();

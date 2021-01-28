@@ -42,6 +42,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string CountryCode { get; set; }
 
         public string Location { get; set; }
+        
+        public int Upvotes { get; set; }
 
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();

@@ -30,6 +30,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return result;
         }
 
+        public async Task<PersonalSetting> Upvote(string battleTag)
+        {
+            var settings = CreateCollection<PersonalSetting>();
+            return await settings.FindOneAndUpdateAsync(s => s.Id == battleTag, Builders<PersonalSetting>.Update.Inc(s => s.Upvotes, 1));
+        }
+
         public Task<List<PersonalSetting>> LoadSince(DateTimeOffset from)
         {
             return LoadSince<PersonalSetting>(from);
