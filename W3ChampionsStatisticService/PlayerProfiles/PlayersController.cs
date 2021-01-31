@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var player = await _playerRepository.LoadPlayerProfile(battleTag);
             if (player == null && authorization != null)
             {
-                var user = await _authenticationService.GetUserByToken(authorization);
+                var user = _authenticationService.GetUserByToken(authorization);
                 if (user == null)
                 {
                     return Unauthorized("Sorry Hackerboi");
