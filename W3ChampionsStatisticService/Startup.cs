@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Achievements;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -91,6 +92,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<INewsRepository, NewsRepository>();
             services.AddTransient<ILoadingScreenTipsRepository, LoadingScreenTipsRepository>();
             services.AddTransient<ClanCommandHandler>();
+            services.AddTransient<AchievementsEngine>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();

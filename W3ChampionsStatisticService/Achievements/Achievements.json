@@ -1,0 +1,9 @@
+[
+    {
+     "title": "Map with 25 Wins",
+     "caption": "Has won 25 games or more on map: ",
+     "id": 0,
+     "type": "map",
+     "rules": [ "win >= 25" ]
+    }
+]
