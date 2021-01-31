@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             if (queryString.AllKeys.Contains("authorization"))
             {
                 var auth = queryString["authorization"];
-                var res = await _authService.GetUserByToken(auth);
+                var res = _authService.GetUserByToken(auth);
 
                 var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
                 if (actingPlayerContent != null)
