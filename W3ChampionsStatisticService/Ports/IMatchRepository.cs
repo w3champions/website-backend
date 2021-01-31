@@ -12,11 +12,13 @@ namespace W3ChampionsStatisticService.Ports
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
-            int pageSize = 100);
+            int pageSize = 100,
+            string map = "Overall");
 
         Task<long> Count(
             GateWay gateWay = GateWay.Undefined,
-            GameMode gameMode = GameMode.Undefined);
+            GameMode gameMode = GameMode.Undefined,
+            string map = "Overall");
 
         Task Insert(Matchup matchup);
 
@@ -45,11 +47,13 @@ namespace W3ChampionsStatisticService.Ports
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
             int offset = 0,
-            int pageSize = 100);
+            int pageSize = 100,
+            string map = "Overall");
 
         Task<long> CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
-            GateWay gateWay = GateWay.Undefined);
+            GateWay gateWay = GateWay.Undefined,
+            string map = "Overall");
 
         Task EnsureIndices();
     }
