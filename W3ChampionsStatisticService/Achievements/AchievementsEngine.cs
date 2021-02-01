@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.Matches;
-using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Achievements.Models;
 using W3ChampionsStatisticService.CommonValueObjects;
-using Newtonsoft.Json;
 
 namespace W3ChampionsStatisticService.Achievements
 {
@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.Achievements
             _matchRepository = matchRepository;
         }
 
-        public async void Run(string battleTag) {
+        public async Task<Dictionary<string, List<Dictionary<string,string>>>> Run(string battleTag) {
             List<Matchup> allPlayerMatchups = new List<Matchup>(); // this will hold every season's match on specific maps
             var seasons = await GetAllSeasons(); // we want to get the match data across all seasons, let's get all of them 
 
@@ -47,26 +47,37 @@ namespace W3ChampionsStatisticService.Achievements
             var matchupDictionary = CreatePlayerMapDictionary(allPlayerMatchups, battleTag); // holds all match records
             var definedAchievements = GetDefinedAchievements(); // achievements available as created by the W3C team
             var playerAchievements = GetAllPlayerAchievements(definedAchievements, matchupDictionary, battleTag);
-            Dump(playerAchievements);
+            return playerAchievements;
         }
 
-        private Dictionary<string,Dictionary<string,string>> GetAllPlayerAchievements( List<Achievement> definedAchievements,
-         Dictionary<string, Dictionary<string,long>> matchupDictionary, string battleTag) {
-            Dictionary<string,Dictionary<string,string>> playerAchievements = 
-              new Dictionary<string,Dictionary<string,string>>{}; // this will hold all the player achievements that have been gained
+        private Dictionary<string,List<Dictionary<string,string>>> GetAllPlayerAchievements(
+           List<Achievement> definedAchievements,
+           Dictionary<string, Dictionary<string,long>> matchupDictionary, 
+           string battleTag) 
+           {
+            Dictionary<string,List<Dictionary<string,string>>> playerAchievements = 
+              new Dictionary<string,List<Dictionary<string,string>>>{}; // this will hold all the player achievements that have been gained
+
             foreach(Achievement achievement in definedAchievements){
               var type = achievement.Type;
               switch (type) {
                 case "map":
+                
                   foreach(string map in matchupDictionary.Keys){
+
                     if (GetPlayerAchievedMapAchievements(achievement, matchupDictionary[map])){
+
                       if (!playerAchievements.ContainsKey("map")){
-                        string achievementString = "Achieved! " + battleTag;
-                        string achievementCommentString = achievement.caption + map;
-                        playerAchievements["map"] = new Dictionary<string,string>{{achievementString, achievementCommentString}};
+                        playerAchievements["map"] = new List<Dictionary<string,string>>();
                       }
+
+                      var achievementTitle = achievement.Title;
+                      string achievementCommentString = achievement.caption + map;
+                      playerAchievements["map"].Add(new Dictionary<string,string>{{map, achievementCommentString}});
                     }
+
                   }
+
                   break;
               }
             }
@@ -149,7 +160,6 @@ namespace W3ChampionsStatisticService.Achievements
             int pageSize = 100)
         {
             if (pageSize > 100) pageSize = 100;
-            //var matches = await _matchRepository.LoadFor(playerId, opponentId, GateWay.Undefined, GameMode.Undefined, pageSize, offset, season);
             var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, pageSize, offset, season);
             return matches;
         }

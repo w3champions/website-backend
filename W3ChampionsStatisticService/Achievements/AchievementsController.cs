@@ -19,6 +19,9 @@ namespace W3ChampionsStatisticService.Achievements
         }
 
         [HttpGet("{battleTag}")]
-        public void GetPlayerAchievements([FromRoute] string battleTag) => _achievementsEngine.Run(battleTag);
+        public async Task<IActionResult> GetPlayerAchievements([FromRoute] string battleTag) {
+            var achievementsEarned = await _achievementsEngine.Run(battleTag);
+            return Ok(new {achievementsEarned});
+        }
     }
 }
