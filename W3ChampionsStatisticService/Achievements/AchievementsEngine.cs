@@ -73,7 +73,7 @@ namespace W3ChampionsStatisticService.Achievements
 
                       var achievementTitle = achievement.Title;
                       string achievementCommentString = achievement.caption + map;
-                      playerAchievements["map"].Add(new Dictionary<string,string>{{map, achievementCommentString}});
+                      playerAchievements["map"].Add(new Dictionary<string,string>{{achievementTitle, achievementCommentString}});
                     }
 
                   }
