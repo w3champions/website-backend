@@ -46,7 +46,7 @@ namespace W3ChampionsStatisticService.PadEvents
         public async Task<List<Queue>> GetLiveQueueData()
         {
             var httpClient = new HttpClient();
-            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots");
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={MatchmakingAdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
