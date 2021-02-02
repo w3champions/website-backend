@@ -4,6 +4,13 @@
      "caption": "Has won 25 games or more on map: ",
      "id": 0,
      "type": "map",
-     "rules": [ "win >= 25" ]
+     "rules": [ "wins >= 25" ]
+    },
+    {
+     "title": "Played AT with 5 different partners",
+     "caption": "Has played AT with 5 different partners",
+     "id": 1,
+     "type": "partner",
+     "rules": [ "partners >= 5" ]
     }
 ]

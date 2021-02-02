@@ -44,15 +44,17 @@ namespace W3ChampionsStatisticService.Achievements
               }
             }
 
-            var matchupDictionary = CreatePlayerMapDictionary(allPlayerMatchups, battleTag); // holds all match records
+            var perMapData = ExportPlayerMapData(allPlayerMatchups, battleTag); // holds all match records
+            ExportPlayerArrangedTeamData(allPlayerMatchups, battleTag); // holds all match records
             var definedAchievements = GetDefinedAchievements(); // achievements available as created by the W3C team
-            var playerAchievements = GetAllPlayerAchievements(definedAchievements, matchupDictionary, battleTag);
+            var playerAchievements = GetAllPlayerAchievements(definedAchievements, perMapData, battleTag);
+
             return playerAchievements;
         }
 
         private Dictionary<string,List<Dictionary<string,string>>> GetAllPlayerAchievements(
            List<Achievement> definedAchievements,
-           Dictionary<string, Dictionary<string,long>> matchupDictionary, 
+           PlayerMatchupMapData matchupDictionary, 
            string battleTag) 
            {
             Dictionary<string,List<Dictionary<string,string>>> playerAchievements = 
@@ -63,9 +65,9 @@ namespace W3ChampionsStatisticService.Achievements
               switch (type) {
                 case "map":
                 
-                  foreach(string map in matchupDictionary.Keys){
+                  foreach(string map in matchupDictionary.PerMapData.Keys){
 
-                    if (GetPlayerAchievedMapAchievements(achievement, matchupDictionary[map])){
+                    if (GetPlayerAchievedMapAchievements(achievement, matchupDictionary.PerMapData[map])){
 
                       if (!playerAchievements.ContainsKey("map")){
                         playerAchievements["map"] = new List<Dictionary<string,string>>();
@@ -77,18 +79,53 @@ namespace W3ChampionsStatisticService.Achievements
                     }
 
                   }
-
                   break;
+               // case "player":
+               // 
+               //   foreach(string map in matchupDictionary.Keys){
+
+               //     if (GetPlayerAchievedMapAchievements(achievement, matchupDictionary[map])){
+
+               //       if (!playerAchievements.ContainsKey("map")){
+               //         playerAchievements["map"] = new List<Dictionary<string,string>>();
+               //       }
+
+               //       var achievementTitle = achievement.Title;
+               //       string achievementCommentString = achievement.caption + map;
+               //       playerAchievements["map"].Add(new Dictionary<string,string>{{achievementTitle, achievementCommentString}});
+               //     }
+
+               //   }
+
+               //   break;
               }
             }
             return playerAchievements;
         }
 
-        private bool GetPlayerAchievedMapAchievements(Achievement achievement, Dictionary<string,long> mapStats) {
+        private long? TranslatePartOfRule(string fromRule, PlayerMatchupPerMapData mapStats) {
+          switch (fromRule){
+            case "wins":
+              return mapStats.NumberOfWins;
+            case "losses":
+              return mapStats.NumberOfLosses;
+            case "amountoftimeplayed":
+              return mapStats.AmountOfTimePlayedInSeconds;
+            default:
+              break;
+          }
+          return null;
+        }
+
+        private bool GetPlayerAchievedMapAchievements(Achievement achievement, PlayerMatchupPerMapData mapStats) {
           var rules = achievement.Rules;
           foreach(string rule in rules){
             var ruleChunks = SplitRule(rule);
-            var val1 = mapStats[ruleChunks[0]]; // expecting "wins", "losses", or "amountoftimeplayed"
+            var translation = TranslatePartOfRule(ruleChunks[0], mapStats); // expecting "wins", "losses", or "amountoftimeplayed"
+            var val1 = new long();
+            if (translation != null) {
+              val1 = translation.GetValueOrDefault();
+            }
             var logicOperatorString = ruleChunks[1]; // expecting ">" || "<" || ">=" || "<=" || "=="
             var val2 = long.Parse(ruleChunks[2]); // expecting an int value so we can convert it
             if (!CheckRuleBasedOnLogic(val1, val2, logicOperatorString)) {
@@ -118,36 +155,75 @@ namespace W3ChampionsStatisticService.Achievements
           return rule.Split(' ');
         }
 
-        private Dictionary<string,Dictionary<string,long>> CreatePlayerMapDictionary(List<Matchup> matches, string battleTag) {
-            Dictionary<string,Dictionary<string,long>> matchupDictionary = new Dictionary<string,Dictionary<string,long>>{};
+        private PlayerMatchupMapData ExportPlayerMapData(List<Matchup> matches, string battleTag) {
+            PlayerMatchupMapData mapData = new PlayerMatchupMapData();
+            mapData.PerMapData = new Dictionary<string,PlayerMatchupPerMapData>();
+            Dump(mapData);
             foreach(Matchup matchup in matches) {
                 var map = matchup.Map;    
                 var teams = matchup.Teams;
                 var duration = matchup.DurationInSeconds;
-                if (!matchupDictionary.ContainsKey(map)) {
-                  matchupDictionary[map] =  new Dictionary<string,long>(){{"win", 0}, {"loss", 0}, {"amountOfTimePlayed", 0}};
+                if (!mapData.PerMapData.ContainsKey(map)) {
+                  PlayerMatchupPerMapData perMapData = new PlayerMatchupPerMapData();
+                  perMapData.NumberOfWins = 0;
+                  perMapData.NumberOfLosses = 0;
+                  perMapData.AmountOfTimePlayedInSeconds = 0;
+                  mapData.PerMapData[map] = perMapData;
                 }
                 foreach(Team team in teams) {
                   if (team.Won) {
-                    if (DidOurPlayerWin(team, battleTag)) {
-                      matchupDictionary[map]["win"] += 1;
+                    if (OurPlayerOnTeam(team, battleTag)) {
+                      mapData.PerMapData[map].NumberOfWins += 1;
                     } else {
-                      matchupDictionary[map]["loss"] += 1;
+                      mapData.PerMapData[map].NumberOfLosses += 1;
                     }
                   }
                 }
-                matchupDictionary[map]["amountOfTimePlayed"] += duration;
+                mapData.PerMapData[map].AmountOfTimePlayedInSeconds += duration;
             }
-            return matchupDictionary;
+            return mapData;
         }
-
-        private bool DidOurPlayerWin( Team team, string battleTag){
-            foreach(PlayerOverviewMatches player in team.Players) {
-              if (player.BattleTag == battleTag) {
-                return true;
+        //TODO: working here need to probe out the arranged team data
+        private void ExportPlayerArrangedTeamData(List<Matchup> matches, string battleTag) {
+          Dictionary<string,Dictionary<string,long>> arrangedTeamData = new Dictionary<string,Dictionary<string,long>>{};
+          foreach(Matchup matchup in matches) {
+            var gameMode = matchup.GameMode;   // just need to search for gameMode = 6 --- that is AT 2v2
+            if (gameMode != GameMode.GM_2v2) { // looks like 2v2_GM is actually AT, probably should check later
+              continue;
+            }
+            var map = matchup.Map;    
+            var teams = matchup.Teams;
+            var duration = matchup.DurationInSeconds;
+            foreach(Team team in teams) {
+              // look through the teams and see who was on our player's team
+              // add the teammate to the arrangedTeamData, and add the counts per game
+              if (OurPlayerOnTeam(team, battleTag)) {
+                // look through each team player and add them to our list.
+                // if they are already on the list, then add to how many times we saw him
+                var teamMates = GetPlayerTeamMates(team, battleTag);
               }
             }
-            return false;
+          }
+        }
+
+        private List<string> GetPlayerTeamMates(Team team, string battleTag) {
+          List<string> teamMates = new List<string>();
+          var players = team.Players;
+          foreach(PlayerOverviewMatches player in players) {
+            if (player.BattleTag != battleTag) {
+              teamMates.Add(player.BattleTag);
+            }
+          }
+          return teamMates;
+        }
+
+        private bool OurPlayerOnTeam( Team team, string battleTag){
+          foreach(PlayerOverviewMatches player in team.Players) {
+            if (player.BattleTag == battleTag) {
+              return true;
+            }
+          }
+          return false;
         }
 
         private async Task<List<Matchup>> GetAllPlayerMatches(
