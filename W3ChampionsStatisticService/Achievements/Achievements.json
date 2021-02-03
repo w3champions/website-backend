@@ -10,7 +10,7 @@
      "title": "Played AT with 5 different partners",
      "caption": "Has played AT with 5 different partners",
      "id": 1,
-     "type": "partner",
-     "rules": [ "partners >= 5" ]
+     "type": "team",
+     "rules": [ "partnerCount >= 5" ]
     }
 ]
