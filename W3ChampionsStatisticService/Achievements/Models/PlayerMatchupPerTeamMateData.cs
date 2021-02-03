@@ -1,5 +1,3 @@
-using System;
-
 namespace W3ChampionsStatisticService.Achievements.Models  {
     class PlayerAndTeamMateRecordData {
         public long NumberOfWins { get; set; }

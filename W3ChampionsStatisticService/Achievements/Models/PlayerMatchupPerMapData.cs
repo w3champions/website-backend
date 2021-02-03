@@ -1,5 +1,3 @@
-using System;
-
 namespace W3ChampionsStatisticService.Achievements.Models  {
     class PlayerMatchupPerMapData {
         public long NumberOfWins { get; set; }
