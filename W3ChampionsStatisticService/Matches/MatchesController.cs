@@ -24,11 +24,12 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100,
             GameMode gameMode = GameMode.Undefined,
-            GateWay gateWay = GateWay.Undefined)
+            GateWay gateWay = GateWay.Undefined,
+            string map = "Overall")
         {
             if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize);
-            var count = await _matchRepository.Count(gateWay, gameMode);
+            var matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map);
+            var count = await _matchRepository.Count(gateWay, gameMode, map);
             return Ok(new { matches, count });
         }
 
@@ -68,11 +69,12 @@ namespace W3ChampionsStatisticService.Matches
             int offset = 0,
             int pageSize = 100,
             GameMode gameMode = GameMode.Undefined,
-            GateWay gateWay = GateWay.Undefined)
+            GateWay gateWay = GateWay.Undefined,
+            string map = "Overall")
         {
             if (pageSize > 200) pageSize = 200;
-            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize);
-            var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay);
+            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map);
+            var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map);
 
             await _matchQueryHandler.PopulatePlayerInfos(matches);
             

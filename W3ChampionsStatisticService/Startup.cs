@@ -13,7 +13,6 @@ using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PadEvents.PadSync;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
@@ -58,7 +57,6 @@ namespace W3ChampionsStatisticService
             });
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
-            var startPadSync = Environment.GetEnvironmentVariable("START_PAD_SYNC");
             var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27018";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
@@ -98,11 +96,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
             services.AddTransient<MatchmakingServiceRepo>();
             services.AddTransient<MatchQueryHandler>();
-
-            if (startPadSync == "true")
-            {
-                services.AddUnversionedReadModelService<PadSyncHandler>();
-            }
 
             if (startHandlers == "true")
             {

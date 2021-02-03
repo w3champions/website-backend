@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.PadEvents.PadSync;
+using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -142,7 +142,13 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-
+        [HttpGet("queue-data")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> GetQueueData()
+        {
+            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+            return Ok(queueData);
+        }
 
     }
 }

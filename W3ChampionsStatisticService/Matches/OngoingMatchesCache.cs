@@ -13,19 +13,25 @@ namespace W3ChampionsStatisticService.Matches
         private List<OnGoingMatchup> _values = new List<OnGoingMatchup>();
         private Object _lock = new Object();
 
-        public async Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay)
+        public async Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay, string map)
         {
             await UpdateCacheIfNeeded();
             return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                                      && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
+                                      && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                                      && (map == "Overall" || m.Map == map));
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize)
+        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize, string map)
         {
             await UpdateCacheIfNeeded();
 
-            return _values.Where(m => gameMode == GameMode.Undefined || m.GameMode == gameMode
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)).Skip(offset).Take(pageSize).ToList();
+            return _values
+                .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                            && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                            && (map == "Overall" || m.Map == map))
+                .Skip(offset)
+                .Take(pageSize)
+                .ToList();
         }
 
         public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
@@ -71,8 +77,8 @@ namespace W3ChampionsStatisticService.Matches
 
     public interface IOngoingMatchesCache
     {
-        Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay);
-        Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize);
+        Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay, string map);
+        Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize, string map);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
         void Upsert(OnGoingMatchup matchup);
         void Delete(string matchId);

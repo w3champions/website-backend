@@ -33,13 +33,17 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
         gameMode = GameMode.GM_1v1)
         {
-            var playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
+            System.Collections.Generic.List<Rank> playerRanks;
 
-            if (playerRanks.Any()) return Ok(playerRanks);
+            playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
 
             var playerStats = await _playerRepository.SearchForPlayer(searchFor);
 
-            return Ok(playerStats.Select(s => s.CreateUnrankedResponse()));
+            var unrankedPlayers = playerStats.Select(s => s.CreateUnrankedResponse());
+
+            playerRanks.AddRange(unrankedPlayers);
+
+            return Ok(playerRanks);
         }
 
         [HttpGet("{leagueId}")]
