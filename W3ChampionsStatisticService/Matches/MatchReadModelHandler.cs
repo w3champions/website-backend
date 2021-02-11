@@ -46,5 +46,4 @@ namespace W3ChampionsStatisticService.Matches
             await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
         }
     }
-
 }
