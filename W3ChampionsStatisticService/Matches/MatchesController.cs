@@ -17,7 +17,10 @@ namespace W3ChampionsStatisticService.Matches
         private readonly MatchQueryHandler _matchQueryHandler;
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
-        public MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler, IPersonalSettingsRepository personalSettingsRepository)
+        public MatchesController(
+            IMatchRepository matchRepository,
+            MatchQueryHandler matchQueryHandler,
+            IPersonalSettingsRepository personalSettingsRepository)
         {
             _matchRepository = matchRepository;
             _matchQueryHandler = matchQueryHandler;
@@ -45,9 +48,11 @@ namespace W3ChampionsStatisticService.Matches
         private async Task<List<Matchup>> AssignLocationsToMatchups(List<Matchup> matches)
         {
             var battleTags = new List<string>();
-            var players = new List<PlayerOverviewMatches>();
+            var players = new Dictionary<PlayerOverviewMatches, Matchup>();
+            var matchesToUpdate = new HashSet<Matchup>();
 
-            // Get all the players for the matches.
+            // Get all the players for the matches that are missing
+            // location or country code.
 
             foreach (var match in matches)
             {
@@ -55,34 +60,42 @@ namespace W3ChampionsStatisticService.Matches
                 {
                     foreach (var player in team.Players)
                     {
-                        players.Add(player);
-                        battleTags.Add(player.BattleTag);
+                        if (player.Location == null && player.CountryCode == null)
+                        {
+                            players.Add(player, match);
+                            battleTags.Add(player.BattleTag);
+                        }
+
                     }
                 }
             }
 
-            // Bulk load their personal settings as BattleTag => PersonalSettings dict
+            // Bulk load their personal settings as <BattleTag, PersonalSettings> dict
 
             var personalSettings =
                 (await _personalSettingsRepository.LoadMany(battleTags.ToArray()))
                     .ToDictionary(ps => ps.Id, ps => ps);
 
 
-            // If the players are missing location or country code, try to fill
-            // it in with their personal settings.
-
+            // Try to fill in location with their personal settings data
             foreach (var player in players)
             {
-                if (player.Location == null && player.CountryCode == null)
+                if (personalSettings.TryGetValue(player.Key.BattleTag, out PersonalSetting ps))
                 {
-                    if (personalSettings.TryGetValue(player.BattleTag, out PersonalSetting ps))
-                    {
-                        player.CountryCode = ps.CountryCode;
-                        player.Location = ps.Location;
-                        player.Country = ps.Country;
-                    }
+                    player.Key.CountryCode ??= ps.CountryCode;
+                    player.Key.Location ??= ps.Location;
+                    player.Key.Country ??= ps.Country;
 
+                    // Queue the matchup to be updated
+                    matchesToUpdate.Add(player.Value);
                 }
+            }
+
+
+            // Update all the matches
+            foreach (var match in matchesToUpdate)
+            {
+                await _matchRepository.Insert(match);
             }
 
             return matches;
