@@ -43,16 +43,79 @@ namespace W3ChampionsStatisticService.PadEvents
             return result.StatusCode;
         }
 
-        public async Task<List<Queue>> GetLiveQueueData()
+        public async Task<List<FormattedQueue>> GetLiveQueueData()
         {
             var httpClient = new HttpClient();
             var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={MatchmakingAdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
-            return deserializeObject;
+            return formatQueueData(deserializeObject); // formatted for easy use on frontend
         }
         
+        private List<FormattedQueue> formatQueueData(List<Queue> allQueues)
+        {
+            try 
+            {
+                var formattedAllQueueData = new List<FormattedQueue>();
+                if (allQueues != null) {
+                    foreach (var queue in allQueues)
+                    {
+                        var gameModeQueue = new FormattedQueue();
+                        gameModeQueue.gameMode = queue.gameMode;
+                        
+                        var formattedSingleQueueData = new List<FormattedPlayerData>();
+
+                        if (queue.snapshot.Count > 0) {
+                            foreach (var playerData in queue.snapshot)
+                            {
+                                var formattedPlayerData = new FormattedPlayerData();
+
+                                // if it's an AT, data is taken from only 1 player
+                                formattedPlayerData.battleTag = playerData.playerData[0].battleTag;
+                                formattedPlayerData.mmr = playerData.mmr;
+                                formattedPlayerData.quantile = playerData.quantiles.quantile;
+                                formattedPlayerData.activityQuantile = playerData.quantiles.activityQuantile;
+                                formattedPlayerData.queueTime = playerData.queueTime;
+                                formattedPlayerData.isFloConnected = playerData.isFloConnected;
+                                formattedPlayerData.location = playerData.playerData[0].location;
+                                formattedPlayerData.serverOption = playerData.playerData[0].serverOption;
+                                
+                                formattedSingleQueueData.Add(formattedPlayerData);
+                            }
+                        }
+                        gameModeQueue.snapshot = formattedSingleQueueData;
+
+                        formattedAllQueueData.Add(gameModeQueue);
+                    }
+                }
+            
+                return formattedAllQueueData;
+            }
+            catch
+            {
+                return new List<FormattedQueue>();
+            }
+            
+        }
+    }
+
+    public class FormattedQueue
+    {
+        public int gameMode { get; set; }
+        public List<FormattedPlayerData> snapshot { get; set; }
+    }
+
+    public class FormattedPlayerData
+    {
+        public string battleTag { get; set; }
+        public float mmr { get; set; }
+        public float quantile { get; set; }
+        public float activityQuantile { get; set; }
+        public int queueTime { get; set; }
+        public bool isFloConnected { get; set; }
+        public string location { get; set; }
+        public string serverOption { get; set; }
     }
 
     public class BannedPlayerResponse
