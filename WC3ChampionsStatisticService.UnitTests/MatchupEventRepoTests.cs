@@ -4,6 +4,7 @@ using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 
 namespace WC3ChampionsStatisticService.UnitTests
 {
@@ -81,9 +82,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await InsertMatchEvent(matchFinishedEvent1);
 
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
             var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
             var matchReadModelHandler = new MatchReadModelHandler(
-                matchRepository);
+                matchRepository, personalSettingsRepository);
 
             await matchReadModelHandler.Update(matchFinishedEvent1);
             await matchReadModelHandler.Update(matchFinishedEvent2);

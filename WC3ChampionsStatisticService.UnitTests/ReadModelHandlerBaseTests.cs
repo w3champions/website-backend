@@ -5,6 +5,7 @@ using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -32,7 +33,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
                 versionRepository,
-                new MatchReadModelHandler(mockMatchRepo.Object));
+                new MatchReadModelHandler(mockMatchRepo.Object, new PersonalSettingsRepository(MongoClient)));
 
             await handler.Update();
 
@@ -58,7 +59,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var handler = new ReadModelHandler<MatchReadModelHandler>(
                 mockEvents.Object,
                 versionRepository,
-                new MatchReadModelHandler(mockMatchRepo.Object));
+                new MatchReadModelHandler(mockMatchRepo.Object, new PersonalSettingsRepository(MongoClient)));
 
             await handler.Update();
 
@@ -99,7 +100,7 @@ namespace WC3ChampionsStatisticService.UnitTests
              var handler = new ReadModelHandler<MatchReadModelHandler>(
                  new MatchEventRepository(MongoClient),
                  versionRepository,
-                 new MatchReadModelHandler(matchRepository));
+                 new MatchReadModelHandler(matchRepository, new PersonalSettingsRepository(MongoClient)));
 
              await handler.Update();
 
