@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -72,10 +73,17 @@ namespace W3ChampionsStatisticService.PadEvents
                                 var formattedPlayerData = new FormattedPlayerData();
 
                                 // if it's an AT, data is taken from only 1 player
-                                formattedPlayerData.battleTag = playerData.playerData[0].battleTag;
-                                formattedPlayerData.mmr = playerData.mmr;
-                                formattedPlayerData.quantile = playerData.quantiles.quantile;
-                                formattedPlayerData.activityQuantile = playerData.quantiles.activityQuantile;
+                                IList<string> playerBattleTagStrings = new List<string>();
+
+                                for (var i = 0; i < playerData.playerData.Count; i++)
+                                {
+                                    playerBattleTagStrings.Add(playerData.playerData[i].battleTag);
+                                }
+
+                                formattedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
+                                formattedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
+                                formattedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
+                                formattedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
                                 formattedPlayerData.queueTime = playerData.queueTime;
                                 formattedPlayerData.isFloConnected = playerData.isFloConnected;
                                 formattedPlayerData.location = playerData.playerData[0].location;
@@ -109,9 +117,9 @@ namespace W3ChampionsStatisticService.PadEvents
     public class FormattedPlayerData
     {
         public string battleTag { get; set; }
-        public float mmr { get; set; }
-        public float quantile { get; set; }
-        public float activityQuantile { get; set; }
+        public double mmr { get; set; }
+        public double quantile { get; set; }
+        public double activityQuantile { get; set; }
         public int queueTime { get; set; }
         public bool isFloConnected { get; set; }
         public string location { get; set; }
