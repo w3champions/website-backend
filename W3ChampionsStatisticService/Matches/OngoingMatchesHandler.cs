@@ -40,8 +40,14 @@ namespace W3ChampionsStatisticService.Matches
                                 if (foundMatchForPlayer != null)
                                     await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
 
+                                // Use the players personal settings to update their location information
                                 var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
-                                if (personalSettings != null) player.CountryCode = personalSettings.CountryCode;
+                                if (personalSettings != null)
+                                {
+                                    player.CountryCode = personalSettings.CountryCode;
+                                    player.Location = personalSettings.Location;
+                                    player.Country = personalSettings.Country;
+                                }
                             }
 
                         await _matchRepository.InsertOnGoingMatch(matchup);
