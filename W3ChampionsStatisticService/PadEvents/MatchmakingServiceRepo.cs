@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.Admin;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -41,6 +42,17 @@ namespace W3ChampionsStatisticService.PadEvents
             var result = await httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}");
             return result.StatusCode;
         }
+
+        public async Task<List<Queue>> GetLiveQueueData()
+        {
+            var httpClient = new HttpClient();
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={MatchmakingAdminSecret}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
+            return deserializeObject;
+        }
+        
     }
 
     public class BannedPlayerResponse

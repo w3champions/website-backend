@@ -142,7 +142,13 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-
+        [HttpGet("queue-data")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> GetQueueData()
+        {
+            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+            return Ok(queueData);
+        }
 
     }
 }
