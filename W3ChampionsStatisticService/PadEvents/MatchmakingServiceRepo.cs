@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -43,16 +44,86 @@ namespace W3ChampionsStatisticService.PadEvents
             return result.StatusCode;
         }
 
-        public async Task<List<Queue>> GetLiveQueueData()
+        public async Task<List<FormattedQueue>> GetLiveQueueData()
         {
             var httpClient = new HttpClient();
             var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={MatchmakingAdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
-            return deserializeObject;
+            return formatQueueData(deserializeObject); // formatted for easy use on frontend
         }
         
+        private List<FormattedQueue> formatQueueData(List<Queue> allQueues)
+        {
+            try 
+            {
+                var formattedAllQueueData = new List<FormattedQueue>();
+                if (allQueues != null) {
+                    foreach (var queue in allQueues)
+                    {
+                        var gameModeQueue = new FormattedQueue();
+                        gameModeQueue.gameMode = queue.gameMode;
+                        
+                        var formattedSingleQueueData = new List<FormattedPlayerData>();
+
+                        if (queue.snapshot.Count > 0) {
+                            foreach (var playerData in queue.snapshot)
+                            {
+                                var formattedPlayerData = new FormattedPlayerData();
+
+                                // if it's an AT, data is taken from only 1 player
+                                IList<string> playerBattleTagStrings = new List<string>();
+
+                                for (var i = 0; i < playerData.playerData.Count; i++)
+                                {
+                                    playerBattleTagStrings.Add(playerData.playerData[i].battleTag);
+                                }
+
+                                formattedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
+                                formattedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
+                                formattedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
+                                formattedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
+                                formattedPlayerData.queueTime = playerData.queueTime;
+                                formattedPlayerData.isFloConnected = playerData.isFloConnected;
+                                formattedPlayerData.location = playerData.playerData[0].location;
+                                formattedPlayerData.serverOption = playerData.playerData[0].serverOption;
+                                
+                                formattedSingleQueueData.Add(formattedPlayerData);
+                            }
+                        }
+                        gameModeQueue.snapshot = formattedSingleQueueData;
+
+                        formattedAllQueueData.Add(gameModeQueue);
+                    }
+                }
+            
+                return formattedAllQueueData;
+            }
+            catch
+            {
+                return new List<FormattedQueue>();
+            }
+            
+        }
+    }
+
+    public class FormattedQueue
+    {
+        public int gameMode { get; set; }
+        public List<FormattedPlayerData> snapshot { get; set; }
+    }
+
+    public class FormattedPlayerData
+    {
+        public string battleTag { get; set; }
+        public double mmr { get; set; }
+        public double quantile { get; set; }
+        public double activityQuantile { get; set; }
+        public int queueTime { get; set; }
+        public bool isFloConnected { get; set; }
+        public string location { get; set; }
+        public string serverOption { get; set; }
     }
 
     public class BannedPlayerResponse
