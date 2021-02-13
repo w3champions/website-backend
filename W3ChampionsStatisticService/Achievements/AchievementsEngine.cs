@@ -11,7 +11,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.Achievements
 {
-    public class AchievementsEngine //: ControllerBase
+    public class AchievementsEngine
 
     {
         private string achievementsJsonFile = "./Achievements/Achievements.json";
