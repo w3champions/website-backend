@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:5.0 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:5.0.102-1-focal-amd64 AS build-env
 
 WORKDIR /app
 COPY ./W3ChampionsStatisticService.sln ./

@@ -22,11 +22,11 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             if (queryString.AllKeys.Contains("authorization"))
             {
                 var auth = queryString["authorization"];
-                var res = await _authService.GetUserByToken(auth);
+                var res = _authService.GetUserByToken(auth);
                 if (
                     res != null
                     && !string.IsNullOrEmpty(res.BattleTag)
-                    && res.isAdmin)
+                    && res.IsAdmin)
                 {
                     context.ActionArguments["battleTag"] = res.BattleTag;
                     await next.Invoke();
