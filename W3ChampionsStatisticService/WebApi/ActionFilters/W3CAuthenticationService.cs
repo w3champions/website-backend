@@ -44,9 +44,9 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
 
                 var handler = new JwtSecurityTokenHandler();
                 var claims = handler.ValidateToken(jwt, validationParameters, out _);
-                var btag = claims.Claims.First(c => c.Type == "BattleTag").Value;
-                var isAdmin = Boolean.Parse(claims.Claims.First(c => c.Type == "IsAdmin").Value);
-                var name = claims.Claims.First(c => c.Type == "Name").Value;
+                var btag = claims.Claims.First(c => c.Type == "battleTag").Value;
+                var isAdmin = Boolean.Parse(claims.Claims.First(c => c.Type == "isAdmin").Value);
+                var name = claims.Claims.First(c => c.Type == "name").Value;
 
                 return new W3CUserAuthenticationDto
                 {
