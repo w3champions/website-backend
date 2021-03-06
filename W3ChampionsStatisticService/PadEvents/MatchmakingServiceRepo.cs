@@ -82,6 +82,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
                                 formattedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
                                 formattedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
+                                formattedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd),0);
                                 formattedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
                                 formattedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
                                 formattedPlayerData.queueTime = playerData.queueTime;
@@ -118,6 +119,7 @@ namespace W3ChampionsStatisticService.PadEvents
     {
         public string battleTag { get; set; }
         public double mmr { get; set; }
+        public double rd { get; set; }
         public double quantile { get; set; }
         public double activityQuantile { get; set; }
         public int queueTime { get; set; }
