@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.PadEvents;
@@ -15,17 +16,20 @@ namespace W3ChampionsStatisticService.Admin
         private readonly MatchmakingServiceRepo _matchmakingServiceRepository;
         private readonly INewsRepository _newsRepository;
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
+        private readonly IAdminRepository _adminRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
             MatchmakingServiceRepo matchmakingServiceRepository,
             INewsRepository newsRepository,
-            ILoadingScreenTipsRepository loadingScreenTipsRepository)
+            ILoadingScreenTipsRepository loadingScreenTipsRepository,
+            IAdminRepository adminRepository)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
             _newsRepository = newsRepository;
             _loadingScreenTipsRepository = loadingScreenTipsRepository;
+            _adminRepository = adminRepository;
         }
 
         [HttpGet("health-check")]
@@ -150,5 +154,26 @@ namespace W3ChampionsStatisticService.Admin
             return Ok(queueData);
         }
 
+        [HttpGet("proxies")]
+        //[CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> GetProxies()
+        {
+            return Ok(await _adminRepository.GetProxies());
+        }
+
+        [HttpGet("proxies-for/{battleTag}")]
+        //[CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> GetProxiesFor(string battleTag)
+        {
+            return Ok(await _adminRepository.GetProxiesFor(battleTag));
+        }
+
+        [HttpPut("update-proxies/{battleTag}")]
+        //[CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UpdateProxy([FromBody] List<ProxyUpdate> proxyUpdateData, string battleTag)
+        {
+            await _adminRepository.UpdateProxy(proxyUpdateData, battleTag);
+            return Ok();
+        }
     }
 }
