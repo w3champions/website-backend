@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.Ports
     public interface IAdminRepository
     {
         Task<List<ProxiesResponse>> GetProxies();
-        Task<List<ProxiesResponse>> UpdateProxy(List<ProxyUpdate> proxyUpdateData, string battleTag);
-        Task<List<ProxiesResponse>> GetProxiesFor(string battleTag);
+        Task<ProxyUpdate> UpdateProxy(ProxyUpdate proxyUpdateData, string battleTag);
+        Task<FloProxies> GetProxiesFor(string battleTag);
     }
 }

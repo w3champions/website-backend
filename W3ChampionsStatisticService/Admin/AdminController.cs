@@ -170,7 +170,7 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpPut("update-proxies/{battleTag}")]
         //[CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> UpdateProxy([FromBody] List<ProxyUpdate> proxyUpdateData, string battleTag)
+        public async Task<IActionResult> UpdateProxy([FromBody] ProxyUpdate proxyUpdateData, string battleTag)
         {
             await _adminRepository.UpdateProxy(proxyUpdateData, battleTag);
             return Ok();
