@@ -77,6 +77,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
             services.AddTransient<IW3StatsRepo, W3StatsRepo>();
             services.AddTransient<IPatchRepository, PatchRepository>();
+            services.AddTransient<IAdminRepository, AdminRepository>();
             services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
             services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
