@@ -49,59 +49,27 @@ namespace W3ChampionsStatisticService.Admin
             return proxies;
         }
 
-        public async Task<ProxyUpdate> UpdateProxy(ProxyUpdate proxyUpdateData, string battleTag)
+        public async Task<ProxyUpdate> UpdateProxies(ProxyUpdate proxyUpdateData, string battleTag)
         {
-            var proxiesForTag = await GetProxiesFor(battleTag);
             var newProxiesBeingAdded = new ProxyUpdate();
 
-            if (proxiesForTag.nodeOverrides.Count != 0) // if the player has some proxies, check which are already set.
-            { 
-                foreach (var nodeOverride in proxyUpdateData.nodeOverrides) // run through all the proxies that were requested
-                {
-                    
-                    foreach (var existingNodeOverride in proxiesForTag.nodeOverrides) // run through existing Node Overrides
-                    {
-                        if (nodeOverride != existingNodeOverride) // check if there is a match.
-                        {
-                            // add it to be requested
-                            newProxiesBeingAdded.nodeOverrides.Add(nodeOverride);
-                        }
-                    }
-                }
-            } else 
+            foreach (var nodeOverride in proxyUpdateData.nodeOverrides)
             {
-                foreach (var nodeOverride in proxyUpdateData.nodeOverrides)
-                {
-                    newProxiesBeingAdded.nodeOverrides.Add(nodeOverride);
-                }
+                newProxiesBeingAdded.nodeOverrides.Add(nodeOverride);
+            }
+            
+            foreach (var autoNodeOverride in proxyUpdateData.automaticNodeOverrides)
+            {
+                newProxiesBeingAdded.automaticNodeOverrides.Add(autoNodeOverride);
             }
 
-            if (proxiesForTag.automaticNodeOverrides.Count > 0) 
-            {
-                foreach (var autoNodeOverride in proxyUpdateData.automaticNodeOverrides) // run through all the proxies that were requested
-                {
-                    foreach (var existingAutoNodeOverride in proxiesForTag.automaticNodeOverrides) // run through existing Auto Node Overrides
-                    {
-                        if (autoNodeOverride != existingAutoNodeOverride)
-                        {
-                            newProxiesBeingAdded.automaticNodeOverrides.Add(autoNodeOverride);
-                        }
-                        
-                    }
-                }
-            } else 
-            {
-                foreach (var autoNodeOverride in proxyUpdateData.automaticNodeOverrides)
-                {
-                    newProxiesBeingAdded.nodeOverrides.Add(autoNodeOverride);
-                }
-            }
-
-            // check if the proxy data is in the options
-            // add it to a http request
-            // send to matchmaking endpoint:
-            // https://matchmaking-service.test.w3champions.com/{battleTag}/flo-proxies?secret={adminSecret}
-            // TO DO
+            // send request to mm with all the node values
+            var httpClient = new HttpClient();
+            var serializedObject = JsonConvert.SerializeObject(newProxiesBeingAdded);
+            var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
+            var byteContent = new ByteArrayContent(buffer);
+            byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            var result = await httpClient.PutAsync($"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies?secret={MatchmakingAdminSecret}", byteContent);
 
             return newProxiesBeingAdded;
         }

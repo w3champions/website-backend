@@ -56,7 +56,7 @@ namespace W3ChampionsStatisticService
             });
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
-            var mongoConnectionString = "mongodb://localhost:27017"; // Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27018";
+            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27018";
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 
