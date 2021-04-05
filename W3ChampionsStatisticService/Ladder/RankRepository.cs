@@ -18,16 +18,6 @@ namespace W3ChampionsStatisticService.Ladder
             _personalSettingsProvider = personalSettingsProvider;
         }
         private PersonalSettingsProvider _personalSettingsProvider;
-        // private static CachedData<List<PersonalSettings.PersonalSetting>> personalSettingsCache;
-
-        // public RankRepository(MongoClient mongoClient) : base(mongoClient)
-        // {
-        //     personalSettingsCache = new CachedData<List<PersonalSettings.PersonalSetting>>(() => FetchPersonalSettings().GetAwaiter().GetResult(), TimeSpan.FromMinutes(10));
-        // }
-        // public Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
-        // {
-        //     return LoadAll<PersonalSettings.PersonalSetting>();
-        // }
 
         public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
         {
@@ -58,6 +48,47 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Gateway == gateWay
                 && (gameMode == GameMode.Undefined || rank.GameMode == gameMode)
                 && rank.Season == season);
+        }
+
+        public async Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string searchFor)
+        {
+            // searches through all battletags that have ever played a game on the system - does not return duplicates or AT teams
+            
+            var search = searchFor.ToLower();
+            var ranksList = await JoinWith(rank => rank.PlayerId.ToLower().Contains(search));
+
+            var listOfProxyData = new List<PlayerInfoForProxy>();
+
+            foreach (var rank in ranksList)
+            {
+                var playerInfo = new PlayerInfoForProxy();
+                playerInfo.GameMode = rank.GameMode;
+                playerInfo.Players = rank.Players;
+                
+                if (!Enum.Equals(playerInfo.GameMode, GameMode.GM_2v2_AT))
+                {
+                    if (listOfProxyData.Count > 0)
+                    {
+                        var foundPlayersTags = new List<string>();
+                        
+                        foreach (var player in listOfProxyData)
+                        {
+                            foundPlayersTags.Add(player.Player.PlayerIds.First().BattleTag);
+                        }
+
+                        if (!foundPlayersTags.Contains(playerInfo.Player.PlayerIds.First().BattleTag))
+                        {
+                            listOfProxyData.Add(playerInfo);    
+                        }
+                    }
+                    else 
+                    {
+                        listOfProxyData.Add(playerInfo);
+                    }
+                } 
+            }
+
+            return listOfProxyData;
         }
 
         public Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)

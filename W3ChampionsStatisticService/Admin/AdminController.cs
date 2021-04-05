@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.PadEvents;
@@ -17,19 +16,22 @@ namespace W3ChampionsStatisticService.Admin
         private readonly INewsRepository _newsRepository;
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
         private readonly IAdminRepository _adminRepository;
+        private readonly IRankRepository _rankRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
             MatchmakingServiceRepo matchmakingServiceRepository,
             INewsRepository newsRepository,
             ILoadingScreenTipsRepository loadingScreenTipsRepository,
-            IAdminRepository adminRepository)
+            IAdminRepository adminRepository,
+            IRankRepository rankRepository)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
             _newsRepository = newsRepository;
             _loadingScreenTipsRepository = loadingScreenTipsRepository;
             _adminRepository = adminRepository;
+            _rankRepository = rankRepository;
         }
 
         [HttpGet("health-check")]
@@ -174,6 +176,15 @@ namespace W3ChampionsStatisticService.Admin
         {
             await _adminRepository.UpdateProxies(proxyUpdateData, battleTag);
             return Ok();
+        }
+
+        [HttpGet("search")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> SearchPlayer(string searchFor)
+        {
+            var playerRanks = await _rankRepository.SearchAllPlayersForProxy(searchFor);
+
+            return Ok(playerRanks);
         }
     }
 }
