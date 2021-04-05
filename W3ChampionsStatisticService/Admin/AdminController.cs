@@ -1,13 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -21,7 +17,6 @@ namespace W3ChampionsStatisticService.Admin
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
         private readonly IAdminRepository _adminRepository;
         private readonly IRankRepository _rankRepository;
-        private readonly IPlayerRepository _playerRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
@@ -29,8 +24,7 @@ namespace W3ChampionsStatisticService.Admin
             INewsRepository newsRepository,
             ILoadingScreenTipsRepository loadingScreenTipsRepository,
             IAdminRepository adminRepository,
-            IRankRepository rankRepository,
-            IPlayerRepository playerRepository)
+            IRankRepository rankRepository)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
@@ -38,7 +32,6 @@ namespace W3ChampionsStatisticService.Admin
             _loadingScreenTipsRepository = loadingScreenTipsRepository;
             _adminRepository = adminRepository;
             _rankRepository = rankRepository;
-            _playerRepository = playerRepository;
         }
 
         [HttpGet("health-check")]
