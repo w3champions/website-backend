@@ -157,14 +157,14 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("proxies")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetProxies()
         {
             return Ok(await _adminRepository.GetProxies());
         }
 
         [HttpGet("proxies-for/{battleTag}")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetProxiesFor(string battleTag)
         {
             return Ok(await _adminRepository.GetProxiesFor(battleTag));
@@ -178,13 +178,13 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpGet("search")]
-        [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> SearchPlayer(string searchFor)
+        [HttpGet("search/{battleTag}")]
+        //[CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> SearchPlayer(string battleTag)
         {
-            var playerRanks = await _rankRepository.SearchAllPlayersForProxy(searchFor);
+            var playerInstances = await _rankRepository.SearchAllPlayersForProxy(battleTag);
 
-            return Ok(playerRanks);
+            return Ok(playerInstances);
         }
     }
 }
