@@ -50,11 +50,11 @@ namespace W3ChampionsStatisticService.Ladder
                 && rank.Season == season);
         }
 
-        public async Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string searchFor)
+        public async Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string battleTag)
         {
             // searches through all battletags that have ever played a game on the system - does not return duplicates or AT teams
             
-            var search = searchFor.ToLower();
+            var search = battleTag.ToLower();
             var ranksList = await JoinWith(rank => rank.PlayerId.ToLower().Contains(search));
 
             var listOfProxyData = new List<PlayerInfoForProxy>();
