@@ -178,13 +178,13 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpGet("search")]
+        [HttpGet("search/{battleTag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> SearchPlayer(string searchFor)
+        public async Task<IActionResult> SearchPlayer(string battleTag)
         {
-            var playerRanks = await _rankRepository.SearchAllPlayersForProxy(searchFor);
+            var playerInstances = await _rankRepository.SearchAllPlayersForProxy(battleTag);
 
-            return Ok(playerRanks);
+            return Ok(playerInstances);
         }
     }
 }
