@@ -50,20 +50,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
         private async Task RecordLosers(Match match, List<PlayerMMrChange> losers)
         {
-            List<PlayerMMrChange> processed = new List<PlayerMMrChange>();
-
-            if (match.gameMode.IsRandomTeam())
-            {
-                foreach (var losingPlayer in losers.Where(x => !x.IsAt))
-                {
-                    await RecordLoss(match, new List<PlayerMMrChange>() { losingPlayer });
-                    processed.Add(losingPlayer);
-                }
-            }
-
-            foreach (var losingTeam in losers.Where(x => !processed.Contains(x)).GroupBy(x => x.team))
+            var atPlayers = losers.Where(x => x.IsAt);
+            foreach (var losingTeam in atPlayers.GroupBy(x => x.team))
             {
                 await RecordLoss(match, losingTeam.ToList());
+            }
+
+            var restPlayers = losers.Where(x => !x.IsAt);
+            foreach (var losingPlayer in restPlayers)
+            {
+                await RecordLoss(match, new List<PlayerMMrChange>() { losingPlayer });
             }
         }
 
@@ -93,20 +89,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
         private async Task RecordWinners(Match match, List<PlayerMMrChange> winners)
         {
-            List<PlayerMMrChange> processed = new List<PlayerMMrChange>();
-
-            if (match.gameMode.IsRandomTeam())
+            var atPlayers = winners.Where(x => x.IsAt);
+            foreach (var losingTeam in atPlayers.GroupBy(x => x.team))
             {
-                foreach (var winningPlayer in winners.Where(x => !x.IsAt))
-                {
-                    await RecordWin(match, new List<PlayerMMrChange>() { winningPlayer });
-                    processed.Add(winningPlayer);
-                }
+                await RecordWin(match, losingTeam.ToList());
             }
 
-            foreach (var winningTeam in winners.Where(x => !processed.Contains(x)).GroupBy(x => x.team))
+            var restPlayers = winners.Where(x => !x.IsAt);
+            foreach (var losingPlayer in restPlayers)
             {
-                await RecordWin(match, winningTeam.ToList());
+                await RecordWin(match, new List<PlayerMMrChange>() { losingPlayer });
             }
         }
 

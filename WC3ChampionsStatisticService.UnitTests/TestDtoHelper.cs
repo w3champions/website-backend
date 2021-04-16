@@ -119,6 +119,43 @@ namespace WC3ChampionsStatisticService.UnitTests
             return fakeEvent;
         }
 
+        public static MatchFinishedEvent CreateFakeFootmenFrenzyEvent()
+        {
+            var fixture = new Fixture();
+            var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+            fakeEvent.WasFakeEvent = false;
+            fakeEvent.WasFromSync = false;
+
+            fakeEvent.match.players = new List<PlayerMMrChange>();
+            CreateMatchTeam(fakeEvent, won: false, team: 0, playersPerTeam: 3);
+            CreateMatchTeam(fakeEvent, won: true, team: 1, playersPerTeam: 3);
+            CreateMatchTeam(fakeEvent, won: false, team: 2, playersPerTeam: 3);
+            CreateMatchTeam(fakeEvent, won: false, team: 3, playersPerTeam: 3);
+
+            fakeEvent.match.season = 0;
+            fakeEvent.match.gameMode = GameMode.GM_FOOTMEN_FRENZY;
+            fakeEvent.match.gateway = GateWay.Europe;
+            fakeEvent.match.map = "W3Champions/Custom/Footmen_Frenzy_v5.8.0_W3C.w3x";
+
+            return fakeEvent;
+        }
+
+        private static void CreateMatchTeam(MatchFinishedEvent fakeEvent, bool won, int team, int playersPerTeam)
+        {
+            for (int i = 0; i < playersPerTeam; i++)
+            {
+                var player = new PlayerMMrChange()
+                {
+                    battleTag = $"{team}#{i}",
+                    team = team,
+                    won = won
+                };
+
+                fakeEvent.match.players.Add(player);
+            }
+        }
+
         public static MatchFinishedEvent CreateFake2v2RTEvent()
         {
             var fixture = new Fixture { RepeatCount = 4 };

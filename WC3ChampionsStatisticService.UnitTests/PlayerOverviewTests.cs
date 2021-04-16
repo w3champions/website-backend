@@ -141,6 +141,43 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task UpdateOverview_HandlerUpdate_FootmenFrenzy()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFakeFootmenFrenzyEvent();
+            var playerRepository = new PlayerRepository(MongoClient);
+            var playOverviewHandler = new PlayOverviewHandler(playerRepository);
+
+            await playOverviewHandler.Update(matchFinishedEvent);
+
+            var winners = matchFinishedEvent.match.players.Where(x => x.won);
+
+            Assert.AreEqual(3, winners.Count());
+
+            foreach (var player in winners)
+            {
+                var playerProfile = await playerRepository.LoadOverview($"0_{player.battleTag}@20_GM_FOOTMEN_FRENZY");
+
+                Assert.AreEqual(1, playerProfile.Wins);
+                Assert.AreEqual(0, playerProfile.Losses);
+                Assert.AreEqual(GameMode.GM_FOOTMEN_FRENZY, playerProfile.GameMode);
+                Assert.AreEqual(1, player.team);
+            }
+
+            var losers = matchFinishedEvent.match.players.Where(x => !x.won);
+
+            Assert.AreEqual(9, losers.Count());
+
+            foreach (var player in losers)
+            {
+                var playerProfile = await playerRepository.LoadOverview($"0_{player.battleTag}@20_GM_FOOTMEN_FRENZY");
+
+                Assert.AreEqual(0, playerProfile.Wins);
+                Assert.AreEqual(1, playerProfile.Losses);
+                Assert.AreEqual(GameMode.GM_FOOTMEN_FRENZY, playerProfile.GameMode);
+            }
+        }
+
+        [Test]
         public async Task UpdateOverview_HandlerUpdate_2v2RT()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFake2v2RTEvent();

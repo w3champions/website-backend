@@ -40,49 +40,23 @@ namespace W3ChampionsStatisticService.Ladder
             // for broken events
             if (winners.Count == 0 || losers.Count == 0) return;
 
-            await UpdateWinners(nextEvent, winners);
-
-            await UpdateLosers(nextEvent, losers);
+            await UpdatePlayersByTeam(nextEvent, winners);
+            await UpdatePlayersByTeam(nextEvent, losers);
         }
 
-        private async Task UpdateWinners(MatchFinishedEvent nextEvent, List<PlayerMMrChange> winners)
+        private async Task UpdatePlayersByTeam(MatchFinishedEvent nextEvent, List<PlayerMMrChange> players)
         {
-            List<PlayerMMrChange> processed = new List<PlayerMMrChange>();
-
-            if (nextEvent.match.gameMode.IsRandomTeam())
+            var atPlayers = players.Where(x => x.IsAt);
+            foreach (var atTeam in atPlayers.GroupBy(x => x.team))
             {
-                foreach (var winningPlayer in winners.Where(x => !x.IsAt))
-                {
-                    var winner = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { winningPlayer });
-                    await _playerRepository.UpsertPlayerOverview(winner);
-                    processed.Add(winningPlayer);
-                }
+                var loser = await UpdatePlayers(nextEvent, atTeam.ToList());
+                await _playerRepository.UpsertPlayerOverview(loser);
             }
 
-            foreach (var winningPlayer in winners.Where(x => !processed.Contains(x)).GroupBy(x => x.team))
+            var restPlayers = players.Where(x => !x.IsAt);
+            foreach (var player in restPlayers)
             {
-                var winner = await UpdatePlayers(nextEvent, winningPlayer.ToList());
-                await _playerRepository.UpsertPlayerOverview(winner);
-            }
-
-        }
-
-        private async Task UpdateLosers(MatchFinishedEvent nextEvent, List<PlayerMMrChange> losers)
-        {
-            List<PlayerMMrChange> processed = new List<PlayerMMrChange>();
-            if (nextEvent.match.gameMode.IsRandomTeam())
-            {
-                foreach (var losingPlayer in losers.Where(x => !x.IsAt))
-                {
-                    var loser = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { losingPlayer });
-                    await _playerRepository.UpsertPlayerOverview(loser);
-                    processed.Add(losingPlayer);
-                }
-            }
-
-            foreach (var losingTeam in losers.Where(x => !processed.Contains(x)).GroupBy(x => x.team))
-            {
-                var loser = await UpdatePlayers(nextEvent, losingTeam.ToList());
+                var loser = await UpdatePlayers(nextEvent, new List<PlayerMMrChange>() { player });
                 await _playerRepository.UpsertPlayerOverview(loser);
             }
         }
