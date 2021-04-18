@@ -40,9 +40,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 return;
             }
 
-            // some events are buggy
-            if (winners.Count != losers.Count && match.gameMode != GameMode.FFA) return;
-
             await RecordWinners(match, winners);
 
             await RecordLosers(match, losers);

@@ -304,6 +304,41 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task UpdateOverview_HandlerUpdate_FootmenFrenzy()
+        {
+            var matchFinishedEvent = TestDtoHelper.CreateFakeFootmenFrenzyEvent();
+
+            var playerRepository = new PlayerRepository(MongoClient);
+            var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
+
+            await handler.Update(matchFinishedEvent);
+
+            var winners = matchFinishedEvent.match.players.Where(x => x.won);
+
+            Assert.AreEqual(3, winners.Count());
+
+            foreach (var player in winners)
+            {
+                var winnerStatGateWay = await playerRepository.LoadGameModeStatPerGateway(player.battleTag, GateWay.Europe, matchFinishedEvent.match.season);
+
+                Assert.AreEqual(1, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_FOOTMEN_FRENZY).Wins);
+                Assert.AreEqual(0, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_FOOTMEN_FRENZY).Losses);
+            }
+
+            var losers = matchFinishedEvent.match.players.Where(x => !x.won);
+
+            Assert.AreEqual(9, losers.Count());
+
+            foreach (var player in losers)
+            {
+                var winnerStatGateWay = await playerRepository.LoadGameModeStatPerGateway(player.battleTag, GateWay.Europe, matchFinishedEvent.match.season);
+
+                Assert.AreEqual(0, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_FOOTMEN_FRENZY).Wins);
+                Assert.AreEqual(1, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_FOOTMEN_FRENZY).Losses);
+            }
+        }
+
+        [Test]
         public async Task Player_UpdateMmrRpTimeline()
         {
             var playerRepository = new PlayerRepository(MongoClient);
