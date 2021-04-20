@@ -55,7 +55,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPost("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var bannedPlayers = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
@@ -63,7 +63,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var bannedPlayers = await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
@@ -149,7 +149,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("queue-data")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetQueueData()
         {
             var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
@@ -157,29 +157,29 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("proxies")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetProxies()
         {
             return Ok(await _adminRepository.GetProxies());
         }
 
         [HttpGet("proxies-for/{battleTag}")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetProxiesFor(string battleTag)
         {
             return Ok(await _adminRepository.GetProxiesFor(battleTag));
         }
 
         [HttpPut("update-proxies/{battleTag}")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, string battleTag)
         {
             await _adminRepository.UpdateProxies(proxyUpdateData, battleTag);
             return Ok();
         }
 
-        [HttpGet("search/{battleTag}")]
-        [CheckIfBattleTagIsAdmin]
+        [HttpGet("search")]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> SearchPlayer(string battleTag)
         {
             var playerInstances = await _rankRepository.SearchAllPlayersForProxy(battleTag);
