@@ -55,7 +55,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPost("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var bannedPlayers = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
@@ -63,7 +63,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        //[CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var bannedPlayers = await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
@@ -178,7 +178,7 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpGet("search/{battleTag}")]
+        [HttpGet("search")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> SearchPlayer(string battleTag)
         {
