@@ -165,14 +165,14 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpGet("proxies-for/{battleTag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> GetProxiesFor(string battleTag)
+        public async Task<IActionResult> GetProxiesFor([FromRoute] string battleTag)
         {
             return Ok(await _adminRepository.GetProxiesFor(battleTag));
         }
 
         [HttpPut("update-proxies/{battleTag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, string battleTag)
+        public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string battleTag)
         {
             await _adminRepository.UpdateProxies(proxyUpdateData, battleTag);
             return Ok();
@@ -180,7 +180,7 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpGet("search/{battleTag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> SearchPlayer(string battleTag)
+        public async Task<IActionResult> SearchPlayer([FromRoute] string battleTag)
         {
             var playerInstances = await _rankRepository.SearchAllPlayersForProxy(battleTag);
 
