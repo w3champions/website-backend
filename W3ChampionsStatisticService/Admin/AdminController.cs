@@ -178,7 +178,7 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpGet("search")]
+        [HttpGet("search/{battleTag}")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> SearchPlayer(string battleTag)
         {
