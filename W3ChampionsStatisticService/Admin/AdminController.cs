@@ -178,11 +178,11 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpGet("search/{battleTag}")]
+        [HttpGet("search/{tagSearch}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> SearchPlayer([FromRoute] string battleTag)
+        public async Task<IActionResult> SearchPlayer([FromRoute] string tagSearch)
         {
-            var playerInstances = await _rankRepository.SearchAllPlayersForProxy(battleTag);
+            var playerInstances = await _rankRepository.SearchAllPlayersForProxy(tagSearch);
 
             return Ok(playerInstances);
         }
