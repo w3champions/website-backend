@@ -55,7 +55,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPost("bannedPlayers")]
-        //[CheckIfBattleTagIsAdmin]
+        [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var bannedPlayers = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
@@ -63,7 +63,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("bannedPlayers")]
-        //[CheckIfBattleTagIsAdmin]
+        [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var bannedPlayers = await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
@@ -163,18 +163,18 @@ namespace W3ChampionsStatisticService.Admin
             return Ok(await _adminRepository.GetProxies());
         }
 
-        [HttpGet("proxies-for/{battleTag}")]
+        [HttpGet("proxies-for/{tag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> GetProxiesFor([FromRoute] string battleTag)
+        public async Task<IActionResult> GetProxiesFor([FromRoute] string tag)
         {
-            return Ok(await _adminRepository.GetProxiesFor(battleTag));
+            return Ok(await _adminRepository.GetProxiesFor(tag));
         }
 
-        [HttpPut("update-proxies/{battleTag}")]
+        [HttpPut("update-proxies/{tag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string battleTag)
+        public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string tag)
         {
-            await _adminRepository.UpdateProxies(proxyUpdateData, battleTag);
+            await _adminRepository.UpdateProxies(proxyUpdateData, tag);
             return Ok();
         }
 
