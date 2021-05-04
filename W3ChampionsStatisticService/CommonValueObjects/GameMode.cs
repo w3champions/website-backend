@@ -9,6 +9,11 @@
         FFA = 5,
         GM_2v2_AT = 6,
         CUSTOM = 9,
-        GM_FOOTMEN_FRENZY = 101
+        GM_FOOTMEN_FRENZY = 101,
+
+        GM_LEGION_4v4_x3 = 201,
+        GM_LEGION_4v4_x20 = 202,
+
+        GM_ROC_1ON1 = 301
     }
 }
