@@ -93,7 +93,6 @@ namespace W3ChampionsStatisticService.PadEvents
         public string id { get; set; }
         public int mapId { get; set; }
         public string map { get; set; }
-        public string mapName { get; set; }
         public List<PlayerMMrChange> players { get; set; }
         public long endTime { get; set; }
         public long number { get; set; }
