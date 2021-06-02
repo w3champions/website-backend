@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.Achievements.Models;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -12,12 +13,12 @@ namespace W3ChampionsStatisticService.Achievements {
     public class AchievementRepositoryHandler : IReadModelHandler  {
 
         private readonly IAchievementRepository _achievementRepository;
-        private readonly IPlayerStatsRepository _playerRepository;
+        private readonly IPlayerRepository _playerRepository;
         private readonly IPlayerStatsRepository _playerStatsRepository;
 
         public AchievementRepositoryHandler(
             IAchievementRepository achievementRepository,
-            IPlayerStatsRepository playerRepository,
+            IPlayerRepository playerRepository,
             IPlayerStatsRepository playerStatsRepository) {
            _achievementRepository = achievementRepository;    
             _playerRepository = playerRepository;
@@ -33,17 +34,31 @@ namespace W3ChampionsStatisticService.Achievements {
         public async Task<PlayerAchievements> GetPlayerAchievements(string playerId){
             var playerAchievements = await _achievementRepository.GetPlayerAchievements(playerId);
             if (playerAchievements == null){
-                // need to create the achievements
-                CreateNewPlayerAchievements(playerId);
-                // need to update the newly created achievements
-                // need to save the newly created achievements
-                // once saved, pass achievments out to be used -- can use playerAchievementsFound
+                // check if the player exists....
+                var playerProfile = await _playerRepository.LoadPlayerProfile(playerId);
+                if (playerProfile != null){
+                    // need to create the achievements
+                    var newPlayerAchievements = CreateNewPlayerAchievements(playerId);
+                    // need to update the newly created achievements
+                    // need to save the newly created achievements
+                    // once saved, pass achievments out to be used -- can use playerAchievementsFound
+                }
             }
             return playerAchievements;
         }
 
-        private void CreateNewPlayerAchievements(string playerId) {
+        private List<Achievement> GenerateNewAchievementList() {
+            var achievementList = new List<Achievement>();
+            achievementList.Add(MapWith25WinsAchievement.Create());
+            achievementList.Add(Win10GamesWithATPartnerAchievement.Create());
+            return achievementList;
+        }
 
+        private PlayerAchievements CreateNewPlayerAchievements(string playerId) {
+            var newPlayerAchievements = new PlayerAchievements();
+            newPlayerAchievements.PlayerId = playerId;
+            newPlayerAchievements.playerAchievements = GenerateNewAchievementList();
+            return newPlayerAchievements;
         }
     }
 }
