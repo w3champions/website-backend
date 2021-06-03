@@ -32,6 +32,7 @@ namespace W3ChampionsStatisticService.Achievements {
         } 
 
         public async Task<PlayerAchievements> GetPlayerAchievements(string playerId){
+
             var playerAchievements = await _achievementRepository.GetPlayerAchievements(playerId);
             if (playerAchievements == null){
                 // check if the player exists....

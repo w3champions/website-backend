@@ -13,7 +13,6 @@ namespace W3ChampionsStatisticService.Achievements {
 
         [HttpGet("{playerId}")]
         public async Task<IActionResult> GetPlayerAchievements(string playerId) {
-            Console.WriteLine("running the thing.................");
             var response = await _achievementRepositoryHandler.GetPlayerAchievements(playerId);
             return Ok(response);
         }
