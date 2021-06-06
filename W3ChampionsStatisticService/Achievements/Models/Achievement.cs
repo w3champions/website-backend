@@ -8,9 +8,5 @@ namespace W3ChampionsStatisticService.Achievements.Models {
         public long ProgressCurrent {get; set;}
         public long ProgressEnd {get; set;}
         public bool Completed {get; set;}
-
-        public static Achievement Create() {
-            return new Achievement();
-        }
     }
 }

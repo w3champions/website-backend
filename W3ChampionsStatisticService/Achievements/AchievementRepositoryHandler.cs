@@ -50,8 +50,8 @@ namespace W3ChampionsStatisticService.Achievements {
 
         private List<Achievement> GenerateNewAchievementList() {
             var achievementList = new List<Achievement>();
-            achievementList.Add(MapWith25WinsAchievement.Create());
-            achievementList.Add(Win10GamesWithATPartnerAchievement.Create());
+            achievementList.Add(new MapWith25WinsAchievement());
+            achievementList.Add(new Win10GamesWithATPartnerAchievement());
             return achievementList;
         }
 
