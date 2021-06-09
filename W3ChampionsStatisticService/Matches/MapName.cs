@@ -23,7 +23,8 @@ namespace W3ChampionsStatisticService.Matches
                 .Replace("battlegrounds", "battleground")
                 .Replace("goleminthemist", "golemsinthemist")
                 .Replace("_cd", "")
-                .Replace("_", "");
+                .Replace("_", "")
+                .Replace(".","_");
         }
 
         public string Name { get; }
