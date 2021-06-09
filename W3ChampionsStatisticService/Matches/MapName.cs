@@ -9,6 +9,7 @@ namespace W3ChampionsStatisticService.Matches
             Name = map.Split("/")
                 .Last()
                 .Replace(".w3x", "")
+                .Replace(".w3m","")
                 .Replace("_lv", "")
                 .Substring(3)
                 .Replace("_lv_anon", "")
