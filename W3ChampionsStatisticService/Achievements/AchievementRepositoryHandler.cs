@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.PadEvents;
 
@@ -15,14 +16,17 @@ namespace W3ChampionsStatisticService.Achievements {
     public class AchievementRepositoryHandler : IReadModelHandler  {
 
         private readonly IAchievementRepository _achievementRepository;
+        private readonly IMatchRepository _matchRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly IPlayerStatsRepository _playerStatsRepository;
 
         public AchievementRepositoryHandler(
             IAchievementRepository achievementRepository,
+            IMatchRepository matchRepository,
             IPlayerRepository playerRepository,
             IPlayerStatsRepository playerStatsRepository) {
-           _achievementRepository = achievementRepository;    
+            _achievementRepository = achievementRepository;
+            _matchRepository = matchRepository;    
             _playerRepository = playerRepository;
             _playerStatsRepository = playerStatsRepository;
         }
@@ -61,18 +65,36 @@ namespace W3ChampionsStatisticService.Achievements {
             return achievementList;
         }
 
-        private PlayerAchievements UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
+        private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
             // TODO: create way for achievements to be updated
             // working here...
+            var battleTag = playerAchievements.PlayerId;
+            var playerRaceOnMapVersusRaceRatios = new List<PlayerRaceOnMapVersusRaceRatio>();
+            var playerMatches = new List<Matchup>();
+
+            // get the seasons in ints...
             var seasons = ConvertSeasonsToSimpleList(playerOverallStats.ParticipatedInSeasons);
+
+            foreach(int s in seasons){
+                var playerRaceOnMapVersusRaceRatio = await _playerStatsRepository.LoadMapAndRaceStat(battleTag, s);
+                playerRaceOnMapVersusRaceRatios.Add(playerRaceOnMapVersusRaceRatio);
+
+                var seasonalMatches = await _matchRepository.LoadFor(battleTag, null, GateWay.Undefined, GameMode.Undefined, 100, 0, s);
+                // need to run through all the maps... should probably start the map count and partner game count here
+                // will take less time to run if calculated here... i think...
+                foreach(Matchup matchup in seasonalMatches) {
+                    playerMatches.Add(matchup);
+                }
+            }
+
             return playerAchievements;
         }
 
-        private PlayerAchievements CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats) {
+        private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats) {
             var newPlayerAchievements = new PlayerAchievements();
             newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
             newPlayerAchievements.playerAchievements = GenerateNewAchievementList();
-            newPlayerAchievements = UpdateCurrentPlayerAchievements(newPlayerAchievements, playerOverallStats, true);
+            newPlayerAchievements = await UpdateCurrentPlayerAchievements(newPlayerAchievements, playerOverallStats, true);
             return newPlayerAchievements;
         }
     }
