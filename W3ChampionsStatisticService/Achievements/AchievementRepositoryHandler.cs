@@ -53,9 +53,10 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         private List<int> ConvertSeasonsToSimpleList(List<Season> seasons) {
-            var seasonArray = new List<int>();
-            foreach (Season s in seasons){seasonArray.Add(s.Id);}
-            return seasonArray;
+            var seasonList = new List<int>();
+            foreach (Season s in seasons){seasonList.Add(s.Id);}
+            seasonList.Reverse();
+            return seasonList;
         }
 
         private List<Achievement> GenerateNewAchievementList() {
@@ -67,10 +68,13 @@ namespace W3ChampionsStatisticService.Achievements {
 
         private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
             // TODO: create way for achievements to be updated
-            // working here...
+
+            // currently working on the first run of getting achievements from previous games....
             var battleTag = playerAchievements.PlayerId;
             var playerRaceOnMapVersusRaceRatios = new List<PlayerRaceOnMapVersusRaceRatio>();
             var playerMatches = new List<Matchup>();
+            var mapWinsCount = new Dictionary<string,int>();
+            var firstMapTo25Wins = "";
 
             // get the seasons in ints...
             var seasons = ConvertSeasonsToSimpleList(playerOverallStats.ParticipatedInSeasons);
@@ -78,16 +82,46 @@ namespace W3ChampionsStatisticService.Achievements {
             foreach(int s in seasons){
                 var playerRaceOnMapVersusRaceRatio = await _playerStatsRepository.LoadMapAndRaceStat(battleTag, s);
                 playerRaceOnMapVersusRaceRatios.Add(playerRaceOnMapVersusRaceRatio);
-
                 var seasonalMatches = await _matchRepository.LoadFor(battleTag, null, GateWay.Undefined, GameMode.Undefined, 100, 0, s);
-                // need to run through all the maps... should probably start the map count and partner game count here
-                // will take less time to run if calculated here... i think...
+
                 foreach(Matchup matchup in seasonalMatches) {
+                    var map = matchup.Map;
+                    var teams = matchup.Teams;
+                    if(PlayerDidWin(battleTag, teams)) {
+                        var hitWinsLimit = AddMapToMapWinsCount(mapWinsCount, map, 25);
+                        if (hitWinsLimit){firstMapTo25Wins = map;}
+                    //TODO: working here - found first map to 25.....
+                    // next will need to save the current stats if this was not reached also create caption
+                    }
                     playerMatches.Add(matchup);
                 }
             }
 
             return playerAchievements;
+        }
+
+        private bool AddMapToMapWinsCount(Dictionary<string,int> mapWinsCount, string map, int maxCount) {
+            var didReachMaxCount = false;
+            if(!mapWinsCount.ContainsKey(map)) {
+                mapWinsCount.Add(map, 1);
+            } else {
+                mapWinsCount[map] += 1;
+                if (mapWinsCount[map] == maxCount) {
+                    didReachMaxCount = true;
+                }
+            }
+            return didReachMaxCount;
+        }
+
+        private bool PlayerDidWin(string battleTag, IList<Team> teams) {
+            foreach(Team team in teams) {
+                var players = team.Players;
+                foreach(PlayerOverviewMatches player in players){
+                    var playerName = player.BattleTag;
+                    if (playerName == battleTag){return player.Won;}
+                }
+            }
+            return false;
         }
 
         private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats) {
