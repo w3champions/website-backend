@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
         public MapWith25WinsAchievement(){
             Id = 0;
             Title = "Win 25 Games On Any Map";
-            Caption = "";
+            Caption = "Player has yet to win 25 games on any map.";
             ProgressCurrent = 0;
             ProgressEnd = 25;
             Completed = false;

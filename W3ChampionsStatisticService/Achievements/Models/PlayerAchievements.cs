@@ -6,6 +6,6 @@ namespace W3ChampionsStatisticService.Achievements.Models {
     public class PlayerAchievements {
         [BsonId]
         public string PlayerId;
-        public List<Achievement> playerAchievements;
+        public List<Achievement> PlayerAchievementList;
     }
 }
