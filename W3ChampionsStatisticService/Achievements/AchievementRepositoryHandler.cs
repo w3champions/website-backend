@@ -69,6 +69,9 @@ namespace W3ChampionsStatisticService.Achievements {
         private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
 
             // currently working on the first run of getting achievements from previous games....
+            // TODO: if this is the first update, then we need to run through all the matches.
+            // if this it not the first update, we need to pull the currently saved PlayerAchievement
+            // and then check for achievement updates that need to be applied........
             var playerMatches = new List<Matchup>();
             var battleTag = playerAchievements.PlayerId;
             var playerRaceOnMapVersusRaceRatios = new List<PlayerRaceOnMapVersusRaceRatio>();
