@@ -86,7 +86,6 @@ namespace W3ChampionsStatisticService.Achievements {
                 }
             }
 
-// working here............ need to start on 2nd achievement.......
             foreach(Achievement achievement in playerAchievements.PlayerAchievementList) {
                 var progressEnd = achievement.ProgressEnd;
                 switch(achievement.Id){
@@ -97,9 +96,9 @@ namespace W3ChampionsStatisticService.Achievements {
                             var map = matchup.Map;
                             var teams = matchup.Teams;
                             if(PlayerDidWin(battleTag, teams)) {
-                                var hitWinsLimit = AddMapToMapWinsCount(mapWinsCount, map, 25);
+                                var hitWinsLimit = AddToWinsCount(mapWinsCount, map, 25);
                                 if(achievement.ProgressCurrent < progressEnd){
-                                    achievement.ProgressCurrent = CheckMostMapWins(mapWinsCount);
+                                    achievement.ProgressCurrent = CheckMostWins(mapWinsCount);
                                 }
                                 if (hitWinsLimit){firstMapTo25Wins = map;}
                             }
@@ -110,27 +109,58 @@ namespace W3ChampionsStatisticService.Achievements {
                             achievement.Completed = true;
                         }
                         break;
+                    case 1:
+                        var partnerWinsCounter = new Dictionary<string,int>();
+                        var firstPartnerTo10Wins = "";
+                        foreach(Matchup matchup in playerMatches){
+                            if (matchup.GameMode != GameMode.GM_2v2_AT){continue;}
+                            if (PlayerDidWin(battleTag, matchup.Teams)){
+                                var teamMate = GetPlayerTeamMate(battleTag, matchup.Teams);
+                                var hitWinsLimit = AddToWinsCount(partnerWinsCounter, teamMate, 10);
+                                if(achievement.ProgressCurrent < achievement.ProgressEnd){
+                                    achievement.ProgressCurrent = CheckMostWins(partnerWinsCounter);
+                                }
+                                if(hitWinsLimit){firstPartnerTo10Wins = teamMate;}
+                            }
+                        }
+                        if(firstPartnerTo10Wins != "") {
+                            achievement.Caption = $"Player has completed this achievement with {firstPartnerTo10Wins}";
+                            achievement.Completed = true;
+                        }
+                        break;
                 }
             }
 
             return playerAchievements;
         }
 
-        private long CheckMostMapWins(Dictionary<string,int> mapWinsCount){
+        private string GetPlayerTeamMate(string battleTag, IList<Team> teams){
+            foreach(Team team in teams){
+                var players = team.Players;
+                foreach(PlayerOverviewMatches player in players){
+                    if(player.BattleTag != battleTag && player.Won){
+                        return player.BattleTag;
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
+        private long CheckMostWins(Dictionary<string,int> winsCount){
             long maxValue = 0;
-            foreach(var mapWins in mapWinsCount){
-                if(mapWins.Value > maxValue){ maxValue = mapWins.Value;}
+            foreach(var wins in winsCount){
+                if(wins.Value > maxValue){ maxValue = wins.Value;}
             }
             return maxValue;
         }
 
-        private bool AddMapToMapWinsCount(Dictionary<string,int> mapWinsCount, string map, int maxCount) {
+        private bool AddToWinsCount(Dictionary<string,int> winsCount, string unit, int maxCount) {
             var didReachMaxCount = false;
-            if(!mapWinsCount.ContainsKey(map)) {
-                mapWinsCount.Add(map, 1);
+            if(!winsCount.ContainsKey(unit)) {
+                winsCount.Add(unit, 1);
             } else {
-                mapWinsCount[map] += 1;
-                if (mapWinsCount[map] == maxCount) {
+                winsCount[unit] += 1;
+                if (winsCount[unit] == maxCount) {
                     didReachMaxCount = true;
                 }
             }
