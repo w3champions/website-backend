@@ -66,17 +66,10 @@ namespace W3ChampionsStatisticService.Achievements {
             return achievementList;
         }
 
-        private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
-
-            // currently working on the first run of getting achievements from previous games....
-            // TODO: if this is the first update, then we need to run through all the matches.
-            // if this it not the first update, we need to pull the currently saved PlayerAchievement
-            // and then check for achievement updates that need to be applied........
+        private async Task<List<Matchup>> GetAllPlayerMatches(PlayerOverallStats playerOverallStats){
             var playerMatches = new List<Matchup>();
-            var battleTag = playerAchievements.PlayerId;
+            var battleTag = playerOverallStats.BattleTag;
             var playerRaceOnMapVersusRaceRatios = new List<PlayerRaceOnMapVersusRaceRatio>();
-
-            // get the seasons in ints...
             var seasons = ConvertSeasonsToSimpleList(playerOverallStats.ParticipatedInSeasons);
 
             foreach(int s in seasons){
@@ -88,24 +81,38 @@ namespace W3ChampionsStatisticService.Achievements {
                     playerMatches.Add(matchup);
                 }
             }
+            return playerMatches;
+        }
+
+        private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
+
+            var playerMatches = new List<Matchup>();
+
+            if(isFirstUpdate){
+                playerMatches = await GetAllPlayerMatches(playerOverallStats);
+            } else {
+                // TODO:
+                // playerMatches will be the match that was just completed........
+            }
+            var battleTag = playerAchievements.PlayerId;
 
             foreach(Achievement achievement in playerAchievements.PlayerAchievementList) {
-                var progressEnd = achievement.ProgressEnd;
+                if(achievement.Completed){continue;}
+                var achievementProgressCounter = new Dictionary<string, int>();
+                if(!isFirstUpdate){achievementProgressCounter = achievement.Counter;}
                 switch(achievement.Id){
                     case 0:
-                        var mapWinsCount = new Dictionary<string,int>();
                         var firstMapTo25Wins = "";
                         foreach(Matchup matchup in playerMatches){
                             var map = matchup.Map;
                             var teams = matchup.Teams;
                             if(PlayerDidWin(battleTag, teams)) {
-                                var hitWinsLimit = AddToWinsCount(mapWinsCount, map, 25);
-                                if(achievement.ProgressCurrent < progressEnd){
-                                    achievement.ProgressCurrent = CheckMostWins(mapWinsCount);
+                                var hitWinsLimit = AddToWinsCount(achievementProgressCounter, map, 25);
+                                if(achievement.ProgressCurrent < achievement.ProgressEnd){
+                                    achievement.ProgressCurrent = CheckMostWins(achievementProgressCounter);
                                 }
-                                if (hitWinsLimit){firstMapTo25Wins = map;}
+                                if (hitWinsLimit){firstMapTo25Wins = map; break;}
                             }
-
                         }
                         if(firstMapTo25Wins != ""){
                             achievement.Caption = $"Player has completed this achievement with 25 games won on {firstMapTo25Wins}";
@@ -113,17 +120,16 @@ namespace W3ChampionsStatisticService.Achievements {
                         }
                         break;
                     case 1:
-                        var partnerWinsCounter = new Dictionary<string,int>();
                         var firstPartnerTo10Wins = "";
                         foreach(Matchup matchup in playerMatches){
                             if (matchup.GameMode != GameMode.GM_2v2_AT){continue;}
                             if (PlayerDidWin(battleTag, matchup.Teams)){
                                 var teamMate = GetPlayerTeamMate(battleTag, matchup.Teams);
-                                var hitWinsLimit = AddToWinsCount(partnerWinsCounter, teamMate, 10);
+                                var hitWinsLimit = AddToWinsCount(achievementProgressCounter, teamMate, 10);
                                 if(achievement.ProgressCurrent < achievement.ProgressEnd){
-                                    achievement.ProgressCurrent = CheckMostWins(partnerWinsCounter);
+                                    achievement.ProgressCurrent = CheckMostWins(achievementProgressCounter);
                                 }
-                                if(hitWinsLimit){firstPartnerTo10Wins = teamMate;}
+                                if(hitWinsLimit){firstPartnerTo10Wins = teamMate; break;}
                             }
                         }
                         if(firstPartnerTo10Wins != "") {
@@ -132,8 +138,8 @@ namespace W3ChampionsStatisticService.Achievements {
                         }
                         break;
                 }
+                achievement.Counter = achievementProgressCounter;
             }
-
             return playerAchievements;
         }
 
