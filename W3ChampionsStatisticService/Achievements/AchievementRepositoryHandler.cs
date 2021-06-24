@@ -19,6 +19,7 @@ namespace W3ChampionsStatisticService.Achievements {
         private readonly IMatchRepository _matchRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly IPlayerStatsRepository _playerStatsRepository;
+        private long[] ActiveAchievements = {0, 1, 2};
 
         public AchievementRepositoryHandler(
             IAchievementRepository achievementRepository,
@@ -44,7 +45,8 @@ namespace W3ChampionsStatisticService.Achievements {
                 // check if the player exists....
                 var playerProfile = await _playerRepository.LoadPlayerProfile(playerId);
                 if (playerProfile != null){
-                    var newPlayerAchievements = CreateNewPlayerAchievements(playerProfile);
+                    playerAchievements = await CreateNewPlayerAchievements(playerProfile);
+
                     // once saved, pass achievments out to be used -- can use playerAchievementsFound
                     // TODO
                 }
@@ -85,6 +87,8 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
+
+            //TODO: check for any newly added achievements and run through games to check if its completed.
 
             var playerMatches = new List<Matchup>();
 
