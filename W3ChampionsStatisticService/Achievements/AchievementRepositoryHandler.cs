@@ -16,7 +16,7 @@ namespace W3ChampionsStatisticService.Achievements {
 
      public class AchievementRepositoryHandler : IReadModelHandler  {
 
-        private readonly IAchievementRepository _achievementRepository;
+        private IAchievementRepository _achievementRepository;
         private readonly IMatchRepository _matchRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly IPlayerStatsRepository _playerStatsRepository;
@@ -44,34 +44,21 @@ namespace W3ChampionsStatisticService.Achievements {
         } 
 
         public async Task<PlayerAchievements> GetPlayerAchievements(string playerId){
-
-            // brand new.... this would be if a player hasnt played a game in a long time
-            // if the achievements dont exist, look to see if the player exists....
-            // if he does exist then add the achievements and then go through each match to see
-            // if any achievements have been acomplished.....
-
-            // achievements already exist, but a new achievement was added...
-            // we will need to look for these....
-            // find which ones are newly added
-            // for each newly added achievement, update....
-
-            // need to have a method that updates achievements one at a time i think....
-
-
             var playerAchievements = await _achievementRepository.GetPlayerAchievements(playerId);
             if (playerAchievements == null || playerAchievements.PlayerAchievementList.Count < ActiveAchievementIds.Length){
                 // check if the player exists....
                 var playerProfile = await _playerRepository.LoadPlayerProfile(playerId);
                 if (playerProfile != null){
                     playerAchievements = await CreateNewPlayerAchievements(playerProfile);
-                    await _achievementRepository.UpsertPlayerAchievements(playerAchievements);
                 } else {
                     // get the newly achievement(s)
-                    playerAchievements.PlayerAchievementList = UpdateCurrentPlayerAchievementList(playerAchievements.PlayerAchievementList);
-                    // update the whole achievement object
-                    //TODO: fix this because its going to run through all achievements again.....
-                  // playerAchievements = await UpdateCurrentPlayerAchievement(playerAchievements, playerProfile, true);
+                    var achievementsToAdd = UpdateCurrentPlayerAchievementList(playerAchievements.PlayerAchievementList);
+                    for(int i = 0; i < achievementsToAdd.Count; i++){
+                        achievementsToAdd[i] = await UpdateCurrentPlayerAchievement(achievementsToAdd[i], playerProfile, null);
+                        playerAchievements.PlayerAchievementList.Add(achievementsToAdd[i]);
+                    }
                 }
+                await _achievementRepository.UpsertPlayerAchievements(playerAchievements);
             }
 
             return playerAchievements;
@@ -124,16 +111,19 @@ namespace W3ChampionsStatisticService.Achievements {
             return playerMatches;
         }
 
-        private async Task<Achievement> UpdateCurrentPlayerAchievement(Achievement playerAchievement, PlayerOverallStats playerOverallStats){
-
-            var playerMatches = await GetAllPlayerMatches(playerOverallStats);
+        private async Task<Achievement> UpdateCurrentPlayerAchievement(
+            Achievement playerAchievement,
+            PlayerOverallStats playerOverallStats,
+            List<Matchup> matches
+            ){
+            if (matches == null){matches = await GetAllPlayerMatches(playerOverallStats);}
             var battleTag = playerOverallStats.BattleTag;
 
             var achievementProgressCounter = playerAchievement.Counter;
             switch(playerAchievement.Id){
                 case 0:
                     var firstMapTo25Wins = "";
-                    foreach(Matchup matchup in playerMatches){
+                    foreach(Matchup matchup in matches){
                         var map = matchup.Map;
                         var teams = matchup.Teams;
                         if(PlayerDidWin(battleTag, teams)) {
@@ -151,7 +141,7 @@ namespace W3ChampionsStatisticService.Achievements {
                         break;
                     case 1:
                         var firstPartnerTo10Wins = "";
-                        foreach(Matchup matchup in playerMatches){
+                        foreach(Matchup matchup in matches){
                             if (matchup.GameMode != GameMode.GM_2v2_AT){continue;}
                             if (PlayerDidWin(battleTag, matchup.Teams)){
                                 var teamMate = GetPlayerTeamMate(battleTag, matchup.Teams);
@@ -219,11 +209,11 @@ namespace W3ChampionsStatisticService.Achievements {
         private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats) {
             var newPlayerAchievements = new PlayerAchievements();
             newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
+            var playerMatches = await GetAllPlayerMatches(playerOverallStats);
             newPlayerAchievements.PlayerAchievementList = UpdateCurrentPlayerAchievementList(null);
             for(int i = 0; i < newPlayerAchievements.PlayerAchievementList.Count; i++){
                 newPlayerAchievements.PlayerAchievementList[i] =
-                    await UpdateCurrentPlayerAchievement(newPlayerAchievements.PlayerAchievementList[i], playerOverallStats);
-
+                    await UpdateCurrentPlayerAchievement(newPlayerAchievements.PlayerAchievementList[i], playerOverallStats, playerMatches);
             }
             return newPlayerAchievements;
         }
