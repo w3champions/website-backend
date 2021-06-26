@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using W3ChampionsStatisticService.Achievements.Models;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
@@ -37,17 +38,20 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         public async Task Update(MatchFinishedEvent nextEvent) {
-
-            //TODO: create new collection if not exist and then
-            //update player achievements upon match finished............
             try {
                 if(nextEvent.WasFakeEvent){return;}
-
+                var matchup = await GetMatchupFromMatch(nextEvent.match);
             }catch(Exception e){
                 Console.WriteLine($"Exception occured when attempting to update player achievements: {e}");
 
             }
         } 
+
+        private async Task<Matchup> GetMatchupFromMatch(Match match) {
+            var id = ObjectId.Parse(match.id);
+            var matchupDetail = await _matchRepository.LoadDetails(id);
+            return matchupDetail.Match;
+        }
 
         public async Task<PlayerAchievements> GetPlayerAchievements(string playerId){
             var playerAchievements = await _achievementRepository.GetPlayerAchievements(playerId);
