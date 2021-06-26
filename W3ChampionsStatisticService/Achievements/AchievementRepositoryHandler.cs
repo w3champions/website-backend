@@ -13,13 +13,17 @@ using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.Achievements {
-    public class AchievementRepositoryHandler : IReadModelHandler  {
+
+     public class AchievementRepositoryHandler : IReadModelHandler  {
 
         private readonly IAchievementRepository _achievementRepository;
         private readonly IMatchRepository _matchRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly IPlayerStatsRepository _playerStatsRepository;
-        private long[] ActiveAchievements = {0, 1, 2};
+
+        // in order to add more achievements add the ID here, and update
+        // UpdateCurrentPlayerAchievementList and UpdateCurrentPlayerAchievements
+        private long[] ActiveAchievementIds = {0, 1};
 
         public AchievementRepositoryHandler(
             IAchievementRepository achievementRepository,
@@ -41,16 +45,21 @@ namespace W3ChampionsStatisticService.Achievements {
 
         public async Task<PlayerAchievements> GetPlayerAchievements(string playerId){
             var playerAchievements = await _achievementRepository.GetPlayerAchievements(playerId);
-            if (playerAchievements == null){
+            if (playerAchievements == null || playerAchievements.PlayerAchievementList.Count < ActiveAchievementIds.Length){
                 // check if the player exists....
                 var playerProfile = await _playerRepository.LoadPlayerProfile(playerId);
                 if (playerProfile != null){
                     playerAchievements = await CreateNewPlayerAchievements(playerProfile);
-
-                    // once saved, pass achievments out to be used -- can use playerAchievementsFound
-                    // TODO
+                    await _achievementRepository.UpsertPlayerAchievements(playerAchievements);
+                } else {
+                    // get the newly achievement(s)
+                    playerAchievements.PlayerAchievementList = UpdateCurrentPlayerAchievementList(playerAchievements.PlayerAchievementList);
+                    // update the whole achievement object
+                    //TODO: fix this because its going to run through all achievements again.....
+                    playerAchievements = await UpdateCurrentPlayerAchievements(playerAchievements, playerProfile, true);
                 }
             }
+
             return playerAchievements;
         }
 
@@ -61,11 +70,26 @@ namespace W3ChampionsStatisticService.Achievements {
             return seasonList;
         }
 
-        private List<Achievement> GenerateNewAchievementList() {
-            var achievementList = new List<Achievement>();
-            achievementList.Add(new MapWith25WinsAchievement());
-            achievementList.Add(new Win10GamesWithATPartnerAchievement());
-            return achievementList;
+        private List<Achievement> UpdateCurrentPlayerAchievementList(List<Achievement> currentAchievementsList) {
+            if (currentAchievementsList == null) {currentAchievementsList = new List<Achievement>();}
+                var currentListIds = new List<long>();
+                foreach(Achievement achievement in currentAchievementsList){
+                    currentListIds.Add(achievement.Id);
+                }
+                foreach(long activeAchievementsId in ActiveAchievementIds){
+                    if(!currentListIds.Contains(activeAchievementsId)){
+                        switch (activeAchievementsId) {
+                            case 0:
+                            currentAchievementsList.Add(new MapWith25WinsAchievement());
+                            break;
+                            case 1:
+                            currentAchievementsList.Add(new Win10GamesWithATPartnerAchievement());
+                            break;
+                        }
+
+                    }
+            }
+            return currentAchievementsList;
         }
 
         private async Task<List<Matchup>> GetAllPlayerMatches(PlayerOverallStats playerOverallStats){
@@ -86,24 +110,22 @@ namespace W3ChampionsStatisticService.Achievements {
             return playerMatches;
         }
 
-        private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool isFirstUpdate){
-
-            //TODO: check for any newly added achievements and run through games to check if its completed.
+        private async Task<PlayerAchievements> UpdateCurrentPlayerAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerOverallStats, bool needsNewAchievementUpdate){
 
             var playerMatches = new List<Matchup>();
 
-            if(isFirstUpdate){
+            if(needsNewAchievementUpdate){
                 playerMatches = await GetAllPlayerMatches(playerOverallStats);
             } else {
                 // TODO:
-                // playerMatches will be the match that was just completed........
+                // playerMatches will be the [ match ] that was just completed........
             }
             var battleTag = playerAchievements.PlayerId;
 
             foreach(Achievement achievement in playerAchievements.PlayerAchievementList) {
                 if(achievement.Completed){continue;}
                 var achievementProgressCounter = new Dictionary<string, int>();
-                if(!isFirstUpdate){achievementProgressCounter = achievement.Counter;}
+                if(!needsNewAchievementUpdate){achievementProgressCounter = achievement.Counter;}
                 switch(achievement.Id){
                     case 0:
                         var firstMapTo25Wins = "";
@@ -194,7 +216,7 @@ namespace W3ChampionsStatisticService.Achievements {
         private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats) {
             var newPlayerAchievements = new PlayerAchievements();
             newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
-            newPlayerAchievements.PlayerAchievementList = GenerateNewAchievementList();
+            newPlayerAchievements.PlayerAchievementList = UpdateCurrentPlayerAchievementList(null);
             newPlayerAchievements = await UpdateCurrentPlayerAchievements(newPlayerAchievements, playerOverallStats, true);
             return newPlayerAchievements;
         }
