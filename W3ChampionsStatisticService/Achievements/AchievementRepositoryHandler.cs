@@ -37,10 +37,16 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         public async Task Update(MatchFinishedEvent nextEvent) {
-            //TODO: get this to work when match is finished....
-             if (nextEvent == null || nextEvent.match == null || nextEvent.result == null) {
-                 return;
-             }
+
+            //TODO: create new collection if not exist and then
+            //update player achievements upon match finished............
+            try {
+                if(nextEvent.WasFakeEvent){return;}
+
+            }catch(Exception e){
+                Console.WriteLine($"Exception occured when attempting to update player achievements: {e}");
+
+            }
         } 
 
         public async Task<PlayerAchievements> GetPlayerAchievements(string playerId){
