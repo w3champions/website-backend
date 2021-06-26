@@ -60,7 +60,7 @@ namespace W3ChampionsStatisticService.Achievements {
                     // get the newly achievement(s)
                     var achievementsToAdd = UpdateCurrentPlayerAchievementList(playerAchievements.PlayerAchievementList);
                     for(int i = 0; i < achievementsToAdd.Count; i++){
-                        achievementsToAdd[i] = await UpdateCurrentPlayerAchievement(achievementsToAdd[i], playerProfile, null);
+                        achievementsToAdd[i] = await UpdateCurrentPlayerAchievement(achievementsToAdd[i], playerProfile, null, true);
                         playerAchievements.PlayerAchievementList.Add(achievementsToAdd[i]);
                     }
                 }
@@ -120,9 +120,11 @@ namespace W3ChampionsStatisticService.Achievements {
         private async Task<Achievement> UpdateCurrentPlayerAchievement(
             Achievement playerAchievement,
             PlayerOverallStats playerOverallStats,
-            List<Matchup> matches
+            List<Matchup> matches,
+            bool isFirstRun
             ){
             if (matches == null){matches = await GetAllPlayerMatches(playerOverallStats);}
+            if (isFirstRun){playerAchievement.Counter = new Dictionary<string, int>();}
             var battleTag = playerOverallStats.BattleTag;
 
             var achievementProgressCounter = playerAchievement.Counter;
@@ -219,7 +221,7 @@ namespace W3ChampionsStatisticService.Achievements {
             newPlayerAchievements.PlayerAchievementList = UpdateCurrentPlayerAchievementList(null);
             for(int i = 0; i < newPlayerAchievements.PlayerAchievementList.Count; i++){
                 newPlayerAchievements.PlayerAchievementList[i] =
-                    await UpdateCurrentPlayerAchievement(newPlayerAchievements.PlayerAchievementList[i], playerOverallStats, playerMatches);
+                    await UpdateCurrentPlayerAchievement(newPlayerAchievements.PlayerAchievementList[i], playerOverallStats, playerMatches, true);
             }
             return newPlayerAchievements;
         }
