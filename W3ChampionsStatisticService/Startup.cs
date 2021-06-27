@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using W3ChampionsStatisticService.Achievements;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
@@ -68,6 +69,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<PlayerAkaProvider>();
             services.AddSingleton<PersonalSettingsProvider>();
 
+            services.AddTransient<IAchievementRepository, AchievementRepository>();
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
@@ -90,6 +92,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<INewsRepository, NewsRepository>();
             services.AddTransient<ILoadingScreenTipsRepository, LoadingScreenTipsRepository>();
             services.AddTransient<ClanCommandHandler>();
+            services.AddTransient<AchievementRepositoryHandler>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
@@ -127,6 +130,9 @@ namespace W3ChampionsStatisticService
 
                 // On going matches
                 services.AddUnversionedReadModelService<OngoingMatchesHandler>();
+
+                // PlayerAchievements
+                services.AddReadModelService<AchievementRepositoryHandler>();
 
                 services.AddUnversionedReadModelService<RankSyncHandler>();
                 services.AddUnversionedReadModelService<LeagueSyncHandler>();
