@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Achievements {
 
         [HttpGet("{playerId}")]
         public async Task<IActionResult> GetPlayerAchievements(string playerId) {
-            var response = await _achievementRepositoryHandler.GetPlayerAchievements(playerId);
+            var response = await _achievementRepositoryHandler.GetPlayerAchievementsFromUI(playerId);
             return Ok(response);
         }
     }
