@@ -14,6 +14,8 @@ using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.Achievements {
 
+    //TODO: refactor this to work with the individual achievements
+    // their update logic will be part of their class
      public class AchievementRepositoryHandler : IReadModelHandler  {
 
         private readonly IAchievementRepository _achievementRepository;
