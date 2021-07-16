@@ -13,5 +13,25 @@ namespace W3ChampionsStatisticService.Achievements.Models {
         public Dictionary<string,int> Counter {get; set;}
         public void Update(Achievement playerAchievement, PlayerOverallStats playerOverallStats, List<Matchup> matches) {
         }
+        private long CheckMostWins(Dictionary<string,int> winsCount){
+            long maxValue = 0;
+            foreach(var wins in winsCount){
+                if(wins.Value > maxValue){ maxValue = wins.Value;}
+            }
+            return maxValue;
+        }
+        private bool AddToWinsCount(Dictionary<string,int> winsCount, string unit, int maxCount) {
+            var didReachMaxCount = false;
+            if(!winsCount.ContainsKey(unit)){
+                winsCount.Add(unit, 1);
+            } else {
+                winsCount[unit] += 1;
+                if (winsCount[unit] == maxCount){
+                    didReachMaxCount = true;
+                }
+            }
+            return didReachMaxCount;
+        }
+        
     }
 }
