@@ -14,7 +14,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             Completed = false;
             Counter = new Dictionary<string, int>();
         }
-        new public void Update(Achievement playerAchievement, PlayerOverallStats playerOverallStats, List<Matchup> matches) {
+        public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches) {
             var battleTag = playerOverallStats.BattleTag;
             var firstPartnerTo10Wins = "";
             foreach(Matchup matchup in matches){
@@ -22,15 +22,15 @@ namespace W3ChampionsStatisticService.Achievements.Models {
                 if (base.PlayerDidWin(battleTag, matchup.Teams)){
                     var teamMate = base.GetPlayerTeamMate(battleTag, matchup.Teams);
                     var hitWinsLimit = base.AddToWinsCount(Counter, teamMate, 10);
-                    if(playerAchievement.ProgressCurrent < playerAchievement.ProgressEnd){
-                        playerAchievement.ProgressCurrent = base.CheckMostWins(Counter);
+                    if(ProgressCurrent < ProgressEnd){
+                        ProgressCurrent = base.CheckMostWins(Counter);
                     }
                     if(hitWinsLimit){firstPartnerTo10Wins = teamMate; break;}
                     }
                 }
                 if(firstPartnerTo10Wins != ""){
-                    playerAchievement.Caption = $"Player has completed this achievement with {firstPartnerTo10Wins}";
-                    playerAchievement.Completed = true;
+                    Caption = $"Player has completed this achievement with {firstPartnerTo10Wins}";
+                    Completed = true;
             }
         }
     }
