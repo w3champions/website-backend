@@ -18,7 +18,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
-            fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
+            fakeEvent.match.mapName = "amazonia";
             fakeEvent.match.state = 2;
             var mockEvents = new Mock<IMatchEventRepository>();
             mockEvents.SetupSequence(m => m.Load(It.IsAny<string>(), It.IsAny<int>()))

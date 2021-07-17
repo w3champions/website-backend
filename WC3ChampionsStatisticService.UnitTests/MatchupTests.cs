@@ -36,18 +36,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         public void MapMatch_Map()
         {
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
+            fakeEvent.match.mapName = "amazonia";
             var matchup = Matchup.Create(fakeEvent);
             Assert.AreEqual("amazonia", matchup.Map);
-        }
-
-        [Test]
-        public void MapMatch_Map_Shorter()
-        {
-            var fakeEvent = TestDtoHelper.CreateFakeEvent();
-            fakeEvent.match.map = "Maps/frozenthrone/(2)terenasstand_lv.w3x";
-            var matchup = Matchup.Create(fakeEvent);
-            Assert.AreEqual("terenasstand", matchup.Map);
         }
 
         [Test]

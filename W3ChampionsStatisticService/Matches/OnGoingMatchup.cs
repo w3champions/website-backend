@@ -16,7 +16,7 @@ namespace W3ChampionsStatisticService.Matches
             var result = new OnGoingMatchup()
             {
                 Id = matchStartedEvent.Id,
-                Map = new MapName(match.map).Name,
+                Map = match.mapName,
                 MatchId = match.id,
                 GateWay = match.gateway,
                 GameMode = match.gameMode,

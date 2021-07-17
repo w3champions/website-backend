@@ -49,11 +49,11 @@ namespace W3ChampionsStatisticService.PlayerStats.HeroStats
 
                 p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
                     eventPlayer2.race,
-                    new MapName(nextEvent.match.map).Name,
+                    nextEvent.match.mapName,
                     eventPlayer1.won);
                 p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
                     eventPlayer1.race,
-                    new MapName(nextEvent.match.map).Name,
+                    nextEvent.match.mapName,
                     eventPlayer2.won);
 
                 await _playerRepository.UpsertPlayerHeroStats(p1);

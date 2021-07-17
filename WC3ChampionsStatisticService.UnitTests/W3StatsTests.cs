@@ -213,9 +213,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             fakeEvent2.match.gameMode = GameMode.GM_1v1;
             fakeEvent3.match.gameMode = GameMode.GM_1v1;
 
-            fakeEvent1.match.map = "(2)Map1.w3x";
-            fakeEvent2.match.map = "(2)Map1.w3x";
-            fakeEvent3.match.map = "(2)Map2.w3x";
+            fakeEvent1.match.mapName = "Map1";
+            fakeEvent2.match.mapName = "Map1";
+            fakeEvent3.match.mapName = "Map2";
 
             fakeEvent1.match.season = 0;
             fakeEvent2.match.season = 1;
@@ -235,21 +235,6 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
             Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map2").Count);
             Assert.IsNull(loadMapsPerSeason3);
-        }
-
-        [Test]
-        [TestCase("path/w3c_1v1_autumnleaves_anon", "autumnleaves")]
-        [TestCase("path/w3c_1v1_terenasstand_anon", "terenasstand")]
-        [TestCase("path/w3c_gnollwood_anon", "gnollwood")]
-        [TestCase("path/w3c_tidewaterglades_lv_anon", "tidewaterglades")]
-        [TestCase("path/w3c_tidewaterglades_anon", "tidewaterglades")]
-        [TestCase("path/w3c_ffa_marketsquare_anon_cd", "marketsquare")]
-        [TestCase("path/w3c_ffa_marketsquare_cd", "marketsquare")]
-        [TestCase("path/w3c_1v1_lastrefuge.anon.w3x", "lastrefuge")]
-        public void MapName(string input, string expected)
-        {
-            var mapName = new MapName(input);
-            Assert.AreEqual(expected, mapName.Name);
         }
 
         [Test]

@@ -51,11 +51,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
                 statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won, patch);
                 statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won, "All");
 
-                statOverall.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, patch);
-                statOverall.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, "All");
+                var mapName = nextEvent.match.mapName;
 
-                statOverall.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, patch);
-                statOverall.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, "All");
+                statOverall.Apply(mapName, players[0].race, players[1].race, players[0].won, patch);
+                statOverall.Apply(mapName, players[0].race, players[1].race, players[0].won, "All");
+
+                statOverall.Apply(mapName, players[1].race, players[0].race, players[1].won, patch);
+                statOverall.Apply(mapName, players[1].race, players[0].race, players[1].won, "All");
 
                 statPerMmr.Apply("Overall", players[0].race, players[1].race, players[0].won, patch);
                 statPerMmr.Apply("Overall", players[0].race, players[1].race, players[0].won, "All");
@@ -63,11 +65,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
                 statPerMmr.Apply("Overall", players[1].race, players[0].race, players[1].won, patch);
                 statPerMmr.Apply("Overall", players[1].race, players[0].race, players[1].won, "All");
 
-                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, patch);
-                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, "All");
+                statPerMmr.Apply(mapName, players[0].race, players[1].race, players[0].won, patch);
+                statPerMmr.Apply(mapName, players[0].race, players[1].race, players[0].won, "All");
 
-                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, patch);
-                statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, "All");
+                statPerMmr.Apply(mapName, players[1].race, players[0].race, players[1].won, patch);
+                statPerMmr.Apply(mapName, players[1].race, players[0].race, players[1].won, "All");
 
                 await _w3Stats.Save(statOverall);
                 await _w3Stats.Save(statPerMmr);
