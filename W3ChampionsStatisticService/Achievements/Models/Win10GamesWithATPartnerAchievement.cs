@@ -1,5 +1,7 @@
-using System;
 using System.Collections.Generic;
+using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.Achievements.Models {
     public class Win10GamesWithATPartnerAchievement: Achievement {
@@ -10,6 +12,26 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             ProgressCurrent = 0;
             ProgressEnd = 10;
             Completed = false;
+            Counter = new Dictionary<string, int>();
+        }
+        new public void Update(Achievement playerAchievement, PlayerOverallStats playerOverallStats, List<Matchup> matches) {
+            var battleTag = playerOverallStats.BattleTag;
+            var firstPartnerTo10Wins = "";
+            foreach(Matchup matchup in matches){
+                if (matchup.GameMode != GameMode.GM_2v2_AT){continue;}
+                if (base.PlayerDidWin(battleTag, matchup.Teams)){
+                    var teamMate = base.GetPlayerTeamMate(battleTag, matchup.Teams);
+                    var hitWinsLimit = base.AddToWinsCount(Counter, teamMate, 10);
+                    if(playerAchievement.ProgressCurrent < playerAchievement.ProgressEnd){
+                        playerAchievement.ProgressCurrent = base.CheckMostWins(Counter);
+                    }
+                    if(hitWinsLimit){firstPartnerTo10Wins = teamMate; break;}
+                    }
+                }
+                if(firstPartnerTo10Wins != ""){
+                    playerAchievement.Caption = $"Player has completed this achievement with {firstPartnerTo10Wins}";
+                    playerAchievement.Completed = true;
+            }
         }
     }
 }

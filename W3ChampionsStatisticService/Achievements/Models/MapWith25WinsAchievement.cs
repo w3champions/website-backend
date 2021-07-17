@@ -12,17 +12,19 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             ProgressCurrent = 0;
             ProgressEnd = 25;
             Completed = false;
+            Counter = new Dictionary<string, int>();
         }
 
         new public void Update(Achievement playerAchievement, PlayerOverallStats playerOverallStats, List<Matchup> matches) {
-/*             var firstMapTo25Wins = "";
+            var battleTag = playerOverallStats.BattleTag;
+            var firstMapTo25Wins = "";
             foreach(Matchup matchup in matches){
                 var map = matchup.Map;
                 var teams = matchup.Teams;
-                    if(PlayerDidWin(battleTag, teams)){
-                        var hitWinsLimit = AddToWinsCount(achievementProgressCounter, map, 25);
+                    if(base.PlayerDidWin(battleTag, teams)){
+                        var hitWinsLimit = base.AddToWinsCount(Counter, map, 25);
                         if(playerAchievement.ProgressCurrent < playerAchievement.ProgressEnd){
-                            playerAchievement.ProgressCurrent = CheckMostWins(achievementProgressCounter);
+                            playerAchievement.ProgressCurrent = base.CheckMostWins(Counter);
                         }
                         if (hitWinsLimit){firstMapTo25Wins = map; break;}
                     }
@@ -30,7 +32,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             if(firstMapTo25Wins != ""){
                 playerAchievement.Caption = $"Player has completed this achievement with 25 games won on {firstMapTo25Wins}";
                 playerAchievement.Completed = true;
-            } */
+            }
         }
     }
 }

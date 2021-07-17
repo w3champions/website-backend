@@ -13,14 +13,14 @@ namespace W3ChampionsStatisticService.Achievements.Models {
         public Dictionary<string,int> Counter {get; set;}
         public void Update(Achievement playerAchievement, PlayerOverallStats playerOverallStats, List<Matchup> matches) {
         }
-        private long CheckMostWins(Dictionary<string,int> winsCount){
+        public long CheckMostWins(Dictionary<string,int> winsCount){
             long maxValue = 0;
             foreach(var wins in winsCount){
                 if(wins.Value > maxValue){ maxValue = wins.Value;}
             }
             return maxValue;
         }
-        private bool AddToWinsCount(Dictionary<string,int> winsCount, string unit, int maxCount) {
+        public bool AddToWinsCount(Dictionary<string,int> winsCount, string unit, int maxCount) {
             var didReachMaxCount = false;
             if(!winsCount.ContainsKey(unit)){
                 winsCount.Add(unit, 1);
@@ -31,6 +31,29 @@ namespace W3ChampionsStatisticService.Achievements.Models {
                 }
             }
             return didReachMaxCount;
+        }
+
+        public bool PlayerDidWin(string battleTag, IList<Team> teams){
+            foreach(Team team in teams){
+                var players = team.Players;
+                foreach(PlayerOverviewMatches player in players){
+                    var playerName = player.BattleTag;
+                    if (playerName == battleTag){return player.Won;}
+                }
+            }
+            return false;
+        }
+
+        public string GetPlayerTeamMate(string battleTag, IList<Team> teams){
+            foreach(Team team in teams){
+                var players = team.Players;
+                foreach(PlayerOverviewMatches player in players){
+                    if(player.BattleTag != battleTag && player.Won){
+                        return player.BattleTag;
+                    }
+                }
+            }
+            return string.Empty;
         }
         
     }
