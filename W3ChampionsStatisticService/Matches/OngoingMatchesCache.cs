@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Matches
             await UpdateCacheIfNeeded();
             return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                       && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                                      && (map == "Overall" || m.Map == map));
+                                      && (map == "Overall" || m.MapName == map));
         }
 
         public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize, string map)
@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.Matches
             return _values
                 .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                             && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                            && (map == "Overall" || m.Map == map))
+                            && (map == "Overall" || m.MapName == map))
                 .Skip(offset)
                 .Take(pageSize)
                 .ToList();

@@ -153,7 +153,7 @@ namespace W3ChampionsStatisticService.Matches
             return mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map))
+                    && (map == "Overall" || m.MapName == map))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -168,7 +168,7 @@ namespace W3ChampionsStatisticService.Matches
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map));
+                    && (map == "Overall" || m.MapName == map));
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)

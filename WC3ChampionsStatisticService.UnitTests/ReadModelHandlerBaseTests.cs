@@ -36,7 +36,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await handler.Update();
 
-            mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), Times.Once);
+            mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.MapName == "amazonia")), Times.Once);
         }
 
         [Test]

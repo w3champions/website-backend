@@ -38,7 +38,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var fakeEvent = TestDtoHelper.CreateFakeEvent();
             fakeEvent.match.mapName = "amazonia";
             var matchup = Matchup.Create(fakeEvent);
-            Assert.AreEqual("amazonia", matchup.Map);
+            Assert.AreEqual("amazonia", matchup.MapName);
         }
 
         [Test]
