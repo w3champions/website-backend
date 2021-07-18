@@ -9,5 +9,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<ProxiesResponse>> GetProxies();
         Task<ProxyUpdate> UpdateProxies(ProxyUpdate proxyUpdateData, string battleTag);
         Task<FloProxies> GetProxiesFor(string battleTag);
+        Task<List<string>> SearchSmurfsFor(string battleTag);
     }
 }

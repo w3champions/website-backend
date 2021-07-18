@@ -91,5 +91,22 @@ namespace W3ChampionsStatisticService.Admin
             public int port { get; set; }
             public string address { get; set; }
         }
+
+        public async Task<List<string>> SearchSmurfsFor(string tag)
+        {
+            var httpClient = new HttpClient();
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(tag)}/alts?secret={MatchmakingAdminSecret}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<Aliases>(content);
+            
+            return deserializeObject.smurfs;
+        }
+
+        public class Aliases
+        {
+            public string battleTag {get; set; }
+            public List<string> smurfs {get; set; }
+        }
     }
 }
