@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             Counter = new Dictionary<string, int>();
         }
 
-        public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches) {
+        override public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches) {
             var battleTag = playerOverallStats.BattleTag;
             var firstMapTo25Wins = "";
             foreach(Matchup matchup in matches){

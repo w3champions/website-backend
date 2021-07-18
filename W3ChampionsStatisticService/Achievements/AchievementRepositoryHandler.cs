@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Achievements {
     // their update logic will be part of their class
      public class AchievementRepositoryHandler : IReadModelHandler  {
 
-        private readonly IAchievementRepository _achievementRepository;
+        private IAchievementRepository _achievementRepository;
         private readonly IMatchRepository _matchRepository;
         private readonly IPlayerRepository _playerRepository;
         private readonly IPlayerStatsRepository _playerStatsRepository;
@@ -47,10 +47,10 @@ namespace W3ChampionsStatisticService.Achievements {
                     foreach(PlayerOverviewMatches player in team.Players){
                         var needsUpdateWithCurrentMatchup = true;
                         var battleTag = player.BattleTag;
+                        var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
                         var playerAchievements = await _achievementRepository.GetPlayerAchievements(battleTag);
 
                         if (playerAchievements == null){
-                            var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
                             playerAchievements = await CreateNewPlayerAchievements(playerProfile);
                             needsUpdateWithCurrentMatchup = false;
                         }
@@ -58,13 +58,11 @@ namespace W3ChampionsStatisticService.Achievements {
                         if (needsUpdateWithCurrentMatchup){
                             var matchups = new List<Matchup>{matchup};
                             for(int i = 0; i < playerAchievements.PlayerAchievementList.Count; i++){
-                                playerAchievements.PlayerAchievementList[i] = await UpdateCurrentPlayerAchievement(
-                                    playerAchievements.PlayerAchievementList[i], null, battleTag, matchups, false);
+                                playerAchievements.PlayerAchievementList[i].Update(playerProfile, matchups);
                             }
                         } 
                         
                         if (playerAchievements.PlayerAchievementList.Count < ActiveAchievementIds.Length) {
-                            var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
                             playerAchievements = await AddAdditionalAchievements(playerAchievements, playerProfile);
                         }
 
@@ -78,8 +76,9 @@ namespace W3ChampionsStatisticService.Achievements {
 
         private async Task<PlayerAchievements> AddAdditionalAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerProfile){
             var achievementsToAdd = UpdateCurrentPlayerAchievementList(playerAchievements.PlayerAchievementList);
+            var matches = await GetAllPlayerMatches(playerProfile);
             for(int i = 0; i < achievementsToAdd.Count; i++){
-                achievementsToAdd[i] = await UpdateCurrentPlayerAchievement(achievementsToAdd[i], playerProfile, null, null, true);
+                achievementsToAdd[i].Update(playerProfile, matches);
                 playerAchievements.PlayerAchievementList.Add(achievementsToAdd[i]);
             }
             return playerAchievements;
@@ -161,112 +160,14 @@ namespace W3ChampionsStatisticService.Achievements {
             return playerMatches;
         }
 
-        private async Task<Achievement> UpdateCurrentPlayerAchievement(
-            Achievement playerAchievement,
-            PlayerOverallStats playerOverallStats,
-            string battleTag,
-            List<Matchup> matches,
-            bool isFirstRun
-            ){
-            if (matches == null){matches = await GetAllPlayerMatches(playerOverallStats);}
-            if (battleTag == null){battleTag = playerOverallStats.BattleTag;}
-            if (isFirstRun){playerAchievement.Counter = new Dictionary<string, int>();}
-        
-            var achievementProgressCounter = playerAchievement.Counter;
-            switch(playerAchievement.Id){
-                case 0:
-                    var firstMapTo25Wins = "";
-                    foreach(Matchup matchup in matches){
-                        var map = matchup.Map;
-                        var teams = matchup.Teams;
-                        if(PlayerDidWin(battleTag, teams)){
-                            var hitWinsLimit = AddToWinsCount(achievementProgressCounter, map, 25);
-                            if(playerAchievement.ProgressCurrent < playerAchievement.ProgressEnd){
-                                playerAchievement.ProgressCurrent = CheckMostWins(achievementProgressCounter);
-                            }
-                            if (hitWinsLimit){firstMapTo25Wins = map; break;}
-                        }
-                    }
-                    if(firstMapTo25Wins != ""){
-                        playerAchievement.Caption = $"Player has completed this achievement with 25 games won on {firstMapTo25Wins}";
-                        playerAchievement.Completed = true;
-                    }
-                    break;
-                case 1:
-                    var firstPartnerTo10Wins = "";
-                    foreach(Matchup matchup in matches){
-                        if (matchup.GameMode != GameMode.GM_2v2_AT){continue;}
-                        if (PlayerDidWin(battleTag, matchup.Teams)){
-                            var teamMate = GetPlayerTeamMate(battleTag, matchup.Teams);
-                            var hitWinsLimit = AddToWinsCount(achievementProgressCounter, teamMate, 10);
-                            if(playerAchievement.ProgressCurrent < playerAchievement.ProgressEnd){
-                                playerAchievement.ProgressCurrent = CheckMostWins(achievementProgressCounter);
-                            }
-                            if(hitWinsLimit){firstPartnerTo10Wins = teamMate; break;}
-                        }
-                    }
-                    if(firstPartnerTo10Wins != ""){
-                        playerAchievement.Caption = $"Player has completed this achievement with {firstPartnerTo10Wins}";
-                        playerAchievement.Completed = true;
-                    }
-                    break;
-            }
-            playerAchievement.Counter = achievementProgressCounter;
-            return playerAchievement;
-        }
-
-        private string GetPlayerTeamMate(string battleTag, IList<Team> teams){
-            foreach(Team team in teams){
-                var players = team.Players;
-                foreach(PlayerOverviewMatches player in players){
-                    if(player.BattleTag != battleTag && player.Won){
-                        return player.BattleTag;
-                    }
-                }
-            }
-            return string.Empty;
-        }
-
-        private long CheckMostWins(Dictionary<string,int> winsCount){
-            long maxValue = 0;
-            foreach(var wins in winsCount){
-                if(wins.Value > maxValue){ maxValue = wins.Value;}
-            }
-            return maxValue;
-        }
-
-        private bool AddToWinsCount(Dictionary<string,int> winsCount, string unit, int maxCount) {
-            var didReachMaxCount = false;
-            if(!winsCount.ContainsKey(unit)){
-                winsCount.Add(unit, 1);
-            } else {
-                winsCount[unit] += 1;
-                if (winsCount[unit] == maxCount){
-                    didReachMaxCount = true;
-                }
-            }
-            return didReachMaxCount;
-        }
-
-        private bool PlayerDidWin(string battleTag, IList<Team> teams){
-            foreach(Team team in teams){
-                var players = team.Players;
-                foreach(PlayerOverviewMatches player in players){
-                    var playerName = player.BattleTag;
-                    if (playerName == battleTag){return player.Won;}
-                }
-            }
-            return false;
-        }
-
         private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats){
             var newPlayerAchievements = new PlayerAchievements();
-            newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
             var playerMatches = await GetAllPlayerMatches(playerOverallStats);
             newPlayerAchievements.PlayerAchievementList = UpdateCurrentPlayerAchievementList(null);
             for(int i = 0; i < newPlayerAchievements.PlayerAchievementList.Count; i++){
-                newPlayerAchievements.PlayerAchievementList[i] =
-                    await UpdateCurrentPlayerAchievement(newPlayerAchievements.PlayerAchievementList[i], playerOverallStats, null, playerMatches, true);
+                var achievement = newPlayerAchievements.PlayerAchievementList[i];
+                achievement.Update(playerOverallStats, playerMatches);
+                newPlayerAchievements.PlayerAchievementList[i] = achievement;
             }
             return newPlayerAchievements;
         }
