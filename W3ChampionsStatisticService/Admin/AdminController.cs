@@ -186,5 +186,14 @@ namespace W3ChampionsStatisticService.Admin
 
             return Ok(playerInstances);
         }
+
+        [HttpGet("alts/{tag}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
+        {
+            var smurfs = await _adminRepository.SearchSmurfsFor(tag);
+
+            return Ok(smurfs);
+        }
     }
 }
