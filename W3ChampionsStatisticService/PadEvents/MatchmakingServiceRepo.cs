@@ -9,6 +9,7 @@ using System.Web;
 using Newtonsoft.Json;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Admin;
+using W3ChampionsStatisticService.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -142,6 +143,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
         public bool isIpBan { get; set; }
         public bool? isOnlyChatBan { get; set; }
+        public List<GameMode> gameModes { get; set; }
 
         public string banReason { get; set; }
         public string Id => battleTag;
