@@ -143,7 +143,7 @@ namespace W3ChampionsStatisticService.PadEvents
 
         public bool isIpBan { get; set; }
         public bool? isOnlyChatBan { get; set; }
-        public List<GameMode> gameModes { get; set; }
+        public List<int> gameModes { get; set; }
 
         public string banReason { get; set; }
         public string Id => battleTag;
