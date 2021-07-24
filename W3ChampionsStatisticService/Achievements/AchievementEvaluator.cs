@@ -1,0 +1,12 @@
+using System.Collections.Generic;
+using W3ChampionsStatisticService.Achievements.Models;
+namespace W3ChampionsStatisticService.Achievements {
+    public static class AchievementEvaluator {
+        public static List<Achievement> AllActiveAchievements;
+
+        static AchievementEvaluator() {
+            AllActiveAchievements.Add(new MapWith25WinsAchievement());
+            AllActiveAchievements.Add(new Win10GamesWithATPartnerAchievement());
+        }
+    }
+}

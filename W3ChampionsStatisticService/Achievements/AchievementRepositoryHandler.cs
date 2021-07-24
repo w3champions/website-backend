@@ -14,8 +14,7 @@ using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.Achievements {
 
-    //TODO: refactor this to work with the individual achievements
-    // their update logic will be part of their class
+    //TODO: Use the achievement evaluator to loop through each class of achievements
      public class AchievementRepositoryHandler : IReadModelHandler  {
 
         private IAchievementRepository _achievementRepository;
@@ -121,24 +120,32 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         private List<Achievement> UpdateCurrentPlayerAchievementList(List<Achievement> currentAchievementsList){
+            var currentAchievements = Enum.GetValues(typeof(AllEnabledAchievements));
             if (currentAchievementsList == null) {currentAchievementsList = new List<Achievement>();}
                 var currentListIds = new List<long>();
                 foreach(Achievement achievement in currentAchievementsList){
                     currentListIds.Add(achievement.Id);
                 }
-                foreach(long activeAchievementsId in ActiveAchievementIds){
-                    if(!currentListIds.Contains(activeAchievementsId)){
-                        switch (activeAchievementsId) {
-                            case 0:
-                            currentAchievementsList.Add(new MapWith25WinsAchievement());
-                            break;
-                            case 1:
-                            currentAchievementsList.Add(new Win10GamesWithATPartnerAchievement());
-                            break;
-                        }
 
-                    }
-            }
+
+                //TODO: use this instead of the foreach loop below
+                foreach(Achievement achievement in AchievementEvaluator.AllActiveAchievements){
+
+                }
+
+                // foreach(long activeAchievementsId in ActiveAchievementIds){
+                //     if(!currentListIds.Contains(activeAchievementsId)){
+                //         switch (activeAchievementsId) {
+                //             case 0:
+                //             currentAchievementsList.Add(new MapWith25WinsAchievement());
+                //             break;
+                //             case 1:
+                //             currentAchievementsList.Add(new Win10GamesWithATPartnerAchievement());
+                //             break;
+                //         }
+
+                //     }
+                // }
             return currentAchievementsList;
         }
 
