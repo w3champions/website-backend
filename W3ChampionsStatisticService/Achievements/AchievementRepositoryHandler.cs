@@ -120,7 +120,6 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         private List<Achievement> UpdateCurrentPlayerAchievementList(List<Achievement> currentAchievementsList){
-            var currentAchievements = Enum.GetValues(typeof(AllEnabledAchievements));
             if (currentAchievementsList == null) {currentAchievementsList = new List<Achievement>();}
                 var currentListIds = new List<long>();
                 foreach(Achievement achievement in currentAchievementsList){

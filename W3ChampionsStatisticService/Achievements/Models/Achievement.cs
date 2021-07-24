@@ -57,8 +57,3 @@ namespace W3ChampionsStatisticService.Achievements.Models {
         
     }
 }
-
-public enum AllEnabledAchievements: long {
-    MapWith25WinsAchievement = 0,
-    Win10GamesWithATPartnerAchievement = 1
-}
