@@ -5,6 +5,7 @@ namespace W3ChampionsStatisticService.Achievements {
         public static List<Achievement> AllActiveAchievements;
 
         static AchievementEvaluator() {
+            AllActiveAchievements = new List<Achievement>();
             AllActiveAchievements.Add(new MapWith25WinsAchievement());
             AllActiveAchievements.Add(new Win10GamesWithATPartnerAchievement());
         }
