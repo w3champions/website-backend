@@ -195,5 +195,29 @@ namespace W3ChampionsStatisticService.Admin
 
             return Ok(smurfs);
         }
+
+        [HttpGet("globalChatBans")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> SearchChatbans()
+        {
+            var chatBans = await _adminRepository.GetChatBans();
+            return Ok(chatBans);
+        }
+
+        [HttpPut("globalChatBans")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> PutChatBan([FromBody] ChatBanPutDto chatBan)
+        {
+            await _adminRepository.PutChatBan(chatBan);
+            return Ok();
+        }
+
+        [HttpDelete("globalChatBans/{id}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
+        {
+            await _adminRepository.DeleteChatBan(id);
+            return Ok();
+        }
     }
 }

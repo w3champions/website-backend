@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Web;
 using System.Collections.Generic;
 using System.Net;
@@ -101,6 +102,62 @@ namespace W3ChampionsStatisticService.Admin
             var deserializeObject = JsonConvert.DeserializeObject<Aliases>(content);
             
             return deserializeObject.smurfs;
+        }
+
+        public async Task<List<GlobalChatBan>> GetChatBans()
+        {
+            var httpClient = new HttpClient();
+            var result = await httpClient.GetAsync($"{MatchmakingApiUrl}/flo/globalChatBans?secret={MatchmakingAdminSecret}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<PlayerChatBanWrapper>(content);
+
+            var globalChatBans = new List<GlobalChatBan>();
+
+            List<PlayerChatBan> banList = deserializeObject.playerBansList;
+
+            if (!banList.Any())
+            {
+                return globalChatBans;
+            }
+
+            foreach (var item in deserializeObject.playerBansList)
+            {
+                var chatBanData = new GlobalChatBan();
+
+                chatBanData.id = item.id;
+                chatBanData.battleTag = item.player.name;
+
+                if (item.banExpiresAt == null)
+                {
+                    chatBanData.expiresAt = null;
+                }
+                else
+                {
+                    chatBanData.expiresAt = DateTimeOffset.FromUnixTimeSeconds(item.banExpiresAt.seconds).DateTime;
+                }
+
+                globalChatBans.Add(chatBanData);
+            }
+            return globalChatBans;
+        }
+
+        public async Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan)
+        {
+            var httpClient = new HttpClient();
+            var serializedObject = JsonConvert.SerializeObject(chatBan);
+            var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
+            var byteContent = new ByteArrayContent(buffer);
+            byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            var result = await httpClient.PostAsync($"{MatchmakingApiUrl}/flo/globalChatBans?secret={MatchmakingAdminSecret}", byteContent);
+            return result.StatusCode;
+        }
+        
+        public async Task<HttpStatusCode> DeleteChatBan(string id)
+        {
+            var httpClient = new HttpClient();
+            var result = await httpClient.DeleteAsync($"{MatchmakingApiUrl}/flo/globalChatBans/{id}?secret={MatchmakingAdminSecret}");
+            return result.StatusCode;
         }
 
         public class Aliases
