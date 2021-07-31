@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.Achievements.Models;
+
 namespace W3ChampionsStatisticService.Achievements {
     public static class AchievementEvaluator {
         public static List<Achievement> AllActiveAchievements;
