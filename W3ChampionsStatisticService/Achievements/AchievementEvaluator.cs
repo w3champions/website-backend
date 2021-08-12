@@ -9,6 +9,7 @@ namespace W3ChampionsStatisticService.Achievements {
             AllActiveAchievements = new List<Achievement>();
             AllActiveAchievements.Add(new MapWith25WinsAchievement());
             AllActiveAchievements.Add(new Win10GamesWithATPartnerAchievement());
+            AllActiveAchievements.Add(new WinGamesWithEveryTavernHero());
         }
     }
 }

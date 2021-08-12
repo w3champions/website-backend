@@ -6,13 +6,16 @@ using MongoDB.Bson;
 namespace W3ChampionsStatisticService.Achievements.Models {
     public class Achievement: IAchievement {
         public long Id {get; set;}
+        public string Type {get; set;}
         public string Title {get; set;}
         public string Caption {get; set;}
         public long ProgressCurrent {get; set;}
         public long ProgressEnd {get; set;}
         public bool Completed {get; set;}
         public Dictionary<string,int> Counter {get; set;}
+        
         virtual public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches){}
+
         protected long CheckMostWins(Dictionary<string,int> winsCount){
             long maxValue = 0;
             foreach(var wins in winsCount){
@@ -20,6 +23,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             }
             return maxValue;
         }
+
         protected bool AddToWinsCount(Dictionary<string,int> winsCount, string unit, int maxCount) {
             var didReachMaxCount = false;
             if(!winsCount.ContainsKey(unit)){

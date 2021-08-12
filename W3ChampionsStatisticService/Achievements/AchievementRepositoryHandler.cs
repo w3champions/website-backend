@@ -140,14 +140,29 @@ namespace W3ChampionsStatisticService.Achievements {
             }
             return playerMatches;
         }
+        private async Task<MatchupDetail> GetMatchupDetail(Matchup matchup) {
+            var matchupId = matchup.Id;
+            var matchupDetails = await _matchRepository.LoadDetails(matchupId);
+            return matchupDetails;
+        }
 
         private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats){
             var newPlayerAchievements = new PlayerAchievements();
             newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
             newPlayerAchievements.PlayerAchievementList = AchievementEvaluator.AllActiveAchievements;
             var playerMatches = await GetAllPlayerMatches(playerOverallStats);
+            var playerMatchDetails = new List<MatchupDetail>();
             foreach(Achievement achievement in newPlayerAchievements.PlayerAchievementList){
-                achievement.Update(playerOverallStats, playerMatches);
+              //  if (achievement.Type == "general"){
+                    achievement.Update(playerOverallStats, playerMatches);
+              //  } else {
+                //     if (playerMatchDetails.Count < 1) {
+                //         foreach(Matchup playerMatch in playerMatches){
+                //             playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
+                //         }
+                //     }
+                //     achievement.Update(playerOverallStats, playerMatchDetails);
+                // }
             }
             return newPlayerAchievements;
         }

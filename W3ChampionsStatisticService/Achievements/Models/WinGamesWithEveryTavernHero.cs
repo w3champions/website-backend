@@ -8,13 +8,13 @@ using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.Achievements.Models {
     public class WinGamesWithEveryTavernHero: Achievement {
-        private readonly IMatchRepository _matchRepository;
+
         private string[] TavernHeros;
 
-        public WinGamesWithEveryTavernHero(IMatchRepository matchRepository){
-            _matchRepository = matchRepository;
+        public WinGamesWithEveryTavernHero() {
             TavernHeros = new string[]{ "alchemist", "seawitch", "tinker", "beastmaster", "bansheeranger", "firelord", 
             "pandarenbrewmaster", "pitlord" };
+            Type = "detail";
             Id = 2;
             Title = "Win Games With Every Tavern Hero";
             Caption = "Player has yet to win using every Tavern Hero.";
@@ -24,29 +24,23 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             Counter = new Dictionary<string, int>();
         }
 
-        override public async void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches) {
+        override public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matchupDetails) {
             if(Completed){return;}
             var battleTag = playerOverallStats.BattleTag;
-            foreach(Matchup matchup in matches){
-                var teams = matchup.Teams;
-                    if(base.PlayerDidWin(battleTag, teams)){
-                        var id = matchup.Id;
-                        var match = await _matchRepository.LoadDetails(id);
-                        var playerScores = match.PlayerScores;
-                        foreach(PlayerScore playerScore in playerScores){
-                            if (playerScore.BattleTag == battleTag){
-                                var heros = playerScore.Heroes;
-                                foreach(Hero hero in heros) {
-                                    if(TavernHeros.Contains(hero.icon)){
-                                        if(!Counter.ContainsKey(hero.icon)){
-                                            Counter[hero.icon] = 1;
-                                        }
-                                    }
-                                }
-                            }
-                        }   
-                    }
-            }
+            // foreach(MatchupDetail matchupDetail in matchupDetails){
+            //     var teams = matchupDetail.Match.Teams;
+            //     if(!base.PlayerDidWin(battleTag, teams)){continue;}
+            //     var playerScores = matchupDetail.PlayerScores;
+            //     foreach(PlayerScore playerScore in playerScores){
+            //         if(playerScore.BattleTag != battleTag){continue;}
+            //         var heroes = playerScore.Heroes;
+            //         foreach(Hero hero in heroes){
+            //             if (TavernHeros.Contains(hero.icon) && !Counter.ContainsKey(hero.icon)){
+            //                 Counter[hero.icon] = 1;
+            //             }
+            //         }
+            //     }
+            //}
             ProgressCurrent = Counter.Keys.Count;
             if (ProgressCurrent == ProgressEnd) {
                 Completed = true;

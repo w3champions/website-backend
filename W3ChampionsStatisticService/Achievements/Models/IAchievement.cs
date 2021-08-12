@@ -6,6 +6,7 @@ using MongoDB.Bson;
 namespace W3ChampionsStatisticService.Achievements.Models {
     public interface IAchievement {
         public long Id {get; set;}
+        public string Type {get; set;}
         public string Title {get; set;}
         public string Caption {get; set;}
         public long ProgressCurrent {get; set;}

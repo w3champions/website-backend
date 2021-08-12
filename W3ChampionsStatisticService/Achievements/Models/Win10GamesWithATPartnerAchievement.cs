@@ -7,6 +7,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
     public class Win10GamesWithATPartnerAchievement: Achievement {
         public Win10GamesWithATPartnerAchievement() {
             Id = 1;
+            Type = "general";
             Title = "Win 10 Games With an AT Partner";
             Caption = "Player has yet to win 10 games with any AT partner.";
             ProgressCurrent = 0;
@@ -19,14 +20,13 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             var firstPartnerTo10Wins = "";
             foreach(Matchup matchup in matches){
                 if (matchup.GameMode != GameMode.GM_2v2_AT){continue;}
-                if (base.PlayerDidWin(battleTag, matchup.Teams)){
-                    var teamMate = base.GetPlayerTeamMate(battleTag, matchup.Teams);
-                    var hitWinsLimit = base.AddToWinsCount(Counter, teamMate, 10);
-                    if(ProgressCurrent < ProgressEnd){
-                        ProgressCurrent = base.CheckMostWins(Counter);
-                    }
-                    if(hitWinsLimit){firstPartnerTo10Wins = teamMate; break;}
-                    }
+                if (!base.PlayerDidWin(battleTag, matchup.Teams)){ continue;}
+                var teamMate = base.GetPlayerTeamMate(battleTag, matchup.Teams);
+                var hitWinsLimit = base.AddToWinsCount(Counter, teamMate, 10);
+                if(ProgressCurrent < ProgressEnd){
+                    ProgressCurrent = base.CheckMostWins(Counter);
+                }
+                if(hitWinsLimit){firstPartnerTo10Wins = teamMate; break;}
                 }
                 if(firstPartnerTo10Wins != ""){
                     Caption = $"Player has completed this achievement with {firstPartnerTo10Wins}";
