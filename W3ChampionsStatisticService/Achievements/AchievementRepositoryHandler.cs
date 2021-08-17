@@ -50,8 +50,21 @@ namespace W3ChampionsStatisticService.Achievements {
 
                         if (needsUpdateWithCurrentMatchup){
                             var matchups = new List<Matchup>{matchup};
+                            var playerMatchDetails = new List<MatchupDetail>();
                             foreach(Achievement achievement in playerAchievements.PlayerAchievementList){
-                                achievement.Update(playerProfile, matchups);
+                                switch (achievement.Type) {
+                                case "detail":
+                                if (playerMatchDetails.Count == 0){
+                                    foreach(Matchup playerMatch in matchups) {
+                                        playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
+                                    }
+                                }
+                                    achievement.UpdateFromMatchupDetails(playerProfile, playerMatchDetails);
+                                    break;
+                                default:
+                                    achievement.UpdateFromMatchups(playerProfile, matchups);
+                                    break;
+                                }
                             }
                         } 
                         
@@ -70,9 +83,22 @@ namespace W3ChampionsStatisticService.Achievements {
         private async Task<PlayerAchievements> AddAdditionalAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerProfile){
             var achievementsToAdd = GetMissingAchievements(playerAchievements.PlayerAchievementList);
             var matches = await GetAllPlayerMatches(playerProfile);
+            var playerMatchDetails = new List<MatchupDetail>();
             foreach(Achievement achievement in achievementsToAdd){
                 var newAchievement = achievement;
-                newAchievement.Update(playerProfile, matches);
+                switch (achievement.Type) {
+                    case "detail":
+                    if (playerMatchDetails.Count == 0){
+                        foreach(Matchup playerMatch in matches) {
+                            playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
+                        }
+                    }
+                    newAchievement.UpdateFromMatchupDetails(playerProfile, playerMatchDetails);
+                    break;
+                    default:
+                    newAchievement.UpdateFromMatchups(playerProfile, matches);
+                    break;
+                }
                 playerAchievements.PlayerAchievementList.Add(newAchievement);
             }
             return playerAchievements;
@@ -153,7 +179,19 @@ namespace W3ChampionsStatisticService.Achievements {
             var playerMatches = await GetAllPlayerMatches(playerOverallStats);
             var playerMatchDetails = new List<MatchupDetail>();
             foreach(Achievement achievement in newPlayerAchievements.PlayerAchievementList){
-                achievement.Update(playerOverallStats, playerMatches);
+                switch (achievement.Type) {
+                    case "detail":
+                    if (playerMatchDetails.Count == 0){
+                        foreach(Matchup playerMatch in playerMatches) {
+                            playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
+                        }
+                    }
+                    achievement.UpdateFromMatchupDetails(playerOverallStats, playerMatchDetails);
+                    break;
+                    default:
+                    achievement.UpdateFromMatchups(playerOverallStats, playerMatches);
+                    break;
+                }
             }
             return newPlayerAchievements;
         }

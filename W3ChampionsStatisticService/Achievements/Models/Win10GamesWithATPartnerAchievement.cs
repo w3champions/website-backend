@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.CommonValueObjects;
 
@@ -15,7 +16,7 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             Completed = false;
             Counter = new Dictionary<string, int>();
         }
-        override public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches) {
+        override public void UpdateFromMatchups(PlayerOverallStats playerOverallStats, List<Matchup> matches) {
             var battleTag = playerOverallStats.BattleTag;
             var firstPartnerTo10Wins = "";
             foreach(Matchup matchup in matches){

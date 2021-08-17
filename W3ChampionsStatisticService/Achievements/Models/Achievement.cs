@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Matches;
 using MongoDB.Bson;
+using System.Linq;
+using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.PadEvents;
 
 namespace W3ChampionsStatisticService.Achievements.Models {
     public class Achievement: IAchievement {
@@ -14,7 +17,9 @@ namespace W3ChampionsStatisticService.Achievements.Models {
         public bool Completed {get; set;}
         public Dictionary<string,int> Counter {get; set;}
         
-        virtual public void Update(PlayerOverallStats playerOverallStats, List<Matchup> matches){}
+        virtual public void UpdateFromMatchups(PlayerOverallStats playerOverallStats, List<Matchup> matches){}
+        virtual public void UpdateFromMatchupDetails(PlayerOverallStats playerOverallStats, List<MatchupDetail> matchupDetails){}
+
 
         protected long CheckMostWins(Dictionary<string,int> winsCount){
             long maxValue = 0;
