@@ -153,16 +153,7 @@ namespace W3ChampionsStatisticService.Achievements {
             var playerMatches = await GetAllPlayerMatches(playerOverallStats);
             var playerMatchDetails = new List<MatchupDetail>();
             foreach(Achievement achievement in newPlayerAchievements.PlayerAchievementList){
-              //  if (achievement.Type == "general"){
-                    achievement.Update(playerOverallStats, playerMatches);
-              //  } else {
-                //     if (playerMatchDetails.Count < 1) {
-                //         foreach(Matchup playerMatch in playerMatches){
-                //             playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
-                //         }
-                //     }
-                //     achievement.Update(playerOverallStats, playerMatchDetails);
-                // }
+                achievement.Update(playerOverallStats, playerMatches);
             }
             return newPlayerAchievements;
         }
