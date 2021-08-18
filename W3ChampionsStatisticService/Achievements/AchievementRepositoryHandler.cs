@@ -173,6 +173,33 @@ namespace W3ChampionsStatisticService.Achievements {
             return matchupDetails;
         }
 
+        //TODO: Consolidate the Achievement updates... there are 3 places were the same code is repeated:
+        // CreateNewPlayerAchievements
+        // AddAdditionalAchievements
+        // MatchFinished Event
+
+        // private async Task<PlayerAchievements> RunAchievementUpdates(
+        //     PlayerOverallStats playerOverallStats,
+        //     PlayerAchievements playerAchievements,
+        //     List<Matchup> playerMatches) {
+        //         var playerMatchDetails = new List<MatchupDetail>();
+        //         foreach(Achievement achievement in newPlayerAchievements.PlayerAchievementList){
+        //             switch (achievement.Type) {
+        //                 case "detail":
+        //                 if (playerMatchDetails.Count == 0){
+        //                     foreach(Matchup playerMatch in playerMatches) {
+        //                         playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
+        //                     }
+        //                 }
+        //                 achievement.UpdateFromMatchupDetails(playerOverallStats, playerMatchDetails);
+        //                 break;
+        //                 default:
+        //                 achievement.UpdateFromMatchups(playerOverallStats, playerMatches);
+        //                 break;
+        //             }
+        //         }
+        // }
+
         private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats){
             var newPlayerAchievements = new PlayerAchievements();
             newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
