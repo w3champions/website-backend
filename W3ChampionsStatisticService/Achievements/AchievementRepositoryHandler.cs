@@ -140,13 +140,14 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         private List<Achievement> GetMissingAchievements(List<Achievement> currentAchievementsList){
-            var achievementsToAddId = currentAchievementsList.Count - 1;
+            var oldestAchievementHeld = currentAchievementsList.Count - 1;
+            var newAchievementsList = new List<Achievement>();
             foreach(Achievement achievement in AchievementEvaluator.AllActiveAchievements){
-                if (achievement.Id > achievementsToAddId) {
-                    currentAchievementsList.Add(achievement);
+                if (achievement.Id > oldestAchievementHeld) {
+                    newAchievementsList.Add(achievement);
                 }
             }
-            return currentAchievementsList;
+            return newAchievementsList;
         }
 
         private async Task<List<Matchup>> GetAllPlayerMatches(PlayerOverallStats playerOverallStats){
