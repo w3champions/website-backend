@@ -1,25 +1,19 @@
-using System.Linq;
 using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.PadEvents;
 
-
 namespace W3ChampionsStatisticService.Achievements.Models {
-    public class WinGamesWithEveryTavernHero: Achievement {
+    public class Use10DifferentHeros: Achievement {
 
-        private string[] TavernHeros;
-
-        public WinGamesWithEveryTavernHero() {
-            TavernHeros = new string[]{ "alchemist", "seawitch", "tinker", "beastmaster", "bansheeranger", "firelord", 
-            "pandarenbrewmaster", "pitlord" };
+        public Use10DifferentHeros() {
             Type = "detail";
-            Id = 2;
-            Title = "Win Games With Every Tavern Hero";
-            Caption = "Player has yet to win using every Tavern Hero.";
+            Id = 5;
+            Title = "Use 10 Different Heros.";
+            Caption = "Player has yet to use 10 different heros.";
             ProgressCurrent = 0;
-            ProgressEnd = 8;
+            ProgressEnd = 10;
             Completed = false;
             Counter = new Dictionary<string, int>();
         }
@@ -28,23 +22,26 @@ namespace W3ChampionsStatisticService.Achievements.Models {
             if(Completed){return;}
             var battleTag = playerOverallStats.BattleTag;
             foreach(MatchupDetail matchupDetail in matchupDetails){
+                if(Completed){break;}
                 var teams = matchupDetail.Match.Teams;
-                if(!base.PlayerDidWin(battleTag, teams)){continue;}
                 var playerScores = matchupDetail.PlayerScores;
                 if(playerScores == null){continue;} // it appears that some games listed could have null scores
                 foreach(PlayerScore playerScore in playerScores){
                     if(playerScore.BattleTag != battleTag){continue;}
                     var heroes = playerScore.Heroes;
-                    foreach(Hero hero in heroes){
-                        if (TavernHeros.Contains(hero.icon) && !Counter.ContainsKey(hero.icon)){
+                    foreach(Hero hero in heroes) {
+                        if (!Counter.ContainsKey(hero.icon)){
                             Counter[hero.icon] = 1;
                         }
                     }
+                    ProgressCurrent = Counter.Keys.Count;
+                    if (ProgressCurrent >= ProgressEnd) {
+                        ProgressCurrent = ProgressEnd;
+                        Completed = true;
+                        Caption = "Player has used 10 different heros.";
+                        break;
+                    }
                 }
-            }
-            ProgressCurrent = Counter.Keys.Count;
-            if (ProgressCurrent == ProgressEnd) {
-                Completed = true;
             }
         }
     }
