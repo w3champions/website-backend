@@ -10,6 +10,7 @@ namespace W3ChampionsStatisticService.Achievements {
             AllActiveAchievements.Add(new MapWith25WinsAchievement());
             AllActiveAchievements.Add(new Win10GamesWithATPartnerAchievement());
             AllActiveAchievements.Add(new WinGamesWithEveryTavernHero());
+            AllActiveAchievements.Add(new Win30GamesWithArmyUnder50());
         }
     }
 }
