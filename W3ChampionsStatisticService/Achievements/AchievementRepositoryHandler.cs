@@ -51,21 +51,7 @@ namespace W3ChampionsStatisticService.Achievements {
                         if (needsUpdateWithCurrentMatchup){
                             var matchups = new List<Matchup>{matchup};
                             var playerMatchDetails = new List<MatchupDetail>();
-                            foreach(Achievement achievement in playerAchievements.PlayerAchievementList){
-                                switch (achievement.Type) {
-                                case "detail":
-                                if (playerMatchDetails.Count == 0){
-                                    foreach(Matchup playerMatch in matchups) {
-                                        playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
-                                    }
-                                }
-                                    achievement.UpdateFromMatchupDetails(playerProfile, playerMatchDetails);
-                                    break;
-                                default:
-                                    achievement.UpdateFromMatchups(playerProfile, matchups);
-                                    break;
-                                }
-                            }
+                            playerAchievements.PlayerAchievementList = await RunAchievementUpdates(playerProfile, playerAchievements.PlayerAchievementList, matchups);
                         } 
                         
                         if (playerAchievements.PlayerAchievementList.Count < AchievementEvaluator.AllActiveAchievements.Count) {
@@ -83,23 +69,9 @@ namespace W3ChampionsStatisticService.Achievements {
         private async Task<PlayerAchievements> AddAdditionalAchievements(PlayerAchievements playerAchievements, PlayerOverallStats playerProfile){
             var achievementsToAdd = GetMissingAchievements(playerAchievements.PlayerAchievementList);
             var matches = await GetAllPlayerMatches(playerProfile);
-            var playerMatchDetails = new List<MatchupDetail>();
+            achievementsToAdd = await RunAchievementUpdates(playerProfile, achievementsToAdd, matches);
             foreach(Achievement achievement in achievementsToAdd){
-                var newAchievement = achievement;
-                switch (achievement.Type) {
-                    case "detail":
-                    if (playerMatchDetails.Count == 0){
-                        foreach(Matchup playerMatch in matches) {
-                            playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
-                        }
-                    }
-                    newAchievement.UpdateFromMatchupDetails(playerProfile, playerMatchDetails);
-                    break;
-                    default:
-                    newAchievement.UpdateFromMatchups(playerProfile, matches);
-                    break;
-                }
-                playerAchievements.PlayerAchievementList.Add(newAchievement);
+                playerAchievements.PlayerAchievementList.Add(achievement);
             }
             return playerAchievements;
         } 
@@ -140,10 +112,13 @@ namespace W3ChampionsStatisticService.Achievements {
         }
 
         private List<Achievement> GetMissingAchievements(List<Achievement> currentAchievementsList){
-            var oldestAchievementHeld = currentAchievementsList.Count - 1;
+            var currentAchievementIds = new List<long>();
+            foreach(Achievement achievement in currentAchievementsList){
+                currentAchievementIds.Add(achievement.Id);
+            }
             var newAchievementsList = new List<Achievement>();
             foreach(Achievement achievement in AchievementEvaluator.AllActiveAchievements){
-                if (achievement.Id > oldestAchievementHeld) {
+                if (!currentAchievementIds.Contains(achievement.Id)) {
                     newAchievementsList.Add(achievement);
                 }
             }
@@ -173,41 +148,13 @@ namespace W3ChampionsStatisticService.Achievements {
             return matchupDetails;
         }
 
-        //TODO: Consolidate the Achievement updates... there are 3 places were the same code is repeated:
-        // CreateNewPlayerAchievements
-        // AddAdditionalAchievements
-        // MatchFinished Event
-
-        // private async Task<PlayerAchievements> RunAchievementUpdates(
-        //     PlayerOverallStats playerOverallStats,
-        //     PlayerAchievements playerAchievements,
-        //     List<Matchup> playerMatches) {
-        //         var playerMatchDetails = new List<MatchupDetail>();
-        //         foreach(Achievement achievement in newPlayerAchievements.PlayerAchievementList){
-        //             switch (achievement.Type) {
-        //                 case "detail":
-        //                 if (playerMatchDetails.Count == 0){
-        //                     foreach(Matchup playerMatch in playerMatches) {
-        //                         playerMatchDetails.Add(await GetMatchupDetail(playerMatch));
-        //                     }
-        //                 }
-        //                 achievement.UpdateFromMatchupDetails(playerOverallStats, playerMatchDetails);
-        //                 break;
-        //                 default:
-        //                 achievement.UpdateFromMatchups(playerOverallStats, playerMatches);
-        //                 break;
-        //             }
-        //         }
-        // }
-
-        private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats){
-            var newPlayerAchievements = new PlayerAchievements();
-            newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
-            newPlayerAchievements.PlayerAchievementList = AchievementEvaluator.AllActiveAchievements;
-            var playerMatches = await GetAllPlayerMatches(playerOverallStats);
-            var playerMatchDetails = new List<MatchupDetail>();
-            foreach(Achievement achievement in newPlayerAchievements.PlayerAchievementList){
-                switch (achievement.Type) {
+        private async Task<List<Achievement>> RunAchievementUpdates(
+            PlayerOverallStats playerOverallStats,
+            List<Achievement> playerAchievements,
+            List<Matchup> playerMatches) {
+                var playerMatchDetails = new List<MatchupDetail>();
+                foreach(Achievement achievement in playerAchievements){
+                    switch (achievement.Type) {
                     case "detail":
                     if (playerMatchDetails.Count == 0){
                         foreach(Matchup playerMatch in playerMatches) {
@@ -219,8 +166,17 @@ namespace W3ChampionsStatisticService.Achievements {
                     default:
                     achievement.UpdateFromMatchups(playerOverallStats, playerMatches);
                     break;
+                    }
                 }
-            }
+                return playerAchievements;
+        }
+
+        private async Task<PlayerAchievements> CreateNewPlayerAchievements(PlayerOverallStats playerOverallStats){
+            var newPlayerAchievements = new PlayerAchievements();
+            newPlayerAchievements.PlayerId = playerOverallStats.BattleTag;
+            newPlayerAchievements.PlayerAchievementList = AchievementEvaluator.AllActiveAchievements;
+            var playerMatches = await GetAllPlayerMatches(playerOverallStats);
+            newPlayerAchievements.PlayerAchievementList = await RunAchievementUpdates(playerOverallStats, newPlayerAchievements.PlayerAchievementList, playerMatches);
             return newPlayerAchievements;
         }
     }
