@@ -4,12 +4,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Cache;
+using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3ChampionsStatisticService.PlayerStats.HeroStats;
+using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -209,6 +212,43 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public Task UpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline)
         {
             return Upsert(mmrRpTimeline);
+        }
+
+        public async Task DeleteAllPlayerData(string battleTag)
+        {
+            var playerIds = new List<PlayerId> { PlayerId.Create(battleTag) };
+            await Delete<PersonalSetting>(battleTag);
+            await Delete<PlayerOverallStats>(p => p.BattleTag == battleTag);
+            await Delete<PlayerOverview>(p => p.PlayerIds == playerIds);
+            await Delete<PlayerDetails>(p => p.BattleTag == battleTag);
+            await Delete<PlayerGameModeStatPerGateway>(p => p.PlayerIds == playerIds);
+            await Delete<PlayerHeroStats>(p => p.BattleTag == battleTag);
+            await Delete<PlayerRaceOnMapVersusRaceRatio>(p => p.BattleTag == battleTag);
+            // shady
+            await Delete<PlayerWinLoss>(p => p.Id.Contains($"_{battleTag}"));
+            
+            //todo
+            // PlayerMmrRpTimeline
+            // PlayerRaceStatPerGateway
+            // Rank
+
+            // clean up clans
+            var clanMembership = await LoadFirst<ClanMembership>(battleTag);
+            if (clanMembership != null)
+            {
+                await Delete<ClanMembership>(p => p.BattleTag == battleTag);
+                
+                var clan = await LoadFirst<Clan>(clanMembership.ClanId);
+                if (clan.ChiefTain == battleTag)
+                {
+                    await Delete<Clan>(clanMembership.ClanId);
+                }
+                else
+                {
+                    clan.LeaveClan(clanMembership);
+                    await Upsert(clan);
+                }
+            }
         }
     }
 }

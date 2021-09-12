@@ -37,6 +37,19 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
             return Ok(setting);
         }
+        
+        [HttpDelete("{battleTag}")]
+        [CheckIfBattleTagBelongsToAuthCode]
+        public async Task<IActionResult> PermaDeleteAndBanPlayer(string battleTag)
+        {
+            // delete all local data
+            await _playerRepository.DeleteAllPlayerData(battleTag);
+            
+            // perma ban on mmr service
+            
+            
+            return Ok();
+        }
 
         [HttpGet("{commaSeparatedBattleTags}/many")]
         public async Task<IActionResult> GetPersonalSettings(string commaSeparatedBattleTags)

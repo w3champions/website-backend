@@ -4,10 +4,11 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Clans.ClanStates;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Clans
 {
-    public class Clan
+    public class Clan : IIdentifiable
     {
         [JsonIgnore]
         public ClanState ClanState { get; set; }
@@ -16,6 +17,8 @@ namespace W3ChampionsStatisticService.Clans
 
         [BsonId]
         public string ClanId { get; set; }
+
+        public string Id => ClanId;
         public string ChiefTain => ClanState.ChiefTain;
 
         public bool IsSuccesfullyFounded => ClanState.GetType() == typeof(FoundedClan);

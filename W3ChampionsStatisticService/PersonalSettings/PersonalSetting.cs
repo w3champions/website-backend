@@ -9,7 +9,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
-    public class PersonalSetting : IVersionable
+    public class PersonalSetting : IIdentifiable, IVersionable
     {
         public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
         {
@@ -45,6 +45,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public string HomePage { get; set; }
         public ProfilePicture ProfilePicture { get; set; } = ProfilePicture.Default();
+        /// <summary>
+        /// The battletag of the player
+        /// </summary>
         public string Id { get; set; }
 
         [BsonIgnoreIfNull]

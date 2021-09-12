@@ -96,6 +96,12 @@ namespace W3ChampionsStatisticService
             services.AddTransient<MatchmakingServiceRepo>();
             services.AddTransient<MatchQueryHandler>();
 
+            services.AddHttpClient<MatchmakingServiceRepo>(c =>
+            {
+                var matchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
+                c.BaseAddress = new Uri(matchmakingApiUrl);
+            });
+
             if (startHandlers == "true")
             {
                 // PlayerProfile
