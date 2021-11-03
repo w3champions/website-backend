@@ -160,6 +160,11 @@ namespace W3ChampionsStatisticService.Admin
             return result.StatusCode;
         }
 
+        public async Task PutPortraits(PortraitsRequest portraitsRequest)
+		{
+
+		}
+
         public class Aliases
         {
             public string battleTag {get; set; }

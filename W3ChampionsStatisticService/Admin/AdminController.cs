@@ -219,5 +219,12 @@ namespace W3ChampionsStatisticService.Admin
             await _adminRepository.DeleteChatBan(id);
             return Ok();
         }
+        
+		[HttpPut("portraits")]
+		[CheckIfBattleTagIsAdmin]
+		public async Task<IActionResult> PutPortraits([FromBody] PortraitsRequest portraitRequest)
+		{
+			await _adminRepository.PutPortraits(portraitRequest);
+		}
     }
 }
