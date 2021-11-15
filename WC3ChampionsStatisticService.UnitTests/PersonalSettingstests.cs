@@ -37,7 +37,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public void SetProfilePicture_ToFewWins()
+        public void SetProfilePicture_TooFewWins()
         {
             var personalSetting = new PersonalSetting("peter#123");
 

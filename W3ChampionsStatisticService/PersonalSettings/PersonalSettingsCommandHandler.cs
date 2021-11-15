@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
@@ -35,18 +36,26 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return true;
         }
 
-        public async Task<bool> UpdateAkaSettings(string battleTag, SetAkaSettingsCommand command)
+        public async Task<bool> UpsertSpecialPortraits(PortraitsCommand command)
         {
-            var setting = await _personalSettingsRepository.Load(battleTag);
-            if (setting == null)
+            var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
+            
+            foreach (var playerSettings in settings)
             {
-                var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
-                setting = new PersonalSetting(battleTag, new List<PlayerOverallStats> { playerProfile });
+                var newSettings = playerSettings;
+                var specialPortraitsList = new List<SpecialPicture>(playerSettings.SpecialPictures);
+                foreach (var portrait in command.Portraits)
+                {
+                    specialPortraitsList.Add(new SpecialPicture(portrait, command.Tooltip));
+                }
+                newSettings.UpdateSpecialPictures(specialPortraitsList.ToArray());
             }
 
-            var result = setting.SetAkaSettings(command);
+            await _personalSettingsRepository.SaveMany();
+        }
 
-            await _personalSettingsRepository.Save(setting);
+        public async Task<bool> DeleteSpecialPortraits(PortraitsCommand command)
+        {
             return true;
         }
     }

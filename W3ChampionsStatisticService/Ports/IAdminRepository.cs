@@ -14,6 +14,5 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<GlobalChatBan>> GetChatBans();
         Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan);
         Task<HttpStatusCode> DeleteChatBan(string id);
-		Task PutPortraits(PortraitsRequest portraitRequest);
     }
 }

@@ -55,5 +55,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
             setting.Players = null;
             return UpsertTimed(setting, p => p.Id == setting.Id);
         }
+
+        public Task SaveMany(List<PersonalSetting> settings)
+        {
+            return UpsertMany(settings);
+        }
     }
 }

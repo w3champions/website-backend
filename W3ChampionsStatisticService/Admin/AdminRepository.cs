@@ -7,13 +7,19 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.ReadModelBase;
+using MongoDB.Driver;
 
 namespace W3ChampionsStatisticService.Admin
 {
-    public class AdminRepository : IAdminRepository
+    public class AdminRepository : MongoDbRepositoryBase, IAdminRepository
     {
         private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
         private static readonly string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+
+        public AdminRepository(MongoClient mongoClient) : base(mongoClient)
+        {
+        }
 
         public async Task<List<ProxiesResponse>> GetProxies()
         {
@@ -159,11 +165,6 @@ namespace W3ChampionsStatisticService.Admin
             var result = await httpClient.DeleteAsync($"{MatchmakingApiUrl}/flo/globalChatBans/{id}?secret={MatchmakingAdminSecret}");
             return result.StatusCode;
         }
-
-        public async Task PutPortraits(PortraitsRequest portraitsRequest)
-		{
-
-		}
 
         public class Aliases
         {
