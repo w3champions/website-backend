@@ -222,13 +222,13 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
         
-		[HttpPut("portraits")]
-		[CheckIfBattleTagIsAdmin]
-		public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
-		{
-			await _personalSettingsCommandHandler.UpsertSpecialPortraits(command);
+        [HttpPut("portraits")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
+        {
+            await _personalSettingsCommandHandler.UpsertSpecialPortraits(command);
             return Ok();
-		}
+        }
 
         [HttpDelete("portraits")]
         [CheckIfBattleTagIsAdmin]
