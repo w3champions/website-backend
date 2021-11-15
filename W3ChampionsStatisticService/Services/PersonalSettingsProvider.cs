@@ -46,14 +46,5 @@ namespace W3ChampionsStatisticService.Services
         {
             return LoadAll<PersonalSetting>();
         }
-
-        private Task<List<PersonalSetting>> UpsertSpecialPortraits(PortraitsRequest portraitsRequest)
-        {
-            foreach (var battetag in portraitsRequest.BnetTags)
-            {
-
-                Upsert<>
-            }
-        }
     }
 }
