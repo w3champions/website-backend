@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
@@ -36,27 +36,35 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return true;
         }
 
-        public async Task<bool> UpsertSpecialPortraits(PortraitsCommand command)
+        public async Task UpsertSpecialPortraits(PortraitsCommand command)
         {
             var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
             
             foreach (var playerSettings in settings)
             {
-                var newSettings = playerSettings;
                 var specialPortraitsList = new List<SpecialPicture>(playerSettings.SpecialPictures);
                 foreach (var portrait in command.Portraits)
                 {
                     specialPortraitsList.Add(new SpecialPicture(portrait, command.Tooltip));
                 }
-                newSettings.UpdateSpecialPictures(specialPortraitsList.ToArray());
+                playerSettings.UpdateSpecialPictures(specialPortraitsList.ToArray());
             }
 
-            await _personalSettingsRepository.SaveMany();
+            await _personalSettingsRepository.SaveMany(settings);
         }
 
-        public async Task<bool> DeleteSpecialPortraits(PortraitsCommand command)
+        public async Task DeleteSpecialPortraits(PortraitsCommand command)
         {
-            return true;
+            var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
+
+            foreach (var playerSettings in settings)
+            {
+                var specialPortraitsList = new List<SpecialPicture>(playerSettings.SpecialPictures);
+                var leftoverPortraits = specialPortraitsList.Where(x => !command.Portraits.Contains(x.PictureId));
+                playerSettings.UpdateSpecialPictures(leftoverPortraits.ToArray());
+            }
+
+            await _personalSettingsRepository.SaveMany(settings);
         }
     }
 }
