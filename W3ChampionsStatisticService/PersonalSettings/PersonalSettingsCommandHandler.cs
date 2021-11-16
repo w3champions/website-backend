@@ -43,9 +43,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
             foreach (var playerSettings in settings)
             {
                 var specialPortraitsList = new List<SpecialPicture>(playerSettings.SpecialPictures);
-                foreach (var portrait in command.Portraits)
+                foreach (var portraitId in command.Portraits)
                 {
-                    specialPortraitsList.Add(new SpecialPicture(portrait, command.Tooltip));
+                    if (!specialPortraitsList.Exists(x => x.PictureId == portraitId))
+                    {
+                        specialPortraitsList.Add(new SpecialPicture(portraitId, command.Tooltip));
+                    }
                 }
                 playerSettings.UpdateSpecialPictures(specialPortraitsList.ToArray());
             }
