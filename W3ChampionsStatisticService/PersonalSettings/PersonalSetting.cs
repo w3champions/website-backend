@@ -9,7 +9,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
-    public class PersonalSetting : IVersionable
+    public class PersonalSetting : IVersionable, IIdentifiable
     {
         public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
         {
@@ -68,7 +68,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 var winsPerRace = RaceWins?.GetWinsPerRace((Race)cmd.avatarCategory);
                 isValid = winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
             }
-           
+
             if (isValid)
             {
                 ProfilePicture = new ProfilePicture()
@@ -82,15 +82,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return isValid;
         }
 
-        public AkaSettings SetAkaSettings(SetAkaSettingsCommand cmd)
+        public void UpdateSpecialPictures(SpecialPicture[] specialPictures)
         {
-            AliasSettings = new AkaSettings() {
-                showAka = cmd.showAka,
-                showW3info = cmd.showW3info,
-                showLiquipedia = cmd.showLiquipedia
-            };
-
-            return AliasSettings;
+            SpecialPictures = specialPictures;
         }
 
         public List<RaceToMaxPicture> PickablePictures => new List<RaceToMaxPicture>

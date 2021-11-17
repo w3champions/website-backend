@@ -1,23 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq.Expressions;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.Admin;
 
 namespace W3ChampionsStatisticService.Services
 {
     public class PersonalSettingsProvider : MongoDbRepositoryBase
     {
-        public static CachedData<List<PersonalSettings.PersonalSetting>> personalSettingsCache;
+        public static CachedData<List<PersonalSetting>> personalSettingsCache;
 
         public PersonalSettingsProvider(MongoClient mongoClient) : base(mongoClient)
         {
-            personalSettingsCache = new CachedData<List<PersonalSettings.PersonalSetting>>(() => FetchPersonalSettingsSync(), TimeSpan.FromMinutes(10));
+            personalSettingsCache = new CachedData<List<PersonalSetting>>(() => FetchPersonalSettingsSync(), TimeSpan.FromMinutes(10));
         }
         
-        public List<PersonalSettings.PersonalSetting> getPersonalSettings()
+        public List<PersonalSetting> GetPersonalSettings()
         {
             try 
             {
@@ -25,11 +26,11 @@ namespace W3ChampionsStatisticService.Services
             }
             catch
             {
-                return new List<PersonalSettings.PersonalSetting>();
+                return new List<PersonalSetting>();
             }
         }
 
-        private List<PersonalSettings.PersonalSetting> FetchPersonalSettingsSync()
+        private List<PersonalSetting> FetchPersonalSettingsSync()
         {
             try 
             {
@@ -37,14 +38,13 @@ namespace W3ChampionsStatisticService.Services
             }
             catch
             {
-                return new List<PersonalSettings.PersonalSetting>();
+                return new List<PersonalSetting>();
             }
         }
 
-        private Task<List<PersonalSettings.PersonalSetting>> FetchPersonalSettings()
+        private Task<List<PersonalSetting>> FetchPersonalSettings()
         {
-            return LoadAll<PersonalSettings.PersonalSetting>();
+            return LoadAll<PersonalSetting>();
         }
-    
     }
 }

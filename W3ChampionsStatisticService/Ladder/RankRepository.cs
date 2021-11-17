@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
         {
-            var personalSettings = _personalSettingsProvider.getPersonalSettings();
+            var personalSettings = _personalSettingsProvider.GetPersonalSettings();
 
             var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
 
