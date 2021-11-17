@@ -62,9 +62,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
             foreach (var playerSettings in settings)
             {
-                var specialPortraitsList = new List<SpecialPicture>(playerSettings.SpecialPictures);
-                var leftoverPortraits = specialPortraitsList.Where(x => !command.Portraits.Contains(x.PictureId));
-                playerSettings.UpdateSpecialPictures(leftoverPortraits.ToArray());
+                var existingPortraits = new List<SpecialPicture>(playerSettings.SpecialPictures);
+                existingPortraits.RemoveAll(x => command.Portraits.Contains(x.PictureId));
+                playerSettings.UpdateSpecialPictures(existingPortraits.ToArray());
             }
 
             await _personalSettingsRepository.SaveMany(settings);

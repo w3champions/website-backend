@@ -145,6 +145,272 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task UpdateSpecialPicture_Success()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            var playerTag = "cepheid#1467";
+            var personalSettings = new PersonalSetting(playerTag);
+
+            List<SpecialPicture> specialPictures = new List<SpecialPicture>();
+            specialPictures.Add(new SpecialPicture(1, "one"));
+            personalSettings.UpdateSpecialPictures(specialPictures.ToArray());
+
+            Assert.AreEqual(1, personalSettings.SpecialPictures.Count());
+            Assert.AreEqual(specialPictures.First().PictureId, personalSettings.SpecialPictures.First().PictureId);
+
+            specialPictures.RemoveAll(x => x.PictureId == 1);
+            personalSettings.UpdateSpecialPictures(specialPictures.ToArray());
+
+            Assert.AreEqual(0, personalSettings.SpecialPictures.Count());
+        }
+
+        [Test]
+        public async Task AssignOnePortrait_PlayerDoesNotHave_Success()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            var playerTag = "cepheid#1467";
+            var personalSettings = new PersonalSetting(playerTag);
+            await personalSettingsRepository.Save(personalSettings);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits.Add(5);
+            portraitsCommand.BnetTags.Add(playerTag);
+            portraitsCommand.Tooltip = "testTooltip";
+
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            var settings = await personalSettingsRepository.Load(playerTag);
+
+            Assert.AreEqual(1, settings.SpecialPictures.Count());
+            Assert.AreEqual(5, settings.SpecialPictures.First().PictureId);
+            Assert.AreEqual("testTooltip", settings.SpecialPictures.First().Description);
+        }
+
+        [Test]
+        public async Task AssignOnePortrait_PlayerAlreadyHas_TooltipUpdated()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            var playerTag = "cepheid#1467";
+            var personalSettings = new PersonalSetting(playerTag);
+            personalSettings.SpecialPictures.Append(new SpecialPicture(3, "initialTestDescription"));
+            await personalSettingsRepository.Save(personalSettings);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits.Add(3);
+            portraitsCommand.BnetTags.Add(playerTag);
+            portraitsCommand.Tooltip = "testTooltip";
+
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            var settings = await personalSettingsRepository.Load(playerTag);
+
+            Assert.AreEqual(1, settings.SpecialPictures.Count());
+            Assert.AreEqual(3, settings.SpecialPictures.First().PictureId);
+            Assert.AreEqual("testTooltip", settings.SpecialPictures.First().Description);
+        }
+
+        [Test]
+        public async Task AssignOnePortraitToMultipleTags_PlayersDoNotHave_Success()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            var listOfSettings = new List<PersonalSetting>();
+            string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
+
+            listOfSettings.Add(new PersonalSetting(playerTags[0]));
+            listOfSettings.Add(new PersonalSetting(playerTags[1]));
+            listOfSettings.Add(new PersonalSetting(playerTags[2]));
+
+            await personalSettingsRepository.SaveMany(listOfSettings);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits.Add(8);
+            portraitsCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            portraitsCommand.Tooltip = "multipleTestTooltip";
+
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            var settingsList = await personalSettingsRepository.LoadMany(playerTags);
+
+            Assert.AreEqual(3, settingsList.Count());
+            Assert.AreEqual(8, settingsList.First().SpecialPictures.First().PictureId);
+            Assert.AreEqual(1, settingsList.First().SpecialPictures.Count());
+            Assert.AreEqual(3, settingsList.FindAll(x => x.SpecialPictures.Length == 1).Count());
+            Assert.AreEqual("multipleTestTooltip", settingsList.Last().SpecialPictures.First().Description);
+        }
+
+        [Test]
+        public async Task AssignMultiplePortraitsToMultipleTags_SomePlayersAlreadyHave_UpsertsProcessCorrectly()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            var listOfSettings = new List<PersonalSetting>();
+            string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
+            listOfSettings.Add(new PersonalSetting(playerTags[0]));
+            listOfSettings.Add(new PersonalSetting(playerTags[1]));
+            listOfSettings.Add(new PersonalSetting(playerTags[2]));
+            listOfSettings.First().SpecialPictures.Append(new SpecialPicture(50, "fifty"));
+            await personalSettingsRepository.SaveMany(listOfSettings);
+
+            var portraitIds = new List<int>();
+
+            portraitIds.Add(1);
+            portraitIds.Add(50);
+            portraitIds.Add(500);
+            portraitIds.Add(5000);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits = portraitIds;
+            portraitsCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            portraitsCommand.Tooltip = "allTagsUpdatedWithThis";
+
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            var settingsList = await personalSettingsRepository.LoadMany(playerTags);
+
+            Assert.AreEqual(3, settingsList.Count());
+            Assert.AreEqual(3, settingsList.FindAll(x => x.SpecialPictures.Length == 4).Count());
+            Assert.AreEqual("allTagsUpdatedWithThis", 
+                settingsList.Find(x => x.Id == "cepheid#1467")
+                .SpecialPictures
+                .AsEnumerable()
+                .ToList()
+                .Find(x => x.PictureId == 50)
+                .Description);
+        }
+
+        [Test]
+        public async Task AssignMultiplePortraitsToMultipleTags_PlayersDoNotHave_Success()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            var listOfSettings = new List<PersonalSetting>();
+            string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
+
+            listOfSettings.Add(new PersonalSetting(playerTags[0]));
+            listOfSettings.Add(new PersonalSetting(playerTags[1]));
+            listOfSettings.Add(new PersonalSetting(playerTags[2]));
+
+            var portraitIds = new List<int>();
+
+            portraitIds.Add(1);
+            portraitIds.Add(50);
+            portraitIds.Add(500);
+            portraitIds.Add(5000);
+
+            await personalSettingsRepository.SaveMany(listOfSettings);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits = portraitIds;
+            portraitsCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            portraitsCommand.Tooltip = "Multiple Tags Portrait Test Tooltip";
+
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            var settingsList = await personalSettingsRepository.LoadMany(playerTags);
+
+            Assert.AreEqual(3, settingsList.Count());
+            Assert.AreEqual(4, settingsList.First().SpecialPictures.Count());
+            Assert.AreEqual(3, settingsList.FindAll(x => x.SpecialPictures.Length == 4).Count());
+            Assert.AreEqual("Multiple Tags Portrait Test Tooltip", settingsList.Last().SpecialPictures.First().Description);
+        }
+
+        [Test]
+        public async Task RemoveSpecialPortraits_PlayersHave_Success()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            string[] playerTags = { "cepheid#1467" };
+            
+            var portraitIds = new List<int>();
+            portraitIds.Add(5);
+            portraitIds.Add(50);
+            portraitIds.Add(500);
+            portraitIds.Add(5000);
+
+            var upsertCommand = new PortraitsCommand();
+            upsertCommand.Portraits = portraitIds;
+            upsertCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            upsertCommand.Tooltip = "description";
+
+            var listOfSettings = new List<PersonalSetting>();
+            foreach (var tag in playerTags) listOfSettings.Add(new PersonalSetting(tag));
+            await personalSettingsRepository.SaveMany(listOfSettings);
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(upsertCommand);
+
+            var deleteCommand = new PortraitsCommand();
+            deleteCommand.Portraits = new List<int>();
+            deleteCommand.Portraits.Add(500);
+            deleteCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            deleteCommand.Tooltip = "Multiple Tags Portrait Test Tooltip";
+
+            await personalSettingsCommandHandler.DeleteSpecialPortraits(deleteCommand);
+            var settings = await personalSettingsRepository.LoadMany(playerTags);
+
+            Assert.AreEqual(3, settings.First().SpecialPictures.Count());
+            CollectionAssert.IsEmpty(settings
+                .FindAll(x => x.SpecialPictures
+                    .AsEnumerable()
+                    .ToList()
+                    .FindAll(x => x.PictureId == 500)
+                    .Count() > 0));
+        }
+
+        [Test]
+        public async Task RemoveSpecialPortrait_PlayerDoesNotHave_NoExceptionThrown()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+
+            string[] playerTags = { "cepheid#1467" };
+
+            var portraitIds = new List<int>();
+            portraitIds.Add(5);
+            portraitIds.Add(50);
+            portraitIds.Add(500);
+            portraitIds.Add(5000);
+
+            var upsertCommand = new PortraitsCommand();
+            upsertCommand.Portraits = portraitIds;
+            upsertCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            upsertCommand.Tooltip = "description";
+
+            var listOfSettings = new List<PersonalSetting>();
+            foreach (var tag in playerTags) listOfSettings.Add(new PersonalSetting(tag));
+            await personalSettingsRepository.SaveMany(listOfSettings);
+            await personalSettingsCommandHandler.UpsertSpecialPortraits(upsertCommand);
+
+            var deleteCommand = new PortraitsCommand();
+            deleteCommand.Portraits = new List<int>();
+            deleteCommand.Portraits.Add(100);
+            deleteCommand.BnetTags = playerTags.AsEnumerable().ToList();
+            deleteCommand.Tooltip = "this text is irrelevant";
+
+            await personalSettingsCommandHandler.DeleteSpecialPortraits(deleteCommand);
+            var settings = await personalSettingsRepository.Load(playerTags[0]);
+
+            Assert.AreEqual(4, settings.SpecialPictures.Count());
+        }
+
+        [Test]
         public async Task LoadProfileSince_LastUpdateDateReturnsNothing()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
