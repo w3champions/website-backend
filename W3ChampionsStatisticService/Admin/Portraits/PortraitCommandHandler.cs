@@ -1,22 +1,26 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
-namespace W3ChampionsStatisticService.PersonalSettings
+namespace W3ChampionsStatisticService.Admin
 {
-    public class PersonalSettingsCommandHandler
+    public class PortraitCommandHandler
     {
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IPlayerRepository _playerRepository;
+        private readonly IPortraitRepository _portraitRepository;
 
-        public PersonalSettingsCommandHandler(
+        public PortraitCommandHandler(
             IPersonalSettingsRepository personalSettingsRepository,
-            IPlayerRepository playerRepository)
+            IPlayerRepository playerRepository,
+            IPortraitRepository portraitRepository)
         {
             _personalSettingsRepository = personalSettingsRepository;
             _playerRepository = playerRepository;
+            _portraitRepository = portraitRepository;
         }
 
         public async Task<bool> UpdatePicture(string battleTag, SetPictureCommand command)
@@ -68,6 +72,16 @@ namespace W3ChampionsStatisticService.PersonalSettings
             }
 
             await _personalSettingsRepository.SaveMany(settings);
+        }
+
+        public async Task AddPortraitDefinition(List<int> portraitIds)
+        {
+            await _portraitRepository.SaveNewPortraits(portraitIds);
+        }
+
+        public async Task RemovePortraitDefinition(List<int> portraitIds)
+        {
+            await _portraitRepository.DeletePortraits(portraitIds);
         }
     }
 }

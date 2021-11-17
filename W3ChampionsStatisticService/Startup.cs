@@ -82,12 +82,13 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
             services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
             services.AddTransient<HeroStatsQueryHandler>();
-            services.AddTransient<PersonalSettingsCommandHandler>();
+            services.AddTransient<PortraitCommandHandler>();
             services.AddTransient<MmrDistributionHandler>();
             services.AddTransient<RankQueryHandler>();
             services.AddTransient<GameModeStatQueryHandler>();
             services.AddTransient<IClanRepository, ClanRepository>();
             services.AddTransient<INewsRepository, NewsRepository>();
+            services.AddTransient<IPortraitRepository, PortraitRepository>();
             services.AddTransient<ILoadingScreenTipsRepository, LoadingScreenTipsRepository>();
             services.AddTransient<ClanCommandHandler>();
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
