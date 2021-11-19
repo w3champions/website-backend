@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Admin;
+using W3ChampionsStatisticService.Admin.Portraits;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -11,7 +12,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 namespace WC3ChampionsStatisticService.UnitTests
 {
     [TestFixture]
-    public class PortraitTests : IntegrationTestBase
+    public class PortraitActionTests : IntegrationTestBase
     {
         [Test]
         public void UpdateSpecialPicture_Success()
@@ -312,15 +313,92 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task DefineNewPortrait_Success()
+        public async Task DefineNewPortraits_Success()
         {
             var portraitRepository = new PortraitRepository(MongoClient);
             int[] portraitIds = { 1, 2, 3, 4 };
-            await portraitRepository.SaveNewPortraits(portraitIds.ToList());
+            await portraitRepository.SaveNewPortraitDefinitions(portraitIds.ToList());
 
-            var portraits = await portraitRepository.GetPortraits();
+            var portraits = await portraitRepository.LoadPortraits();
 
             Assert.AreEqual(4, portraits.Count);
         }
+
+        [Test]
+        public async Task DefineNewPortraits_AlreadyExists_IsNotDuplicated()
+        {
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = { 1, 2, 3, 4 };
+            List<int> portraitList = portraitIds.ToList();
+            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
+
+            portraitList.RemoveAll(x => x > 2);
+            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
+
+            var portraits = await portraitRepository.LoadPortraits();
+
+            Assert.AreEqual(4, portraits.Count);
+        }
+
+        [Test]
+        public async Task DeleteDefinedPortrait_Success()
+        {
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = { 1, 2, 3, 4 };
+            List<int> portraitList = portraitIds.ToList();
+            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
+
+            portraitList.RemoveAll(x => x < 3);
+            await portraitRepository.DeletePortraitDefinitions(portraitList);
+
+            var portraits = await portraitRepository.LoadPortraits();
+
+            Assert.AreEqual(2, portraits.Count);
+        }
+
+        [Test]
+        public async Task DefineNewPortraits_DuplicateInRequest_IsNotDuplicated()
+        {
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = { 1, 1 };
+            List<int> portraitList = portraitIds.ToList();
+            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
+
+            var portraits = await portraitRepository.LoadPortraits();
+
+            Assert.AreEqual(1, portraits.Count);
+            Assert.AreEqual(1, portraits[0].Id);
+        }
+
+        [Test]
+        public async Task DeleteDefinedPortrait_DoesNotExist_NoError()
+        {
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = { 1, 2, 3, 4 };
+            List<int> portraitList = portraitIds.ToList();
+            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
+
+            int[] nonExistentPortraitIds = { 10 , 11 };
+            List<int> nonExistentPortraitList = nonExistentPortraitIds.ToList();
+            await portraitRepository.DeletePortraitDefinitions(nonExistentPortraitList);
+
+            var portraits = await portraitRepository.LoadPortraits();
+
+            Assert.AreEqual(4, portraits.Count);
+        }
+
+        public async Task DefineTestPortraits(List<PortraitDefinition> definitions)
+        {
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = Array.Empty<int>();
+
+            foreach(var def in definitions)
+            {
+                portraitIds.Append(def.Id);
+            }
+            await portraitRepository.SaveNewPortraitDefinitions(portraitIds.ToList());
+        }
+
+        // TODO - add integration tests that only permit assigning portraits that have been defined.
     }
 }

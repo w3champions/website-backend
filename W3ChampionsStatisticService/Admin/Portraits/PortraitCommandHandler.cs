@@ -76,12 +76,12 @@ namespace W3ChampionsStatisticService.Admin
 
         public async Task AddPortraitDefinition(List<int> portraitIds)
         {
-            await _portraitRepository.SaveNewPortraits(portraitIds);
+            await _portraitRepository.SaveNewPortraitDefinitions(portraitIds);
         }
 
         public async Task RemovePortraitDefinition(List<int> portraitIds)
         {
-            await _portraitRepository.DeletePortraits(portraitIds);
+            await _portraitRepository.DeletePortraitDefinitions(portraitIds);
         }
     }
 }

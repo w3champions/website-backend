@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -13,36 +14,33 @@ namespace W3ChampionsStatisticService.Admin
         {
         }
 
-        public Task<PortraitDefinitions> GetPortraits()
+        public Task<List<PortraitDefinition>> LoadPortraits()
         {
-            var mongoCollection = CreateCollection<PortraitDefinitions>();
-            return mongoCollection
-                .Find(r => true)
-                .SortBy(x => x.Ids)
-                .SingleAsync();
-            // TODO - resolve collection type
+            return LoadAll<PortraitDefinition>();
         }
 
-        public async Task SaveNewPortraits(List<int> portraitIds)
+        public async Task SaveNewPortraitDefinitions(List<int> portraitIds)
         {
-            var existingPortraits = await GetPortraits();
-            foreach (var id in portraitIds)
+            var existingPortraits = await LoadPortraits();
+            var toAdd = portraitIds.Distinct().ToList();
+            foreach (var id in toAdd)
             {
-                if (!existingPortraits.Ids.Contains(id))
+                if (!existingPortraits.Any(x => x.Id == id))
                 {
-                    await Insert(id);
+                    await Insert(new PortraitDefinition(id));
                 }
             }
         }
 
-        public async Task DeletePortraits(List<int> portraitIds)
+        public async Task DeletePortraitDefinitions(List<int> portraitIds)
         {
-            var existingPortraits = await GetPortraits();
-            foreach (var id in portraitIds)
+            var existingPortraits = await LoadPortraits();
+            var toDelete = portraitIds.Distinct().ToList();
+            foreach (var id in toDelete)
             {
-                if (existingPortraits.Ids.Contains(id))
+                if (existingPortraits.Any(x => x.Id == id))
                 {
-                    await Delete<PortraitDefinitions>(n => n.Ids == id);
+                    await Delete<PortraitDefinition>(n => n.Id == id);
                 }
             }
         }
