@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.PadEvents;
@@ -18,7 +19,7 @@ namespace W3ChampionsStatisticService.Admin
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
         private readonly IAdminRepository _adminRepository;
         private readonly IRankRepository _rankRepository;
-        private readonly PersonalSettingsCommandHandler _personalSettingsCommandHandler;
+        private readonly PortraitCommandHandler _portraitCommandHandler;
 
         public AdminController(
             IMatchRepository matchRepository,
@@ -27,7 +28,7 @@ namespace W3ChampionsStatisticService.Admin
             ILoadingScreenTipsRepository loadingScreenTipsRepository,
             IAdminRepository adminRepository,
             IRankRepository rankRepository,
-            PersonalSettingsCommandHandler personalSettingsCommandHandler)
+            PortraitCommandHandler portraitCommandHandler)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
@@ -35,7 +36,7 @@ namespace W3ChampionsStatisticService.Admin
             _loadingScreenTipsRepository = loadingScreenTipsRepository;
             _adminRepository = adminRepository;
             _rankRepository = rankRepository;
-            _personalSettingsCommandHandler = personalSettingsCommandHandler;
+            _portraitCommandHandler = portraitCommandHandler;
         }
 
         [HttpGet("health-check")]
@@ -226,7 +227,7 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
         {
-            await _personalSettingsCommandHandler.UpsertSpecialPortraits(command);
+            await _portraitCommandHandler.UpsertSpecialPortraits(command);
             return Ok();
         }
 
@@ -234,7 +235,23 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeletePortraits([FromBody] PortraitsCommand command)
         {
-            await _personalSettingsCommandHandler.DeleteSpecialPortraits(command);
+            await _portraitCommandHandler.DeleteSpecialPortraits(command);
+            return Ok();
+        }
+
+        [HttpPut("portraitDefinitions")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DefinePortraits([FromBody] List<int> portraitIds)
+        {
+            await _portraitCommandHandler.AddPortraitDefinition(portraitIds);
+            return Ok();
+        }
+
+        [HttpDelete("portraitDefinitions")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> RemovePortraits([FromBody] List<int> portraitIds)
+        {
+            await _portraitCommandHandler.RemovePortraitDefinition(portraitIds);
             return Ok();
         }
     }
