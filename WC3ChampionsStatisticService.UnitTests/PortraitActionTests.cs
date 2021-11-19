@@ -419,7 +419,5 @@ namespace WC3ChampionsStatisticService.UnitTests
             }
             await portraitRepository.SaveNewPortraitDefinitions(portraitIds.ToList());
         }
-
-        // TODO - add integration tests that only permit assigning portraits that have been defined.
     }
 }
