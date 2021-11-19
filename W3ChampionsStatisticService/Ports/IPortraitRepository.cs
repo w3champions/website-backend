@@ -6,7 +6,7 @@ namespace W3ChampionsStatisticService.Admin
 {
     public interface IPortraitRepository
     {
-        public Task<List<PortraitDefinition>> LoadPortraits();
+        public Task<List<PortraitDefinition>> LoadPortraitDefinitions();
         public Task SaveNewPortraitDefinitions(List<int> portraitIds);
         public Task DeletePortraitDefinitions(List<int> portraitIds);
     }

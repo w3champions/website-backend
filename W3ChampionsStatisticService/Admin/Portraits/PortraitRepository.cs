@@ -14,14 +14,14 @@ namespace W3ChampionsStatisticService.Admin
         {
         }
 
-        public Task<List<PortraitDefinition>> LoadPortraits()
+        public Task<List<PortraitDefinition>> LoadPortraitDefinitions()
         {
             return LoadAll<PortraitDefinition>();
         }
 
         public async Task SaveNewPortraitDefinitions(List<int> portraitIds)
         {
-            var existingPortraits = await LoadPortraits();
+            var existingPortraits = await LoadPortraitDefinitions();
             var toAdd = portraitIds.Distinct().ToList();
             foreach (var id in toAdd)
             {
@@ -34,7 +34,7 @@ namespace W3ChampionsStatisticService.Admin
 
         public async Task DeletePortraitDefinitions(List<int> portraitIds)
         {
-            var existingPortraits = await LoadPortraits();
+            var existingPortraits = await LoadPortraitDefinitions();
             var toDelete = portraitIds.Distinct().ToList();
             foreach (var id in toDelete)
             {

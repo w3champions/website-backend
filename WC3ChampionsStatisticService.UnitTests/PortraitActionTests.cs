@@ -44,6 +44,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
+            int[] validPortraits = { 5 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
+
             var playerTag = "cepheid#1467";
             var personalSettings = new PersonalSetting(playerTag);
             await personalSettingsRepository.Save(personalSettings);
@@ -69,6 +72,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+
+            int[] validPortraits = { 3 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
 
             var playerTag = "cepheid#1467";
             var personalSettings = new PersonalSetting(playerTag);
@@ -96,6 +102,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+            
+            int[] validPortraits = { 8 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
 
             var listOfSettings = new List<PersonalSetting>();
             string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
@@ -129,6 +138,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+
+            int[] validPortraits = { 1 , 50 , 500 , 5000 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
 
             var listOfSettings = new List<PersonalSetting>();
             string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
@@ -173,6 +185,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
+            int[] validPortraits = { 1 , 50 , 500 , 5000 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
+
             var listOfSettings = new List<PersonalSetting>();
             string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
 
@@ -211,6 +226,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+
+            int[] validPortraits = { 5 , 50 , 500 , 5000 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
 
             string[] playerTags = { "cepheid#1467" };
             
@@ -255,6 +273,9 @@ namespace WC3ChampionsStatisticService.UnitTests
             var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+
+            int[] validPortraits = { 5 , 50 , 500 , 5000 };
+            await portraitCommandHandler.AddPortraitDefinition(validPortraits.ToList());
 
             string[] playerTags = { "cepheid#1467" };
 
@@ -319,7 +340,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             int[] portraitIds = { 1, 2, 3, 4 };
             await portraitRepository.SaveNewPortraitDefinitions(portraitIds.ToList());
 
-            var portraits = await portraitRepository.LoadPortraits();
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
 
             Assert.AreEqual(4, portraits.Count);
         }
@@ -335,7 +356,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             portraitList.RemoveAll(x => x > 2);
             await portraitRepository.SaveNewPortraitDefinitions(portraitList);
 
-            var portraits = await portraitRepository.LoadPortraits();
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
 
             Assert.AreEqual(4, portraits.Count);
         }
@@ -351,7 +372,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             portraitList.RemoveAll(x => x < 3);
             await portraitRepository.DeletePortraitDefinitions(portraitList);
 
-            var portraits = await portraitRepository.LoadPortraits();
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
 
             Assert.AreEqual(2, portraits.Count);
         }
@@ -364,7 +385,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             List<int> portraitList = portraitIds.ToList();
             await portraitRepository.SaveNewPortraitDefinitions(portraitList);
 
-            var portraits = await portraitRepository.LoadPortraits();
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
 
             Assert.AreEqual(1, portraits.Count);
             Assert.AreEqual(1, portraits[0].Id);
@@ -382,7 +403,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             List<int> nonExistentPortraitList = nonExistentPortraitIds.ToList();
             await portraitRepository.DeletePortraitDefinitions(nonExistentPortraitList);
 
-            var portraits = await portraitRepository.LoadPortraits();
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
 
             Assert.AreEqual(4, portraits.Count);
         }
