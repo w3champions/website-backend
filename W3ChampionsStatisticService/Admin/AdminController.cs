@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
+using W3ChampionsStatisticService.Admin.Portraits;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
@@ -241,17 +242,17 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpPut("portraitDefinitions")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> DefinePortraits([FromBody] List<int> portraitIds)
+        public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
         {
-            await _portraitCommandHandler.AddPortraitDefinition(portraitIds);
+            await _portraitCommandHandler.AddPortraitDefinition(command.Ids);
             return Ok();
         }
 
         [HttpDelete("portraitDefinitions")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> RemovePortraits([FromBody] List<int> portraitIds)
+        public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
         {
-            await _portraitCommandHandler.RemovePortraitDefinition(portraitIds);
+            await _portraitCommandHandler.RemovePortraitDefinition(command.Ids);
             return Ok();
         }
     }
