@@ -19,28 +19,41 @@ namespace W3ChampionsStatisticService.Admin
             return LoadAll<PortraitDefinition>();
         }
 
-        public async Task SaveNewPortraitDefinitions(List<int> portraitIds)
+        public async Task SaveNewPortraitDefinitions(List<int> _ids, List<string> _group = null)
         {
             var existingPortraits = await LoadPortraitDefinitions();
-            var toAdd = portraitIds.Distinct().ToList();
+            var toAdd = _ids.Distinct().ToList();
             foreach (var id in toAdd)
             {
-                if (!existingPortraits.Any(x => x.Id == id))
+                if (!existingPortraits.Any(x => x.Number == id))
                 {
-                    await Insert(new PortraitDefinition(id));
+                    await Insert(new PortraitDefinition(id, _group ?? new List<string>()));
                 }
             }
         }
 
-        public async Task DeletePortraitDefinitions(List<int> portraitIds)
+        public async Task DeletePortraitDefinitions(List<int> _ids)
         {
             var existingPortraits = await LoadPortraitDefinitions();
-            var toDelete = portraitIds.Distinct().ToList();
+            var toDelete = _ids.Distinct().ToList();
             foreach (var id in toDelete)
             {
-                if (existingPortraits.Any(x => x.Id == id))
+                if (existingPortraits.Any(x => x.Number == id))
                 {
-                    await Delete<PortraitDefinition>(n => n.Id == id);
+                    await Delete<PortraitDefinition>(n => n.Number == id);
+                }
+            }
+        }
+
+        public async Task UpdatePortraitDefinition(List<int> _ids, List<string> _group)
+        {
+            var existingPortraits = await LoadPortraitDefinitions();
+            var toUpdate = _ids.Distinct().ToList();
+            foreach (var id in toUpdate)
+            {
+                if (existingPortraits.Any(x => x.Number == id))
+                {
+                    await Upsert(new PortraitDefinition(id, _group));
                 }
             }
         }
