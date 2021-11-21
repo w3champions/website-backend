@@ -411,21 +411,53 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(4, portraits.Count);
         }
 
-        public async Task DefineTestPortraits(List<PortraitDefinition> definitions)
+        [Test]
+        public async Task UpdateGroups_PortraitDefinitionExists_Success()
         {
-            var portraitRepository = new PortraitRepository(MongoClient);
-            int[] portraitIds = Array.Empty<int>();
+            var settingsRepo = new PersonalSettingsRepository(MongoClient);
+            var portraitRepo = new PortraitRepository(MongoClient);
+            var playeRepo = new PlayerRepository(MongoClient);
+            var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+            int[] portraitIds = { 1, 2, 3, 4 };
+            string[] portraitGroups = { "brozne", "silver" };
+            var defineCommand = new PortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
+            await portraitCommandHandler.AddPortraitDefinition(defineCommand);
 
-            foreach(var def in definitions)
-            {
-                portraitIds.Append(def.Number);
-            }
-            await portraitRepository.SaveNewPortraitDefinitions(portraitIds.ToList());
+            int[] portraitsToUpdate = { 1, 4 };
+            string[] portraitGroupToUpdate = { "gold" };
+            var updateCommand = new PortraitsDefinitionCommand(portraitsToUpdate.ToList(), portraitGroupToUpdate.ToList());
+            await portraitCommandHandler.UpdatePortraitDefinition(updateCommand);
+
+            var portraits = await portraitCommandHandler.GetPortraitDefinitions();
+
+            var definitionsWithGold = portraits.FindAll(x => x.Groups.Count() == 1);
+            var definitionsWithBronzeSilver = portraits.FindAll(x => x.Groups.Count() == 2);
+
+            Assert.AreEqual(4, portraits.Count());
+            Assert.AreEqual(2, definitionsWithGold.Count());
+            Assert.AreEqual(2, definitionsWithBronzeSilver.Count());
         }
 
-        // TODO
-        // Test that updating groups works
-        // more assertions that groups are correct when updating
-        // test adding duplicates with different group values
+        [Test]
+        public async Task UpdateGroups_PortraitDefinitionDoesntExist_NoError()
+        {
+            var settingsRepo = new PersonalSettingsRepository(MongoClient);
+            var portraitRepo = new PortraitRepository(MongoClient);
+            var playeRepo = new PlayerRepository(MongoClient);
+            var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+            int[] portraitIds = { 1, 2, 3, 4 };
+            string[] portraitGroups = { "bronze", "silver" };
+            var defineCommand = new PortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
+            await portraitCommandHandler.AddPortraitDefinition(defineCommand);
+
+            int[] portraitsToUpdate = { 5 };
+            string[] portraitGroupToUpdate = { "gold" };
+            var updateCommand = new PortraitsDefinitionCommand(portraitsToUpdate.ToList(), portraitGroupToUpdate.ToList());
+            await portraitCommandHandler.UpdatePortraitDefinition(updateCommand);
+
+            var portraits = await portraitCommandHandler.GetPortraitDefinitions();
+
+            Assert.AreEqual(4, portraits.Count());
+        }
     }
 }

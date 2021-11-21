@@ -77,6 +77,11 @@ namespace W3ChampionsStatisticService.Admin
             await _personalSettingsRepository.SaveMany(settings);
         }
 
+        public async Task<List<PortraitDefinition>> GetPortraitDefinitions()
+        {
+            return await _portraitRepository.LoadPortraitDefinitions();
+        }
+
         public async Task AddPortraitDefinition(PortraitsDefinitionCommand command)
         {
             await _portraitRepository.SaveNewPortraitDefinitions(command.Ids, command.Groups);
