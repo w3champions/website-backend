@@ -1,12 +1,18 @@
-﻿namespace W3ChampionsStatisticService.Admin.Portraits
+﻿using System.Collections.Generic;
+using W3ChampionsStatisticService.ReadModelBase;
+
+namespace W3ChampionsStatisticService.Admin.Portraits
 {
-    public class PortraitDefinition
+    public class PortraitDefinition : IIdentifiable
     {
-        public PortraitDefinition(int _id)
+        public PortraitDefinition(int _id, List<string> _group = null)
         {
-            Id = _id;
+            Number = _id;
+            Groups = _group;
         }
 
-        public int Id { get; set; }
+        public string Id => Number.ToString();
+        public int Number { get; set; }
+        public List<string> Groups { get; set; }
     }
 }

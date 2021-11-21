@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.Admin
                 foreach (var portraitId in command.Portraits)
                 {
                     if (!specialPortraitsList.Exists(x => x.PictureId == portraitId) && 
-                        validPortraits.Any(x => x.Id == portraitId))
+                        validPortraits.Any(x => x.Number == portraitId))
                     {
                         specialPortraitsList.Add(new SpecialPicture(portraitId, command.Tooltip));
                     }
@@ -77,14 +77,24 @@ namespace W3ChampionsStatisticService.Admin
             await _personalSettingsRepository.SaveMany(settings);
         }
 
-        public async Task AddPortraitDefinition(List<int> portraitIds)
+        public async Task<List<PortraitDefinition>> GetPortraitDefinitions()
         {
-            await _portraitRepository.SaveNewPortraitDefinitions(portraitIds);
+            return await _portraitRepository.LoadPortraitDefinitions();
         }
 
-        public async Task RemovePortraitDefinition(List<int> portraitIds)
+        public async Task AddPortraitDefinition(PortraitsDefinitionCommand command)
         {
-            await _portraitRepository.DeletePortraitDefinitions(portraitIds);
+            await _portraitRepository.SaveNewPortraitDefinitions(command.Ids, command.Groups);
+        }
+
+        public async Task RemovePortraitDefinition(PortraitsDefinitionCommand command)
+        {
+            await _portraitRepository.DeletePortraitDefinitions(command.Ids);
+        }
+
+        public async Task UpdatePortraitDefinition(PortraitsDefinitionCommand command)
+        {
+            await _portraitRepository.UpdatePortraitDefinition(command.Ids, command.Groups);
         }
     }
 }

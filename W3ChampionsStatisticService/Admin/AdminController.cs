@@ -244,7 +244,7 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
         {
-            await _portraitCommandHandler.AddPortraitDefinition(command.Ids);
+            await _portraitCommandHandler.AddPortraitDefinition(command);
             return Ok();
         }
 
@@ -252,7 +252,7 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
         {
-            await _portraitCommandHandler.RemovePortraitDefinition(command.Ids);
+            await _portraitCommandHandler.RemovePortraitDefinition(command);
             return Ok();
         }
     }
