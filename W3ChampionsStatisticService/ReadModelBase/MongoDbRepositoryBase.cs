@@ -31,7 +31,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
 
         protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
         {
-            return LoadFirst<T>(x => x.Id == id);
+            return LoadFirst<T>(x => x.Id.ToLower() == id.ToLower());
         }
 
         protected Task Insert<T>(T element)
