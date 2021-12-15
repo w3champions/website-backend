@@ -30,6 +30,7 @@ namespace W3ChampionsStatisticService.Matches
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
+            Race opponentRace = Race.Total,
             int pageSize = 100,
             int offset = 0,
             int season = 1)
@@ -42,6 +43,7 @@ namespace W3ChampionsStatisticService.Matches
                     .Find(m => Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
                         && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                        && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
                         && (m.Season == season))
                     .SortByDescending(s => s.Id)
                     .Skip(offset)
@@ -66,6 +68,7 @@ namespace W3ChampionsStatisticService.Matches
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
+            Race opponentRace = Race.Total,
             int season = 1)
         {
             var textSearchOpts = new TextSearchOptions();
@@ -76,6 +79,7 @@ namespace W3ChampionsStatisticService.Matches
                     Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
                     && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                    && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
                     && (m.Season == season));
             }
 
@@ -219,5 +223,6 @@ namespace W3ChampionsStatisticService.Matches
         {
             return _cache.CountOnGoingMatches(gameMode, gateWay, map);
         }
+
     }
 }
