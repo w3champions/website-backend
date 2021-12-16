@@ -1,7 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
+using W3ChampionsStatisticService.Admin.Portraits;
 using W3ChampionsStatisticService.PadEvents;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -17,6 +20,7 @@ namespace W3ChampionsStatisticService.Admin
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
         private readonly IAdminRepository _adminRepository;
         private readonly IRankRepository _rankRepository;
+        private readonly PortraitCommandHandler _portraitCommandHandler;
 
         public AdminController(
             IMatchRepository matchRepository,
@@ -24,7 +28,8 @@ namespace W3ChampionsStatisticService.Admin
             INewsRepository newsRepository,
             ILoadingScreenTipsRepository loadingScreenTipsRepository,
             IAdminRepository adminRepository,
-            IRankRepository rankRepository)
+            IRankRepository rankRepository,
+            PortraitCommandHandler portraitCommandHandler)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
@@ -32,6 +37,7 @@ namespace W3ChampionsStatisticService.Admin
             _loadingScreenTipsRepository = loadingScreenTipsRepository;
             _adminRepository = adminRepository;
             _rankRepository = rankRepository;
+            _portraitCommandHandler = portraitCommandHandler;
         }
 
         [HttpGet("health-check")]
@@ -183,7 +189,6 @@ namespace W3ChampionsStatisticService.Admin
         public async Task<IActionResult> SearchPlayer([FromRoute] string tagSearch)
         {
             var playerInstances = await _rankRepository.SearchAllPlayersForProxy(tagSearch);
-
             return Ok(playerInstances);
         }
 
@@ -192,7 +197,6 @@ namespace W3ChampionsStatisticService.Admin
         public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
         {
             var smurfs = await _adminRepository.SearchSmurfsFor(tag);
-
             return Ok(smurfs);
         }
 
@@ -217,6 +221,38 @@ namespace W3ChampionsStatisticService.Admin
         public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
         {
             await _adminRepository.DeleteChatBan(id);
+            return Ok();
+        }
+        
+        [HttpPut("portraits")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
+        {
+            await _portraitCommandHandler.UpsertSpecialPortraits(command);
+            return Ok();
+        }
+
+        [HttpDelete("portraits")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DeletePortraits([FromBody] PortraitsCommand command)
+        {
+            await _portraitCommandHandler.DeleteSpecialPortraits(command);
+            return Ok();
+        }
+
+        [HttpPut("portraitDefinitions")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
+        {
+            await _portraitCommandHandler.AddPortraitDefinition(command);
+            return Ok();
+        }
+
+        [HttpDelete("portraitDefinitions")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
+        {
+            await _portraitCommandHandler.RemovePortraitDefinition(command);
             return Ok();
         }
     }
