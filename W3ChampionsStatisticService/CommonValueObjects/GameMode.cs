@@ -8,6 +8,7 @@
         GM_4v4 = 4,
         FFA = 5,
         GM_2v2_AT = 6,
+        GM_4v4_AT = 8,
         CUSTOM = 9,
         GM_FOOTMEN_FRENZY = 101,
 
