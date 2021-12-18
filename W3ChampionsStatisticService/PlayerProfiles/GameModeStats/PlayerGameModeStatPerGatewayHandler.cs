@@ -126,6 +126,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 return GameMode.GM_2v2_AT;
             }
 
+            if (gameMode == GameMode.GM_4v4 && player.IsAt)
+            {
+                return GameMode.GM_4v4_AT;
+            }
+
             return gameMode;
         }
     }

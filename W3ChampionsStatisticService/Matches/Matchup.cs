@@ -195,6 +195,7 @@ namespace W3ChampionsStatisticService.Matches
                 case GameMode.GM_2v2_AT:
                 case GameMode.GM_2v2:
                 case GameMode.GM_4v4:
+                case GameMode.GM_4v4_AT:
                     {
                         return 2;
                     }

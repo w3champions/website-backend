@@ -325,7 +325,11 @@ namespace WC3ChampionsStatisticService.UnitTests
                 if (gateWay == GateWay.Undefined) continue;
                 foreach (GameMode gameMode in gameModeValues)
                 {
-                    if (gameMode == GameMode.Undefined || gameMode ==GameMode.GM_2v2 || gameMode == GameMode.GM_2v2_AT ) continue;
+                    if (gameMode == GameMode.Undefined
+                        || gameMode ==GameMode.GM_2v2
+                        || gameMode == GameMode.GM_2v2_AT
+                        || gameMode == GameMode.GM_4v4
+                        || gameMode == GameMode.GM_4v4_AT) continue;
 
                     var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
                     matchFinishedEvent1.match.players[0].battleTag = "peter#123";

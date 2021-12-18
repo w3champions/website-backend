@@ -40,6 +40,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
                     },
                     new GameLengthPerMode
                     {
+                        GameMode = GameMode.GM_4v4_AT,
+                        Lengths = CreateLengths(GameMode.GM_4v4_AT)
+                    },
+                    new GameLengthPerMode
+                    {
                         GameMode = GameMode.FFA,
                         Lengths = CreateLengths(GameMode.FFA)
                     },
