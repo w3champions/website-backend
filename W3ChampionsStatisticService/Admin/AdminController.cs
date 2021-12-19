@@ -240,6 +240,14 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
+        [HttpGet("portraitDefinitions")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> GetPortraitDefinitions()
+        {
+            var portraits = await _portraitCommandHandler.GetPortraitDefinitions();
+            return Ok(portraits);
+        }
+
         [HttpPut("portraitDefinitions")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)

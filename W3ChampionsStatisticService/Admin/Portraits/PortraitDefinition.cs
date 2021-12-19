@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using System.Collections.Generic;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Admin.Portraits
@@ -7,12 +8,16 @@ namespace W3ChampionsStatisticService.Admin.Portraits
     {
         public PortraitDefinition(int _id, List<string> _group = null)
         {
-            Number = _id;
+            Id = _id.ToString();
             Groups = _group;
         }
-
-        public string Id => Number.ToString();
-        public int Number { get; set; }
+        [BsonId]
+        public string Id { get; set; }
         public List<string> Groups { get; set; }
+
+        public int getId()
+        {
+            return int.Parse(Id);
+        }
     }
 }

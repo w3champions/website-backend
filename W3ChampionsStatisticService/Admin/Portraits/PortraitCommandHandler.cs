@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.Admin
                 foreach (var portraitId in command.Portraits)
                 {
                     if (!specialPortraitsList.Exists(x => x.PictureId == portraitId) && 
-                        validPortraits.Any(x => x.Number == portraitId))
+                        validPortraits.Any(x => x.Id == portraitId.ToString()))
                     {
                         specialPortraitsList.Add(new SpecialPicture(portraitId, command.Tooltip));
                     }
