@@ -45,7 +45,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             int[] validPortraits = { 5 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             var playerTag = "cepheid#1467";
             var personalSettings = new PersonalSetting(playerTag);
@@ -74,7 +74,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             int[] validPortraits = { 3 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             var playerTag = "cepheid#1467";
             var personalSettings = new PersonalSetting(playerTag);
@@ -104,7 +104,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
             
             int[] validPortraits = { 8 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             var listOfSettings = new List<PersonalSetting>();
             string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
@@ -140,7 +140,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             int[] validPortraits = { 1 , 50 , 500 , 5000 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             var listOfSettings = new List<PersonalSetting>();
             string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
@@ -186,7 +186,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             int[] validPortraits = { 1 , 50 , 500 , 5000 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             var listOfSettings = new List<PersonalSetting>();
             string[] playerTags = { "cepheid#1467", "modmoto#123", "toxi#4321" };
@@ -228,7 +228,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             int[] validPortraits = { 5 , 50 , 500 , 5000 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             string[] playerTags = { "cepheid#1467" };
             
@@ -275,7 +275,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             int[] validPortraits = { 5 , 50 , 500 , 5000 };
-            await portraitCommandHandler.AddPortraitDefinition(new PortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
             string[] playerTags = { "cepheid#1467" };
 
@@ -420,12 +420,12 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
             int[] portraitIds = { 1, 2, 3, 4 };
             string[] portraitGroups = { "brozne", "silver" };
-            var defineCommand = new PortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
+            var defineCommand = CreatePortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
             await portraitCommandHandler.AddPortraitDefinition(defineCommand);
 
             int[] portraitsToUpdate = { 1, 4 };
             string[] portraitGroupToUpdate = { "gold" };
-            var updateCommand = new PortraitsDefinitionCommand(portraitsToUpdate.ToList(), portraitGroupToUpdate.ToList());
+            var updateCommand = CreatePortraitsDefinitionCommand(portraitsToUpdate.ToList(), portraitGroupToUpdate.ToList());
             await portraitCommandHandler.UpdatePortraitDefinition(updateCommand);
 
             var portraits = await portraitCommandHandler.GetPortraitDefinitions();
@@ -447,17 +447,25 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
             int[] portraitIds = { 1, 2, 3, 4 };
             string[] portraitGroups = { "bronze", "silver" };
-            var defineCommand = new PortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
+            var defineCommand = CreatePortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
             await portraitCommandHandler.AddPortraitDefinition(defineCommand);
 
             int[] portraitsToUpdate = { 5 };
             string[] portraitGroupToUpdate = { "gold" };
-            var updateCommand = new PortraitsDefinitionCommand(portraitsToUpdate.ToList(), portraitGroupToUpdate.ToList());
+            var updateCommand = CreatePortraitsDefinitionCommand(portraitsToUpdate.ToList(), portraitGroupToUpdate.ToList());
             await portraitCommandHandler.UpdatePortraitDefinition(updateCommand);
 
             var portraits = await portraitCommandHandler.GetPortraitDefinitions();
 
             Assert.AreEqual(4, portraits.Count());
+        }
+
+        public PortraitsDefinitionCommand CreatePortraitsDefinitionCommand(List<int> ids, List<string> groups)
+        {
+            var pdc = new PortraitsDefinitionCommand();
+            pdc.Ids = ids;
+            pdc.Groups = groups;
+            return pdc;
         }
     }
 }
