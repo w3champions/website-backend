@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.Admin
             var toAdd = _ids.Distinct().ToList();
             foreach (var id in toAdd)
             {
-                if (!existingPortraits.Any(x => x.Number == id))
+                if (!existingPortraits.Any(x => x.Id == id.ToString()))
                 {
                     await Insert(new PortraitDefinition(id, _group ?? new List<string>()));
                 }
@@ -38,9 +38,9 @@ namespace W3ChampionsStatisticService.Admin
             var toDelete = _ids.Distinct().ToList();
             foreach (var id in toDelete)
             {
-                if (existingPortraits.Any(x => x.Number == id))
+                if (existingPortraits.Any(x => x.Id == id.ToString()))
                 {
-                    await Delete<PortraitDefinition>(n => n.Number == id);
+                    await Delete<PortraitDefinition>(n => n.Id == id.ToString());
                 }
             }
         }
@@ -51,7 +51,7 @@ namespace W3ChampionsStatisticService.Admin
             var toUpdate = _ids.Distinct().ToList();
             foreach (var id in toUpdate)
             {
-                if (existingPortraits.Any(x => x.Number == id))
+                if (existingPortraits.Any(x => x.Id == id.ToString()))
                 {
                     await Upsert(new PortraitDefinition(id, _group));
                 }
