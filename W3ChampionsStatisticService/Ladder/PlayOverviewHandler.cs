@@ -105,6 +105,11 @@ namespace W3ChampionsStatisticService.Ladder
                 return GameMode.GM_4v4_AT;
             }
 
+            if (gameMode == GameMode.GM_LEGION_4v4_x20 && player.IsAt)
+            {
+                return GameMode.GM_LEGION_4v4_x20_AT;
+            }
+
             return gameMode;
         }
     }
