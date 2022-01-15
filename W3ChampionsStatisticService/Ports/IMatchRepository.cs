@@ -26,6 +26,8 @@ namespace W3ChampionsStatisticService.Ports
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
+            Race playerRace = Race.Total,
+            Race opponentRace = Race.Total,
             int pageSize = 100,
             int offset = 0,
             int season = 1);
@@ -33,6 +35,8 @@ namespace W3ChampionsStatisticService.Ports
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
+            Race playerRace = Race.Total,
+            Race opponentRace = Race.Total,
             int season = 1);
 
         Task<MatchupDetail> LoadDetails(ObjectId id);
