@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -14,12 +15,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         private readonly IPersonalSettingsRepository _personalSettingsRepository;
         private readonly IPlayerRepository _playerRepository;
-        private readonly PersonalSettingsCommandHandler _commandHandler;
+        private readonly PortraitCommandHandler _commandHandler;
 
         public PersonalSettingsController(
             IPersonalSettingsRepository personalSettingsRepository,
             IPlayerRepository playerRepository,
-            PersonalSettingsCommandHandler commandHandler)
+            PortraitCommandHandler commandHandler)
         {
             _personalSettingsRepository = personalSettingsRepository;
             _playerRepository = playerRepository;

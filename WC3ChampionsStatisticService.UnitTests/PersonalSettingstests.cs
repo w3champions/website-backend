@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -37,7 +38,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public void SetProfilePicture_ToFewWins()
+        public void SetProfilePicture_TooFewWins()
         {
             var personalSetting = new PersonalSetting("peter#123");
 
@@ -125,7 +126,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
             var playerRepo = new PlayerRepository(MongoClient);
-            var personalSettingsCommandHandler = new PersonalSettingsCommandHandler(personalSettingsRepository, playerRepo);
+            var portraitRepo = new PortraitRepository(MongoClient);
+            var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             var player = PlayerOverallStats.Create("modmoto#123");
             for (int i = 0; i < 30; i++)
@@ -135,39 +137,13 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await playerRepo.UpsertPlayer(player);
 
-            var result = await personalSettingsCommandHandler.UpdatePicture("modmoto#123",
+            var result = await portraitCommandHandler.UpdatePicture("modmoto#123",
                 new SetPictureCommand {avatarCategory = AvatarCategory.NE, pictureId = 2});
 
             Assert.IsTrue(result);
             var settings = await personalSettingsRepository.Load("modmoto#123");
 
             Assert.AreEqual(2, settings.ProfilePicture.PictureId);
-        }
-
-        [Test]
-        public async Task LoadProfileSince_LastUpdateDateReturnsNothing()
-        {
-            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var personalSetting = new PersonalSetting("peter#123");
-            await personalSettingsRepository.Save(personalSetting);
-
-            var result = await personalSettingsRepository.LoadSince(personalSetting.LastUpdated);
-
-            Assert.AreEqual(0, result.Count);
-        }
-
-        [Test]
-        public async Task LoadProfileSince_LastUpdateDateMinusAMsReturnsSomething()
-        {
-            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var personalSetting = new PersonalSetting("peter#123");
-            await personalSettingsRepository.Save(personalSetting);
-
-            var personalSettingLastUpdated = personalSetting.LastUpdated.Subtract(TimeSpan.FromMilliseconds(1));
-            var result = await personalSettingsRepository.LoadSince(personalSettingLastUpdated);
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual("peter#123", result[0].Id);
         }
     }
 }

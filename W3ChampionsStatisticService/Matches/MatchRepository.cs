@@ -227,5 +227,6 @@ namespace W3ChampionsStatisticService.Matches
         {
             return _cache.CountOnGoingMatches(gameMode, gateWay, map);
         }
+
     }
 }

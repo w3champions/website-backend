@@ -92,14 +92,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             int season)
         {
             return LoadAll<PlayerGameModeStatPerGateway>(t =>
-                t.Id.Contains(battleTag) &&
+                t.Id.ToLower().Contains(battleTag.ToLower()) &&
                 t.GateWay == gateWay &&
                 t.Season == season);
         }
 
         public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
         {
-            return LoadAll<PlayerRaceStatPerGateway>(t => t.Id.StartsWith($"{season}_{battleTag}_@{gateWay}"));
+            return LoadAll<PlayerRaceStatPerGateway>(t => t.Id.ToLower().StartsWith($"{season}_{battleTag.ToLower()}_@{gateWay}"));
         }
 
         public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
@@ -114,7 +114,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)
         {
-            return LoadFirst<PlayerOverallStats>(p => p.BattleTag == battleTag);
+            return LoadFirst<PlayerOverallStats>(p => p.BattleTag.ToLower() == battleTag.ToLower());
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
@@ -146,7 +146,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
         {
-            if (gameMode != GameMode.GM_2v2_AT)
+            if (gameMode != GameMode.GM_2v2_AT && gameMode != GameMode.GM_4v4_AT && gameMode != GameMode.GM_LEGION_4v4_x20_AT)
             {
                 if (gameMode == GameMode.GM_1v1)
                 {
