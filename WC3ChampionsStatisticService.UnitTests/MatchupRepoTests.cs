@@ -179,6 +179,33 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
         }
 
+        [Test]
+        public async Task SearchForPlayerAndOppoRace()
+        {
+            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+            var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
+        
+            matchFinishedEvent1.match.players[0].race = Race.UD;
+            matchFinishedEvent1.match.players[1].race = Race.HU;
+
+            matchFinishedEvent2.match.players[0].race = Race.UD;
+            matchFinishedEvent2.match.players[1].race = Race.NE;
+
+            matchFinishedEvent3.match.players[0].race = Race.OC;
+            matchFinishedEvent3.match.players[1].race = Race.HU;
+
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+            await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+            var matches = await matchRepository.LoadFor("peter#123", null, GateWay.Europe, GameMode.GM_1v1, Race.UD, Race.HU, 100, 0, 0);
+            var count = await matchRepository.CountFor("peter#123", null, GateWay.Europe, GameMode.GM_1v1, Race.UD, Race.HU, 0);
+
+            Assert.AreEqual(1, count);
+            Assert.AreEqual(Matchup.Create(matchFinishedEvent1).ToString(), matches.Single().ToString());
+        }
+
         [TestCase(1, "ANDERER#456")]
         [TestCase(0, "wolf#456")]
         public async Task SearchForPlayerAndOpponent_FilterBySeason(int season, string playerTwo)

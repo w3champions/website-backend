@@ -30,6 +30,7 @@ namespace W3ChampionsStatisticService.Matches
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
+            Race playerRace = Race.Total,
             Race opponentRace = Race.Total,
             int pageSize = 100,
             int offset = 0,
@@ -43,6 +44,7 @@ namespace W3ChampionsStatisticService.Matches
                     .Find(m => Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
                         && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                        && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
                         && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
                         && (m.Season == season))
                     .SortByDescending(s => s.Id)
@@ -68,6 +70,7 @@ namespace W3ChampionsStatisticService.Matches
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
+            Race playerRace = Race.Total,
             Race opponentRace = Race.Total,
             int season = 1)
         {
@@ -79,6 +82,7 @@ namespace W3ChampionsStatisticService.Matches
                     Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
                     && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                    && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
                     && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
                     && (m.Season == season));
             }
