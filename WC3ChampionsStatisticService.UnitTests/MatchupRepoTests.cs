@@ -199,11 +199,11 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-            var matches = await matchRepository.LoadFor("peter#123", null, GateWay.Europe, GameMode.GM_1v1, Race.UD, Race.HU, 0);
+            var matches = await matchRepository.LoadFor("peter#123", null, GateWay.Europe, GameMode.GM_1v1, Race.UD, Race.HU, 100, 0, 0);
             var count = await matchRepository.CountFor("peter#123", null, GateWay.Europe, GameMode.GM_1v1, Race.UD, Race.HU, 0);
 
             Assert.AreEqual(1, count);
-            Assert.AreEqual(matchFinishedEvent1, matches.Single());
+            Assert.AreEqual(Matchup.Create(matchFinishedEvent1).ToString(), matches.Single().ToString());
         }
 
         [TestCase(1, "ANDERER#456")]
