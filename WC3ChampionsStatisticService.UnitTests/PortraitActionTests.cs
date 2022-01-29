@@ -96,6 +96,36 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task AssignOnePortrait_PlayerDoesNotHave_CaseInsensitiveTag_Success()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var portraitRepo = new PortraitRepository(MongoClient);
+            var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+
+            int[] validPortraits = { 5 };
+            await portraitCommandHandler.AddPortraitDefinition(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
+
+            var playerTagA = "CePhEiD#1467";
+            var playerTagB = "cEpHeId#1467";
+            var personalSettings = new PersonalSetting(playerTagB);
+            await personalSettingsRepository.Save(personalSettings);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits.Add(5);
+            portraitsCommand.BnetTags.Add(playerTagA);
+            portraitsCommand.Tooltip = "testTooltip";
+
+            await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            var settings = await personalSettingsRepository.Load(playerTagA);
+
+            Assert.AreEqual(1, settings.SpecialPictures.Count());
+            Assert.AreEqual(5, settings.SpecialPictures.First().PictureId);
+            Assert.AreEqual("testTooltip", settings.SpecialPictures.First().Description);
+        }
+
+        [Test]
         public async Task AssignOnePortraitToMultipleTags_PlayersDoNotHave_Success()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
