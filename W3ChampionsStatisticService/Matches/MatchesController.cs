@@ -54,13 +54,14 @@ namespace W3ChampionsStatisticService.Matches
             string opponentId = null,
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
+            Race playerRace = Race.Total,
             Race opponentRace = Race.Total,
             int offset = 0,
             int pageSize = 100)
         {
             if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, opponentRace, pageSize, offset, season);
-            var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, opponentRace, season);
+            var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, pageSize, offset, season);
+            var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season);
             return Ok(new { matches, count });
         }
 
