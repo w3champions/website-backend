@@ -39,16 +39,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public async Task<List<PersonalSetting>> LoadMany(string[] battletags)
         {
             var settings = CreateCollection<PersonalSetting>();
-            var results = new List<PersonalSetting>();
-            foreach (var tag in battletags)
-            {
-                var filter = Builders<PersonalSetting>.Filter.Regex("_id", new BsonRegularExpression(tag, "i"));
-                var result = await settings.Find(filter).FirstOrDefaultAsync();
-                if (result != null)
-                {
-                    results.Add(result);
-                }
-            }
+            var tags = String.Join("|", battletags);
+            var filter = Builders<PersonalSetting>.Filter.Regex("_id", new BsonRegularExpression(tags, "i"));
+            var results = await settings.Find(filter).ToListAsync();
             return results;
         }
 
