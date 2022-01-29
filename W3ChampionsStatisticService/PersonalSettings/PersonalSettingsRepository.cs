@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
@@ -21,7 +22,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var players = CreateCollection<PlayerOverallStats>();
             var result = await settings
                 .Aggregate()
-                .Match(p => p.Id == battletag)
+                .Match(p => p.Id.ToLower() == battletag.ToLower())
                 .Lookup<PersonalSetting, PlayerOverallStats, PersonalSetting>(players,
                     rank => rank.Id,
                     player => player.BattleTag,
@@ -38,11 +39,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public async Task<List<PersonalSetting>> LoadMany(string[] battletags)
         {
             var settings = CreateCollection<PersonalSetting>();
-            var result = await settings
-                .Aggregate()
-                .Match(p => battletags.Contains(p.Id))
-                .ToListAsync();
-            return result;
+            var tags = String.Join("|", battletags);
+            var filter = Builders<PersonalSetting>.Filter.Regex("_id", new BsonRegularExpression(tags, "i"));
+            var results = await settings.Find(filter).ToListAsync();
+            return results;
         }
 
         public Task<List<PersonalSetting>> LoadAll()
