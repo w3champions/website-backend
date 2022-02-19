@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Clans
             var memberShip = await _clanRepository.LoadMemberShip(battleTagOfFounder) ?? ClanMembership.Create(battleTagOfFounder);
             var clan = Clan.Create(clanName, clanAbbrevation, memberShip);
             var wasSaved = await _clanRepository.TryInsertClan(clan);
-            if (!wasSaved) throw new ValidationException("Clan Name allready taken");
+            if (!wasSaved) throw new ValidationException("Clan Name or Abbreviation already taken");
             memberShip.ClanId = clan.ClanId;
             memberShip.ClanName = clan.ClanName;
             await _clanRepository.UpsertMemberShip(memberShip);
@@ -72,9 +72,7 @@ namespace W3ChampionsStatisticService.Clans
             await _clanRepository.DeleteClan(clanId);
 
             var allMembers = new List<string>();
-            allMembers.AddRange(clan.FoundingFathers);
             allMembers.AddRange(clan.Members);
-            allMembers.Add(clan.ChiefTain);
 
             var memberShips = await _clanRepository.LoadMemberShips(allMembers);
 

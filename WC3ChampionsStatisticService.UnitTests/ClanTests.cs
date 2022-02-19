@@ -31,16 +31,18 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public void InvitePlayer_ClanNotPresent()
         {
-            Assert.ThrowsAsync<ValidationException>(async () =>
+            var exception = Assert.ThrowsAsync<ValidationException>(async () =>
                 await _handler.InviteToClan("peter#123", ObjectId.GenerateNewId().ToString(), "doesNotMatter"));
+            Assert.AreEqual("Clan not found", exception.Message);
         }
 
         [Test]
-        public async Task InvitePlayer_ThatHasAlreadySigned_Founder()
+        public async Task InvitePlayer_ThatIsAlreadyAMember()
         {
             var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("Peter#123", clan.ClanId, "Peter#123"));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("Peter#123", clan.ClanId, "Peter#123"));
+            Assert.AreEqual("Can not invite player who is already a clan member", exception.Message);
         }
 
         [Test]
@@ -52,6 +54,7 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
+            Assert.IsTrue(clanLoaded.Members.Contains(clan.Members[2]));
             Assert.AreEqual(clan.Members[2], clanLoaded.Shamans.Single());
         }
 
@@ -60,8 +63,9 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () =>
+            var exception = Assert.ThrowsAsync<ValidationException>(async () =>
                 await _handler.LeaveClan(clan.ClanId, clan.ChiefTain));
+            Assert.AreEqual("Chieftain can not leave clan, transfer ownership first", exception.Message);
         }
 
         [Test]
@@ -75,23 +79,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
-            Assert.AreEqual(clanLoaded.Shamans[0], clan.ChiefTain);
+            Assert.AreEqual(clanLoaded.Shamans.Single(), clan.ChiefTain);
             Assert.AreEqual(clanLoaded.ChiefTain, newChieftain);
-            Assert.IsFalse(clanLoaded.Members.Contains(newChieftain));
-        }
-
-        [Test]
-        public async Task SwitchChieftain_ShamanIsRemoved()
-        {
-            var clan = await CreateFoundedClanForTest();
-
-            await _handler.AddShamanToClan(clan.Members[1], clan.ClanId, clan.ChiefTain);
-            await _handler.SwitchChieftain(clan.Members[1], clan.ClanId, clan.ChiefTain);
-
-            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
-
-            Assert.AreEqual(clan.Members[1], clanLoaded.ChiefTain);
-            Assert.IsEmpty(clan.Shamans);
+            Assert.IsTrue(clanLoaded.Members.Contains(clan.ChiefTain));
+            Assert.IsTrue(clanLoaded.Members.Contains(newChieftain));
         }
 
         [Test]
@@ -99,10 +90,11 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.SwitchChieftain(
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.SwitchChieftain(
                 clan.Members[1],
                 clan.ClanId,
                 clan.Members[1]));
+            Assert.AreEqual("Only Chieftain can switch to new Chieftain", exception.Message);
         }
 
         [Test]
@@ -110,10 +102,11 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.SwitchChieftain(
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.SwitchChieftain(
                 "NotInClan#123",
                 clan.ClanId,
                 clan.ChiefTain));
+            Assert.AreEqual("Only Shaman can be promoted to Chieftain", exception.Message);
         }
 
         [Test]
@@ -127,6 +120,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
             Assert.IsEmpty(clanLoaded.Shamans);
+            Assert.IsTrue(clanLoaded.Members.Contains(clan.Members[2]));
         }
 
         [Test]
@@ -134,7 +128,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.AddShamanToClan("NotInChal#123", clan.ClanId, clan.ChiefTain));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.AddShamanToClan("NotInChal#123", clan.ClanId, clan.ChiefTain));
+            Assert.AreEqual("Shaman has to be in clan", exception.Message);
         }
 
         [Test]
@@ -142,11 +137,12 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.AddShamanToClan(clan.ChiefTain, clan.ClanId, clan.ChiefTain));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.AddShamanToClan(clan.ChiefTain, clan.ClanId, clan.ChiefTain));
+            Assert.AreEqual("Chieftain can not be made Shaman", exception.Message);
         }
 
         [Test]
-        public async Task InvitePlayer_PlayerRejects_IsNotAddedToFoundingFathers()
+        public async Task InvitePlayer_NotFoundedClan_PlayerRejects_IsNotAddedToFoundingFathersNorMembers()
         {
             var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
             await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
@@ -156,6 +152,47 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             Assert.AreEqual(1, clanLoaded.FoundingFathers.Count);
             Assert.AreEqual("Peter#123", clanLoaded.FoundingFathers[0]);
+            Assert.IsFalse(clanLoaded.Members.Contains("NewGUY#123"));
+        }
+
+        [Test]
+        public async Task InvitePlayer_NotFoundedClan_PlayerAccepts_IsAddedToFoundingFathersAndMembers()
+        {
+            var clan = await _handler.CreateClan("egal", "CS", "Peter#123");
+            await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
+            await _handler.AcceptInvite("NewGUY#123", clan.ClanId);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+
+            Assert.AreEqual(2, clanLoaded.FoundingFathers.Count);
+            Assert.AreEqual("NewGUY#123", clanLoaded.FoundingFathers[1]);
+            Assert.IsTrue(clanLoaded.Members.Contains("NewGUY#123"));
+        }
+
+        [Test]
+        public async Task InvitePlayer_FoundedClan_PlayerAccepts_IsAddedOnlyToMembers()
+        {
+            var clan = await CreateFoundedClanForTest();
+            await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
+            await _handler.AcceptInvite("NewGUY#123", clan.ClanId);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+
+            Assert.IsFalse(clanLoaded.FoundingFathers.Contains("NewGUY#123"));
+            Assert.IsTrue(clanLoaded.Members.Contains("NewGUY#123"));
+        }
+
+        [Test]
+        public async Task InvitePlayer_FoundedClan_PlayerRejects_IsNotAddedToFoundingFathersNorMembers()
+        {
+            var clan = await CreateFoundedClanForTest();
+            await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
+            await _handler.RevokeInvitationToClan("NewGUY#123", clan.ClanId, "Peter#123");
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+
+            Assert.IsFalse(clanLoaded.FoundingFathers.Contains("NewGUY#123"));
+            Assert.IsFalse(clanLoaded.Members.Contains("NewGUY#123"));
         }
 
         [Test]
@@ -165,7 +202,8 @@ namespace WC3ChampionsStatisticService.UnitTests
             await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123");
             await _handler.AcceptInvite("NewGUY#123", clan.ClanId);
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123"));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan("NewGUY#123", clan.ClanId, "Peter#123"));
+            Assert.AreEqual("Can not invite player who is already a clan member", exception.Message);
         }
 
         [Test]
@@ -215,6 +253,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(clanLoaded.ClanId, member.ClanId);
             Assert.IsEmpty(clanLoaded.PendingInvites);
             Assert.AreEqual("peter#123", clanLoaded.FoundingFathers[1]);
+            Assert.IsTrue(clanLoaded.Members.Contains(member.BattleTag));
         }
 
         [Test]
@@ -235,10 +274,11 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
-                "NotInClan#123",
-                clan.ClanId,
-                clan.ChiefTain));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
+                 "NotInClan#123",
+                 clan.ClanId,
+                 clan.ChiefTain));
+            Assert.AreEqual("Clan or member not found", exception.Message);
         }
 
         [Test]
@@ -246,14 +286,31 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
                 clan.Members[3],
                 clan.ClanId,
                 clan.Members[2]));
+            Assert.AreEqual("Only Chieftain or shamans can kick players", exception.Message);
         }
 
         [Test]
         public async Task KickMember()
+        {
+            var clan = await CreateFoundedClanForTest();
+            var memberTag = $"btag#{Guid.NewGuid()}";
+            await _handler.InviteToClan(memberTag, clan.ClanId, clan.ChiefTain);
+            await _handler.AcceptInvite(memberTag, clan.ClanId);
+            await _handler.KickPlayer(
+                memberTag,
+                clan.ClanId,
+                clan.ChiefTain);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsFalse(clanLoaded.Members.Contains(memberTag));
+        }
+
+        [Test]
+        public async Task KickFounder_RemovesMember_StaysFounder()
         {
             var clan = await CreateFoundedClanForTest();
 
@@ -264,7 +321,8 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
-            Assert.AreEqual(5, clanLoaded.Members.Count);
+            Assert.AreEqual(6, clanLoaded.Members.Count);
+            Assert.IsTrue(clanLoaded.FoundingFathers.Contains(clan.Members[1]));
             Assert.IsFalse(clanLoaded.Members.Contains(clan.Members[1]));
         }
 
@@ -273,14 +331,40 @@ namespace WC3ChampionsStatisticService.UnitTests
         {
             var clan = await CreateFoundedClanForTest();
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
                 clan.ChiefTain,
                 clan.ClanId,
                 clan.ChiefTain));
+            Assert.AreEqual("Can not kick chieftain", exception.Message);
         }
 
         [Test]
         public async Task KickMember_Shaman()
+        {
+            var clan = await CreateFoundedClanForTest();
+            var memberTag = $"btag#{Guid.NewGuid()}";
+            await _handler.InviteToClan(memberTag, clan.ClanId, clan.ChiefTain);
+            await _handler.AcceptInvite(memberTag, clan.ClanId);
+
+            await _handler.AddShamanToClan(
+                memberTag,
+                clan.ClanId,
+                clan.ChiefTain);
+
+            await _handler.KickPlayer(
+                memberTag,
+                clan.ClanId,
+                clan.ChiefTain);
+
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+
+            Assert.AreEqual(0, clanLoaded.Shamans.Count);
+            Assert.IsFalse(clanLoaded.Members.Contains(memberTag));
+            Assert.IsFalse(clanLoaded.Shamans.Contains(memberTag));
+        }
+
+        [Test]
+        public async Task KickMember_ShamanFounder_RemovesMemberButStaysFounder()
         {
             var clan = await CreateFoundedClanForTest();
 
@@ -297,37 +381,71 @@ namespace WC3ChampionsStatisticService.UnitTests
             var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
 
             Assert.AreEqual(0, clanLoaded.Shamans.Count);
-            Assert.IsFalse(clanLoaded.Shamans.Contains(clanLoaded.Members[1]));
+            Assert.IsTrue(clanLoaded.FoundingFathers.Contains(clan.Members[1]));
+            Assert.IsFalse(clanLoaded.Members.Contains(clan.Members[1]));
+            Assert.IsFalse(clanLoaded.Shamans.Contains(clan.Members[1]));
         }
 
         [Test]
-        public async Task CreatClanWithSameNameNotPossible()
+        public async Task CreateClanWithSameNameNotPossible()
         {
             var clanNameExpected = "Cool Shit";
             await _handler.CreateClan(clanNameExpected, "CS", "Peter#123");
 
-            Assert.ThrowsAsync<ValidationException>(async () =>
-                await _handler.CreateClan(clanNameExpected, "CS", "Peter#123"));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () =>
+                await _handler.CreateClan(clanNameExpected, "CS1", "John#456"));
+            Assert.AreEqual("Clan Name or Abbreviation already taken", exception.Message);
         }
 
         [Test]
-        public async Task CreatClan_FounderGetsCreated()
+        public async Task CreateClanWithSameAbbreviationNotPossible()
+        {
+            var clanAbbrevation = "CS";
+            await _handler.CreateClan("Clan Name 1", clanAbbrevation, "Peter#123");
+
+            var exception = Assert.ThrowsAsync<ValidationException>(async () =>
+                await _handler.CreateClan("Clan Name 2", clanAbbrevation, "John#456"));
+            Assert.AreEqual("Clan Name or Abbreviation already taken", exception.Message);
+        }
+
+        [Test]
+        public async Task CreateClan_FounderGetsCreated()
         {
             var clanNameExpected = "Cool Shit";
             var clan = await _handler.CreateClan(clanNameExpected, "CS", "Peter#123");
 
-            var founder = await _clanRepository.LoadMemberShip("Peter#123");
+            var member = await _clanRepository.LoadMemberShip("Peter#123");
+            var loadedClan = await _clanRepository.LoadClan(member.ClanId);
 
-            Assert.AreEqual(founder.ClanId, clan.ClanId);
-            Assert.AreEqual(founder.BattleTag, "Peter#123");
+            Assert.AreEqual(member.ClanId, clan.ClanId);
+            Assert.AreEqual(member.BattleTag, "Peter#123");
+            Assert.IsTrue(loadedClan.FoundingFathers.Contains(member.BattleTag));
         }
 
         [Test]
-        public async Task CreatClan_FoundingTwiceIsProhibitted()
+        public async Task CreateClan_FoundingWhenInOtherClanIsProhibited()
         {
             await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
 
-            Assert.ThrowsAsync<ValidationException>(async () => await _handler.CreateClan("Cool Shit NEW", "CS", "Peter#123"));
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.CreateClan("Cool Shit NEW", "CS", "Peter#123"));
+            Assert.AreEqual("Founder can not be in another clan", exception.Message);
+        }
+
+        [Test]
+        public async Task CreateClan_BeingFounderOfMultipleClansIsAllowed_ButMemberInOneOnlyAtGivenTime()
+        {
+            var firstClan = await CreateFoundedClanForTest();
+            var founder = firstClan.FoundingFathers[1];
+            await _handler.KickPlayer(firstClan.FoundingFathers[1], firstClan.ClanId, firstClan.ChiefTain);
+
+            var secondClan = await _handler.CreateClan("Second clan", "SC", founder);
+
+            var firstClanLoaded = await _clanRepository.LoadClan(firstClan.ClanId);
+            var secondClanLoaded = await _clanRepository.LoadClan(secondClan.ClanId);
+            Assert.IsTrue(firstClanLoaded.FoundingFathers.Contains(founder));
+            Assert.IsFalse(firstClanLoaded.Members.Contains(founder));
+            Assert.IsTrue(secondClanLoaded.FoundingFathers.Contains(founder));
+            Assert.IsTrue(secondClanLoaded.Members.Contains(founder));
         }
 
         [Test]
@@ -343,6 +461,9 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             var chieftain = await _clanRepository.LoadMemberShip(clan.ChiefTain);
             Assert.IsNull(chieftain.ClanId);
+
+            Assert.IsTrue(clan.Members.Contains(chieftain.BattleTag));
+            Assert.IsTrue(clan.Shamans.All(s => clan.Members.Contains(s)));
 
             foreach (var clanMember in clan.Members)
             {
@@ -392,7 +513,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
 
             var member1 = await _clanRepository.LoadMemberShip("Wolf#456");
-            
+
             Assert.AreEqual(null, member1.ClanId);
             Assert.AreEqual("CS", member1.PendingInviteFromClan);
 
@@ -416,7 +537,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
 
             var member1 = await _clanRepository.LoadMemberShip("Wolf#456");
-            
+
             Assert.AreEqual(null, member1.ClanId);
             Assert.AreEqual("CS", member1.PendingInviteFromClan);
 
@@ -431,8 +552,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task UserWithPendingInviteGetsNoInvite()
         {
-            await CreateFoundedClanForTest("AB", "Crank#123");
-            await CreateFoundedClanForTest("CD", "Wolf#456");
+            await CreateFoundedClanForTest("Clan1", "AB", "Crank#123");
+            await CreateFoundedClanForTest("Clan2", "CD", "Wolf#456");
 
             await _handler.InviteToClan("Merlin#123", "AB", "Crank#123");
             var exception = Assert.ThrowsAsync<ValidationException>(async () =>
@@ -455,8 +576,8 @@ namespace WC3ChampionsStatisticService.UnitTests
         [Test]
         public async Task UserInActiveClanGetsNoInvite()
         {
-            await CreateFoundedClanForTest("AB", "Crank#123");
-            await CreateFoundedClanForTest("CD", "Wolf#456");
+            await CreateFoundedClanForTest("Clan1", "AB", "Crank#123");
+            await CreateFoundedClanForTest("Clan2", "CD", "Wolf#456");
 
             await _handler.InviteToClan("Merlin#123", "AB", "Crank#123");
             await _handler.AcceptInvite("Merlin#123", "AB");
@@ -475,6 +596,47 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.IsNull(loadMemberShip.PendingInviteFromClan);
             Assert.AreEqual(0, clanWithMember.PendingInvites.Count);
             Assert.AreEqual(0, clanNotWithMember.PendingInvites.Count);
+        }
+
+        [Test]
+        public async Task UserShamanInActiveClanGetsNoInvite()
+        {
+            var clan1 = await CreateFoundedClanForTest("Clan1", "AB", "Crank#123");
+            var clan2 = await CreateFoundedClanForTest("Clan2", "CD", "Wolf#456");
+            await _handler.AddShamanToClan(clan1.Members[2], clan1.ClanId, clan1.ChiefTain);
+
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.InviteToClan(clan1.Members[2], clan2.ClanId, "Wolf#456"));
+            Assert.AreEqual("Player already part of a different clan", exception.Message);
+
+            var loadMemberShip = await _clanRepository.LoadMemberShip(clan1.Members[2]);
+            var clanWithMember = await _clanRepository.LoadClan("AB");
+            var clanNotWithMember = await _clanRepository.LoadClan("CD");
+
+            Assert.IsNull(loadMemberShip.PendingInviteFromClan);
+            Assert.AreEqual(0, clanWithMember.PendingInvites.Count);
+            Assert.AreEqual(0, clanNotWithMember.PendingInvites.Count);
+        }
+
+        [Test]
+        public async Task FounderLeavesClanAndRejoins()
+        {
+            var clan = await CreateFoundedClanForTest();
+            var founder = clan.Members[1];
+            await _handler.LeaveClan(clan.ClanId, founder);
+            var loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsFalse(loadedClan.Members.Contains(founder));
+
+            Assert.DoesNotThrowAsync(async () =>
+            {
+                await _handler.InviteToClan(
+                    founder,
+                    clan.ClanId,
+                    clan.ChiefTain);
+                await _handler.AcceptInvite(founder, clan.ClanId);
+            }, "Re-inviting a founder should be possible");
+
+            loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.Members.Contains(founder));
         }
 
         [Test]
@@ -514,17 +676,24 @@ namespace WC3ChampionsStatisticService.UnitTests
             Assert.AreEqual(5, clanLoaded.Ranks.First().LeagueDivision);
         }
 
-        private async Task<Clan> CreateFoundedClanForTest(string clanId = "CS", string warchief = "Peter#123")
+        private async Task<Clan> CreateFoundedClanForTest(string clanName = "Cool Stuff", string clanId = "CS", string warchief = "Peter#123")
         {
-            var clan = await _handler.CreateClan("Cool Stuff", clanId, warchief);
+            var clan = await _handler.CreateClan(clanName, clanId, warchief);
+            var membersId = new List<string>();
             for (int i = 0; i < 6; i++)
             {
                 var newGuid = Guid.NewGuid();
-                await _handler.InviteToClan($"btag#{newGuid}", clan.ClanId, warchief);
-                await _handler.AcceptInvite($"btag#{newGuid}", clan.ClanId);
+                var tag = $"btag#{newGuid}";
+                membersId.Add(tag);
+                await _handler.InviteToClan(tag, clan.ClanId, warchief);
+                await _handler.AcceptInvite(tag, clan.ClanId);
             }
-
-            return await _clanRepository.LoadClan(clan.ClanId);
+            var loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.Members.Contains(warchief));
+            Assert.IsTrue(loadedClan.FoundingFathers.Contains(warchief));
+            Assert.IsTrue(membersId.All(id => loadedClan.Members.Contains(id)));
+            Assert.IsTrue(membersId.All(id => loadedClan.FoundingFathers.Contains(id)));
+            return loadedClan;
         }
     }
 }

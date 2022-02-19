@@ -8,7 +8,7 @@ namespace W3ChampionsStatisticService.Clans.ClanStates
         public FoundedClan(List<string> foundingFathers, string chiefTain)
         {
             FoundingFathers = foundingFathers;
-            Members = foundingFathers.Where(f => f != chiefTain).ToList();
+            Members = foundingFathers;
             ChiefTain = chiefTain;
         }
 

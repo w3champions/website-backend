@@ -56,8 +56,7 @@ namespace W3ChampionsStatisticService.Clans
         {
             if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag)) throw new ValidationException("Only chieftains and shamans can invite");
             if (PendingInvites.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
-            if (Members.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
-            if (FoundingFathers.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
+            if (Members.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player who is already a clan member");
 
             clanMemberShip.Invite(this);
 
@@ -86,15 +85,6 @@ namespace W3ChampionsStatisticService.Clans
             clanMemberShip.LeaveClan();
 
             ClanState = ClanState.LeaveClan(clanMemberShip);
-
-            if (!IsSuccesfullyFounded)
-            {
-                FoundingFathers.Remove(clanMemberShip.BattleTag);
-            }
-            else
-            {
-                Members.Remove(clanMemberShip.BattleTag);
-            }
         }
 
         public void AddShaman(string shamanId, string actingPlayer)
@@ -104,7 +94,6 @@ namespace W3ChampionsStatisticService.Clans
             if (shamanId == ChiefTain) throw new ValidationException("Chieftain can not be made Shaman");
             if (Shamans.Contains(shamanId)) throw new ValidationException("Player is already Shaman");
 
-            Members.Remove(shamanId);
             Shamans.Add(shamanId);
         }
 
@@ -113,7 +102,6 @@ namespace W3ChampionsStatisticService.Clans
             if (ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can manage Shamans");
 
             Shamans.Remove(shamanId);
-            Members.Add(shamanId);
         }
 
         public void KickPlayer(ClanMembership clanMemberShip, string actingPlayer)
