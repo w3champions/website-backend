@@ -69,6 +69,36 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task LeavesAsFounder_NotFoundedClan_RemovesMemberAndFounder()
+        {
+            var clan = await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
+            var leaver = $"btag#{Guid.NewGuid()}";
+            await _handler.InviteToClan(leaver, clan.ClanId, clan.ChiefTain);
+            await _handler.AcceptInvite(leaver, clan.ClanId);
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(clanLoaded.FoundingFathers.Contains(leaver));
+            Assert.IsTrue(clanLoaded.Members.Contains(leaver));
+
+            await _handler.LeaveClan(clan.ClanId, leaver);
+            clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+
+            Assert.IsFalse(clanLoaded.FoundingFathers.Contains(leaver));
+            Assert.IsFalse(clanLoaded.Members.Contains(leaver));
+        }
+
+        [Test]
+        public async Task LeavesAsFounder_FoundedClan_RemovesMember_StaysFounder()
+        {
+            var clan = await CreateFoundedClanForTest();
+            var leaver = clan.Members[1];
+            await _handler.LeaveClan(clan.ClanId, leaver);
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+
+            Assert.IsTrue(clanLoaded.FoundingFathers.Contains(leaver));
+            Assert.IsFalse(clanLoaded.Members.Contains(leaver));
+        }
+
+        [Test]
         public async Task SwitchChieftain()
         {
             var clan = await CreateFoundedClanForTest();
@@ -282,6 +312,18 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
+        public async Task KickMember_InAnotherClan()
+        {
+            var clan = await CreateFoundedClanForTest();
+            var anotherClan = await _handler.CreateClan("Another Clan", "AS", "Name#123");
+            var exception = Assert.ThrowsAsync<ValidationException>(async () => await _handler.KickPlayer(
+                 "Name#123",
+                 clan.ClanId,
+                 clan.ChiefTain));
+            Assert.AreEqual("Player not in this clan", exception.Message);
+        }
+
+        [Test]
         public async Task KickMember_NotChieftain()
         {
             var clan = await CreateFoundedClanForTest();
@@ -310,7 +352,28 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task KickFounder_RemovesMember_StaysFounder()
+        public async Task KickFounder_NotFoundedClan_RemovesMemberAndFounder()
+        {
+            var clan = await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
+            var memberTag = $"btag#{Guid.NewGuid()}";
+            await _handler.InviteToClan(memberTag, clan.ClanId, clan.ChiefTain);
+            await _handler.AcceptInvite(memberTag, clan.ClanId);
+            var clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(clanLoaded.FoundingFathers.Contains(memberTag));
+            Assert.IsTrue(clanLoaded.Members.Contains(memberTag));
+
+            await _handler.KickPlayer(
+                memberTag,
+                clan.ClanId,
+                clan.ChiefTain);
+
+            clanLoaded = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsFalse(clanLoaded.FoundingFathers.Contains(memberTag));
+            Assert.IsFalse(clanLoaded.Members.Contains(memberTag));
+        }
+
+        [Test]
+        public async Task KickFounder_FoundedClan_RemovesMember_StaysFounder()
         {
             var clan = await CreateFoundedClanForTest();
 
@@ -364,7 +427,7 @@ namespace WC3ChampionsStatisticService.UnitTests
         }
 
         [Test]
-        public async Task KickMember_ShamanFounder_RemovesMemberButStaysFounder()
+        public async Task KickMember_ShamanFounder_RemovesMember_StaysFounder()
         {
             var clan = await CreateFoundedClanForTest();
 
@@ -633,9 +696,90 @@ namespace WC3ChampionsStatisticService.UnitTests
                     clan.ClanId,
                     clan.ChiefTain);
                 await _handler.AcceptInvite(founder, clan.ClanId);
-            }, "Re-inviting a founder should be possible");
+            }, "Re-joining as founder should be possible");
 
             loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.Members.Contains(founder));
+        }
+        [Test]
+        public async Task FounderLeavesClanAndRejoins_NotFoundedClan()
+        {
+            var clan = await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
+            var founder = $"btag#{Guid.NewGuid()}";
+            await _handler.InviteToClan(founder, clan.ClanId, clan.ChiefTain);
+            await _handler.AcceptInvite(founder, clan.ClanId);
+            var loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.FoundingFathers.Contains(founder));
+            Assert.IsTrue(loadedClan.Members.Contains(founder));
+
+            await _handler.LeaveClan(clan.ClanId, founder);
+            loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsFalse(loadedClan.FoundingFathers.Contains(founder));
+            Assert.IsFalse(loadedClan.Members.Contains(founder));
+
+            Assert.DoesNotThrowAsync(async () =>
+            {
+                await _handler.InviteToClan(
+                    founder,
+                    clan.ClanId,
+                    clan.ChiefTain);
+                await _handler.AcceptInvite(founder, clan.ClanId);
+            }, "Re-joining as founder should be possible");
+
+            loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.FoundingFathers.Contains(founder));
+            Assert.IsTrue(loadedClan.Members.Contains(founder));
+        }
+
+        [Test]
+        public async Task FounderGetKickedAndRejoins()
+        {
+            var clan = await CreateFoundedClanForTest();
+            var founder = clan.Members[1];
+            await _handler.KickPlayer(founder, clan.ClanId, clan.ChiefTain);
+            var loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsFalse(loadedClan.Members.Contains(founder));
+
+            Assert.DoesNotThrowAsync(async () =>
+            {
+                await _handler.InviteToClan(
+                    founder,
+                    clan.ClanId,
+                    clan.ChiefTain);
+                await _handler.AcceptInvite(founder, clan.ClanId);
+            }, "Re-joining as founder should be possible");
+
+            loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.Members.Contains(founder));
+        }
+
+        [Test]
+        public async Task FounderGetKickedAndRejoins_NotFoundedClan()
+        {
+            var clan = await _handler.CreateClan("Cool Shit", "CS", "Peter#123");
+            var founder = $"btag#{Guid.NewGuid()}";
+            await _handler.InviteToClan(founder, clan.ClanId, clan.ChiefTain);
+            await _handler.AcceptInvite(founder, clan.ClanId);
+            var loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.FoundingFathers.Contains(founder));
+            Assert.IsTrue(loadedClan.Members.Contains(founder));
+
+            await _handler.KickPlayer(founder, clan.ClanId, clan.ChiefTain);
+            loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsFalse(loadedClan.FoundingFathers.Contains(founder));
+            Assert.IsFalse(loadedClan.Members.Contains(founder));
+
+            Assert.DoesNotThrowAsync(async () =>
+            {
+                await _handler.InviteToClan(
+                    founder,
+                    clan.ClanId,
+                    clan.ChiefTain);
+                await _handler.AcceptInvite(founder, clan.ClanId);
+            }, "Re-joining as founder should be possible");
+
+            loadedClan = await _clanRepository.LoadClan(clan.ClanId);
+            Assert.IsTrue(loadedClan.FoundingFathers.Contains(founder));
             Assert.IsTrue(loadedClan.Members.Contains(founder));
         }
 

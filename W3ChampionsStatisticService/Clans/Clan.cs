@@ -112,7 +112,7 @@ namespace W3ChampionsStatisticService.Clans
             if (clanMemberShip.BattleTag == ChiefTain) throw new ValidationException("Can not kick chieftain");
 
             clanMemberShip.LeaveClan();
-            Members.Remove(clanMemberShip.BattleTag);
+            ClanState.LeaveClan(clanMemberShip);
             Shamans.Remove(clanMemberShip.BattleTag);
         }
 

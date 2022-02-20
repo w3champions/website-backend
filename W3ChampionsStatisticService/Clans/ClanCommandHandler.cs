@@ -72,7 +72,10 @@ namespace W3ChampionsStatisticService.Clans
             await _clanRepository.DeleteClan(clanId);
 
             var allMembers = new List<string>();
+            allMembers.AddRange(clan.FoundingFathers);
             allMembers.AddRange(clan.Members);
+            allMembers.Add(clan.ChiefTain);
+            allMembers = allMembers.Distinct().ToList();
 
             var memberShips = await _clanRepository.LoadMemberShips(allMembers);
 
@@ -212,6 +215,7 @@ namespace W3ChampionsStatisticService.Clans
             list.AddRange(clan.Members);
             list.AddRange(clan.Shamans);
             list.Add(clan.ChiefTain);
+            list = list.Distinct().ToList();
             var ranksFromClan = await _rankRepository.LoadRanksForPlayers(list, season);
 
             PopulateLeague(ranksFromClan, leagueConstellation);
