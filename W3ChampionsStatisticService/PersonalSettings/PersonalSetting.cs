@@ -61,7 +61,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
             if (cmd.avatarCategory == AvatarCategory.Special)
             {
-                isValid = SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
+                isValid = SpecialPictures == null ? false : SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
             }
             else
             {

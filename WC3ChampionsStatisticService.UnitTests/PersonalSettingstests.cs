@@ -24,7 +24,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerOverallStats> {player };
+            personalSetting.Players = new List<PlayerOverallStats> { player };
             SetPictureCommand cmd = new SetPictureCommand()
             {
                 avatarCategory = AvatarCategory.HU,
@@ -48,7 +48,7 @@ namespace WC3ChampionsStatisticService.UnitTests
                 player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerOverallStats> {player };
+            personalSetting.Players = new List<PlayerOverallStats> { player };
             SetPictureCommand cmd1 = new SetPictureCommand()
             {
                 avatarCategory = AvatarCategory.HU,
@@ -81,6 +81,25 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             personalSetting.Players = new List<PlayerOverallStats> { player };
             Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.Race == Race.HU).Max);
+        }
+
+        [Test]
+        public void SetProfilePicture_SpecialAvatar_ButSpecialPicturesNull_DoesNotThrow()
+        {
+            var player = PlayerOverallStats.Create("peter#123");
+            var personalSetting = new PersonalSetting("peter#123") { SpecialPictures = null };
+            personalSetting.Players = new List<PlayerOverallStats> { player };
+            var expectedProfilePic = ProfilePicture.Default();
+
+            SetPictureCommand cmd = new SetPictureCommand()
+            {
+                avatarCategory = AvatarCategory.Special,
+                pictureId = 2
+            };
+            Assert.DoesNotThrow(() => personalSetting.SetProfilePicture(cmd));
+
+            Assert.AreEqual(expectedProfilePic.PictureId, personalSetting.ProfilePicture.PictureId);
+            Assert.AreEqual(expectedProfilePic.Race, personalSetting.ProfilePicture.Race);
         }
 
         [Test]
@@ -138,7 +157,7 @@ namespace WC3ChampionsStatisticService.UnitTests
             await playerRepo.UpsertPlayer(player);
 
             var result = await portraitCommandHandler.UpdatePicture("modmoto#123",
-                new SetPictureCommand {avatarCategory = AvatarCategory.NE, pictureId = 2});
+                new SetPictureCommand { avatarCategory = AvatarCategory.NE, pictureId = 2 });
 
             Assert.IsTrue(result);
             var settings = await personalSettingsRepository.Load("modmoto#123");
