@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Admin.Portraits;
@@ -488,6 +491,79 @@ namespace WC3ChampionsStatisticService.UnitTests
             var portraits = await portraitCommandHandler.GetPortraitDefinitions();
 
             Assert.AreEqual(4, portraits.Count());
+        }
+
+        [Test]
+        public async Task UpdatePortrait_OldSchemaWithoutSpecialPicturesField_NoError()
+        {
+            var settingsRepo = new PersonalSettingsRepository(MongoClient);
+            var portraitRepo = new PortraitRepository(MongoClient);
+            var playeRepo = new PlayerRepository(MongoClient);
+            var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+
+            int[] portraitIds = { 1, 2, 3, 4 };
+            string[] portraitGroups = { "brozne", "silver" };
+            var defineCommand = CreatePortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
+            await portraitCommandHandler.AddPortraitDefinition(defineCommand);
+
+            var tag = "cepheid#1467";
+
+            await settingsRepo.Save(new PersonalSetting(tag));
+            var settings = await settingsRepo.Load(tag);
+            Assert.AreEqual(0, settings.SpecialPictures.Count());
+            await settingsRepo.UnsetOne("SpecialPictures", tag);
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits.Add(3);
+            portraitsCommand.BnetTags.Add(tag);
+            portraitsCommand.Tooltip = "testTooltip";
+
+            await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            settings = await settingsRepo.Load(tag);
+            Assert.AreEqual(1, settings.SpecialPictures.Count());
+        }
+
+        [Test]
+        public async Task UpdateMultiplePortraits_MixOfOldAndNewSchemas_NewSchemaPortraitsAreNotDeleted()
+        {
+            var settingsRepo = new PersonalSettingsRepository(MongoClient);
+            var portraitRepo = new PortraitRepository(MongoClient);
+            var playeRepo = new PlayerRepository(MongoClient);
+            var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+
+            int[] portraitIds = { 1, 2, 3, 4 };
+            string[] portraitGroups = { "gym" };
+            var defineCommand = CreatePortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
+            await portraitCommandHandler.AddPortraitDefinition(defineCommand);
+
+            string[] btags = { "Cepheid#1467", "Floss2xDaily#1987" };
+
+            var tagsList = new List<PersonalSetting>();
+            tagsList.Add(new PersonalSetting("Cepheid#1467"));
+            tagsList.Add(new PersonalSetting("Floss2xDaily#1987"));
+
+            var portraitsCommand = new PortraitsCommand();
+            portraitsCommand.Portraits.Add(1);
+            portraitsCommand.Portraits.Add(2);
+            portraitsCommand.Portraits.Add(3);
+            portraitsCommand.BnetTags.Add(btags[1]);
+            portraitsCommand.Tooltip = "floss's portraits";
+            
+            await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
+
+            await settingsRepo.SaveMany(tagsList);
+            await settingsRepo.UnsetOne("SpecialPictures", btags[0]); // Cepheid#1467
+
+            var portraitsCommand2 = new PortraitsCommand();
+            portraitsCommand2.Portraits.Add(4);
+            portraitsCommand2.BnetTags = btags.ToList();
+            portraitsCommand2.Tooltip = "added portraits";
+
+            await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand2);
+
+            var flossSettings = await settingsRepo.Load(btags[1]);
+            Assert.AreEqual(4, flossSettings.SpecialPictures.Count());
         }
 
         public PortraitsDefinitionCommand CreatePortraitsDefinitionCommand(List<int> ids, List<string> groups)
