@@ -592,9 +592,10 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             string[] btags = { "Cepheid#1467", "Floss2xDaily#1987" };
 
-            var tagsList = new List<PersonalSetting>();
-            tagsList.Add(new PersonalSetting("Cepheid#1467"));
-            tagsList.Add(new PersonalSetting("Floss2xDaily#1987"));
+            var settingsList = new List<PersonalSetting>();
+            settingsList.Add(new PersonalSetting("Cepheid#1467"));
+            settingsList.Add(new PersonalSetting("Floss2xDaily#1987"));
+            await settingsRepo.SaveMany(settingsList);
 
             var portraitsCommand = new PortraitsCommand();
             portraitsCommand.Portraits.Add(1);
@@ -602,11 +603,13 @@ namespace WC3ChampionsStatisticService.UnitTests
             portraitsCommand.Portraits.Add(3);
             portraitsCommand.BnetTags.Add(btags[1]);
             portraitsCommand.Tooltip = "floss's portraits";
-            
+
             await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
 
-            await settingsRepo.SaveMany(tagsList);
-            await settingsRepo.UnsetOne("SpecialPictures", btags[0]); // Cepheid#1467
+            await settingsRepo.UnsetOne("SpecialPictures", btags[0]); // Cepheid#1467 as the old schema
+
+            var flossSettings = await settingsRepo.Load(btags[1]);
+            Assert.AreEqual(3, flossSettings.SpecialPictures.Count());
 
             var portraitsCommand2 = new PortraitsCommand();
             portraitsCommand2.Portraits.Add(4);
@@ -615,8 +618,11 @@ namespace WC3ChampionsStatisticService.UnitTests
 
             await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand2);
 
-            var flossSettings = await settingsRepo.Load(btags[1]);
+            var cephSettings = await settingsRepo.Load(btags[0]);
+            flossSettings = await settingsRepo.Load(btags[1]);
             Assert.AreEqual(4, flossSettings.SpecialPictures.Count());
+            Assert.IsNotNull(cephSettings.SpecialPictures);
+            Assert.AreEqual(1, cephSettings.SpecialPictures.Count());
         }
 
         public PortraitsDefinitionCommand CreatePortraitsDefinitionCommand(List<int> ids, List<string> groups)
