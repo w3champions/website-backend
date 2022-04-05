@@ -11,6 +11,11 @@ namespace W3ChampionsStatisticService.Matches
     public class Matchup
     {
         public string Map { get; set; }
+
+        public string MapName { get; set; }
+
+        public int? MapId { get; set; }
+
         [JsonIgnore]
         public ObjectId Id { get; set; }
 
@@ -56,6 +61,8 @@ namespace W3ChampionsStatisticService.Matches
             {
                 Id = matchFinishedEvent.Id,
                 Map = new MapName(matchFinishedEvent.match.map).Name,
+                MapId = match.mapId,
+                MapName = match.mapName,
                 MatchId = match.id,
                 GateWay = match.gateway,
                 GameMode = matchFinishedEvent.match.gameMode,
