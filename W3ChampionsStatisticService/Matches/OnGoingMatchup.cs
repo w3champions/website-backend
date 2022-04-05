@@ -17,6 +17,8 @@ namespace W3ChampionsStatisticService.Matches
             {
                 Id = matchStartedEvent.Id,
                 Map = new MapName(match.map).Name,
+                MapId = match.mapId,
+                MapName = match.mapName,
                 MatchId = match.id,
                 GateWay = match.gateway,
                 GameMode = match.gameMode,
