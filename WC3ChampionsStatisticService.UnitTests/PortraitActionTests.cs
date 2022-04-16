@@ -12,7 +12,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 
-namespace WC3ChampionsStatisticService.UnitTests
+namespace WC3ChampionsStatisticService.Tests
 {
     [TestFixture]
     public class PortraitActionTests : IntegrationTestBase

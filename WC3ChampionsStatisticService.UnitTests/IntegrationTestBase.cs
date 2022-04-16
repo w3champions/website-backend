@@ -7,7 +7,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Services;
 
-namespace WC3ChampionsStatisticService.UnitTests
+namespace WC3ChampionsStatisticService.Tests
 {
     public class IntegrationTestBase
     {

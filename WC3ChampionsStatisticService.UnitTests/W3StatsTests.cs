@@ -14,7 +14,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
-namespace WC3ChampionsStatisticService.UnitTests
+namespace WC3ChampionsStatisticService.Tests
 {
     [TestFixture]
     public class W3Stats : IntegrationTestBase
