@@ -8,7 +8,7 @@ using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 
-namespace WC3ChampionsStatisticService.UnitTests
+namespace WC3ChampionsStatisticService.Tests
 {
     [TestFixture]
     public class PlayerOverviewTests : IntegrationTestBase

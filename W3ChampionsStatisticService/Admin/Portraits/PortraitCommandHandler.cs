@@ -5,6 +5,8 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Admin.Portraits;
 using W3ChampionsStatisticService.Ports;
+using MongoDB.Bson;
+using System;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -44,6 +46,9 @@ namespace W3ChampionsStatisticService.Admin
         public async Task UpsertSpecialPortraits(PortraitsCommand command)
         {
             var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
+            await UpdateSchemaToIncludeSpecialPictures(settings);
+            settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
+
             var validPortraits = await _portraitRepository.LoadPortraitDefinitions();
 
             foreach (var playerSettings in settings)
@@ -98,6 +103,22 @@ namespace W3ChampionsStatisticService.Admin
         public async Task UpdatePortraitDefinition(PortraitsDefinitionCommand command)
         {
             await _portraitRepository.UpdatePortraitDefinition(command.Ids, command.Groups);
+        }
+
+        private async Task UpdateSchemaToIncludeSpecialPictures(List<PersonalSetting> settings)
+        {
+            var updatedSettings = settings;
+            List<PersonalSetting> outOfDateDocuments = new();
+            foreach (var setting in settings)
+            {
+                if (!setting.ToBsonDocument().Contains("SpecialPictures"))
+                {
+                    setting.SpecialPictures = Array.Empty<SpecialPicture>();
+                    outOfDateDocuments.Add(setting);
+                }
+            }
+            
+            await _personalSettingsRepository.SaveMany(outOfDateDocuments);
         }
     }
 }

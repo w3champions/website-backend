@@ -60,5 +60,10 @@ namespace W3ChampionsStatisticService.PersonalSettings
         {
             return UpsertMany(settings);
         }
+
+        public Task UnsetOne(string fieldName, string id)
+        {
+            return UnsetOne<PersonalSetting>(fieldName, id);
+        }
     }
 }

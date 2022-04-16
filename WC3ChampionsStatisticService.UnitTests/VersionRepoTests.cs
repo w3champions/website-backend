@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace WC3ChampionsStatisticService.UnitTests
+namespace WC3ChampionsStatisticService.Tests
 {
     [TestFixture]
     public class VersionRepoTest : IntegrationTestBase

@@ -104,6 +104,15 @@ namespace W3ChampionsStatisticService.ReadModelBase
         {
             return Delete<T>(x => x.Id == id);
         }
+
+        protected async Task UnsetOne<T>(FieldDefinition<T> fieldName, string id) where T : IIdentifiable
+        {
+            // $unset
+            var mongoDatabase = CreateClient();
+            var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+            var updateDefinition = Builders<T>.Update.Unset(fieldName);
+            await mongoCollection.UpdateOneAsync(x => x.Id == id, updateDefinition);
+        }
     }
 
     public interface IIdentifiable
