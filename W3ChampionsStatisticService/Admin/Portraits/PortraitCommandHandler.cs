@@ -46,7 +46,7 @@ namespace W3ChampionsStatisticService.Admin
         public async Task UpsertSpecialPortraits(PortraitsCommand command)
         {
             var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
-            await UpdateSchemaToIncludeSpecialPictures(settings);
+            await UpdateSchema(settings);
             settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
 
             var validPortraits = await _portraitRepository.LoadPortraitDefinitions();
@@ -105,20 +105,9 @@ namespace W3ChampionsStatisticService.Admin
             await _portraitRepository.UpdatePortraitDefinition(command.Ids, command.Groups);
         }
 
-        private async Task UpdateSchemaToIncludeSpecialPictures(List<PersonalSetting> settings)
+        private async Task UpdateSchema(List<PersonalSetting> settings)
         {
-            var updatedSettings = settings;
-            List<PersonalSetting> outOfDateDocuments = new();
-            foreach (var setting in settings)
-            {
-                if (!setting.ToBsonDocument().Contains("SpecialPictures"))
-                {
-                    setting.SpecialPictures = Array.Empty<SpecialPicture>();
-                    outOfDateDocuments.Add(setting);
-                }
-            }
-            
-            await _personalSettingsRepository.SaveMany(outOfDateDocuments);
+            await _personalSettingsRepository.UpdateSchema(settings);
         }
     }
 }

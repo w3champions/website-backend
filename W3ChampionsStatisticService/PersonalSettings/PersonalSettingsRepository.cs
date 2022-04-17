@@ -65,5 +65,22 @@ namespace W3ChampionsStatisticService.PersonalSettings
         {
             return UnsetOne<PersonalSetting>(fieldName, id);
         }
+
+        public async Task UpdateSchema(List<PersonalSetting> settings)
+        {
+            var updatedSettings = settings;
+            List<PersonalSetting> outOfDateDocuments = new();
+            foreach (var setting in settings)
+            {
+                if (!setting.ToBsonDocument().Contains("SpecialPictures"))
+                {
+                    setting.SpecialPictures = Array.Empty<SpecialPicture>();
+                    outOfDateDocuments.Add(setting);
+                }
+            }
+
+            await SaveMany(outOfDateDocuments);
+            return;
+        }
     }
 }
