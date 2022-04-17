@@ -11,7 +11,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 namespace WC3ChampionsStatisticService.Tests
 {
     [TestFixture]
-    public class PersonalSettingstests : IntegrationTestBase
+    public class PersonalSettingsTests : IntegrationTestBase
     {
         [Test]
         public void SetProfilePicture()
@@ -163,6 +163,59 @@ namespace WC3ChampionsStatisticService.Tests
             var settings = await personalSettingsRepository.Load("modmoto#123");
 
             Assert.AreEqual(2, settings.ProfilePicture.PictureId);
+        }
+
+        [Test]
+        public async Task RequestPersonalSettings_SpecialPicturesNull_Load_CorrectlyUpdatedAndReturned()
+        {
+            // arrange
+            var playerRepo = new PlayerRepository(MongoClient);
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+
+            var player = PlayerOverallStats.Create("cepheid#1467"); 
+            var playerSettings = new PersonalSetting("cepheid#1467");
+            await playerRepo.UpsertPlayer(player);
+            await personalSettingsRepository.Save(playerSettings);
+            await personalSettingsRepository.UnsetOne("SpecialPictures", player.BattleTag);
+
+            // act
+            var settings = await personalSettingsRepository.Load("cepheid#1467");
+
+            // assert
+            Assert.IsNotNull(settings.SpecialPictures);
+            Assert.IsEmpty(settings.SpecialPictures);
+        }
+
+        [Test]
+        public async Task RequestPersonalSettings_SpecialPicturesNull_LoadMany_CorrectlyUpdatedAndReturned()
+        {
+            // arrange
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+
+            string[] players = { "cepheid#1467", "floss2xdaily#1234", "setcho#4567" };
+
+            foreach (var player in players)
+            {
+                var stats = PlayerOverallStats.Create(player);
+                await playerRepo.UpsertPlayer(stats);
+                var newSettings = new PersonalSetting(player);
+                await personalSettingsRepository.Save(newSettings);
+            }
+
+            await personalSettingsRepository.UnsetOne("SpecialPictures", players[0]);
+            await personalSettingsRepository.UnsetOne("SpecialPictures", players[1]);
+
+            // act
+            var settings = await personalSettingsRepository.LoadMany(players);
+
+            // assert
+            Assert.IsNotNull(settings.Find(x => x.Id == players[0]).SpecialPictures);
+            Assert.IsEmpty(settings.Find(x => x.Id == players[0]).SpecialPictures);
+            Assert.IsNotNull(settings.Find(x => x.Id == players[1]).SpecialPictures);
+            Assert.IsEmpty(settings.Find(x => x.Id == players[1]).SpecialPictures);
+            Assert.IsNotNull(settings.Find(x => x.Id == players[2]).SpecialPictures);
+            Assert.IsEmpty(settings.Find(x => x.Id == players[2]).SpecialPictures);
         }
     }
 }

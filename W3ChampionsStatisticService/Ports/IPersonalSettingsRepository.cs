@@ -13,5 +13,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<PersonalSetting>> LoadAll();
         Task Save(PersonalSetting setting);
         Task SaveMany(List<PersonalSetting> settings);
+        Task UpdateSchema(List<PersonalSetting> settings);
     }
 }
