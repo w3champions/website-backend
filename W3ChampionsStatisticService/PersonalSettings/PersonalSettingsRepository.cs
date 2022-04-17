@@ -28,6 +28,14 @@ namespace W3ChampionsStatisticService.PersonalSettings
                     player => player.BattleTag,
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
+
+            if (result != null && SchemaOutdated(result))
+            {
+                var settingList = new List<PersonalSetting>();
+                settingList.Add(result);
+                await UpdateSchema(settingList);
+                result = await Load(battletag);
+            }
             return result;
         }
 
@@ -42,6 +50,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var tags = String.Join("|", battletags);
             var filter = Builders<PersonalSetting>.Filter.Regex("_id", new BsonRegularExpression(tags, "i"));
             var results = await settings.Find(filter).ToListAsync();
+            await UpdateSchema(results);
             return results;
         }
 
@@ -61,9 +70,9 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return UpsertMany(settings);
         }
 
-        public Task UnsetOne(string fieldName, string id)
+        public Task UnsetOne(string fieldName, string battleTag)
         {
-            return UnsetOne<PersonalSetting>(fieldName, id);
+            return UnsetOne<PersonalSetting>(fieldName, battleTag);
         }
 
         public async Task UpdateSchema(List<PersonalSetting> settings)
@@ -81,6 +90,15 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
             await SaveMany(outOfDateDocuments);
             return;
+        }
+
+        public bool SchemaOutdated(PersonalSetting setting)
+        {
+            if (!setting.ToBsonDocument().Contains("SpecialPictures"))
+            {
+                return true;
+            }
+            return false;
         }
     }
 }

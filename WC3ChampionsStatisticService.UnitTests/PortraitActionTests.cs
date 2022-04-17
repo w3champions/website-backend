@@ -390,7 +390,7 @@ namespace WC3ChampionsStatisticService.Tests
             Assert.DoesNotThrowAsync(async () => await portraitCommandHandler.DeleteSpecialPortraits(deleteCommand));
             var settings = await personalSettingsRepository.Load(playerTag);
 
-            Assert.IsNull(settings.SpecialPictures);
+            Assert.IsEmpty(settings.SpecialPictures);
         }
 
         [Test]
