@@ -59,26 +59,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
             return Ok(new object[0]);
         }
 
-        [HttpPost("populate-country-codes")]
-        public async Task<IActionResult> MigrateCountry()
-        {
-            var settings = await _personalSettingsRepository.LoadAll();
-            var countriesJson = System.IO.File.ReadAllText("countries.json");
-            var countries = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(countriesJson);
-
-            foreach (var setting in settings)
-            {
-                if (!string.IsNullOrEmpty(setting.Country) && countries.ContainsKey(setting.Country))
-                {
-                    var foundCountryCode = countries[setting.Country];
-                    setting.CountryCode = foundCountryCode;
-                    await _personalSettingsRepository.Save(setting);
-                }
-            }
-
-            return Ok();
-        }
-
         [HttpPut("{battleTag}")]
         public async Task<IActionResult> SetPersonalSetting(
            string battleTag,

@@ -5,6 +5,8 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Admin.Portraits;
 using W3ChampionsStatisticService.Ports;
+using MongoDB.Bson;
+using System;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -44,14 +46,17 @@ namespace W3ChampionsStatisticService.Admin
         public async Task UpsertSpecialPortraits(PortraitsCommand command)
         {
             var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
+            await UpdateSchema(settings);
+            settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
+
             var validPortraits = await _portraitRepository.LoadPortraitDefinitions();
-            
+
             foreach (var playerSettings in settings)
             {
-                var specialPortraitsList = new List<SpecialPicture>(playerSettings.SpecialPictures);
+                var specialPortraitsList = playerSettings.SpecialPictures != null ? new List<SpecialPicture>(playerSettings.SpecialPictures) : new List<SpecialPicture>();
                 foreach (var portraitId in command.Portraits)
                 {
-                    if (!specialPortraitsList.Exists(x => x.PictureId == portraitId) && 
+                    if (!specialPortraitsList.Exists(x => x.PictureId == portraitId) &&
                         validPortraits.Any(x => x.Id == portraitId.ToString()))
                     {
                         specialPortraitsList.Add(new SpecialPicture(portraitId, command.Tooltip));
@@ -69,9 +74,12 @@ namespace W3ChampionsStatisticService.Admin
 
             foreach (var playerSettings in settings)
             {
-                var existingPortraits = new List<SpecialPicture>(playerSettings.SpecialPictures);
-                existingPortraits.RemoveAll(x => command.Portraits.Contains(x.PictureId));
-                playerSettings.UpdateSpecialPictures(existingPortraits.ToArray());
+                if (playerSettings.SpecialPictures != null)
+                {
+                    var existingPortraits = new List<SpecialPicture>(playerSettings.SpecialPictures);
+                    existingPortraits.RemoveAll(x => command.Portraits.Contains(x.PictureId));
+                    playerSettings.UpdateSpecialPictures(existingPortraits.ToArray());
+                }
             }
 
             await _personalSettingsRepository.SaveMany(settings);
@@ -95,6 +103,11 @@ namespace W3ChampionsStatisticService.Admin
         public async Task UpdatePortraitDefinition(PortraitsDefinitionCommand command)
         {
             await _portraitRepository.UpdatePortraitDefinition(command.Ids, command.Groups);
+        }
+
+        private async Task UpdateSchema(List<PersonalSetting> settings)
+        {
+            await _personalSettingsRepository.UpdateSchema(settings);
         }
     }
 }

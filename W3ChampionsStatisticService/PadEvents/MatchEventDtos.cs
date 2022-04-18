@@ -91,8 +91,9 @@ namespace W3ChampionsStatisticService.PadEvents
         public string host { get; set; }
         [BsonElement("_id")]
         public string id { get; set; }
-        public int mapId { get; set; }
+        public int? mapId { get; set; }
         public string map { get; set; }
+        public string mapName { get; set; }
         public List<PlayerMMrChange> players { get; set; }
         public long endTime { get; set; }
         public long number { get; set; }
@@ -120,8 +121,9 @@ namespace W3ChampionsStatisticService.PadEvents
         public string host { get; set; }
         [BsonElement("_id")]
         public string id { get; set; }
-        public int mapId { get; set; }
+        public int? mapId { get; set; }
         public string map { get; set; }
+        public string mapName { get; set; }
         public List<UnfinishedMatchPlayer> players { get; set; }
         public FloNode floNode { get; set; }
         public string serverProvider { get; set; }

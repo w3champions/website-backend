@@ -2,7 +2,7 @@ using System.Linq;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
-namespace WC3ChampionsStatisticService.UnitTests
+namespace WC3ChampionsStatisticService.Tests
 {
     public static class RaceExtensions
     {

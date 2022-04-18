@@ -28,6 +28,14 @@ namespace W3ChampionsStatisticService.PersonalSettings
                     player => player.BattleTag,
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
+
+            if (result != null && SchemaOutdated(result))
+            {
+                var settingList = new List<PersonalSetting>();
+                settingList.Add(result);
+                await UpdateSchema(settingList);
+                result = await Load(battletag);
+            }
             return result;
         }
 
@@ -42,6 +50,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var tags = String.Join("|", battletags);
             var filter = Builders<PersonalSetting>.Filter.Regex("_id", new BsonRegularExpression(tags, "i"));
             var results = await settings.Find(filter).ToListAsync();
+            await UpdateSchema(results);
             return results;
         }
 
@@ -59,6 +68,37 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public Task SaveMany(List<PersonalSetting> settings)
         {
             return UpsertMany(settings);
+        }
+
+        public Task UnsetOne(string fieldName, string battleTag)
+        {
+            return UnsetOne<PersonalSetting>(fieldName, battleTag);
+        }
+
+        public async Task UpdateSchema(List<PersonalSetting> settings)
+        {
+            var updatedSettings = settings;
+            List<PersonalSetting> outOfDateDocuments = new();
+            foreach (var setting in settings)
+            {
+                if (!setting.ToBsonDocument().Contains("SpecialPictures"))
+                {
+                    setting.SpecialPictures = Array.Empty<SpecialPicture>();
+                    outOfDateDocuments.Add(setting);
+                }
+            }
+
+            await SaveMany(outOfDateDocuments);
+            return;
+        }
+
+        public bool SchemaOutdated(PersonalSetting setting)
+        {
+            if (!setting.ToBsonDocument().Contains("SpecialPictures"))
+            {
+                return true;
+            }
+            return false;
         }
     }
 }
