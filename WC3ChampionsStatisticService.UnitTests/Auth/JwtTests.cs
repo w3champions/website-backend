@@ -1,7 +1,7 @@
 using NUnit.Framework;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Auth
 {
     [TestFixture]
     public class JwtTests

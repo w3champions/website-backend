@@ -4,7 +4,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.CommonValueObjects;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Matchups
 {
     [TestFixture]
     public class MatchupDetailTests : IntegrationTestBase

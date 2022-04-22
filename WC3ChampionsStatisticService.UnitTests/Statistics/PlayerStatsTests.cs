@@ -11,7 +11,7 @@ using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Statistics
 {
     [TestFixture]
     public class PlayerStatsTests : IntegrationTestBase

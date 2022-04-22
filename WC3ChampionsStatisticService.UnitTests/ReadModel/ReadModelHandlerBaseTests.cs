@@ -8,7 +8,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.ReadModel
 {
     [TestFixture]
     public class ReadModelHandlerBaseTests : IntegrationTestBase

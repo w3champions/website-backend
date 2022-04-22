@@ -11,7 +11,7 @@ using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Clans
 {
     [TestFixture]
     public class ClanTests : IntegrationTestBase

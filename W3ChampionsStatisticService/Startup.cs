@@ -22,6 +22,7 @@ using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.Tournaments;
 using W3ChampionsStatisticService.W3ChampionsStats;

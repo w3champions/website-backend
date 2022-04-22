@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Rewards.Portraits;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.PersonalSettings
 {
     [TestFixture]
     public class PersonalSettingsTests : IntegrationTestBase
@@ -100,6 +100,32 @@ namespace WC3ChampionsStatisticService.Tests
 
             Assert.AreEqual(expectedProfilePic.PictureId, personalSetting.ProfilePicture.PictureId);
             Assert.AreEqual(expectedProfilePic.Race, personalSetting.ProfilePicture.Race);
+        }
+
+        [Test]
+        public async Task LoadProfileSince_LastUpdateDateReturnsNothing()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var personalSetting = new PersonalSetting("peter#123");
+            await personalSettingsRepository.Save(personalSetting);
+
+            var result = await personalSettingsRepository.LoadSince(personalSetting.LastUpdated);
+
+            Assert.AreEqual(0, result.Count);
+        }
+
+        [Test]
+        public async Task LoadProfileSince_LastUpdateDateMinusAMsReturnsSomething()
+        {
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var personalSetting = new PersonalSetting("peter#123");
+            await personalSettingsRepository.Save(personalSetting);
+
+            var personalSettingLastUpdated = personalSetting.LastUpdated.Subtract(TimeSpan.FromMilliseconds(1));
+            var result = await personalSettingsRepository.LoadSince(personalSettingLastUpdated);
+
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual("peter#123", result[0].Id);
         }
 
         [Test]

@@ -9,7 +9,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PadEvents;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Matchups
 {
     [TestFixture]
     public class MatchupRepoTests : IntegrationTestBase

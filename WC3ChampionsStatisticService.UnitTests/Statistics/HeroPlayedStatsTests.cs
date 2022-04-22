@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Statistics
 {
     [TestFixture]
     public class HeroPlayedStatsTests : IntegrationTestBase
