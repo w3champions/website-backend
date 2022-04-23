@@ -10,11 +10,11 @@ namespace W3ChampionsStatisticService.Rewards
     [ApiController]
     public class RewardsController : ControllerBase
     {
-        private PortraitCommandHandler _portraitCommandHandler;
-        private PortraitRepository _portraitRepository;
+        private readonly PortraitCommandHandler _portraitCommandHandler;
+        private readonly IPortraitRepository _portraitRepository;
 
         public RewardsController(
-            PortraitRepository portraitRepository,
+            IPortraitRepository portraitRepository,
             PortraitCommandHandler portraitCommandHandler)
         {
             _portraitRepository = portraitRepository;
@@ -64,8 +64,8 @@ namespace W3ChampionsStatisticService.Rewards
         [HttpGet("portrait-groups")]
         public async Task<IActionResult> GetPortraitGroups()
         {
-            await _portraitRepository.LoadDistinctPortraitGroups();
-            return Ok();
+            var portraitGroups = await _portraitRepository.LoadDistinctPortraitGroups();
+            return Ok(portraitGroups);
         }
     }
 }

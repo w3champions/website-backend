@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.Rewards.Portraits;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3ChampionsStatisticService.Rewards.Portraits
 {
     public interface IPortraitRepository
     {
