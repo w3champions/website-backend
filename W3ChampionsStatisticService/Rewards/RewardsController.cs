@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.Rewards
             return Ok();
         }
 
-        [HttpGet("portraitDefinitions")]
+        [HttpGet("portrait-definitions")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetPortraitDefinitions()
         {
@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.Rewards
             return Ok(portraits);
         }
 
-        [HttpPut("portraitDefinitions")]
+        [HttpPut("portrait-definitions")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
         {
@@ -53,7 +53,7 @@ namespace W3ChampionsStatisticService.Rewards
             return Ok();
         }
 
-        [HttpDelete("portraitDefinitions")]
+        [HttpDelete("portrait-definitions")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
         {
@@ -64,7 +64,7 @@ namespace W3ChampionsStatisticService.Rewards
         [HttpGet("portrait-groups")]
         public async Task<IActionResult> GetPortraitGroups()
         {
-            await _portraitRepository.LoadPortraitDefinitions();
+            await _portraitRepository.LoadDistinctPortraitGroups();
             return Ok();
         }
     }

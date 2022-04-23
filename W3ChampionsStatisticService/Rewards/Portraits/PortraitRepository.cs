@@ -66,15 +66,8 @@ namespace W3ChampionsStatisticService.Rewards.Portraits
                 .Aggregate()
                 .Match(p => p.Groups.Count > 0)
                 .Unwind<PortraitDefinition, SinglePortraitDefinitionAndGroup>(p => p.Groups)
-                /*.Group(key => key.Group, g => new PortraitGroup()
-                 {
-                     Group = g.First().Group,
-                     PortraitIds = g.Select(x => x.getId())
-                        .Distinct()
-                        .ToList(),
-                 })
-                .SortBy(x => x.Group)*/
                 .ToListAsync();
+
             var grouped = pipeline.GroupBy(p => p.Groups).Select(p => new PortraitGroup
             {
                 Group = p.Key,
