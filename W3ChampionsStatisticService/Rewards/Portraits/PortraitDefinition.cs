@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.Admin.Portraits
+namespace W3ChampionsStatisticService.Rewards.Portraits
 {
     public class PortraitDefinition : IIdentifiable
     {
@@ -13,11 +13,26 @@ namespace W3ChampionsStatisticService.Admin.Portraits
         }
         [BsonId]
         public string Id { get; set; }
+
         public List<string> Groups { get; set; }
+    }
+
+    public class SinglePortraitDefinitionAndGroup
+    {
+        [BsonId]
+        public string Id { get; set; }
+
+        public string Groups { get; set; }
 
         public int getId()
         {
             return int.Parse(Id);
         }
+    }
+    public class PortraitGroup
+    {
+        public string Group { get; set; }
+
+        public List<int> PortraitIds { get; set; }
     }
 }

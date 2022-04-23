@@ -4,7 +4,7 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Player
 {
     [TestFixture]
     public class PlayerReadmodelTests

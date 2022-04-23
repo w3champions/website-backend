@@ -22,6 +22,7 @@ using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.Tournaments;
 using W3ChampionsStatisticService.W3ChampionsStats;
@@ -56,7 +57,8 @@ namespace W3ChampionsStatisticService
             });
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
-            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017"; //  
+            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+
             var mongoClient = new MongoClient(mongoConnectionString.Replace("'", ""));
             services.AddSingleton(mongoClient);
 

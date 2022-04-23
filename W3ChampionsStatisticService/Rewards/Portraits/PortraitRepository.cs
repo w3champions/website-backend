@@ -3,10 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using W3ChampionsStatisticService.Admin.Portraits;
+using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3ChampionsStatisticService.Rewards.Portraits
 {
     public class PortraitRepository : MongoDbRepositoryBase, IPortraitRepository
     {
@@ -56,6 +56,26 @@ namespace W3ChampionsStatisticService.Admin
                     await Upsert(new PortraitDefinition(id, _group));
                 }
             }
+        }
+
+        public async Task<List<PortraitGroup>> LoadDistinctPortraitGroups()
+        {
+            var mongoCollection = CreateCollection<PortraitDefinition>();
+
+            var pipeline = await mongoCollection
+                .Aggregate()
+                .Match(p => p.Groups.Count > 0)
+                .Unwind<PortraitDefinition, SinglePortraitDefinitionAndGroup>(p => p.Groups)
+                .ToListAsync();
+
+            var grouped = pipeline.GroupBy(p => p.Groups).Select(p => new PortraitGroup
+            {
+                Group = p.Key,
+                PortraitIds = p.Select(x => x.getId()).ToList(),
+
+            }).ToList();
+
+            return grouped;
         }
     }
 }

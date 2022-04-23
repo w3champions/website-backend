@@ -5,7 +5,7 @@ using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Statistics
 {
     [TestFixture]
     public class PlayTimePerDayStats : IntegrationTestBase

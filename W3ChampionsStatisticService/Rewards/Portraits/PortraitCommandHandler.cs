@@ -3,12 +3,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3ChampionsStatisticService.Admin.Portraits;
 using W3ChampionsStatisticService.Ports;
-using MongoDB.Bson;
-using System;
+using W3ChampionsStatisticService.Admin;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3ChampionsStatisticService.Rewards.Portraits
 {
     public class PortraitCommandHandler
     {
@@ -108,6 +106,11 @@ namespace W3ChampionsStatisticService.Admin
         private async Task UpdateSchema(List<PersonalSetting> settings)
         {
             await _personalSettingsRepository.UpdateSchema(settings);
+        }
+
+        public async Task<List<PortraitGroup>> GetPortraitGroups()
+        {
+            return await _portraitRepository.LoadDistinctPortraitGroups();
         }
     }
 }

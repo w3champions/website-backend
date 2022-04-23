@@ -10,9 +10,8 @@ using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.Services;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Ranks
 {
     [TestFixture]
     public class RankTests : IntegrationTestBase

@@ -2,20 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using NUnit.Framework;
-using W3ChampionsStatisticService.Admin;
-using W3ChampionsStatisticService.Admin.Portraits;
-using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.Rewards.Portraits;
 
-namespace WC3ChampionsStatisticService.Tests
+namespace WC3ChampionsStatisticService.Tests.Rewards
 {
     [TestFixture]
-    public class PortraitActionTests : IntegrationTestBase
+    public class PortraitCommandTests : IntegrationTestBase
     {
         [Test]
         public void UpdateSpecialPicture_Success()
@@ -391,110 +387,6 @@ namespace WC3ChampionsStatisticService.Tests
             var settings = await personalSettingsRepository.Load(playerTag);
 
             Assert.IsEmpty(settings.SpecialPictures);
-        }
-
-        [Test]
-        public async Task LoadProfileSince_LastUpdateDateReturnsNothing()
-        {
-            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var personalSetting = new PersonalSetting("peter#123");
-            await personalSettingsRepository.Save(personalSetting);
-
-            var result = await personalSettingsRepository.LoadSince(personalSetting.LastUpdated);
-
-            Assert.AreEqual(0, result.Count);
-        }
-
-        [Test]
-        public async Task LoadProfileSince_LastUpdateDateMinusAMsReturnsSomething()
-        {
-            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var personalSetting = new PersonalSetting("peter#123");
-            await personalSettingsRepository.Save(personalSetting);
-
-            var personalSettingLastUpdated = personalSetting.LastUpdated.Subtract(TimeSpan.FromMilliseconds(1));
-            var result = await personalSettingsRepository.LoadSince(personalSettingLastUpdated);
-
-            Assert.AreEqual(1, result.Count);
-            Assert.AreEqual("peter#123", result[0].Id);
-        }
-
-        [Test]
-        public async Task DefineNewPortraits_Success()
-        {
-            var portraitRepository = new PortraitRepository(MongoClient);
-            int[] portraitIds = { 1, 2, 3, 4 };
-            string[] portraitGroups = { "bronze", "silver", "gold" };
-            await portraitRepository.SaveNewPortraitDefinitions(portraitIds.ToList(), portraitGroups.ToList());
-
-            var portraits = await portraitRepository.LoadPortraitDefinitions();
-
-            Assert.AreEqual(4, portraits.Count);
-            Assert.AreEqual(3, portraits.First().Groups.Count());
-            Assert.AreEqual(portraits.First().Id, portraitIds.First().ToString());
-        }
-
-        [Test]
-        public async Task DefineNewPortraits_AlreadyExists_IsNotDuplicated()
-        {
-            var portraitRepository = new PortraitRepository(MongoClient);
-            int[] portraitIds = { 1, 2, 3, 4 };
-            List<int> portraitList = portraitIds.ToList();
-            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
-
-            portraitList.RemoveAll(x => x > 2);
-            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
-
-            var portraits = await portraitRepository.LoadPortraitDefinitions();
-
-            Assert.AreEqual(4, portraits.Count);
-        }
-
-        [Test]
-        public async Task DeleteDefinedPortrait_Success()
-        {
-            var portraitRepository = new PortraitRepository(MongoClient);
-            int[] portraitIds = { 1, 2, 3, 4 };
-            List<int> portraitList = portraitIds.ToList();
-            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
-
-            portraitList.RemoveAll(x => x < 3);
-            await portraitRepository.DeletePortraitDefinitions(portraitList);
-
-            var portraits = await portraitRepository.LoadPortraitDefinitions();
-
-            Assert.AreEqual(2, portraits.Count);
-        }
-
-        [Test]
-        public async Task DefineNewPortraits_DuplicateInRequest_IsNotDuplicated()
-        {
-            var portraitRepository = new PortraitRepository(MongoClient);
-            int[] portraitIds = { 1, 1 };
-            List<int> portraitList = portraitIds.ToList();
-            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
-
-            var portraits = await portraitRepository.LoadPortraitDefinitions();
-
-            Assert.AreEqual(1, portraits.Count);
-            Assert.AreEqual(1.ToString(), portraits[0].Id);
-        }
-
-        [Test]
-        public async Task DeleteDefinedPortrait_DoesNotExist_NoError()
-        {
-            var portraitRepository = new PortraitRepository(MongoClient);
-            int[] portraitIds = { 1, 2, 3, 4 };
-            List<int> portraitList = portraitIds.ToList();
-            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
-
-            int[] nonExistentPortraitIds = { 10, 11 };
-            List<int> nonExistentPortraitList = nonExistentPortraitIds.ToList();
-            await portraitRepository.DeletePortraitDefinitions(nonExistentPortraitList);
-
-            var portraits = await portraitRepository.LoadPortraitDefinitions();
-
-            Assert.AreEqual(4, portraits.Count);
         }
 
         [Test]

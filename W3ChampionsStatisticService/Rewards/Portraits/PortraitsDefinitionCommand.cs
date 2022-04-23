@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace W3ChampionsStatisticService.Admin.Portraits
+namespace W3ChampionsStatisticService.Rewards.Portraits
 {
     public class PortraitsDefinitionCommand
     {
