@@ -53,6 +53,8 @@ namespace W3ChampionsStatisticService.PersonalSettings
         public string ChatAlias { get; set; }
         public string ChatColor { get; set; }
 
+        public int Upvotes { get; set; }
+
         public AkaSettings AliasSettings { get; set; }
 
         public bool SetProfilePicture(SetPictureCommand cmd)
