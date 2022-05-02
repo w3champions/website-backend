@@ -88,17 +88,17 @@ namespace W3ChampionsStatisticService.Rewards.Portraits
             return await _portraitRepository.LoadPortraitDefinitions();
         }
 
-        public async Task AddPortraitDefinition(PortraitsDefinitionCommand command)
+        public async Task AddPortraitDefinitions(PortraitsDefinitionCommand command)
         {
             await _portraitRepository.SaveNewPortraitDefinitions(command.Ids, command.Groups);
         }
 
-        public async Task RemovePortraitDefinition(PortraitsDefinitionCommand command)
+        public async Task RemovePortraitDefinitions(PortraitsDefinitionCommand command)
         {
             await _portraitRepository.DeletePortraitDefinitions(command.Ids);
         }
 
-        public async Task UpdatePortraitDefinition(PortraitsDefinitionCommand command)
+        public async Task UpdatePortraitDefinitions(PortraitsDefinitionCommand command)
         {
             await _portraitRepository.UpdatePortraitDefinition(command.Ids, command.Groups);
         }
