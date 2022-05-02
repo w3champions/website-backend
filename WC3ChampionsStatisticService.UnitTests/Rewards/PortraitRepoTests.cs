@@ -71,6 +71,54 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         }
 
         [Test]
+        public async Task UpdateDefinedPortrait_HasNoGroups_GroupsAdded_Success()
+        {
+            // arrange
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = { 1, 2, 3 };
+            string[] groupsToAdd = { "bronze", "silver" };
+            List<int> portraitList = portraitIds.ToList();
+            await portraitRepository.SaveNewPortraitDefinitions(portraitList);
+
+            // act
+            await portraitRepository.UpdatePortraitDefinition(
+                new List<int>() { portraitIds[0] }, 
+                groupsToAdd.ToList());
+
+            // assert
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
+
+            Assert.AreEqual(3, portraits.Count);
+            Assert.AreEqual(2, portraits[0].Groups.Count);
+            Assert.Contains("bronze", portraits[0].Groups);
+            Assert.Contains("silver", portraits[0].Groups);
+        }
+
+        [Test]
+        public async Task UpdateDefinedPortraits_HaveGroupsAlready_GroupsReplacedCorrectly()
+        {
+            // arrange
+            var portraitRepository = new PortraitRepository(MongoClient);
+            int[] portraitIds = { 1, 2, 3 };
+            string[] startingGroups = { "bronze", "silver" };
+            string[] groupsToAdd = { "gold", "platinum" };
+            await portraitRepository.SaveNewPortraitDefinitions(
+                portraitIds.ToList(), 
+                startingGroups.ToList());
+
+            // act
+            await portraitRepository.UpdatePortraitDefinition(new List<int>() { portraitIds[0]}, groupsToAdd.ToList());
+
+            // assert
+            var portraits = await portraitRepository.LoadPortraitDefinitions();
+
+            Assert.AreEqual(3, portraits.Count);
+            Assert.AreEqual(2, portraits[0].Groups.Count);
+            Assert.Contains("gold", portraits[0].Groups);
+            Assert.Contains("platinum", portraits[0].Groups);
+        }
+
+        [Test]
         public async Task DeleteDefinedPortrait_DoesNotExist_NoError()
         {
             var portraitRepository = new PortraitRepository(MongoClient);

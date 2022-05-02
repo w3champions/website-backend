@@ -45,11 +45,19 @@ namespace W3ChampionsStatisticService.Rewards
             return Ok(portraits);
         }
 
+        [HttpPost("portrait-definitions")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> CreatePortraits([FromBody] PortraitsDefinitionCommand command)
+        {
+            await _portraitCommandHandler.AddPortraitDefinitions(command);
+            return Ok();
+        }
+
         [HttpPut("portrait-definitions")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
         {
-            await _portraitCommandHandler.AddPortraitDefinition(command);
+            await _portraitCommandHandler.UpdatePortraitDefinitions(command);
             return Ok();
         }
 
@@ -57,7 +65,7 @@ namespace W3ChampionsStatisticService.Rewards
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
         {
-            await _portraitCommandHandler.RemovePortraitDefinition(command);
+            await _portraitCommandHandler.RemovePortraitDefinitions(command);
             return Ok();
         }
 

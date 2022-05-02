@@ -37,17 +37,24 @@ steps:
         **/*.token.yml => *.yml
 
   - task: UseDotNet@2
+    displayName: .NET 5.0 SDK
     inputs:
       packageType: 'sdk'
       version: '5.0.x'
+
   - task: DotNetCoreCLI@2
+    displayName: restore
     inputs:
       command: 'restore'
       feedsToUse: 'select'
+
   - task: DotNetCoreCLI@2
+    displayName: build
     inputs:
       command: 'build'
+
   - task: DotNetCoreCLI@2
+    displayName: run tests
     inputs:
       command: 'test'
 
@@ -68,5 +75,6 @@ steps:
       targetFolder: $(Build.ArtifactStagingDirectory)
 
   - task: PublishBuildArtifacts@1
+    displayName: publish build artifacts
     inputs:
       pathToPublish: $(Build.ArtifactStagingDirectory)
