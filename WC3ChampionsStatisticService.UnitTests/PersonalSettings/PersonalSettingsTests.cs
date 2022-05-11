@@ -243,5 +243,50 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             Assert.IsNotNull(settings.Find(x => x.Id == players[2]).SpecialPictures);
             Assert.IsEmpty(settings.Find(x => x.Id == players[2]).SpecialPictures);
         }
+
+        [Test]
+        public async Task ExcludePlayer_ThenRevivePlayer_PersonalSettingsReturnsCorrectly()
+        {
+            // arrange
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            string[] players = { "cepheid#1467", "floss2xdaily#1234", "setcho#4567" };
+
+            foreach (var player in players)
+            {
+                var stats = PlayerOverallStats.Create(player);
+                await playerRepo.UpsertPlayer(stats);
+                var newSettings = new PersonalSetting(player);
+                await personalSettingsRepository.Save(newSettings);
+            }
+
+            // act
+            await personalSettingsRepository.ExcludePlayer("cepheid#1467");
+            var settings = await personalSettingsRepository.LoadMany(players);
+
+            // assert
+            Assert.AreEqual(3, settings.Count);
+            Assert.IsTrue(settings.Select(x => x.Id).Contains("cepheid#1467"));
+        }
+
+        [Test]
+        public async Task ExcludePlayer_LoadMany_StillWorks()
+        {
+            // arrange
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient);
+            var battleTag = "cepheid#1467";
+
+            var stats = PlayerOverallStats.Create(battleTag);
+            await playerRepo.UpsertPlayer(stats);
+            var newSettings = new PersonalSetting(battleTag);
+            await personalSettingsRepository.Save(newSettings);
+
+            // act
+            await personalSettingsRepository.ExcludePlayer(battleTag);
+
+            // assert
+            Assert.Pass();
+        }
     }
 }

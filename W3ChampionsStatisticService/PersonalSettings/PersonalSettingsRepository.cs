@@ -36,6 +36,14 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 await UpdateSchema(settingList);
                 result = await Load(battletag);
             }
+  
+            if (result != null && 
+                result.ToBsonDocument().Contains("IsExcluded") && 
+                result.IsExcluded)
+            {
+                return null;
+            }
+
             return result;
         }
 
@@ -99,6 +107,20 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 return true;
             }
             return false;
+        }
+
+        public async Task ExcludePlayer(string battleTag)
+        {
+            var player = await LoadFirst<PersonalSetting>(battleTag);
+            player.IsExcluded = true;
+            await Upsert(player);
+        }
+
+        public async Task RevivePlayer(string battleTag)
+        {
+            var player = await LoadFirst<PersonalSetting>(battleTag);
+            player.IsExcluded = false;
+            await Upsert(player);
         }
     }
 }

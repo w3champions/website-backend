@@ -17,6 +17,7 @@ namespace W3ChampionsStatisticService.Admin
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
         private readonly IAdminRepository _adminRepository;
         private readonly IRankRepository _rankRepository;
+        private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
         public AdminController(
             IMatchRepository matchRepository,
@@ -24,7 +25,8 @@ namespace W3ChampionsStatisticService.Admin
             INewsRepository newsRepository,
             ILoadingScreenTipsRepository loadingScreenTipsRepository,
             IAdminRepository adminRepository,
-            IRankRepository rankRepository)
+            IRankRepository rankRepository,
+            IPersonalSettingsRepository personalSettingsRepository)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
@@ -32,6 +34,7 @@ namespace W3ChampionsStatisticService.Admin
             _loadingScreenTipsRepository = loadingScreenTipsRepository;
             _adminRepository = adminRepository;
             _rankRepository = rankRepository;
+            _personalSettingsRepository = personalSettingsRepository;
         }
 
         [HttpGet("health-check")]
@@ -215,6 +218,22 @@ namespace W3ChampionsStatisticService.Admin
         public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
         {
             await _adminRepository.DeleteChatBan(id);
+            return Ok();
+        }
+
+        [HttpDelete("exclude")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> ExcludePlayer([FromQuery] string tag)
+        {
+            await _personalSettingsRepository.ExcludePlayer(tag);
+            return Ok();
+        }
+
+        [HttpDelete("revive")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> RevivePlayer([FromQuery] string tag)
+        {
+            await _personalSettingsRepository.RevivePlayer(tag);
             return Ok();
         }
     }

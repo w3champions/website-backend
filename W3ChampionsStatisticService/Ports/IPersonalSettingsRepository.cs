@@ -14,5 +14,7 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(PersonalSetting setting);
         Task SaveMany(List<PersonalSetting> settings);
         Task UpdateSchema(List<PersonalSetting> settings);
+        Task ExcludePlayer(string battleTag);
+        Task RevivePlayer(string battleTag);
     }
 }
