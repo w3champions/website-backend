@@ -221,7 +221,7 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpDelete("exclude")]
+        [HttpPut("exclude")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> ExcludePlayer([FromQuery] string tag)
         {
@@ -229,7 +229,7 @@ namespace W3ChampionsStatisticService.Admin
             return Ok();
         }
 
-        [HttpDelete("revive")]
+        [HttpPut("revive")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> RevivePlayer([FromQuery] string tag)
         {
