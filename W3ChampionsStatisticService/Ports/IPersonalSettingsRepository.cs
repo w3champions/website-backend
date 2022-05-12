@@ -16,6 +16,5 @@ namespace W3ChampionsStatisticService.Ports
         Task UpdateSchema(List<PersonalSetting> settings);
         Task ExcludePlayer(string battleTag);
         Task RevivePlayer(string battleTag);
-        Task<bool> CheckIfExcluded(string battleTag);
     }
 }
