@@ -22,6 +22,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
         private readonly PlayerAkaProvider _playerAkaProvider;
+        private readonly PersonalSettingsProvider _personalSettingsProvider;
 
         public PlayersController(
             IPlayerRepository playerRepository,
@@ -29,7 +30,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             IPersonalSettingsRepository personalSettingsRepository,
             IClanRepository clanRepository,
             IW3CAuthenticationService authenticationService,
-            PlayerAkaProvider playerAkaProvider)
+            PlayerAkaProvider playerAkaProvider,
+            PersonalSettingsProvider personalSettingsProvider)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
@@ -37,6 +39,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
             _playerAkaProvider = playerAkaProvider;
+            _personalSettingsProvider = personalSettingsProvider;
         }
 
         [HttpGet("{battleTag}")]
@@ -54,7 +57,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 player = PlayerOverallStats.Create(battleTag);
             }
 
-            if (await _personalSettingsRepository.CheckIfExcluded(battleTag))
+            var cachedSettings = _personalSettingsProvider
+                .GetPersonalSettings()
+                .First(x => x.Id == battleTag);
+            if (cachedSettings != null && cachedSettings.IsExcluded) // for players who request profile deletion
             {
                 return NotFound();
             }
