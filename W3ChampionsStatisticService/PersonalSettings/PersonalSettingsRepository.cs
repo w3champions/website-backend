@@ -122,5 +122,15 @@ namespace W3ChampionsStatisticService.PersonalSettings
             player.IsExcluded = false;
             await Upsert(player);
         }
+
+        public async Task<bool> CheckIsExcluded(string battleTag)
+        {
+            var player = await LoadFirst<PersonalSetting>(battleTag);
+            if (player.IsExcluded)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

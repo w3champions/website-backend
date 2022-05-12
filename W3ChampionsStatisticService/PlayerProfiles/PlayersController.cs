@@ -53,6 +53,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 
                 player = PlayerOverallStats.Create(battleTag);
             }
+
+            if (await _personalSettingsRepository.CheckIfExcluded(battleTag))
+            {
+                return NotFound();
+            }
             
             // Akas are stored in cache - preferences for showing akas are stored in DB
             var settings = await _personalSettingsRepository.Load(battleTag);
