@@ -19,7 +19,7 @@ namespace WC3ChampionsStatisticService.Tests
         [SetUp]
         public async Task Setup()
         {
-            await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service");
+            await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service-Tests");
             personalSettingsProvider= new PersonalSettingsProvider(MongoClient);
         }
 
@@ -33,7 +33,7 @@ namespace WC3ChampionsStatisticService.Tests
 
         protected async Task InsertMatchEvent(MatchFinishedEvent newEvent)
         {
-            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
+            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service-Tests");
             var mongoDatabase = database;
             var mongoCollection = mongoDatabase.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent));
             await mongoCollection.FindOneAndReplaceAsync(
@@ -44,7 +44,7 @@ namespace WC3ChampionsStatisticService.Tests
 
         protected async Task InsertMatchStartedEvent(MatchStartedEvent newEvent)
         {
-            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
+            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service-Tests");
             var mongoDatabase = database;
             var mongoCollection = mongoDatabase.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
             await mongoCollection.FindOneAndReplaceAsync(
@@ -55,7 +55,7 @@ namespace WC3ChampionsStatisticService.Tests
 
         protected async Task InsertRankChangedEvent(RankingChangedEvent newEvent)
         {
-            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
+            var database = MongoClient.GetDatabase("W3Champions-Statistic-Service-Tests");
             var mongoDatabase = database;
             var mongoCollection = mongoDatabase.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
             await mongoCollection.FindOneAndReplaceAsync(
