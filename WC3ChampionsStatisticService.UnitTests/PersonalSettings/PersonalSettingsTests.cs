@@ -212,6 +212,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             Assert.IsEmpty(settings.SpecialPictures);
         }
 
+        [Ignore("Removed update schema to reduce load on server")]
         [Test]
         public async Task RequestPersonalSettings_SpecialPicturesNull_LoadMany_CorrectlyUpdatedAndReturned()
         {

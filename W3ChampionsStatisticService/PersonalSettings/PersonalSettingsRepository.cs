@@ -29,13 +29,13 @@ namespace W3ChampionsStatisticService.PersonalSettings
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
 
-            /*if (result != null && SchemaOutdated(result))
+            if (result != null && SchemaOutdated(result))
             {
                 var settingList = new List<PersonalSetting>();
                 settingList.Add(result);
                 await UpdateSchema(settingList);
                 result = await Load(battletag);
-            }*/
+            }
             return result;
         }
 
@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var tags = String.Join("|", battletags);
             var filter = Builders<PersonalSetting>.Filter.Regex("_id", new BsonRegularExpression(tags, "i"));
             var results = await settings.Find(filter).ToListAsync();
-            await UpdateSchema(results);
+            //await UpdateSchema(results);
             return results;
         }
 
