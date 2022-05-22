@@ -29,13 +29,13 @@ namespace W3ChampionsStatisticService.PersonalSettings
                     rank => rank.Players)
                 .FirstOrDefaultAsync();
 
-            if (result != null && SchemaOutdated(result))
+            /*if (result != null && SchemaOutdated(result))
             {
                 var settingList = new List<PersonalSetting>();
                 settingList.Add(result);
                 await UpdateSchema(settingList);
                 result = await Load(battletag);
-            }
+            }*/
             return result;
         }
 
