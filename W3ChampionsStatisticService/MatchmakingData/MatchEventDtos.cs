@@ -248,7 +248,7 @@ namespace W3ChampionsStatisticService.PadEvents
     }
 
     [BsonIgnoreExtraElements]
-    public class MatchFinishedEvent : PadEvent
+    public class MatchFinishedEvent : MatchmakingEvent
     {
         public Match match { get; set; }
         public Result result { get; set; }
@@ -257,19 +257,19 @@ namespace W3ChampionsStatisticService.PadEvents
     }
 
     [BsonIgnoreExtraElements]
-    public class MatchStartedEvent : PadEvent
+    public class MatchStartedEvent : MatchmakingEvent
     {
         public UnfinishedMatch match { get; set; }
     }
 
     [BsonIgnoreExtraElements]
-    public class MatchCanceledEvent : PadEvent
+    public class MatchCanceledEvent : MatchmakingEvent
     {
         public Match match { get; set; }
     }
 
     [BsonIgnoreExtraElements]
-    public class PadEvent
+    public class MatchmakingEvent
     {
         public ObjectId Id { get; set; }
     }
