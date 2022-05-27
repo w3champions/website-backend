@@ -7,6 +7,6 @@ namespace W3ChampionsStatisticService.PadEvents.MatchmakingContracts
         public string Name { get; set; }
         public int Flags { get; set; }
         [JsonProperty("player_set")]
-        public int PlayerSet { get; set; }
+        public long PlayerSet { get; set; }
     }
 }

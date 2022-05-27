@@ -7,5 +7,6 @@
         public string Category { get; set; }
         public int MaxTeams { get; set; }
         public MapForce[] MappedForces { get; set; } = new MapForce[0];
+        public GameMap GameMap { get; set; }
     }
 }

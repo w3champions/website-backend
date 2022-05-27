@@ -1,15 +1,15 @@
-﻿using System;
-using System.Linq;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
-using Newtonsoft.Json;
-using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.CommonValueObjects;
+using W3ChampionsStatisticService.PadEvents.MatchmakingContracts;
+using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PadEvents
 {
@@ -54,7 +54,62 @@ namespace W3ChampionsStatisticService.PadEvents
             var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
             return formatQueueData(deserializeObject); // formatted for easy use on frontend
         }
-        
+
+        public async Task<GetMapsResponse> GetMaps(GetMapsRequest request)
+        {
+            List<string> queryParams = new List<string>()
+            {
+                $"secret={MatchmakingAdminSecret}",
+                $"offset={request.Offset}",
+                $"limit={request.Limit}"
+            };
+
+            if (!string.IsNullOrEmpty(request.Filter))
+            {
+                queryParams.Add($"filter={request.Filter}");
+            }
+
+            var httpClient = new HttpClient();
+            var response = await httpClient
+                .GetAsync($"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
+            return result;
+        }
+
+        public async Task<MapContract> GetMap(int id)
+        {
+            var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync($"{MatchmakingApiUrl}/maps/${id}?secret={MatchmakingAdminSecret}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<MapContract>(content);
+            return result;
+        }
+
+        public async Task<MapContract> CreateMap(MapContract newMap)
+        {
+            var httpClient = new HttpClient();
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(newMap), Encoding.UTF8, "application/json");
+            var response = await httpClient.PostAsync($"{MatchmakingApiUrl}/maps/?secret={MatchmakingAdminSecret}", httpcontent);
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<MapContract>(content);
+            return result;
+        }
+
+        public async Task<MapContract> UpdateMap(int id, MapContract map)
+        {
+            var httpClient = new HttpClient();
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(map), Encoding.UTF8, "application/json");
+            var response = await httpClient.PutAsync($"{MatchmakingApiUrl}/maps/${id}?secret={MatchmakingAdminSecret}", httpcontent);
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<MapContract>(content);
+            return result;
+        }
+
         private List<FormattedQueue> formatQueueData(List<Queue> allQueues)
         {
             try 

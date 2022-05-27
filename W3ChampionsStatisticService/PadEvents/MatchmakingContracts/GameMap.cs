@@ -6,9 +6,9 @@ namespace W3ChampionsStatisticService.PadEvents.MatchmakingContracts
     {
         public string Path { get; set; }
         public string Sha1 { get; set; }
-        public int Checksum { get; set; }
+        public long Checksum { get; set; }
         public string Name { get; set; }
-        public int Crc32 { get; set; }
+        public long Crc32 { get; set; }
         public string Description { get; set; }
         public string Author { get; set; }
         public int Width { get; set; }
