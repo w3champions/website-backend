@@ -4,7 +4,6 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts
 {
     public class GameMap
     {
-        public string Path { get; set; }
         public string Sha1 { get; set; }
         public long Checksum { get; set; }
         public string Name { get; set; }

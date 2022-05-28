@@ -19,7 +19,7 @@ namespace W3C.Domain.MatchmakingService
     public class MatchmakingServiceClient
     {
         private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
-        private static readonly string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+        private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
         private readonly HttpClient _httpClient;
         public MatchmakingServiceClient(IHttpClientFactory httpClientFactory)
@@ -29,7 +29,7 @@ namespace W3C.Domain.MatchmakingService
 
         public async Task<BannedPlayerResponse> GetBannedPlayers()
         {
-            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={MatchmakingAdminSecret}");
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
@@ -40,20 +40,20 @@ namespace W3C.Domain.MatchmakingService
         {
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
             var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
-            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}", httpcontent);
+            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}", httpcontent);
             return result.StatusCode;
         }
 
         public async Task<HttpStatusCode> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
-            var result = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={MatchmakingAdminSecret}");
+            var result = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}");
             return result.StatusCode;
         }
 
         public async Task<List<FormattedQueue>> GetLiveQueueData()
         {
-            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={MatchmakingAdminSecret}");
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={AdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
@@ -64,7 +64,7 @@ namespace W3C.Domain.MatchmakingService
         {
             List<string> queryParams = new List<string>()
             {
-                $"secret={MatchmakingAdminSecret}",
+                $"secret={AdminSecret}",
                 $"offset={request.Offset}",
                 $"limit={request.Limit}"
             };
@@ -84,7 +84,7 @@ namespace W3C.Domain.MatchmakingService
 
         public async Task<MapContract> GetMap(int id)
         {
-            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/${id}?secret={MatchmakingAdminSecret}");
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/${id}?secret={AdminSecret}");
             var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var result = JsonConvert.DeserializeObject<MapContract>(content);
@@ -94,7 +94,7 @@ namespace W3C.Domain.MatchmakingService
         public async Task<MapContract> CreateMap(MapContract newMap)
         {
             var httpcontent = new StringContent(JsonConvert.SerializeObject(newMap), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync($"{MatchmakingApiUrl}/maps/?secret={MatchmakingAdminSecret}", httpcontent);
+            var response = await _httpClient.PostAsync($"{MatchmakingApiUrl}/maps/?secret={AdminSecret}", httpcontent);
             if (response.IsSuccessStatusCode)
             {
                 return await GetResult<MapContract>(response);
@@ -107,7 +107,7 @@ namespace W3C.Domain.MatchmakingService
         public async Task<MapContract> UpdateMap(int id, MapContract map)
         {
             var httpcontent = new StringContent(JsonConvert.SerializeObject(map), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PutAsync($"{MatchmakingApiUrl}/maps/${id}?secret={MatchmakingAdminSecret}", httpcontent);
+            var response = await _httpClient.PutAsync($"{MatchmakingApiUrl}/maps/${id}?secret={AdminSecret}", httpcontent);
 
             if (response.IsSuccessStatusCode)
             {
