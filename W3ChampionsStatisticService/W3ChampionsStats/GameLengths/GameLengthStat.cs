@@ -10,8 +10,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
     {
         public void Apply(GameMode gameMode, TimeSpan duration)
         {
-            var gameLengthPerMode = GameLengths.Single(m => m.GameMode == gameMode);
-            gameLengthPerMode.Record(duration);
+            var gameLengthPerMode = GameLengths.SingleOrDefault(m => m.GameMode == gameMode);
+
+            if (gameLengthPerMode != null)
+            {
+                gameLengthPerMode.Record(duration);
+            }
         }
 
         public List<GameLengthPerMode> GameLengths { get; set; } = new List<GameLengthPerMode>();
