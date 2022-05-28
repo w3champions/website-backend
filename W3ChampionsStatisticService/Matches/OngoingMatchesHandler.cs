@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
@@ -29,7 +30,7 @@ namespace W3ChampionsStatisticService.Matches
             {
                 foreach (var nextEvent in nextEvents)
                 {
-                    if (nextEvent.match.gameMode != CommonValueObjects.GameMode.CUSTOM)
+                    if (nextEvent.match.gameMode != W3C.Domain.CommonValueObjects.GameMode.CUSTOM)
                     {
                         var matchup = OnGoingMatchup.Create(nextEvent);
 

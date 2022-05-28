@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using MongoDB.Driver;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Driver;
-using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Tournaments.Models;
 
 namespace W3ChampionsStatisticService.Tournaments

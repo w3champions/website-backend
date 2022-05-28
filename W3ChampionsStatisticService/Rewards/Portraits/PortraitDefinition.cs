@@ -1,6 +1,6 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Collections.Generic;
-using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Rewards.Portraits
 {

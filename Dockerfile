@@ -1,12 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:5.0.102-1-focal-amd64 AS build-env
 
 WORKDIR /app
-COPY ./W3ChampionsStatisticService.sln ./
-
-COPY ./W3ChampionsStatisticService/W3ChampionsStatisticService.csproj ./W3ChampionsStatisticService/W3ChampionsStatisticService.csproj
-RUN dotnet restore ./W3ChampionsStatisticService/W3ChampionsStatisticService.csproj
-
 COPY ./W3ChampionsStatisticService ./W3ChampionsStatisticService
+COPY ./W3C.Domain ./W3C.Domain
 RUN dotnet build ./W3ChampionsStatisticService/W3ChampionsStatisticService.csproj -c Release
 
 RUN dotnet publish "./W3ChampionsStatisticService/W3ChampionsStatisticService.csproj" -c Release -o "../../app/out"

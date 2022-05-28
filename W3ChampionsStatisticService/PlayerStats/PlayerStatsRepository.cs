@@ -1,9 +1,9 @@
-using System.Threading.Tasks;
 using MongoDB.Driver;
+using System.Threading.Tasks;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerStats
 {

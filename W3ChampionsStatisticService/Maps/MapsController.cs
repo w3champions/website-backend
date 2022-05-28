@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.PadEvents;
-using W3ChampionsStatisticService.PadEvents.MatchmakingContracts;
+using W3C.Domain.MatchmakingService;
+using W3C.Domain.MatchmakingService.MatchmakingContracts;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Maps
 {
@@ -9,31 +10,34 @@ namespace W3ChampionsStatisticService.Maps
     [Route("api/maps")]
     public class MapsController : ControllerBase
     {
-        private readonly MatchmakingServiceRepo _matchmakingServiceRepository;
+        private readonly MatchmakingServiceClient _matchmakingServiceClient;
 
-        public MapsController(MatchmakingServiceRepo matchmakingServiceRepository)
+        public MapsController(MatchmakingServiceClient matchmakingServiceClient)
         {
-            _matchmakingServiceRepository = matchmakingServiceRepository;
+            _matchmakingServiceClient = matchmakingServiceClient;
         }
 
         [HttpGet("")]
+        [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetMaps([FromQuery] GetMapsRequest request)
         {
-            var maps = await _matchmakingServiceRepository.GetMaps(request);
+            var maps = await _matchmakingServiceClient.GetMaps(request);
             return Ok(maps);
         }
 
         [HttpPost("")]
+        [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> CreateMap([FromBody] MapContract request)
         {
-            var map = await _matchmakingServiceRepository.CreateMap(request);
+            var map = await _matchmakingServiceClient.CreateMap(request);
             return Ok(map);
         }
 
         [HttpPut("{id}")]
+        [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> CreateMap(int id, [FromBody] MapContract request)
         {
-            var map = await _matchmakingServiceRepository.UpdateMap(id, request);
+            var map = await _matchmakingServiceClient.UpdateMap(id, request);
             return Ok(map);
         }
     }

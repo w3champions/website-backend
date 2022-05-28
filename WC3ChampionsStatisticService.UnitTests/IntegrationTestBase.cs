@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using NUnit.Framework;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests

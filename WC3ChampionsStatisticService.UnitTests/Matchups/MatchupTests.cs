@@ -1,6 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups

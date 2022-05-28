@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Matches
 {
