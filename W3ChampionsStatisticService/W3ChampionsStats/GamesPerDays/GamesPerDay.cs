@@ -1,6 +1,6 @@
 using System;
-using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays
 {

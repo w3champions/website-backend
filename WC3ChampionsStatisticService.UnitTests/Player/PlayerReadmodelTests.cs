@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
 namespace WC3ChampionsStatisticService.Tests.Player

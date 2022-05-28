@@ -1,11 +1,11 @@
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Driver;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;

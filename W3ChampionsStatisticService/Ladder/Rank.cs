@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using MongoDB.Bson.Serialization.Attributes;
-using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Ladder
 {

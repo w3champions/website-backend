@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 using AutoFixture;
 using MongoDB.Bson;
 using NUnit.Framework;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups
 {

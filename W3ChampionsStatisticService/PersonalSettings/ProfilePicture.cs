@@ -1,4 +1,4 @@
-﻿using W3ChampionsStatisticService.CommonValueObjects;
+﻿using W3C.Domain.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {

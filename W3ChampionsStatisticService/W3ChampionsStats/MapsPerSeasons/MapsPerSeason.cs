@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons

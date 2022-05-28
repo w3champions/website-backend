@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 

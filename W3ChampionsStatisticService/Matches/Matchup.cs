@@ -1,10 +1,10 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
-using MongoDB.Bson;
-using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Matches
 {
