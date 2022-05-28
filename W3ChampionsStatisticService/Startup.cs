@@ -9,6 +9,7 @@ using System;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
+using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Ladder;
@@ -73,7 +74,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<PlayerAkaProvider>();
             services.AddSingleton<PersonalSettingsProvider>();
 
-            services.AddTransient<Repos.IMatchEventRepository, MatchEventRepository>();
+            services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
             services.AddTransient<TournamentsRepository, TournamentsRepository>();
@@ -100,6 +101,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
             services.AddSingleton<MatchmakingServiceClient>();
+            services.AddSingleton<UpdateServiceClient>();
             services.AddTransient<MatchQueryHandler>();
 
             if (startHandlers == "true")
