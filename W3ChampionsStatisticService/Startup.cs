@@ -65,6 +65,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton(mongoClient);
 
             services.AddSignalR();
+            services.AddHttpClient();
 
             services.AddSpecialBsonRegistrations();
 

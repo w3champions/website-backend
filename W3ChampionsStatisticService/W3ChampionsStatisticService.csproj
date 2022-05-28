@@ -16,9 +16,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="UpdateServiceData\" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\W3C.Domain\W3C.Domain.csproj" />
   </ItemGroup>
 </Project>
