@@ -11,6 +11,7 @@ using System.Web;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingContracts;
 using W3C.Domain.MatchmakingService.MatchmakingContracts;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.MatchmakingData.MatchmakingContracts;
 
 namespace W3C.Domain.MatchmakingService

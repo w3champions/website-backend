@@ -1,11 +1,10 @@
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Driver;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Cache;
-using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.PersonalSettings;
-using W3ChampionsStatisticService.Admin;
 
 namespace W3ChampionsStatisticService.Services
 {
