@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -12,7 +13,6 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingContracts;
 using W3C.Domain.MatchmakingService.MatchmakingContracts;
 using W3C.Domain.Repositories;
-using W3ChampionsStatisticService.MatchmakingData.MatchmakingContracts;
 
 namespace W3C.Domain.MatchmakingService
 {
@@ -21,10 +21,21 @@ namespace W3C.Domain.MatchmakingService
         private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
         private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
+        private readonly JsonSerializerSettings _jsonSerializerSettings;
+
         private readonly HttpClient _httpClient;
         public MatchmakingServiceClient(IHttpClientFactory httpClientFactory)
         {
             _httpClient = httpClientFactory.CreateClient();
+
+            _jsonSerializerSettings = new JsonSerializerSettings()
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            };
         }
 
         public async Task<BannedPlayerResponse> GetBannedPlayers()
@@ -57,7 +68,7 @@ namespace W3C.Domain.MatchmakingService
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
-            return formatQueueData(deserializeObject); // formatted for easy use on frontend
+            return FormatQueueData(deserializeObject); // formatted for easy use on frontend
         }
 
         public async Task<GetMapsResponse> GetMaps(GetMapsRequest request)
@@ -84,7 +95,7 @@ namespace W3C.Domain.MatchmakingService
 
         public async Task<MapContract> GetMap(int id)
         {
-            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/${id}?secret={AdminSecret}");
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/{id}?secret={AdminSecret}");
             var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var result = JsonConvert.DeserializeObject<MapContract>(content);
@@ -93,7 +104,7 @@ namespace W3C.Domain.MatchmakingService
 
         public async Task<MapContract> CreateMap(MapContract newMap)
         {
-            var httpcontent = new StringContent(JsonConvert.SerializeObject(newMap), Encoding.UTF8, "application/json");
+            var httpcontent = new StringContent(SerializeData(newMap), Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync($"{MatchmakingApiUrl}/maps/?secret={AdminSecret}", httpcontent);
             if (response.IsSuccessStatusCode)
             {
@@ -106,8 +117,8 @@ namespace W3C.Domain.MatchmakingService
 
         public async Task<MapContract> UpdateMap(int id, MapContract map)
         {
-            var httpcontent = new StringContent(JsonConvert.SerializeObject(map), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PutAsync($"{MatchmakingApiUrl}/maps/${id}?secret={AdminSecret}", httpcontent);
+            var httpcontent = new StringContent(SerializeData(map), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"{MatchmakingApiUrl}/maps/{id}?secret={AdminSecret}", httpcontent);
 
             if (response.IsSuccessStatusCode)
             {
@@ -120,8 +131,8 @@ namespace W3C.Domain.MatchmakingService
 
         private async Task HandleMMError(HttpResponseMessage response)
         {
-            var errorReponse = await GetResult<MMError[]>(response);
-            var errors = errorReponse.Select(x => $"{x.Param} {x.Message}");
+            var errorReponse = await GetResult<ErrorResponse>(response);
+            var errors = errorReponse.Errors.Select(x => $"{x.Param} {x.Message}");
 
             throw new ValidationException(string.Join(",", errors));
         }
@@ -135,7 +146,12 @@ namespace W3C.Domain.MatchmakingService
             return result;
         }
 
-        private List<FormattedQueue> formatQueueData(List<Queue> allQueues)
+        private string SerializeData(object data)
+        {
+            return JsonConvert.SerializeObject(data, _jsonSerializerSettings);
+        }
+
+        private List<FormattedQueue> FormatQueueData(List<Queue> allQueues)
         {
             try 
             {
