@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace W3ChampionsStatisticService.MatchmakingData.MatchmakingContracts
+namespace W3C.Domain.MatchmakingService.MatchmakingContracts
 {
     public class MMError
     {

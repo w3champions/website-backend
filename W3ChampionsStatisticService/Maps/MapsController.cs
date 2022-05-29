@@ -43,7 +43,7 @@ namespace W3ChampionsStatisticService.Maps
 
         [HttpPut("{id}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> CreateMap(int id, [FromBody] MapContract request)
+        public async Task<IActionResult> UpdateMap(int id, [FromBody] MapContract request)
         {
             var map = await _matchmakingServiceClient.UpdateMap(id, request);
             return Ok(map);
