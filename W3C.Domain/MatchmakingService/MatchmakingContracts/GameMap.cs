@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace W3C.Domain.MatchmakingService.MatchmakingContracts
 {
@@ -13,8 +14,10 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts
         public int Width { get; set; }
         public int Height { get; set; }
         [JsonProperty("suggested_players")]
+        [JsonPropertyName("suggested_players")]
         public string SuggestedPlayers { get; set; }
         [JsonProperty("num_players")]
+        [JsonPropertyName("num_players")]
         public int NumPlayers { get; set; }
         public GameMapForce[] Forces { get; set; } = new GameMapForce[0];
         public GameMapPlayer[] Players { get; set; } = new GameMapPlayer[0];
