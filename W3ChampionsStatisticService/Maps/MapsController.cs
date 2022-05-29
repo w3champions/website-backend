@@ -51,9 +51,9 @@ namespace W3ChampionsStatisticService.Maps
 
         [HttpGet("{id}/files")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> GetMapFiles([FromQuery] int mapId)
+        public async Task<IActionResult> GetMapFiles(int id)
         {
-            var mapFiles = await _updateServiceClient.GetMapFiles(mapId);
+            var mapFiles = await _updateServiceClient.GetMapFiles(id);
             return Ok(mapFiles);
         }
 
