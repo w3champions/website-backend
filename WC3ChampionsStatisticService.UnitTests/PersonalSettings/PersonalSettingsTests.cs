@@ -59,7 +59,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             SetPictureCommand cmd2 = new SetPictureCommand()
             {
                 avatarCategory = AvatarCategory.HU,
-                pictureId = 2
+                pictureId = 3
             };
             var profilePicture = personalSetting.SetProfilePicture(cmd2);
 
@@ -80,7 +80,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             }
 
             personalSetting.Players = new List<PlayerOverallStats> { player };
-            Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.Race == Race.HU).Max);
+            Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.AvatarType == AvatarCategory.HU).Max);
         }
 
         [Test]
@@ -98,7 +98,9 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             };
             Assert.DoesNotThrow(() => personalSetting.SetProfilePicture(cmd));
 
-            Assert.AreEqual(expectedProfilePic.PictureId, personalSetting.ProfilePicture.PictureId);
+            Assert.IsTrue(
+                personalSetting.ProfilePicture.PictureId >= 1 && 
+                personalSetting.ProfilePicture.PictureId <= 5);
             Assert.AreEqual(expectedProfilePic.Race, personalSetting.ProfilePicture.Race);
         }
 
