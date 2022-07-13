@@ -13,12 +13,16 @@ namespace W3ChampionsStatisticService.Ports
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
             int pageSize = 100,
-            string map = "Overall");
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000);
 
         Task<long> Count(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
-            string map = "Overall");
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000);
 
         Task Insert(Matchup matchup);
 
@@ -52,12 +56,16 @@ namespace W3ChampionsStatisticService.Ports
             GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100,
-            string map = "Overall");
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000);
 
         Task<long> CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
-            string map = "Overall");
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000);
 
         Task EnsureIndices();
     }

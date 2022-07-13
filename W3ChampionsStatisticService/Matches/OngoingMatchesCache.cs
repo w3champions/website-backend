@@ -13,22 +13,39 @@ namespace W3ChampionsStatisticService.Matches
         private List<OnGoingMatchup> _values = new List<OnGoingMatchup>();
         private Object _lock = new Object();
 
-        public async Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay, string map)
+        public async Task<long> CountOnGoingMatches(
+          GameMode gameMode,
+          GateWay gateWay,
+          string map,
+          int minMmr,
+          int maxMmr)
         {
             await UpdateCacheIfNeeded();
             return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                       && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                                      && (map == "Overall" || m.Map == map));
+                                      && (map == "Overall" || m.Map == map)
+                                      && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
+                                      && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)));
+
         }
 
-        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize, string map)
+        public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+          GameMode gameMode,
+          GateWay gateWay,
+          int offset,
+          int pageSize,
+          string map,
+          int minMmr,
+          int maxMmr)
         {
             await UpdateCacheIfNeeded();
 
             return _values
                 .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                             && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                            && (map == "Overall" || m.Map == map))
+                            && (map == "Overall" || m.Map == map)
+                            && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
+                            && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
                 .Skip(offset)
                 .Take(pageSize)
                 .ToList();
@@ -77,8 +94,22 @@ namespace W3ChampionsStatisticService.Matches
 
     public interface IOngoingMatchesCache
     {
-        Task<long> CountOnGoingMatches(GameMode gameMode, GateWay gateWay, string map);
-        Task<List<OnGoingMatchup>> LoadOnGoingMatches(GameMode gameMode, GateWay gateWay, int offset, int pageSize, string map);
+        Task<long> CountOnGoingMatches(
+          GameMode gameMode,
+          GateWay gateWay,
+          string map,
+          int minMmr,
+          int maxMmr);
+
+        Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+          GameMode gameMode,
+          GateWay gateWay,
+          int offset,
+          int pageSize,
+          string map,
+          int minMmr,
+          int maxMmr);
+
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
         void Upsert(OnGoingMatchup matchup);
         void Delete(string matchId);
