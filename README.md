@@ -92,9 +92,9 @@ Download the collections and put them in a folder `dump` then to import it, run:
 mongorestore --uri="mongodb://localhost:27017" dump/
 ```
 
-We also have an open test db here, but be warned it may be unstable due to people adding new properties or collections, feel free to edit it as you require, or run integration tests against it `mongodb://157.90.1.251:3513`
+We also have an open tests db here, but be warned it may be unstable due to people adding new properties or collections, feel free to edit it as you require, or run integration tests against it `mongodb://157.90.1.251:3512`
     
-If you need access to the test environment database, ask a Dev and they can give you the connection string. Please dont run integration tests against the test DB!
+If you need access to the test environment database, ask a Dev and they can give you the connection string.
 
 Change this line to your localhost, and you should be good to go!
 https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/W3ChampionsStatisticService/Startup.cs#L63
