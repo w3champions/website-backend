@@ -65,7 +65,7 @@ namespace W3ChampionsStatisticService.Matches
             if (pageSize > 100) pageSize = 100;
             var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, pageSize, offset, season, dtFrom, dtTo);
             var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, dtFrom, dtTo);
-            return Ok(new { matches, count, dtFrom, dtTo });
+            return Ok(new { matches, count });
         }
 
 
