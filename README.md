@@ -81,8 +81,6 @@ To run the service locally with data, you will need to install:
 - [MongoDB Database Tools](https://www.mongodb.com/try/download/database-tools)
 - [MongoDB Compass](https://www.mongodb.com/products/compass) (not necessary but recommended)
 
-Export with (this is the open test db, so it might be broken, ask a dev for the connection string to the test db)
-
 There is a dump of the W3Champions production database from Season 11 here: 
 https://drive.google.com/drive/folders/1mfH_jECJI6kisaA0uBDsXkYxk42FcRF9
 
@@ -95,6 +93,8 @@ mongorestore --uri="mongodb://localhost:27017" dump/
 ```
 
 We also have an open test db here, but be warned it may be unstable due to people adding new properties or collections, feel free to edit it as you require, or run integration tests against it `mongodb://157.90.1.251:3513`
+    
+If you need access to the test environment database, ask a Dev and they can give you the connection string. Please dont run integration tests against the test DB!
 
 Change this line to your localhost, and you should be good to go!
 https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/W3ChampionsStatisticService/Startup.cs#L63
