@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.CommonValueObjects;
@@ -57,12 +58,14 @@ namespace W3ChampionsStatisticService.Matches
             Race playerRace = Race.Total,
             Race opponentRace = Race.Total,
             int offset = 0,
-            int pageSize = 100)
+            int pageSize = 100,
+            Nullable<DateTimeOffset> dtFrom = null,
+            Nullable<DateTimeOffset> dtTo = null)
         {
             if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, pageSize, offset, season);
-            var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season);
-            return Ok(new { matches, count });
+            var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, pageSize, offset, season, dtFrom, dtTo);
+            var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, dtFrom, dtTo);
+            return Ok(new { matches, count, dtFrom, dtTo });
         }
 
 

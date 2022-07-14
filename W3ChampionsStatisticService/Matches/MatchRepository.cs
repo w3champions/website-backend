@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using System;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System.Collections.Generic;
@@ -34,7 +35,9 @@ namespace W3ChampionsStatisticService.Matches
             Race opponentRace = Race.Total,
             int pageSize = 100,
             int offset = 0,
-            int season = 1)
+            int season = 1,
+            Nullable<DateTimeOffset> dtFrom = null,
+            Nullable<DateTimeOffset> dtTo = null)
         {
             var mongoCollection = CreateCollection<Matchup>();
             var textSearchOpts = new TextSearchOptions();
@@ -46,6 +49,8 @@ namespace W3ChampionsStatisticService.Matches
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                         && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
                         && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
+                        && (dtFrom == null || dtFrom <= m.StartTime)
+                        && (dtTo == null || dtTo >= m.EndTime)
                         && (m.Season == season))
                     .SortByDescending(s => s.Id)
                     .Skip(offset)
@@ -58,6 +63,8 @@ namespace W3ChampionsStatisticService.Matches
                     Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
                     && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                    && (dtFrom == null || dtFrom <= m.StartTime)
+                    && (dtTo == null || dtTo >= m.EndTime)
                     && (m.Season == season))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
@@ -72,7 +79,9 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined,
             Race playerRace = Race.Total,
             Race opponentRace = Race.Total,
-            int season = 1)
+            int season = 1,
+            Nullable<DateTimeOffset> dtFrom = null,
+            Nullable<DateTimeOffset> dtTo = null)
         {
             var textSearchOpts = new TextSearchOptions();
             var mongoCollection = CreateCollection<Matchup>();
@@ -84,6 +93,8 @@ namespace W3ChampionsStatisticService.Matches
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
                     && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
+                    && (dtFrom == null || dtFrom <= m.StartTime)
+                    && (dtTo == null || dtTo >= m.EndTime)
                     && (m.Season == season));
             }
 
@@ -91,6 +102,8 @@ namespace W3ChampionsStatisticService.Matches
                 Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
                 && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                 && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+                && (dtFrom == null || dtFrom <= m.StartTime)
+                && (dtTo == null || dtTo >= m.EndTime)
                 && (m.Season == season));
         }
 

@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using System;
+using MongoDB.Bson;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.CommonValueObjects;
@@ -30,14 +31,18 @@ namespace W3ChampionsStatisticService.Ports
             Race opponentRace = Race.Total,
             int pageSize = 100,
             int offset = 0,
-            int season = 1);
+            int season = 1,
+            Nullable<DateTimeOffset> dtFrom = null,
+            Nullable<DateTimeOffset> dtTo = null);
         Task<long> CountFor(string playerId,
             string opponentId = null,
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             Race playerRace = Race.Total,
             Race opponentRace = Race.Total,
-            int season = 1);
+            int season = 1,
+            Nullable<DateTimeOffset> dtFrom = null,
+            Nullable<DateTimeOffset> dtTo = null);
 
         Task<MatchupDetail> LoadDetails(ObjectId id);
         Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id);
