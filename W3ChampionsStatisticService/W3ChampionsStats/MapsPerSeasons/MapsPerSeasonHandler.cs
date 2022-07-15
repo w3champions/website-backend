@@ -26,8 +26,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
 
             var statCurrent = await _w3Stats.LoadMapsPerSeason(match.season) ?? MapsPerSeason.Create(match.season);
 
-            statOverall.Count(new MapName(match.map).Name, match.gameMode);
-            statCurrent.Count(new MapName(match.map).Name, match.gameMode);
+            statOverall.Count(match.mapName, match.gameMode);
+            statCurrent.Count(match.mapName, match.gameMode);
 
             await _w3Stats.Save(statOverall);
             await _w3Stats.Save(statCurrent);
