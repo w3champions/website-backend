@@ -71,7 +71,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
                 
                 case AvatarCategory.Total:
                     var totalWins = RaceWins?.GetTotalWins();
-                    isValid = totalWins >= TotalPicturerange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
+                    isValid = totalWins >= TotalPictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
                     break;
                 
                 default:
@@ -122,7 +122,12 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         private long GetMaxPictureIdForAllWins()
         {
-            return TotalPicturerange
+
+            var minimumWinsNeededForAllIcon = TotalPictureRange.First().NeededWins;
+            var raceWinsForAll = RaceWins.GetTotalWins();
+
+            if (raceWinsForAll < minimumWinsNeededForAllIcon) return 0;
+            return TotalPictureRange
                 .Where(r => r.NeededWins <= RaceWins.GetTotalWins())
                 .Max(r => r.PictureId);
         }
@@ -167,7 +172,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
         };
 
         [BsonIgnore]
-        public List<WinsToPictureId> TotalPicturerange => new List<WinsToPictureId>
+        public List<WinsToPictureId> TotalPictureRange => new List<WinsToPictureId>
         {
             new WinsToPictureId(1, 15),
             new WinsToPictureId(2, 30),
