@@ -20,7 +20,6 @@ namespace W3C.Domain.MatchmakingService
     {
         private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
         private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
-
         private readonly JsonSerializerSettings _jsonSerializerSettings;
 
         private readonly HttpClient _httpClient;
@@ -127,6 +126,15 @@ namespace W3C.Domain.MatchmakingService
 
             await HandleMMError(response);
             return null;
+        }
+
+        public async Task<GetSeasonMapsResponse> GetCurrentSeasonMaps()
+        {
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/currentseason");
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<GetSeasonMapsResponse>(content);
+            return result;
         }
 
         private async Task HandleMMError(HttpResponseMessage response)
