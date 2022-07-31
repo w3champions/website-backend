@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays
 {

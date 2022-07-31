@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.Admin
     public class AdminController : ControllerBase
     {
         private readonly IMatchRepository _matchRepository;
-        private readonly MatchmakingServiceRepo _matchmakingServiceRepository;
+        private readonly MatchmakingServiceClient _matchmakingServiceRepository;
         private readonly INewsRepository _newsRepository;
         private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
         private readonly IAdminRepository _adminRepository;
@@ -21,7 +21,7 @@ namespace W3ChampionsStatisticService.Admin
 
         public AdminController(
             IMatchRepository matchRepository,
-            MatchmakingServiceRepo matchmakingServiceRepository,
+            MatchmakingServiceClient matchmakingServiceRepository,
             INewsRepository newsRepository,
             ILoadingScreenTipsRepository loadingScreenTipsRepository,
             IAdminRepository adminRepository,

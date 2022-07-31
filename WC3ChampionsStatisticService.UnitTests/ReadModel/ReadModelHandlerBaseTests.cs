@@ -4,9 +4,10 @@ using MongoDB.Bson;
 using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Repositories;
 
 namespace WC3ChampionsStatisticService.Tests.ReadModel
 {

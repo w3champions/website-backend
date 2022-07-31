@@ -1,4 +1,5 @@
-﻿using W3ChampionsStatisticService.CommonValueObjects;
+﻿using System;
+using W3C.Domain.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
@@ -6,10 +7,11 @@ namespace W3ChampionsStatisticService.PersonalSettings
     {
         public static ProfilePicture Default()
         {
+            var random = new Random();
             return new ProfilePicture()
             {
-                Race = AvatarCategory.Total,
-                PictureId = 0
+                Race = AvatarCategory.Starter,
+                PictureId = random.Next(1,5),
             };
         }
 

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
 {

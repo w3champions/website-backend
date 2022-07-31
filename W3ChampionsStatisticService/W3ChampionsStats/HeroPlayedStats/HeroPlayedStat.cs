@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using W3ChampionsStatisticService.CommonValueObjects;
-using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 {
@@ -27,8 +27,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
 
         public void AddHeroes(List<HeroPickDto> heroes, GameMode gameMode)
         {
-            var total = Stats.Single(s => s.GameMode == gameMode);
-            total.AddHeroes(heroes);
+            var total = Stats.SingleOrDefault(s => s.GameMode == gameMode);
+            if (total != null)
+            {
+                total.AddHeroes(heroes);
+            }
         }
         public string Id { get; set; } = nameof(HeroPlayedStat);
     }

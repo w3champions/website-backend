@@ -1,4 +1,3 @@
-using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -6,12 +5,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using System;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.MatchmakingService;
+using W3C.Domain.Repositories;
+using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Clans;
-using W3ChampionsStatisticService.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.PadEvents;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
@@ -37,6 +39,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using Repos = W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService
 {
@@ -63,6 +66,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton(mongoClient);
 
             services.AddSignalR();
+            services.AddHttpClient();
 
             services.AddSpecialBsonRegistrations();
 
@@ -96,7 +100,8 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
-            services.AddTransient<MatchmakingServiceRepo>();
+            services.AddSingleton<MatchmakingServiceClient>();
+            services.AddSingleton<UpdateServiceClient>();
             services.AddTransient<MatchQueryHandler>();
 
             if (startHandlers == "true")

@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using W3ChampionsStatisticService.PadEvents;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 

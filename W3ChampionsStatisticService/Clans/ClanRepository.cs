@@ -1,9 +1,9 @@
-﻿using System;
+﻿using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Driver;
+using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Clans
 {

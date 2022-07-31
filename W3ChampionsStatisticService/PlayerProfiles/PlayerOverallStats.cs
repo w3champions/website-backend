@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson.Serialization.Attributes;
-using W3ChampionsStatisticService.CommonValueObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
@@ -49,6 +49,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public int GetWinsPerRace(Race race)
         {
             return WinLosses.Single(w => w.Race == race).Wins;
+        }
+
+        public int GetTotalWins()
+        {
+            return WinLosses.Sum(w => w.Wins);
         }
     }
 }
