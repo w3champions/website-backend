@@ -137,6 +137,21 @@ namespace W3C.Domain.MatchmakingService
             return result;
         }
 
+        public async Task<MessageOfTheDay> GetMotd()
+        {
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/motd/");
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            return JsonConvert.DeserializeObject<MessageOfTheDay>(content);
+        }
+
+        public async Task<HttpStatusCode> SetMotd(MessageOfTheDay motd)
+        {
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(motd), Encoding.UTF8, "application/json");
+            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/motd/?secret={AdminSecret}", httpcontent);
+            return result.StatusCode;
+        }
+
         private async Task HandleMMError(HttpResponseMessage response)
         {
             var errorReponse = await GetResult<ErrorResponse>(response);
