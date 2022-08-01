@@ -154,14 +154,17 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
             int pageSize = 100,
-            string map = "Overall")
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000)
         {
             var mongoCollection = CreateCollection<Matchup>();
-
             return mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map))
+                    && (map == "Overall" || m.Map == map)
+                    && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
+                    && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -171,12 +174,16 @@ namespace W3ChampionsStatisticService.Matches
         public Task<long> Count(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
-            string map = "Overall")
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000)
         {
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map));
+                    && (map == "Overall" || m.Map == map)
+                    && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
+                    && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)));
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)
@@ -215,17 +222,21 @@ namespace W3ChampionsStatisticService.Matches
             GateWay gateWay = GateWay.Undefined,
             int offset = 0,
             int pageSize = 100,
-            string map = "Overall")
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000)
         {
-            return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map);
+            return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr);
         }
 
         public Task<long> CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,
             GateWay gateWay = GateWay.Undefined,
-            string map = "Overall")
+            string map = "Overall",
+            int minMmr = 0,
+            int maxMmr = 3000)
         {
-            return _cache.CountOnGoingMatches(gameMode, gateWay, map);
+            return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
         }
 
     }
