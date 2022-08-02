@@ -81,5 +81,12 @@ namespace W3ChampionsStatisticService.Maps
             await _updateServiceClient.DeleteMapFile(fileId);
             return NoContent();
         }
+
+        [HttpGet("currentseason")]
+        public async Task<IActionResult> GetCurrentSeasonMaps()
+        {
+            var maps = await _matchmakingServiceClient.GetCurrentSeasonMaps();
+            return Ok(maps);
+        }
     }
 }

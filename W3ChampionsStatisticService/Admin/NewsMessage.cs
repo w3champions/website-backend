@@ -9,7 +9,6 @@ namespace W3ChampionsStatisticService.Admin
         public string Date { get; set; }
         [JsonIgnore]
         public ObjectId? Id { get; set; }
-
         public string BsonId => Id.ToString();
     }
 }

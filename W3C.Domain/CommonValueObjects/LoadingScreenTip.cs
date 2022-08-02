@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using MongoDB.Bson;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3C.Domain.CommonValueObjects
 {
     public class LoadingScreenTip
     {
@@ -10,7 +10,6 @@ namespace W3ChampionsStatisticService.Admin
         public string CreationDate { get; set; }
         [JsonIgnore]
         public ObjectId? Id { get; set; }
-
         public string BsonId => Id.ToString();
     }
 }

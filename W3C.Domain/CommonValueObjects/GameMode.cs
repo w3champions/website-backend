@@ -16,6 +16,7 @@
         GM_LEGION_4v4_x20 = 202,
         GM_LEGION_1v1_x20 = 203,
         GM_LEGION_4v4_x20_AT = 204,
+        GM_LEGION_2v2_x20 = 205,
 
         GM_ROC_1ON1 = 301,
         GM_LTW_1ON1 = 401,
