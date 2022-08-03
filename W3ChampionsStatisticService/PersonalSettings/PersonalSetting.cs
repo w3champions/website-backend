@@ -9,6 +9,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.PersonalSettings
 {
+    [BsonIgnoreExtraElements]
     public class PersonalSetting : IVersionable, IIdentifiable
     {
         public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)

@@ -91,6 +91,35 @@ namespace W3ChampionsStatisticService.Ladder
             return listOfProxyData;
         }
 
+        public async Task<List<PlayerInfoForGlobalSearch>> SearchAllPlayersForGlobalSearch(string tagSearch)
+        {
+            var search = tagSearch.ToLower();
+            var ranksList = await JoinWithSortedByLeague(rank => rank.PlayerId.ToLower().Contains(search));
+
+            var listOfProxyData = new List<PlayerInfoForGlobalSearch>();
+            var insertedPlayerIds = new List<string>();
+
+            foreach (var rank in ranksList)
+            {
+                var playerInfo = new PlayerInfoForGlobalSearch();
+                playerInfo.RankInfo = new RankInfo
+                {
+                  League=rank.League,
+                  Season=rank.Season,
+                  RankNumber=rank.RankNumber,
+                  GameMode= rank.GameMode,
+                };
+
+                playerInfo.Players = rank.Players;
+                listOfProxyData.Add(playerInfo);
+                insertedPlayerIds.Add(rank.Id);
+            }
+
+            return listOfProxyData;
+        }
+
+        
+
         public Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
         {
             var search = searchFor.ToLower();
@@ -110,6 +139,22 @@ namespace W3ChampionsStatisticService.Ladder
                 .Aggregate()
                 .Match(matchExpression)
                 .SortBy(rank => rank.RankNumber)
+                .Lookup<Rank, PlayerOverview, Rank>(players,
+                    rank => rank.PlayerId,
+                    player => player.Id,
+                    rank => rank.Players)
+                .ToListAsync();
+            return result.Where(r => r.Player != null).ToList();
+        }
+
+        private async Task<List<Rank>> JoinWithSortedByLeague(Expression<Func<Rank,bool>> matchExpression)
+        {
+            var ranks = CreateCollection<Rank>();
+            var players = CreateCollection<PlayerOverview>();
+            var result = await ranks
+                .Aggregate()
+                .Match(matchExpression)
+                .SortBy(rank => rank.League)
                 .Lookup<Rank, PlayerOverview, Rank>(players,
                     rank => rank.PlayerId,
                     player => player.Id,

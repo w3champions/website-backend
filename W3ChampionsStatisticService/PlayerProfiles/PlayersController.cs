@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.Search;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
@@ -22,6 +24,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
         private readonly PlayerAkaProvider _playerAkaProvider;
+        private readonly IRankRepository _rankRepository;
+        private readonly GlobalSearchCommandHandler globalSearchCommandHandler;
 
         public PlayersController(
             IPlayerRepository playerRepository,
@@ -29,7 +33,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             IPersonalSettingsRepository personalSettingsRepository,
             IClanRepository clanRepository,
             IW3CAuthenticationService authenticationService,
-            PlayerAkaProvider playerAkaProvider)
+            PlayerAkaProvider playerAkaProvider,
+            IRankRepository rankRepository)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
@@ -37,6 +42,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
             _playerAkaProvider = playerAkaProvider;
+            _rankRepository = rankRepository;
+            globalSearchCommandHandler = new GlobalSearchCommandHandler(_rankRepository, _personalSettingsRepository);
         }
 
         [HttpGet("{battleTag}")]
@@ -91,6 +98,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<IActionResult> SearchPlayer(string search)
         {
             var players = await _playerRepository.SearchForPlayer(search);
+            return Ok(players);
+        }
+
+        [HttpGet("global-search")]
+        public async Task<IActionResult> SearchPlayerWithLeaguesAndParticipatedSeasons(string search, int limit=10, int offset=0)
+        {
+            var players = await globalSearchCommandHandler.SearchAllPlayersForGlobalSearch(search, limit, offset);
             return Ok(players);
         }
 

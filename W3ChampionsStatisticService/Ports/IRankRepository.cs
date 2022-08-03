@@ -18,5 +18,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<List<Season>> LoadSeasons();
         Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season);
         Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string tagSearch);
+        Task<List<PlayerInfoForGlobalSearch>> SearchAllPlayersForGlobalSearch(string tagSearch);
     }
 }
