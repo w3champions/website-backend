@@ -4,6 +4,9 @@ using MongoDB.Bson;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.Repositories;
+using W3C.Domain.CommonValueObjects;
+using System.Net;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -14,7 +17,7 @@ namespace W3ChampionsStatisticService.Admin
         private readonly IMatchRepository _matchRepository;
         private readonly MatchmakingServiceClient _matchmakingServiceRepository;
         private readonly INewsRepository _newsRepository;
-        private readonly ILoadingScreenTipsRepository _loadingScreenTipsRepository;
+        private readonly IInformationMessagesRepository _informationMessagesRepository;
         private readonly IAdminRepository _adminRepository;
         private readonly IRankRepository _rankRepository;
 
@@ -22,14 +25,14 @@ namespace W3ChampionsStatisticService.Admin
             IMatchRepository matchRepository,
             MatchmakingServiceClient matchmakingServiceRepository,
             INewsRepository newsRepository,
-            ILoadingScreenTipsRepository loadingScreenTipsRepository,
+            IInformationMessagesRepository informationMessagesRepository,
             IAdminRepository adminRepository,
             IRankRepository rankRepository)
         {
             _matchRepository = matchRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
             _newsRepository = newsRepository;
-            _loadingScreenTipsRepository = loadingScreenTipsRepository;
+            _informationMessagesRepository = informationMessagesRepository;
             _adminRepository = adminRepository;
             _rankRepository = rankRepository;
         }
@@ -105,13 +108,32 @@ namespace W3ChampionsStatisticService.Admin
         [HttpGet("loadingScreenTips")]
         public async Task<IActionResult> GetTips(int? limit)
         {
-            return Ok(await _loadingScreenTipsRepository.Get(limit));
+            return Ok(await _informationMessagesRepository.GetTips(limit));
+        }
+        
+        [HttpGet("motd")] // Message Of The Day
+        public async Task<IActionResult> GetMotd()
+        {
+            return Ok(await _informationMessagesRepository.GetMotd());
+        }
+
+        [HttpPut("motd")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
+        {
+            if (motd.motd.Length > 400)
+            {
+                return new BadRequestObjectResult("The motd exceeded 400 characters. We can't display messages this long!");
+            }
+
+            await _informationMessagesRepository.SetMotd(motd);
+            return Ok();
         }
 
         [HttpGet("loadingScreenTips/randomTip")]
         public async Task<IActionResult> GetRandomTip()
         {
-            return Ok(await _loadingScreenTipsRepository.GetRandomTip());
+            return Ok(await _informationMessagesRepository.GetRandomTip());
         }
 
         [HttpPut("loadingScreenTips/{tipId}")]
@@ -123,7 +145,7 @@ namespace W3ChampionsStatisticService.Admin
                 return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
             }
             loadingScreenTip.Id = new ObjectId(tipId);
-            await _loadingScreenTipsRepository.UpsertTip(loadingScreenTip);
+            await _informationMessagesRepository.UpsertTip(loadingScreenTip);
             return Ok();
         }
 
@@ -136,7 +158,7 @@ namespace W3ChampionsStatisticService.Admin
                 return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
             }
             loadingScreenTip.Id = ObjectId.GenerateNewId();
-            await _loadingScreenTipsRepository.UpsertTip(loadingScreenTip);
+            await _informationMessagesRepository.UpsertTip(loadingScreenTip);
             return Ok();
         }
 
@@ -144,7 +166,7 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteTip(string tipId)
         {
-            await _loadingScreenTipsRepository.DeleteTip(new ObjectId(tipId));
+            await _informationMessagesRepository.DeleteTip(new ObjectId(tipId));
             return Ok();
         }
 

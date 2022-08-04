@@ -60,14 +60,25 @@ namespace W3ChampionsStatisticService.PersonalSettings
         {
             bool isValid = false;
 
-            if (cmd.avatarCategory == AvatarCategory.Special)
+            switch (cmd.avatarCategory)
             {
-                isValid = SpecialPictures == null ? false : SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
-            }
-            else
-            {
-                var winsPerRace = RaceWins?.GetWinsPerRace((Race)cmd.avatarCategory);
-                isValid = winsPerRace >= PictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
+                case AvatarCategory.Starter:
+                    isValid = true;
+                    break;
+
+                case AvatarCategory.Special:
+                    isValid = SpecialPictures == null ? false : SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
+                    break;
+                
+                case AvatarCategory.Total:
+                    var totalWins = RaceWins?.GetTotalWins();
+                    isValid = totalWins >= TotalPictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
+                    break;
+                
+                default:
+                    var winsPerRace = RaceWins?.GetWinsPerRace((Race)cmd.avatarCategory);
+                    isValid = winsPerRace >= RacePictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
+                    break;
             }
 
             if (isValid)
@@ -88,35 +99,39 @@ namespace W3ChampionsStatisticService.PersonalSettings
             SpecialPictures = specialPictures;
         }
 
-        public List<RaceToMaxPicture> PickablePictures => new List<RaceToMaxPicture>
+        public List<AvatarCategoryToMaxPictureId> PickablePictures => new List<AvatarCategoryToMaxPictureId>
         {
-            new RaceToMaxPicture(Race.HU, GetMaxOf(RaceWins.GetWinsPerRace(Race.HU)) ),
-            new RaceToMaxPicture(Race.OC, GetMaxOf(RaceWins.GetWinsPerRace(Race.OC)) ),
-            new RaceToMaxPicture(Race.NE, GetMaxOf(RaceWins.GetWinsPerRace(Race.NE)) ),
-            new RaceToMaxPicture(Race.UD, GetMaxOf(RaceWins.GetWinsPerRace(Race.UD)) ),
-            new RaceToMaxPicture(Race.RnD, GetMaxOf(RaceWins.GetWinsPerRace(Race.RnD)) )
+            new AvatarCategoryToMaxPictureId(AvatarCategory.HU, GetMaxPictureIdForRace(Race.HU)),
+            new AvatarCategoryToMaxPictureId(AvatarCategory.OC, GetMaxPictureIdForRace(Race.OC)),
+            new AvatarCategoryToMaxPictureId(AvatarCategory.NE, GetMaxPictureIdForRace(Race.NE)),
+            new AvatarCategoryToMaxPictureId(AvatarCategory.UD, GetMaxPictureIdForRace(Race.UD)),
+            new AvatarCategoryToMaxPictureId(AvatarCategory.RnD, GetMaxPictureIdForRace(Race.RnD)),
+            new AvatarCategoryToMaxPictureId(AvatarCategory.Total, GetMaxPictureIdForAllWins()),
         };
 
-        private long GetMaxOf(long getWinsPerRace)
+        private long GetMaxPictureIdForRace(Race race)
         {
-            return PictureRange.Where(r => r.NeededWins <= getWinsPerRace).Max(r => r.PictureId);
+            var minimumWinsNeededForRaceIcon = RacePictureRange.First().NeededWins;
+            var raceWinsForRace = RaceWins.GetWinsPerRace(race);
+
+            if (raceWinsForRace < minimumWinsNeededForRaceIcon) return 0;
+
+            return RacePictureRange
+                .Where(r => r.NeededWins <= raceWinsForRace)
+                .Max(r => r.PictureId);
         }
 
-        [BsonIgnore]
-        public List<WinsToPictureId> PictureRange => new List<WinsToPictureId>
+        private long GetMaxPictureIdForAllWins()
         {
-            new WinsToPictureId(0, 0),
-            new WinsToPictureId(1, 5),
-            new WinsToPictureId(2, 20),
-            new WinsToPictureId(3, 70),
-            new WinsToPictureId(4, 150),
-            new WinsToPictureId(5, 250),
-            new WinsToPictureId(6, 400),
-            new WinsToPictureId(7, 600),
-            new WinsToPictureId(8, 900),
-            new WinsToPictureId(9, 1200),
-            new WinsToPictureId(10, 1500)
-        };
+
+            var minimumWinsNeededForAllIcon = TotalPictureRange.First().NeededWins;
+            var raceWinsForAll = RaceWins.GetTotalWins();
+
+            if (raceWinsForAll < minimumWinsNeededForAllIcon) return 0;
+            return TotalPictureRange
+                .Where(r => r.NeededWins <= RaceWins.GetTotalWins())
+                .Max(r => r.PictureId);
+        }
 
         public void Update(PersonalSettingsDTO dto)
         {
@@ -133,5 +148,75 @@ namespace W3ChampionsStatisticService.PersonalSettings
         }
 
         public DateTimeOffset LastUpdated { get; set; }
+
+        [BsonIgnore]
+        public List<WinsToPictureId> RacePictureRange => new List<WinsToPictureId>
+        {
+            new WinsToPictureId(1, 5),
+            new WinsToPictureId(2, 10),
+            new WinsToPictureId(3, 25),
+            new WinsToPictureId(4, 50),
+            new WinsToPictureId(5, 100),
+            new WinsToPictureId(6, 150),
+            new WinsToPictureId(7, 250),
+            new WinsToPictureId(8, 350),
+            new WinsToPictureId(9, 500),
+            new WinsToPictureId(10, 750),
+            new WinsToPictureId(11, 1000),
+            new WinsToPictureId(12, 1250),
+            new WinsToPictureId(13, 1500),
+            new WinsToPictureId(14, 1750),
+            new WinsToPictureId(15, 2000),
+            new WinsToPictureId(16, 2500),
+            new WinsToPictureId(17, 3500),
+            new WinsToPictureId(18, 5000)
+        };
+
+        [BsonIgnore]
+        public List<WinsToPictureId> TotalPictureRange => new List<WinsToPictureId>
+        {
+            new WinsToPictureId(1, 15),
+            new WinsToPictureId(2, 30),
+            new WinsToPictureId(3, 75),
+            new WinsToPictureId(4, 150),
+            new WinsToPictureId(5, 300),
+            new WinsToPictureId(6, 450),
+            new WinsToPictureId(7, 750),
+            new WinsToPictureId(8, 1000),
+            new WinsToPictureId(9, 1500),
+            new WinsToPictureId(10, 2250),
+            new WinsToPictureId(11, 3000),
+            new WinsToPictureId(12, 3750),
+            new WinsToPictureId(13, 4500),
+            new WinsToPictureId(14, 5250),
+            new WinsToPictureId(15, 6000),
+            new WinsToPictureId(16, 7500),
+            new WinsToPictureId(17, 10000),
+            new WinsToPictureId(18, 15000)
+        };
+
+        [BsonIgnore]
+        public List<WinsToPictureId> TournamentPicturerange => new List<WinsToPictureId>
+        // for future use with autotours
+        {
+            new WinsToPictureId(1, 1),
+            new WinsToPictureId(2, 5),
+            new WinsToPictureId(3, 10),
+            new WinsToPictureId(4, 20),
+            new WinsToPictureId(5, 30),
+            new WinsToPictureId(6, 50),
+            new WinsToPictureId(7, 75),
+            new WinsToPictureId(8, 100),
+            new WinsToPictureId(9, 125),
+            new WinsToPictureId(10, 150),
+            new WinsToPictureId(11, 200),
+            new WinsToPictureId(12, 300),
+            new WinsToPictureId(13, 400),
+            new WinsToPictureId(14, 500),
+            new WinsToPictureId(15, 750),
+            new WinsToPictureId(16, 1000),
+            new WinsToPictureId(17, 1250),
+            new WinsToPictureId(18, 1500)
+        };
     }
 }

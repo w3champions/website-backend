@@ -123,6 +123,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
             Assert.AreEqual("testTooltip", settings.SpecialPictures.First().Description);
         }
 
+        [Ignore("Not case insensitive anymore to improve performance.")]
         [Test]
         public async Task AssignOnePortrait_PlayerDoesNotHave_CaseInsensitiveTag_Success()
         {

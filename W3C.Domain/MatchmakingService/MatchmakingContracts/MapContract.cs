@@ -8,5 +8,6 @@
         public int MaxTeams { get; set; }
         public MapForce[] MappedForces { get; set; } = new MapForce[0];
         public ExtendedGameMap GameMap { get; set; }
+        public int teamSize { get; set; }
     }
 }

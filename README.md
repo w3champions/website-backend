@@ -76,22 +76,33 @@ As you can see you need to make the transformation and save the readmodel in our
   people ;)
 
 ## Import Export Mongodata
-You need mongodb installed to have the mentioned toole here.
+To run the service locally with data, you will need to install: 
+- [MongoDB](https://www.mongodb.com/try/download/community)
+- [MongoDB Database Tools](https://www.mongodb.com/try/download/database-tools)
+- [MongoDB Compass](https://www.mongodb.com/products/compass) (not necessary but recommended)
 
-Export with (this is the open test db, so it might be broken, ask a dev for the connection string to the test db)
-```
-mongodump --uri="mongodb://157.90.1.251:3513"
-```
-creates a `./dump` folder with the data.
+There is a dump of the W3Champions production database from Season 11 here: 
+https://drive.google.com/drive/folders/1mfH_jECJI6kisaA0uBDsXkYxk42FcRF9
 
-Import to Test DB
+Note that the `MatchFinishedEvents` collection is separate. This collection is only useful if you plan to work on pre-S10 match results pages.
+
+Download the collections and put them in a folder `dump` then to import it, run:
+
 ```
 mongorestore --uri="mongodb://localhost:27017" dump/
 ```
-I also have a dump for the stat service here:
-https://www.dropbox.com/sh/2hjxhct8bfjxs6i/AAAyCZBoWSE4tcLnlXXs_EIQa?dl=0
 
-Just download the folder, name it dump and run the import command to get your test env up. Like mentioned above, we have an open test db here `mongodb://157.90.1.251:3513`
+We also have an open tests db here, but be warned it may be unstable due to people adding new properties or collections, feel free to edit it as you require, or run integration tests against it `mongodb://157.90.1.251:3512`
+    
+If you need access to the test environment database, ask a Dev and they can give you the connection string.
+
+Change this line to your localhost, and you should be good to go!
+https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/W3ChampionsStatisticService/Startup.cs#L63
+
+To run integration tests against the local database, edit this line:
+https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/WC3ChampionsStatisticService.UnitTests/IntegrationTestBase.cs#L14
+
+Warning: this WILL drop your local database, so be warned!
 
 ### Deploying to a Pull Request Environment
 If you branch starts with "DEPLOY_" azure will create a automatic deployment for your pull request, so you can test it in an isolated environment. It will be deployed to whatever comes after "DEPLOY_". For example, if my branch is called DEPLOY_add-new-language the pr will be published to https://statistic-service-add-new-language.pr.w3champions.com. The https certificate will be generated after the deployment, but this can take some time.

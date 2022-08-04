@@ -2,21 +2,24 @@
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
-using W3C.Domain.Repositories;
-using W3ChampionsStatisticService.Ports;
+using W3C.Domain.CommonValueObjects;
+using W3C.Domain.MatchmakingService;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3C.Domain.Repositories
 {
-    public class LoadingScreenTipsRepository : MongoDbRepositoryBase, ILoadingScreenTipsRepository
+    public class InformationMessagesRepository : MongoDbRepositoryBase, IInformationMessagesRepository
     {
-
-        public LoadingScreenTipsRepository(MongoClient mongoClient) : base(mongoClient)
+        MatchmakingServiceClient _matchmakingServiceClient;
+        public InformationMessagesRepository(
+            MongoClient mongoClient, 
+            MatchmakingServiceClient matchmakingServiceClient) : base(mongoClient)
         {
-
+            _matchmakingServiceClient = matchmakingServiceClient;
         }
 
-        public Task<List<LoadingScreenTip>> Get(int? limit = 5)
+        public Task<List<LoadingScreenTip>> GetTips(int? limit = 5)
         {
             var mongoCollection = CreateCollection<LoadingScreenTip>();
             return mongoCollection
@@ -48,6 +51,16 @@ namespace W3ChampionsStatisticService.Admin
         public Task UpsertTip(LoadingScreenTip loadingScreenTip)
         {
             return Upsert(loadingScreenTip, n => n.Id == loadingScreenTip.Id);
+        }
+
+        public async Task<MessageOfTheDay> GetMotd()
+        {
+            return await _matchmakingServiceClient.GetMotd();
+        }
+
+        public Task<HttpStatusCode> SetMotd(MessageOfTheDay motd)
+        {
+            return _matchmakingServiceClient.SetMotd(motd);
         }
     }
 }

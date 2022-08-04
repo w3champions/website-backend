@@ -50,5 +50,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             return WinLosses.Single(w => w.Race == race).Wins;
         }
+
+        public int GetTotalWins()
+        {
+            return WinLosses.Sum(w => w.Wins);
+        }
     }
 }
