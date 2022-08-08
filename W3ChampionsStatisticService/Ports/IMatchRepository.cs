@@ -58,7 +58,8 @@ namespace W3ChampionsStatisticService.Ports
             int pageSize = 100,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000);
+            int maxMmr = 3000,
+            string sort = "startTimeDescending");
 
         Task<long> CountOnGoingMatches(
             GameMode gameMode = GameMode.Undefined,

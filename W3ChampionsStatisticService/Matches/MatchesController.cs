@@ -76,10 +76,12 @@ namespace W3ChampionsStatisticService.Matches
             GateWay gateWay = GateWay.Undefined,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000)
+            int maxMmr = 3000,
+            string sort = "startTimeDescending"
+            )
         {
             if (pageSize > 200) pageSize = 200;
-            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr);
+            var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
             var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
 
             await _matchQueryHandler.PopulatePlayerInfos(matches);
