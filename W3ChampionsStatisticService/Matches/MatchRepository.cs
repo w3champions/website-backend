@@ -224,9 +224,10 @@ namespace W3ChampionsStatisticService.Matches
             int pageSize = 100,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000)
+            int maxMmr = 3000,
+            string sort = "startTimeDescending")
         {
-            return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr);
+            return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
         }
 
         public Task<long> CountOnGoingMatches(

@@ -36,19 +36,34 @@ namespace W3ChampionsStatisticService.Matches
           int pageSize,
           string map,
           int minMmr,
-          int maxMmr)
+          int maxMmr,
+          string sort)
         {
             await UpdateCacheIfNeeded();
 
-            return _values
+            var matches = _values
                 .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                             && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                             && (map == "Overall" || m.Map == map)
                             && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
-                            && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
+                            && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)));
+
+            if (sort == "mmrDescending") {
+                matches = matches.OrderByDescending(m => getMaxMmrInMatch(m));
+            }
+
+            return matches
                 .Skip(offset)
                 .Take(pageSize)
                 .ToList();
+        }
+
+        public int getMaxMmrInTeam(Team team) {
+            return team.Players.Max(p => p.OldMmr);
+        }
+
+        public int getMaxMmrInMatch(OnGoingMatchup match) {
+            return match.Teams.Max(t => getMaxMmrInTeam(t));
         }
 
         public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
@@ -108,7 +123,8 @@ namespace W3ChampionsStatisticService.Matches
           int pageSize,
           string map,
           int minMmr,
-          int maxMmr);
+          int maxMmr,
+          string sort);
 
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
         void Upsert(OnGoingMatchup matchup);
