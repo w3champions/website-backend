@@ -33,7 +33,6 @@ namespace W3ChampionsStatisticService.Matches
         public IList<Team> Teams { get; set; } = new List<Team>();
         public GateWay GateWay { get; set; }
         public int Season { get; set; }
-        public long? Number { get; set; }
 
         public ServerInfo ServerInfo { get; set; } = new ServerInfo();
 

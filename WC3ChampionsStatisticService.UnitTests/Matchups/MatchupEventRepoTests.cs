@@ -72,28 +72,5 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
             Assert.AreEqual(1, events.Count);
             Assert.AreEqual(startEvent1.match.id, events[0].match.id);
         }
-
-        [Test]
-        public async Task SaveWithNewNumber()
-        {
-            var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
-            var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
-
-            await InsertMatchEvent(matchFinishedEvent1);
-
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-            var matchReadModelHandler = new MatchReadModelHandler(
-                matchRepository);
-
-            await matchReadModelHandler.Update(matchFinishedEvent1);
-            await matchReadModelHandler.Update(matchFinishedEvent2);
-
-            var events = await matchRepository.Load();
-
-            Assert.AreEqual(2, events.Count);
-
-            Assert.AreEqual(1, events[1].Number);
-            Assert.AreEqual(2, events[0].Number);
-        }
     }
 }
