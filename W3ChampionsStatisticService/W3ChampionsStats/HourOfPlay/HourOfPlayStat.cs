@@ -42,10 +42,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 PlayTimesPerModeTwoWeeks.Reverse();
             }
 
-            gameLengthPerMode = PlayTimesPerModeTwoWeeks.Single(m => m.GameMode == gameMode
+            gameLengthPerMode = PlayTimesPerModeTwoWeeks.SingleOrDefault(m => m.GameMode == gameMode
                                                           && m.Day.Date == timeOfGame.Date);
 
-            gameLengthPerMode.Record(timeOfGame);
+            if (gameLengthPerMode != null) { 
+                gameLengthPerMode.Record(timeOfGame);
+            }
             PlayTimesPerMode = CalculateAverage(PlayTimesPerModeTwoWeeks);
         }
 
