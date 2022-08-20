@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
             var players = CreateCollection<PlayerOverallStats>();
             var result = await settings
                 .Aggregate()
-                .Match(p => p.Id.ToLower() == battletag.ToLower())
+                .Match(p => p.Id == battletag)
                 .Lookup<PersonalSetting, PlayerOverallStats, PersonalSetting>(players,
                     rank => rank.Id,
                     player => player.BattleTag,

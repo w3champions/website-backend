@@ -31,7 +31,7 @@ namespace W3C.Domain.Repositories
 
         protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
         {
-            return LoadFirst<T>(x => x.Id.ToLower() == id.ToLower());
+            return LoadFirst<T>(x => x.Id == id);
         }
 
         protected Task Insert<T>(T element)

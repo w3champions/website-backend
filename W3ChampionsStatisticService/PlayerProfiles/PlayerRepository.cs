@@ -92,7 +92,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             int season)
         {
             return LoadAll<PlayerGameModeStatPerGateway>(t =>
-                t.Id.ToLower().Contains(battleTag.ToLower()) &&
+                t.Id.Contains(battleTag) &&
                 t.GateWay == gateWay &&
                 t.Season == season);
         }
@@ -114,7 +114,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)
         {
-            return LoadFirst<PlayerOverallStats>(p => p.BattleTag.ToLower() == battleTag.ToLower());
+            return LoadFirst<PlayerOverallStats>(p => p.BattleTag == battleTag);
         }
 
         public Task<PlayerOverview> LoadOverview(string battleTag)
