@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
+using System.Collections.Generic;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -29,9 +30,12 @@ namespace W3ChampionsStatisticService.Matches
             int minMmr = 0,
             int maxMmr = 3000)
         {
-            if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            var count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
+            //temporarily disable getting finished matches
+            List<Matchup> matches = new List<Matchup>();
+            int count = 0;
+            //if (pageSize > 100) pageSize = 100;
+            //var matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
+            //var count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
             return Ok(new { matches, count });
         }
 
