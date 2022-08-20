@@ -34,6 +34,8 @@ namespace W3ChampionsStatisticService.Matches
         public GateWay GateWay { get; set; }
         public int Season { get; set; }
 
+        public long? Number { get; set; }
+
         public ServerInfo ServerInfo { get; set; } = new ServerInfo();
 
         [JsonIgnore]
