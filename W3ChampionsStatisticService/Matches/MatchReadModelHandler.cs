@@ -22,10 +22,7 @@ namespace W3ChampionsStatisticService.Matches
             try
             {
                 if (nextEvent.WasFakeEvent) return;
-                var count = await _matchRepository.Count();
                 var matchup = Matchup.Create(nextEvent);
-
-                matchup.Number = count + 1;
 
                 await _matchRepository.Insert(matchup);
                 await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
