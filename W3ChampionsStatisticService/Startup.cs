@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using Prometheus;
 using System;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
@@ -155,6 +156,7 @@ namespace W3ChampionsStatisticService
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
             app.UseRouting();
+            app.UseHttpMetrics();
             app.UseCors(builder =>
                 builder
                     .AllowAnyHeader()
@@ -165,6 +167,7 @@ namespace W3ChampionsStatisticService
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapMetrics();
             });
             app.UseSwagger();
             app.UseSwaggerUI(c =>
