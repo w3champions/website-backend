@@ -375,7 +375,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
             string playerTag = "cepheid#1467";
-            var personalSettings = new PersonalSetting(playerTag) { SpecialPictures = null };
+            var personalSettings = new PersonalSetting(playerTag);
             await personalSettingsRepository.Save(personalSettings);
 
             var deleteCommand = new PortraitsCommand();
