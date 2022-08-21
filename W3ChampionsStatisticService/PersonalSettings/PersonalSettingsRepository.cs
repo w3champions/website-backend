@@ -18,25 +18,20 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public async Task<PersonalSetting> Load(string battletag)
         {
-            var settings = CreateCollection<PersonalSetting>();
-            var players = CreateCollection<PlayerOverallStats>();
-            var result = await settings
-                .Aggregate()
-                .Match(p => p.Id == battletag)
-                .Lookup<PersonalSetting, PlayerOverallStats, PersonalSetting>(players,
-                    rank => rank.Id,
-                    player => player.BattleTag,
-                    rank => rank.Players)
-                .FirstOrDefaultAsync();
+            var personalSettings = await LoadFirst<PersonalSetting>(battletag);
 
-            if (result != null && SchemaOutdated(result))
+            if (personalSettings == null)
             {
-                var settingList = new List<PersonalSetting>();
-                settingList.Add(result);
-                await UpdateSchema(settingList);
-                result = await Load(battletag);
+                personalSettings = new PersonalSetting(battletag);
+                await Upsert(personalSettings);
             }
-            return result;
+
+            var playersStatsCollection = CreateCollection<PlayerOverallStats>();
+            var playerStats = (await playersStatsCollection.FindAsync(x => x.BattleTag == battletag)).FirstOrDefault();
+
+            personalSettings.RaceWins = playerStats;
+
+            return personalSettings;
         }
 
         public Task<List<PersonalSetting>> LoadSince(DateTimeOffset from)
@@ -61,7 +56,7 @@ namespace W3ChampionsStatisticService.PersonalSettings
 
         public Task Save(PersonalSetting setting)
         {
-            setting.Players = null;
+            setting.RaceWins = null;
             return UpsertTimed(setting, p => p.Id == setting.Id);
         }
 

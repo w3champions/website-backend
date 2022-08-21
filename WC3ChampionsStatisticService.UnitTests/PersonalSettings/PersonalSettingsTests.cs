@@ -24,7 +24,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
                 player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerOverallStats> { player };
+            personalSetting.RaceWins = player;
             SetPictureCommand cmd = new SetPictureCommand()
             {
                 avatarCategory = AvatarCategory.HU,
@@ -48,7 +48,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
                 player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerOverallStats> { player };
+            personalSetting.RaceWins = player;
             SetPictureCommand cmd1 = new SetPictureCommand()
             {
                 avatarCategory = AvatarCategory.HU,
@@ -79,7 +79,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
                 player.RecordWin(Race.HU, 1, true);
             }
 
-            personalSetting.Players = new List<PlayerOverallStats> { player };
+            personalSetting.RaceWins = player;
             Assert.AreEqual(2, personalSetting.PickablePictures.Single(r => r.AvatarType == AvatarCategory.HU).Max);
         }
 
@@ -88,7 +88,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         {
             var player = PlayerOverallStats.Create("peter#123");
             var personalSetting = new PersonalSetting("peter#123") { SpecialPictures = null };
-            personalSetting.Players = new List<PlayerOverallStats> { player };
+            personalSetting.RaceWins = player;
             var expectedProfilePic = ProfilePicture.Default();
 
             SetPictureCommand cmd = new SetPictureCommand()
@@ -156,14 +156,14 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
             var playerRepo = new PlayerRepository(MongoClient);
-            var personalSetting = new PersonalSetting("peter#123@10");
+            var personalSetting = new PersonalSetting("peter#123");
 
             var player = PlayerOverallStats.Create("peter#123");
 
             await playerRepo.UpsertPlayer(player);
             await settingsRepo.Save(personalSetting);
 
-            var loaded = await settingsRepo.Load("peter#123@10");
+            var loaded = await settingsRepo.Load("peter#123");
 
             Assert.AreEqual(0, loaded.RaceWins.GetWinsPerRace(Race.HU));
         }
@@ -204,7 +204,6 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             var playerSettings = new PersonalSetting("cepheid#1467");
             await playerRepo.UpsertPlayer(player);
             await personalSettingsRepository.Save(playerSettings);
-            await personalSettingsRepository.UnsetOne("SpecialPictures", player.BattleTag);
 
             // act
             var settings = await personalSettingsRepository.Load("cepheid#1467");

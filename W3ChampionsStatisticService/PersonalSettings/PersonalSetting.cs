@@ -11,21 +11,19 @@ namespace W3ChampionsStatisticService.PersonalSettings
 {
     public class PersonalSetting : IVersionable, IIdentifiable
     {
-        public PersonalSetting(string battleTag, List<PlayerOverallStats> players = null)
+        public PersonalSetting(string battleTag, PlayerOverallStats playerStats = null)
         {
             Id = battleTag;
-            Players = players ?? new List<PlayerOverallStats>();
+            RaceWins = playerStats ?? PlayerOverallStats.Create(Id);
             AliasSettings = new AkaSettings();
         }
 
         public string ProfileMessage { get; set; }
-        [BsonIgnore]
-        [JsonIgnore]
-        public PlayerOverallStats RaceWins => Players?.SingleOrDefault() ?? PlayerOverallStats.Create(Id);
-        public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
+
         [JsonIgnore]
         [BsonIgnoreIfNull]
-        public List<PlayerOverallStats> Players { get; set; }
+        public PlayerOverallStats RaceWins { get; set; }
+        public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
 
         public string Twitch { get; set; }
 

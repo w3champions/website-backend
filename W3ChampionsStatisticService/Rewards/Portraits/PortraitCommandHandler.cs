@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Rewards.Portraits
             if (setting == null)
             {
                 var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
-                setting = new PersonalSetting(battleTag, new List<PlayerOverallStats> { playerProfile });
+                setting = new PersonalSetting(battleTag, playerProfile);
             }
 
             var result = setting.SetProfilePicture(command);
