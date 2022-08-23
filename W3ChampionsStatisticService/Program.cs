@@ -13,6 +13,13 @@ namespace W3ChampionsStatisticService
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.ConfigureKestrel(serverOptions =>
+                    {
+                        serverOptions.Limits.MaxRequestBodySize = 60286400;
+                    })
+                 .UseStartup<Startup>();
+                });
     }
 }
