@@ -92,19 +92,19 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             int season)
         {
             return LoadAll<PlayerGameModeStatPerGateway>(t =>
-                t.Id.Contains(battleTag) &&
+                t.PlayerIds.Any(player => player.BattleTag==battleTag) &&
                 t.GateWay == gateWay &&
                 t.Season == season);
         }
 
         public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
         {
-            return LoadAll<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay);
+            return LoadAll<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag.ToLower() && t.Season == season && t.GateWay == gateWay);
         }
 
         public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
         {
-            return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay && t.Race == race);
+            return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag.ToLower() && t.Season == season && t.GateWay == gateWay && t.Race == race);
         }
 
         public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
