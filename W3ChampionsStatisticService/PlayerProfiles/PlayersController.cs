@@ -109,7 +109,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GateWay gateWay,
             int season)
         {
-            var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
+            // var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
+
+            // !!! Temp fix until index is added
+            var wins = new List<PlayerGameModeStatPerGateway>();
             return Ok(wins);
         }
 
