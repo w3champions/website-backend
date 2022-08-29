@@ -214,14 +214,14 @@ namespace WC3ChampionsStatisticService.Tests.Player
 
             await handler.Update(ev);
 
-            var winners = await playerRepository.LoadGameModeStatPerGateway("1_peter#123@10_wolf#456@10_GM_2v2_AT", GateWay.America, 1);
-            var losers = await playerRepository.LoadGameModeStatPerGateway("1_TEAM2#123@10_TEAM2#456@10_GM_2v2_AT", GateWay.America, 1);
+            var winners = await playerRepository.LoadGameModeStatPerGateway("1_peter#123@10_wolf#456@10_GM_2v2_AT");
+            var losers = await playerRepository.LoadGameModeStatPerGateway("1_TEAM2#123@10_TEAM2#456@10_GM_2v2_AT");
 
-            Assert.AreEqual(1, winners.First(x => x.GameMode == GameMode.GM_2v2_AT).Wins);
-            Assert.AreEqual(0, winners.First(x => x.GameMode == GameMode.GM_2v2_AT).Losses);
+            Assert.AreEqual(1, winners.Wins);
+            Assert.AreEqual(0, winners.Losses);
 
-            Assert.AreEqual(1, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Losses);
-            Assert.AreEqual(0, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Wins);
+            Assert.AreEqual(1, losers.Losses);
+            Assert.AreEqual(0, losers.Wins);
         }
 
         [Test]
@@ -249,18 +249,18 @@ namespace WC3ChampionsStatisticService.Tests.Player
 
             await handler.Update(ev);
 
-            var winnerP1 = await playerRepository.LoadGameModeStatPerGateway($"1_peter#123@10_GM_2v2", GateWay.America, 1);
-            var winnerP2 = await playerRepository.LoadGameModeStatPerGateway($"1_wolf#456@10_GM_2v2", GateWay.America, 1);
-            var losers = await playerRepository.LoadGameModeStatPerGateway("1_TEAM2#123@10_TEAM2#456@10_GM_2v2_AT", GateWay.America, 1);
+            var winnerP1 = await playerRepository.LoadGameModeStatPerGateway($"1_peter#123@10_GM_2v2");
+            var winnerP2 = await playerRepository.LoadGameModeStatPerGateway($"1_wolf#456@10_GM_2v2");
+            var losers = await playerRepository.LoadGameModeStatPerGateway("1_TEAM2#123@10_TEAM2#456@10_GM_2v2_AT");
 
-            Assert.AreEqual(1, winnerP1.First(x => x.GameMode == GameMode.GM_2v2).Wins);
-            Assert.AreEqual(0, winnerP1.First(x => x.GameMode == GameMode.GM_2v2).Losses);
+            Assert.AreEqual(1, winnerP1.Wins);
+            Assert.AreEqual(0, winnerP1.Losses);
 
-            Assert.AreEqual(1, winnerP2.First(x => x.GameMode == GameMode.GM_2v2).Wins);
-            Assert.AreEqual(0, winnerP2.First(x => x.GameMode == GameMode.GM_2v2).Losses);
+            Assert.AreEqual(1, winnerP2.Wins);
+            Assert.AreEqual(0, winnerP2.Losses);
 
-            Assert.AreEqual(1, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Losses);
-            Assert.AreEqual(0, losers.First(x => x.GameMode == GameMode.GM_2v2_AT).Wins);
+            Assert.AreEqual(1, losers.Losses);
+            Assert.AreEqual(0, losers.Wins);
         }
 
         [Test]

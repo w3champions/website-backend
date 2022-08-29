@@ -10,6 +10,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats
             Id = $"{season}_{battleTag}_@{gateWay}_{race}";
             Race = race;
             GateWay = gateWay;
+            BattleTag = battleTag;
             Season = season;
         }
 
@@ -17,5 +18,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats
         public GateWay GateWay { get; set; }
         public int Season { get; set; }
         public string Id { get; set; }
+        public string BattleTag { get; set; }
     }
 }
