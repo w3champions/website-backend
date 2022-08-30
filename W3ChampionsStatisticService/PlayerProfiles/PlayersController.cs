@@ -110,9 +110,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             int season)
         {
             var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
-
-            // !!! Temp fix until index is added
-            
             return Ok(wins);
         }
 
