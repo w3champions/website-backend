@@ -4,10 +4,6 @@ using MongoDB.Bson;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using System.Collections.Generic;
-using W3ChampionsStatisticService.Cache;
-using System;
-using W3ChampionsStatisticService.PersonalSettings;
-using System.Linq;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -15,9 +11,6 @@ namespace W3ChampionsStatisticService.Matches
     [Route("api/matches")]
     public class MatchesController : ControllerBase
     {
-        public static Dictionary<GameMode,CachedData<List<Matchup>>> _matchesCache;
-        public static Dictionary<GameMode, CachedData<long>> _matchesCountCache;
-
         private readonly IMatchRepository _matchRepository;
         private readonly MatchQueryHandler _matchQueryHandler;
 
@@ -25,64 +18,6 @@ namespace W3ChampionsStatisticService.Matches
         {
             _matchRepository = matchRepository;
             _matchQueryHandler = matchQueryHandler;
-
-            _matchesCache = new Dictionary<GameMode, CachedData<List<Matchup>>>();
-            _matchesCountCache = new Dictionary<GameMode, CachedData<long>>();
-            foreach (GameMode gm in Enum.GetValues(typeof(GameMode)))
-            {
-                _matchesCache.Add(gm, new CachedData<List<Matchup>>(() => FetchMatchDataSync(gm), TimeSpan.FromMinutes(1)));
-                _matchesCountCache.Add(gm,new CachedData<long>(() => FetchMatchCountSync(gm), TimeSpan.FromMinutes(1)));
-            }
-            
-        }
-        public List<Matchup> FetchMatchDataSync(GameMode gm)
-        {
-            try
-            {
-                return FetchMatchData(gm).GetAwaiter().GetResult();
-            }
-            catch
-            {
-                return new List<Matchup>();
-            }
-        }
-
-
-
-        private Task<List<Matchup>> FetchMatchData(GameMode gm)
-        {
-            GameMode gameMode = gm;
-
-            GateWay gateWay = GateWay.Undefined;
-            string map = "Overall";
-            int minMmr = 0;
-            int maxMmr = 3000;
-            int offset = 0;
-            int pageSize = 500;
-            return _matchRepository.Load(gateWay, gm, offset, pageSize, map, minMmr, maxMmr);
-        }
-        public long FetchMatchCountSync(GameMode gm)
-        {
-            try
-            {
-                return FetchMatchCount(gm).GetAwaiter().GetResult();
-
-            }
-            catch
-            {
-                return 0;
-            }
-        }
-
-
-        private Task<long> FetchMatchCount(GameMode gm)
-        {
-
-            GateWay gateWay = GateWay.Undefined;
-            string map = "Overall";
-            int minMmr = 0;
-            int maxMmr = 3000;
-            return _matchRepository.Count(gateWay, gm, map, minMmr, maxMmr);
         }
 
         [HttpGet("")]
@@ -98,16 +33,8 @@ namespace W3ChampionsStatisticService.Matches
             List<Matchup> matches = new List<Matchup>();
             long count = 0;
             if (pageSize > 100) pageSize = 100;
-            if (offset < 500 && (offset + pageSize) < 501 && map=="Overall" && minMmr==0 && maxMmr==3000)
-            {
-                _matchesCache[gameMode].GetCachedData().Skip(offset).Take(pageSize).ToList();
-            }
-            else
-            {
-                matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            }
-            count = _matchesCountCache[gameMode].GetCachedData();
-
+            matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
+            count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
             return Ok(new { matches, count });
         }
 
@@ -161,7 +88,7 @@ namespace W3ChampionsStatisticService.Matches
             var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
 
             await _matchQueryHandler.PopulatePlayerInfos(matches);
-
+            
             PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
             return Ok(new { matches, count });
