@@ -18,7 +18,8 @@ using W3ChampionsStatisticService.W3ChampionsStats;
 namespace WC3ChampionsStatisticService.Tests.Matches
 {
     [TestFixture]
-    public class MatchesTest : IntegrationTestBase
+    [Ignore("Use only when performance testing DB")]
+    public class DBPerformanceTest : IntegrationTestBase
     {
         [Test]
         public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
