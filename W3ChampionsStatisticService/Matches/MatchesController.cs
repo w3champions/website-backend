@@ -17,6 +17,7 @@ namespace W3ChampionsStatisticService.Matches
     {
         public static Dictionary<GameMode,CachedData<List<Matchup>>> _matchesCache;
         public static Dictionary<GameMode, CachedData<long>> _matchesCountCache;
+
         private readonly IMatchRepository _matchRepository;
         private readonly MatchQueryHandler _matchQueryHandler;
 
@@ -47,9 +48,11 @@ namespace W3ChampionsStatisticService.Matches
         }
 
 
+
         private Task<List<Matchup>> FetchMatchData(GameMode gm)
         {
             GameMode gameMode = gm;
+
             GateWay gateWay = GateWay.Undefined;
             string map = "Overall";
             int minMmr = 0;
@@ -63,6 +66,7 @@ namespace W3ChampionsStatisticService.Matches
             try
             {
                 return FetchMatchCount(gm).GetAwaiter().GetResult();
+
             }
             catch
             {
@@ -73,6 +77,7 @@ namespace W3ChampionsStatisticService.Matches
 
         private Task<long> FetchMatchCount(GameMode gm)
         {
+
             GateWay gateWay = GateWay.Undefined;
             string map = "Overall";
             int minMmr = 0;
@@ -102,6 +107,7 @@ namespace W3ChampionsStatisticService.Matches
                 matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
             }
             count = _matchesCountCache[gameMode].GetCachedData();
+
             return Ok(new { matches, count });
         }
 
