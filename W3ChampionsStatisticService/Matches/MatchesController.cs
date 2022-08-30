@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Matches
         public MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler)
         {
             _matchRepository = matchRepository;
-            _matchQueryHandler = matchQueryHandler;            
+            _matchQueryHandler = matchQueryHandler;
         }
 
         [HttpGet("")]
