@@ -19,7 +19,7 @@ namespace W3ChampionsStatisticService.Matches
             _matchRepository = matchRepository;
             _matchQueryHandler = matchQueryHandler;
         }
-
+         
         [HttpGet("")]
         public async Task<IActionResult> GetMatches(
             int offset = 0,
