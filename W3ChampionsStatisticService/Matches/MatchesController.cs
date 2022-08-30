@@ -18,6 +18,15 @@ namespace W3ChampionsStatisticService.Matches
         {
             _matchRepository = matchRepository;
             _matchQueryHandler = matchQueryHandler;
+
+            _matchesCache = new Dictionary<GameMode, CachedData<List<Matchup>>>();
+            _matchesCountCache = new Dictionary<GameMode, CachedData<long>>();
+            foreach (GameMode gm in Enum.GetValues(typeof(GameMode)))
+            {
+                _matchesCache.Add(gm, new CachedData<List<Matchup>>(() => FetchMatchDataSync(gm), TimeSpan.FromMinutes(1)));
+                _matchesCountCache.Add(gm,new CachedData<long>(() => FetchMatchCountSync(gm), TimeSpan.FromMinutes(1)));
+            }
+            
         }
 
         [HttpGet("")]
@@ -107,6 +116,54 @@ namespace W3ChampionsStatisticService.Matches
             PlayersObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
 
             return Ok(onGoingMatch);
+        }
+
+        public List<Matchup> FetchMatchDataSync(GameMode gm)
+        {
+            try
+            {
+                return FetchMatchData(gm).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                return new List<Matchup>();
+            }
+        }
+
+        private Task<List<Matchup>> FetchMatchData(GameMode gm)
+        {
+            GameMode gameMode = gm;
+
+            GateWay gateWay = GateWay.Undefined;
+            string map = "Overall";
+            int minMmr = 0;
+            int maxMmr = 3000;
+            int offset = 0;
+            int pageSize = 500;
+            return _matchRepository.Load(gateWay, gm, offset, pageSize, map, minMmr, maxMmr);
+        }
+
+        public long FetchMatchCountSync(GameMode gm)
+        {
+            try
+            {
+                return FetchMatchCount(gm).GetAwaiter().GetResult();
+
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private Task<long> FetchMatchCount(GameMode gm)
+        {
+
+            GateWay gateWay = GateWay.Undefined;
+            string map = "Overall";
+            int minMmr = 0;
+            int maxMmr = 3000;
+            return _matchRepository.Count(gateWay, gm, map, minMmr, maxMmr);
         }
     }
 }
