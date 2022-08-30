@@ -32,10 +32,10 @@ namespace W3ChampionsStatisticService.Matches
         {
             //temporarily disable getting finished matches
             List<Matchup> matches = new List<Matchup>();
-            int count = 0;
-            //if (pageSize > 100) pageSize = 100;
-            //var matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            //var count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
+            long count = 0;
+            if (pageSize > 100) pageSize = 100;
+            matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
+            count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
             return Ok(new { matches, count });
         }
 
