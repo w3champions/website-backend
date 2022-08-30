@@ -163,7 +163,7 @@ namespace W3ChampionsStatisticService.Matches
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (map == "Overall" || m.Map == map))
-                .SortByDescending(s => s.Id)
+                .SortByDescending(s => s.EndTime)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
