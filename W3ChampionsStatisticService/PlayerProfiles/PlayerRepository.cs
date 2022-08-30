@@ -76,6 +76,29 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(lower));
         }
 
+        public async Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(string search)
+        {
+            var searchLower = search.ToLower();
+
+            var fieldsBuilder = Builders<PlayerSearchInfo>.Projection;
+            var fields = fieldsBuilder.Include(d => d.Name).Include(d => d.ParticipatedInSeasons);
+
+            var playerStats = CreateCollection<PlayerSearchInfo>(nameof(PlayerOverallStats));
+            var personalSettings = CreateCollection<PersonalSetting>();
+            var result = await playerStats
+                .Aggregate()
+                .Match(p => p.BattleTag.ToLower().Contains(searchLower))
+                .Project<PlayerSearchInfo>(fields)
+                .SortBy(p => p.BattleTag)
+                .Lookup<PlayerSearchInfo, PersonalSetting, PlayerSearchInfo>(personalSettings,
+                    p => p.BattleTag,
+                    ps => ps.Id,
+                    p => p.PersonalSettings)
+                .ToListAsync();
+
+            return result;
+        }
+
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
             return LoadFirst<PlayerGameModeStatPerGateway>(id);

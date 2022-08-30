@@ -41,6 +41,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _playerAkaProvider = playerAkaProvider;
         }
 
+        [HttpGet("global_search")]
+        public async Task<IActionResult> GlobalSearchPlayer(string search, int page = 1, int page_size = 10)
+        {
+            // TODO: add pagination
+            var players = await _playerRepository.GlobalSearchForPlayer(search);
+            return Ok(players);
+        }
+
         [HttpGet("{battleTag}")]
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, [FromQuery] string authorization)
         {
