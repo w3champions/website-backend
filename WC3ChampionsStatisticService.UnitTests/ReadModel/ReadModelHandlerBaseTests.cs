@@ -99,7 +99,7 @@ namespace WC3ChampionsStatisticService.Tests.ReadModel
 
             await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
 
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
             var versionRepository = new VersionRepository(MongoClient);
 
             var handler = new ReadModelHandler<MatchReadModelHandler>(
@@ -111,7 +111,7 @@ namespace WC3ChampionsStatisticService.Tests.ReadModel
 
             var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
 
-            var matches = await matchRepository.Load();
+            var matches = matchRepository.Load();
 
             Assert.AreEqual(1, version.Season);
             Assert.AreEqual(fakeEvent5.Id.ToString(), version.Version);

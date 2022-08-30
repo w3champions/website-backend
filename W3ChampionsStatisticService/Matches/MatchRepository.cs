@@ -8,16 +8,18 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Matches
 {
     public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
     {
         private readonly IOngoingMatchesCache _cache;
-
-        public MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : base(mongoClient)
+        private MatchesProvider _matchesProvider;
+        public MatchRepository(MongoClient mongoClient, MatchesProvider matchesProvider, IOngoingMatchesCache cache) : base(mongoClient)
         {
             _cache = cache;
+            _matchesProvider = matchesProvider;
         }
 
         public Task Insert(Matchup matchup)
@@ -149,7 +151,7 @@ namespace W3ChampionsStatisticService.Matches
                 playerBlizzard.resourceScore);
         }
 
-        public Task<List<Matchup>> Load(
+        public List<Matchup> Load(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             int offset = 0,
@@ -158,28 +160,17 @@ namespace W3ChampionsStatisticService.Matches
             int minMmr = 0,
             int maxMmr = 3000)
         {
-            var mongoCollection = CreateCollection<Matchup>();
-            return mongoCollection
-                .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map))
-                .SortByDescending(s => s.EndTime)
-                .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
+            return _matchesProvider.GetMatches(offset,pageSize,gameMode,gateWay,map,minMmr,maxMmr);
         }
 
-        public Task<long> Count(
+        public long Count(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             string map = "Overall",
             int minMmr = 0,
             int maxMmr = 3000)
         {
-            return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                    (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map));
+            return _matchesProvider.GetCount(gameMode,gateWay,map,minMmr,maxMmr);
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)

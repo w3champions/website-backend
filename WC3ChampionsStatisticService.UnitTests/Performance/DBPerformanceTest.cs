@@ -41,7 +41,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         [Test]
         public async Task LoadMatchesColorful()
         {
-            var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchesRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
             Stopwatch sw = new Stopwatch();
             sw.Start();
             string playerId = "COLORFUL#5214";
@@ -65,7 +65,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         [Test]
         public async Task LoadCountColorful()
         {
-            var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchesRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
             Stopwatch sw = new Stopwatch();
             sw.Start();
             string playerId = "COLORFUL#5214";
@@ -89,7 +89,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         [Test]
         public async Task LoadMatchesShaDe()
         {
-            var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchesRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
             Stopwatch sw = new Stopwatch();
             sw.Start();
             string playerId = "ShaDeFaDe#2441";
@@ -113,7 +113,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         [Test]
         public async Task LoadCountShaDe()
         {
-            var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchesRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
             Stopwatch sw = new Stopwatch();
             sw.Start();
             string playerId = "ShaDeFaDe#2441";

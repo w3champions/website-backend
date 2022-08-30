@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
             matchFinishedEvent.match.id = "nmhcCLaRc7";
             matchFinishedEvent.Id = ObjectId.GenerateNewId();
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -34,7 +34,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
 
             await InsertMatchEvent(matchFinishedEvent);
 
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -58,7 +58,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
 
             await InsertMatchEvent(matchFinishedEvent);
 
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -84,7 +84,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
 
             await InsertMatchEvent(matchFinishedEvent);
 
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -110,7 +110,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
 
             await InsertMatchEvent(matchFinishedEvent);
 
-            var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+            var matchRepository = new MatchRepository(MongoClient, matchesProvider, new OngoingMatchesCache(MongoClient));
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 

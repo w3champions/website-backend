@@ -61,7 +61,7 @@ namespace W3ChampionsStatisticService
             });
 
             var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
-            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
 
             var mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
             mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
@@ -78,6 +78,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<TrackingService>();
             services.AddSingleton<PlayerAkaProvider>();
             services.AddSingleton<PersonalSettingsProvider>();
+            services.AddSingleton<MatchesProvider>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();

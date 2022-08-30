@@ -30,13 +30,12 @@ namespace W3ChampionsStatisticService.Matches
             int minMmr = 0,
             int maxMmr = 3000)
         {
-            List<Matchup> matches = new List<Matchup>();
-            long count = 0;
             if (pageSize > 100) pageSize = 100;
-            //matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            //count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
-            //return Ok(new { matches, count });
-            return Ok();
+            List<Matchup> matches = _matchRepository.Load(gateWay,gameMode,offset,pageSize,map,minMmr,maxMmr);
+            long count = _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
+
+            
+            return Ok(new { matches, count });
         }
 
         [HttpGet("{id}")]

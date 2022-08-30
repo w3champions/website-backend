@@ -15,11 +15,12 @@ namespace WC3ChampionsStatisticService.Tests
         protected readonly MongoClient MongoClient = new MongoClient("mongodb://157.90.1.251:3512/");
 
         protected PersonalSettingsProvider personalSettingsProvider;
-
+        protected MatchesProvider matchesProvider;
         [SetUp]
         public async Task Setup()
         {
             await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service");
+            matchesProvider = new MatchesProvider(MongoClient);
             personalSettingsProvider= new PersonalSettingsProvider(MongoClient);
         }
 
