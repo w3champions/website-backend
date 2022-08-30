@@ -15,9 +15,8 @@ namespace W3ChampionsStatisticService.Matches
     [Route("api/matches")]
     public class MatchesController : ControllerBase
     {
-        public static Dictionary<GameMode,CachedData<List<Matchup>>> _matchesCache;
-        public static Dictionary<GameMode, CachedData<long>> _matchesCountCache;
-
+        public static CachedData<List<Matchup>> _matchesCache;
+        public static CachedData<long> _matchesCountCache;
         private readonly IMatchRepository _matchRepository;
         private readonly MatchQueryHandler _matchQueryHandler;
 
@@ -25,21 +24,14 @@ namespace W3ChampionsStatisticService.Matches
         {
             _matchRepository = matchRepository;
             _matchQueryHandler = matchQueryHandler;
-
-            _matchesCache = new Dictionary<GameMode, CachedData<List<Matchup>>>();
-            _matchesCountCache = new Dictionary<GameMode, CachedData<long>>();
-            foreach (GameMode gm in Enum.GetValues(typeof(GameMode)))
-            {
-                _matchesCache.Add(gm, new CachedData<List<Matchup>>(() => FetchMatchDataSync(gm), TimeSpan.FromMinutes(1)));
-                _matchesCountCache.Add(gm,new CachedData<long>(() => FetchMatchCountSync(gm), TimeSpan.FromMinutes(1)));
-            }
-            
+            _matchesCache = new CachedData<List<Matchup>>(() => FetchMatchDataSync(), TimeSpan.FromMinutes(1));
+            _matchesCountCache = new CachedData<long>(() => FetchMatchCountSync(), TimeSpan.FromMinutes(1));
         }
-        public List<Matchup> FetchMatchDataSync(GameMode gm)
+        public List<Matchup> FetchMatchDataSync()
         {
             try
             {
-                return FetchMatchData(gm).GetAwaiter().GetResult();
+                return FetchMatchData().GetAwaiter().GetResult();
             }
             catch
             {
@@ -48,25 +40,22 @@ namespace W3ChampionsStatisticService.Matches
         }
 
 
-
-        private Task<List<Matchup>> FetchMatchData(GameMode gm)
+        private Task<List<Matchup>> FetchMatchData()
         {
-            GameMode gameMode = gm;
-
+            GameMode gameMode = GameMode.Undefined;
             GateWay gateWay = GateWay.Undefined;
             string map = "Overall";
             int minMmr = 0;
             int maxMmr = 3000;
             int offset = 0;
             int pageSize = 500;
-            return _matchRepository.Load(gateWay, gm, offset, pageSize, map, minMmr, maxMmr);
+            return _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
         }
-        public long FetchMatchCountSync(GameMode gm)
+        public long FetchMatchCountSync()
         {
             try
             {
-                return FetchMatchCount(gm).GetAwaiter().GetResult();
-
+                return FetchMatchCount().GetAwaiter().GetResult();
             }
             catch
             {
@@ -75,14 +64,14 @@ namespace W3ChampionsStatisticService.Matches
         }
 
 
-        private Task<long> FetchMatchCount(GameMode gm)
+        private Task<long> FetchMatchCount()
         {
-
+            GameMode gameMode = GameMode.Undefined;
             GateWay gateWay = GateWay.Undefined;
             string map = "Overall";
             int minMmr = 0;
             int maxMmr = 3000;
-            return _matchRepository.Count(gateWay, gm, map, minMmr, maxMmr);
+            return _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
         }
 
         [HttpGet("")]
@@ -98,16 +87,15 @@ namespace W3ChampionsStatisticService.Matches
             List<Matchup> matches = new List<Matchup>();
             long count = 0;
             if (pageSize > 100) pageSize = 100;
-            if (offset < 500 && (offset + pageSize) < 501 && map=="Overall" && minMmr==0 && maxMmr==3000)
+            if (offset < 500 && (offset + pageSize) < 501)
             {
-                _matchesCache[gameMode].GetCachedData().Skip(offset).Take(pageSize).ToList();
+                _matchesCache.GetCachedData().Skip(offset).Take(pageSize).ToList();
             }
             else
             {
                 matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
             }
-            count = _matchesCountCache[gameMode].GetCachedData();
-
+            count = _matchesCountCache.GetCachedData();
             return Ok(new { matches, count });
         }
 
