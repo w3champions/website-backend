@@ -30,7 +30,6 @@ namespace W3ChampionsStatisticService.Matches
             int minMmr = 0,
             int maxMmr = 3000)
         {
-            //temporarily disable getting finished matches
             List<Matchup> matches = new List<Matchup>();
             long count = 0;
             if (pageSize > 100) pageSize = 100;
