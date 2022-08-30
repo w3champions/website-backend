@@ -4,6 +4,9 @@ using MongoDB.Bson;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
 using System.Collections.Generic;
+using W3ChampionsStatisticService.Cache;
+using System;
+using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -11,6 +14,8 @@ namespace W3ChampionsStatisticService.Matches
     [Route("api/matches")]
     public class MatchesController : ControllerBase
     {
+        //public static CachedData<List<Matchup>> _matchesCache;
+        public static CachedData<long> _matchesCountCache;
         private readonly IMatchRepository _matchRepository;
         private readonly MatchQueryHandler _matchQueryHandler;
 
@@ -18,8 +23,32 @@ namespace W3ChampionsStatisticService.Matches
         {
             _matchRepository = matchRepository;
             _matchQueryHandler = matchQueryHandler;
+            // _matchesCache = new CachedData<List<Matchup>>(() => FetchMatchupData(), TimeSpan.FromMinutes(1));
+            _matchesCountCache = new CachedData<long>(() => FetchMatchCountDataSync(), TimeSpan.FromMinutes(1));
         }
-         
+
+        public long FetchMatchCountDataSync()
+        {
+            try
+            {
+                return FetchPersonalSettings().GetAwaiter().GetResult();
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+
+        private Task<long> FetchPersonalSettings()
+        {
+            GameMode gameMode = GameMode.Undefined;
+            GateWay gateWay = GateWay.Undefined;
+            string map = "Overall";
+            int minMmr = 0;
+            int maxMmr = 3000;
+            return _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
+        }
         [HttpGet("")]
         public async Task<IActionResult> GetMatches(
             int offset = 0,
@@ -34,7 +63,7 @@ namespace W3ChampionsStatisticService.Matches
             long count = 0;
             if (pageSize > 100) pageSize = 100;
             matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
+            count = _matchesCountCache.GetCachedData();
             return Ok(new { matches, count });
         }
 
@@ -88,7 +117,7 @@ namespace W3ChampionsStatisticService.Matches
             var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
 
             await _matchQueryHandler.PopulatePlayerInfos(matches);
-            
+
             PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
             return Ok(new { matches, count });
