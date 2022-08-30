@@ -60,10 +60,10 @@ namespace W3ChampionsStatisticService.Matches
             int maxMmr = 3000)
         {
             List<Matchup> matches = new List<Matchup>();
-            int count = 0;
-            //if (pageSize > 100) pageSize = 100;
-            //var matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            //var count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
+            long count = 0;
+            if (pageSize > 100) pageSize = 100;
+            matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
+            count = _matchesCountCache.GetCachedData();
             return Ok(new { matches, count });
         }
 
