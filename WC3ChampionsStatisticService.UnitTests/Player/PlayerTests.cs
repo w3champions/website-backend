@@ -73,6 +73,28 @@ namespace WC3ChampionsStatisticService.Tests.Player
         }
 
         [Test]
+        public async Task GlobalSearch()
+        {
+            var playerRepository = new PlayerRepository(MongoClient);
+
+            var player1 = PlayerOverallStats.Create("ThunderHorn#2481");
+            await playerRepository.UpsertPlayer(player1);
+            var player2 = PlayerOverallStats.Create("ThunderHorn#21132");
+            await playerRepository.UpsertPlayer(player2);
+            var player3 = PlayerOverallStats.Create("OtherPlayer#123");
+            await playerRepository.UpsertPlayer(player3);
+
+            var players = await playerRepository.GlobalSearchForPlayer("under");
+            Assert.AreEqual(2, players.Count);
+            Assert.AreEqual(player2.BattleTag, players[0].BattleTag);
+            Assert.AreEqual(player1.BattleTag, players[1].BattleTag);
+
+            players = await playerRepository.GlobalSearchForPlayer("under", "ThunderHorn#21132");
+            Assert.AreEqual(1, players.Count);
+            Assert.AreEqual(player1.BattleTag, players[0].BattleTag);
+        }
+
+        [Test]
         public async Task PlayerMapping()
         {
             var playerRepository = new PlayerRepository(MongoClient);
