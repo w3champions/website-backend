@@ -116,10 +116,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GateWay gateWay,
             int season)
         {
-            // var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
-
-            // !!! Temp fix until index is added
-            var wins = new List<PlayerGameModeStatPerGateway>();
+            var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
             return Ok(wins);
         }
 
@@ -129,16 +126,15 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             GateWay gateWay,
             int season)
         {
-            //var wins = await _playerRepository.LoadRaceStatPerGateway(battleTag, gateWay, season);
-            //var ordered = wins.OrderBy(s => s.Race).ToList();
-            //var firstPick = ordered.FirstOrDefault();
-            //if (firstPick?.Race != Race.RnD) return Ok(ordered);
+            var wins = await _playerRepository.LoadRaceStatPerGateway(battleTag, gateWay, season);
+            var ordered = wins.OrderBy(s => s.Race).ToList();
+            var firstPick = ordered.FirstOrDefault();
+            if (firstPick?.Race != Race.RnD) return Ok(ordered);
 
-            //ordered.Remove(firstPick);
-            //ordered.Add(firstPick);
+            ordered.Remove(firstPick);
+            ordered.Add(firstPick);
 
-            // !!! Temp fix until index is added
-            var ordered = new List<PlayerRaceStatPerGateway>();
+            
             return Ok(ordered);
         }
 
