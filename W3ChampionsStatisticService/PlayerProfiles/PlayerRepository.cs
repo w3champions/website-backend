@@ -76,7 +76,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(lower));
         }
 
-        public async Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(string search)
+        public async Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(
+          string search,
+          string lastObjectId = "",
+          int pageSize = 20
+        )
         {
             var searchLower = search.ToLower();
 
@@ -87,9 +91,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var personalSettings = CreateCollection<PersonalSetting>();
             var result = await playerStats
                 .Aggregate()
-                .Match(p => p.BattleTag.ToLower().Contains(searchLower))
+                .Match(
+                  p => p.BattleTag.ToLower().Contains(searchLower)
+                    && p.BattleTag.CompareTo(lastObjectId) > 0
+                )
                 .Project<PlayerSearchInfo>(fields)
                 .SortBy(p => p.BattleTag)
+                .Limit(pageSize)
                 .Lookup<PlayerSearchInfo, PersonalSetting, PlayerSearchInfo>(personalSettings,
                     p => p.BattleTag,
                     ps => ps.Id,

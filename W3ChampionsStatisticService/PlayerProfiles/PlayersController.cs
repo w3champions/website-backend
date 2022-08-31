@@ -42,10 +42,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("global_search")]
-        public async Task<IActionResult> GlobalSearchPlayer(string search, int page = 1, int page_size = 10)
+        public async Task<IActionResult> GlobalSearchPlayer(string search, string lastObjectId = "", int pageSize = 20)
         {
-            // TODO: add pagination
-            var players = await _playerRepository.GlobalSearchForPlayer(search);
+            var players = await _playerRepository.GlobalSearchForPlayer(search, lastObjectId, pageSize);
             return Ok(players);
         }
 
