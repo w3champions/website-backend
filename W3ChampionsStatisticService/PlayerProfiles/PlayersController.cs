@@ -41,7 +41,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _playerAkaProvider = playerAkaProvider;
         }
 
-        [HttpGet("global_search")]
+        [HttpGet("global-search")]
         public async Task<IActionResult> GlobalSearchPlayer(string search, string lastObjectId = "", int pageSize = 20)
         {
             var players = await _playerRepository.GlobalSearchForPlayer(search, lastObjectId, pageSize);
