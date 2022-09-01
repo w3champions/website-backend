@@ -11,6 +11,7 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
@@ -84,27 +85,29 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var searchLower = search.ToLower();
 
-            var fieldsBuilder = Builders<PlayerSearchInfo>.Projection;
-            var fields = fieldsBuilder.Include(d => d.Name).Include(d => d.ParticipatedInSeasons);
+            var fields = Builders<PersonalSettingSearch>
+              .Projection
+              .Include(d => d.Name)
+              .Include(d => d.ProfilePicture);
 
-            var playerStats = CreateCollection<PlayerSearchInfo>(nameof(PlayerOverallStats));
-            var personalSettings = CreateCollection<PersonalSetting>();
-            var result = await playerStats
+            var personalSettings = CreateCollection<PersonalSettingSearch>(nameof(PersonalSetting));
+            var playerStats = CreateCollection<PlayerOverallStats>();
+            var result = await personalSettings
                 .Aggregate()
                 .Match(
                   p => p.BattleTag.ToLower().Contains(searchLower)
                     && p.BattleTag.CompareTo(lastObjectId) > 0
                 )
-                .Project<PlayerSearchInfo>(fields)
+                .Project<PersonalSettingSearch>(fields)
                 .SortBy(p => p.BattleTag)
                 .Limit(pageSize)
-                .Lookup<PlayerSearchInfo, PersonalSetting, PlayerSearchInfo>(personalSettings,
-                    p => p.BattleTag,
-                    ps => ps.Id,
-                    p => p.PersonalSettings)
+                .Lookup<PersonalSettingSearch, PlayerOverallStats, PersonalSettingSearch>(playerStats,
+                    personalSetting => personalSetting.BattleTag,
+                    playerStat => playerStat.BattleTag,
+                    personalSetting => personalSetting.PlayerStats)
                 .ToListAsync();
 
-            return result;
+            return result.Select(ps => new PlayerSearchInfo(ps)).ToList();
         }
 
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)

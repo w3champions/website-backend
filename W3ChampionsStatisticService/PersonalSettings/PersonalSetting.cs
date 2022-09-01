@@ -23,8 +23,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
         [JsonIgnore]
         [BsonIgnoreIfNull]
         public PlayerOverallStats RaceWins { get; set; }
-        [JsonIgnore]
-        [BsonIgnoreIfNull]
         public List<RaceWinLoss> WinLosses => RaceWins.WinLosses;
 
         public string Twitch { get; set; }
@@ -98,8 +96,6 @@ namespace W3ChampionsStatisticService.PersonalSettings
             SpecialPictures = specialPictures;
         }
 
-        [JsonIgnore]
-        [BsonIgnoreIfNull]
         public List<AvatarCategoryToMaxPictureId> PickablePictures => new List<AvatarCategoryToMaxPictureId>
         {
             new AvatarCategoryToMaxPictureId(AvatarCategory.HU, GetMaxPictureIdForRace(Race.HU)),
