@@ -14,20 +14,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GlobalSearch
         public List<Season> Seasons { get; set; }
         public ProfilePicture ProfilePicture { get; set; }
 
-        public PlayerSearchInfo(PersonalSettingSearch p)
+        public PlayerSearchInfo(PersonalSetting p)
         {
-          BattleTag = p.BattleTag;
-          Name = p.BattleTag.Split("#")[0];
-          if (p.PlayerStats.Length > 0) {
-            Seasons = p.PlayerStats[0]
-                       .ParticipatedInSeasons
-                       .OrderByDescending(s => s.Id)
-                       .Take(3)
-                       .ToList();
-          } else {
-            Seasons = new List<Season>();
-          }
+          BattleTag = p.Id;
+          Name = p.Id.Split("#")[0];
+          Seasons = new List<Season>();
           ProfilePicture = p.ProfilePicture;
+        }
+
+        public void SetSeasons(PlayerOverallStats p)
+        {
+          Seasons = p
+            .ParticipatedInSeasons
+            .OrderByDescending(s => s.Id)
+            .Take(3)
+            .ToList();
         }
     }
 }

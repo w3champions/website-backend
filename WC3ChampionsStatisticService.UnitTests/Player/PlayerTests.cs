@@ -75,7 +75,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task GlobalSearch()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, personalSettingsProvider);
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
 
             var player1 = new PersonalSetting("ThunderHorn#2481");

@@ -13,15 +13,18 @@ using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
         private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
+        private PersonalSettingsProvider _personalSettingsProvider;
 
-        public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
+        public PlayerRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider = null) : base(mongoClient)
         {
+          _personalSettingsProvider = personalSettingsProvider;
         }
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
@@ -85,29 +88,34 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         {
             var searchLower = search.ToLower();
 
-            var fields = Builders<PersonalSettingSearch>
-              .Projection
-              .Include(d => d.Name)
-              .Include(d => d.ProfilePicture);
+            // Fetch entire cache
+            var personalSettings = _personalSettingsProvider.GetPersonalSettings();
 
-            var personalSettings = CreateCollection<PersonalSettingSearch>(nameof(PersonalSetting));
-            var playerStats = CreateCollection<PlayerOverallStats>();
-            var result = await personalSettings
-                .Aggregate()
-                .Match(
-                  p => p.BattleTag.ToLower().Contains(searchLower)
-                    && p.BattleTag.CompareTo(lastObjectId) > 0
-                )
-                .Project<PersonalSettingSearch>(fields)
-                .SortBy(p => p.BattleTag)
-                .Limit(pageSize)
-                .Lookup<PersonalSettingSearch, PlayerOverallStats, PersonalSettingSearch>(playerStats,
-                    personalSetting => personalSetting.BattleTag,
-                    playerStat => playerStat.BattleTag,
-                    personalSetting => personalSetting.PlayerStats)
-                .ToListAsync();
+            // Filter cached personal settings
+            var result = personalSettings
+              .Where(ps => ps.Id.ToLower().Contains(searchLower)
+                 && ps.Id.CompareTo(lastObjectId) > 0)
+              .OrderBy(ps => ps.Id)
+              .Take(pageSize)
+              .Select(ps => new PlayerSearchInfo(ps))
+              .ToList();
+            var personalSettingIds = result.Select(ps => ps.BattleTag).ToHashSet();
 
-            return result.Select(ps => new PlayerSearchInfo(ps)).ToList();
+            // Fetch corresponding stats to fill in seasons
+            var playerStats = await CreateCollection<PlayerOverallStats>()
+              .Find(ps => personalSettingIds.Contains(ps.BattleTag))
+              .ToListAsync();
+            var playerStatsMap = playerStats.ToDictionary(ps => ps.BattleTag);
+
+            // Populate seasons for each player
+            foreach (var player in result) {
+              playerStatsMap.TryGetValue(player.BattleTag, out var y);
+              if (y != null) {
+                player.SetSeasons(y);
+              }
+            }
+
+            return result;
         }
 
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
