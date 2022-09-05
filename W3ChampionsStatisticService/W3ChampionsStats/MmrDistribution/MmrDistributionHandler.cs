@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
+using System;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
 {
@@ -23,7 +24,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
             var highest = ranges.First();
             var grouped = ranges.Select(r => new MmrCount(r, orderedMMrs.Count(x => ((x - r < 25) && (x >= r)) || x >= highest))).ToList();
             grouped.Remove(grouped.Last());
-            return new MmrStats(grouped, orderedMMrs);
+            var standardDeviation = CalculateStandardDeviation(mmrs);
+            return new MmrStats(grouped, orderedMMrs, standardDeviation);
         }
 
         private static IEnumerable<int> Ranges(int max, int min, int steps)
@@ -33,6 +35,21 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
                 max -= steps;
                 yield return max;
             }
+        }
+
+        private static double CalculateStandardDeviation(List<int> values)
+        {
+          if (!values.Any())
+          {
+            return 0.0;
+          }
+
+          double average = values.Average();
+          double sum = values.Sum(val => (val - average) * (val - average));
+          double result = Math.Sqrt(sum / values.Count());
+          result = Math.Round(result, 2);
+
+          return result;
         }
     }
 
@@ -47,7 +64,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
 
         public List<MmrCount> DistributedMmrs { get; }
 
-        public MmrStats(List<MmrCount> distributedMmrs, List<int> mmrs)
+        public double StandardDeviation { get; set; }
+
+        public MmrStats(List<MmrCount> distributedMmrs, List<int> mmrs, double standardDeviation)
         {
             DistributedMmrs = distributedMmrs;
 
@@ -56,6 +75,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
             Top10PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 10]));
             Top25ercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 4]));
             Top50PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 2]));
+
+            StandardDeviation = standardDeviation;
         }
     }
 }
