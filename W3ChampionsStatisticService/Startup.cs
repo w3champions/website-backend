@@ -78,6 +78,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<TrackingService>();
             services.AddSingleton<PlayerAkaProvider>();
             services.AddSingleton<PersonalSettingsProvider>();
+            services.AddSingleton<MatchmakingProvider>();
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
