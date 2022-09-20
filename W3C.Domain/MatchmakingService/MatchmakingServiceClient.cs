@@ -12,6 +12,7 @@ using System.Web;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingContracts;
 using W3C.Domain.MatchmakingService.MatchmakingContracts;
+using W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments;
 using W3C.Domain.Repositories;
 
 namespace W3C.Domain.MatchmakingService
@@ -152,6 +153,24 @@ namespace W3C.Domain.MatchmakingService
             return result.StatusCode;
         }
 
+        public async Task<TournamentsResponse> GetTournaments()
+        {
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentsResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> GetTournament(string id)
+        {
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments/{id}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
         private async Task HandleMMError(HttpResponseMessage response)
         {
             var errorReponse = await GetResult<ErrorResponse>(response);
@@ -266,5 +285,15 @@ namespace W3C.Domain.MatchmakingService
 
         public string banReason { get; set; }
         public string Id => battleTag;
+    }
+
+    public class TournamentsResponse
+    {
+        public Tournament[] tournaments { get; set; }
+    }
+
+    public class TournamentResponse
+    {
+        public Tournament tournament { get; set; }
     }
 }

@@ -1,9 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3ChampionsStatisticService.Tournaments.Models;
-using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Tournaments
 {
@@ -12,31 +9,39 @@ namespace W3ChampionsStatisticService.Tournaments
     public class TournamentsController : ControllerBase
     {
         private readonly TournamentsRepository _tournamentsRepository;
-        public TournamentsController(TournamentsRepository tournamentsRepository)
+        private readonly MatchmakingServiceClient _matchmakingServiceRepository;
+
+        public TournamentsController(
+          TournamentsRepository tournamentsRepository,
+          MatchmakingServiceClient matchmakingServiceRepository)
         {
             _tournamentsRepository = tournamentsRepository;
+            _matchmakingServiceRepository = matchmakingServiceRepository;
         }
 
         [HttpGet("")]
         public async Task<IActionResult> GetTournaments()
         {
-            List<Tournament> result = await _tournamentsRepository.GetAll();
-
-            result = result ?? new List<Tournament>();
-
-            result = result.OrderByDescending(x => x.CreatedOn).ToList();
-
-            return Ok(new { tournaments = result });
+            var tournaments = await _matchmakingServiceRepository.GetTournaments();
+            return Ok(tournaments);
         }
 
-        [HttpPut("{id}")]
-        [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> UpdateTournament(string id, Tournament tournament)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTournaments(string id)
         {
-            tournament.Id = new MongoDB.Bson.ObjectId(id);
-            await _tournamentsRepository.Save(tournament);
-
+            var tournament = await _matchmakingServiceRepository.GetTournament(id);
             return Ok(tournament);
         }
+
+        // TODO: implement this
+        // [HttpPut("{id}")]
+        // [CheckIfBattleTagIsAdmin]
+        // public async Task<IActionResult> UpdateTournament(string id, Tournament tournament)
+        // {
+        //     tournament.Id = new MongoDB.Bson.ObjectId(id);
+        //     await _tournamentsRepository.Save(tournament);
+
+        //     return Ok(tournament);
+        // }
     }
 }
