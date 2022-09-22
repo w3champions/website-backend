@@ -1,10 +1,7 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using W3C.Domain.ReplayService.Contracts;
-using W3C.Domain.UpdateService.Contracts;
 
 namespace W3C.Domain.UpdateService
 {
@@ -21,7 +18,11 @@ namespace W3C.Domain.UpdateService
 
         public async Task<Stream> GenerateReplay(int gameId)
         {
-            return await _httpClient.GetStreamAsync($"{ReplayServiceUrl}/generate/{gameId}?secret={AdminSecret}");
+            var stream = await _httpClient.GetStreamAsync($"{ReplayServiceUrl}/generate/{gameId}?secret={AdminSecret}");
+            var memStream = new MemoryStream();
+            await stream.CopyToAsync(memStream);
+            memStream.Seek(0, SeekOrigin.Begin);
+            return memStream;
         }
     }
 }
