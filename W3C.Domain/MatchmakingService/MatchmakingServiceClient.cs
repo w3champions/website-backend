@@ -9,11 +9,13 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Dynamic;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingContracts;
 using W3C.Domain.MatchmakingService.MatchmakingContracts;
 using W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments;
 using W3C.Domain.Repositories;
+using System.Net.Http.Json;
 
 namespace W3C.Domain.MatchmakingService
 {
@@ -171,6 +173,106 @@ namespace W3C.Domain.MatchmakingService
             return deserializeObject;
         }
 
+        public async Task<TournamentResponse> GetUpcomingTournament(GateWay gateway)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/upcoming";
+            if (gateway != GateWay.Undefined) {
+              url += $"?gateway={(int) gateway}";
+            }
+            var result = await _httpClient.GetAsync(url);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> RegisterPlayer(string id, string battleTag, Race race)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
+
+            var data = new
+            {
+                battleTag = battleTag,
+                race = race,
+                secret = AdminSecret,
+            };
+            JsonContent postBody = JsonContent.Create(data);
+            var result = await _httpClient.PostAsync(url, postBody);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> UpdateTournament(string id, TournamentUpdateBody updates)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/{id}";
+
+            dynamic data = new ExpandoObject();
+            if (updates.Name != null) {
+              data.name = updates.Name;
+            }
+            if (updates.StartDateTime != null) {
+              data.startDateTime = updates.StartDateTime;
+            }
+            if (updates.State != null) {
+              data.state = updates.State;
+            }
+            if (updates.Gateway != null) {
+              data.gateway = updates.Gateway;
+            }
+            if (updates.Mode != null) {
+              data.mode = updates.Mode;
+            }
+            if (updates.Format != null) {
+              data.format = updates.Format;
+            }
+            if (updates.MapPool != null) {
+              data.mapPool = updates.MapPool;
+            }
+            data.secret = AdminSecret;
+
+            JsonContent patchBody = JsonContent.Create(data);
+            var result = await _httpClient.PatchAsync(url, patchBody);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> CreateTournament(TournamentUpdateBody updates)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments";
+
+            dynamic data = new ExpandoObject();
+            if (updates.Name != null) {
+              data.name = updates.Name;
+            }
+            if (updates.StartDateTime != null) {
+              data.startDateTime = updates.StartDateTime;
+            }
+            if (updates.Gateway != null) {
+              data.gateway = updates.Gateway;
+            }
+            if (updates.Mode != null) {
+              data.mode = updates.Mode;
+            }
+            if (updates.Format != null) {
+              data.format = updates.Format;
+            }
+            if (updates.MapPool != null) {
+              data.mapPool = updates.MapPool;
+            }
+            data.secret = AdminSecret;
+
+            JsonContent postBody = JsonContent.Create(data);
+            var result = await _httpClient.PostAsync(url, postBody);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
         private async Task HandleMMError(HttpResponseMessage response)
         {
             var errorReponse = await GetResult<ErrorResponse>(response);
@@ -195,7 +297,7 @@ namespace W3C.Domain.MatchmakingService
 
         private List<FormattedQueue> FormatQueueData(List<Queue> allQueues)
         {
-            try 
+            try
             {
                 var formattedAllQueueData = new List<FormattedQueue>();
                 if (allQueues != null) {
@@ -203,7 +305,7 @@ namespace W3C.Domain.MatchmakingService
                     {
                         var gameModeQueue = new FormattedQueue();
                         gameModeQueue.gameMode = queue.gameMode;
-                        
+
                         var formattedSingleQueueData = new List<FormattedPlayerData>();
 
                         if (queue.snapshot.Count > 0) {
@@ -228,7 +330,7 @@ namespace W3C.Domain.MatchmakingService
                                 formattedPlayerData.isFloConnected = playerData.isFloConnected;
                                 formattedPlayerData.location = playerData.playerData[0].location;
                                 formattedPlayerData.serverOption = playerData.playerData[0].serverOption;
-                                
+
                                 formattedSingleQueueData.Add(formattedPlayerData);
                             }
                         }
@@ -237,14 +339,14 @@ namespace W3C.Domain.MatchmakingService
                         formattedAllQueueData.Add(gameModeQueue);
                     }
                 }
-            
+
                 return formattedAllQueueData;
             }
             catch
             {
                 return new List<FormattedQueue>();
             }
-            
+
         }
     }
 
@@ -295,5 +397,17 @@ namespace W3C.Domain.MatchmakingService
     public class TournamentResponse
     {
         public Tournament tournament { get; set; }
+        public string error { get; set; }
+    }
+
+    public class TournamentUpdateBody
+    {
+        public string Name { get; set; }
+        public DateTime? StartDateTime { get; set; }
+        public GateWay? Gateway { get; set; }
+        public GameMode? Mode { get; set; }
+        public TournamentFormat? Format { get; set; }
+        public TournamentState? State { get; set; }
+        public List<int> MapPool { get; set; }
     }
 }

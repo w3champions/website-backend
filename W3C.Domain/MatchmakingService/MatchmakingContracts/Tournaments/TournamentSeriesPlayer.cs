@@ -4,7 +4,7 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments
     {
         public string BattleTag { get; set; }
         public int Team { get; set; }
-        public int Score { get; set; }
-        public bool Won { get; set; }
+        public int? Score { get; set; }
+        public bool? Won { get; set; }
     }
 }

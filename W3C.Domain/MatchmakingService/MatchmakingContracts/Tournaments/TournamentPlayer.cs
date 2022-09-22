@@ -6,8 +6,8 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments
     {
         public string BattleTag { get; set; }
         public GateWay Gateway { get; set; }
-        public int Seed { get; set; }
-        public Race race;
-        public string CountryCode { get; set; }
+        public int? Seed { get; set; }
+        public Race Race { get; set; }
+        public bool Eliminated { get; set; }
     }
 }
