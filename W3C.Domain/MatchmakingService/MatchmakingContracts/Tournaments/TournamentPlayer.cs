@@ -9,5 +9,6 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments
         public int? Seed { get; set; }
         public Race Race { get; set; }
         public bool Eliminated { get; set; }
+        public string CountryCode { get; set; }
     }
 }

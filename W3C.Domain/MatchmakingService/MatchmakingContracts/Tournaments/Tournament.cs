@@ -19,9 +19,9 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments
         public DateTime StartDateTime { get; set; }
         public List<int> MapPool { get; set; }
         public TournamentPlayer Winner { get; set; }
-        public List<TournamentRound> rounds { get; set; }
-        public List<TournamentPlayer> players { get; set; }
-        public List<TournamentPlayer> admins { get; set; }
+        public List<TournamentRound> Rounds { get; set; }
+        public List<TournamentPlayer> Players { get; set; }
+        public List<TournamentPlayer> Admins { get; set; }
 
         // TODO: add this
         // public string MatcherinoLink { get; set; }

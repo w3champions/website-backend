@@ -186,7 +186,7 @@ namespace W3C.Domain.MatchmakingService
             return deserializeObject;
         }
 
-        public async Task<TournamentResponse> RegisterPlayer(string id, string battleTag, Race race)
+        public async Task<TournamentResponse> RegisterPlayer(string id, string battleTag, Race race, string countryCode)
         {
             var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
 
@@ -194,6 +194,7 @@ namespace W3C.Domain.MatchmakingService
             {
                 battleTag = battleTag,
                 race = race,
+                countryCode = countryCode,
                 secret = AdminSecret,
             };
             JsonContent postBody = JsonContent.Create(data);
