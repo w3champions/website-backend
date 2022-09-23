@@ -9,9 +9,9 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using W3C.Contracts.Matchmaking;
+using W3C.Contracts.Matchmaking.Queue;
 using W3C.Domain.CommonValueObjects;
-using W3C.Domain.MatchmakingContracts;
-using W3C.Domain.MatchmakingService.MatchmakingContracts;
 using W3C.Domain.Repositories;
 
 namespace W3C.Domain.MatchmakingService
@@ -61,7 +61,7 @@ namespace W3C.Domain.MatchmakingService
             return result.StatusCode;
         }
 
-        public async Task<List<FormattedQueue>> GetLiveQueueData()
+        public async Task<List<MappedQueue>> GetLiveQueueData()
         {
             var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={AdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
@@ -174,23 +174,23 @@ namespace W3C.Domain.MatchmakingService
             return JsonConvert.SerializeObject(data, _jsonSerializerSettings);
         }
 
-        private List<FormattedQueue> FormatQueueData(List<Queue> allQueues)
+        private List<MappedQueue> FormatQueueData(List<Queue> allQueues)
         {
             try 
             {
-                var formattedAllQueueData = new List<FormattedQueue>();
+                var formattedAllQueueData = new List<MappedQueue>();
                 if (allQueues != null) {
                     foreach (var queue in allQueues)
                     {
-                        var gameModeQueue = new FormattedQueue();
+                        var gameModeQueue = new MappedQueue();
                         gameModeQueue.gameMode = queue.gameMode;
                         
-                        var formattedSingleQueueData = new List<FormattedPlayerData>();
+                        var formattedSingleQueueData = new List<MappedPlayerData>();
 
                         if (queue.snapshot.Count > 0) {
                             foreach (var playerData in queue.snapshot)
                             {
-                                var formattedPlayerData = new FormattedPlayerData();
+                                var MappedPlayerData = new MappedPlayerData();
 
                                 // if it's an AT, data is taken from only 1 player
                                 IList<string> playerBattleTagStrings = new List<string>();
@@ -200,17 +200,17 @@ namespace W3C.Domain.MatchmakingService
                                     playerBattleTagStrings.Add(playerData.playerData[i].battleTag);
                                 }
 
-                                formattedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
-                                formattedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
-                                formattedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd),0);
-                                formattedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
-                                formattedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
-                                formattedPlayerData.queueTime = playerData.queueTime;
-                                formattedPlayerData.isFloConnected = playerData.isFloConnected;
-                                formattedPlayerData.location = playerData.playerData[0].location;
-                                formattedPlayerData.serverOption = playerData.playerData[0].serverOption;
+                                MappedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
+                                MappedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
+                                MappedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd),0);
+                                MappedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
+                                MappedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
+                                MappedPlayerData.queueTime = playerData.queueTime;
+                                MappedPlayerData.isFloConnected = playerData.isFloConnected;
+                                MappedPlayerData.location = playerData.playerData[0].location;
+                                MappedPlayerData.serverOption = playerData.playerData[0].serverOption;
                                 
-                                formattedSingleQueueData.Add(formattedPlayerData);
+                                formattedSingleQueueData.Add(MappedPlayerData);
                             }
                         }
                         gameModeQueue.snapshot = formattedSingleQueueData;
@@ -223,19 +223,19 @@ namespace W3C.Domain.MatchmakingService
             }
             catch
             {
-                return new List<FormattedQueue>();
+                return new List<MappedQueue>();
             }
             
         }
     }
 
-    public class FormattedQueue
+    public class MappedQueue
     {
         public int gameMode { get; set; }
-        public List<FormattedPlayerData> snapshot { get; set; }
+        public List<MappedPlayerData> snapshot { get; set; }
     }
 
-    public class FormattedPlayerData
+    public class MappedPlayerData
     {
         public string battleTag { get; set; }
         public double mmr { get; set; }
@@ -257,13 +257,10 @@ namespace W3C.Domain.MatchmakingService
     public class BannedPlayerReadmodel : IIdentifiable
     {
         public string battleTag { get; set; }
-
         public string endDate { get; set; }
-
         public bool isIpBan { get; set; }
         public bool? isOnlyChatBan { get; set; }
         public List<GameMode> gameModes { get; set; }
-
         public string banReason { get; set; }
         public string Id => battleTag;
     }

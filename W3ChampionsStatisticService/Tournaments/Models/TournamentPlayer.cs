@@ -1,4 +1,4 @@
-﻿using W3C.Domain.CommonValueObjects;
+﻿using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.Tournaments.Models
 {

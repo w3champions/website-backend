@@ -3,6 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 
 namespace W3C.Domain.MatchmakingService
