@@ -10,14 +10,10 @@ namespace W3ChampionsStatisticService.Tournaments
     [Route("api/tournaments")]
     public class TournamentsController : ControllerBase
     {
-        private readonly TournamentsRepository _tournamentsRepository;
         private readonly MatchmakingServiceClient _matchmakingServiceRepository;
 
-        public TournamentsController(
-          TournamentsRepository tournamentsRepository,
-          MatchmakingServiceClient matchmakingServiceRepository)
+        public TournamentsController(MatchmakingServiceClient matchmakingServiceRepository)
         {
-            _tournamentsRepository = tournamentsRepository;
             _matchmakingServiceRepository = matchmakingServiceRepository;
         }
 

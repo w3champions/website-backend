@@ -31,8 +31,8 @@ namespace W3ChampionsStatisticService.Matches
             int maxMmr = 3000)
         {
             List<Matchup> matches = new List<Matchup>();
-            long count = 0;
             if (pageSize > 100) pageSize = 100;
+            // long count = 0;
             //matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
             //count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
             //return Ok(new { matches, count });
