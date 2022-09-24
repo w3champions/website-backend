@@ -1,6 +1,4 @@
-﻿using W3C.Domain.CommonValueObjects;
-
-namespace W3C.Domain.MatchmakingService.MatchmakingContracts
+﻿namespace W3C.Contracts.GameObjects
 {
     public class MapForceComputer
     {

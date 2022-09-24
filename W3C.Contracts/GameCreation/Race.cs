@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace W3C.Domain.CommonValueObjects
+﻿namespace W3C.Contracts.GameObjects
 {
     public enum Race
     {

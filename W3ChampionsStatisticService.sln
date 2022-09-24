@@ -17,7 +17,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WC3ChampionsStatisticService.Tests", "WC3ChampionsStatisticService.UnitTests\WC3ChampionsStatisticService.Tests.csproj", "{861D57A0-C360-406B-B5E2-B6B86C103BED}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "W3C.Domain", "W3C.Domain\W3C.Domain.csproj", "{0A96E92E-066E-4AB6-AA23-EC450C53EBAC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "W3C.Domain", "W3C.Domain\W3C.Domain.csproj", "{0A96E92E-066E-4AB6-AA23-EC450C53EBAC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "W3C.Contracts", "W3C.Contracts\W3C.Contracts.csproj", "{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,6 +39,10 @@ Global
 		{0A96E92E-066E-4AB6-AA23-EC450C53EBAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0A96E92E-066E-4AB6-AA23-EC450C53EBAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0A96E92E-066E-4AB6-AA23-EC450C53EBAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
-using System.Net.Http;
 using System.Threading.Tasks;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
-using W3C.Domain.MatchmakingService.MatchmakingContracts;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 

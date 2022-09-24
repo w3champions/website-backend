@@ -1,3 +1,5 @@
+using W3C.Contracts.GameObjects;
+
 namespace W3C.Domain.CommonValueObjects
 {
     public class RaceWinLoss : WinLoss

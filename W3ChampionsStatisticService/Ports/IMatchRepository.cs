@@ -1,6 +1,7 @@
 ﻿using MongoDB.Bson;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Matches;
 

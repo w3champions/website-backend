@@ -1,4 +1,4 @@
-﻿namespace W3C.Domain.MatchmakingService.MatchmakingContracts
+﻿namespace W3C.Contracts.Matchmaking
 {
     public class GameMapPlayer
     {

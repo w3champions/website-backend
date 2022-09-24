@@ -1,4 +1,5 @@
-﻿using W3C.Domain.CommonValueObjects;
+﻿using W3C.Contracts.GameObjects;
+using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats
