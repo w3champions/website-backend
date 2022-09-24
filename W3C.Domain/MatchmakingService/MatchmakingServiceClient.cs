@@ -190,7 +190,7 @@ namespace W3C.Domain.MatchmakingService
                         if (queue.snapshot.Count > 0) {
                             foreach (var playerData in queue.snapshot)
                             {
-                                var MappedPlayerData = new MappedPlayerData();
+                                var mappedPlayerData = new MappedPlayerData();
 
                                 // if it's an AT, data is taken from only 1 player
                                 IList<string> playerBattleTagStrings = new List<string>();
@@ -200,17 +200,17 @@ namespace W3C.Domain.MatchmakingService
                                     playerBattleTagStrings.Add(playerData.playerData[i].battleTag);
                                 }
 
-                                MappedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
-                                MappedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
-                                MappedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd),0);
-                                MappedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
-                                MappedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
-                                MappedPlayerData.queueTime = playerData.queueTime;
-                                MappedPlayerData.isFloConnected = playerData.isFloConnected;
-                                MappedPlayerData.location = playerData.playerData[0].location;
-                                MappedPlayerData.serverOption = playerData.playerData[0].serverOption;
+                                mappedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
+                                mappedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
+                                mappedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd),0);
+                                mappedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
+                                mappedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
+                                mappedPlayerData.queueTime = playerData.queueTime;
+                                mappedPlayerData.isFloConnected = playerData.isFloConnected;
+                                mappedPlayerData.location = playerData.playerData[0].location;
+                                mappedPlayerData.serverOption = playerData.playerData[0].serverOption;
                                 
-                                formattedSingleQueueData.Add(MappedPlayerData);
+                                formattedSingleQueueData.Add(mappedPlayerData);
                             }
                         }
                         gameModeQueue.snapshot = formattedSingleQueueData;
