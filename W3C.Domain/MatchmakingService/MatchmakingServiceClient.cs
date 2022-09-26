@@ -231,6 +231,19 @@ namespace W3C.Domain.MatchmakingService
             if (updates.MapPool != null) {
               data.mapPool = updates.MapPool;
             }
+            if (updates.RegistrationTimeMinutes != null) {
+              data.registrationTimeMinutes = updates.RegistrationTimeMinutes;
+            }
+            if (updates.ReadyTimeSeconds != null) {
+              data.readyTimeSeconds = updates.ReadyTimeSeconds;
+            }
+            if (updates.VetoTimeSeconds != null) {
+              data.vetoTimeSeconds = updates.VetoTimeSeconds;
+            }
+            if (updates.ShowWinnerTimeHours != null) {
+              data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
+            }
+            data.matcherinoUrl = updates.MatcherinoUrl;
             data.secret = AdminSecret;
 
             JsonContent patchBody = JsonContent.Create(data);
@@ -264,6 +277,19 @@ namespace W3C.Domain.MatchmakingService
             if (updates.MapPool != null) {
               data.mapPool = updates.MapPool;
             }
+            if (updates.RegistrationTimeMinutes != null) {
+              data.registrationTimeMinutes = updates.RegistrationTimeMinutes;
+            }
+            if (updates.ReadyTimeSeconds != null) {
+              data.readyTimeSeconds = updates.ReadyTimeSeconds;
+            }
+            if (updates.VetoTimeSeconds != null) {
+              data.vetoTimeSeconds = updates.VetoTimeSeconds;
+            }
+            if (updates.ShowWinnerTimeHours != null) {
+              data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
+            }
+            data.matcherinoUrl = updates.MatcherinoUrl;
             data.secret = AdminSecret;
 
             JsonContent postBody = JsonContent.Create(data);
@@ -410,5 +436,10 @@ namespace W3C.Domain.MatchmakingService
         public TournamentFormat? Format { get; set; }
         public TournamentState? State { get; set; }
         public List<int> MapPool { get; set; }
+        public string MatcherinoUrl { get; set; }
+        public int? RegistrationTimeMinutes { get; set; }
+        public int? ReadyTimeSeconds { get; set; }
+        public int? VetoTimeSeconds { get; set; }
+        public int? ShowWinnerTimeHours { get; set; }
     }
 }

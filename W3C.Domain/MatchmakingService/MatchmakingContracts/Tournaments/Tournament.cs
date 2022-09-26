@@ -22,8 +22,10 @@ namespace W3C.Domain.MatchmakingService.MatchmakingContracts.Tournaments
         public List<TournamentRound> Rounds { get; set; }
         public List<TournamentPlayer> Players { get; set; }
         public List<TournamentPlayer> Admins { get; set; }
-
-        // TODO: add this
-        // public string MatcherinoLink { get; set; }
+        public string MatcherinoUrl { get; set; }
+        public int? RegistrationTimeMinutes { get; set; }
+        public int? ReadyTimeSeconds { get; set; }
+        public int? VetoTimeSeconds { get; set; }
+        public int? ShowWinnerTimeHours { get; set; }
     }
 }
