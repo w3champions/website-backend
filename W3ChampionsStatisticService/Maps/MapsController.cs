@@ -88,5 +88,12 @@ namespace W3ChampionsStatisticService.Maps
             var maps = await _matchmakingServiceClient.GetCurrentSeasonMaps();
             return Ok(maps);
         }
+
+        [HttpGet("tournaments")]
+        public async Task<IActionResult> GetTournamentMaps()
+        {
+            var maps = await _matchmakingServiceClient.GetTournamentMaps();
+            return Ok(maps);
+        }
     }
 }

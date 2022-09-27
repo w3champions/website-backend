@@ -140,6 +140,15 @@ namespace W3C.Domain.MatchmakingService
             return result;
         }
 
+        public async Task<GetMapsResponse> GetTournamentMaps()
+        {
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/tournaments");
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
+            return result;
+        }
+
         public async Task<MessageOfTheDay> GetMotd()
         {
             var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/motd/");
