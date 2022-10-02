@@ -90,9 +90,9 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpGet("tournaments")]
-        public async Task<IActionResult> GetTournamentMaps()
+        public async Task<IActionResult> GetTournamentMaps([FromQuery] bool? active)
         {
-            var maps = await _matchmakingServiceClient.GetTournamentMaps();
+            var maps = await _matchmakingServiceClient.GetTournamentMaps(active);
             return Ok(maps);
         }
     }
