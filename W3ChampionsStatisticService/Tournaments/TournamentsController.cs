@@ -69,10 +69,23 @@ namespace W3ChampionsStatisticService.Tournaments
             return Ok(tournament);
         }
 
+        [HttpDelete("{id}/players")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UnregisterPlayer(string id, [FromBody] UnregisterPlayerBody body)
+        {
+            var tournament = await _matchmakingServiceRepository.UnregisterPlayer(id, body.BattleTag);
+            return Ok(tournament);
+        }
+
         public class RegisterPlayerBody
         {
             public string BattleTag { get; set; }
             public Race Race { get; set; }
+        }
+
+        public class UnregisterPlayerBody
+        {
+            public string BattleTag { get; set; }
         }
     }
 }

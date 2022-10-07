@@ -219,6 +219,23 @@ namespace W3C.Domain.MatchmakingService
             return deserializeObject;
         }
 
+        public async Task<TournamentResponse> UnregisterPlayer(string id, string battleTag)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
+            var data = new
+            {
+                battleTag = battleTag,
+                secret = AdminSecret,
+            };
+            var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
+            var result = await _httpClient.SendAsync(request);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
         public async Task<TournamentResponse> UpdateTournament(string id, TournamentUpdateBody updates)
         {
             var url = $"{MatchmakingApiUrl}/tournaments/{id}";
