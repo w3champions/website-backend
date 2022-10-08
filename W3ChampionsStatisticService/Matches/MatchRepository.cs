@@ -172,9 +172,9 @@ namespace W3ChampionsStatisticService.Matches
 
         public async Task<int> GetFloIdFromId(string gameId)
         {
-            var match = await LoadFirst<Matchup>(x => x.Id.ToString() == gameId);
-            if (match == null) return 0;
-            return (int)match.FloMatchId;
+            var gameIdObj = new ObjectId($"{gameId}");
+            var match = await LoadFirst<Matchup>(x => x.Id == gameIdObj);
+            return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
         }
 
         public Task<long> Count(

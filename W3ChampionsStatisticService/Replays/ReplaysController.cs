@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using W3C.Domain.UpdateService;
-using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Maps
 {
@@ -10,10 +10,10 @@ namespace W3ChampionsStatisticService.Maps
     public class ReplaysController : ControllerBase
     {
         private readonly ReplayServiceClient _replayServiceClient;
-        private readonly MatchRepository _matchRepository;
+        private readonly IMatchRepository _matchRepository;
         public ReplaysController(
             ReplayServiceClient replayServiceClient,
-            MatchRepository matchRepository)
+            IMatchRepository matchRepository)
         {
             _replayServiceClient = replayServiceClient;
             _matchRepository = matchRepository;
