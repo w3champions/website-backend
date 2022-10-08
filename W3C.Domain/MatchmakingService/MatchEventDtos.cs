@@ -84,29 +84,38 @@ namespace W3C.Domain.MatchmakingService
     [BsonNoId]
     public class Match : IMatchServerInfo
     {
-        public int season { get; set; }
+        public string serverProvider { get; set; }
+        public string type { get; set; }
         public int state { get; set; }
         public long startTime { get; set; }
+        public List<PlayerMMrChange> players { get; set; }
         public GameMode gameMode { get; set; }
         public GateWay gateway { get; set; }
+        public int season { get; set; }
+        public FloNode floNode { get; set; }
         public string host { get; set; }
+        public string map { get; set; }
+        public int? mapId { get; set; }
+        public string mapName { get; set; }
+        public bool publicGame { get; set; }
+
         [BsonElement("_id")]
         public string id { get; set; }
-        public int? mapId { get; set; }
-        public string map { get; set; }
-        public string mapName { get; set; }
-        public List<PlayerMMrChange> players { get; set; }
+        public int? floGameId { get; set; }
         public long endTime { get; set; }
-        public long number { get; set; }
-        public FloNode floNode { get; set; }
-        public string serverProvider { get; set; }
-
+        public float lengthSeconds { get; set; }
         public List<IMatchPlayerServerInfo> PlayersServerInfo
         {
             get
             {
                 return players?.Cast<IMatchPlayerServerInfo>().ToList();
             }
+        }
+
+        public bool HasFloGameId()
+        {
+            if (floGameId.HasValue) return true;
+            return false;
         }
     }
 

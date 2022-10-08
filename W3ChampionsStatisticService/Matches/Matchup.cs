@@ -22,17 +22,27 @@ namespace W3ChampionsStatisticService.Matches
 
         [JsonPropertyName("id")]
         public string ObjectId => Id.ToString();
+
         [JsonPropertyName("original-ongoing-match-id")]
         public string MatchId { get; set; }
+
+        public int? FloMatchId { get; set; }
+
         [JsonIgnore]
         public TimeSpan Duration { get; set; }
 
         public long DurationInSeconds => (long)Duration.TotalSeconds;
+
         public DateTimeOffset StartTime { get; set; }
+
         public DateTimeOffset EndTime { get; set; }
+
         public GameMode GameMode { get; set; }
+
         public IList<Team> Teams { get; set; } = new List<Team>();
+
         public GateWay GateWay { get; set; }
+
         public int Season { get; set; }
 
         public long? Number { get; set; }
@@ -41,10 +51,13 @@ namespace W3ChampionsStatisticService.Matches
 
         [JsonIgnore]
         public string Team1Players { get; set; }
+
         [JsonIgnore]
         public string Team2Players { get; set; }
+
         [JsonIgnore]
         public string Team3Players { get; set; }
+
         [JsonIgnore]
         public string Team4Players { get; set; }
 
@@ -66,6 +79,7 @@ namespace W3ChampionsStatisticService.Matches
                 MapId = match.mapId,
                 MapName = match.mapName,
                 MatchId = match.id,
+                FloMatchId = match.floGameId,
                 GateWay = match.gateway,
                 GameMode = matchFinishedEvent.match.gameMode,
                 StartTime = startTime,
