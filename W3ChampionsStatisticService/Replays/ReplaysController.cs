@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using W3C.Domain.UpdateService;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Maps
 {
@@ -8,16 +9,25 @@ namespace W3ChampionsStatisticService.Maps
     [Route("api/replays")]
     public class ReplaysController : ControllerBase
     {
-        ReplayServiceClient _replayServiceClient;
-        public ReplaysController(ReplayServiceClient replayServiceClient)
+        private readonly ReplayServiceClient _replayServiceClient;
+        private readonly IMatchRepository _matchRepository;
+        public ReplaysController(
+            ReplayServiceClient replayServiceClient,
+            IMatchRepository matchRepository)
         {
             _replayServiceClient = replayServiceClient;
+            _matchRepository = matchRepository;
         }
 
         [HttpGet("{gameId}")]
-        public async Task<IActionResult> GetReplay(int gameId)
+        public async Task<IActionResult> GetReplay(string gameId)
         {
-            var replayStream = await _replayServiceClient.GenerateReplay(gameId);
+            var floMatchId = await _matchRepository.GetFloIdFromId(gameId);
+            if (floMatchId == 0)
+            {
+                return NotFound();
+            }
+            var replayStream = await _replayServiceClient.GenerateReplay(floMatchId);
             return File(replayStream, "application/octet-stream", $"{gameId}.w3g");
         }
     }

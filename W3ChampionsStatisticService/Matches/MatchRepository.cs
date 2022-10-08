@@ -170,6 +170,13 @@ namespace W3ChampionsStatisticService.Matches
                 .ToListAsync();
         }
 
+        public async Task<int> GetFloIdFromId(string gameId)
+        {
+            var gameIdObj = new ObjectId($"{gameId}");
+            var match = await LoadFirst<Matchup>(x => x.Id == gameIdObj);
+            return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
+        }
+
         public Task<long> Count(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,

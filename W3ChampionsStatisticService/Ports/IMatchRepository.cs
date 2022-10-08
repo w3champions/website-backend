@@ -70,6 +70,8 @@ namespace W3ChampionsStatisticService.Ports
             int maxMmr = 3000);
 
         Task EnsureIndices();
+
+        Task<int> GetFloIdFromId(string gameId);
     }
 
     public class MatchupDetail
