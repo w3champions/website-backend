@@ -103,7 +103,6 @@ namespace W3C.Domain.MatchmakingService
         public string id { get; set; }
         public int? floGameId { get; set; }
         public long endTime { get; set; }
-        public float lengthSeconds { get; set; }
         public List<IMatchPlayerServerInfo> PlayersServerInfo
         {
             get
