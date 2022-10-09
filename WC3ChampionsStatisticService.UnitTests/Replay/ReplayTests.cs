@@ -61,11 +61,13 @@ namespace WC3ChampionsStatisticService.Tests.Replay
             var players = new List<ReplayChatsPlayerInfo>();
             players.Add(new ReplayChatsPlayerInfo {
                 Id = 1,
+                Name = "p1#1",
                 Team = 0,
                 Color = 1
             });
             players.Add(new ReplayChatsPlayerInfo {
                 Id = 2,
+                Name = "p2#2",
                 Team = 1,
                 Color = 2
             });
