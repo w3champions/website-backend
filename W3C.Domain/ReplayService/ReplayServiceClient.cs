@@ -2,7 +2,8 @@
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-
+using Newtonsoft.Json;
+using W3C.Contracts.Replay;
 namespace W3C.Domain.UpdateService
 {
     public class ReplayServiceClient
@@ -23,6 +24,15 @@ namespace W3C.Domain.UpdateService
             await stream.CopyToAsync(memStream);
             memStream.Seek(0, SeekOrigin.Begin);
             return memStream;
+        }
+        
+        public async Task<ReplayChatsData> GetChatLogs(int gameId)
+        {
+            var response = await _httpClient.GetAsync($"{ReplayServiceUrl}/chats/{gameId}?secret={AdminSecret}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<ReplayChatsData>(content);
+            return result;
         }
     }
 }
