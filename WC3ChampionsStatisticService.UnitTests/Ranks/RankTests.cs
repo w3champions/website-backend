@@ -3,6 +3,7 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Clans;
@@ -10,6 +11,7 @@ using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
+using W3C.Contracts.Matchmaking;
 
 namespace WC3ChampionsStatisticService.Tests.Ranks
 {

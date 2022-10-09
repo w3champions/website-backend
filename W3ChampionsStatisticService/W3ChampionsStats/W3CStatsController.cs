@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;

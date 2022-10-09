@@ -1,7 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Domain.MatchmakingService;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
+using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Ports;
 

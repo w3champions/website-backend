@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
@@ -11,6 +11,7 @@ using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {

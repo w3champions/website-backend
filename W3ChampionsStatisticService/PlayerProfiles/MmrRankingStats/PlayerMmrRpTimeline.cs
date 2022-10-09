@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats

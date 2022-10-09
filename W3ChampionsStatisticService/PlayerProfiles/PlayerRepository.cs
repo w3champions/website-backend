@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Cache;
@@ -12,6 +13,7 @@ using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {

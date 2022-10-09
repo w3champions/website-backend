@@ -1,7 +1,8 @@
 ﻿using MongoDB.Bson;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.Ports
@@ -69,6 +70,8 @@ namespace W3ChampionsStatisticService.Ports
             int maxMmr = 3000);
 
         Task EnsureIndices();
+
+        Task<int> GetFloIdFromId(string gameId);
     }
 
     public class MatchupDetail

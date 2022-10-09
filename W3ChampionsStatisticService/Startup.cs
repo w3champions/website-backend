@@ -106,6 +106,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
             services.AddSingleton<MatchmakingServiceClient>();
             services.AddSingleton<UpdateServiceClient>();
+            services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
 
             if (startHandlers == "true")

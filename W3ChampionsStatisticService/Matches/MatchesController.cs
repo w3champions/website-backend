@@ -1,9 +1,10 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using System.Collections.Generic;
+using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.Matches
 {

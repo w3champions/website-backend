@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Ports
 {
