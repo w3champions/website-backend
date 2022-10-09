@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Maps
 {
@@ -29,6 +30,19 @@ namespace W3ChampionsStatisticService.Maps
             }
             var replayStream = await _replayServiceClient.GenerateReplay(floMatchId);
             return File(replayStream, "application/octet-stream", $"{gameId}.w3g");
+        }
+
+        [CheckIfBattleTagIsAdmin]
+        [HttpGet("{gameId}/chats")]
+        public async Task<IActionResult> GetReplayChatLogs(string gameId)
+        {
+            var floMatchId = await _matchRepository.GetFloIdFromId(gameId);
+            if (floMatchId == 0)
+            {
+                return NotFound();
+            }
+            var data = await _replayServiceClient.GetChatLogs(floMatchId);
+            return Ok(data);
         }
     }
 }
