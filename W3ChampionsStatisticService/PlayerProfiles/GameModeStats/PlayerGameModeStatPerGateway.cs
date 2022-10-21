@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             }
         }
 
-        public void RecordRanking(in int mmr, in int rankingPoints)
+        public void RecordRanking(in int mmr, in double rankingPoints)
         {
             if (RankProgressionStart == null || LastGameWasBefore8Hours())
             {

@@ -80,7 +80,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
             loser.RecordRanking(
                 (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
-                (int?)firstLooser.updatedRanking?.rp ?? (int?)firstLooser.ranking?.rp ?? 0);
+                firstLooser.updatedRanking?.rp ?? firstLooser.ranking?.rp ?? 0);
 
             await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
         }
