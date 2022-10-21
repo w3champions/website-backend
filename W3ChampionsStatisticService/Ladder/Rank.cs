@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.Ladder
             List<string> playerIds,
             int league,
             int rankNumber,
-            int rankingPoints,
+            double rankingPoints,
             Race? race,
             GateWay gateway,
             GameMode gameMode,
@@ -47,7 +47,7 @@ namespace W3ChampionsStatisticService.Ladder
         public string LeagueName { get; set; }
         public int LeagueOrder { get; set; }
         public int RankNumber { get; set; }
-        public int RankingPoints { get; set; }
+        public double RankingPoints { get; set; }
         public Race? Race { get; set; }
         public string PlayerId { get; set; }
         public string Player1Id { get; set; }

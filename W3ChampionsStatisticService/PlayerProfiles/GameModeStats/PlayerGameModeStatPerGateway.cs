@@ -35,7 +35,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
         public string Id { get; set; }
 
         public int MMR { set; get; }
-        public int RankingPoints { get; set; }
+        public double RankingPoints { get; set; }
         public int Rank { get; set; }
         public int LeagueId { get; set; }
         public int LeagueOrder { get; set; }
