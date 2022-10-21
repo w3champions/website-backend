@@ -14,6 +14,7 @@ namespace W3C.Domain.MatchmakingService
         public double rating { get; set; }
         public double rd { get; set; }
         public double vol { get; set; }
+        public double rating_lower_bound { get; set; }
     }
 
     [BsonIgnoreExtraElements]
