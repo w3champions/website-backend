@@ -115,7 +115,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             winner.RecordWin(true);
             winner.RecordRanking(
                 (int?)winners.First().updatedMmr?.rating ?? (int?)winners.First().mmr?.rating ?? 0,
-                (int?)winners.First().updatedRanking?.rp ?? (int?)winners.First().ranking?.rp ?? 0);
+                winners.First().updatedRanking?.rp ?? winners.First().ranking?.rp ?? 0);
 
             await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
         }
