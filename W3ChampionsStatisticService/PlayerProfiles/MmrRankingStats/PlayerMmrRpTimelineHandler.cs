@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
                            ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
                 mmrRpTimeline.UpdateTimeline(new MmrRpAtDate(
                     mmr: (int)player.updatedMmr.rating,
-                    rp: (int?)player.ranking?.rp,
+                    rp: player.ranking?.rp,
                     date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
                 await _playerRepository.UpsertPlayerMmrRpTimeline(mmrRpTimeline);
             }
