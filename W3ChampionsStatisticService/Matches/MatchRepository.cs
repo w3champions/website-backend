@@ -4,6 +4,7 @@ using MongoDB.Driver.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
@@ -167,6 +168,13 @@ namespace W3ChampionsStatisticService.Matches
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
+        }
+
+        public async Task<int> GetFloIdFromId(string gameId)
+        {
+            var gameIdObj = new ObjectId($"{gameId}");
+            var match = await LoadFirst<Matchup>(x => x.Id == gameIdObj);
+            return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
         }
 
         public Task<long> Count(

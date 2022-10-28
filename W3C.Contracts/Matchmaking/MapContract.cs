@@ -1,4 +1,6 @@
-﻿namespace W3C.Domain.MatchmakingService.MatchmakingContracts
+﻿using W3C.Contracts.GameObjects;
+
+namespace W3C.Contracts.Matchmaking
 {
     public class MapContract
     {

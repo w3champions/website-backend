@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Ladder
                     new Rank(r.battleTags,
                         changedEvent.league,
                         i + 1,
-                        (int) r.rp,
+                        r.rp,
                         r.race,
                         changedEvent.gateway,
                         changedEvent.gameMode,
