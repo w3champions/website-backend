@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 
 namespace W3ChampionsStatisticService.Ports
 {
@@ -21,6 +22,7 @@ namespace W3ChampionsStatisticService.Ports
         Task UpsertWins(List<PlayerWinLoss> winrate);
         Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode);
         Task<List<PlayerOverallStats>> SearchForPlayer(string search);
+        Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(string search, string lastObjectId = "", int pageSize = 20);
         Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id);
         Task UpsertPlayerGameModeStatPerGateway(PlayerGameModeStatPerGateway stat);
         Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag, GateWay gateWay, int season);

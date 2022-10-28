@@ -74,6 +74,43 @@ namespace WC3ChampionsStatisticService.Tests.Player
         }
 
         [Test]
+        public async Task GlobalSearch()
+        {
+            var playerRepository = new PlayerRepository(MongoClient, personalSettingsProvider);
+            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+
+            var player1 = new PersonalSetting("ThunderHorn#2481");
+            var playerStats = PlayerOverallStats.Create("ThunderHorn#2481");
+            playerStats.RecordWin(Race.HU, 1, true);
+            player1.RaceWins = playerStats;
+            SetPictureCommand cmd = new SetPictureCommand()
+            {
+                avatarCategory = AvatarCategory.HU,
+                pictureId = 2
+            };
+            player1.SetProfilePicture(cmd);
+            await personalSettingsRepository.Save(player1);
+            await playerRepository.UpsertPlayer(playerStats);
+
+            var player2 = new PersonalSetting("ThunderHorn#21132");
+            await personalSettingsRepository.Save(player2);
+
+            var player3 = new PersonalSetting("OtherPlayer#123");
+            await personalSettingsRepository.Save(player3);
+
+            var players = await playerRepository.GlobalSearchForPlayer("under");
+            Assert.AreEqual(2, players.Count);
+            Assert.AreEqual(player2.Id, players[0].BattleTag);
+            Assert.AreEqual(player1.Id, players[1].BattleTag);
+
+            players = await playerRepository.GlobalSearchForPlayer("under", "ThunderHorn#21132");
+            Assert.AreEqual(1, players.Count);
+            Assert.AreEqual(player1.Id, players[0].BattleTag);
+            Assert.AreEqual(player1.ProfilePicture.PictureId, players[0].ProfilePicture.PictureId);
+            Assert.AreEqual(1, players[0].Seasons.Count);
+        }
+
+        [Test]
         public async Task PlayerMapping()
         {
             var playerRepository = new PlayerRepository(MongoClient);
