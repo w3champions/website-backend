@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
@@ -79,7 +80,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 
             loser.RecordRanking(
                 (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
-                (int?)firstLooser.updatedRanking?.rp ?? (int?)firstLooser.ranking?.rp ?? 0);
+                firstLooser.updatedRanking?.rp ?? firstLooser.ranking?.rp ?? 0);
 
             await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
         }
@@ -114,7 +115,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             winner.RecordWin(true);
             winner.RecordRanking(
                 (int?)winners.First().updatedMmr?.rating ?? (int?)winners.First().mmr?.rating ?? 0,
-                (int?)winners.First().updatedRanking?.rp ?? (int?)winners.First().ranking?.rp ?? 0);
+                winners.First().updatedRanking?.rp ?? winners.First().ranking?.rp ?? 0);
 
             await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
         }

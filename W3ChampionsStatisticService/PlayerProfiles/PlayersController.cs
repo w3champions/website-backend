@@ -11,6 +11,7 @@ using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using System.Collections.Generic;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
@@ -39,6 +40,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
             _playerAkaProvider = playerAkaProvider;
+        }
+
+        [HttpGet("global-search")]
+        public async Task<IActionResult> GlobalSearchPlayer(string search, string lastObjectId = "", int pageSize = 20)
+        {
+            if (pageSize > 20) pageSize = 20;
+            var players = await _playerRepository.GlobalSearchForPlayer(search, lastObjectId, pageSize);
+            return Ok(players);
         }
 
         [HttpGet("{battleTag}")]
