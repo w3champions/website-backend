@@ -23,9 +23,10 @@ namespace WC3ChampionsStatisticService.Tests.Player
                 null);
             var gameModeStatPerGateway = PlayerGameModeStatPerGateway.Create(btag);
             gameModeStatPerGateway.RankProgressionStart = RankProgression.Create(90, 200);
-            gameModeStatPerGateway.RecordRanking(100, 220);
+            gameModeStatPerGateway.RecordRanking(100, 220.1);
 
-            Assert.AreEqual(20, gameModeStatPerGateway.RankingPointsProgress.RankingPoints);
+            Assert.GreaterOrEqual(gameModeStatPerGateway.RankingPointsProgress.RankingPoints, 20.099);
+            Assert.LessOrEqual(gameModeStatPerGateway.RankingPointsProgress.RankingPoints, 20.101);
             Assert.AreEqual(10, gameModeStatPerGateway.RankingPointsProgress.MMR);
         }
 

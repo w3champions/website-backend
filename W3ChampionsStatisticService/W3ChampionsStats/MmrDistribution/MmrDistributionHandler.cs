@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
+using System;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
 {
@@ -47,6 +48,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
 
         public List<MmrCount> DistributedMmrs { get; }
 
+        public double StandardDeviation { get; set; }
+
         public MmrStats(List<MmrCount> distributedMmrs, List<int> mmrs)
         {
             DistributedMmrs = distributedMmrs;
@@ -56,6 +59,23 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
             Top10PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 10]));
             Top25ercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 4]));
             Top50PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 2]));
+
+            StandardDeviation = CalculateStandardDeviation(mmrs);
+        }
+
+        private static double CalculateStandardDeviation(List<int> values)
+        {
+          if (!values.Any())
+          {
+            return 0.0;
+          }
+
+          double average = values.Average();
+          double sum = values.Sum(val => (val - average) * (val - average));
+          double result = Math.Sqrt(sum / values.Count());
+          result = Math.Round(result, 2);
+
+          return result;
         }
     }
 }

@@ -5,7 +5,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
     public class RankProgression
     {
-        public static RankProgression Create(in int mmr, in int rankingPoints)
+        public static RankProgression Create(in int mmr, in double rankingPoints)
         {
             return new RankProgression
             {

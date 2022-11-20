@@ -9,7 +9,7 @@ You will need a mongodb to run the service. If you do not have a local mongo con
 ```
 docker run mongo
 ```
-and your local service should be able to connect to this default mongo adress. The default is our open test db with connectionstring `mongodb://157.90.1.251:3513`
+and your local service should be able to connect to this default mongo address. The default is our open test db with connectionstring `mongodb://157.90.1.251:3513`
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
 set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
@@ -17,7 +17,7 @@ connection string (Line 57).
 
 CAUTION:
 When running locally, the readmodel handling is turned off, unless you set the corresponding env variable. But only
-do that, if you know what you are doing. You can end up overwriting data from prod/test, depending where you are
+do that, if you know what you are doing. You can end up overwriting data from prod/test, depending on where you are
 connected. So always make sure the handlers are turned off, or you have breakpoints set before you save any data.
 (more to readmodels below).
 
@@ -30,7 +30,7 @@ This also decouples the matchmaking service from the stuff that we need to show 
 
 CAUTION:
 When running locally, the readmodel handling is turned off, unless you set the corresponding env variable. But only
-do that, if you know what you are doing. You can end up overwriting data from prod/test, depending where you are
+do that, if you know what you are doing. You can end up overwriting data from prod/test, depending on where you are
 connected. So always make sure the handlers are turned off, or you have breakpoints set before you save any data.
 
 ## Fixing Readmodels
@@ -60,7 +60,7 @@ public class PlayerWinrateHandler : IReadModelHandler
 }
 ```
 
-As you can see you need to make the transformation and save the readmodel in our database. The convention always was,
+As you can see you need to make the transformation and save the readmodel in our database. The convention was always
  that we call the handler like the readmodel. In that case `PlayerWinrateHandler` and `PlayerWinrate`, so it is
  easier to find the collection to the handler.
  Also the handling framework saves the version of the last save event, when the function returns. (See
@@ -72,7 +72,7 @@ As you can see you need to make the transformation and save the readmodel in our
  We also have unversioned handlers for stuff that is not tight to an event. For example the Rankings are also pushed
  to the database after a match and we load all of them in a handler, transform all ranks and then save all of them to
   our readmodel db. That is usually not needed, but the interface for that is `IAsyncUpdatable`. This function is
-  called every 5 seconds aswell and you can do whatever you want in there periodically. Like a chron job for poor
+  called every 5 seconds as well and you can do whatever you want in there periodically. Like a CRON job for poor
   people ;)
 
 ## Import Export Mongodata
@@ -107,6 +107,6 @@ Warning: this WILL drop your local database, so be warned!
 ### Deploying to a Pull Request Environment
 If you branch starts with "DEPLOY_" azure will create a automatic deployment for your pull request, so you can test it in an isolated environment. It will be deployed to whatever comes after "DEPLOY_". For example, if my branch is called DEPLOY_add-new-language the pr will be published to https://statistic-service-add-new-language.pr.w3champions.com. The https certificate will be generated after the deployment, but this can take some time.
 
-If you need any other connection strings, just update the `docker-dompose.token.yaml` file accordingliy, for example if you want to use a different backend for the identification for example (which can also be deployed by a PR just like this repo).
+If you need any other connection strings, just update the `docker-compose.token.yaml` file accordingliy, for example if you want to use a different backend for the identification for example (which can also be deployed by a PR just like this repo).
 
 When you are done, please contact one of the older devs, because they can delete the unused containers again.
