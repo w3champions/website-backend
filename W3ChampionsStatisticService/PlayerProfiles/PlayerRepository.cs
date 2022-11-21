@@ -14,6 +14,7 @@ using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.Ports;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerProfiles

@@ -1,4 +1,4 @@
-﻿namespace W3C.Domain.CommonValueObjects
+﻿namespace W3C.Contracts.Matchmaking
 {
     public enum GameMode
     {

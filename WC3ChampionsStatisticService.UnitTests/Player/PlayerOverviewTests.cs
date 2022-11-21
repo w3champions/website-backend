@@ -8,6 +8,7 @@ using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
+using W3C.Contracts.Matchmaking;
 
 namespace WC3ChampionsStatisticService.Tests.Player
 {

@@ -1,5 +1,5 @@
 using System;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays

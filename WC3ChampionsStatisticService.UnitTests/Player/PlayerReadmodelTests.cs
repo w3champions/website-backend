@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3C.Contracts.Matchmaking;
 
 namespace WC3ChampionsStatisticService.Tests.Player
 {

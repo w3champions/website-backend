@@ -13,6 +13,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Contracts.Matchmaking;
 
 namespace WC3ChampionsStatisticService.Tests.Statistics
 {

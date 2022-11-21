@@ -9,6 +9,7 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Matches
 {

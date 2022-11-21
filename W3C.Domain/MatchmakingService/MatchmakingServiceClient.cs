@@ -9,10 +9,14 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using System.Dynamic;
+using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking.Tournaments;
 using W3C.Contracts.Matchmaking;
 using W3C.Contracts.Matchmaking.Queue;
-using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
+using System.Net.Http.Json;
 
 namespace W3C.Domain.MatchmakingService
 {
@@ -137,6 +141,20 @@ namespace W3C.Domain.MatchmakingService
             return result;
         }
 
+        public async Task<GetMapsResponse> GetTournamentMaps(bool? active)
+        {
+            var url = $"{MatchmakingApiUrl}/maps/tournaments";
+            if (active.HasValue) {
+                string activeStr = active.Value ? "true" : "false";
+                url += $"?active={activeStr}";
+            }
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
+            return result;
+        }
+
         public async Task<MessageOfTheDay> GetMotd()
         {
             var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/motd/");
@@ -150,6 +168,168 @@ namespace W3C.Domain.MatchmakingService
             var httpcontent = new StringContent(JsonConvert.SerializeObject(motd), Encoding.UTF8, "application/json");
             var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/motd/?secret={AdminSecret}", httpcontent);
             return result.StatusCode;
+        }
+
+        public async Task<TournamentsResponse> GetTournaments()
+        {
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentsResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> GetTournament(string id)
+        {
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments/{id}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> GetUpcomingTournament(GateWay gateway)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/upcoming";
+            if (gateway != GateWay.Undefined) {
+              url += $"?gateway={(int) gateway}";
+            }
+            var result = await _httpClient.GetAsync(url);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> RegisterPlayer(string id, string battleTag, Race race, string countryCode)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
+
+            var data = new
+            {
+                battleTag = battleTag,
+                race = race,
+                countryCode = countryCode,
+                secret = AdminSecret,
+            };
+            JsonContent postBody = JsonContent.Create(data);
+            var result = await _httpClient.PostAsync(url, postBody);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> UnregisterPlayer(string id, string battleTag)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
+            var data = new
+            {
+                battleTag = battleTag,
+                secret = AdminSecret,
+            };
+            var request = new HttpRequestMessage(HttpMethod.Delete, url);
+            request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
+            var result = await _httpClient.SendAsync(request);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> UpdateTournament(string id, TournamentUpdateBody updates)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments/{id}";
+
+            dynamic data = new ExpandoObject();
+            if (updates.Name != null) {
+              data.name = updates.Name;
+            }
+            if (updates.StartDateTime != null) {
+              data.startDateTime = updates.StartDateTime;
+            }
+            if (updates.State != null) {
+              data.state = updates.State;
+            }
+            if (updates.Gateway != null) {
+              data.gateway = updates.Gateway;
+            }
+            if (updates.Mode != null) {
+              data.mode = updates.Mode;
+            }
+            if (updates.Format != null) {
+              data.format = updates.Format;
+            }
+            if (updates.MapPool != null) {
+              data.mapPool = updates.MapPool;
+            }
+            if (updates.RegistrationTimeMinutes != null) {
+              data.registrationTimeMinutes = updates.RegistrationTimeMinutes;
+            }
+            if (updates.ReadyTimeSeconds != null) {
+              data.readyTimeSeconds = updates.ReadyTimeSeconds;
+            }
+            if (updates.VetoTimeSeconds != null) {
+              data.vetoTimeSeconds = updates.VetoTimeSeconds;
+            }
+            if (updates.ShowWinnerTimeHours != null) {
+              data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
+            }
+            data.matcherinoUrl = updates.MatcherinoUrl;
+            data.secret = AdminSecret;
+
+            JsonContent patchBody = JsonContent.Create(data);
+            var result = await _httpClient.PatchAsync(url, patchBody);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
+        }
+
+        public async Task<TournamentResponse> CreateTournament(TournamentUpdateBody updates)
+        {
+            var url = $"{MatchmakingApiUrl}/tournaments";
+
+            dynamic data = new ExpandoObject();
+            if (updates.Name != null) {
+              data.name = updates.Name;
+            }
+            if (updates.StartDateTime != null) {
+              data.startDateTime = updates.StartDateTime;
+            }
+            if (updates.Gateway != null) {
+              data.gateway = updates.Gateway;
+            }
+            if (updates.Mode != null) {
+              data.mode = updates.Mode;
+            }
+            if (updates.Format != null) {
+              data.format = updates.Format;
+            }
+            if (updates.MapPool != null) {
+              data.mapPool = updates.MapPool;
+            }
+            if (updates.RegistrationTimeMinutes != null) {
+              data.registrationTimeMinutes = updates.RegistrationTimeMinutes;
+            }
+            if (updates.ReadyTimeSeconds != null) {
+              data.readyTimeSeconds = updates.ReadyTimeSeconds;
+            }
+            if (updates.VetoTimeSeconds != null) {
+              data.vetoTimeSeconds = updates.VetoTimeSeconds;
+            }
+            if (updates.ShowWinnerTimeHours != null) {
+              data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
+            }
+            data.matcherinoUrl = updates.MatcherinoUrl;
+            data.secret = AdminSecret;
+
+            JsonContent postBody = JsonContent.Create(data);
+            var result = await _httpClient.PostAsync(url, postBody);
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
+            return deserializeObject;
         }
 
         private async Task HandleMMError(HttpResponseMessage response)
@@ -176,7 +356,7 @@ namespace W3C.Domain.MatchmakingService
 
         private List<MappedQueue> FormatQueueData(List<Queue> allQueues)
         {
-            try 
+            try
             {
                 var formattedAllQueueData = new List<MappedQueue>();
                 if (allQueues != null) {
@@ -218,14 +398,14 @@ namespace W3C.Domain.MatchmakingService
                         formattedAllQueueData.Add(gameModeQueue);
                     }
                 }
-            
+
                 return formattedAllQueueData;
             }
             catch
             {
                 return new List<MappedQueue>();
             }
-            
+
         }
     }
 
@@ -263,5 +443,32 @@ namespace W3C.Domain.MatchmakingService
         public List<GameMode> gameModes { get; set; }
         public string banReason { get; set; }
         public string Id => battleTag;
+    }
+
+    public class TournamentsResponse
+    {
+        public Tournament[] tournaments { get; set; }
+    }
+
+    public class TournamentResponse
+    {
+        public Tournament tournament { get; set; }
+        public string error { get; set; }
+    }
+
+    public class TournamentUpdateBody
+    {
+        public string Name { get; set; }
+        public DateTime? StartDateTime { get; set; }
+        public GateWay? Gateway { get; set; }
+        public GameMode? Mode { get; set; }
+        public TournamentFormat? Format { get; set; }
+        public TournamentState? State { get; set; }
+        public List<int> MapPool { get; set; }
+        public string MatcherinoUrl { get; set; }
+        public int? RegistrationTimeMinutes { get; set; }
+        public int? ReadyTimeSeconds { get; set; }
+        public int? VetoTimeSeconds { get; set; }
+        public int? ShowWinnerTimeHours { get; set; }
     }
 }
