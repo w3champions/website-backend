@@ -1,4 +1,5 @@
-﻿using MongoDB.Bson;
+﻿using System;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System.Collections.Generic;
@@ -161,10 +162,12 @@ namespace W3ChampionsStatisticService.Matches
             int maxMmr = 3000)
         {
             var mongoCollection = CreateCollection<Matchup>();
+            var twoWeeksAgo = DateTimeOffset.UtcNow.Date.AddDays(-14);
             return mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map))
+                    && (map == "Overall" || m.Map == map)
+                    && (m.EndTime > twoWeeksAgo))
                 .SortByDescending(s => s.EndTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -185,10 +188,12 @@ namespace W3ChampionsStatisticService.Matches
             int minMmr = 0,
             int maxMmr = 3000)
         {
+            var twoWeeksAgo = DateTimeOffset.UtcNow.Date.AddDays(-14);
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map));
+                    && (map == "Overall" || m.Map == map)
+                    && (m.EndTime > twoWeeksAgo));
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)
