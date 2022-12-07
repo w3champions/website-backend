@@ -78,9 +78,7 @@ namespace W3C.Domain.MatchmakingService
         {
             List<string> queryParams = new List<string>()
             {
-                $"secret={AdminSecret}",
-                $"offset={request.Offset}",
-                $"limit={request.Limit}"
+                $"secret={AdminSecret}"
             };
 
             if (!string.IsNullOrEmpty(request.Filter))
