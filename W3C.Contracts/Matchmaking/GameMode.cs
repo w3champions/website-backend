@@ -24,6 +24,8 @@
 
         GM_ATR_1ON1 = 601,
 
-        GM_BANJOBALL_4ON4 = 701
+        GM_BANJOBALL_4ON4 = 701,
+
+        GM_PTR_1ON1 = 801
     }
 }
