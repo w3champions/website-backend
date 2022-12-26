@@ -16,14 +16,16 @@ namespace W3ChampionsStatisticService.Ports
             int pageSize = 100,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000);
+            int maxMmr = 3000,
+            int season = 1);
 
         Task<long> Count(
             GateWay gateWay = GateWay.Undefined,
             GameMode gameMode = GameMode.Undefined,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000);
+            int maxMmr = 3000,
+            int season = 1);
 
         Task Insert(Matchup matchup);
 

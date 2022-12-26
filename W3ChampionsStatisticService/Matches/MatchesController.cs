@@ -29,15 +29,15 @@ namespace W3ChampionsStatisticService.Matches
             GateWay gateWay = GateWay.Undefined,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000)
+            int maxMmr = 3000,
+            int season = 1)
         {
             List<Matchup> matches = new List<Matchup>();
             if (pageSize > 100) pageSize = 100;
-            // long count = 0;
-            //matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            //count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
-            //return Ok(new { matches, count });
-            return Ok();
+            long count = 0;
+            matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr, season);
+            count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr, season);
+            return Ok(new { matches, count });
         }
 
         [HttpGet("{id}")]

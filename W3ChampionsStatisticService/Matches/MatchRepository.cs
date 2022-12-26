@@ -158,15 +158,18 @@ namespace W3ChampionsStatisticService.Matches
             int pageSize = 100,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000)
+            int maxMmr = 3000,
+            int season = 1)
         {
             var mongoCollection = CreateCollection<Matchup>();
+
             return mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (map == "Overall" || m.Map == map)
                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))))
+                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
+                    && m.Season == season)
                 .SortByDescending(s => s.EndTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -185,14 +188,16 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined,
             string map = "Overall",
             int minMmr = 0,
-            int maxMmr = 3000)
+            int maxMmr = 3000,
+            int season = 1)
         {
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (map == "Overall" || m.Map == map)
                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
+                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
+                    && m.Season == season);
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)
@@ -248,6 +253,5 @@ namespace W3ChampionsStatisticService.Matches
         {
             return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
         }
-
     }
 }
