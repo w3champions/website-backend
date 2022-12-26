@@ -167,8 +167,6 @@ namespace W3ChampionsStatisticService.Matches
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (map == "Overall" || m.Map == map)
-                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
                     && m.Season == season)
                 .SortByDescending(s => s.EndTime)
                 .Skip(offset)
@@ -195,8 +193,6 @@ namespace W3ChampionsStatisticService.Matches
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (map == "Overall" || m.Map == map)
-                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)))
                     && m.Season == season);
         }
 
