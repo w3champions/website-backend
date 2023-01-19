@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService
                 {
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
-                        serverOptions.Limits.MaxRequestBodySize = 60286400;
+                        serverOptions.Limits.MaxRequestBodySize = 100_000_000;
                     })
                  .UseStartup<Startup>();
                 });

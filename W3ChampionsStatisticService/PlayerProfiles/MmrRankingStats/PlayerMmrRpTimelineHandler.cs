@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
 {
@@ -28,7 +29,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
                            ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
                 mmrRpTimeline.UpdateTimeline(new MmrRpAtDate(
                     mmr: (int)player.updatedMmr.rating,
-                    rp: (int?)player.ranking?.rp,
+                    rp: player.ranking?.rp,
                     date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
                 await _playerRepository.UpsertPlayerMmrRpTimeline(mmrRpTimeline);
             }

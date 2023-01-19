@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
 {

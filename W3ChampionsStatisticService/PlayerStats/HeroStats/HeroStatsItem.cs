@@ -1,4 +1,4 @@
-﻿using W3C.Domain.CommonValueObjects;
+﻿using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats

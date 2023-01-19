@@ -6,6 +6,7 @@ using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats
 {

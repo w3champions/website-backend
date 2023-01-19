@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;

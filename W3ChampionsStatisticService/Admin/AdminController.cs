@@ -6,6 +6,7 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using System.Net;
 
 namespace W3ChampionsStatisticService.Admin

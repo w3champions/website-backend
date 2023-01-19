@@ -83,7 +83,6 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
             services.AddTransient<IMatchRepository, MatchRepository>();
-            services.AddTransient<TournamentsRepository, TournamentsRepository>();
             services.AddSingleton<IPlayerRepository, PlayerRepository>();
             services.AddTransient<IRankRepository, RankRepository>();
             services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
@@ -108,6 +107,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
             services.AddSingleton<MatchmakingServiceClient>();
             services.AddSingleton<UpdateServiceClient>();
+            services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
 
             if (startHandlers == "true")

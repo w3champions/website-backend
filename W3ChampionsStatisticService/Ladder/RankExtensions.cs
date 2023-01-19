@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Ladder
 {

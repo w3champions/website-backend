@@ -1,4 +1,4 @@
-﻿using W3C.Domain.MatchmakingService.MatchmakingContracts;
+﻿using W3C.Contracts.Matchmaking;
 
 namespace W3C.Domain.UpdateService.Contracts
 {

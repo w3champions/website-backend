@@ -5,6 +5,7 @@ using AutoFixture;
 using MongoDB.Bson;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
+using W3C.Contracts.Matchmaking;
 
 namespace WC3ChampionsStatisticService.Tests
 {

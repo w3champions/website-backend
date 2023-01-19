@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
 
 namespace W3C.Domain.CommonValueObjects
 {

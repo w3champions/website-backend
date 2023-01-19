@@ -1,4 +1,5 @@
-﻿using W3C.Domain.CommonValueObjects;
+﻿using W3C.Contracts.GameObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
 namespace W3ChampionsStatisticService.Ladder

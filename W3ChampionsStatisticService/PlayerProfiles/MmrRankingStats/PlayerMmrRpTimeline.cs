@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
@@ -96,13 +97,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
 
     public class MmrRpAtDate : IComparable
     {
-        public MmrRpAtDate(int mmr, int? rp, DateTimeOffset date) {
+        public MmrRpAtDate(int mmr, double? rp, DateTimeOffset date) {
             Mmr = mmr;
             Rp = rp;
             Date = date;
         }
         public int Mmr { get; set; }
-        public int? Rp { get; set; }
+        public double? Rp { get; set; }
         public DateTimeOffset Date { get; set; }
 
         public Boolean HasSameYearMonthDayAs(MmrRpAtDate mRAT2)

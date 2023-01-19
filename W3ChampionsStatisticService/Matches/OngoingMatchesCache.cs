@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Matches
@@ -24,9 +24,8 @@ namespace W3ChampionsStatisticService.Matches
             return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                       && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                       && (map == "Overall" || m.Map == map)
-                                      && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
-                                      && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)));
-
+                                      && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
+                                      && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
         }
 
         public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
@@ -45,8 +44,8 @@ namespace W3ChampionsStatisticService.Matches
                 .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                             && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                             && (map == "Overall" || m.Map == map)
-                            && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr))
-                            && !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)));
+                            && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
+                            && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
             if (sort == "mmrDescending") {
                 matches = matches.OrderByDescending(m => getMaxMmrInMatch(m));

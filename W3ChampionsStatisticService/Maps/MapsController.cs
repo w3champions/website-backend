@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
 using System.Threading.Tasks;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
-using W3C.Domain.MatchmakingService.MatchmakingContracts;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
@@ -88,6 +88,13 @@ namespace W3ChampionsStatisticService.Maps
         public IActionResult GetCurrentSeasonMaps()
         {
             var maps = _matchmakingProvider.GetCurrentSeasonMaps();
+            return Ok(maps);
+        }
+
+        [HttpGet("tournaments")]
+        public async Task<IActionResult> GetTournamentMaps([FromQuery] bool? active)
+        {
+            var maps = await _matchmakingServiceClient.GetTournamentMaps(active);
             return Ok(maps);
         }
     }

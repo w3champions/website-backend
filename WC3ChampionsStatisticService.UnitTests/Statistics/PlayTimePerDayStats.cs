@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 

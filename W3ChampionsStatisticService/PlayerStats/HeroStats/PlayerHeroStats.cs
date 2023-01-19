@@ -1,4 +1,5 @@
-﻿using W3C.Domain.CommonValueObjects;
+﻿using W3C.Contracts.GameObjects;
+using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 

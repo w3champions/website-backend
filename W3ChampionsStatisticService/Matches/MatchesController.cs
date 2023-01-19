@@ -1,9 +1,10 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using System.Collections.Generic;
+using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -31,8 +32,8 @@ namespace W3ChampionsStatisticService.Matches
             int maxMmr = 3000)
         {
             List<Matchup> matches = new List<Matchup>();
-            long count = 0;
             if (pageSize > 100) pageSize = 100;
+            // long count = 0;
             //matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
             //count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
             //return Ok(new { matches, count });

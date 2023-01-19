@@ -1,18 +1,11 @@
-﻿using System.Threading.Tasks;
-using MongoDB.Bson;
-using NUnit.Framework;
-using W3ChampionsStatisticService.Matches;
-using W3C.Domain.CommonValueObjects;
-using W3ChampionsStatisticService.Ladder;
-using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
-using W3ChampionsStatisticService.Ports;
+﻿using NUnit.Framework;
 using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerProfiles;
-using W3C.Domain.MatchmakingService;
-using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
 using W3ChampionsStatisticService.W3ChampionsStats;
 
 namespace WC3ChampionsStatisticService.Tests.Matches
@@ -24,7 +17,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         [Test]
         public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
         {
-           
+
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
             var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay();
@@ -60,7 +53,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
             }
             sw.Stop();
             Console.WriteLine("Call took " + sw.ElapsedMilliseconds + " ms - Collection size " + result.Count);
-            Assert.IsTrue(result.Count> 0);
+            Assert.IsTrue(result.Count > 0);
         }
         [Test]
         public async Task LoadCountColorful()
@@ -108,7 +101,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
             }
             sw.Stop();
             Console.WriteLine("Call took " + sw.ElapsedMilliseconds + " ms - Collection size " + result.Count);
-            Assert.IsTrue(result.Count >0);
+            Assert.IsTrue(result.Count > 0);
         }
         [Test]
         public async Task LoadCountShaDe()

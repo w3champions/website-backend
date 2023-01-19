@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
 {
@@ -34,7 +36,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
         public string Id { get; set; }
 
         public int MMR { set; get; }
-        public int RankingPoints { get; set; }
+        public double RankingPoints { get; set; }
         public int Rank { get; set; }
         public int LeagueId { get; set; }
         public int LeagueOrder { get; set; }
@@ -53,7 +55,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             }
         }
 
-        public void RecordRanking(in int mmr, in int rankingPoints)
+        public void RecordRanking(in int mmr, in double rankingPoints)
         {
             if (RankProgressionStart == null || LastGameWasBefore8Hours())
             {

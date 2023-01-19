@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Bson.Serialization.Attributes;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;

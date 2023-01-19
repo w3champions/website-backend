@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
 
 namespace W3C.Domain.MatchmakingService
 {

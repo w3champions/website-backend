@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3ChampionsStatisticService.Tournaments.Models;
+using W3C.Domain.MatchmakingService;
+using W3C.Contracts.Matchmaking;
+using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Tournaments
 {
@@ -11,32 +12,81 @@ namespace W3ChampionsStatisticService.Tournaments
     [Route("api/tournaments")]
     public class TournamentsController : ControllerBase
     {
-        private readonly TournamentsRepository _tournamentsRepository;
-        public TournamentsController(TournamentsRepository tournamentsRepository)
+        private readonly IPersonalSettingsRepository _personalSettingsRepository;
+        private readonly MatchmakingServiceClient _matchmakingServiceRepository;
+
+        public TournamentsController(
+            MatchmakingServiceClient matchmakingServiceRepository,
+            IPersonalSettingsRepository personalSettingsRepository
+        )
         {
-            _tournamentsRepository = tournamentsRepository;
+            _personalSettingsRepository = personalSettingsRepository;
+            _matchmakingServiceRepository = matchmakingServiceRepository;
         }
 
         [HttpGet("")]
         public async Task<IActionResult> GetTournaments()
         {
-            List<Tournament> result = await _tournamentsRepository.GetAll();
-
-            result = result ?? new List<Tournament>();
-
-            result = result.OrderByDescending(x => x.CreatedOn).ToList();
-
-            return Ok(new { tournaments = result });
+            var tournaments = await _matchmakingServiceRepository.GetTournaments();
+            return Ok(tournaments);
         }
 
-        [HttpPut("{id}")]
+        [HttpPost("")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> UpdateTournament(string id, Tournament tournament)
+        public async Task<IActionResult> CreateTournament([FromBody] TournamentUpdateBody tournamentData)
         {
-            tournament.Id = new MongoDB.Bson.ObjectId(id);
-            await _tournamentsRepository.Save(tournament);
-
+            var tournament = await _matchmakingServiceRepository.CreateTournament(tournamentData);
             return Ok(tournament);
+        }
+
+        [HttpGet("upcoming")]
+        public async Task<IActionResult> GetUpcomingTournament([FromQuery] GateWay gateway)
+        {
+            var tournament = await _matchmakingServiceRepository.GetUpcomingTournament(gateway);
+            return Ok(tournament);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTournament(string id)
+        {
+            var tournament = await _matchmakingServiceRepository.GetTournament(id);
+            return Ok(tournament);
+        }
+
+        [HttpPatch("{id}")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UpdateTournament(string id, [FromBody] TournamentUpdateBody updates)
+        {
+            var tournament = await _matchmakingServiceRepository.UpdateTournament(id, updates);
+            return Ok(tournament);
+        }
+
+        [HttpPost("{id}/players")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> RegisterPlayer(string id, [FromBody] RegisterPlayerBody body)
+        {
+            var personalSetting = await _personalSettingsRepository.Load(body.BattleTag);
+            var tournament = await _matchmakingServiceRepository.RegisterPlayer(id, body.BattleTag, body.Race, personalSetting.CountryCode);
+            return Ok(tournament);
+        }
+
+        [HttpDelete("{id}/players")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> UnregisterPlayer(string id, [FromBody] UnregisterPlayerBody body)
+        {
+            var tournament = await _matchmakingServiceRepository.UnregisterPlayer(id, body.BattleTag);
+            return Ok(tournament);
+        }
+
+        public class RegisterPlayerBody
+        {
+            public string BattleTag { get; set; }
+            public Race Race { get; set; }
+        }
+
+        public class UnregisterPlayerBody
+        {
+            public string BattleTag { get; set; }
         }
     }
 }

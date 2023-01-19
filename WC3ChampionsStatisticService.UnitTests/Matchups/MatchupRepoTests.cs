@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 using AutoFixture;
 using MongoDB.Bson;
 using NUnit.Framework;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
+using W3C.Contracts.GameObjects;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups
 {

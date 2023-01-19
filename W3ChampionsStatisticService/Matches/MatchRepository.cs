@@ -4,10 +4,12 @@ using MongoDB.Driver.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -162,11 +164,20 @@ namespace W3ChampionsStatisticService.Matches
             return mongoCollection
                 .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map))
+                    && (map == "Overall" || m.Map == map)
+                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
+                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))))
                 .SortByDescending(s => s.EndTime)
                 .Skip(offset)
                 .Limit(pageSize)
                 .ToListAsync();
+        }
+
+        public async Task<int> GetFloIdFromId(string gameId)
+        {
+            var gameIdObj = new ObjectId($"{gameId}");
+            var match = await LoadFirst<Matchup>(x => x.Id == gameIdObj);
+            return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
         }
 
         public Task<long> Count(
@@ -179,7 +190,9 @@ namespace W3ChampionsStatisticService.Matches
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
                     (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map));
+                    && (map == "Overall" || m.Map == map)
+                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
+                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)

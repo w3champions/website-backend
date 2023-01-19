@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using W3C.Domain.CommonValueObjects;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Matches
 {
