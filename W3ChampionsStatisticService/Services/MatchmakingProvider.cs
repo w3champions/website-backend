@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.PersonalSettings;
-using W3C.Domain.MatchmakingService.MatchmakingContracts;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Services
