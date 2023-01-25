@@ -331,3 +331,6 @@ ASALocalRun/
 
 .fake
 .ionide
+
+# direnv file
+.envrc

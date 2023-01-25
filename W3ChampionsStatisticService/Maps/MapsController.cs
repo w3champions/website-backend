@@ -5,6 +5,7 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Maps
 {
@@ -12,14 +13,17 @@ namespace W3ChampionsStatisticService.Maps
     [Route("api/maps")]
     public class MapsController : ControllerBase
     {
+        private readonly MatchmakingProvider _matchmakingProvider;
         private readonly MatchmakingServiceClient _matchmakingServiceClient;
         private readonly UpdateServiceClient _updateServiceClient;
 
         public MapsController(
             MatchmakingServiceClient matchmakingServiceClient,
+            MatchmakingProvider matchmakingProvider,
             UpdateServiceClient updateServiceClient)
         {
             _matchmakingServiceClient = matchmakingServiceClient;
+            _matchmakingProvider = matchmakingProvider;
             _updateServiceClient = updateServiceClient;
         }
 
@@ -81,9 +85,9 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpGet("currentseason")]
-        public async Task<IActionResult> GetCurrentSeasonMaps()
+        public IActionResult GetCurrentSeasonMaps()
         {
-            var maps = await _matchmakingServiceClient.GetCurrentSeasonMaps();
+            var maps = _matchmakingProvider.GetCurrentSeasonMaps();
             return Ok(maps);
         }
 
