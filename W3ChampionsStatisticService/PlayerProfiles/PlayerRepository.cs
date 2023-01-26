@@ -190,7 +190,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
         {
-            if (gameMode != GameMode.GM_2v2_AT && gameMode != GameMode.GM_4v4_AT && gameMode != GameMode.GM_LEGION_4v4_x20_AT)
+            if (gameMode != GameMode.GM_2v2_AT 
+                && gameMode != GameMode.GM_4v4_AT 
+                && gameMode != GameMode.GM_LEGION_4v4_x20_AT
+                && gameMode != GameMode.GM_DOTA_5ON5_AT)
             {
                 if (gameMode == GameMode.GM_1v1)
                 {

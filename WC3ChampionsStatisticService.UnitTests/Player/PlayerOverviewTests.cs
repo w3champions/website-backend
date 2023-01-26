@@ -320,7 +320,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
 
             var gateWayValues = Enum.GetValues(typeof(GateWay));
             var gameModeValues = Enum.GetValues(typeof(GameMode));
-        
+
             foreach (GateWay gateWay in gateWayValues)
             {
                 //skip undefinded value of ENums
@@ -328,12 +328,14 @@ namespace WC3ChampionsStatisticService.Tests.Player
                 foreach (GameMode gameMode in gameModeValues)
                 {
                     if (gameMode == GameMode.Undefined
-                        || gameMode ==GameMode.GM_2v2
+                        || gameMode == GameMode.GM_2v2
                         || gameMode == GameMode.GM_2v2_AT
                         || gameMode == GameMode.GM_4v4
                         || gameMode == GameMode.GM_4v4_AT
                         || gameMode == GameMode.GM_LEGION_4v4_x20
-                        || gameMode == GameMode.GM_LEGION_4v4_x20_AT) continue;
+                        || gameMode == GameMode.GM_LEGION_4v4_x20_AT
+                        || gameMode == GameMode.GM_DOTA_5ON5
+                        || gameMode == GameMode.GM_DOTA_5ON5_AT) continue;
 
                     var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
                     matchFinishedEvent1.match.players[0].battleTag = "peter#123";

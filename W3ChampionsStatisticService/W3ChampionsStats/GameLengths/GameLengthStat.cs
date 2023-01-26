@@ -57,6 +57,11 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
                         GameMode = GameMode.GM_2v2,
                         Lengths = CreateLengths(GameMode.GM_2v2)
                     },
+                    new GameLengthPerMode
+                    {
+                        GameMode = GameMode.GM_DOTA_5ON5,
+                        Lengths = CreateLengths(GameMode.GM_DOTA_5ON5)
+                    },
                 }
             };
         }
