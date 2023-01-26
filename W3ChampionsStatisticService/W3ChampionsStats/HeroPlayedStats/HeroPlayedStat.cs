@@ -19,6 +19,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
                     new HeroStatByMode { GameMode = GameMode.GM_2v2_AT },
                     new HeroStatByMode { GameMode = GameMode.GM_2v2 },
                     new HeroStatByMode { GameMode = GameMode.GM_4v4_AT },
+                    new HeroStatByMode { GameMode = GameMode.GM_DOTA_5ON5 },
                 }
             };
         }

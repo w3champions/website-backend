@@ -221,6 +221,8 @@ namespace W3ChampionsStatisticService.Matches
                 case GameMode.GM_4v4:
                 case GameMode.GM_4v4_AT:
                 case GameMode.GM_LEGION_4v4_x20_AT:
+                case GameMode.GM_DOTA_5ON5:
+                case GameMode.GM_DOTA_5ON5_AT:
                     {
                         return 2;
                     }

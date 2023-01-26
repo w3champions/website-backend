@@ -112,6 +112,11 @@ namespace W3ChampionsStatisticService.Ladder
                 return GameMode.GM_LEGION_4v4_x20_AT;
             }
 
+            if (gameMode == GameMode.GM_DOTA_5ON5 && player.IsAt)
+            {
+                return GameMode.GM_DOTA_5ON5_AT;
+            }
+
             return gameMode;
         }
     }
