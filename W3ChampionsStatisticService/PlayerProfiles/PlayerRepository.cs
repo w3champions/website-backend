@@ -136,7 +136,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             int season)
         {
             return LoadAll<PlayerGameModeStatPerGateway>(t =>
-                t.PlayerIds.Any(player => player.BattleTag==battleTag) &&
+                t.PlayerIds.Any(player => player.BattleTag.ToLower() == battleTag.ToLower()) &&
                 t.GateWay == gateWay &&
                 t.Season == season);
         }
