@@ -227,6 +227,7 @@ namespace W3ChampionsStatisticService.Matches
                         return 2;
                     }
                 case GameMode.FFA:
+                case GameMode.GM_SC_FFA_4:
                     {
                         return 4;
                     }
