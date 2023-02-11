@@ -25,7 +25,7 @@ namespace W3ChampionsStatisticService.Matches
                 StartTime = startTime,
             };
 
-            result.SetServerInfo(match);
+            result.SetServerInfo(match, match.gameMode);
 
             var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
 

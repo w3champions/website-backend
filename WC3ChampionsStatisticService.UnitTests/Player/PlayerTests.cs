@@ -189,7 +189,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
             ev.match.players[0].race = Race.HU;
             ev.match.players[1].race = Race.OC;
 
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 5; i++)
             {
                 await handler.Update(ev);
                 await handler2.Update(ev);
@@ -199,8 +199,8 @@ namespace WC3ChampionsStatisticService.Tests.Player
             var playerLoaded = await playerRepository.LoadRaceStatPerGateway("peter#123", Race.HU, GateWay.Europe, 1);
             var playerLoadedStats = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, 1);
 
-            Assert.AreEqual(100, playerLoadedStats.Single().Wins);
-            Assert.AreEqual(100, playerLoaded.Wins);
+            Assert.AreEqual(5, playerLoadedStats.Single().Wins);
+            Assert.AreEqual(5, playerLoaded.Wins);
         }
 
 

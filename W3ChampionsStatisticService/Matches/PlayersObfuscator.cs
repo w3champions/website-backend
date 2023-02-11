@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using W3C.Contracts.Matchmaking;
+﻿using System.Linq;
+using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -8,10 +7,8 @@ namespace W3ChampionsStatisticService.Matches
     {
         public static void ObfuscatePlayersForFFA(params OnGoingMatchup[] matches)
         {
-            var ffaGameModes = new List<GameMode>() { GameMode.FFA, GameMode.GM_SC_FFA_4 };
-
             foreach (var ffaMatch in matches.
-                Where(x => x != null && ffaGameModes.Contains(x.GameMode)))
+                Where(x => x != null && GameModesHelper.IsFfaGameMode(x.GameMode)))
             {
                 foreach (var team in ffaMatch.Teams)
                 {

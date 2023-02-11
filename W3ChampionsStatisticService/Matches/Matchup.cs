@@ -7,6 +7,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -132,12 +133,14 @@ namespace W3ChampionsStatisticService.Matches
             return result;
         }
 
-        protected void SetServerInfo(IMatchServerInfo matchServerInfo)
+        protected void SetServerInfo(IMatchServerInfo matchServerInfo, GameMode? gameMode = null)
         {
             ServerInfo.Provider = matchServerInfo.serverProvider;
 
             if (matchServerInfo.floNode != null)
             {
+                bool isFFa = gameMode.HasValue && GameModesHelper.IsFfaGameMode(gameMode.Value);
+
                 ServerInfo.NodeId = matchServerInfo.floNode.id;
                 ServerInfo.Name = matchServerInfo.floNode.name;
                 ServerInfo.CountryCode = matchServerInfo.floNode.countryId;
@@ -152,7 +155,7 @@ namespace W3ChampionsStatisticService.Matches
                         {
                             var playerServerInfo = new PlayerServerInfo()
                             {
-                                BattleTag = matchPlayer.battleTag,
+                                BattleTag = isFFa ? "*" : matchPlayer.battleTag,
                                 CurrentPing = nodePing.currentPing,
                                 AveragePing = nodePing.avgPing
                             };
