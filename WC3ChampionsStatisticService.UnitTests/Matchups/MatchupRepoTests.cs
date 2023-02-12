@@ -32,7 +32,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-            var matches = await matchRepository.Load();
+            var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gameMode);
 
             Assert.AreEqual(2, matches.Count);
         }
@@ -88,7 +88,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
-            var matches = await matchRepository.Load();
+            var matches = await matchRepository.Load(matchFinishedEvent.match.season, matchFinishedEvent.match.gameMode);
 
             Assert.AreEqual(1, matches.Count);
         }
@@ -352,7 +352,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
             matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-            var matches = await matchRepository.Load(GateWay.Undefined, GameMode.GM_2v2_AT);
+            var matches = await matchRepository.Load(0, GameMode.GM_2v2_AT);
 
             Assert.AreEqual(0, matches.Count);
         }
@@ -365,7 +365,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
             matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-            var matches = await matchRepository.Load(GateWay.Undefined, GameMode.GM_2v2_AT);
+            var matches = await matchRepository.Load(0, GameMode.GM_2v2_AT);
 
             Assert.AreEqual(1, matches.Count);
         }
@@ -378,7 +378,7 @@ namespace WC3ChampionsStatisticService.Tests.Matchups
             matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
             await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-            var matches = await matchRepository.Load();
+            var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gameMode);
 
             Assert.AreEqual(1, matches.Count);
         }

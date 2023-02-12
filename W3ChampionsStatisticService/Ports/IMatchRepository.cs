@@ -10,20 +10,14 @@ namespace W3ChampionsStatisticService.Ports
     public interface IMatchRepository
     {
         Task<List<Matchup>> Load(
-            GateWay gateWay = GateWay.Undefined,
-            GameMode gameMode = GameMode.Undefined,
+            int season,
+            GameMode gameMode,
             int offset = 0,
-            int pageSize = 100,
-            string map = "Overall",
-            int minMmr = 0,
-            int maxMmr = 3000);
+            int pageSize = 100);
 
         Task<long> Count(
-            GateWay gateWay = GateWay.Undefined,
-            GameMode gameMode = GameMode.Undefined,
-            string map = "Overall",
-            int minMmr = 0,
-            int maxMmr = 3000);
+            int season,
+            GameMode gameMode);
 
         Task Insert(Matchup matchup);
 

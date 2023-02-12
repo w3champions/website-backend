@@ -68,8 +68,6 @@ namespace WC3ChampionsStatisticService.Tests.Matches
             GateWay gateWay = GateWay.Undefined;
             Race playerRace = Race.Total;
             Race opponentRace = Race.Total;
-            int offset = 0;
-            int pageSize = 100;
             long result = 0;
             for (int i = 0; i < 1000; i++)
             {
@@ -116,8 +114,6 @@ namespace WC3ChampionsStatisticService.Tests.Matches
             GateWay gateWay = GateWay.Undefined;
             Race playerRace = Race.Total;
             Race opponentRace = Race.Total;
-            int offset = 0;
-            int pageSize = 100;
             long result = 0;
             for (int i = 0; i < 1000; i++)
             {

@@ -8,6 +8,7 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Domain.Repositories;
+using W3C.Contracts.Matchmaking;
 
 namespace WC3ChampionsStatisticService.Tests.ReadModel
 {
@@ -111,13 +112,13 @@ namespace WC3ChampionsStatisticService.Tests.ReadModel
 
             var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
 
-            var matches = await matchRepository.Load();
+            var matches = await matchRepository.Load(1, GameMode.GM_1v1);
 
             Assert.AreEqual(1, version.Season);
             Assert.AreEqual(fakeEvent5.Id.ToString(), version.Version);
-            Assert.AreEqual(4, matches.Count);
-            Assert.AreEqual(fakeEvent4.match.id, matches[3].MatchId);
-            Assert.AreEqual(fakeEvent4.Id, matches[3].Id);
+            Assert.AreEqual(2, matches.Count);
+            Assert.AreEqual(fakeEvent3.match.id, matches[0].MatchId);
+            Assert.AreEqual(fakeEvent3.Id, matches[0].Id);
         }
     }
 }

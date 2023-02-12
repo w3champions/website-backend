@@ -25,19 +25,12 @@ namespace W3ChampionsStatisticService.Matches
         public async Task<IActionResult> GetMatches(
             int offset = 0,
             int pageSize = 100,
-            GameMode gameMode = GameMode.Undefined,
-            GateWay gateWay = GateWay.Undefined,
-            string map = "Overall",
-            int minMmr = 0,
-            int maxMmr = 3000)
+            GameMode gameMode = GameMode.Undefined)
         {
-            List<Matchup> matches = new List<Matchup>();
             if (pageSize > 100) pageSize = 100;
-            // long count = 0;
-            //matches = await _matchRepository.Load(gateWay, gameMode, offset, pageSize, map, minMmr, maxMmr);
-            //count = await _matchRepository.Count(gateWay, gameMode, map, minMmr, maxMmr);
-            //return Ok(new { matches, count });
-            return Ok();
+            var matches = await _matchRepository.Load(14, gameMode, offset, pageSize);
+            var count = await _matchRepository.Count(14, gameMode);
+            return Ok(new { matches, count });
         }
 
         [HttpGet("{id}")]
