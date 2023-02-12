@@ -162,11 +162,7 @@ namespace W3ChampionsStatisticService.Matches
         {
             var mongoCollection = CreateCollection<Matchup>();
             return mongoCollection
-                .Find(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map)
-                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))))
+                .Find(m => gameMode == m.GameMode && m.Season == 14)
                 .SortByDescending(s => s.EndTime)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -188,11 +184,7 @@ namespace W3ChampionsStatisticService.Matches
             int maxMmr = 3000)
         {
             return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                    (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (map == "Overall" || m.Map == map)
-                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
+                    gameMode == m.GameMode && m.Season == 14);
         }
 
         public Task InsertOnGoingMatch(OnGoingMatchup matchup)
