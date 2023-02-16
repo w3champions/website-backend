@@ -39,7 +39,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 PopulateLeague(playerGameModeStats, allLeagues, rank);
             }
 
-            PopulateQuantiles(playerGameModeStats, season);
+            await PopulateQuantilesAsync(playerGameModeStats, season);
 
             return playerGameModeStats.OrderByDescending(r => r.RankingPoints).ToList();
         }
@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
                 var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
 
                 if (gameModeStat == null) return;
-            
+
 
                 gameModeStat.Division = league.Division;
                 gameModeStat.LeagueOrder = league.Order;
@@ -82,11 +82,11 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
             }
         }
 
-        private void PopulateQuantiles(List<PlayerGameModeStatPerGateway> playerGameModeStats, int season)
+        private async Task PopulateQuantilesAsync(List<PlayerGameModeStatPerGateway> playerGameModeStats, int season)
         {
             foreach (var gameModeStat in playerGameModeStats)
             {
-                gameModeStat.Quantile = _playerRepository.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
+                gameModeStat.Quantile =  await _playerRepository.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
             }
         }
     }

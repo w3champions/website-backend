@@ -1,10 +1,7 @@
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Cache;
-using W3ChampionsStatisticService.PersonalSettings;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 
@@ -13,27 +10,18 @@ namespace W3ChampionsStatisticService.Services
     public class MatchmakingProvider : MongoDbRepositoryBase
     {
         private readonly MatchmakingServiceClient _matchmakingServiceClient;
-        private static CachedData<GetSeasonMapsResponse> _currentSeasonMapsCache;
+        private readonly ICacheData<GetSeasonMapsResponse> _cacheData;
 
-        public MatchmakingProvider(
-          MongoClient mongoClient,
-          MatchmakingServiceClient matchmakingServiceClient) : base(mongoClient)
+        public MatchmakingProvider(MongoClient mongoClient, MatchmakingServiceClient matchmakingServiceClient, ICacheData<GetSeasonMapsResponse> cacheData) : base(mongoClient)
         {
             _matchmakingServiceClient = matchmakingServiceClient;
-            _currentSeasonMapsCache = new CachedData<GetSeasonMapsResponse>(() => FetchSeasonMapsResponse(), TimeSpan.FromMinutes(10));
+            _cacheData = cacheData;
         }
-
-        private GetSeasonMapsResponse FetchSeasonMapsResponse()
+        public Task<GetSeasonMapsResponse> GetCurrentSeasonMapsAsync()
         {
-            return _matchmakingServiceClient
-              .GetCurrentSeasonMaps()
-              .GetAwaiter()
-              .GetResult();
-        }
-
-        public GetSeasonMapsResponse GetCurrentSeasonMaps()
-        {
-            return _currentSeasonMapsCache.GetCachedData();
+            return _cacheData.GetCachedOrRequestAsync(
+                async () => await _matchmakingServiceClient
+                .GetCurrentSeasonMaps(), null);
         }
     }
 }
