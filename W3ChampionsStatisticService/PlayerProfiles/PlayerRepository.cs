@@ -167,6 +167,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerOverview>(battleTag);
         }
 
+        // TODO: Move to separate service
         public async Task<float?> GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
         {
             var seasonRanks =

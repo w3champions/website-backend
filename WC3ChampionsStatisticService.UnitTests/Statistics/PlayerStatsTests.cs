@@ -8,6 +8,7 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
@@ -201,7 +202,7 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
         [Test]
         public async Task PlayerStats_PlayerParticipatedRaceIsCorrect()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var personalSettingsRepo = new PersonalSettingsRepository(MongoClient);
 
             var playerHeroStatsHandler = new PlayerOverallStatsHandler(playerRepository, personalSettingsRepo);
@@ -227,7 +228,7 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
         [Test]
         public async Task PlayerStats_RaceBasedMMR()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var playerHeroStatsHandler = new PlayOverviewHandler(playerRepository);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();

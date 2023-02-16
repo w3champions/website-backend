@@ -1,11 +1,14 @@
 ﻿using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.W3ChampionsStats;
 
 namespace WC3ChampionsStatisticService.Tests.Matches
@@ -129,7 +132,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var playerLoadedAgain = await playerRepository.LoadRaceStatPerGateway("ShaDeFaDe#2441", GateWay.Europe, 1);
             for (int i = 0; i < 1000; i++)
             {
@@ -143,7 +146,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("ShaDeFaDe#2441", GateWay.Europe, 1);
             for (int i = 0; i < 1000; i++)
             {
