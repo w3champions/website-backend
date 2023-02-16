@@ -8,11 +8,9 @@ namespace W3ChampionsStatisticService.Cache
 {
     public class InMemoryCacheData<T>: ICacheData<T>
     {
-        // ReSharper disable StaticMemberInGenericType
         // NOTE: It is intentional to have different semaphores for different generic types
+        // ReSharper disable once StaticMemberInGenericType
         private static readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-        private static readonly object _lockObject= new ();
-        // ReSharper restore StaticMemberInGenericType
 
         private readonly CacheDataOptions<T> _cacheDataOptions;
         private readonly IMemoryCache _memoryCache;
@@ -45,26 +43,6 @@ namespace W3ChampionsStatisticService.Cache
                 finally
                 {
                     _semaphoreSlim.Release();
-                }
-            });
-        }
-
-        public T GetCachedOrRequest(Func<T> requestDataCallback, string key = null)
-        {
-            return _memoryCache.GetOrCreate(typeof(T).FullName + key, cacheEntry =>
-            {
-                if (_cacheDataOptions.CacheDuration.HasValue)
-                {
-                    cacheEntry.SetSlidingExpiration(_cacheDataOptions.CacheDuration.Value);
-                }
-                if (!_cacheDataOptions.LockDuringFetch)
-                {
-                    return requestDataCallback();
-                }
-
-                lock (_lockObject)
-                {
-                    return requestDataCallback();
                 }
             });
         }
