@@ -38,10 +38,15 @@ namespace W3ChampionsStatisticService.PlayerStats
 
         private async Task<SeasonMapInformation> FetchCurrentSeasonMapsInfoAsync()
         {
-            var seasonMaps =  await _matchmakingProvider.GetCurrentSeasonMapsAsync();
-            var mapInforation = seasonMaps.Items.SelectMany(x => x.Maps)
-                .ToDictionary(x => new MapName(x.GameMap.Path).Name, x => x.GameMap.Name);
-            return new SeasonMapInformation(mapInforation);
+            var seasonMaps = await _matchmakingProvider.GetCurrentSeasonMapsAsync();
+            var mapNames = new Dictionary<string, string>();
+            foreach (var seasonMap in seasonMaps.Items.SelectMany(x => x.Maps))
+            {
+                var map = new MapName(seasonMap.GameMap.Path).Name;
+                mapNames[map] = seasonMap.GameMap.Name;
+            }
+
+            return new SeasonMapInformation(mapNames);
         }
     }
 

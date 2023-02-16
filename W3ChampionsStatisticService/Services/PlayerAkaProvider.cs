@@ -27,6 +27,11 @@ namespace W3ChampionsStatisticService.Services
             httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
 
             var response = await httpClient.GetAsync(war3infoApiUrl);
+
+            if (!response.IsSuccessStatusCode) {
+                return new List<PlayerAka>();
+            }
+
             string data = await response.Content.ReadAsStringAsync();
 
             var stringData = JsonSerializer.Deserialize<List<PlayerAka>>(data);

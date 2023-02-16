@@ -6,7 +6,7 @@ namespace W3ChampionsStatisticService.Matches
     {
         public MapName(string map)
         {
-            Name = map.Split("/")
+            Name = map.Split('/', '\\')
                 .Last()
                 .Replace(".w3x", "")
                 .Replace(".w3m","")
