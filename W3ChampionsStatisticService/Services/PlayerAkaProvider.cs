@@ -41,8 +41,7 @@ namespace W3ChampionsStatisticService.Services
             return stringData;
         }
 
-        
-        public Player GetPlayerAkaData(string battleTag) // string should be received all lower-case.
+        public async Task<Player> GetPlayerAkaDataAsync(string battleTag) // string should be received all lower-case.
         {
             var akas = PlayersAkaCache.GetCachedData();
             var aka = akas.Find(x => x.aka == battleTag);
