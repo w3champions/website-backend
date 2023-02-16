@@ -5,21 +5,23 @@ using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 
-namespace W3ChampionsStatisticService.PlayerStats
+namespace W3ChampionsStatisticService.Services
 {
-    public class PlayerStatisticsService: IPlayerStatisticsService
+    public class PlayerStatisticsService
     {
         private readonly IPlayerStatsRepository _playerStatsRepository;
         private readonly MatchmakingProvider _matchmakingProvider;
         private readonly ICacheData<SeasonMapInformation> _seasonMapCache;
+        private readonly IW3StatsRepo _w3StatsRepo;
 
-        public PlayerStatisticsService(IPlayerStatsRepository playerStatsRepository, MatchmakingProvider matchmakingProvider, ICacheData<SeasonMapInformation> seasonMapCache)
+        public PlayerStatisticsService(IPlayerStatsRepository playerStatsRepository, MatchmakingProvider matchmakingProvider, ICacheData<SeasonMapInformation> seasonMapCache, IW3StatsRepo w3StatsRepo)
         {
             _playerStatsRepository = playerStatsRepository;
             _matchmakingProvider = matchmakingProvider;
             _seasonMapCache = seasonMapCache;
+            _w3StatsRepo = w3StatsRepo;
         }
 
         public async Task<PlayerRaceOnMapVersusRaceRatioView> GetMapAndRaceStatAsync(string battleTag, int season)

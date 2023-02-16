@@ -23,6 +23,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             };
         }
         public string Map { get; set; }
+        public string MapName { get; set; }
         public List<RaceWinLoss> WinLosses { get; set; }
 
         public void RecordWin(Race enemyRace, in bool won)

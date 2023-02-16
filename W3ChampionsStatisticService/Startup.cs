@@ -127,7 +127,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
 
-            services.AddTransient<IPlayerStatisticsService, PlayerStatisticsService>();
+            services.AddTransient<PlayerStatisticsService>();
 
             if (startHandlers == "true")
             {
