@@ -54,9 +54,9 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("bannedPlayers")]
-        public async Task<IActionResult> GetBannedPlayers()
+        public async Task<IActionResult> GetBannedPlayers(bool active)
         {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers(active);
             return Ok(bannedPlayers);
         }
 

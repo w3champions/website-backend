@@ -41,9 +41,9 @@ namespace W3C.Domain.MatchmakingService
             };
         }
 
-        public async Task<BannedPlayerResponse> GetBannedPlayers()
+        public async Task<BannedPlayerResponse> GetBannedPlayers(bool active)
         {
-            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}");
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}&active={active}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
