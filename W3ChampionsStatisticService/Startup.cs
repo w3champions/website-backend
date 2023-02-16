@@ -76,9 +76,23 @@ namespace W3ChampionsStatisticService
             services.AddSpecialBsonRegistrations();
 
             services.AddSingleton<TrackingService>();
-            services.AddSingleton<PlayerAkaProvider>();
-            services.AddSingleton<PersonalSettingsProvider>();
-            services.AddSingleton<MatchmakingProvider>();
+            services.AddTransient<PlayerAkaProvider>();
+            services.AddTransient<PersonalSettingsProvider>();
+            services.AddTransient<MatchmakingProvider>();
+
+            services.AddMemoryCache();
+            services.AddTransient(typeof(ICacheData<>), typeof(InMemoryCacheData<>));
+            services.Configure<CacheDataOptions<SeasonMapInformation>>(
+                x =>
+                {
+                    x.CacheDuration = TimeSpan.FromHours(1);
+                });
+
+            services.Configure<CacheDataOptions<List<PlayerAka>>>(
+                x =>
+                {
+                    x.CacheDuration = TimeSpan.FromHours(1);
+                });
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -109,6 +123,8 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<UpdateServiceClient>();
             services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
+
+            services.AddTransient<IPlayerStatisticsService, PlayerStatisticsService>();
 
             if (startHandlers == "true")
             {
