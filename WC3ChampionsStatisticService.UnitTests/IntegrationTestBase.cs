@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using NUnit.Framework;
 using W3C.Domain.MatchmakingService;
+using W3ChampionsStatisticService.Cache;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests
@@ -20,7 +24,14 @@ namespace WC3ChampionsStatisticService.Tests
         public async Task Setup()
         {
             await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service");
-            personalSettingsProvider= new PersonalSettingsProvider(MongoClient);
+            personalSettingsProvider= new PersonalSettingsProvider(MongoClient, CreateTestCache<List<PersonalSetting>>());
+        }
+
+        protected ICacheData<T> CreateTestCache<T>()
+        {
+            return new InMemoryCacheData<T>(
+                new OptionsWrapper<CacheDataOptions<T>>(new CacheDataOptions<T>()),
+                new MemoryCache(new MemoryCacheOptions()));
         }
 
         protected async Task InsertMatchEvents(List<MatchFinishedEvent> newEvents)

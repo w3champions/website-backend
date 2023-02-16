@@ -19,7 +19,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task LoadAndSave()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var player = PlayerOverallStats.Create("peter#123");
             await playerRepository.UpsertPlayer(player);
@@ -31,7 +31,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task Search()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var player = PlayerOverallStats.Create("Peter#123");
             var player2 = PlayerOverallStats.Create("Anderer#123");
@@ -46,7 +46,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task Search_DuplicateNameBug()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var player = PlayerOverallStats.Create("ThunderHorn#2481");
             var player2 = PlayerOverallStats.Create("ThunderHorn#21132");
@@ -62,7 +62,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task Search_DuplicateNameBug_RefineWithBtag()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var player = PlayerOverallStats.Create("ThunderHorn#2481");
             var player2 = PlayerOverallStats.Create("ThunderHorn#21132");
@@ -77,7 +77,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task GlobalSearch()
         {
-            var playerRepository = new PlayerRepository(MongoClient, personalSettingsProvider);
+            var playerRepository = new PlayerRepository(MongoClient, personalSettingsProvider, CreateTestCache<List<MmrRank>>());
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
 
             var player1 = new PersonalSetting("ThunderHorn#2481");
@@ -114,7 +114,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayerMapping()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var player = PlayerOverallStats.Create("peter#123");
             player.RecordWin(Race.HU, 0, true);
@@ -132,7 +132,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayerStatsMapping()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var battleTagIdCombined = new BattleTagIdCombined(new List<PlayerId>
                 {
@@ -156,7 +156,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayerIdMappedRight()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             var player1 = PlayerOverallStats.Create("peter#123");
             var player2 = PlayerOverallStats.Create("wolf#456");
@@ -173,7 +173,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayerMultipleWinRecords()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var personalSettingsRepo = new PersonalSettingsRepository(MongoClient);
 
             var handler = new PlayerOverallStatsHandler(playerRepository, personalSettingsRepo);
@@ -207,7 +207,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayersFromAn1v1Match_GameModeHandler_Test()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeEvent();
@@ -233,7 +233,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayersFromAn2v2ATMatch_GameModeHandler_Test()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFake2v2AtEvent();
@@ -266,7 +266,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayersFromAn2v2AT_vs_RTMatch_GameModeHandler_Test()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFake2v2AtEvent();
@@ -305,7 +305,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task PlayersFromAnFFAMatch_GameModeHandler_Test()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
             var ev = TestDtoHelper.CreateFakeFFAEvent();
@@ -347,7 +347,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeFootmenFrenzyEvent();
 
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var handler = new PlayerGameModeStatPerGatewayHandler(playerRepository);
 
             await handler.Update(matchFinishedEvent);
@@ -380,7 +380,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task Player_UpdateMmrRpTimeline()
         {
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var handler = new PlayerMmrRpTimelineHandler(playerRepository);
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
             var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
@@ -388,7 +388,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
             var matchFinishedEvent4 = TestDtoHelper.CreateFakeEvent();
 
             // P1 Win
-            matchFinishedEvent1.match.endTime = 1585692047363; 
+            matchFinishedEvent1.match.endTime = 1585692047363;
             matchFinishedEvent1.match.players[0].race = Race.OC;
             matchFinishedEvent1.match.players[1].race = Race.NE;
             matchFinishedEvent1.match.players[0].updatedMmr.rating = 123;
