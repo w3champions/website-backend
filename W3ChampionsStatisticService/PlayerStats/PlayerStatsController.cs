@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerStats
 {
@@ -11,9 +12,9 @@ namespace W3ChampionsStatisticService.PlayerStats
     public class PlayerStatsController : ControllerBase
     {
         private readonly IPlayerStatsRepository _playerRepository;
-        private readonly IPlayerStatisticsService _playerStatisticsService;
+        private readonly PlayerStatisticsService _playerStatisticsService;
 
-        public PlayerStatsController(IPlayerStatsRepository playerRepository, IPlayerStatisticsService playerStatisticsService)
+        public PlayerStatsController(IPlayerStatsRepository playerRepository, PlayerStatisticsService playerStatisticsService)
         {
             _playerRepository = playerRepository;
             _playerStatisticsService = playerStatisticsService;

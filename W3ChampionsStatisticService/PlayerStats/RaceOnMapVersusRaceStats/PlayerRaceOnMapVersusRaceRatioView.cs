@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
@@ -12,13 +13,28 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
                 BattleTag = battleTag.BattleTag,
                 Season = battleTag.Season,
                 RaceWinsOnMap = battleTag.RaceWinsOnMap,
-                RaceWinsOnMapByPatch = new Dictionary<string, MapWinsPerRaceList>()
+                RaceWinsOnMapByPatch = battleTag.RaceWinsOnMapByPatch
             };
-            foreach (var (key, value) in battleTag.RaceWinsOnMapByPatch)
+
+            foreach (var winLossesPerMap in mapVersusRaceRatioView.RaceWinsOnMap
+                         .SelectMany(x => x.WinLossesOnMap))
             {
-                var displayMapName = mapNames.TryGetValue(key, out var mapName) ? mapName : key;
-                mapVersusRaceRatioView.RaceWinsOnMapByPatch[displayMapName] = value;
+                if (mapNames.TryGetValue(winLossesPerMap.Map, out var mapName))
+                {
+                    winLossesPerMap.MapName = mapName;
+                }
             }
+
+            foreach (var winLossesPerMap in mapVersusRaceRatioView.RaceWinsOnMapByPatch
+                         .SelectMany(x => x.Value)
+                         .SelectMany(x => x.WinLossesOnMap))
+            {
+                if (mapNames.TryGetValue(winLossesPerMap.Map, out var mapName))
+                {
+                    winLossesPerMap.MapName = mapName;
+                }
+            }
+
             return mapVersusRaceRatioView;
         }
 
