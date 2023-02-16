@@ -21,12 +21,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
-        private static Dictionary<int, CachedData<List<MmrRank>>> MmrRanksCacheBySeason = new Dictionary<int, CachedData<List<MmrRank>>>();
-        private PersonalSettingsProvider _personalSettingsProvider;
+        private readonly PersonalSettingsProvider _personalSettingsProvider;
+        private readonly ICacheData<List<MmrRank>> _mmrCacheData;
 
-        public PlayerRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider = null) : base(mongoClient)
+        public PlayerRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider, ICacheData<List<MmrRank>> mmrCacheData) : base(mongoClient)
         {
-          _personalSettingsProvider = personalSettingsProvider;
+            _personalSettingsProvider = personalSettingsProvider;
+            _mmrCacheData = mmrCacheData;
         }
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
@@ -91,7 +92,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             var searchLower = search.ToLower();
 
             // Fetch entire cache
-            var personalSettings = _personalSettingsProvider.GetPersonalSettings();
+            var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
             // Filter cached personal settings
             var result = personalSettings
@@ -166,14 +167,10 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerOverview>(battleTag);
         }
 
-        public float? GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
+        public async Task<float?> GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
         {
-            if (!MmrRanksCacheBySeason.ContainsKey(season))
-            {
-                MmrRanksCacheBySeason[season] = new CachedData<List<MmrRank>>(() => FetchMmrRanks(season).GetAwaiter().GetResult(), TimeSpan.FromMinutes(5));
-            }
-
-            var seasonRanks = MmrRanksCacheBySeason[season].GetCachedData();
+            var seasonRanks =
+                await _mmrCacheData.GetCachedOrRequestAsync(async () => await FetchMmrRanks(season), season.ToString());
             var gatewayGameModeRanks = seasonRanks.FirstOrDefault(x => x.Gateway == gateWay && x.GameMode == gameMode);
 
             var rankKey = GetRankKey(playerIds, gameMode, race);
@@ -190,8 +187,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
         public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
         {
-            if (gameMode != GameMode.GM_2v2_AT 
-                && gameMode != GameMode.GM_4v4_AT 
+            if (gameMode != GameMode.GM_2v2_AT
+                && gameMode != GameMode.GM_4v4_AT
                 && gameMode != GameMode.GM_LEGION_4v4_x20_AT
                 && gameMode != GameMode.GM_DOTA_5ON5_AT)
             {

@@ -10,38 +10,19 @@ namespace W3ChampionsStatisticService.Services
 {
     public class PersonalSettingsProvider : MongoDbRepositoryBase
     {
-        public static CachedData<List<PersonalSetting>> personalSettingsCache;
+        private readonly ICacheData<List<PersonalSetting>> _cacheData;
 
-        public PersonalSettingsProvider(MongoClient mongoClient) : base(mongoClient)
+        public PersonalSettingsProvider(MongoClient mongoClient, ICacheData<List<PersonalSetting>> cacheData) : base(mongoClient)
         {
-            personalSettingsCache = new CachedData<List<PersonalSetting>>(() => FetchPersonalSettingsSync(), TimeSpan.FromMinutes(10));
-        }
-        
-        public List<PersonalSetting> GetPersonalSettings()
-        {
-            try 
-            {
-                return personalSettingsCache.GetCachedData();
-            }
-            catch
-            {
-                return new List<PersonalSetting>();
-            }
+            _cacheData = cacheData;
         }
 
-        private List<PersonalSetting> FetchPersonalSettingsSync()
+        public Task<List<PersonalSetting>> GetPersonalSettingsAsync()
         {
-            try 
-            {
-                return FetchPersonalSettings().GetAwaiter().GetResult();
-            }
-            catch
-            {
-                return new List<PersonalSetting>();
-            }
+            return _cacheData.GetCachedOrRequestAsync(FetchPersonalSettingsAsync, null);
         }
 
-        private Task<List<PersonalSetting>> FetchPersonalSettings()
+        private Task<List<PersonalSetting>> FetchPersonalSettingsAsync()
         {
             return LoadAll<PersonalSetting>();
         }
