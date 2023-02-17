@@ -11,6 +11,7 @@ using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
 namespace WC3ChampionsStatisticService.Tests.Clans
 {
@@ -393,7 +394,7 @@ namespace WC3ChampionsStatisticService.Tests.Clans
             await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
 
             var member1 = await _clanRepository.LoadMemberShip("Wolf#456");
-            
+
             Assert.AreEqual(null, member1.ClanId);
             Assert.AreEqual("CS", member1.PendingInviteFromClan);
 
@@ -417,7 +418,7 @@ namespace WC3ChampionsStatisticService.Tests.Clans
             await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
 
             var member1 = await _clanRepository.LoadMemberShip("Wolf#456");
-            
+
             Assert.AreEqual(null, member1.ClanId);
             Assert.AreEqual("CS", member1.PendingInviteFromClan);
 
@@ -497,7 +498,7 @@ namespace WC3ChampionsStatisticService.Tests.Clans
                 })
             });
 
-            var playerRepository = new PlayerRepository(MongoClient);
+            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId>
                 {
                     PlayerId.Create(clan.Members[0])

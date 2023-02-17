@@ -11,22 +11,15 @@ namespace W3ChampionsStatisticService.Services
 {
     public class PlayerAkaProvider
     {
-        private static CachedData<List<PlayerAka>> PlayersAkaCache = new CachedData<List<PlayerAka>>(() => FetchAkasSync(), TimeSpan.FromMinutes(60));
-        
-        public static List<PlayerAka> FetchAkasSync()
+        private readonly ICachedDataProvider<List<PlayerAka>> _userAccountsCached;
+
+        public PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccountsCached)
         {
-            try
-            {
-               return FetchAkas().GetAwaiter().GetResult();
-            }
-            catch
-            {
-                return new List<PlayerAka>();
-            }
+            _userAccountsCached = userAccountsCached;
         }
 
-        public static async Task<List<PlayerAka>> FetchAkas() // list of all Akas requested from W3info
-        { 
+        public static async Task<List<PlayerAka>> GetAkaReferencesAsync() // list of all Akas requested from W3info
+        {
             var war3infoApiKey = Environment.GetEnvironmentVariable("WAR3_INFO_API_KEY"); // Change this to secret for dev
             var war3infoApiUrl = "https://warcraft3.info/api/v1/aka/battle_net";
 
@@ -34,17 +27,21 @@ namespace W3ChampionsStatisticService.Services
             httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
 
             var response = await httpClient.GetAsync(war3infoApiUrl);
+
+            if (!response.IsSuccessStatusCode) {
+                return new List<PlayerAka>();
+            }
+
             string data = await response.Content.ReadAsStringAsync();
 
             var stringData = JsonSerializer.Deserialize<List<PlayerAka>>(data);
-            
+
             return stringData;
         }
 
-        
-        public Player GetPlayerAkaData(string battleTag) // string should be received all lower-case.
+        public async Task<Player> GetPlayerAkaDataAsync(string battleTag) // string should be received all lower-case.
         {
-            var akas = PlayersAkaCache.GetCachedData();
+            var akas = await _userAccountsCached.GetCachedOrRequestAsync(GetAkaReferencesAsync, null);
             var aka = akas.Find(x => x.aka == battleTag);
 
             if (aka != null) {
@@ -53,10 +50,10 @@ namespace W3ChampionsStatisticService.Services
             return new Player(); // returns an default values if they are not in the database
         }
 
-        public Player GetAkaDataByPreferences(string battletag, PersonalSetting settings)
+        public async Task<Player> GetAkaDataByPreferencesAsync(string battletag, PersonalSetting settings)
         {
-            var playerAkaData = GetPlayerAkaData(battletag.ToLower());
-            
+            var playerAkaData = await GetPlayerAkaDataAsync(battletag.ToLower());
+
             if (settings != null && settings.AliasSettings != null)  // Strip the data if the player doesn't want it shown.
             {
                 var modifiedAka = new Player();
@@ -66,20 +63,20 @@ namespace W3ChampionsStatisticService.Services
                     modifiedAka.main_race = playerAkaData.main_race;
                     modifiedAka.country = playerAkaData.country;
                 }
-            
-                if (settings.AliasSettings.showW3info) 
+
+                if (settings.AliasSettings.showW3info)
                 {
                     modifiedAka.id = playerAkaData.id;
                 }
-            
-                if (settings.AliasSettings.showLiquipedia) 
+
+                if (settings.AliasSettings.showLiquipedia)
                 {
                     modifiedAka.liquipedia = playerAkaData.liquipedia;
                 }
 
                 return modifiedAka;
             }
-            
+
             return playerAkaData;
         }
     }

@@ -61,16 +61,16 @@ namespace W3ChampionsStatisticService.PlayerProfiles
                 {
                     return Unauthorized("Sorry Hackerboi");
                 }
-                
+
                 player = PlayerOverallStats.Create(battleTag);
             }
-            
+
             // Akas are stored in cache - preferences for showing akas are stored in DB
             var settings = await _personalSettingsRepository.Load(battleTag);
-            player.PlayerAkaData = _playerAkaProvider.GetAkaDataByPreferences(battleTag, settings);
+            player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferencesAsync(battleTag, settings);
 
             await _playerRepository.UpsertPlayer(player);
-            
+
             return Ok(player);
         }
 
@@ -136,7 +136,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             ordered.Remove(firstPick);
             ordered.Add(firstPick);
 
-            
+
             return Ok(ordered);
         }
 
@@ -153,9 +153,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         }
 
         [HttpGet("{battleTag}/aka")]
-        public IActionResult GetPlayerAka([FromRoute] string battleTag)
+        public async Task<IActionResult> GetPlayerAka([FromRoute] string battleTag)
         {
-            var player = _playerAkaProvider.GetPlayerAkaData(battleTag.ToLower());
+            var player = await _playerAkaProvider.GetPlayerAkaDataAsync(battleTag.ToLower());
             return Ok(player);
         }
     }

@@ -7,11 +7,13 @@ using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using Prometheus;
 using System;
+using System.Collections.Generic;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Admin;
+using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
@@ -20,6 +22,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
@@ -76,9 +79,23 @@ namespace W3ChampionsStatisticService
             services.AddSpecialBsonRegistrations();
 
             services.AddSingleton<TrackingService>();
-            services.AddSingleton<PlayerAkaProvider>();
-            services.AddSingleton<PersonalSettingsProvider>();
-            services.AddSingleton<MatchmakingProvider>();
+            services.AddTransient<PlayerAkaProvider>();
+            services.AddTransient<PersonalSettingsProvider>();
+            services.AddTransient<MatchmakingProvider>();
+
+            services.AddMemoryCache();
+            services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
+            services.Configure<CacheOptionsFor<SeasonMapInformation>>(
+                x =>
+                {
+                    x.CacheDuration = TimeSpan.FromHours(1);
+                });
+
+            services.Configure<CacheOptionsFor<List<PlayerAka>>>(
+                x =>
+                {
+                    x.CacheDuration = TimeSpan.FromHours(1);
+                });
 
             services.AddTransient<IMatchEventRepository, MatchEventRepository>();
             services.AddTransient<IVersionRepository, VersionRepository>();
@@ -109,6 +126,8 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<UpdateServiceClient>();
             services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
+
+            services.AddTransient<PlayerStatisticsService>();
 
             if (startHandlers == "true")
             {

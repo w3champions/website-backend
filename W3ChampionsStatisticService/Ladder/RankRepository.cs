@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Ladder
 
         public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
         {
-            var personalSettings = _personalSettingsProvider.GetPersonalSettings();
+            var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
             var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
 
@@ -53,7 +53,7 @@ namespace W3ChampionsStatisticService.Ladder
         public async Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string tagSearch)
         {
             // searches through all battletags that have ever played a game on the system - does not return duplicates or AT teams
-            
+
             var search = tagSearch.ToLower();
             var ranksList = await JoinWith(rank => rank.PlayerId.ToLower().Contains(search));
 
@@ -64,13 +64,13 @@ namespace W3ChampionsStatisticService.Ladder
                 var playerInfo = new PlayerInfoForProxy();
                 playerInfo.GameMode = rank.GameMode;
                 playerInfo.Players = rank.Players;
-                
+
                 if (!Enum.Equals(playerInfo.GameMode, GameMode.GM_2v2_AT))
                 {
                     if (listOfProxyData.Count > 0)
                     {
                         var foundPlayersTags = new List<string>();
-                        
+
                         foreach (var player in listOfProxyData)
                         {
                             foundPlayersTags.Add(player.Player.PlayerIds.First().BattleTag);
@@ -78,14 +78,14 @@ namespace W3ChampionsStatisticService.Ladder
 
                         if (!foundPlayersTags.Contains(playerInfo.Player.PlayerIds.First().BattleTag))
                         {
-                            listOfProxyData.Add(playerInfo);    
+                            listOfProxyData.Add(playerInfo);
                         }
                     }
-                    else 
+                    else
                     {
                         listOfProxyData.Add(playerInfo);
                     }
-                } 
+                }
             }
 
             return listOfProxyData;

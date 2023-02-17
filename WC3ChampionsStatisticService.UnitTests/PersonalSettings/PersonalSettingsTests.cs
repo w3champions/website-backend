@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -6,6 +7,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.Rewards.Portraits;
 
 namespace WC3ChampionsStatisticService.Tests.PersonalSettings
@@ -99,7 +101,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
             Assert.DoesNotThrow(() => personalSetting.SetProfilePicture(cmd));
 
             Assert.IsTrue(
-                personalSetting.ProfilePicture.PictureId >= 1 && 
+                personalSetting.ProfilePicture.PictureId >= 1 &&
                 personalSetting.ProfilePicture.PictureId <= 5);
             Assert.AreEqual(expectedProfilePic.Race, personalSetting.ProfilePicture.Race);
         }
@@ -134,7 +136,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task RepoLoadWithJoin()
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var personalSetting = new PersonalSetting("peter#123");
 
             var player = PlayerOverallStats.Create("peter#123");
@@ -155,7 +157,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task RepoLoadWithJoin_NotFoundPlayer()
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var personalSetting = new PersonalSetting("peter#123");
 
             var player = PlayerOverallStats.Create("peter#123");
@@ -172,7 +174,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task SetPictureWhenSettingsAreNotThere()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -197,10 +199,10 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task RequestPersonalSettings_SpecialPicturesNull_Load_CorrectlyUpdatedAndReturned()
         {
             // arrange
-            var playerRepo = new PlayerRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
 
-            var player = PlayerOverallStats.Create("cepheid#1467"); 
+            var player = PlayerOverallStats.Create("cepheid#1467");
             var playerSettings = new PersonalSetting("cepheid#1467");
             await playerRepo.UpsertPlayer(player);
             await personalSettingsRepository.Save(playerSettings);
@@ -219,7 +221,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         {
             // arrange
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient);
+            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
 
             string[] players = { "cepheid#1467", "floss2xdaily#1234", "setcho#4567" };
 

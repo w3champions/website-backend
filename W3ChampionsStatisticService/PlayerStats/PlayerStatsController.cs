@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerStats
 {
@@ -11,17 +12,19 @@ namespace W3ChampionsStatisticService.PlayerStats
     public class PlayerStatsController : ControllerBase
     {
         private readonly IPlayerStatsRepository _playerRepository;
+        private readonly PlayerStatisticsService _playerStatisticsService;
 
-        public PlayerStatsController(IPlayerStatsRepository playerRepository)
+        public PlayerStatsController(IPlayerStatsRepository playerRepository, PlayerStatisticsService playerStatisticsService)
         {
             _playerRepository = playerRepository;
+            _playerStatisticsService = playerStatisticsService;
         }
 
         [HttpGet("{battleTag}/race-on-map-versus-race")]
         public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag, int season)
         {
-            var matches = await _playerRepository.LoadMapAndRaceStat(battleTag, season);
-            return Ok(matches ?? PlayerRaceOnMapVersusRaceRatio.Create(battleTag, season));
+            var matches = await _playerStatisticsService.GetMapAndRaceStatAsync(battleTag, season);
+            return Ok(matches ?? PlayerRaceOnMapVersusRaceRatioView.Create(battleTag, season));
         }
 
         [HttpGet("{battleTag}/hero-on-map-versus-race")]
