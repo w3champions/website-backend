@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Services
 
             var mapInformation = await FetchMapNamesAsync();
 
-            return PlayerRaceOnMapVersusRaceRatioView.Create(mapAndRaceStat, mapInformation.MapNames);
+            return PlayerRaceOnMapVersusRaceRatioView.Create(mapAndRaceStat, mapInformation);
         }
 
         private async Task<SeasonMapInformation> FetchMapNamesAsync()
@@ -49,16 +49,6 @@ namespace W3ChampionsStatisticService.Services
             }
 
             return new SeasonMapInformation(mapNames);
-        }
-    }
-
-    public class SeasonMapInformation
-    {
-        public IReadOnlyDictionary<string, string> MapNames { get; }
-
-        public SeasonMapInformation(IReadOnlyDictionary<string, string> mapNames)
-        {
-            MapNames = mapNames;
         }
     }
 }
