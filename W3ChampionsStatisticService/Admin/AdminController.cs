@@ -64,6 +64,14 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
+            if (bannedPlayerReadmodel.battleTag == "") {
+                return BadRequest("BattleTag cannot be empty.");
+            }
+
+            if (bannedPlayerReadmodel.endDate == "") {
+                return BadRequest("Ban End Date must be set.");
+            }
+
             var result = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
             if (result.StatusCode == HttpStatusCode.BadRequest) {
                 var reason = result.Content.ReadAsStringAsync().Result;
