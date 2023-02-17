@@ -67,7 +67,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
 
             // Akas are stored in cache - preferences for showing akas are stored in DB
             var settings = await _personalSettingsRepository.Load(battleTag);
-            player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferences(battleTag, settings);
+            player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferencesAsync(battleTag, settings);
 
             await _playerRepository.UpsertPlayer(player);
 

@@ -18,7 +18,7 @@ namespace W3ChampionsStatisticService.Services
             _userAccountsCache = userAccountsCache;
         }
 
-        public static async Task<List<PlayerAka>> FetchBattleNetAccounts() // list of all Akas requested from W3info
+        public static async Task<List<PlayerAka>> GetAkaReferencesAsync() // list of all Akas requested from W3info
         {
             var war3infoApiKey = Environment.GetEnvironmentVariable("WAR3_INFO_API_KEY"); // Change this to secret for dev
             var war3infoApiUrl = "https://warcraft3.info/api/v1/aka/battle_net";
@@ -41,7 +41,7 @@ namespace W3ChampionsStatisticService.Services
 
         public async Task<Player> GetPlayerAkaDataAsync(string battleTag) // string should be received all lower-case.
         {
-            var akas = await _userAccountsCache.GetCachedOrRequestAsync(FetchBattleNetAccounts, null);
+            var akas = await _userAccountsCache.GetCachedOrRequestAsync(GetAkaReferencesAsync, null);
             var aka = akas.Find(x => x.aka == battleTag);
 
             if (aka != null) {
@@ -50,7 +50,7 @@ namespace W3ChampionsStatisticService.Services
             return new Player(); // returns an default values if they are not in the database
         }
 
-        public async Task<Player> GetAkaDataByPreferences(string battletag, PersonalSetting settings)
+        public async Task<Player> GetAkaDataByPreferencesAsync(string battletag, PersonalSetting settings)
         {
             var playerAkaData = await GetPlayerAkaDataAsync(battletag.ToLower());
 
