@@ -9,13 +9,15 @@ namespace W3ChampionsStatisticService.Matches
             UnitScore unitScore,
             List<Hero> heroes,
             HeroScore heroScore,
-            ResourceScore resourceScore)
+            ResourceScore resourceScore,
+            int teamIndex)
         {
             BattleTag = battleTag;
             UnitScore = unitScore;
             Heroes = heroes;
             HeroScore = heroScore;
             ResourceScore = resourceScore;
+            TeamIndex = teamIndex;
         }
 
         public string BattleTag { get; }
@@ -23,5 +25,6 @@ namespace W3ChampionsStatisticService.Matches
         public List<Hero> Heroes { get; }
         public HeroScore HeroScore { get; }
         public ResourceScore ResourceScore { get; }
+        public int TeamIndex { get; }
     }
 }
