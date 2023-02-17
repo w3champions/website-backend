@@ -50,12 +50,12 @@ namespace W3C.Domain.MatchmakingService
             return deserializeObject;
         }
 
-        public async Task<HttpStatusCode> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
+        public async Task<HttpResponseMessage> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
             var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
             var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}", httpcontent);
-            return result.StatusCode;
+            return result;
         }
 
         public async Task<HttpStatusCode> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)

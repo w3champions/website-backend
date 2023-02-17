@@ -64,8 +64,12 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-            return Ok(bannedPlayers);
+            var result = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
+            if (result.StatusCode == HttpStatusCode.BadRequest) {
+                var reason = result.Content.ReadAsStringAsync().Result;
+                return BadRequest(reason);
+            }
+            return Ok();
         }
 
         [HttpDelete("bannedPlayers")]
