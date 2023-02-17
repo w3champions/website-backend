@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
     public class PlayerRaceOnMapVersusRaceRatioView
     {
-        public static PlayerRaceOnMapVersusRaceRatioView Create(PlayerRaceOnMapVersusRaceRatio battleTag, IReadOnlyDictionary<string, string> mapNames)
+        public static PlayerRaceOnMapVersusRaceRatioView Create(PlayerRaceOnMapVersusRaceRatio battleTag, SeasonMapInformation mapNames)
         {
             var mapVersusRaceRatioView = new PlayerRaceOnMapVersusRaceRatioView
             {
@@ -19,20 +20,14 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             foreach (var winLossesPerMap in mapVersusRaceRatioView.RaceWinsOnMap
                          .SelectMany(x => x.WinLossesOnMap))
             {
-                if (mapNames.TryGetValue(winLossesPerMap.Map, out var mapName))
-                {
-                    winLossesPerMap.MapName = mapName;
-                }
+                winLossesPerMap.MapName = mapNames.GetMapName(winLossesPerMap.Map);
             }
 
             foreach (var winLossesPerMap in mapVersusRaceRatioView.RaceWinsOnMapByPatch
                          .SelectMany(x => x.Value)
                          .SelectMany(x => x.WinLossesOnMap))
             {
-                if (mapNames.TryGetValue(winLossesPerMap.Map, out var mapName))
-                {
-                    winLossesPerMap.MapName = mapName;
-                }
+                winLossesPerMap.MapName = mapNames.GetMapName(winLossesPerMap.Map);
             }
 
             return mapVersusRaceRatioView;
@@ -40,7 +35,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 
         public static PlayerRaceOnMapVersusRaceRatioView Create(string battleTag, int mapNames)
         {
-            return Create(PlayerRaceOnMapVersusRaceRatio.Create(battleTag, mapNames), new Dictionary<string, string>());
+            return Create(PlayerRaceOnMapVersusRaceRatio.Create(battleTag, mapNames), SeasonMapInformation.Empty);
         }
 
         public string Id { get; set; }
