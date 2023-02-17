@@ -18,7 +18,7 @@ namespace WC3ChampionsStatisticService.Tests.Cache
         {
             var services = new ServiceCollection();
             services.AddMemoryCache();
-            services.AddTransient(typeof(ICacheData<>), typeof(InMemoryCacheData<>));
+            services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
             services.AddTransient<ITestService, TestService>();
             _serviceCollection = services;
         }
@@ -43,7 +43,7 @@ namespace WC3ChampionsStatisticService.Tests.Cache
         [Test]
         public async Task TestCacheWithoutLocking()
         {
-            _serviceCollection.Configure<CacheDataOptions<TestData>>(
+            _serviceCollection.Configure<CacheOptionsFor<TestData>>(
                 x => { x.LockDuringFetch = false; });
 
             var serviceProvider = _serviceCollection.BuildServiceProvider();
@@ -63,7 +63,7 @@ namespace WC3ChampionsStatisticService.Tests.Cache
         [Test]
         public async Task TestCacheTimeToLive()
         {
-            _serviceCollection.Configure<CacheDataOptions<TestData>>(
+            _serviceCollection.Configure<CacheOptionsFor<TestData>>(
                 x => { x.CacheDuration = TimeSpan.FromMilliseconds(100); });
 
             var serviceProvider = _serviceCollection.BuildServiceProvider();
@@ -133,16 +133,16 @@ namespace WC3ChampionsStatisticService.Tests.Cache
 
     public class TestService : ITestService
     {
-        private readonly ICacheData<TestData> _testCacheData;
+        private readonly ICachedDataProvider<TestData> _testCachedDataProvider;
 
-        public TestService(ICacheData<TestData> testCacheData)
+        public TestService(ICachedDataProvider<TestData> testCachedDataProvider)
         {
-            _testCacheData = testCacheData;
+            _testCachedDataProvider = testCachedDataProvider;
         }
 
         public async Task<TestData> GetTestDataAsync(string key)
         {
-            return await _testCacheData.GetCachedOrRequestAsync(
+            return await _testCachedDataProvider.GetCachedOrRequestAsync(
                 async () =>
                 {
                     //Simulate a slow request

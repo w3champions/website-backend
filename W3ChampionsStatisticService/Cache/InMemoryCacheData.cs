@@ -6,24 +6,24 @@ using Microsoft.Extensions.Options;
 
 namespace W3ChampionsStatisticService.Cache
 {
-    public class InMemoryCacheData<T> : ICacheData<T>
+    public class InMemoryCachedDataProvider<T> : ICachedDataProvider<T> where T : class
     {
         // NOTE: It is intentional to have different semaphores for different generic types
         // ReSharper disable once StaticMemberInGenericType
         private static readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
-        private readonly CacheDataOptions<T> _cacheDataOptions;
+        private readonly CacheOptionsFor<T> _cacheOptions;
         private readonly IMemoryCache _memoryCache;
 
-        public InMemoryCacheData(IOptions<CacheDataOptions<T>> cacheDataOptions, IMemoryCache memoryCache)
+        public InMemoryCachedDataProvider(IOptions<CacheOptionsFor<T>> cacheDataOptions, IMemoryCache memoryCache)
         {
-            _cacheDataOptions = cacheDataOptions.Value;
+            _cacheOptions = cacheDataOptions.Value;
             _memoryCache = memoryCache;
         }
 
         public async Task<T> GetCachedOrRequestAsync(Func<Task<T>> requestDataCallbackAsync, string key = null)
         {
-            if (_cacheDataOptions.LockDuringFetch)
+            if (_cacheOptions.LockDuringFetch)
             {
                 await _semaphoreSlim.WaitAsync();
             }
@@ -32,9 +32,9 @@ namespace W3ChampionsStatisticService.Cache
             {
                 return await _memoryCache.GetOrCreateAsync(typeof(T).FullName + key, async cacheEntry =>
                 {
-                    if (_cacheDataOptions.CacheDuration.HasValue)
+                    if (_cacheOptions.CacheDuration.HasValue)
                     {
-                        cacheEntry.SetAbsoluteExpiration(_cacheDataOptions.CacheDuration.Value);
+                        cacheEntry.SetAbsoluteExpiration(_cacheOptions.CacheDuration.Value);
                     }
 
                     return await requestDataCallbackAsync();
@@ -42,7 +42,7 @@ namespace W3ChampionsStatisticService.Cache
             }
             finally
             {
-                if (_cacheDataOptions.LockDuringFetch)
+                if (_cacheOptions.LockDuringFetch)
                 {
                     _semaphoreSlim.Release();
                 }

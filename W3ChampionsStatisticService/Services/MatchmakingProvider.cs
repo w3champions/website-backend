@@ -10,16 +10,16 @@ namespace W3ChampionsStatisticService.Services
     public class MatchmakingProvider : MongoDbRepositoryBase
     {
         private readonly MatchmakingServiceClient _matchmakingServiceClient;
-        private readonly ICacheData<GetSeasonMapsResponse> _cacheData;
+        private readonly ICachedDataProvider<GetSeasonMapsResponse> _cachedDataProvider;
 
-        public MatchmakingProvider(MongoClient mongoClient, MatchmakingServiceClient matchmakingServiceClient, ICacheData<GetSeasonMapsResponse> cacheData) : base(mongoClient)
+        public MatchmakingProvider(MongoClient mongoClient, MatchmakingServiceClient matchmakingServiceClient, ICachedDataProvider<GetSeasonMapsResponse> cachedDataProvider) : base(mongoClient)
         {
             _matchmakingServiceClient = matchmakingServiceClient;
-            _cacheData = cacheData;
+            _cachedDataProvider = cachedDataProvider;
         }
         public Task<GetSeasonMapsResponse> GetCurrentSeasonMapsAsync()
         {
-            return _cacheData.GetCachedOrRequestAsync(
+            return _cachedDataProvider.GetCachedOrRequestAsync(
                 async () => await _matchmakingServiceClient
                 .GetCurrentSeasonMaps(), null);
         }

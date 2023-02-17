@@ -11,11 +11,11 @@ namespace W3ChampionsStatisticService.Services
 {
     public class PlayerAkaProvider
     {
-        private readonly ICacheData<List<PlayerAka>> _userAccountsCache;
+        private readonly ICachedDataProvider<List<PlayerAka>> _userAccountsCached;
 
-        public PlayerAkaProvider(ICacheData<List<PlayerAka>> userAccountsCache)
+        public PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccountsCached)
         {
-            _userAccountsCache = userAccountsCache;
+            _userAccountsCached = userAccountsCached;
         }
 
         public static async Task<List<PlayerAka>> GetAkaReferencesAsync() // list of all Akas requested from W3info
@@ -41,7 +41,7 @@ namespace W3ChampionsStatisticService.Services
 
         public async Task<Player> GetPlayerAkaDataAsync(string battleTag) // string should be received all lower-case.
         {
-            var akas = await _userAccountsCache.GetCachedOrRequestAsync(GetAkaReferencesAsync, null);
+            var akas = await _userAccountsCached.GetCachedOrRequestAsync(GetAkaReferencesAsync, null);
             var aka = akas.Find(x => x.aka == battleTag);
 
             if (aka != null) {

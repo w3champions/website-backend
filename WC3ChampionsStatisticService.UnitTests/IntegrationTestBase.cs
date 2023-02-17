@@ -27,10 +27,10 @@ namespace WC3ChampionsStatisticService.Tests
             personalSettingsProvider= new PersonalSettingsProvider(MongoClient, CreateTestCache<List<PersonalSetting>>());
         }
 
-        protected ICacheData<T> CreateTestCache<T>()
+        protected ICachedDataProvider<T> CreateTestCache<T>() where T : class
         {
-            return new InMemoryCacheData<T>(
-                new OptionsWrapper<CacheDataOptions<T>>(new CacheDataOptions<T>()),
+            return new InMemoryCachedDataProvider<T>(
+                new OptionsWrapper<CacheOptionsFor<T>>(new CacheOptionsFor<T>()),
                 new MemoryCache(new MemoryCacheOptions()));
         }
 

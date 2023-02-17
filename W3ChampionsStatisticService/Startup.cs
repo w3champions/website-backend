@@ -84,14 +84,14 @@ namespace W3ChampionsStatisticService
             services.AddTransient<MatchmakingProvider>();
 
             services.AddMemoryCache();
-            services.AddTransient(typeof(ICacheData<>), typeof(InMemoryCacheData<>));
-            services.Configure<CacheDataOptions<SeasonMapInformation>>(
+            services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
+            services.Configure<CacheOptionsFor<SeasonMapInformation>>(
                 x =>
                 {
                     x.CacheDuration = TimeSpan.FromHours(1);
                 });
 
-            services.Configure<CacheDataOptions<List<PlayerAka>>>(
+            services.Configure<CacheOptionsFor<List<PlayerAka>>>(
                 x =>
                 {
                     x.CacheDuration = TimeSpan.FromHours(1);

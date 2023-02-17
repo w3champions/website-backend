@@ -2,7 +2,7 @@
 
 namespace W3ChampionsStatisticService.Cache
 {
-    public class CacheDataOptions<T>
+    public class CacheOptionsFor<T> where T : class
     {
         public bool LockDuringFetch { get; set; } = true;
         public TimeSpan? CacheDuration { get; set; } = TimeSpan.FromMinutes(5);

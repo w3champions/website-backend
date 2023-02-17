@@ -22,12 +22,12 @@ namespace W3ChampionsStatisticService.PlayerProfiles
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
         private readonly PersonalSettingsProvider _personalSettingsProvider;
-        private readonly ICacheData<List<MmrRank>> _mmrCacheData;
+        private readonly ICachedDataProvider<List<MmrRank>> _mmrCachedDataProvider;
 
-        public PlayerRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider, ICacheData<List<MmrRank>> mmrCacheData) : base(mongoClient)
+        public PlayerRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider, ICachedDataProvider<List<MmrRank>> mmrCachedDataProvider) : base(mongoClient)
         {
             _personalSettingsProvider = personalSettingsProvider;
-            _mmrCacheData = mmrCacheData;
+            _mmrCachedDataProvider = mmrCachedDataProvider;
         }
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
@@ -171,7 +171,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<float?> GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
         {
             var seasonRanks =
-                await _mmrCacheData.GetCachedOrRequestAsync(async () => await FetchMmrRanks(season), season.ToString());
+                await _mmrCachedDataProvider.GetCachedOrRequestAsync(async () => await FetchMmrRanks(season), season.ToString());
             var gatewayGameModeRanks = seasonRanks.FirstOrDefault(x => x.Gateway == gateWay && x.GameMode == gameMode);
 
             var rankKey = GetRankKey(playerIds, gameMode, race);
