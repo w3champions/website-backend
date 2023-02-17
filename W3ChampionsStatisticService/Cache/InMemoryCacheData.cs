@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace W3ChampionsStatisticService.Cache
 {
-    public class InMemoryCacheData<T>: ICacheData<T>
+    public class InMemoryCacheData<T> : ICacheData<T>
     {
         // NOTE: It is intentional to have different semaphores for different generic types
         // ReSharper disable once StaticMemberInGenericType
@@ -21,30 +21,32 @@ namespace W3ChampionsStatisticService.Cache
             _memoryCache = memoryCache;
         }
 
-        public Task<T> GetCachedOrRequestAsync(Func<Task<T>> requestDataCallbackAsync, string key = null)
+        public async Task<T> GetCachedOrRequestAsync(Func<Task<T>> requestDataCallbackAsync, string key = null)
         {
-            return _memoryCache.GetOrCreateAsync(typeof(T).FullName + key, async cacheEntry =>
+            if (_cacheDataOptions.LockDuringFetch)
             {
-                if (_cacheDataOptions.CacheDuration.HasValue)
-                {
-                    cacheEntry.SetSlidingExpiration(_cacheDataOptions.CacheDuration.Value);
-                }
-
-                if (!_cacheDataOptions.LockDuringFetch)
-                {
-                    return await requestDataCallbackAsync();
-                }
-
                 await _semaphoreSlim.WaitAsync();
-                try
+            }
+
+            try
+            {
+                return await _memoryCache.GetOrCreateAsync(typeof(T).FullName + key, async cacheEntry =>
                 {
+                    if (_cacheDataOptions.CacheDuration.HasValue)
+                    {
+                        cacheEntry.SetAbsoluteExpiration(_cacheDataOptions.CacheDuration.Value);
+                    }
+
                     return await requestDataCallbackAsync();
-                }
-                finally
+                });
+            }
+            finally
+            {
+                if (_cacheDataOptions.LockDuringFetch)
                 {
                     _semaphoreSlim.Release();
                 }
-            });
+            }
         }
     }
 }
