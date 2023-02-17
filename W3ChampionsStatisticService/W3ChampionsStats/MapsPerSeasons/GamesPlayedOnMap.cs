@@ -11,6 +11,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
         }
 
         public string Map { get; set; }
+        public string MapName { get; set; }
 
         public void CountMatch()
         {

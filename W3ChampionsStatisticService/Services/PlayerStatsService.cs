@@ -50,5 +50,19 @@ namespace W3ChampionsStatisticService.Services
 
             return new SeasonMapInformation(mapNames);
         }
+
+        public async Task<List<MapsPerSeason>> LoadMatchesOnMapAsync()
+        {
+            var loadMatchesOnMap = await _w3StatsRepo.LoadMatchesOnMap();
+            var mapInformation = await FetchMapNamesAsync();
+            foreach (var mapsPerSeason in loadMatchesOnMap
+                         .SelectMany(x => x.MatchesOnMapPerModes)
+                         .SelectMany(x => x.Maps))
+            {
+                mapsPerSeason.MapName = mapInformation.GetMapName(mapsPerSeason.Map);
+            }
+
+            return loadMatchesOnMap;
+        }
     }
 }
