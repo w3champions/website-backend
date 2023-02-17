@@ -148,7 +148,8 @@ namespace W3ChampionsStatisticService.Matches
                 playerBlizzard.unitScore,
                 playerBlizzard.heroes,
                 playerBlizzard.heroScore,
-                playerBlizzard.resourceScore);
+                playerBlizzard.resourceScore,
+                playerBlizzard.teamIndex);
         }
 
         public Task<List<Matchup>> Load(
