@@ -128,6 +128,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<MatchQueryHandler>();
 
             services.AddTransient<PlayerStatisticsService>();
+            services.AddTransient<PlayerService>();
 
             if (startHandlers == "true")
             {

@@ -136,7 +136,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task RepoLoadWithJoin()
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var personalSetting = new PersonalSetting("peter#123");
 
             var player = PlayerOverallStats.Create("peter#123");
@@ -157,7 +157,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task RepoLoadWithJoin_NotFoundPlayer()
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var personalSetting = new PersonalSetting("peter#123");
 
             var player = PlayerOverallStats.Create("peter#123");
@@ -174,7 +174,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task SetPictureWhenSettingsAreNotThere()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -199,7 +199,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         public async Task RequestPersonalSettings_SpecialPicturesNull_Load_CorrectlyUpdatedAndReturned()
         {
             // arrange
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
 
             var player = PlayerOverallStats.Create("cepheid#1467");
@@ -221,7 +221,7 @@ namespace WC3ChampionsStatisticService.Tests.PersonalSettings
         {
             // arrange
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
 
             string[] players = { "cepheid#1467", "floss2xdaily#1234", "setcho#4567" };
 

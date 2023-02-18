@@ -25,6 +25,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         private readonly IClanRepository _clanRepository;
         private readonly IW3CAuthenticationService _authenticationService;
         private readonly PlayerAkaProvider _playerAkaProvider;
+        private readonly PlayerService _playerService;
 
         public PlayersController(
             IPlayerRepository playerRepository,
@@ -32,7 +33,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             IPersonalSettingsRepository personalSettingsRepository,
             IClanRepository clanRepository,
             IW3CAuthenticationService authenticationService,
-            PlayerAkaProvider playerAkaProvider)
+            PlayerAkaProvider playerAkaProvider,
+            PlayerService playerService)
         {
             _playerRepository = playerRepository;
             _queryHandler = queryHandler;
@@ -40,13 +42,14 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             _clanRepository = clanRepository;
             _authenticationService = authenticationService;
             _playerAkaProvider = playerAkaProvider;
+            _playerService = playerService;
         }
 
         [HttpGet("global-search")]
         public async Task<IActionResult> GlobalSearchPlayer(string search, string lastObjectId = "", int pageSize = 20)
         {
             if (pageSize > 20) pageSize = 20;
-            var players = await _playerRepository.GlobalSearchForPlayer(search, lastObjectId, pageSize);
+            var players = await _playerService.GlobalSearchForPlayer(search, lastObjectId, pageSize);
             return Ok(players);
         }
 
