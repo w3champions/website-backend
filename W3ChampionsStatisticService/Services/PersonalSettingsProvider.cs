@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.Services
 {
+    // TODO: It is a repository with a cache
     public class PersonalSettingsProvider : MongoDbRepositoryBase
     {
         private readonly ICachedDataProvider<List<PersonalSetting>> _cachedDataProvider;

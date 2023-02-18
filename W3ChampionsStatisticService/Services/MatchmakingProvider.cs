@@ -7,6 +7,7 @@ using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Services
 {
+    // TODO: It is a repository with a cache
     public class MatchmakingProvider : MongoDbRepositoryBase
     {
         private readonly MatchmakingServiceClient _matchmakingServiceClient;
