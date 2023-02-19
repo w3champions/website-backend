@@ -54,9 +54,9 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("bannedPlayers")]
-        public async Task<IActionResult> GetBannedPlayers()
+        public async Task<IActionResult> GetBannedPlayers(bool active)
         {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers(active);
             return Ok(bannedPlayers);
         }
 
@@ -64,8 +64,20 @@ namespace W3ChampionsStatisticService.Admin
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-            return Ok(bannedPlayers);
+            if (bannedPlayerReadmodel.battleTag == "") {
+                return BadRequest("BattleTag cannot be empty.");
+            }
+
+            if (bannedPlayerReadmodel.endDate == "") {
+                return BadRequest("Ban End Date must be set.");
+            }
+
+            var result = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
+            if (result.StatusCode == HttpStatusCode.BadRequest) {
+                var reason = result.Content.ReadAsStringAsync().Result;
+                return BadRequest(reason);
+            }
+            return Ok();
         }
 
         [HttpDelete("bannedPlayers")]
