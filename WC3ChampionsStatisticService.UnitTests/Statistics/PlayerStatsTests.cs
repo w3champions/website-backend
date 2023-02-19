@@ -202,7 +202,7 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
         [Test]
         public async Task PlayerStats_PlayerParticipatedRaceIsCorrect()
         {
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var personalSettingsRepo = new PersonalSettingsRepository(MongoClient);
 
             var playerHeroStatsHandler = new PlayerOverallStatsHandler(playerRepository, personalSettingsRepo);
@@ -228,7 +228,7 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
         [Test]
         public async Task PlayerStats_RaceBasedMMR()
         {
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playerHeroStatsHandler = new PlayOverviewHandler(playerRepository);
 
             var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();

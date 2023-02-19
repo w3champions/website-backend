@@ -17,9 +17,6 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         [Test]
         public void UpdateSpecialPicture_Success()
         {
-            var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
-
             var playerTag = "cepheid#1467";
             var personalSettings = new PersonalSetting(playerTag);
 
@@ -40,7 +37,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignOnePortrait_PlayerDoesNotHave_Success()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -69,7 +66,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignOnePortrait_PlayerDoesNotHaveSpecialPortaits_DoesNotThrow()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -98,7 +95,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignOnePortrait_PlayerAlreadyHas_TooltipUpdated()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -129,7 +126,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignOnePortrait_PlayerDoesNotHave_CaseInsensitiveTag_Success()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -159,7 +156,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignOnePortraitToMultipleTags_PlayersDoNotHave_Success()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -195,7 +192,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignMultiplePortraitsToMultipleTags_SomePlayersAlreadyHave_UpsertsProcessCorrectly()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -241,7 +238,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task AssignMultiplePortraitsToMultipleTags_PlayersDoNotHave_Success()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -283,7 +280,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task RemoveSpecialPortraits_PlayersHave_Success()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -330,7 +327,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task RemoveSpecialPortrait_PlayerDoesNotHave_NoExceptionThrown()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -371,7 +368,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         public async Task RemoveSpecialPortrait_PlayerDoesNotHaveSpecialPictures_NoExceptionThrown()
         {
             var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-            var playerRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepo = new PlayerRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
 
@@ -396,7 +393,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
-            var playeRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playeRepo = new PlayerRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
             int[] portraitIds = { 1, 2, 3, 4 };
             string[] portraitGroups = { "brozne", "silver" };
@@ -423,7 +420,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
-            var playeRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playeRepo = new PlayerRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
             int[] portraitIds = { 1, 2, 3, 4 };
             string[] portraitGroups = { "bronze", "silver" };
@@ -445,7 +442,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
-            var playeRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playeRepo = new PlayerRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
 
             int[] portraitIds = { 1, 2, 3, 4 };
@@ -476,7 +473,7 @@ namespace WC3ChampionsStatisticService.Tests.Rewards
         {
             var settingsRepo = new PersonalSettingsRepository(MongoClient);
             var portraitRepo = new PortraitRepository(MongoClient);
-            var playeRepo = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playeRepo = new PlayerRepository(MongoClient);
             var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
 
             int[] portraitIds = { 1, 2, 3, 4 };

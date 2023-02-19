@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 
@@ -15,15 +16,18 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         private readonly IW3StatsRepo _w3StatsRepo;
         private readonly HeroStatsQueryHandler _heroStatsQueryHandler;
         private readonly MmrDistributionHandler _mmrDistributionHandler;
+        private readonly PlayerStatisticsService _statisticsService;
 
         public W3CStatsController(
             IW3StatsRepo w3StatsRepo,
             HeroStatsQueryHandler heroStatsQueryHandler,
-            MmrDistributionHandler mmrDistributionHandler)
+            MmrDistributionHandler mmrDistributionHandler,
+            PlayerStatisticsService statisticsService)
         {
             _w3StatsRepo = w3StatsRepo;
             _heroStatsQueryHandler = heroStatsQueryHandler;
             _mmrDistributionHandler = mmrDistributionHandler;
+            _statisticsService = statisticsService;
         }
 
         [HttpGet("map-race-wins")]
@@ -97,7 +101,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         [HttpGet("matches-on-map")]
         public async Task<IActionResult> GetMatchesOnMap()
         {
-            var mmrs = await _w3StatsRepo.LoadMatchesOnMap();
+            var mmrs = await _statisticsService.LoadMatchesOnMapAsync();
             return Ok(mmrs);
         }
 

@@ -19,7 +19,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task LoadAndSave()
         {
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
 
             var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
             await playerRepository.UpsertPlayerOverview(player);
@@ -65,7 +65,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_1v1()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].won = true;
@@ -87,7 +87,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_2v2AT()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFake2v2AtEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
@@ -111,7 +111,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_FFA()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeFFAEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -147,7 +147,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_FootmenFrenzy()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeFootmenFrenzyEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -184,7 +184,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_2v2RT()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFake2v2RTEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             await playOverviewHandler.Update(matchFinishedEvent);
@@ -219,7 +219,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_2v2RTvsAT()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFake2v2RTEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[2].atTeamId = "t2";
@@ -255,7 +255,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         public async Task UpdateOverview_HandlerUpdate_1v1_doubleWins()
         {
             var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             matchFinishedEvent.match.players[0].battleTag = "peter#123";
@@ -276,7 +276,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         [Test]
         public async Task UpdateOverview_HandlerUpdate_RaceBasedMMR()
         {
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
 
@@ -314,7 +314,7 @@ namespace WC3ChampionsStatisticService.Tests.Player
         {
 
             var testing_season = 0;
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             var playOverviewHandler = new PlayOverviewHandler(playerRepository);
 
             var mmrDistributionHandler = new MmrDistributionHandler(playerRepository);

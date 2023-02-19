@@ -1,33 +1,24 @@
 ﻿using MongoDB.Driver;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
-using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
-using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
-using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
-using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 
 namespace W3ChampionsStatisticService.PlayerProfiles
 {
     public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     {
-        private readonly PersonalSettingsProvider _personalSettingsProvider;
-        private readonly ICachedDataProvider<List<MmrRank>> _mmrCachedDataProvider;
-
-        public PlayerRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider, ICachedDataProvider<List<MmrRank>> mmrCachedDataProvider) : base(mongoClient)
+        public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
         {
-            _personalSettingsProvider = personalSettingsProvider;
-            _mmrCachedDataProvider = mmrCachedDataProvider;
         }
 
         public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
@@ -83,44 +74,6 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(lower));
         }
 
-        public async Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(
-          string search,
-          string lastObjectId = "",
-          int pageSize = 20
-        )
-        {
-            var searchLower = search.ToLower();
-
-            // Fetch entire cache
-            var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
-
-            // Filter cached personal settings
-            var result = personalSettings
-              .Where(ps => ps.Id.ToLower().Contains(searchLower)
-                 && ps.Id.CompareTo(lastObjectId) > 0)
-              .OrderBy(ps => ps.Id)
-              .Take(pageSize)
-              .Select(ps => new PlayerSearchInfo(ps))
-              .ToList();
-            var personalSettingIds = result.Select(ps => ps.BattleTag).ToHashSet();
-
-            // Fetch corresponding stats to fill in seasons
-            var playerStats = await CreateCollection<PlayerOverallStats>()
-              .Find(ps => personalSettingIds.Contains(ps.BattleTag))
-              .ToListAsync();
-            var playerStatsMap = playerStats.ToDictionary(ps => ps.BattleTag);
-
-            // Populate seasons for each player
-            foreach (var player in result) {
-              playerStatsMap.TryGetValue(player.BattleTag, out var y);
-              if (y != null) {
-                player.SetSeasons(y);
-              }
-            }
-
-            return result;
-        }
-
         public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
         {
             return LoadFirst<PlayerGameModeStatPerGateway>(id);
@@ -167,83 +120,20 @@ namespace W3ChampionsStatisticService.PlayerProfiles
             return LoadFirst<PlayerOverview>(battleTag);
         }
 
-        // TODO: Move to separate service
-        public async Task<float?> GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
-        {
-            var seasonRanks =
-                await _mmrCachedDataProvider.GetCachedOrRequestAsync(async () => await FetchMmrRanks(season), season.ToString());
-            var gatewayGameModeRanks = seasonRanks.FirstOrDefault(x => x.Gateway == gateWay && x.GameMode == gameMode);
-
-            var rankKey = GetRankKey(playerIds, gameMode, race);
-            if (gatewayGameModeRanks.Ranks.ContainsKey(rankKey))
-            {
-                var foundRank = gatewayGameModeRanks.Ranks[rankKey];
-
-                var numberOfPlayersAfter = gatewayGameModeRanks.Ranks.Count - foundRank.Rank;
-                return numberOfPlayersAfter / (float)gatewayGameModeRanks.Ranks.Count;
-            }
-
-            return null;
-        }
-
-        public string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
-        {
-            if (gameMode != GameMode.GM_2v2_AT
-                && gameMode != GameMode.GM_4v4_AT
-                && gameMode != GameMode.GM_LEGION_4v4_x20_AT
-                && gameMode != GameMode.GM_DOTA_5ON5_AT)
-            {
-                if (gameMode == GameMode.GM_1v1)
-                {
-                    return $"{ playerIds[0].BattleTag}_{ race}";
-                }
-
-                return playerIds[0].BattleTag;
-            }
-            else
-            {
-                return string.Join("_", playerIds.Select(x => x.BattleTag).OrderBy(x => x));
-            }
-        }
-
-        private Task<List<PlayerOverview>> LoadOverviews(int season)
+        public Task<List<PlayerOverview>> LoadOverviews(int season)
         {
             return LoadAll<PlayerOverview>(t => t.Season == season);
         }
 
-        private async Task<List<MmrRank>> FetchMmrRanks(int season)
+        public async Task<Dictionary<string, PlayerOverallStats>> GetPlayerBattleTagsAsync(
+            ICollection<string> personalSettingIds)
         {
-            var overviews = await LoadOverviews(season);
-            List<MmrRank> result = new List<MmrRank>();
-            foreach (var overViewsByGateway in overviews.GroupBy(x => x.GateWay))
-            {
-                foreach (var overViewsByGatewayGameMode in overViewsByGateway.GroupBy(x => x.GameMode))
-                {
-                    var mmrRanks = new MmrRank
-                    {
-                        Gateway = overViewsByGateway.Key,
-                        GameMode = overViewsByGatewayGameMode.Key,
-                    };
-
-                    var orderedByMmr = overViewsByGatewayGameMode.OrderByDescending(x => x.MMR).ToList();
-
-                    for (int i = 0; i < orderedByMmr.Count; i++)
-                    {
-                        var overView = orderedByMmr[i];
-                        var rankKey = GetRankKey(overView.PlayerIds, overViewsByGatewayGameMode.Key, overView.Race);
-
-                        mmrRanks.Ranks[rankKey] = new PlayerMmrRank()
-                        {
-                            Mmr = overView.MMR,
-                            Rank = i,
-                        };
-                    }
-
-                    result.Add(mmrRanks);
-                }
-            }
-
-            return result;
+            // Fetch corresponding stats to fill in seasons
+            var playerStats = await CreateCollection<PlayerOverallStats>()
+                .Find(ps => personalSettingIds.Contains(ps.BattleTag))
+                .ToListAsync();
+            var playerStatsMap = playerStats.ToDictionary(ps => ps.BattleTag);
+            return playerStatsMap;
         }
 
         public Task<PlayerMmrRpTimeline> LoadPlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode)

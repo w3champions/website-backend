@@ -498,7 +498,7 @@ namespace WC3ChampionsStatisticService.Tests.Clans
                 })
             });
 
-            var playerRepository = new PlayerRepository(MongoClient, null, CreateTestCache<List<MmrRank>>());
+            var playerRepository = new PlayerRepository(MongoClient);
             await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId>
                 {
                     PlayerId.Create(clan.Members[0])

@@ -12,15 +12,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
     public class GameModeStatQueryHandler
     {
         private readonly IPlayerRepository _playerRepository;
+        private readonly PlayerService _playerService;
         private readonly TrackingService _trackingService;
         private readonly IRankRepository _rankRepository;
 
         public GameModeStatQueryHandler(
             IPlayerRepository playerRepository,
+            PlayerService playerService,
             TrackingService trackingService,
             IRankRepository rankRepository)
         {
             _playerRepository = playerRepository;
+            _playerService = playerService;
             _trackingService = trackingService;
             _rankRepository = rankRepository;
         }
@@ -86,7 +89,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
         {
             foreach (var gameModeStat in playerGameModeStats)
             {
-                gameModeStat.Quantile =  await _playerRepository.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
+                gameModeStat.Quantile =  await _playerService.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
             }
         }
     }
