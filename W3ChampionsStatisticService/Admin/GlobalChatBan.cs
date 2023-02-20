@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -12,6 +13,7 @@ namespace W3ChampionsStatisticService.Admin
 
     public class PlayerChatBanWrapper 
     {
+        [JsonProperty("player_bans")]
         public List<PlayerChatBan> playerBansList { get; set; }
     }
 
@@ -20,7 +22,11 @@ namespace W3ChampionsStatisticService.Admin
         public int id { get; set; }
         public PlayerChatBanPlayerData player { get; set; }
         public int banType { get; set; }
+
+        [JsonProperty("ban_expires_at")]
         public PlayerChatBanTimestamp banExpiresAt { get; set; }
+
+        [JsonProperty("created_at")]
         public PlayerChatBanTimestamp createdAt { get; set; }
     }
 
