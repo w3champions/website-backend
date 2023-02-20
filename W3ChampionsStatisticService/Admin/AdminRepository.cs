@@ -158,7 +158,7 @@ namespace W3ChampionsStatisticService.Admin
             var result = await httpClient.PostAsync($"{MatchmakingApiUrl}/flo/globalChatBans?secret={MatchmakingAdminSecret}", byteContent);
             return result.StatusCode;
         }
-        
+
         public async Task<HttpStatusCode> DeleteChatBan(string id)
         {
             var httpClient = new HttpClient();
