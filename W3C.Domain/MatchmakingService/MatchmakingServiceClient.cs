@@ -442,6 +442,7 @@ namespace W3C.Domain.MatchmakingService
         public string banReason { get; set; }
         public string Id => battleTag;
         public List<string> smurfs { get; set; }
+        public string banInsertDate { get; set; }
     }
 
     public class TournamentsResponse
