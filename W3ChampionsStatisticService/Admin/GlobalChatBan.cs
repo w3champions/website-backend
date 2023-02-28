@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.Admin
 
     public class PlayerChatBanTimestamp 
     {
-        public int seconds { get; set; }
+        public uint seconds { get; set; }
         public int nanos { get; set; }
     }
 
