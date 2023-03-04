@@ -43,7 +43,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
         public int Top2PercentIndex { get; set; }
         public int Top5PercentIndex { get; set; }
         public int Top10PercentIndex { get; set; }
-        public int Top25ercentIndex { get; set; }
+        public int Top25PercentIndex { get; set; }
         public int Top50PercentIndex { get; set; }
 
         public List<MmrCount> DistributedMmrs { get; }
@@ -57,7 +57,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution
             Top2PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 50]));
             Top5PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 20]));
             Top10PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 10]));
-            Top25ercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 4]));
+            Top25PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 4]));
             Top50PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 2]));
 
             StandardDeviation = CalculateStandardDeviation(mmrs);
