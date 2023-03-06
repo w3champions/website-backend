@@ -6,15 +6,15 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
 {
     public class PlayerRaceOnMapVersusRaceRatioView
     {
-        public static PlayerRaceOnMapVersusRaceRatioView Create(PlayerRaceOnMapVersusRaceRatio battleTag, SeasonMapInformation mapNames)
+        public static PlayerRaceOnMapVersusRaceRatioView Create(PlayerRaceOnMapVersusRaceRatio player, SeasonMapInformation mapNames)
         {
             var mapVersusRaceRatioView = new PlayerRaceOnMapVersusRaceRatioView
             {
-                Id = battleTag.Id,
-                BattleTag = battleTag.BattleTag,
-                Season = battleTag.Season,
-                RaceWinsOnMap = battleTag.RaceWinsOnMap,
-                RaceWinsOnMapByPatch = battleTag.RaceWinsOnMapByPatch
+                Id = player.Id,
+                BattleTag = player.BattleTag,
+                Season = player.Season,
+                RaceWinsOnMap = player.RaceWinsOnMap,
+                RaceWinsOnMapByPatch = player.RaceWinsOnMapByPatch
             };
 
             foreach (var winLossesPerMap in mapVersusRaceRatioView.RaceWinsOnMap
@@ -33,9 +33,9 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
             return mapVersusRaceRatioView;
         }
 
-        public static PlayerRaceOnMapVersusRaceRatioView Create(string battleTag, int mapNames)
+        public static PlayerRaceOnMapVersusRaceRatioView Create(string battleTag, int season)
         {
-            return Create(PlayerRaceOnMapVersusRaceRatio.Create(battleTag, mapNames), SeasonMapInformation.Empty);
+            return Create(PlayerRaceOnMapVersusRaceRatio.Create(battleTag, season), SeasonMapInformation.Empty);
         }
 
         public string Id { get; set; }

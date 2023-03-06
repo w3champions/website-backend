@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
         public string Id { get; set; }
         public MapWinsPerRaceList RaceWinsOnMap { get; set; } = MapWinsPerRaceList.Create();
 
-        public Dictionary<string, MapWinsPerRaceList> RaceWinsOnMapByPatch { get; set; }
+        public Dictionary<string, MapWinsPerRaceList> RaceWinsOnMapByPatch { get; set; } = new Dictionary<string, MapWinsPerRaceList>();
 
         public string BattleTag { get; set; }
         public int Season { get; set; }

@@ -23,8 +23,8 @@ namespace W3ChampionsStatisticService.PlayerStats
         [HttpGet("{battleTag}/race-on-map-versus-race")]
         public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag, int season)
         {
-            var matches = await _playerStatisticsService.GetMapAndRaceStatAsync(battleTag, season);
-            return Ok(matches ?? PlayerRaceOnMapVersusRaceRatioView.Create(battleTag, season));
+            var stats = await _playerStatisticsService.GetMapAndRaceStatAsync(battleTag, season);
+            return Ok(stats);
         }
 
         [HttpGet("{battleTag}/hero-on-map-versus-race")]
