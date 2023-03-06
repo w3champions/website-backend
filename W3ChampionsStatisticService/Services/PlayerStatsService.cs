@@ -32,7 +32,9 @@ namespace W3ChampionsStatisticService.Services
 
             var mapInformation = await FetchMapNamesAsync();
 
-            return PlayerRaceOnMapVersusRaceRatioView.Create(mapAndRaceStat, mapInformation);
+            return mapAndRaceStat == null ?
+            PlayerRaceOnMapVersusRaceRatioView.Create(battleTag, season) :
+            PlayerRaceOnMapVersusRaceRatioView.Create(mapAndRaceStat, mapInformation);
         }
 
         private async Task<SeasonMapInformation> FetchMapNamesAsync()
