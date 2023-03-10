@@ -19,7 +19,10 @@
         GM_LEGION_2v2_x20 = 205,
 
         GM_ROC_1ON1 = 301,
+
         GM_LTW_1ON1 = 401,
+        GM_LTW_FFA = 402,
+
         GM_FROSTCRAFT_4ON4 = 501,
 
         GM_ATR_1ON1 = 601,
