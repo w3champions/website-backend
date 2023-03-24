@@ -65,20 +65,19 @@ namespace W3C.Domain.MatchmakingService
             return result.StatusCode;
         }
 
-        public async Task<LoungeMuteReadmodel[]> GetLoungeMutes()
+        public async Task<LoungeMuteResponse[]> GetLoungeMutes()
         {
             var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/loungeMutes?secret={AdminSecret}");
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
-            var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteReadmodel[]>(content);
+            var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteResponse[]>(content);
             return deserializeObject;
         }
 
-        public async Task<HttpResponseMessage> PostLoungeMute(LoungeMuteReadmodel loungeMuteReadmodel)
+        public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute)
         {
-            var encodedTag = HttpUtility.UrlEncode(loungeMuteReadmodel.battleTag);
-            var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMuteReadmodel), Encoding.UTF8, "application/json");
-            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/loungeMutes/{encodedTag}?secret={AdminSecret}", httpcontent);
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
+            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/loungeMutes/?secret={AdminSecret}", httpcontent);
             return result;
         }
 
@@ -470,13 +469,16 @@ namespace W3C.Domain.MatchmakingService
         public string author { get; set;}
     }
 
-    public class LoungeMuteReadmodel : IIdentifiable
+    public class LoungeMute
     {
         public string battleTag { get; set; }
-        public string Id => battleTag;
         public string endDate { get; set; }
-        public string insertDate { get; set; }
         public string author { get; set;}
+    }
+
+    public class LoungeMuteResponse : LoungeMute
+    {
+        public string insertDate { get; set; }
     }
 
     public class TournamentsResponse

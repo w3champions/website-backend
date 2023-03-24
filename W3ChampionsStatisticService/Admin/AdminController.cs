@@ -97,24 +97,28 @@ namespace W3ChampionsStatisticService.Admin
 
         [HttpPost("loungeMutes")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMuteReadmodel loungeMuteReadmodel)
+        public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute)
         {
-            if (loungeMuteReadmodel.battleTag == "") {
+            if (loungeMute.battleTag == "") {
                 return BadRequest("BattleTag cannot be empty.");
             }
 
-            if (loungeMuteReadmodel.endDate == "") {
+            if (loungeMute.endDate == "") {
                 return BadRequest("Ban End Date must be set.");
             }
 
-            var result = await _matchmakingServiceRepository.PostLoungeMute(loungeMuteReadmodel);
+            var result = await _matchmakingServiceRepository.PostLoungeMute(loungeMute);
+            if (result.StatusCode == HttpStatusCode.Forbidden) {
+                return StatusCode(403);
+            }
             if (result.StatusCode == HttpStatusCode.BadRequest) {
                 var reason = result.Content.ReadAsStringAsync().Result;
                 return BadRequest(reason);
-            } else if (result.StatusCode == HttpStatusCode.Forbidden) {
-                return Forbid();
             }
-            return Ok();
+            if (result.StatusCode == HttpStatusCode.OK) {
+                return Ok();
+            }
+            return StatusCode(500);
         }
 
         [HttpDelete("loungeMutes/{bTag}")]
@@ -127,13 +131,16 @@ namespace W3ChampionsStatisticService.Admin
                 return BadRequest(reason);
             }
             if (result.StatusCode == HttpStatusCode.Forbidden) {
-                return Forbid();
+                return StatusCode(403);
             }
             if (result.StatusCode == HttpStatusCode.NotFound) {
                 var reason = result.Content.ReadAsStringAsync().Result;
                 return NotFound(reason);
             }
-            return Ok();
+            if (result.StatusCode == HttpStatusCode.OK) {
+                return Ok();
+            }
+            return StatusCode(500);
         }
 
         [HttpGet("news")]
