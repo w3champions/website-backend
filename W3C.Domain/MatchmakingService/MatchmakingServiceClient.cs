@@ -17,6 +17,7 @@ using W3C.Contracts.Matchmaking;
 using W3C.Contracts.Matchmaking.Queue;
 using W3C.Domain.Repositories;
 using System.Net.Http.Json;
+using W3C.Contracts.Admin.Moderation;
 
 namespace W3C.Domain.MatchmakingService
 {
@@ -467,18 +468,6 @@ namespace W3C.Domain.MatchmakingService
         public List<string> smurfs { get; set; }
         public string banInsertDate { get; set; }
         public string author { get; set;}
-    }
-
-    public class LoungeMute
-    {
-        public string battleTag { get; set; }
-        public string endDate { get; set; }
-        public string author { get; set;}
-    }
-
-    public class LoungeMuteResponse : LoungeMute
-    {
-        public string insertDate { get; set; }
     }
 
     public class TournamentsResponse

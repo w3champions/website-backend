@@ -88,61 +88,6 @@ namespace W3ChampionsStatisticService.Admin
             return Ok(bannedPlayers);
         }
 
-        [HttpGet("loungeMutes")]
-        public async Task<IActionResult> GetLoungeMutes()
-        {
-            var loungeMutes = await _matchmakingServiceRepository.GetLoungeMutes();
-            return Ok(loungeMutes);
-        }
-
-        [HttpPost("loungeMutes")]
-        [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute)
-        {
-            if (loungeMute.battleTag == "") {
-                return BadRequest("BattleTag cannot be empty.");
-            }
-
-            if (loungeMute.endDate == "") {
-                return BadRequest("Ban End Date must be set.");
-            }
-
-            var result = await _matchmakingServiceRepository.PostLoungeMute(loungeMute);
-            if (result.StatusCode == HttpStatusCode.Forbidden) {
-                return StatusCode(403);
-            }
-            if (result.StatusCode == HttpStatusCode.BadRequest) {
-                var reason = result.Content.ReadAsStringAsync().Result;
-                return BadRequest(reason);
-            }
-            if (result.StatusCode == HttpStatusCode.OK) {
-                return Ok();
-            }
-            return StatusCode(500);
-        }
-
-        [HttpDelete("loungeMutes/{bTag}")]
-        [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag)
-        {
-            var result = await _matchmakingServiceRepository.DeleteLoungeMute(bTag);
-            if (result.StatusCode == HttpStatusCode.BadRequest) {
-                var reason = result.Content.ReadAsStringAsync().Result;
-                return BadRequest(reason);
-            }
-            if (result.StatusCode == HttpStatusCode.Forbidden) {
-                return StatusCode(403);
-            }
-            if (result.StatusCode == HttpStatusCode.NotFound) {
-                var reason = result.Content.ReadAsStringAsync().Result;
-                return NotFound(reason);
-            }
-            if (result.StatusCode == HttpStatusCode.OK) {
-                return Ok();
-            }
-            return StatusCode(500);
-        }
-
         [HttpGet("news")]
         public async Task<IActionResult> GetNews(int? limit)
         {
