@@ -65,6 +65,30 @@ namespace W3C.Domain.MatchmakingService
             return result.StatusCode;
         }
 
+        public async Task<LoungeMuteReadmodel[]> GetLoungeMutes()
+        {
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/loungeMutes?secret={AdminSecret}");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteReadmodel[]>(content);
+            return deserializeObject;
+        }
+
+        public async Task<HttpResponseMessage> PostLoungeMute(LoungeMuteReadmodel loungeMuteReadmodel)
+        {
+            var encodedTag = HttpUtility.UrlEncode(loungeMuteReadmodel.battleTag);
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMuteReadmodel), Encoding.UTF8, "application/json");
+            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/loungeMutes/{encodedTag}?secret={AdminSecret}", httpcontent);
+            return result;
+        }
+
+        public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag)
+        {
+            var encodedTag = HttpUtility.UrlEncode(battleTag);
+            var result = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/loungeMutes/{encodedTag}?secret={AdminSecret}");
+            return result;
+        }
+
         public async Task<List<MappedQueue>> GetLiveQueueData()
         {
             var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots?secret={AdminSecret}");
@@ -443,6 +467,15 @@ namespace W3C.Domain.MatchmakingService
         public string Id => battleTag;
         public List<string> smurfs { get; set; }
         public string banInsertDate { get; set; }
+        public string author { get; set;}
+    }
+
+    public class LoungeMuteReadmodel : IIdentifiable
+    {
+        public string battleTag { get; set; }
+        public string Id => battleTag;
+        public string endDate { get; set; }
+        public string insertDate { get; set; }
         public string author { get; set;}
     }
 
