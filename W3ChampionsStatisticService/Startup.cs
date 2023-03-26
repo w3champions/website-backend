@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using Prometheus;
 using System;
 using System.Collections.Generic;
+using W3C.Domain.ChatService;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
@@ -126,6 +127,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<UpdateServiceClient>();
             services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
+            services.AddSingleton<ChatServiceClient>();
 
             services.AddTransient<PlayerStatisticsService>();
             services.AddTransient<PlayerService>();

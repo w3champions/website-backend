@@ -17,7 +17,6 @@ using W3C.Contracts.Matchmaking;
 using W3C.Contracts.Matchmaking.Queue;
 using W3C.Domain.Repositories;
 using System.Net.Http.Json;
-using W3C.Contracts.Admin.Moderation;
 
 namespace W3C.Domain.MatchmakingService
 {
@@ -64,29 +63,6 @@ namespace W3C.Domain.MatchmakingService
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
             var result = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}");
             return result.StatusCode;
-        }
-
-        public async Task<LoungeMuteResponse[]> GetLoungeMutes()
-        {
-            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/moderation/loungeMutes?secret={AdminSecret}");
-            var content = await result.Content.ReadAsStringAsync();
-            if (string.IsNullOrEmpty(content)) return null;
-            var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteResponse[]>(content);
-            return deserializeObject;
-        }
-
-        public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute)
-        {
-            var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
-            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/moderation/loungeMutes/?secret={AdminSecret}", httpcontent);
-            return result;
-        }
-
-        public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag)
-        {
-            var encodedTag = HttpUtility.UrlEncode(battleTag);
-            var result = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/moderation/loungeMutes/{encodedTag}?secret={AdminSecret}");
-            return result;
         }
 
         public async Task<List<MappedQueue>> GetLiveQueueData()
