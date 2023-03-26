@@ -31,24 +31,27 @@ namespace W3C.Domain.ChatService
 
         public async Task<LoungeMuteResponse[]> GetLoungeMutes(string authorization)
         {
-            var result = await _httpClient.GetAsync($"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}");
+            var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
+            var result = await _httpClient.GetAsync(url);
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteResponse[]>(content);
             return deserializeObject;
         }
 
-        public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute)
+        public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute, string authorization)
         {
             var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
-            var result = await _httpClient.PostAsync($"{ChatServiceApiUrl}/api/loungeMute/?secret={AdminSecret}", httpcontent);
+            var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
+            var result = await _httpClient.PostAsync(url, httpcontent);
             return result;
         }
 
-        public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag)
+        public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag, string authorization)
         {
             var encodedTag = HttpUtility.UrlEncode(battleTag);
-            var result = await _httpClient.DeleteAsync($"{ChatServiceApiUrl}/api/loungeMute/{encodedTag}?secret={AdminSecret}");
+            var url = $"{ChatServiceApiUrl}/api/loungeMute/{encodedTag}?authorization={authorization}&secret={AdminSecret}";
+            var result = await _httpClient.DeleteAsync(url);
             return result;
         }
     }

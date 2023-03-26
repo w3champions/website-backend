@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.Moderation
 
         [HttpPost("loungeMute")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute)
+        public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authorization)
         {
             if (loungeMute.battleTag == "") {
                 return BadRequest("BattleTag cannot be empty.");
@@ -39,7 +39,7 @@ namespace W3ChampionsStatisticService.Moderation
                 return BadRequest("Ban End Date must be set.");
             }
 
-            var result = await _chatServiceRepository.PostLoungeMute(loungeMute);
+            var result = await _chatServiceRepository.PostLoungeMute(loungeMute, authorization);
             if (result.StatusCode == HttpStatusCode.Forbidden) {
                 return StatusCode(403);
             }
@@ -55,9 +55,9 @@ namespace W3ChampionsStatisticService.Moderation
 
         [HttpDelete("loungeMute/{bTag}")]
         [CheckIfBattleTagIsAdmin]
-        public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag)
+        public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authorization)
         {
-            var result = await _chatServiceRepository.DeleteLoungeMute(bTag);
+            var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authorization);
             if (result.StatusCode == HttpStatusCode.BadRequest) {
                 var reason = result.Content.ReadAsStringAsync().Result;
                 return BadRequest(reason);
