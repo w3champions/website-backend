@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using W3C.Domain.MatchmakingService;
+using W3C.Domain.ChatService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net;
 using W3C.Contracts.Admin.Moderation;
@@ -11,22 +11,23 @@ namespace W3ChampionsStatisticService.Moderation
     [Route("api/moderation")]
     public class ModerationController : ControllerBase
     {
-        private readonly MatchmakingServiceClient _matchmakingServiceRepository;
+        private readonly ChatServiceClient _chatServiceRepository;
 
         public ModerationController(
-            MatchmakingServiceClient matchmakingServiceRepository)
+            ChatServiceClient chatServiceRepository)
         {
-            _matchmakingServiceRepository = matchmakingServiceRepository;
+            _chatServiceRepository = chatServiceRepository;
         }
 
-        [HttpGet("loungeMutes")]
-        public async Task<IActionResult> GetLoungeMutes()
+        [HttpGet("loungeMute")]
+        [CheckIfBattleTagIsAdmin]
+        public async Task<IActionResult> GetLoungeMutes(string authorization)
         {
-            var loungeMutes = await _matchmakingServiceRepository.GetLoungeMutes();
+            var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authorization);
             return Ok(loungeMutes);
         }
 
-        [HttpPost("loungeMutes")]
+        [HttpPost("loungeMute")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute)
         {
@@ -38,7 +39,7 @@ namespace W3ChampionsStatisticService.Moderation
                 return BadRequest("Ban End Date must be set.");
             }
 
-            var result = await _matchmakingServiceRepository.PostLoungeMute(loungeMute);
+            var result = await _chatServiceRepository.PostLoungeMute(loungeMute);
             if (result.StatusCode == HttpStatusCode.Forbidden) {
                 return StatusCode(403);
             }
@@ -52,11 +53,11 @@ namespace W3ChampionsStatisticService.Moderation
             return StatusCode(500);
         }
 
-        [HttpDelete("loungeMutes/{bTag}")]
+        [HttpDelete("loungeMute/{bTag}")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag)
         {
-            var result = await _matchmakingServiceRepository.DeleteLoungeMute(bTag);
+            var result = await _chatServiceRepository.DeleteLoungeMute(bTag);
             if (result.StatusCode == HttpStatusCode.BadRequest) {
                 var reason = result.Content.ReadAsStringAsync().Result;
                 return BadRequest(reason);
