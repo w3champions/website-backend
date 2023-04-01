@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
-using W3C.Contracts.Matchmaking;
+using Serilog;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
 {
@@ -30,6 +30,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
             }
 
             var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStat.Create();
+            Log.Information($"Recording Popular Hours stat for {nextEvent.match.id}");
             stat.Apply(nextEvent.match.gameMode, startTime);
             await _w3Stats.Save(stat);
         }
