@@ -11,12 +11,19 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
         public List<HourOfPlayPerMode> PlayTimesPerModeTwoWeeks { get; set; } = new List<HourOfPlayPerMode>();
         public List<HourOfPlayPerMode> PlayTimesPerMode { get; set; } = new List<HourOfPlayPerMode>();
         public string Id { get; set; } = nameof(HourOfPlayStat);
+        public List<GameMode> ActiveGameModes = new List<GameMode>() {
+            GameMode.GM_1v1,
+            GameMode.GM_2v2,
+            GameMode.GM_2v2_AT,
+            GameMode.GM_4v4,
+            GameMode.FFA
+        };
 
         public void Apply(GameMode gameMode, DateTimeOffset timeOfGame, DateTimeOffset now = default)
         {
             now = now == default ? DateTimeOffset.UtcNow.Date : now.Date;
             var daysOfDifference = now - timeOfGame.Date;
-            if (daysOfDifference >= TimeSpan.FromDays(14))
+            if (daysOfDifference >= TimeSpan.FromDays(14) || !ActiveGameModes.Contains(gameMode))
             {
                 return;
             }
