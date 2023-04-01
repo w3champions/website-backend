@@ -31,7 +31,6 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Services;
-using W3ChampionsStatisticService.Tournaments;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
@@ -44,7 +43,8 @@ using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
-using Repos = W3C.Domain.Repositories;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace W3ChampionsStatisticService
 {
@@ -132,6 +132,8 @@ namespace W3ChampionsStatisticService
             services.AddTransient<PlayerStatisticsService>();
             services.AddTransient<PlayerService>();
 
+            services.AddDirectoryBrowser();
+
             if (startHandlers == "true")
             {
                 // PlayerProfile
@@ -196,6 +198,29 @@ namespace W3ChampionsStatisticService
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "w3champions");
+            });
+
+            // Configure log path
+            var fileProvider = new PhysicalFileProvider(System.IO.Path.Combine(env.ContentRootPath, "Logs"));
+            var requestPath = "/logs";
+
+            // Allow serving files with .log extension
+            var contentTypeProvider = new FileExtensionContentTypeProvider();
+            contentTypeProvider.Mappings[".log"] = "text/plain";
+
+            // Serve files in the logs directory
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = fileProvider,
+                ContentTypeProvider = contentTypeProvider,
+                RequestPath = requestPath
+            });
+
+            // Allow browsing the logs directory
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions
+            {
+                FileProvider = fileProvider,
+                RequestPath = requestPath
             });
         }
     }

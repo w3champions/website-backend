@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Prometheus;
+using Serilog;
 
 namespace W3ChampionsStatisticService
 {
@@ -8,6 +9,14 @@ namespace W3ChampionsStatisticService
     {
         public static void Main(string[] args)
         {
+            // Create logs with format website-backend_yyyyMMdd.log
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
+                .CreateLogger();
+
+            Log.Information("Starting server.");
+
             CreateHostBuilder(args).Build().Run();
         }
 
