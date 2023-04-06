@@ -168,6 +168,14 @@ namespace W3C.Domain.MatchmakingService
             return result.StatusCode;
         }
 
+        public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes() {
+            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/ladder/active-modes");
+            var content = await result.Content.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<List<ActiveGameMode>>(content);
+            return deserializeObject;
+        }
+
         public async Task<TournamentsResponse> GetTournaments()
         {
             var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments");
@@ -444,6 +452,21 @@ namespace W3C.Domain.MatchmakingService
         public List<string> smurfs { get; set; }
         public string banInsertDate { get; set; }
         public string author { get; set;}
+    }
+
+    public class ActiveGameMode
+    {
+        public GameMode id { get; set; }
+        public List<MapShortInfo> maps { get; set; }
+        public string name { get; set; }
+        public string type { get; set; }
+    }
+
+    public class MapShortInfo
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public string path { get; set; }
     }
 
     public class TournamentsResponse
