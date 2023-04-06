@@ -12,30 +12,21 @@ namespace W3ChampionsStatisticService.Services
     public class MatchmakingProvider : MongoDbRepositoryBase
     {
         private readonly MatchmakingServiceClient _matchmakingServiceClient;
-        private readonly ICachedDataProvider<GetSeasonMapsResponse> _cachedDataProvider;
-        private readonly ICachedDataProvider<List<ActiveGameMode>> _cachedDataProvider2;
+        private readonly ICachedDataProvider<List<ActiveGameMode>> _cachedDataProvider;
 
         public MatchmakingProvider(
             MongoClient mongoClient,
             MatchmakingServiceClient matchmakingServiceClient,
-            ICachedDataProvider<GetSeasonMapsResponse> cachedDataProvider,
-            ICachedDataProvider<List<ActiveGameMode>> cachedDataProvider2
+            ICachedDataProvider<List<ActiveGameMode>> cachedDataProvider
         ) : base(mongoClient)
         {
             _matchmakingServiceClient = matchmakingServiceClient;
             _cachedDataProvider = cachedDataProvider;
-            _cachedDataProvider2 = cachedDataProvider2;
-        }
-        public Task<GetSeasonMapsResponse> GetCurrentSeasonMapsAsync()
-        {
-            return _cachedDataProvider.GetCachedOrRequestAsync(
-                async () => await _matchmakingServiceClient
-                .GetCurrentSeasonMaps(), null);
         }
 
         public Task<List<ActiveGameMode>> GetCurrentlyActiveGameModesAsync()
         {
-            return _cachedDataProvider2.GetCachedOrRequestAsync(
+            return _cachedDataProvider.GetCachedOrRequestAsync(
                 async () => await _matchmakingServiceClient
                 .GetCurrentlyActiveGameModes(), null);
         }

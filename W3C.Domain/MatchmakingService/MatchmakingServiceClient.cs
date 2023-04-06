@@ -130,15 +130,6 @@ namespace W3C.Domain.MatchmakingService
             return null;
         }
 
-        public async Task<GetSeasonMapsResponse> GetCurrentSeasonMaps()
-        {
-            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/currentseason");
-            var content = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrEmpty(content)) return null;
-            var result = JsonConvert.DeserializeObject<GetSeasonMapsResponse>(content);
-            return result;
-        }
-
         public async Task<GetMapsResponse> GetTournamentMaps(bool? active)
         {
             var url = $"{MatchmakingApiUrl}/maps/tournaments";
