@@ -44,12 +44,12 @@ namespace W3ChampionsStatisticService.Services
 
         private async Task<SeasonMapInformation> FetchCurrentSeasonMapsInfoAsync()
         {
-            var seasonMaps = await _matchmakingProvider.GetCurrentSeasonMapsAsync();
+            var gameModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
             var mapNames = new Dictionary<string, string>();
-            foreach (var seasonMap in seasonMaps.Items.SelectMany(x => x.Maps))
+            foreach (var map in gameModes.SelectMany(x => x.maps))
             {
-                var map = new MapName(seasonMap.GameMap.Path).Name;
-                mapNames[map] = seasonMap.GameMap.Name;
+                var mapName = new MapName(map.path).Name;
+                mapNames[mapName] = map.name;
             }
 
             return new SeasonMapInformation(mapNames);

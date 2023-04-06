@@ -4,6 +4,7 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Cache;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
+using System.Collections.Generic;
 
 namespace W3ChampionsStatisticService.Services
 {
@@ -11,18 +12,23 @@ namespace W3ChampionsStatisticService.Services
     public class MatchmakingProvider : MongoDbRepositoryBase
     {
         private readonly MatchmakingServiceClient _matchmakingServiceClient;
-        private readonly ICachedDataProvider<GetSeasonMapsResponse> _cachedDataProvider;
+        private readonly ICachedDataProvider<List<ActiveGameMode>> _cachedDataProvider;
 
-        public MatchmakingProvider(MongoClient mongoClient, MatchmakingServiceClient matchmakingServiceClient, ICachedDataProvider<GetSeasonMapsResponse> cachedDataProvider) : base(mongoClient)
+        public MatchmakingProvider(
+            MongoClient mongoClient,
+            MatchmakingServiceClient matchmakingServiceClient,
+            ICachedDataProvider<List<ActiveGameMode>> cachedDataProvider
+        ) : base(mongoClient)
         {
             _matchmakingServiceClient = matchmakingServiceClient;
             _cachedDataProvider = cachedDataProvider;
         }
-        public Task<GetSeasonMapsResponse> GetCurrentSeasonMapsAsync()
+
+        public Task<List<ActiveGameMode>> GetCurrentlyActiveGameModesAsync()
         {
             return _cachedDataProvider.GetCachedOrRequestAsync(
                 async () => await _matchmakingServiceClient
-                .GetCurrentSeasonMaps(), null);
+                .GetCurrentlyActiveGameModes(), null);
         }
     }
 }

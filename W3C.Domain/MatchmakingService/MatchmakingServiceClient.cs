@@ -130,15 +130,6 @@ namespace W3C.Domain.MatchmakingService
             return null;
         }
 
-        public async Task<GetSeasonMapsResponse> GetCurrentSeasonMaps()
-        {
-            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/currentseason");
-            var content = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrEmpty(content)) return null;
-            var result = JsonConvert.DeserializeObject<GetSeasonMapsResponse>(content);
-            return result;
-        }
-
         public async Task<GetMapsResponse> GetTournamentMaps(bool? active)
         {
             var url = $"{MatchmakingApiUrl}/maps/tournaments";
@@ -166,6 +157,18 @@ namespace W3C.Domain.MatchmakingService
             var httpcontent = new StringContent(JsonConvert.SerializeObject(motd), Encoding.UTF8, "application/json");
             var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/motd/?secret={AdminSecret}", httpcontent);
             return result.StatusCode;
+        }
+
+        public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes() {
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/ladder/active-modes?secret={AdminSecret}");
+            if (response.IsSuccessStatusCode) {
+                var content = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrEmpty(content)) return null;
+                var deserializeObject = JsonConvert.DeserializeObject<List<ActiveGameMode>>(content);
+                return deserializeObject;
+            } else {
+                return null;
+            }
         }
 
         public async Task<TournamentsResponse> GetTournaments()
@@ -444,6 +447,21 @@ namespace W3C.Domain.MatchmakingService
         public List<string> smurfs { get; set; }
         public string banInsertDate { get; set; }
         public string author { get; set;}
+    }
+
+    public class ActiveGameMode
+    {
+        public GameMode id { get; set; }
+        public List<MapShortInfo> maps { get; set; }
+        public string name { get; set; }
+        public string type { get; set; }
+    }
+
+    public class MapShortInfo
+    {
+        public int id { get; set; }
+        public string name { get; set; }
+        public string path { get; set; }
     }
 
     public class TournamentsResponse

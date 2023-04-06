@@ -15,17 +15,20 @@ namespace W3ChampionsStatisticService.Ladder
         private readonly IPlayerRepository _playerRepository;
         private readonly RankQueryHandler _rankQueryHandler;
         private readonly PlayerAkaProvider _playerAkaProvider;
+        private readonly MatchmakingProvider _matchmakingProvider;
 
         public LadderController(
             IRankRepository rankRepository,
             IPlayerRepository playerRepository,
             RankQueryHandler rankQueryHandler,
-            PlayerAkaProvider playerAkaProvider)
+            PlayerAkaProvider playerAkaProvider,
+            MatchmakingProvider matchmakingProvider)
         {
             _rankRepository = rankRepository;
             _playerRepository = playerRepository;
             _rankQueryHandler = rankQueryHandler;
             _playerAkaProvider = playerAkaProvider;
+            _matchmakingProvider = matchmakingProvider;
         }
 
         [HttpGet("search")]
@@ -91,6 +94,13 @@ namespace W3ChampionsStatisticService.Ladder
         {
             var seasons = await _rankRepository.LoadSeasons();
             return Ok(seasons.OrderByDescending(s => s.Id));
+        }
+
+        [HttpGet("active-modes")]
+        public async Task<IActionResult> GetActiveGameModes()
+        {
+            var currentlyActiveModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
+            return Ok(currentlyActiveModes);
         }
     }
 }

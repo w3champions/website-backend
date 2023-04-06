@@ -84,13 +84,6 @@ namespace W3ChampionsStatisticService.Maps
             return NoContent();
         }
 
-        [HttpGet("currentseason")]
-        public async Task<IActionResult> GetCurrentSeasonMaps()
-        {
-            var maps = await _matchmakingProvider.GetCurrentSeasonMapsAsync();
-            return Ok(maps);
-        }
-
         [HttpGet("tournaments")]
         public async Task<IActionResult> GetTournamentMaps([FromQuery] bool? active)
         {
