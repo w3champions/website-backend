@@ -160,11 +160,15 @@ namespace W3C.Domain.MatchmakingService
         }
 
         public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes() {
-            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/ladder/active-modes");
-            var content = await result.Content.ReadAsStringAsync();
-            if (string.IsNullOrEmpty(content)) return null;
-            var deserializeObject = JsonConvert.DeserializeObject<List<ActiveGameMode>>(content);
-            return deserializeObject;
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/ladder/active-modes?secret={AdminSecret}");
+            if (response.IsSuccessStatusCode) {
+                var content = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrEmpty(content)) return null;
+                var deserializeObject = JsonConvert.DeserializeObject<List<ActiveGameMode>>(content);
+                return deserializeObject;
+            } else {
+                return null;
+            }
         }
 
         public async Task<TournamentsResponse> GetTournaments()
