@@ -11,7 +11,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
-using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
@@ -101,17 +101,17 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
                 .OrderBy(g => g.GameMode).ToList()).ToList();
         }
 
-        public Task<HourOfPlayStat2> LoadHourOfPlay(GameMode mode)
+        public Task<PopularHoursStat> LoadHourOfPlay(GameMode mode)
         {
-            return LoadFirst<HourOfPlayStat2>(stat => stat.GameMode == mode);
+            return LoadFirst<PopularHoursStat>(stat => stat.GameMode == mode);
         }
 
-        public Task<List<HourOfPlayStat2>> LoadAllHourOfPlay()
+        public Task<List<PopularHoursStat>> LoadAllHourOfPlay()
         {
-            return LoadAll<HourOfPlayStat2>();
+            return LoadAll<PopularHoursStat>();
         }
 
-        public Task Save(HourOfPlayStat2 stat)
+        public Task Save(PopularHoursStat stat)
         {
             return Upsert(stat);
         }

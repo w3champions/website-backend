@@ -2,9 +2,9 @@ using System;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
+namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
 {
-    public class HourOfPlay
+    public class Timeslot
     {
         public int Games { get; set; }
         [JsonIgnore]

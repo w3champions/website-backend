@@ -37,7 +37,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
-using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
@@ -152,7 +152,7 @@ namespace W3ChampionsStatisticService
                 services.AddReadModelService<GamesPerDayHandler>();
                 services.AddReadModelService<GameLengthStatHandler>();
                 services.AddReadModelService<DistinctPlayersPerDayHandler>();
-                services.AddReadModelService<HourOfPlayStatHandler>();
+                services.AddReadModelService<PopularHoursStatHandler>();
                 services.AddReadModelService<HeroPlayedStatHandler>();
                 services.AddReadModelService<MapsPerSeasonHandler>();
 

@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
-using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
@@ -26,8 +26,9 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(DistinctPlayersPerDay stat);
         Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
         Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
-        Task<HourOfPlayStat2> LoadHourOfPlay(GameMode mode);
-        Task Save(HourOfPlayStat2 stat);
+        Task<PopularHoursStat> LoadHourOfPlay(GameMode mode);
+        Task Save(PopularHoursStat stat);
+        Task <List<PopularHoursStat>>LoadAllHourOfPlay();
         Task<HeroPlayedStat> LoadHeroPlayedStat();
         Task Save(HeroPlayedStat stat);
         Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId);
@@ -36,6 +37,5 @@ namespace W3ChampionsStatisticService.Ports
         Task<MapsPerSeason> LoadMapsPerSeason(int matchSeason);
         Task Save(MapsPerSeason mapsPerSeason);
         Task<List<MapsPerSeason>> LoadMatchesOnMap();
-        Task <List<HourOfPlayStat2>>LoadAllHourOfPlay();
     }
 }
