@@ -58,8 +58,8 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         [HttpGet("play-hours")]
         public async Task<IActionResult> GetPlayHours()
         {
-            var stats = await _w3StatsRepo.LoadHourOfPlay();
-            return Ok(stats.PlayTimesPerMode);
+            var stats = await _w3StatsRepo.LoadAllHourOfPlay();
+            return Ok(stats);
         }
 
         [HttpGet("heroes-played")]

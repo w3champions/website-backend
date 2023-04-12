@@ -26,8 +26,8 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(DistinctPlayersPerDay stat);
         Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
         Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
-        Task<HourOfPlayStat> LoadHourOfPlay();
-        Task Save(HourOfPlayStat stat);
+        Task<HourOfPlayStat2> LoadHourOfPlay(GameMode mode);
+        Task Save(HourOfPlayStat2 stat);
         Task<HeroPlayedStat> LoadHeroPlayedStat();
         Task Save(HeroPlayedStat stat);
         Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId);
@@ -36,5 +36,6 @@ namespace W3ChampionsStatisticService.Ports
         Task<MapsPerSeason> LoadMapsPerSeason(int matchSeason);
         Task Save(MapsPerSeason mapsPerSeason);
         Task<List<MapsPerSeason>> LoadMatchesOnMap();
+        Task <List<HourOfPlayStat2>>LoadAllHourOfPlay();
     }
 }

@@ -29,9 +29,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 return;
             }
 
-            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStat.Create();
+            var mode = nextEvent.match.gameMode;
+            var stat = await _w3Stats.LoadHourOfPlay(mode) ?? HourOfPlayStat2.Create(mode);
             Log.Information($"Recording Popular Hours stat for {nextEvent.match.id}");
-            stat.Apply(nextEvent.match.gameMode, startTime);
+            stat.Apply(mode, startTime.UtcDateTime);
             await _w3Stats.Save(stat);
         }
     }
