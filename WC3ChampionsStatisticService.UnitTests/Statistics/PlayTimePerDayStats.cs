@@ -4,6 +4,7 @@ using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay;
+using System.Linq;
 
 namespace WC3ChampionsStatisticService.Tests.Statistics
 {
@@ -12,95 +13,105 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
     {
 
         [Test]
-        public void PlayTimesPerDay()
+        public void PlayTimesPerDay_Midnight()
         {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
+            var now = DateTime.UtcNow;
+            var todayMidnight = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
+            var popularHoursStats = HourOfPlayStat2.Create(GameMode.GM_1v1);
 
-            Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerModeTwoWeeks[0].PlayTimePerHour[0].Games);
-            Assert.AreEqual(0, hourOfPlayStats.PlayTimesPerModeTwoWeeks[0].PlayTimePerHour[1].Games);
+            popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight);
+
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTwoWeeks.Last().PlayTimePerHour[0].Games);
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour[0].Games);
         }
 
         [Test]
-        public void PlayTimesPerDayOneHourOff()
+        public void PlayTimesPerDay_OneHourOff()
         {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
+            var now = DateTime.UtcNow;
+            var todayMidnight = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddHours(-1), dateTime);
+            var popularHoursStats = HourOfPlayStat2.Create(GameMode.GM_1v1);
 
-            Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerModeTwoWeeks[5].PlayTimePerHour[92].Games);
+            popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddHours(-1));
+
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTwoWeeks[12].PlayTimePerHour[92].Games);
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour[92].Games);
         }
 
         [Test]
-        public void PlayTimesPerDayOneDayAfterInterval()
+        public void PlayTimesPerDay_DaysOff()
         {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
+            var now = DateTime.UtcNow;
+            var todayMidnight = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(1), dateTime.AddDays(1));
+            var popularHoursStats = HourOfPlayStat2.Create(GameMode.GM_1v1);
 
-            Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerModeTwoWeeks[0].PlayTimePerHour[0].Games);
-        }
+            popularHoursStats.Apply(GameMode.GM_1v1,  todayMidnight.AddDays(-1));
+            popularHoursStats.Apply(GameMode.GM_1v1,  todayMidnight.AddDays(-2));
 
-        [Test]
-        public void PlayTimesPerDay_Average()
-        {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
-
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime, dateTime);
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-1), dateTime);
-            hourOfPlayStats.Apply(GameMode.GM_1v1,  dateTime.AddDays(-2), dateTime);
-
-            Assert.AreEqual(3, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
-            Assert.AreEqual(15, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
-            Assert.AreEqual(1, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTwoWeeks[12].PlayTimePerHour[0].Games);
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTwoWeeks[11].PlayTimePerHour[0].Games);
+            Assert.AreEqual(2, popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour[0].Games);
+            Assert.AreEqual(15, popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour[1].Minutes);
+            Assert.AreEqual(1, popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour[4].Hours);
         }
 
         [Test]
         public void PlayTimesPerDay_TooOldGame()
         {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
+            var now = DateTime.UtcNow;
+            var todayMidnight = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-15), dateTime);
+            var popularHoursStats = HourOfPlayStat2.Create(GameMode.GM_1v1);
 
-            Assert.AreEqual(0, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
+            popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddDays(-15));
+
+            int games = 0;
+            foreach (var timeslot in popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour) {
+                games += timeslot.Games;
+            }
+
+            Assert.AreEqual(0, games);
         }
 
         [Test]
         public void PlayTimesPerDay_TooOldGame_On14Days()
         {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
+            var now = DateTime.UtcNow;
+            var todayMidnight = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
 
-            hourOfPlayStats.Apply(GameMode.GM_1v1, dateTime.AddDays(-14), dateTime);
+            var popularHoursStats = HourOfPlayStat2.Create(GameMode.GM_1v1);
 
-            Assert.AreEqual(0, hourOfPlayStats.PlayTimesPerMode[0].PlayTimePerHour[0].Games);
+            popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddDays(-14));
+
+            int games = 0;
+            foreach (var timeslot in popularHoursStats.PlayTimesPerModeTotal.PlayTimePerHour) {
+                games += timeslot.Games;
+            }
+
+            Assert.AreEqual(0, games);
         }
 
-
         [Test]
-        public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
+        public async Task PlayTimesPerDay_TimeslotsAreSetCorrectlyAfterLoad()
         {
-            var dateTime = new DateTimeOffset(new DateTime(2020, 10, 16));
-            var hourOfPlayStats = HourOfPlayStat.Create(dateTime);
+            var popularHoursStats = HourOfPlayStat2.Create(GameMode.GM_1v1);
 
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            await w3StatsRepo.Save(hourOfPlayStats);
-            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay();
+            await w3StatsRepo.Save(popularHoursStats);
 
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Minutes);
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Hours);
+            var popularHoursStatsLoaded = await w3StatsRepo.LoadHourOfPlay(GameMode.GM_1v1);
 
-            Assert.AreEqual(15, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Hours);
+            Assert.AreEqual(0, popularHoursStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[0].Minutes);
+            Assert.AreEqual(0, popularHoursStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[0].Hours);
 
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Minutes);
-            Assert.AreEqual(1, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
+            Assert.AreEqual(15, popularHoursStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[1].Minutes);
+            Assert.AreEqual(0, popularHoursStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[1].Hours);
+
+            Assert.AreEqual(0, popularHoursStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[4].Minutes);
+            Assert.AreEqual(1, popularHoursStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[4].Hours);
         }
     }
 }

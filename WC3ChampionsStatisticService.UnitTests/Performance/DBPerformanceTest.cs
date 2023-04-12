@@ -18,21 +18,19 @@ namespace WC3ChampionsStatisticService.Tests.Matches
     public class DBPerformanceTest : IntegrationTestBase
     {
         [Test]
-        public async Task PlayTimesPerDay_Average_TimeIsSetCorrectly_afterLoad()
+        public async Task PlayTimesPerDay_TimeslotsAreSetCorrectlyAfterLoad()
         {
-
-
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay();
+            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay(GameMode.GM_1v1);
 
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Minutes);
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[0].Hours);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[0].Minutes);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[0].Hours);
 
-            Assert.AreEqual(15, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Minutes);
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[1].Hours);
+            Assert.AreEqual(15, hourOfPlayStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[1].Minutes);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[1].Hours);
 
-            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Minutes);
-            Assert.AreEqual(1, hourOfPlayStatsLoaded.PlayTimesPerMode[0].PlayTimePerHour[4].Hours);
+            Assert.AreEqual(0, hourOfPlayStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[4].Minutes);
+            Assert.AreEqual(1, hourOfPlayStatsLoaded.PlayTimesPerModeTotal.PlayTimePerHour[4].Hours);
         }
         [Test]
         public async Task LoadMatchesColorful()
