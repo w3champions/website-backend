@@ -29,14 +29,13 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
             if (popularHoursStat == null)
             {
                 PopularHoursTwoWeeks.Remove(PopularHoursTwoWeeks.First());
-                AddDay(PopularHoursTwoWeeks, gameMode, 0, now);
+                AddDay(PopularHoursTwoWeeks, gameMode, 0, gameStartTime.Date);
 
                 popularHoursStat = PopularHoursTwoWeeks.SingleOrDefault(m => m.Day.Date == gameStartTime.Date);
             }
 
-            if (popularHoursStat != null) { 
-                popularHoursStat.Record(gameStartTime);
-            }
+            popularHoursStat.Record(gameStartTime);
+
             PopularHoursTotal = CalculateTotal(PopularHoursTwoWeeks);
         }
 
