@@ -8,10 +8,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
 {
     public class PopularHoursStat : IIdentifiable
     {
-        public List<DayOfTimeslots> PopularHoursTwoWeeks { get; set; } = new List<DayOfTimeslots>();
-        public DayOfTimeslots PopularHoursTotal { get; set; } = new DayOfTimeslots();
         public string Id => GameMode.ToString();
         public GameMode GameMode { get; set; }
+        public List<DayOfTimeslots> PopularHoursTwoWeeks { get; set; } = new List<DayOfTimeslots>();
+        public DayOfTimeslots PopularHoursTotal { get; set; } = new DayOfTimeslots();
 
         public void Apply(GameMode gameMode, DateTime gameStartTime)
         {
