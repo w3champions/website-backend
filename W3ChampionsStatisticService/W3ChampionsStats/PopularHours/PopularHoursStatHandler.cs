@@ -5,13 +5,13 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using Serilog;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
+namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
 {
-    public class HourOfPlayStatHandler : IReadModelHandler
+    public class PopularHoursStatHandler : IReadModelHandler
     {
         private readonly IW3StatsRepo _w3Stats;
 
-        public HourOfPlayStatHandler(
+        public PopularHoursStatHandler(
             IW3StatsRepo w3Stats
             )
         {
@@ -29,9 +29,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
                 return;
             }
 
-            var stat = await _w3Stats.LoadHourOfPlay() ?? HourOfPlayStat.Create();
+            var mode = nextEvent.match.gameMode;
+            var stat = await _w3Stats.LoadHourOfPlay(mode) ?? PopularHoursStat.Create(mode);
             Log.Information($"Recording Popular Hours stat for {nextEvent.match.id}");
-            stat.Apply(nextEvent.match.gameMode, startTime);
+            stat.Apply(mode, startTime.UtcDateTime);
             await _w3Stats.Save(stat);
         }
     }

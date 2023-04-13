@@ -6,6 +6,7 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
+using System.Linq;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats
 {
@@ -58,8 +59,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         [HttpGet("play-hours")]
         public async Task<IActionResult> GetPlayHours()
         {
-            var stats = await _w3StatsRepo.LoadHourOfPlay();
-            return Ok(stats.PlayTimesPerMode);
+            var stats = await _w3StatsRepo.LoadAllHourOfPlay();
+            var totalStats = stats.Select(stat => new { stat.GameMode, stat.PopularHoursTotal.Timeslots });
+            return Ok(totalStats);
         }
 
         [HttpGet("heroes-played")]

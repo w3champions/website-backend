@@ -2,13 +2,13 @@ using System;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.HourOfPlay
+namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
 {
-    public class HourOfPlay
+    public class Timeslot
     {
-        public long Games { get; set; }
+        public int Games { get; set; }
         [JsonIgnore]
-        public DateTimeOffset Time { get; set; }
+        public DateTime Time { get; set; }
 
         [BsonIgnore]
         public int Minutes => Time.Minute;
