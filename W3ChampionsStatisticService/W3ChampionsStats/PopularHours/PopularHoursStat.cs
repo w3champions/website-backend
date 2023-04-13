@@ -39,21 +39,21 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
             PopularHoursTotal = CalculateTotal(PopularHoursTwoWeeks);
         }
 
-        private DayOfTimeslots CalculateTotal(List<DayOfTimeslots> playTimesPerModeTwoWeeks)
+        private DayOfTimeslots CalculateTotal(List<DayOfTimeslots> PopularHoursTwoWeeks)
         {
-            var hourOfPlaysPerDay = playTimesPerModeTwoWeeks
+            var groupedByTimeslot = PopularHoursTwoWeeks
                 .SelectMany(h => h.Timeslots)
                 .GroupBy(d => d.Time.TimeOfDay)
                 .ToList();
-            var hourOfPlays = hourOfPlaysPerDay.Select(f => new Timeslot
+            var summedTimeslots = groupedByTimeslot.Select(f => new Timeslot
             {
                 Time = new DateTime(2000, 1, 1, f.Key.Hours, f.Key.Minutes, 0, DateTimeKind.Utc),
                 Games = f.Sum(r => r.Games)
             }).ToList();
             return new DayOfTimeslots
             {
-                Timeslots = hourOfPlays,
-                Day = playTimesPerModeTwoWeeks.Last().Day
+                Timeslots = summedTimeslots,
+                Day = PopularHoursTwoWeeks.Last().Day
             };
         }
 
