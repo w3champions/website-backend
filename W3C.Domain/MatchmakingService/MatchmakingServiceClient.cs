@@ -440,7 +440,6 @@ namespace W3C.Domain.MatchmakingService
         public string battleTag { get; set; }
         public string endDate { get; set; }
         public bool isIpBan { get; set; }
-        public bool? isOnlyChatBan { get; set; }
         public List<GameMode> gameModes { get; set; }
         public string banReason { get; set; }
         public string Id => battleTag;
