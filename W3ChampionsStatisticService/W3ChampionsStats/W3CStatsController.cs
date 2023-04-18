@@ -56,10 +56,10 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return Ok(stats);
         }
 
-        [HttpGet("play-hours")]
-        public async Task<IActionResult> GetPlayHours()
+        [HttpGet("popular-hours")]
+        public async Task<IActionResult> GetPopularHours()
         {
-            var stats = await _w3StatsRepo.LoadAllHourOfPlay();
+            var stats = await _w3StatsRepo.LoadAllPopularHoursStat();
             var totalStats = stats.Select(stat => new { stat.GameMode, stat.PopularHoursTotal.Timeslots });
             return Ok(totalStats);
         }

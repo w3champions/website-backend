@@ -101,12 +101,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
                 .OrderBy(g => g.GameMode).ToList()).ToList();
         }
 
-        public Task<PopularHoursStat> LoadHourOfPlay(GameMode mode)
+        public Task<PopularHoursStat> LoadPopularHoursStat(GameMode mode)
         {
             return LoadFirst<PopularHoursStat>(stat => stat.GameMode == mode);
         }
 
-        public Task<List<PopularHoursStat>> LoadAllHourOfPlay()
+        public Task<List<PopularHoursStat>> LoadAllPopularHoursStat()
         {
             return LoadAll<PopularHoursStat>();
         }

@@ -26,9 +26,9 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(DistinctPlayersPerDay stat);
         Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to);
         Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
-        Task<PopularHoursStat> LoadHourOfPlay(GameMode mode);
+        Task<PopularHoursStat> LoadPopularHoursStat(GameMode mode);
         Task Save(PopularHoursStat stat);
-        Task <List<PopularHoursStat>>LoadAllHourOfPlay();
+        Task <List<PopularHoursStat>>LoadAllPopularHoursStat();
         Task<HeroPlayedStat> LoadHeroPlayedStat();
         Task Save(HeroPlayedStat stat);
         Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId);

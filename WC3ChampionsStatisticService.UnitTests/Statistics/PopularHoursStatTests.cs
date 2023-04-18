@@ -102,7 +102,7 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
             var w3StatsRepo = new W3StatsRepo(MongoClient);
             await w3StatsRepo.Save(popularHoursStats);
 
-            var popularHoursStatsLoaded = await w3StatsRepo.LoadHourOfPlay(GameMode.GM_1v1);
+            var popularHoursStatsLoaded = await w3StatsRepo.LoadPopularHoursStat(GameMode.GM_1v1);
 
             Assert.AreEqual(0, popularHoursStatsLoaded.PopularHoursTotal.Timeslots[0].Minutes);
             Assert.AreEqual(0, popularHoursStatsLoaded.PopularHoursTotal.Timeslots[0].Hours);

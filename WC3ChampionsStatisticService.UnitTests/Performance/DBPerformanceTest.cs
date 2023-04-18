@@ -18,7 +18,7 @@ namespace WC3ChampionsStatisticService.Tests.Matches
         public async Task PopularHours_TimeslotsAreSetCorrectlyAfterLoad()
         {
             var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadHourOfPlay(GameMode.GM_1v1);
+            var hourOfPlayStatsLoaded = await w3StatsRepo.LoadPopularHoursStat(GameMode.GM_1v1);
 
             Assert.AreEqual(0, hourOfPlayStatsLoaded.PopularHoursTotal.Timeslots[0].Minutes);
             Assert.AreEqual(0, hourOfPlayStatsLoaded.PopularHoursTotal.Timeslots[0].Hours);
