@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours
             }
 
             var mode = nextEvent.match.gameMode;
-            var stat = await _w3Stats.LoadHourOfPlay(mode) ?? PopularHoursStat.Create(mode);
+            var stat = await _w3Stats.LoadPopularHoursStat(mode) ?? PopularHoursStat.Create(mode);
             Log.Information($"Recording Popular Hours stat for {nextEvent.match.id}");
             stat.Apply(mode, startTime.UtcDateTime);
             await _w3Stats.Save(stat);
