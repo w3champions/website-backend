@@ -36,9 +36,9 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
 
         private static List<GameLength> CreateLengths(GameMode gameMode)
         {
-            GameMode[] modesWithLongLengths = { GameMode.FFA, GameMode.GM_SC_FFA_4 };
-            int interval = modesWithLongLengths.Contains(gameMode) ? 60 : 30;
-            var iterations = modesWithLongLengths.Contains(gameMode) ? 180 : 120;
+            GameMode[] modesWithLongGames = { GameMode.FFA, GameMode.GM_SC_FFA_4 };
+            int interval = modesWithLongGames.Contains(gameMode) ? 60 : 30;
+            var iterations = modesWithLongGames.Contains(gameMode) ? 180 : 120;
             var lengths = new List<GameLength>();
             for (var i = 0; i <= iterations; i++)
             {
