@@ -52,7 +52,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
         [HttpGet("games-lengths")]
         public async Task<IActionResult> GetGameLengths()
         {
-            var stats = await _w3StatsRepo.LoadGameLengths();
+            var stats = await _w3StatsRepo.LoadAllGameLengths();
             return Ok(stats);
         }
 

@@ -20,7 +20,8 @@ namespace W3ChampionsStatisticService.Ports
         Task Save(OverallRaceAndWinStat stat);
         Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode matchGameMode, GateWay matchGateway);
         Task Save(List<GamesPerDay> stat);
-        Task<GameLengthStat> LoadGameLengths();
+        Task<GameLengthStat> LoadGameLengths(GameMode mode);
+        Task<List<GameLengthStat>> LoadAllGameLengths();
         Task Save(GameLengthStat stat);
         Task<DistinctPlayersPerDay> LoadPlayersPerDay(DateTime date);
         Task Save(DistinctPlayersPerDay stat);

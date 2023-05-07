@@ -48,9 +48,14 @@ namespace W3ChampionsStatisticService.W3ChampionsStats
             return UpsertMany(stat);
         }
 
-        public Task<GameLengthStat> LoadGameLengths()
+        public Task<GameLengthStat> LoadGameLengths(GameMode mode)
         {
-            return LoadFirst<GameLengthStat>(nameof(GameLengthStat));
+            return LoadFirst<GameLengthStat>(stat => stat.GameMode == mode);
+        }
+
+        public Task<List<GameLengthStat>> LoadAllGameLengths()
+        {
+            return LoadAll<GameLengthStat>();
         }
 
         public Task Save(GameLengthStat stat)

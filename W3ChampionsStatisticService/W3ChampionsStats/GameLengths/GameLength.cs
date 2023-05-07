@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
             Games++;
         }
 
-        public long passedTimeInSeconds { get; set; }
-        public long Games { get; set; }
+        public int Seconds { get; set; }
+        public int Games { get; set; }
     }
 }
