@@ -21,11 +21,12 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths
         public async Task Update(MatchFinishedEvent nextEvent)
         {
             if (nextEvent.WasFakeEvent) return;
-            var stat = await _w3Stats.LoadGameLengths() ?? GameLengthStat.Create();
+            GameMode mode = nextEvent.match.gameMode;
+            var stat = await _w3Stats.LoadGameLengths(mode) ?? GameLengthStat.Create(mode);
             var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
             var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
             var duration = endTime - startTime;
-            stat.Apply(nextEvent.match.gameMode, duration);
+            stat.Apply(mode, duration);
             await _w3Stats.Save(stat);
         }
     }

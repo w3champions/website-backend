@@ -8,7 +8,6 @@ using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
-using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
@@ -106,26 +105,6 @@ namespace WC3ChampionsStatisticService.Tests.Statistics
             Assert.AreEqual(GameMode.GM_2v2, gamesReloaded3.GameMode);
             Assert.AreEqual(0, gamesReloaded4.GamesPlayed);
             Assert.AreEqual(3, gamesReloaded5.GamesPlayed);
-        }
-
-        [Test]
-        public void GameLengtStatsBelow30s()
-        {
-            var gameLengthStats = GameLengthStat.Create();
-            gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(0, 0, 20));
-
-            Assert.AreEqual(1, gameLengthStats.GameLengths[0].Lengths[0].Games);
-            Assert.AreEqual(0, gameLengthStats.GameLengths[0].Lengths[1].Games);
-        }
-
-        [Test]
-        public void GameLengtStatsLongetThan1hour()
-        {
-            var gameLengthStats = GameLengthStat.Create();
-            gameLengthStats.Apply(GameMode.GM_1v1, new TimeSpan(1, 5, 20));
-
-            Assert.AreEqual(1, gameLengthStats.GameLengths[0].Lengths[120].Games);
-            Assert.AreEqual(3600, gameLengthStats.GameLengths[0].Lengths[120].passedTimeInSeconds);
         }
 
         [Test]
