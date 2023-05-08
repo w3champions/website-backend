@@ -44,10 +44,19 @@ namespace W3C.Domain.MatchmakingService
         public async Task<BannedPlayerResponse> GetBannedPlayers()
         {
             var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}");
+            validateResponse(result);
             var content = await result.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
             return deserializeObject;
+        }
+
+        public static void validateResponse(HttpResponseMessage res) {
+            if (res.IsSuccessStatusCode) {
+                return;
+            }
+            var msg = res.Content.ReadAsStringAsync().Result;
+            throw new HttpRequestException(msg, null, res.StatusCode);
         }
 
         public async Task<HttpResponseMessage> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)

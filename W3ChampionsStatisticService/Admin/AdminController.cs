@@ -8,6 +8,7 @@ using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
 using System.Net;
+using System.Net.Http;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -56,8 +57,13 @@ namespace W3ChampionsStatisticService.Admin
         [HttpGet("bannedPlayers")]
         public async Task<IActionResult> GetBannedPlayers()
         {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
-            return Ok(bannedPlayers);
+            try {
+                var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+                return Ok(bannedPlayers);
+            }
+            catch (HttpRequestException ex) {
+                return StatusCode(((int)ex.StatusCode), ex.Message);
+            }
         }
 
         [HttpPost("bannedPlayers")]
