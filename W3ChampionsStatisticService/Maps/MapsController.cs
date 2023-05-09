@@ -6,6 +6,7 @@ using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
+using System.Net.Http;
 
 namespace W3ChampionsStatisticService.Maps
 {
@@ -39,8 +40,12 @@ namespace W3ChampionsStatisticService.Maps
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> CreateMap([FromBody] MapContract request)
         {
-            var map = await _matchmakingServiceClient.CreateMap(request);
-            return Ok(map);
+            try {
+                var map = await _matchmakingServiceClient.CreateMap(request);
+                return Ok(map);
+            } catch(HttpRequestException ex) {
+                return StatusCode((int)ex.StatusCode, ex.Message);
+            }
         }
 
         [HttpPut("{id}")]

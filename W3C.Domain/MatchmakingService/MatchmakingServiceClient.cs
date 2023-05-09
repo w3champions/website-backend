@@ -86,8 +86,7 @@ namespace W3C.Domain.MatchmakingService
                 queryParams.Add($"filter={request.Filter}");
             }
 
-            var response = await _httpClient
-                .GetAsync($"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}");
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}");
             var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
@@ -338,7 +337,7 @@ namespace W3C.Domain.MatchmakingService
             var errorReponse = await GetResult<ErrorResponse>(response);
             var errors = errorReponse.Errors.Select(x => $"{x.Param} {x.Message}");
 
-            throw new ValidationException(string.Join(",", errors));
+            throw new HttpRequestException(string.Join(",", errors), null, response.StatusCode);
         }
 
         private async Task<T> GetResult<T>(HttpResponseMessage response)
