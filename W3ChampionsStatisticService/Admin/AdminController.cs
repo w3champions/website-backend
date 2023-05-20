@@ -8,6 +8,7 @@ using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
 using System.Net;
+using System.Net.Http;
 
 namespace W3ChampionsStatisticService.Admin
 {
@@ -56,36 +57,36 @@ namespace W3ChampionsStatisticService.Admin
         [HttpGet("bannedPlayers")]
         public async Task<IActionResult> GetBannedPlayers()
         {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
-            return Ok(bannedPlayers);
+            try {
+                var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+                return Ok(bannedPlayers);
+            } catch(HttpRequestException ex) {
+                return StatusCode((int)ex.StatusCode, ex.Message);
+            }
         }
 
         [HttpPost("bannedPlayers")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            if (bannedPlayerReadmodel.battleTag == "") {
-                return BadRequest("BattleTag cannot be empty.");
+            try {
+                await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
+                return Ok();
+            } catch(HttpRequestException ex) {
+                return StatusCode((int)ex.StatusCode, ex.Message);
             }
-
-            if (bannedPlayerReadmodel.endDate == "") {
-                return BadRequest("Ban End Date must be set.");
-            }
-
-            var result = await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-            if (result.StatusCode == HttpStatusCode.BadRequest) {
-                var reason = result.Content.ReadAsStringAsync().Result;
-                return BadRequest(reason);
-            }
-            return Ok();
         }
 
         [HttpDelete("bannedPlayers")]
         [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var bannedPlayers = await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
-            return Ok(bannedPlayers);
+            try {
+                await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
+                return Ok();
+            } catch(HttpRequestException ex) {
+                return StatusCode((int)ex.StatusCode, ex.Message);
+            }
         }
 
         [HttpGet("news")]
