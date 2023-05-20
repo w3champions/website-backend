@@ -43,26 +43,40 @@ namespace W3C.Domain.MatchmakingService
 
         public async Task<BannedPlayerResponse> GetBannedPlayers()
         {
-            var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}");
-            var content = await result.Content.ReadAsStringAsync();
-            if (string.IsNullOrEmpty(content)) return null;
-            var deserializeObject = JsonConvert.DeserializeObject<BannedPlayerResponse>(content);
-            return deserializeObject;
+            var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}");
+            if (response.IsSuccessStatusCode)
+            {
+                return await GetResult<BannedPlayerResponse>(response);
+            }
+
+            await HandleMMError(response);
+            return null;
         }
 
         public async Task<HttpResponseMessage> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
-            var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
             var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
-            var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}", httpcontent);
-            return result;
+            var response = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}", httpcontent);
+            if (response.IsSuccessStatusCode)
+            {
+                return response;
+            }
+
+            await HandleMMError(response);
+            return null;
         }
 
-        public async Task<HttpStatusCode> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
+        public async Task<HttpResponseMessage> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
-            var result = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}");
-            return result.StatusCode;
+            var response = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}");
+            if (response.IsSuccessStatusCode)
+            {
+                return response;
+            }
+
+            await HandleMMError(response);
+            return null;
         }
 
         public async Task<List<MappedQueue>> GetLiveQueueData()
@@ -336,7 +350,6 @@ namespace W3C.Domain.MatchmakingService
         {
             var errorReponse = await GetResult<ErrorResponse>(response);
             var errors = errorReponse.Errors.Select(x => $"{x.Param} {x.Message}");
-
             throw new HttpRequestException(string.Join(",", errors), null, response.StatusCode);
         }
 
