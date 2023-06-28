@@ -16,6 +16,7 @@ using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
+using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
@@ -128,6 +129,7 @@ namespace W3ChampionsStatisticService
             services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
             services.AddSingleton<ChatServiceClient>();
+            services.AddTransient<IFriendRepository, FriendRepository>();
 
             services.AddTransient<PlayerStatisticsService>();
             services.AddTransient<PlayerService>();
