@@ -99,6 +99,7 @@ namespace W3C.Domain.MatchmakingService
         public int? mapId { get; set; }
         public string mapName { get; set; }
         public bool publicGame { get; set; }
+        public string gamename { get; set; }
 
         [BsonElement("_id")]
         public string id { get; set; }
