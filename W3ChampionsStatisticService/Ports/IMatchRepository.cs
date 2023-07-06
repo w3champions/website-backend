@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.Ports
@@ -40,6 +41,7 @@ namespace W3ChampionsStatisticService.Ports
 
         Task<MatchupDetail> LoadDetails(ObjectId id);
         Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id);
+        Task<MatchFinishedEvent> LoadDetailsByGameName(string gameName);
 
         Task InsertOnGoingMatch(OnGoingMatchup matchup);
         Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
