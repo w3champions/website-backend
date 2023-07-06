@@ -40,6 +40,14 @@ namespace W3ChampionsStatisticService.Matches
             return Ok(match);
         }
 
+        [HttpGet("gameName/{gameName}")]
+        public async Task<IActionResult> GetMatchIdFromGameName(string gameName)
+        {
+            var match = await _matchRepository.LoadDetailsByGameName(gameName);
+            if (match == null) return NotFound();
+            return Ok(match.Id);
+        }
+
         [HttpGet("by-ongoing-match-id/{id}")]
         public async Task<IActionResult> GetMatcheDetailsByOngoingMatchId(string id)
         {

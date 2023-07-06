@@ -120,6 +120,11 @@ namespace W3ChampionsStatisticService.Matches
             };
         }
 
+        public async Task<MatchFinishedEvent> LoadDetailsByGameName(string gameName)
+        {
+            return await LoadFirst<MatchFinishedEvent>(t => t.result.gameName == gameName);
+        }
+
         public Task EnsureIndices()
         {
             var collection = CreateCollection<Matchup>();
