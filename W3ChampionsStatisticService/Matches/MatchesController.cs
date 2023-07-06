@@ -45,7 +45,7 @@ namespace W3ChampionsStatisticService.Matches
         {
             var match = await _matchRepository.LoadDetailsByGameName(gameName);
             if (match == null) return NotFound();
-            return Ok(match.Id);
+            return Ok(match.Id.ToString());
         }
 
         [HttpGet("by-ongoing-match-id/{id}")]

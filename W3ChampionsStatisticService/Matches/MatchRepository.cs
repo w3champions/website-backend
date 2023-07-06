@@ -122,7 +122,7 @@ namespace W3ChampionsStatisticService.Matches
 
         public async Task<MatchFinishedEvent> LoadDetailsByGameName(string gameName)
         {
-            return await LoadFirst<MatchFinishedEvent>(t => t.result.gameName == gameName);
+            return await LoadFirst<MatchFinishedEvent>(t => t.match.gamename == gameName);
         }
 
         public Task EnsureIndices()
