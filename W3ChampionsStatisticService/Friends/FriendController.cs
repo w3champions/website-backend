@@ -40,19 +40,23 @@ namespace W3ChampionsStatisticService.Friends
             try {
                 var player = await _playerRepository.LoadPlayerProfile(data.otherBattleTag);
                 if (player == null) {
-                    return Ok($"Player {data.otherBattleTag} not found.");
+                    return BadRequest($"Player {data.otherBattleTag} not found.");
                 }
                 if (battleTag.ToLower() == data.otherBattleTag.ToLower()) {
-                    return Ok($"Cannot request yourself as a friend.");
+                    return BadRequest($"Cannot request yourself as a friend.");
                 }
-                var friendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
-                canMakeFriendRequest(friendlist, battleTag);
-                friendlist.ReceivedFriendRequests.Add(battleTag);
-                await _friendRepository.UpsertFriendlist(friendlist);
+                var allRequestsMadeByPlayer = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
+                if (allRequestsMadeByPlayer.Count() > 10) {
+                    return BadRequest($"You have too many pending friend requests.");
+                }
+                var request = new FriendRequest(battleTag, data.otherBattleTag);
+                var otherUserFriendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
+                await canMakeFriendRequest(otherUserFriendlist, request);
+                await _friendRepository.CreateFriendRequest(request);
 
                 return Ok($"Friend request sent to {data.otherBattleTag}!");
             } catch (ValidationException ex) {
-                return Ok(ex.Message);
+                return BadRequest(ex.Message);
             } catch (Exception ex) {
                 return StatusCode(500, ex.Message);
             }
@@ -63,16 +67,31 @@ namespace W3ChampionsStatisticService.Friends
         public async Task<IActionResult> AcceptFriendRequest(string battleTag, [FromBody] FriendData data)
         {
             try {
-                var friendlist = await _friendRepository.LoadFriendlist(battleTag);
-                var itemToRemove = friendlist.ReceivedFriendRequests.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+                var currentUserFriendlist = await _friendRepository.LoadFriendlist(battleTag);
+                var otherUserFriendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
+                var request = await _friendRepository.LoadFriendRequest(data.otherBattleTag, battleTag);
 
-                if (itemToRemove == null) {
+                if (request == null) {
                     return BadRequest("Could not find a friend request to accept.");
                 }
 
-                friendlist.ReceivedFriendRequests.Remove(itemToRemove);
-                friendlist.Friends.Add(data.otherBattleTag);
-                await _friendRepository.UpsertFriendlist(friendlist);
+                await _friendRepository.DeleteFriendRequest(request);
+
+                if (!currentUserFriendlist.Friends.Contains(data.otherBattleTag)) {
+                    currentUserFriendlist.Friends.Add(data.otherBattleTag);
+                }
+                await _friendRepository.UpsertFriendlist(currentUserFriendlist);
+
+                if (!otherUserFriendlist.Friends.Contains(battleTag)) {
+                    otherUserFriendlist.Friends.Add(battleTag);
+                }
+
+                var reciprocalRequest = await _friendRepository.LoadFriendRequest(battleTag, data.otherBattleTag);
+                if (reciprocalRequest != null) {
+                    await _friendRepository.DeleteFriendRequest(reciprocalRequest);
+                }
+
+                await _friendRepository.UpsertFriendlist(otherUserFriendlist);
                 return Ok($"Friend request from {data.otherBattleTag} accepted!");
             } catch (Exception ex) {
                 return StatusCode(500, ex.Message);
@@ -84,15 +103,13 @@ namespace W3ChampionsStatisticService.Friends
         public async Task<IActionResult> DenyFriendRequest(string battleTag, [FromBody] FriendData data)
         {
             try {
-                var friendlist = await _friendRepository.LoadFriendlist(battleTag);
-                var itemToRemove = friendlist.ReceivedFriendRequests.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+                var request = await _friendRepository.LoadFriendRequest(data.otherBattleTag, battleTag);
 
-                if (itemToRemove == null) {
+                if (request == null) {
                     return BadRequest("Could not find a friend request to deny.");
                 }
 
-                friendlist.ReceivedFriendRequests.Remove(itemToRemove);
-                await _friendRepository.UpsertFriendlist(friendlist);
+                await _friendRepository.DeleteFriendRequest(request);
 
                 return Ok($"Friend request from {data.otherBattleTag} denied!");
             } catch (Exception ex) {
@@ -108,10 +125,13 @@ namespace W3ChampionsStatisticService.Friends
                 var friendlist = await _friendRepository.LoadFriendlist(battleTag);
                 canBlock(friendlist, data.otherBattleTag);
 
-                var itemToRemove = friendlist.ReceivedFriendRequests.SingleOrDefault(bTag => bTag == data.otherBattleTag);
-                if (itemToRemove != null) {
-                    friendlist.ReceivedFriendRequests.Remove(itemToRemove);
+                var request = await _friendRepository.LoadFriendRequest(data.otherBattleTag, battleTag);
+                // var itemToRemove = friendlist.ReceivedFriendRequests.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+                if (request == null) {
+                    return BadRequest("Could not find a friend request to block.");
                 }
+
+                await _friendRepository.DeleteFriendRequest(request);
 
                 friendlist.BlockedBattleTags.Add(data.otherBattleTag);
                 await _friendRepository.UpsertFriendlist(friendlist);
@@ -127,12 +147,19 @@ namespace W3ChampionsStatisticService.Friends
         public async Task<IActionResult> RemoveFriend(string battleTag, [FromBody] FriendData data)
         {
             try {
-                var friendlist = await _friendRepository.LoadFriendlist(battleTag);
-                var itemToRemove = friendlist.Friends.SingleOrDefault(bTag => bTag == data.otherBattleTag);
-                if (itemToRemove != null) {
-                    friendlist.Friends.Remove(itemToRemove);
+                var currentUserFriendlist = await _friendRepository.LoadFriendlist(battleTag);
+                var friendRelation1 = currentUserFriendlist.Friends.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+                if (friendRelation1 != null) {
+                    currentUserFriendlist.Friends.Remove(friendRelation1);
                 }
-                await _friendRepository.UpsertFriendlist(friendlist);
+                await _friendRepository.UpsertFriendlist(currentUserFriendlist);
+
+                var otherUserFriendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
+                var friendRelation2 = otherUserFriendlist.Friends.SingleOrDefault(bTag => bTag == battleTag);
+                if (friendRelation2 != null) {
+                    otherUserFriendlist.Friends.Remove(friendRelation2);
+                }
+                await _friendRepository.UpsertFriendlist(otherUserFriendlist);
 
                 return Ok($"Removed {data.otherBattleTag} from friends.");
             } catch (Exception ex) {
@@ -158,15 +185,51 @@ namespace W3ChampionsStatisticService.Friends
             }
         }
 
-        private void canMakeFriendRequest(Friendlist friendlist, string battleTag) {
-            if (friendlist.BlockAllRequests || friendlist.BlockedBattleTags.Contains(battleTag)) {
+        [HttpPost("{battleTag}/delete-request")]
+        [CheckIfBattleTagBelongsToAuthCode]
+        public async Task<IActionResult> DeleteOutgoingFriendRequest(string battleTag, [FromBody] FriendData data)
+        {
+            try {
+                var request = await _friendRepository.LoadFriendRequest(battleTag, data.otherBattleTag);
+                if (request == null) {
+                    return BadRequest("Could not find a friend request to delete.");
+                }
+
+                await _friendRepository.DeleteFriendRequest(request);
+
+                return Ok($"Friend request to {data.otherBattleTag} deleted!");
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("{battleTag}/received-requests")]
+        [CheckIfBattleTagBelongsToAuthCode]
+        public async Task<IActionResult> LoadReceivedFriendRequests(string battleTag, string sender)
+        {
+            var friendlist = await _friendRepository.LoadAllFriendRequestsSentToPlayer(battleTag);
+            return Ok(friendlist);
+        }
+
+        [HttpGet("{battleTag}/sent-requests")]
+        [CheckIfBattleTagBelongsToAuthCode]
+        public async Task<IActionResult> LoadSentFriendRequests(string battleTag, string sender)
+        {
+            var friendlist = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
+            return Ok(friendlist);
+        }
+
+        private async Task canMakeFriendRequest(Friendlist friendlist, FriendRequest req) {
+            if (friendlist.BlockAllRequests || friendlist.BlockedBattleTags.Contains(req.Sender)) {
                 throw new ValidationException("This player is not accepting friend requests.");
             }
-            if (friendlist.ReceivedFriendRequests.Contains(battleTag)) {
-                throw new ValidationException("You have already requested to be friends with this player.");
-            }
-            if (friendlist.Friends.Contains(battleTag)) {
+            if (friendlist.Friends.Contains(req.Sender)) {
                 throw new ValidationException("You are already friends with this player.");
+            }
+
+            var requestAlreadyExists = await _friendRepository.FriendRequestExists(req);
+            if (requestAlreadyExists) {
+                throw new ValidationException("You have already requested to be friends with this player.");
             }
         }
 
