@@ -28,8 +28,8 @@ namespace W3ChampionsStatisticService.Matches
             GameMode gameMode = GameMode.Undefined)
         {
             if (pageSize > 100) pageSize = 100;
-            var matches = await _matchRepository.Load(15, gameMode, offset, pageSize);
-            var count = await _matchRepository.Count(15, gameMode);
+            var matches = await _matchRepository.Load(16, gameMode, offset, pageSize);
+            var count = await _matchRepository.Count(16, gameMode);
             return Ok(new { matches, count });
         }
 
