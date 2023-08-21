@@ -60,7 +60,7 @@ namespace W3ChampionsStatisticService.Admin
             try {
                 var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
                 return Ok(bannedPlayers);
-            } catch(HttpRequestException ex) {
+            } catch (HttpRequestException ex) {
                 return StatusCode((int)ex.StatusCode, ex.Message);
             }
         }
@@ -72,7 +72,7 @@ namespace W3ChampionsStatisticService.Admin
             try {
                 await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
                 return Ok();
-            } catch(HttpRequestException ex) {
+            } catch (HttpRequestException ex) {
                 return StatusCode((int)ex.StatusCode, ex.Message);
             }
         }
@@ -84,7 +84,7 @@ namespace W3ChampionsStatisticService.Admin
             try {
                 await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
                 return Ok();
-            } catch(HttpRequestException ex) {
+            } catch (HttpRequestException ex) {
                 return StatusCode((int)ex.StatusCode, ex.Message);
             }
         }

@@ -47,7 +47,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     {
                         var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
                         telemetryClient.TrackException(e, "Some Readmodelhandler is dying");
-                        Log.Error($"Some Readmodelhandler is dying: {e}");
+                        Log.Error($"Some Readmodelhandler is dying: {e.Message}");
                     }
 
                     await Task.Delay(5000, stoppingToken);

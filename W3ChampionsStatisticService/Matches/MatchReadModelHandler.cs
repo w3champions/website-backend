@@ -27,11 +27,11 @@ namespace W3ChampionsStatisticService.Matches
 
                 await _matchRepository.Insert(matchup);
                 await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
-                Log.Information($"Deleted Ongoing match: {matchup.MatchId} because it ended.");
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                Log.Error($"Error handling MatchFinishedEvent: {e.Message}");
             }
         }
     }
