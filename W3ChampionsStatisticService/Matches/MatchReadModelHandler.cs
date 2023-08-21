@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using Serilog;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -26,6 +27,7 @@ namespace W3ChampionsStatisticService.Matches
 
                 await _matchRepository.Insert(matchup);
                 await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
+                Log.Information($"Deleted Ongoing match: {matchup.MatchId} because it ended.");
             }
             catch (Exception e)
             {
