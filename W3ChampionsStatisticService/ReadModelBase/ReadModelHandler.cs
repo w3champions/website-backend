@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
-using Serilog;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
@@ -57,7 +56,6 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     catch (Exception e)
                     {
                         _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
-                        Log.Error($"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
                         throw;
                     }
                 }

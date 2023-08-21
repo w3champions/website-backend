@@ -4,7 +4,6 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
-using Serilog;
 
 namespace W3ChampionsStatisticService.Matches
 {
@@ -27,7 +26,6 @@ namespace W3ChampionsStatisticService.Matches
         public async Task Update()
         {
             var nextEvents = await _eventRepository.LoadStartedMatches();
-            Log.Information($"OngoingMatchesHandler: NextEvents Count: {nextEvents.Count}");
 
             while (nextEvents.Any())
             {
@@ -35,7 +33,6 @@ namespace W3ChampionsStatisticService.Matches
                 {
                     if (nextEvent.match.gameMode != GameMode.CUSTOM)
                     {
-                        Log.Information($"Handling Ongoing match: {nextEvent.match.id} for game mode: {nextEvent.match.gameMode}");
                         var matchup = OnGoingMatchup.Create(nextEvent);
 
                         foreach (var team in matchup.Teams)
@@ -44,7 +41,6 @@ namespace W3ChampionsStatisticService.Matches
                                 var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
                                 if (foundMatchForPlayer != null) {
                                     await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
-                                    Log.Information($"Deleted Ongoing match: {foundMatchForPlayer.MatchId} because {nextEvent.match.id} was found.");
                                 }
 
                                 var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
@@ -54,7 +50,6 @@ namespace W3ChampionsStatisticService.Matches
                             }
 
                         await _matchRepository.InsertOnGoingMatch(matchup);
-                        Log.Information($"Inserted Ongoing match: {matchup.MatchId}");
                     }
  
                     await _eventRepository.DeleteStartedEvent(nextEvent.Id);
