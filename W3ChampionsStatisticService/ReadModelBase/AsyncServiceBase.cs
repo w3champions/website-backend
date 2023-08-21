@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using W3ChampionsStatisticService.Services;
+using Serilog;
 
 namespace W3ChampionsStatisticService.ReadModelBase
 {
@@ -46,6 +47,7 @@ namespace W3ChampionsStatisticService.ReadModelBase
                     {
                         var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
                         telemetryClient.TrackException(e, "Some Readmodelhandler is dying");
+                        Log.Error($"Some Readmodelhandler is dying: {e}");
                     }
 
                     await Task.Delay(5000, stoppingToken);
