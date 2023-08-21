@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
+using Serilog;
 
 namespace W3C.Domain.Repositories
 {
@@ -30,6 +31,8 @@ namespace W3C.Domain.Repositories
         public Task<List<MatchStartedEvent>> LoadStartedMatches()
         {
             var delay = ObjectId.GenerateNewId(DateTime.Now.AddSeconds(-20));
+            Log.Information($"MatchEventRepository: LoadStartedMatches: Delay: {delay}");
+            Log.Information($"MatchEventRepository: LoadStartedMatches: No Delay: {ObjectId.GenerateNewId()}");
             return LoadAll<MatchStartedEvent>(m => m.Id < delay, 1000);
         }
 

@@ -27,6 +27,7 @@ namespace W3ChampionsStatisticService.Matches
         public async Task Update()
         {
             var nextEvents = await _eventRepository.LoadStartedMatches();
+            Log.Information($"OngoingMatchesHandler: NextEvents Count: {nextEvents.Count}");
 
             while (nextEvents.Any())
             {
