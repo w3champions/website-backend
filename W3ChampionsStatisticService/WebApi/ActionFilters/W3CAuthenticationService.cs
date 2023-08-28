@@ -35,11 +35,12 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 {
                     ValidateIssuer = false,
                     ValidateAudience = false,
-                    ValidateLifetime = false,
+                    ValidateLifetime = true,
                     ValidateTokenReplay = false,
                     ValidateActor = false,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new RsaSecurityKey(rsa)
+                    IssuerSigningKey = new RsaSecurityKey(rsa),
+                    ClockSkew = TimeSpan.Zero
                 };
 
                 var handler = new JwtSecurityTokenHandler();

@@ -43,7 +43,7 @@ namespace W3ChampionsStatisticService.Maps
             try {
                 var map = await _matchmakingServiceClient.CreateMap(request);
                 return Ok(map);
-            } catch(HttpRequestException ex) {
+            } catch (HttpRequestException ex) {
                 return StatusCode((int)ex.StatusCode, ex.Message);
             }
         }
