@@ -39,8 +39,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                     ValidateTokenReplay = false,
                     ValidateActor = false,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new RsaSecurityKey(rsa),
-                    ClockSkew = TimeSpan.Zero
+                    IssuerSigningKey = new RsaSecurityKey(rsa)
                 };
 
                 var handler = new JwtSecurityTokenHandler();
