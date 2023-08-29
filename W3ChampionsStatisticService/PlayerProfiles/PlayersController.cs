@@ -57,14 +57,13 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, [FromQuery] string authorization)
         {
             var player = await _playerRepository.LoadPlayerProfile(battleTag);
-            if (player == null && authorization != null)
+            if (player != null && authorization != null)
             {
-                var user = _authenticationService.GetUserByToken(authorization);
-                if (user == null)
-                {
+                try {
+                    _authenticationService.GetUserByToken(authorization, false);
+                } catch (Exception) {
                     return Unauthorized("Sorry Hackerboi");
                 }
-
                 player = PlayerOverallStats.Create(battleTag);
             }
 

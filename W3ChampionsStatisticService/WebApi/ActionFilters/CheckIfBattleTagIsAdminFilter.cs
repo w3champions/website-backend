@@ -1,8 +1,10 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.IdentityModel.Tokens;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
@@ -21,20 +23,24 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             var queryString = HttpUtility.ParseQueryString(context.HttpContext.Request.QueryString.Value);
             if (queryString.AllKeys.Contains("authorization"))
             {
-                var auth = queryString["authorization"];
-                var res = _authService.GetUserByToken(auth);
-                if (
-                    res != null
-                    && !string.IsNullOrEmpty(res.BattleTag)
-                    && res.IsAdmin)
-                {
-                    context.ActionArguments["battleTag"] = res.BattleTag;
-                    await next.Invoke();
+                try {
+                    var auth = queryString["authorization"];
+                    var res = _authService.GetUserByToken(auth);
+                    if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin)
+                    {
+                        context.ActionArguments["battleTag"] = res.BattleTag;
+                        await next.Invoke();
+                    }
+                }
+                catch (SecurityTokenExpiredException) {
+                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Token expired."));
+                    context.Result = unauthorizedResult;
+                }
+                catch (Exception) {
+                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
+                    context.Result = unauthorizedResult;
                 }
             }
-
-            var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
-            context.Result = unauthorizedResult;
         }
     }
 }
