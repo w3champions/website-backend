@@ -1,11 +1,11 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.IdentityModel.Tokens;
-using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
@@ -33,7 +33,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                     }
                 }
                 catch (SecurityTokenExpiredException) {
-                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Token expired."));
+                    var unauthorizedResult = new UnauthorizedObjectResult(new { StatusCode = HttpStatusCode.Unauthorized, Error = "JWT_TOKEN_EXPIRED", Message = "Token expired." });
                     context.Result = unauthorizedResult;
                 }
                 catch (Exception) {
