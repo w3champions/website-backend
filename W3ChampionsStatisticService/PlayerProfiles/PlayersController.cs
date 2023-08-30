@@ -57,14 +57,18 @@ namespace W3ChampionsStatisticService.PlayerProfiles
         public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, [FromQuery] string authorization)
         {
             var player = await _playerRepository.LoadPlayerProfile(battleTag);
-            if (player != null && authorization != null)
-            {
-                try {
-                    _authenticationService.GetUserByToken(authorization, false);
-                } catch (Exception) {
-                    return Unauthorized("Sorry Hackerboi");
+
+            if (player == null) {
+                if (authorization == null) {
+                    return NotFound("Player not found.");
+                } else {
+                    try {
+                        _authenticationService.GetUserByToken(authorization, false);
+                    } catch (Exception) {
+                        return Unauthorized("Sorry Hackerboi");
+                    }
+                    player = PlayerOverallStats.Create(battleTag);
                 }
-                player = PlayerOverallStats.Create(battleTag);
             }
 
             // Akas are stored in cache - preferences for showing akas are stored in DB
