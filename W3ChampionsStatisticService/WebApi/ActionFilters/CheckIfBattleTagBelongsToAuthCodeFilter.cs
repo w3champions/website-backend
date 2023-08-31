@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.IdentityModel.Tokens;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
@@ -33,10 +32,6 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                         context.ActionArguments["battleTag"] = res.BattleTag;
                         await next.Invoke();
                     }
-                }
-                catch (SecurityTokenExpiredException) {
-                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Token expired."));
-                    context.Result = unauthorizedResult;
                 }
                 catch (Exception) {
                     var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
