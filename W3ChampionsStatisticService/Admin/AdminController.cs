@@ -55,6 +55,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("bannedPlayers")]
+        [CheckIfBattleTagIsAdmin]
         public async Task<IActionResult> GetBannedPlayers()
         {
             try {
@@ -253,6 +254,15 @@ namespace W3ChampionsStatisticService.Admin
         public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
         {
             await _adminRepository.DeleteChatBan(id);
+            return Ok();
+        }
+
+        // This API endpoint just runs the 'CheckIfBattleTagIsAdmin' filter which then checks the jwt lifetime.
+        // Returns a 200 OK if it passes validation and a 401 Unauthorized if it's expired.
+        [HttpGet("checkJwtLifetime")]
+        [CheckIfBattleTagIsAdmin]
+        public IActionResult CheckJwtLifetime()
+        {
             return Ok();
         }
     }

@@ -33,7 +33,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                     }
                 }
                 catch (SecurityTokenExpiredException) {
-                    var unauthorizedResult = new UnauthorizedObjectResult(new { StatusCode = HttpStatusCode.Unauthorized, Error = "JWT_TOKEN_EXPIRED", Message = "Token expired." });
+                    var unauthorizedResult = new UnauthorizedObjectResult(new { StatusCode = HttpStatusCode.Unauthorized, Error = "AUTH_TOKEN_EXPIRED", Message = "Token expired." });
                     context.Result = unauthorizedResult;
                 }
                 catch (Exception) {
