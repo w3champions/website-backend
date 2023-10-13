@@ -20,7 +20,7 @@ namespace W3ChampionsStatisticService.Moderation
         }
 
         [HttpGet("loungeMute")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> GetLoungeMutes(string authorization)
         {
             var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authorization);
@@ -28,7 +28,7 @@ namespace W3ChampionsStatisticService.Moderation
         }
 
         [HttpPost("loungeMute")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authorization)
         {
             if (loungeMute.battleTag == "") {
@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.Moderation
         }
 
         [HttpDelete("loungeMute/{bTag}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authorization)
         {
             var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authorization);

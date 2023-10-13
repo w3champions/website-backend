@@ -22,7 +22,7 @@ namespace W3ChampionsStatisticService.Rewards
         }
 
         [HttpPut("portraits")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
         {
             await _portraitCommandHandler.UpsertSpecialPortraits(command);
@@ -30,7 +30,7 @@ namespace W3ChampionsStatisticService.Rewards
         }
 
         [HttpDelete("portraits")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> DeletePortraits([FromBody] PortraitsCommand command)
         {
             await _portraitCommandHandler.DeleteSpecialPortraits(command);
@@ -38,7 +38,7 @@ namespace W3ChampionsStatisticService.Rewards
         }
 
         [HttpGet("portrait-definitions")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> GetPortraitDefinitions()
         {
             var portraits = await _portraitCommandHandler.GetPortraitDefinitions();
@@ -46,7 +46,7 @@ namespace W3ChampionsStatisticService.Rewards
         }
 
         [HttpPost("portrait-definitions")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> CreatePortraits([FromBody] PortraitsDefinitionCommand command)
         {
             await _portraitCommandHandler.AddPortraitDefinitions(command);
@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.Rewards
         }
 
         [HttpPut("portrait-definitions")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
         {
             await _portraitCommandHandler.UpdatePortraitDefinitions(command);
@@ -62,7 +62,7 @@ namespace W3ChampionsStatisticService.Rewards
         }
 
         [HttpDelete("portrait-definitions")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
         {
             await _portraitCommandHandler.RemovePortraitDefinitions(command);

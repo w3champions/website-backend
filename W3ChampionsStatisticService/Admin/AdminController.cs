@@ -7,7 +7,6 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
-using System.Net;
 using System.Net.Http;
 
 namespace W3ChampionsStatisticService.Admin
@@ -55,7 +54,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> GetBannedPlayers()
         {
             try {
@@ -67,7 +66,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPost("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             try {
@@ -79,7 +78,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("bannedPlayers")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
         {
             try {
@@ -97,7 +96,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPut("news/{newsId}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> UpdateNews(string newsId, [FromBody] NewsMessage newsMessage)
         {
             newsMessage.Id = new ObjectId(newsId);
@@ -106,7 +105,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPut("news")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> UpdateNews([FromBody] NewsMessage newsMessage)
         {
             newsMessage.Id = ObjectId.GenerateNewId();
@@ -115,7 +114,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("news/{newsId}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> DeleteNews(string newsId)
         {
             await _newsRepository.DeleteNews(new ObjectId(newsId));
@@ -135,7 +134,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPut("motd")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
         {
             if (motd.motd.Length > 400)
@@ -154,7 +153,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPut("loadingScreenTips/{tipId}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> UpdateTips(string tipId, [FromBody] LoadingScreenTip loadingScreenTip)
         {
             if (loadingScreenTip.Message.Length > 200)
@@ -167,7 +166,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPut("loadingScreenTips")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> UpdateTips([FromBody] LoadingScreenTip loadingScreenTip)
         {
             if (loadingScreenTip.Message.Length > 200)
@@ -180,7 +179,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("loadingScreenTips/{tipId}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasContentPermission]
         public async Task<IActionResult> DeleteTip(string tipId)
         {
             await _informationMessagesRepository.DeleteTip(new ObjectId(tipId));
@@ -188,7 +187,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("queue-data")]
-        [CheckIfBattleTagIsAdmin]
+        [HasQueuePermission]
         public async Task<IActionResult> GetQueueData()
         {
             var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
@@ -196,21 +195,21 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("proxies")]
-        [CheckIfBattleTagIsAdmin]
+        [HasProxiesPermission]
         public async Task<IActionResult> GetProxies()
         {
             return Ok(await _adminRepository.GetProxies());
         }
 
         [HttpGet("proxies-for/{tag}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasProxiesPermission]
         public async Task<IActionResult> GetProxiesFor([FromRoute] string tag)
         {
             return Ok(await _adminRepository.GetProxiesFor(tag));
         }
 
         [HttpPut("update-proxies/{tag}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasProxiesPermission]
         public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string tag)
         {
             await _adminRepository.UpdateProxies(proxyUpdateData, tag);
@@ -218,7 +217,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("search/{tagSearch}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasProxiesPermission]
         public async Task<IActionResult> SearchPlayer([FromRoute] string tagSearch)
         {
             var playerInstances = await _rankRepository.SearchAllPlayersForProxy(tagSearch);
@@ -226,7 +225,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("alts/{tag}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
         {
             var smurfs = await _adminRepository.SearchSmurfsFor(tag);
@@ -234,7 +233,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpGet("globalChatBans")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> SearchChatbans()
         {
             var chatBans = await _adminRepository.GetChatBans();
@@ -242,7 +241,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpPut("globalChatBans")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> PutChatBan([FromBody] ChatBanPutDto chatBan)
         {
             await _adminRepository.PutChatBan(chatBan);
@@ -250,7 +249,7 @@ namespace W3ChampionsStatisticService.Admin
         }
 
         [HttpDelete("globalChatBans/{id}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
         {
             await _adminRepository.DeleteChatBan(id);

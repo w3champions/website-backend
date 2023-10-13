@@ -46,6 +46,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.StaticFiles;
+using W3ChampionsStatisticService.Admin.Permissions;
 
 namespace W3ChampionsStatisticService
 {
@@ -121,18 +122,27 @@ namespace W3ChampionsStatisticService
             services.AddTransient<IPortraitRepository, PortraitRepository>();
             services.AddTransient<IInformationMessagesRepository, InformationMessagesRepository>();
             services.AddTransient<ClanCommandHandler>();
+
+            // Actionfilters
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
-            services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
+            services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
+            services.AddTransient<HasModerationPermissionFilter>();
+            services.AddTransient<HasPermissionsPermissionFilter>();
+            services.AddTransient<HasQueuePermissionFilter>();
+            services.AddTransient<HasTournamentsPermissionFilter>();
+            services.AddTransient<HasContentPermissionFilter>();
+            services.AddTransient<HasProxiesPermissionFilter>();
+
             services.AddSingleton<MatchmakingServiceClient>();
             services.AddSingleton<UpdateServiceClient>();
             services.AddSingleton<ReplayServiceClient>();
             services.AddTransient<MatchQueryHandler>();
             services.AddSingleton<ChatServiceClient>();
             services.AddTransient<IFriendRepository, FriendRepository>();
-
             services.AddTransient<PlayerStatisticsService>();
             services.AddTransient<PlayerService>();
+            services.AddTransient<IPermissionsRepository, PermissionsRepository>();
 
             services.AddDirectoryBrowser();
 

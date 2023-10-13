@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.Tournaments
         }
 
         [HttpPost("")]
-        [CheckIfBattleTagIsAdmin]
+        [HasTournamentsPermission]
         public async Task<IActionResult> CreateTournament([FromBody] TournamentUpdateBody tournamentData)
         {
             var tournament = await _matchmakingServiceRepository.CreateTournament(tournamentData);
@@ -54,7 +54,7 @@ namespace W3ChampionsStatisticService.Tournaments
         }
 
         [HttpPatch("{id}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasTournamentsPermission]
         public async Task<IActionResult> UpdateTournament(string id, [FromBody] TournamentUpdateBody updates)
         {
             var tournament = await _matchmakingServiceRepository.UpdateTournament(id, updates);
@@ -62,7 +62,7 @@ namespace W3ChampionsStatisticService.Tournaments
         }
 
         [HttpPost("{id}/players")]
-        [CheckIfBattleTagIsAdmin]
+        [HasTournamentsPermission]
         public async Task<IActionResult> RegisterPlayer(string id, [FromBody] RegisterPlayerBody body)
         {
             var personalSetting = await _personalSettingsRepository.Load(body.BattleTag);
@@ -71,7 +71,7 @@ namespace W3ChampionsStatisticService.Tournaments
         }
 
         [HttpDelete("{id}/players")]
-        [CheckIfBattleTagIsAdmin]
+        [HasTournamentsPermission]
         public async Task<IActionResult> UnregisterPlayer(string id, [FromBody] UnregisterPlayerBody body)
         {
             var tournament = await _matchmakingServiceRepository.UnregisterPlayer(id, body.BattleTag);
