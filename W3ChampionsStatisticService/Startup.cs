@@ -127,9 +127,10 @@ namespace W3ChampionsStatisticService
             services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
             services.AddTransient<CheckIfBattleTagIsAdminFilter>();
             services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
-            services.AddTransient<HasModerationPermissionFilter>();
             services.AddTransient<HasPermissionsPermissionFilter>();
+            services.AddTransient<HasModerationPermissionFilter>();
             services.AddTransient<HasQueuePermissionFilter>();
+            services.AddTransient<HasMapsPermissionFilter>();
             services.AddTransient<HasTournamentsPermissionFilter>();
             services.AddTransient<HasContentPermissionFilter>();
             services.AddTransient<HasProxiesPermissionFilter>();
