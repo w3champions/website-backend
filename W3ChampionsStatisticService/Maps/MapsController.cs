@@ -29,7 +29,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpGet("")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> GetMaps([FromQuery] GetMapsRequest request)
         {
             var maps = await _matchmakingServiceClient.GetMaps(request);
@@ -37,7 +37,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpPost("")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> CreateMap([FromBody] MapContract request)
         {
             try {
@@ -49,7 +49,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpPut("{id}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> UpdateMap(int id, [FromBody] MapContract request)
         {
             var map = await _matchmakingServiceClient.UpdateMap(id, request);
@@ -57,7 +57,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpGet("{id}/files")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> GetMapFiles(int id)
         {
             var mapFiles = await _updateServiceClient.GetMapFiles(id);
@@ -65,7 +65,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpPost("{id}/files")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> CreateMapFile()
         {
             HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(Request.HttpContext);
@@ -74,7 +74,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpGet("files/{fileId}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> GetMapFile(string fileId)
         {
             var mapFile = await _updateServiceClient.GetMapFile(fileId);
@@ -82,7 +82,7 @@ namespace W3ChampionsStatisticService.Maps
         }
 
         [HttpDelete("files/{fileId}")]
-        [CheckIfBattleTagIsAdmin]
+        [HasMapsPermission]
         public async Task<IActionResult> DeleteMapFile(string fileId)
         {
             await _updateServiceClient.DeleteMapFile(fileId);

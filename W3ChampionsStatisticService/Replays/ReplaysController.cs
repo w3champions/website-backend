@@ -32,7 +32,7 @@ namespace W3ChampionsStatisticService.Maps
             return File(replayStream, "application/octet-stream", $"{gameId}.w3g");
         }
 
-        [CheckIfBattleTagIsAdmin]
+        [HasModerationPermission]
         [HttpGet("{gameId}/chats")]
         public async Task<IActionResult> GetReplayChatLogs(string gameId)
         {

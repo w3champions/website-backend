@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.IdentityModel.Tokens;
+using System.Collections.Generic;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
@@ -45,17 +46,23 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
             var btag = claims.Claims.First(c => c.Type == "battleTag").Value;
             var isAdmin = Boolean.Parse(claims.Claims.First(c => c.Type == "isAdmin").Value);
             var name = claims.Claims.First(c => c.Type == "name").Value;
+            var permissions = claims.Claims
+                .Where(claim => claim.Type == "permissions")
+                .Select(x => x.Value)
+                .ToList();
 
             return new W3CUserAuthenticationDto
             {
                 Name = name,
                 BattleTag = btag,
-                IsAdmin = isAdmin
+                IsAdmin = isAdmin,
+                Permissions = permissions,
             };
         }
 
         public string BattleTag { get; set; }
         public string Name { get; set; }
         public bool IsAdmin { get; set; }
+        public List<string> Permissions { get; set; }
     }
 }
