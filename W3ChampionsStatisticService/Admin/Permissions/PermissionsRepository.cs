@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.Admin.Permissions
 {
     public class PermissionsRepository : MongoDbRepositoryBase, IPermissionsRepository
     {
-        private static readonly string IdentityApiUrl = Environment.GetEnvironmentVariable("IDENTITY_API") ?? "https://identification-service.test.w3champions.com";
+        private static readonly string IdentityApiUrl = Environment.GetEnvironmentVariable("IDENTIFICATION_SERVICE_URI") ?? "https://identification-service.test.w3champions.com";
         public PermissionsRepository(MongoClient mongoClient) : base(mongoClient)
         {
         }
