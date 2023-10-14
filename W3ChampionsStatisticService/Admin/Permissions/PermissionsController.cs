@@ -27,8 +27,12 @@ namespace W3ChampionsStatisticService.Admin
         [HasPermissionsPermission]
         public async Task<IActionResult> GetPermissions([FromQuery] string authorization)
         {
-            var permissions = await _permissionsRepository.GetPermissions(authorization);
-            return Ok(permissions);
+            try {
+                var permissions = await _permissionsRepository.GetPermissions(authorization);
+                return Ok(permissions);
+            } catch (HttpRequestException ex) {
+                return StatusCode((int)ex.StatusCode, ex.Message);
+            }
         }
 
         [HttpPost("add")]

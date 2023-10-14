@@ -23,9 +23,12 @@ namespace W3ChampionsStatisticService.Admin.Permissions
         public async Task<List<Permission>> GetPermissions(string authorization)
         {
             var httpClient = new HttpClient();
-            var result = await httpClient.GetAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}");
-            var content = await result.Content.ReadAsStringAsync();
+            var response = await httpClient.GetAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}");
+            var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
+            if (response.StatusCode != HttpStatusCode.OK) {
+                throw new HttpRequestException(content, null, response.StatusCode);
+            }
             var permissionList = JsonConvert.DeserializeObject<List<Permission>>(content);
 
             if (!permissionList.Any())

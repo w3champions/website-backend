@@ -39,7 +39,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                     context.Result = unauthorizedResult;
                 }
                 catch (Exception) {
-                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
+                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Permission missing."));
                     context.Result = unauthorizedResult;
                 }
             }
