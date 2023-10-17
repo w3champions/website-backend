@@ -33,13 +33,16 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                         context.ActionArguments["battleTag"] = res.BattleTag;
                         await next.Invoke();
                     }
+                    else {
+                        throw new SecurityTokenValidationException("Permission missing.");
+                    }
                 }
                 catch (SecurityTokenExpiredException) {
                     var unauthorizedResult = new UnauthorizedObjectResult(new { StatusCode = HttpStatusCode.Unauthorized, Error = "AUTH_TOKEN_EXPIRED", Message = "Token expired." });
                     context.Result = unauthorizedResult;
                 }
-                catch (Exception) {
-                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Permission missing."));
+                catch (Exception ex) {
+                    var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult(ex.Message));
                     context.Result = unauthorizedResult;
                 }
             }
