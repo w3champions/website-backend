@@ -47,6 +47,7 @@ using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.StaticFiles;
 using W3ChampionsStatisticService.Admin.Permissions;
+using W3ChampionsStatisticService.Admin.Logs;
 
 namespace W3ChampionsStatisticService
 {
@@ -130,6 +131,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<HasPermissionsPermissionFilter>();
             services.AddTransient<HasModerationPermissionFilter>();
             services.AddTransient<HasQueuePermissionFilter>();
+            services.AddTransient<HasLogsPermissionFilter>();
             services.AddTransient<HasMapsPermissionFilter>();
             services.AddTransient<HasTournamentsPermissionFilter>();
             services.AddTransient<HasContentPermissionFilter>();
@@ -144,6 +146,7 @@ namespace W3ChampionsStatisticService
             services.AddTransient<PlayerStatisticsService>();
             services.AddTransient<PlayerService>();
             services.AddTransient<IPermissionsRepository, PermissionsRepository>();
+            services.AddTransient<ILogsRepository, LogsRepository>();
 
             services.AddDirectoryBrowser();
 

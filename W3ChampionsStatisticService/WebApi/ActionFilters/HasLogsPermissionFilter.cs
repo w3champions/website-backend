@@ -11,10 +11,10 @@ using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters
 {
-    public class HasProxiesPermissionFilter : IAsyncActionFilter {
+    public class HasLogsPermissionFilter : IAsyncActionFilter {
         private readonly IW3CAuthenticationService _authService;
 
-        public HasProxiesPermissionFilter(IW3CAuthenticationService authService)
+        public HasLogsPermissionFilter(IW3CAuthenticationService authService)
         {
             _authService = authService;
         }
@@ -27,7 +27,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters
                 try {
                     var auth = queryString["authorization"];
                     var res = _authService.GetUserByToken(auth);
-                    var hasPermission = res.Permissions.Contains(nameof(EPermission.Proxies));
+                    var hasPermission = res.Permissions.Contains(nameof(EPermission.Logs));
                     if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
                     {
                         context.ActionArguments["battleTag"] = res.BattleTag;

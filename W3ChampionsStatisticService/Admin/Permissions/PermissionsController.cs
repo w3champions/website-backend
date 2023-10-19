@@ -1,15 +1,11 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using W3C.Domain.Repositories;
-using W3C.Domain.CommonValueObjects;
-using System.Net;
 using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3ChampionsStatisticService.Admin.Permissions
 {
     [ApiController]
     [Route("api/admin/permissions")]
