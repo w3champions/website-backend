@@ -49,7 +49,8 @@ namespace W3ChampionsStatisticService.Admin.CloudStorage.S3
             PutObjectRequest putObjectRequest = new PutObjectRequest
             {
                 BucketName = S3BucketName,
-                Key = $"{S3Prefix}{file.Name}"
+                Key = $"{S3Prefix}{file.Name}",
+                CannedACL = S3CannedACL.PublicRead
             };
             using var ms = new MemoryStream(bytes);
             putObjectRequest.InputStream = ms;
