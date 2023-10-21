@@ -1,6 +1,6 @@
 using System;
 
-namespace W3C.Contracts.Admin.Rewards
+namespace W3C.Contracts.Admin.CloudStorage
 {
     public class CloudFile
     {

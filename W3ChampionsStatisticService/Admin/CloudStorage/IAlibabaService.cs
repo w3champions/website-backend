@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using W3C.Contracts.Admin.Rewards;
+using W3C.Contracts.Admin.CloudStorage;
 
-namespace W3ChampionsStatisticService.Rewards.CloudStorage
+namespace W3ChampionsStatisticService.Admin.CloudStorage.Alibaba
 {
     public interface IAlibabaService
     {

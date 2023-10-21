@@ -1,13 +1,13 @@
-﻿using System.Threading.Tasks;
-using System.Collections.Generic;
-using Aliyun.OSS;
+﻿using System;
 using System.IO;
 using System.Net;
-using System;
 using System.Linq;
-using W3C.Contracts.Admin.Rewards;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using W3C.Contracts.Admin.CloudStorage;
+using Aliyun.OSS;
 
-namespace W3ChampionsStatisticService.Rewards.CloudStorage
+namespace W3ChampionsStatisticService.Admin.CloudStorage.Alibaba
 {
     public class AlibabaService : IAlibabaService
     {
@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
         private readonly string alibabaAccessKey = Environment.GetEnvironmentVariable("ALIBABA_ACCESS_KEY") ?? "";
         private readonly string alibabaSecretKey = Environment.GetEnvironmentVariable("ALIBABA_SECRET_KEY") ?? "";
         private readonly string alibabaEndpoint = Environment.GetEnvironmentVariable("ALIBABA_ENDPOINT") ?? "";
-        private readonly string prefix = "integration/icons/specialAvatars";
+        private readonly string alibabaPrefix = Environment.GetEnvironmentVariable("ALIBABA_PREFIX") ?? "";
 
         public List<CloudFile> ListFiles()
         {
@@ -23,7 +23,7 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
             var listObjectsRequest = new ListObjectsRequest(alibabaBucketName)
             {
                 MaxKeys = 1000, // The default value of MaxKeys is 100. The maximum value is 1000.
-                Prefix = prefix
+                Prefix = alibabaPrefix
             };
             var result = client.ListObjects(listObjectsRequest);
             return result.ObjectSummaries
@@ -40,7 +40,7 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
             var client = new OssClient(alibabaEndpoint, alibabaAccessKey, alibabaSecretKey);
             byte[] bytes = Convert.FromBase64String(file.Content);
             using var ms = new MemoryStream(bytes);
-            var putObjectRequest = new PutObjectRequest(alibabaBucketName, $"{prefix}/{file.Name}", ms);
+            var putObjectRequest = new PutObjectRequest(alibabaBucketName, $"{alibabaPrefix}{file.Name}", ms);
             PutObjectResult response = client.PutObject(putObjectRequest);
         }
 
@@ -49,7 +49,7 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
             var client = new OssClient(alibabaEndpoint, alibabaAccessKey, alibabaSecretKey);
             MemoryStream ms = null;
 
-            GetObjectRequest getObjectRequest = new GetObjectRequest(alibabaBucketName, $"{prefix}/{fileName}");
+            GetObjectRequest getObjectRequest = new GetObjectRequest(alibabaBucketName, $"{alibabaPrefix}{fileName}");
 
             using var response = client.GetObject(getObjectRequest);
             if (response.HttpStatusCode == HttpStatusCode.OK)
@@ -70,7 +70,7 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
         public void DeleteFile(string fileName)
         {
             var client = new OssClient(alibabaEndpoint, alibabaAccessKey, alibabaSecretKey);
-            client.DeleteObject(alibabaBucketName, $"{prefix}/{fileName}");
+            client.DeleteObject(alibabaBucketName, $"{alibabaPrefix}{fileName}");
         }
     }
 }

@@ -1,20 +1,23 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using W3C.Contracts.Admin.Rewards;
+using W3C.Contracts.Admin.CloudStorage;
+using W3ChampionsStatisticService.Admin.CloudStorage.S3;
+using W3ChampionsStatisticService.Admin.CloudStorage.Alibaba;
 
-namespace W3ChampionsStatisticService.Rewards.CloudStorage
+namespace W3ChampionsStatisticService.Admin.CloudStorage
 {
     [ApiController]
     [Route("api/admin/storage")]
     public class CloudStorageController : ControllerBase
     {
-        [HttpGet]
+        [HttpGet("alibaba")]
         [HasContentPermission]
-        public IActionResult ListFiles()
+        public IActionResult ListAlibabaFiles()
         {
             AlibabaService alibabaService = new AlibabaService();
             try {
@@ -25,9 +28,22 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
             }
         }
 
-        [HttpPost("upload")]
+        [HttpGet("s3")]
         [HasContentPermission]
-        public IActionResult UploadFile([FromBody] UploadFileRequest req)
+        public async Task<IActionResult> ListS3Files()
+        {
+            S3Service s3Service = new S3Service();
+            try {
+                var fileList = await s3Service.ListFiles();
+                return Ok(fileList);
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPost("alibaba/upload")]
+        [HasContentPermission]
+        public IActionResult UploadAlibabaFile([FromBody] UploadFileRequest req)
         {
             AlibabaService alibabaService = new AlibabaService();
             try {
@@ -44,9 +60,28 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
             }
         }
 
-        [HttpGet("download/{fileName}")]
+        [HttpPost("s3/upload")]
         [HasContentPermission]
-        public async Task<IActionResult> DownloadFile([FromRoute] string fileName)
+        public async Task<IActionResult> UploadS3File([FromBody] UploadFileRequest req)
+        {
+            S3Service s3Service = new S3Service();
+            try {
+                var fileList = await s3Service.ListFiles();
+                if (fileList.Select(f => f.Name).Contains(req.Name)) {
+                    throw new ValidationException($"Could not upload file. File {req.Name} already exists.");
+                }
+                await s3Service.UploadFile(req);
+                return Ok($"File {req.Name} uploaded!");
+            } catch (ValidationException ex) {
+                return BadRequest(ex.Message);
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpGet("alibaba/download/{fileName}")]
+        [HasContentPermission]
+        public async Task<IActionResult> DownloadAlibabaFile([FromRoute] string fileName)
         {
             AlibabaService alibabaService = new AlibabaService();
             try {
@@ -58,14 +93,37 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
                 return File(file, "application/octet-stream", fileName);
             } catch (ValidationException ex) {
                 return BadRequest(ex.Message);
+            } catch (FileNotFoundException ex) {
+                return NotFound(ex.Message);
             } catch (Exception ex) {
                 return StatusCode(500, ex.Message);
             }
         }
 
-        [HttpDelete("{fileName}")]
+        [HttpGet("s3/download/{fileName}")]
         [HasContentPermission]
-        public IActionResult DeleteFile([FromRoute] string fileName)
+        public async Task<IActionResult> DownloadS3File([FromRoute] string fileName)
+        {
+            S3Service s3Service = new S3Service();
+            try {
+                var fileList = await s3Service.ListFiles();
+                if (!fileList.Select(f => f.Name).Contains(fileName)) {
+                    throw new ValidationException($"Could not download file. File {fileName} does not exist.");
+                }
+                var file = await s3Service.DownloadFile(fileName);
+                return File(file, "application/octet-stream", fileName);
+            } catch (ValidationException ex) {
+                return BadRequest(ex.Message);
+            } catch (FileNotFoundException ex) {
+                return NotFound(ex.Message);
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpDelete("alibaba/{fileName}")]
+        [HasContentPermission]
+        public IActionResult DeleteAlibabaFile([FromRoute] string fileName)
         {
             AlibabaService alibabaService = new AlibabaService();
             try {
@@ -74,6 +132,25 @@ namespace W3ChampionsStatisticService.Rewards.CloudStorage
                     throw new ValidationException($"Could not delete file. File {fileName} does not exist.");
                 }
                 alibabaService.DeleteFile(fileName);
+                return Ok($"File {fileName} was deleted.");
+            } catch (ValidationException ex) {
+                return BadRequest(ex.Message);
+            } catch (Exception ex) {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpDelete("s3/{fileName}")]
+        [HasContentPermission]
+        public async Task<IActionResult> DeleteS3File([FromRoute] string fileName)
+        {
+            S3Service s3Service = new S3Service();
+            try {
+                var fileList = await s3Service.ListFiles();
+                if (!fileList.Select(f => f.Name).Contains(fileName)) {
+                    throw new ValidationException($"Could not delete file. File {fileName} does not exist.");
+                }
+                await s3Service.DeleteFile(fileName);
                 return Ok($"File {fileName} was deleted.");
             } catch (ValidationException ex) {
                 return BadRequest(ex.Message);
