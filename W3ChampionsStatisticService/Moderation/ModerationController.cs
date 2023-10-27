@@ -4,6 +4,7 @@ using W3C.Domain.ChatService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net;
 using W3C.Contracts.Admin.Moderation;
+using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.Moderation;
 
@@ -20,7 +21,7 @@ public class ModerationController : ControllerBase
     }
 
     [HttpGet("loungeMute")]
-    [HasModerationPermission]
+    [HasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetLoungeMutes(string authorization)
     {
         var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authorization);
@@ -28,7 +29,7 @@ public class ModerationController : ControllerBase
     }
 
     [HttpPost("loungeMute")]
-    [HasModerationPermission]
+    [HasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authorization)
     {
         if (loungeMute.battleTag == "") {
@@ -54,7 +55,7 @@ public class ModerationController : ControllerBase
     }
 
     [HttpDelete("loungeMute/{bTag}")]
-    [HasModerationPermission]
+    [HasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authorization)
     {
         var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authorization);
