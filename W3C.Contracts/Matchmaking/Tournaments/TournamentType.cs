@@ -1,8 +1,7 @@
-namespace W3C.Contracts.Matchmaking.Tournaments
+namespace W3C.Contracts.Matchmaking.Tournaments;
+
+public enum TournamentType
 {
-    public enum TournamentType
-    {
-        AUTOMATED,
-        CUSTOM,
-    }
+    AUTOMATED,
+    CUSTOM,
 }

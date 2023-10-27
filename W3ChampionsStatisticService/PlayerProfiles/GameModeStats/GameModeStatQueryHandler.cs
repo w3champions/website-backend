@@ -8,91 +8,90 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using Serilog;
 
-namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+
+public class GameModeStatQueryHandler
 {
-    public class GameModeStatQueryHandler
+    private readonly IPlayerRepository _playerRepository;
+    private readonly PlayerService _playerService;
+    private readonly TrackingService _trackingService;
+    private readonly IRankRepository _rankRepository;
+
+    public GameModeStatQueryHandler(
+        IPlayerRepository playerRepository,
+        PlayerService playerService,
+        TrackingService trackingService,
+        IRankRepository rankRepository)
     {
-        private readonly IPlayerRepository _playerRepository;
-        private readonly PlayerService _playerService;
-        private readonly TrackingService _trackingService;
-        private readonly IRankRepository _rankRepository;
+        _playerRepository = playerRepository;
+        _playerService = playerService;
+        _trackingService = trackingService;
+        _rankRepository = rankRepository;
+    }
 
-        public GameModeStatQueryHandler(
-            IPlayerRepository playerRepository,
-            PlayerService playerService,
-            TrackingService trackingService,
-            IRankRepository rankRepository)
+    public async Task<List<PlayerGameModeStatPerGateway>> LoadPlayerStatsWithRanks(
+        string battleTag,
+        GateWay gateWay,
+        int season)
+    {
+        var playerGameModeStats = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
+        var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
+        var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
+
+        foreach (var rank in leaguesOfPlayer)
         {
-            _playerRepository = playerRepository;
-            _playerService = playerService;
-            _trackingService = trackingService;
-            _rankRepository = rankRepository;
+            PopulateLeague(playerGameModeStats, allLeagues, rank);
         }
 
-        public async Task<List<PlayerGameModeStatPerGateway>> LoadPlayerStatsWithRanks(
-            string battleTag,
-            GateWay gateWay,
-            int season)
+        await PopulateQuantilesAsync(playerGameModeStats, season);
+
+        return playerGameModeStats.OrderByDescending(r => r.RankingPoints).ToList();
+    }
+
+    private void PopulateLeague(
+        List<PlayerGameModeStatPerGateway> player,
+        List<LeagueConstellation> allLeagues,
+        Rank rank)
+    {
+        try
         {
-            var playerGameModeStats = await _playerRepository.LoadGameModeStatPerGateway(battleTag, gateWay, season);
-            var leaguesOfPlayer = await _rankRepository.LoadPlayerOfLeague(battleTag, season);
-            var allLeagues = await _rankRepository.LoadLeagueConstellation(season);
+            if (rank.RankNumber == 0) return;
+            var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
 
-            foreach (var rank in leaguesOfPlayer)
-            {
-                PopulateLeague(playerGameModeStats, allLeagues, rank);
-            }
+            // There are some Ranks with Leagues that do not exist in
+            // Season 0 LeagueConstellations, which we should ignore.
+            // (Data integrity issue)
+            var league = leagueConstellation.Season == 0
+                ? leagueConstellation.Leagues.SingleOrDefault(l => l.Id == rank.League)
+                : leagueConstellation.Leagues.Single(l => l.Id == rank.League);
 
-            await PopulateQuantilesAsync(playerGameModeStats, season);
+            if (league == null) return;
 
-            return playerGameModeStats.OrderByDescending(r => r.RankingPoints).ToList();
+
+            var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
+
+            if (gameModeStat == null) return;
+
+
+            gameModeStat.Division = league.Division;
+            gameModeStat.LeagueOrder = league.Order;
+
+            gameModeStat.RankingPoints = rank.RankingPoints;
+            gameModeStat.LeagueId = rank.League;
+            gameModeStat.Rank = rank.RankNumber;
         }
-
-        private void PopulateLeague(
-            List<PlayerGameModeStatPerGateway> player,
-            List<LeagueConstellation> allLeagues,
-            Rank rank)
+        catch (Exception e)
         {
-            try
-            {
-                if (rank.RankNumber == 0) return;
-                var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
-
-                // There are some Ranks with Leagues that do not exist in
-                // Season 0 LeagueConstellations, which we should ignore.
-                // (Data integrity issue)
-                var league = leagueConstellation.Season == 0
-                    ? leagueConstellation.Leagues.SingleOrDefault(l => l.Id == rank.League)
-                    : leagueConstellation.Leagues.Single(l => l.Id == rank.League);
-
-                if (league == null) return;
-
-
-                var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
-
-                if (gameModeStat == null) return;
-
-
-                gameModeStat.Division = league.Division;
-                gameModeStat.LeagueOrder = league.Order;
-
-                gameModeStat.RankingPoints = rank.RankingPoints;
-                gameModeStat.LeagueId = rank.League;
-                gameModeStat.Rank = rank.RankNumber;
-            }
-            catch (Exception e)
-            {
-                _trackingService.TrackException(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} Leage: {rank.League}");
-                Log.Error($"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League} {e.Message}");
-            }
+            _trackingService.TrackException(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} Leage: {rank.League}");
+            Log.Error($"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League} {e.Message}");
         }
+    }
 
-        private async Task PopulateQuantilesAsync(List<PlayerGameModeStatPerGateway> playerGameModeStats, int season)
+    private async Task PopulateQuantilesAsync(List<PlayerGameModeStatPerGateway> playerGameModeStats, int season)
+    {
+        foreach (var gameModeStat in playerGameModeStats)
         {
-            foreach (var gameModeStat in playerGameModeStats)
-            {
-                gameModeStat.Quantile =  await _playerService.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
-            }
+            gameModeStat.Quantile =  await _playerService.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
         }
     }
 }

@@ -1,10 +1,9 @@
-namespace W3C.Contracts.Matchmaking.Tournaments
+namespace W3C.Contracts.Matchmaking.Tournaments;
+
+public enum TournamentMatchState
 {
-    public enum TournamentMatchState
-    {
-        INIT,
-        STARTED,
-        FINISHED,
-        CANCELED
-    }
+    INIT,
+    STARTED,
+    FINISHED,
+    CANCELED
 }

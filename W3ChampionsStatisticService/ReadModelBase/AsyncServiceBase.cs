@@ -6,71 +6,70 @@ using Microsoft.Extensions.Hosting;
 using W3ChampionsStatisticService.Services;
 using Serilog;
 
-namespace W3ChampionsStatisticService.ReadModelBase
+namespace W3ChampionsStatisticService.ReadModelBase;
+
+public class AsyncServiceBase<T> : IHostedService where T : IAsyncUpdatable
 {
-    public class AsyncServiceBase<T> : IHostedService where T : IAsyncUpdatable
+    protected readonly IServiceScopeFactory ServiceScopeFactory;
+
+    private Task _executingTask;
+    private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
+
+    public AsyncServiceBase(IServiceScopeFactory serviceScopeFactory)
     {
-        protected readonly IServiceScopeFactory ServiceScopeFactory;
+        ServiceScopeFactory = serviceScopeFactory;
+    }
 
-        private Task _executingTask;
-        private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _executingTask = ExecuteAsync(_stoppingCts.Token);
 
-        public AsyncServiceBase(IServiceScopeFactory serviceScopeFactory)
+        if (_executingTask.IsCompleted)
         {
-            ServiceScopeFactory = serviceScopeFactory;
+            return _executingTask;
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        do
         {
-            _executingTask = ExecuteAsync(_stoppingCts.Token);
-
-            if (_executingTask.IsCompleted)
+            using (var scope = ServiceScopeFactory.CreateScope())
             {
-                return _executingTask;
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            do
-            {
-                using (var scope = ServiceScopeFactory.CreateScope())
+                try
                 {
-                    try
-                    {
-                        var service = scope.ServiceProvider.GetService<T>();
-                        await service.Update();
-                    }
-                    catch (Exception e)
-                    {
-                        var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
-                        telemetryClient.TrackException(e, "Some Readmodelhandler is dying");
-                        Log.Error($"Some Readmodelhandler is dying: {e.Message}");
-                    }
-
-                    await Task.Delay(5000, stoppingToken);
+                    var service = scope.ServiceProvider.GetService<T>();
+                    await service.Update();
                 }
+                catch (Exception e)
+                {
+                    var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
+                    telemetryClient.TrackException(e, "Some Readmodelhandler is dying");
+                    Log.Error($"Some Readmodelhandler is dying: {e.Message}");
+                }
+
+                await Task.Delay(5000, stoppingToken);
             }
-            while (!stoppingToken.IsCancellationRequested);
+        }
+        while (!stoppingToken.IsCancellationRequested);
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_executingTask == null)
+        {
+            return;
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        try
         {
-            if (_executingTask == null)
-            {
-                return;
-            }
-
-            try
-            {
-                _stoppingCts.Cancel();
-            }
-            finally
-            {
-                await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
-            }
+            _stoppingCts.Cancel();
+        }
+        finally
+        {
+            await Task.WhenAny(_executingTask, Task.Delay(Timeout.Infinite, cancellationToken));
         }
     }
 }

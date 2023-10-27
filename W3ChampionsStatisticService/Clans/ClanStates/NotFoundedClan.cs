@@ -1,31 +1,30 @@
 ﻿using System.Collections.Generic;
 
-namespace W3ChampionsStatisticService.Clans.ClanStates
+namespace W3ChampionsStatisticService.Clans.ClanStates;
+
+public class NotFoundedClan : ClanState
 {
-    public class NotFoundedClan : ClanState
+    public NotFoundedClan(string founder)
     {
-        public NotFoundedClan(string founder)
+        FoundingFathers = new List<string> { founder };
+        ChiefTain = founder;
+    }
+
+    public override ClanState AcceptInvite(ClanMembership membership)
+    {
+        FoundingFathers.Add(membership.BattleTag);
+
+        if (FoundingFathers.Count >= 7)
         {
-            FoundingFathers = new List<string> { founder };
-            ChiefTain = founder;
+            return new FoundedClan(FoundingFathers, ChiefTain);
         }
 
-        public override ClanState AcceptInvite(ClanMembership membership)
-        {
-            FoundingFathers.Add(membership.BattleTag);
+        return this;
+    }
 
-            if (FoundingFathers.Count >= 7)
-            {
-                return new FoundedClan(FoundingFathers, ChiefTain);
-            }
-
-            return this;
-        }
-
-        public override ClanState LeaveClan(ClanMembership clanMemberShip)
-        {
-            FoundingFathers.Remove(clanMemberShip.BattleTag);
-            return this;
-        }
+    public override ClanState LeaveClan(ClanMembership clanMemberShip)
+    {
+        FoundingFathers.Remove(clanMemberShip.BattleTag);
+        return this;
     }
 }

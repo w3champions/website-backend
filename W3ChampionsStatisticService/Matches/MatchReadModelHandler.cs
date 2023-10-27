@@ -5,34 +5,33 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using Serilog;
 
-namespace W3ChampionsStatisticService.Matches
+namespace W3ChampionsStatisticService.Matches;
+
+public class MatchReadModelHandler : IReadModelHandler
 {
-    public class MatchReadModelHandler : IReadModelHandler
+    private readonly IMatchRepository _matchRepository;
+
+    public MatchReadModelHandler(
+        IMatchRepository matchRepository
+        )
     {
-        private readonly IMatchRepository _matchRepository;
+        _matchRepository = matchRepository;
+    }
 
-        public MatchReadModelHandler(
-            IMatchRepository matchRepository
-            )
+    public async Task Update(MatchFinishedEvent nextEvent)
+    {
+        try
         {
-            _matchRepository = matchRepository;
+            if (nextEvent.WasFakeEvent) return;
+            var matchup = Matchup.Create(nextEvent);
+
+            await _matchRepository.Insert(matchup);
+            await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
         }
-
-        public async Task Update(MatchFinishedEvent nextEvent)
+        catch (Exception e)
         {
-            try
-            {
-                if (nextEvent.WasFakeEvent) return;
-                var matchup = Matchup.Create(nextEvent);
-
-                await _matchRepository.Insert(matchup);
-                await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                Log.Error($"Error handling MatchFinishedEvent: {e.Message}");
-            }
+            Console.WriteLine(e);
+            Log.Error($"Error handling MatchFinishedEvent: {e.Message}");
         }
     }
 }

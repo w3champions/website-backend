@@ -1,10 +1,9 @@
 using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 
-namespace W3ChampionsStatisticService.ReadModelBase
+namespace W3ChampionsStatisticService.ReadModelBase;
+
+public interface IReadModelHandler
 {
-    public interface IReadModelHandler
-    {
-        Task Update(MatchFinishedEvent nextEvent);
-    }
+    Task Update(MatchFinishedEvent nextEvent);
 }

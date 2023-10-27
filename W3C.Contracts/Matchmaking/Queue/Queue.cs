@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 
-namespace W3C.Contracts.Matchmaking.Queue
+namespace W3C.Contracts.Matchmaking.Queue;
+
+public class Queue 
 {
-    public class Queue 
-    {
-        public int gameMode { get; set; }
-        public List<QueuedPlayer> snapshot { get; set; }
-    }
+    public int gameMode { get; set; }
+    public List<QueuedPlayer> snapshot { get; set; }
 }

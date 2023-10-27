@@ -1,9 +1,8 @@
-﻿namespace W3C.Contracts.GameObjects
+﻿namespace W3C.Contracts.GameObjects;
+
+public enum Computer
 {
-    public enum Computer
-    {
-        EASY = 0,
-        NORMAL = 1,
-        INSANE = 2,
-    }
+    EASY = 0,
+    NORMAL = 1,
+    INSANE = 2,
 }

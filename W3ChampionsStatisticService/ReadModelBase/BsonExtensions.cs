@@ -3,23 +3,22 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson.Serialization;
 using W3ChampionsStatisticService.Clans.ClanStates;
 
-namespace W3ChampionsStatisticService.ReadModelBase
+namespace W3ChampionsStatisticService.ReadModelBase;
+
+public static class BsonExtensions
 {
-    public static class BsonExtensions
+    public static IServiceCollection AddSpecialBsonRegistrations(this IServiceCollection services)
     {
-        public static IServiceCollection AddSpecialBsonRegistrations(this IServiceCollection services)
-        {
-            BsonClassMap.RegisterClassMap<ClanState>(cm => {
-                cm.AutoMap();
-                cm.SetIsRootClass(true);
+        BsonClassMap.RegisterClassMap<ClanState>(cm => {
+            cm.AutoMap();
+            cm.SetIsRootClass(true);
 
-                var featureType = typeof(ClanState);
-                featureType.Assembly.GetTypes()
-                    .Where(type => featureType.IsAssignableFrom(type)).ToList()
-                    .ForEach(type => cm.AddKnownType(type));
-            });
+            var featureType = typeof(ClanState);
+            featureType.Assembly.GetTypes()
+                .Where(type => featureType.IsAssignableFrom(type)).ToList()
+                .ForEach(type => cm.AddKnownType(type));
+        });
 
-            return services;
-        }
+        return services;
     }
 }

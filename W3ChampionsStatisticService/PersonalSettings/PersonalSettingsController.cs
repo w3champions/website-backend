@@ -7,83 +7,82 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
-namespace W3ChampionsStatisticService.PersonalSettings
+namespace W3ChampionsStatisticService.PersonalSettings;
+
+[ApiController]
+[Route("api/personal-settings")]
+public class PersonalSettingsController : ControllerBase
 {
-    [ApiController]
-    [Route("api/personal-settings")]
-    public class PersonalSettingsController : ControllerBase
+    private readonly IPersonalSettingsRepository _personalSettingsRepository;
+    private readonly IPlayerRepository _playerRepository;
+    private readonly PortraitCommandHandler _commandHandler;
+
+    public PersonalSettingsController(
+        IPersonalSettingsRepository personalSettingsRepository,
+        IPlayerRepository playerRepository,
+        PortraitCommandHandler commandHandler)
     {
-        private readonly IPersonalSettingsRepository _personalSettingsRepository;
-        private readonly IPlayerRepository _playerRepository;
-        private readonly PortraitCommandHandler _commandHandler;
+        _personalSettingsRepository = personalSettingsRepository;
+        _playerRepository = playerRepository;
+        _commandHandler = commandHandler;
+    }
 
-        public PersonalSettingsController(
-            IPersonalSettingsRepository personalSettingsRepository,
-            IPlayerRepository playerRepository,
-            PortraitCommandHandler commandHandler)
+    [HttpGet("{battleTag}")]
+    public async Task<IActionResult> GetPersonalSetting(string battleTag)
+    {
+        var setting = await _personalSettingsRepository.Load(battleTag);
+        if (setting == null)
         {
-            _personalSettingsRepository = personalSettingsRepository;
-            _playerRepository = playerRepository;
-            _commandHandler = commandHandler;
+            var player = await _playerRepository.LoadPlayerProfile(battleTag);
+            return Ok(new PersonalSetting(battleTag) { RaceWins = player });
+        }
+        return Ok(setting);
+    }
+
+    [HttpGet("{commaSeparatedBattleTags}/many")]
+    public async Task<IActionResult> GetPersonalSettings(string commaSeparatedBattleTags)
+    {
+        var splitBattleTags = commaSeparatedBattleTags.Split(new string[] { "," }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        var settings = await _personalSettingsRepository.LoadMany(splitBattleTags);
+
+        if (settings != null)
+        {
+            return Ok(settings.Select(x => new {
+                x.Id,
+                x.CountryCode,
+                x.Location,
+                x.ProfilePicture
+            }));
         }
 
-        [HttpGet("{battleTag}")]
-        public async Task<IActionResult> GetPersonalSetting(string battleTag)
-        {
-            var setting = await _personalSettingsRepository.Load(battleTag);
-            if (setting == null)
-            {
-                var player = await _playerRepository.LoadPlayerProfile(battleTag);
-                return Ok(new PersonalSetting(battleTag) { RaceWins = player });
-            }
-            return Ok(setting);
-        }
+        return Ok(new object[0]);
+    }
 
-        [HttpGet("{commaSeparatedBattleTags}/many")]
-        public async Task<IActionResult> GetPersonalSettings(string commaSeparatedBattleTags)
-        {
-            var splitBattleTags = commaSeparatedBattleTags.Split(new string[] { "," }, System.StringSplitOptions.RemoveEmptyEntries);
+    [HttpPut("{battleTag}")]
+    public async Task<IActionResult> SetPersonalSetting(
+        string battleTag,
+        [FromBody] PersonalSettingsDTO dto)
+    {
+        var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
 
-            var settings = await _personalSettingsRepository.LoadMany(splitBattleTags);
+        setting.Update(dto);
 
-            if (settings != null)
-            {
-                return Ok(settings.Select(x => new {
-                    x.Id,
-                    x.CountryCode,
-                    x.Location,
-                    x.ProfilePicture
-                }));
-            }
+        await _personalSettingsRepository.Save(setting);
 
-            return Ok(new object[0]);
-        }
+        return Ok();
+    }
 
-        [HttpPut("{battleTag}")]
-        public async Task<IActionResult> SetPersonalSetting(
-           string battleTag,
-           [FromBody] PersonalSettingsDTO dto)
-        {
-            var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
+    [HttpPut("{battleTag}/profile-picture")]
+    [CheckIfBattleTagBelongsToAuthCode]
+    public async Task<IActionResult> SetProfilePicture(
+        string battleTag,
+        [FromBody] SetPictureCommand command)
+    {
+        var result = await _commandHandler.UpdatePicture(battleTag, command);
 
-            setting.Update(dto);
+        if (!result) return BadRequest();
 
-            await _personalSettingsRepository.Save(setting);
-
-            return Ok();
-        }
-
-        [HttpPut("{battleTag}/profile-picture")]
-        [CheckIfBattleTagBelongsToAuthCode]
-        public async Task<IActionResult> SetProfilePicture(
-            string battleTag,
-            [FromBody] SetPictureCommand command)
-        {
-            var result = await _commandHandler.UpdatePicture(battleTag, command);
-
-            if (!result) return BadRequest();
-
-            return Ok();
-        }
+        return Ok();
     }
 }

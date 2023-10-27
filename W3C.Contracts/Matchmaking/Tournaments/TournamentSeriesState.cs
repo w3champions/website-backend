@@ -1,12 +1,11 @@
-namespace W3C.Contracts.Matchmaking.Tournaments
+namespace W3C.Contracts.Matchmaking.Tournaments;
+
+public enum TournamentSeriesState
 {
-    public enum TournamentSeriesState
-    {
-        INIT,
-        VETO,
-        IN_PROGRESS,
-        FINISHED,
-        BYE,
-        CANCELED,
-    }
+    INIT,
+    VETO,
+    IN_PROGRESS,
+    FINISHED,
+    BYE,
+    CANCELED,
 }

@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 
-namespace W3C.Contracts.Matchmaking.Tournaments
+namespace W3C.Contracts.Matchmaking.Tournaments;
+
+public class TournamentRound
 {
-    public class TournamentRound
-    {
-        public string Name { get; set; }
-        public int Number { get; set; }
-        public List<TournamentSeries> Series { get; set; }
-    }
+    public string Name { get; set; }
+    public int Number { get; set; }
+    public List<TournamentSeries> Series { get; set; }
 }

@@ -3,43 +3,42 @@ using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 
-namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
+
+public class PlayerRaceOnMapVersusRaceRatio : IIdentifiable
 {
-    public class PlayerRaceOnMapVersusRaceRatio : IIdentifiable
+    public static PlayerRaceOnMapVersusRaceRatio Create(string battleTag, int season)
     {
-        public static PlayerRaceOnMapVersusRaceRatio Create(string battleTag, int season)
+        return new PlayerRaceOnMapVersusRaceRatio
         {
-            return new PlayerRaceOnMapVersusRaceRatio
-            {
-                Id = $"{season}_{battleTag}",
-                BattleTag = battleTag,
-                Season = season
-            };
+            Id = $"{season}_{battleTag}",
+            BattleTag = battleTag,
+            Season = season
+        };
+    }
+
+    public string Id { get; set; }
+    public MapWinsPerRaceList RaceWinsOnMap { get; set; } = MapWinsPerRaceList.Create();
+
+    public Dictionary<string, MapWinsPerRaceList> RaceWinsOnMapByPatch { get; set; } = new Dictionary<string, MapWinsPerRaceList>();
+
+    public string BattleTag { get; set; }
+    public int Season { get; set; }
+
+    public void AddMapWin(Race myRace, Race enemyRace, string mapName, bool won, string patch)
+    {
+        if(RaceWinsOnMapByPatch == null){
+            RaceWinsOnMapByPatch = new Dictionary<string, MapWinsPerRaceList>();
         }
 
-        public string Id { get; set; }
-        public MapWinsPerRaceList RaceWinsOnMap { get; set; } = MapWinsPerRaceList.Create();
-
-        public Dictionary<string, MapWinsPerRaceList> RaceWinsOnMapByPatch { get; set; } = new Dictionary<string, MapWinsPerRaceList>();
-
-        public string BattleTag { get; set; }
-        public int Season { get; set; }
-
-        public void AddMapWin(Race myRace, Race enemyRace, string mapName, bool won, string patch)
-        {
-            if(RaceWinsOnMapByPatch == null){
-                RaceWinsOnMapByPatch = new Dictionary<string, MapWinsPerRaceList>();
-            }
-
-            if(!RaceWinsOnMapByPatch.ContainsKey(patch)){
-                RaceWinsOnMapByPatch[patch] = MapWinsPerRaceList.Create();
-            }
-
-            //Add win to stats by patch
-            RaceWinsOnMapByPatch[patch].AddWin(myRace, enemyRace, mapName, won);
-
-            //Add win to overall stats by season
-            // RaceWinsOnMap.AddWin(myRace, enemyRace, mapName, won);
+        if(!RaceWinsOnMapByPatch.ContainsKey(patch)){
+            RaceWinsOnMapByPatch[patch] = MapWinsPerRaceList.Create();
         }
+
+        //Add win to stats by patch
+        RaceWinsOnMapByPatch[patch].AddWin(myRace, enemyRace, mapName, won);
+
+        //Add win to overall stats by season
+        // RaceWinsOnMap.AddWin(myRace, enemyRace, mapName, won);
     }
 }

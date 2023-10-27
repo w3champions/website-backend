@@ -1,8 +1,7 @@
-namespace W3C.Domain.MatchmakingService
+namespace W3C.Domain.MatchmakingService;
+
+internal interface ISyncable
 {
-    internal interface ISyncable
-    {
-        public bool wasSyncedJustNow { get; }
-        public int id { get; }
-    }
+    public bool wasSyncedJustNow { get; }
+    public int id { get; }
 }

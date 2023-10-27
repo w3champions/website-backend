@@ -3,37 +3,36 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 
-namespace W3ChampionsStatisticService.PlayerStats.HeroStats
+namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
+
+public class PlayerHeroStats : IIdentifiable
 {
-    public class PlayerHeroStats : IIdentifiable
+    public static PlayerHeroStats Create(string battleTag, int season)
     {
-        public static PlayerHeroStats Create(string battleTag, int season)
+        return new PlayerHeroStats
         {
-            return new PlayerHeroStats
-            {
-                Id = $"{season}_{battleTag}",
-                BattleTag = battleTag,
-                Season = season
-            };
+            Id = $"{season}_{battleTag}",
+            BattleTag = battleTag,
+            Season = season
+        };
+    }
+
+    public string Id { get; set; }
+
+    public HeroStatsItemList HeroStatsItemList { get; set; } = HeroStatsItemList.Create();
+    public string BattleTag { get; set; }
+    public int Season { get; set; }
+
+    public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string mapName, bool won)
+    {
+        if (playerBlizzard.heroes == null)
+        {
+            return;
         }
 
-        public string Id { get; set; }
-
-        public HeroStatsItemList HeroStatsItemList { get; set; } = HeroStatsItemList.Create();
-        public string BattleTag { get; set; }
-        public int Season { get; set; }
-
-        public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string mapName, bool won)
+        foreach (var hero in playerBlizzard.heroes)
         {
-            if (playerBlizzard.heroes == null)
-            {
-                return;
-            }
-
-            foreach (var hero in playerBlizzard.heroes)
-            {
-                HeroStatsItemList.AddWin(hero.icon.ParseReforgedName(), myRace, enemyRace, mapName, won);
-            }
+            HeroStatsItemList.AddWin(hero.icon.ParseReforgedName(), myRace, enemyRace, mapName, won);
         }
     }
 }

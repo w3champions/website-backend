@@ -5,102 +5,101 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 
-namespace W3ChampionsStatisticService.Ladder
+namespace W3ChampionsStatisticService.Ladder;
+
+[ApiController]
+[Route("api/ladder")]
+public class LadderController : ControllerBase
 {
-    [ApiController]
-    [Route("api/ladder")]
-    public class LadderController : ControllerBase
+    private readonly IRankRepository _rankRepository;
+    private readonly IPlayerRepository _playerRepository;
+    private readonly RankQueryHandler _rankQueryHandler;
+    private readonly PlayerAkaProvider _playerAkaProvider;
+    private readonly MatchmakingProvider _matchmakingProvider;
+
+    public LadderController(
+        IRankRepository rankRepository,
+        IPlayerRepository playerRepository,
+        RankQueryHandler rankQueryHandler,
+        PlayerAkaProvider playerAkaProvider,
+        MatchmakingProvider matchmakingProvider)
     {
-        private readonly IRankRepository _rankRepository;
-        private readonly IPlayerRepository _playerRepository;
-        private readonly RankQueryHandler _rankQueryHandler;
-        private readonly PlayerAkaProvider _playerAkaProvider;
-        private readonly MatchmakingProvider _matchmakingProvider;
+        _rankRepository = rankRepository;
+        _playerRepository = playerRepository;
+        _rankQueryHandler = rankQueryHandler;
+        _playerAkaProvider = playerAkaProvider;
+        _matchmakingProvider = matchmakingProvider;
+    }
 
-        public LadderController(
-            IRankRepository rankRepository,
-            IPlayerRepository playerRepository,
-            RankQueryHandler rankQueryHandler,
-            PlayerAkaProvider playerAkaProvider,
-            MatchmakingProvider matchmakingProvider)
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
+    gameMode = GameMode.GM_1v1)
+    {
+        System.Collections.Generic.List<Rank> playerRanks;
+
+        playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
+
+        var playerStats = await _playerRepository.SearchForPlayer(searchFor);
+
+        var unrankedPlayers = playerStats.Select(s => s.CreateUnrankedResponse());
+
+        playerRanks.AddRange(unrankedPlayers);
+
+        return Ok(playerRanks);
+    }
+
+    [HttpGet("{leagueId}")]
+    public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+    {
+        var playersInLadder = await _rankQueryHandler.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
+
+        if (playersInLadder == null)
         {
-            _rankRepository = rankRepository;
-            _playerRepository = playerRepository;
-            _rankQueryHandler = rankQueryHandler;
-            _playerAkaProvider = playerAkaProvider;
-            _matchmakingProvider = matchmakingProvider;
+            return NoContent();
         }
 
-        [HttpGet("search")]
-        public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
-        gameMode = GameMode.GM_1v1)
+        foreach (var entityInLadder in playersInLadder)
         {
-            System.Collections.Generic.List<Rank> playerRanks;
-
-            playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
-
-            var playerStats = await _playerRepository.SearchForPlayer(searchFor);
-
-            var unrankedPlayers = playerStats.Select(s => s.CreateUnrankedResponse());
-
-            playerRanks.AddRange(unrankedPlayers);
-
-            return Ok(playerRanks);
-        }
-
-        [HttpGet("{leagueId}")]
-        public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
-        {
-            var playersInLadder = await _rankQueryHandler.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
-
-            if (playersInLadder == null)
+            foreach (var playerInLadder in entityInLadder.PlayersInfo)
             {
-                return NoContent();
+                playerInLadder.PlayerAkaData = await _playerAkaProvider.GetPlayerAkaDataAsync(playerInLadder.BattleTag.ToLower());
             }
-
-            foreach (var entityInLadder in playersInLadder)
-            {
-                foreach (var playerInLadder in entityInLadder.PlayersInfo)
-                {
-                    playerInLadder.PlayerAkaData = await _playerAkaProvider.GetPlayerAkaDataAsync(playerInLadder.BattleTag.ToLower());
-                }
-            }
-
-            return Ok(playersInLadder);
         }
 
-        [HttpGet("country/{countryCode}")]
-        public async Task<IActionResult> GetCountryLadder([FromRoute] string countryCode, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+        return Ok(playersInLadder);
+    }
+
+    [HttpGet("country/{countryCode}")]
+    public async Task<IActionResult> GetCountryLadder([FromRoute] string countryCode, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
+    {
+        var playersByCountry = await _rankQueryHandler.LoadPlayersOfCountry(countryCode, season, gateWay, gameMode);
+
+        if (playersByCountry == null)
         {
-            var playersByCountry = await _rankQueryHandler.LoadPlayersOfCountry(countryCode, season, gateWay, gameMode);
-
-            if (playersByCountry == null)
-            {
-                return NoContent();
-            }
-
-            return Ok(playersByCountry);
+            return NoContent();
         }
 
-        [HttpGet("league-constellation")]
-        public async Task<IActionResult> GetLeagueConstellation(int season)
-        {
-            var leagues = await _rankRepository.LoadLeagueConstellation(season);
-            return Ok(leagues);
-        }
+        return Ok(playersByCountry);
+    }
 
-        [HttpGet("seasons")]
-        public async Task<IActionResult> GetLeagueSeasons()
-        {
-            var seasons = await _rankRepository.LoadSeasons();
-            return Ok(seasons.OrderByDescending(s => s.Id));
-        }
+    [HttpGet("league-constellation")]
+    public async Task<IActionResult> GetLeagueConstellation(int season)
+    {
+        var leagues = await _rankRepository.LoadLeagueConstellation(season);
+        return Ok(leagues);
+    }
 
-        [HttpGet("active-modes")]
-        public async Task<IActionResult> GetActiveGameModes()
-        {
-            var currentlyActiveModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
-            return Ok(currentlyActiveModes);
-        }
+    [HttpGet("seasons")]
+    public async Task<IActionResult> GetLeagueSeasons()
+    {
+        var seasons = await _rankRepository.LoadSeasons();
+        return Ok(seasons.OrderByDescending(s => s.Id));
+    }
+
+    [HttpGet("active-modes")]
+    public async Task<IActionResult> GetActiveGameModes()
+    {
+        var currentlyActiveModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
+        return Ok(currentlyActiveModes);
     }
 }

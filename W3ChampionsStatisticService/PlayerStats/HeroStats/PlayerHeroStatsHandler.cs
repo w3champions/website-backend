@@ -4,61 +4,60 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.PlayerStats.HeroStats
-{
-    public class PlayerHeroStatsHandler : IReadModelHandler
-    {
-        private readonly IPlayerStatsRepository _playerRepository;
+namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
 
-        public PlayerHeroStatsHandler(
-            IPlayerStatsRepository playerRepository
-            )
+public class PlayerHeroStatsHandler : IReadModelHandler
+{
+    private readonly IPlayerStatsRepository _playerRepository;
+
+    public PlayerHeroStatsHandler(
+        IPlayerStatsRepository playerRepository
+        )
+    {
+        _playerRepository = playerRepository;
+    }
+
+    public async Task Update(MatchFinishedEvent nextEvent)
+    {
+        if (nextEvent == null || nextEvent.match == null || nextEvent.result == null)
         {
-            _playerRepository = playerRepository;
+            return;
         }
 
-        public async Task Update(MatchFinishedEvent nextEvent)
+        var dataPlayers = nextEvent.match.players;
+        if (dataPlayers?.Count == 2 && nextEvent.result.players?.Count == 2)
         {
-            if (nextEvent == null || nextEvent.match == null || nextEvent.result == null)
-            {
-                return;
-            }
+            var eventPlayer1 = dataPlayers[0];
+            var eventPlayer2 = dataPlayers[1];
 
-            var dataPlayers = nextEvent.match.players;
-            if (dataPlayers?.Count == 2 && nextEvent.result.players?.Count == 2)
-            {
-                var eventPlayer1 = dataPlayers[0];
-                var eventPlayer2 = dataPlayers[1];
+            var blizzardInfoPlayer1 = nextEvent.result.players[0];
+            var blizzardInfoPlayer2 = nextEvent.result.players[1];
 
-                var blizzardInfoPlayer1 = nextEvent.result.players[0];
-                var blizzardInfoPlayer2 = nextEvent.result.players[1];
+            var p1 = await _playerRepository.LoadHeroStat(eventPlayer1.battleTag, nextEvent.match.season)
+                        ?? PlayerHeroStats.Create(eventPlayer1.battleTag, nextEvent.match.season);
+            var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag, nextEvent.match.season)
+                        ?? PlayerHeroStats.Create(eventPlayer2.battleTag, nextEvent.match.season);
 
-                var p1 = await _playerRepository.LoadHeroStat(eventPlayer1.battleTag, nextEvent.match.season)
-                         ?? PlayerHeroStats.Create(eventPlayer1.battleTag, nextEvent.match.season);
-                var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag, nextEvent.match.season)
-                         ?? PlayerHeroStats.Create(eventPlayer2.battleTag, nextEvent.match.season);
+            p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
+                eventPlayer2.race,
+                "Overall",
+                dataPlayers[0].won);
+            p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
+                eventPlayer1.race,
+                "Overall",
+                dataPlayers[1].won);
 
-                p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
-                    eventPlayer2.race,
-                    "Overall",
-                    dataPlayers[0].won);
-                p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
-                    eventPlayer1.race,
-                    "Overall",
-                    dataPlayers[1].won);
+            p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
+                eventPlayer2.race,
+                new MapName(nextEvent.match.map).Name,
+                eventPlayer1.won);
+            p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
+                eventPlayer1.race,
+                new MapName(nextEvent.match.map).Name,
+                eventPlayer2.won);
 
-                p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
-                    eventPlayer2.race,
-                    new MapName(nextEvent.match.map).Name,
-                    eventPlayer1.won);
-                p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
-                    eventPlayer1.race,
-                    new MapName(nextEvent.match.map).Name,
-                    eventPlayer2.won);
-
-                await _playerRepository.UpsertPlayerHeroStats(p1);
-                await _playerRepository.UpsertPlayerHeroStats(p2);
-            }
+            await _playerRepository.UpsertPlayerHeroStats(p1);
+            await _playerRepository.UpsertPlayerHeroStats(p2);
         }
     }
 }

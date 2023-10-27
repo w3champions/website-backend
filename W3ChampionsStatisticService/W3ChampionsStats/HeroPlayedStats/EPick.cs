@@ -1,10 +1,9 @@
-namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats
+namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
+
+public enum EPick
 {
-    public enum EPick
-    {
-        Overall = 0,
-        First = 1,
-        Second = 2,
-        Third = 3
-    }
+    Overall = 0,
+    First = 1,
+    Second = 2,
+    Third = 3
 }

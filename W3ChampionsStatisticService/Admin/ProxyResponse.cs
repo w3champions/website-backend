@@ -1,8 +1,7 @@
-namespace W3ChampionsStatisticService.Admin
+namespace W3ChampionsStatisticService.Admin;
+
+public class ProxiesResponse
 {
-    public class ProxiesResponse
-    {
-        public string id { get; set; }
-        public int nodeId { get; set; }
-    }
+    public string id { get; set; }
+    public int nodeId { get; set; }
 }

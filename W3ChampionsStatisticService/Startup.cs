@@ -49,213 +49,212 @@ using Microsoft.AspNetCore.StaticFiles;
 using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Admin.Logs;
 
-namespace W3ChampionsStatisticService
+namespace W3ChampionsStatisticService;
+
+public class Startup
 {
-    public class Startup
+    public void ConfigureServices(IServiceCollection services)
     {
-        public void ConfigureServices(IServiceCollection services)
+        var appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
+        services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
+
+        services.AddControllers(c =>
         {
-            var appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
-            services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
+            c.Filters.Add<ValidationExceptionFilter>();
+        });
 
-            services.AddControllers(c =>
+        services.AddSwaggerGen(f => {
+            f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1"});
+        });
+
+        var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
+        var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+
+        var mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
+        mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
+        mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
+
+        var mongoClient = new MongoClient(mongoSettings);
+        services.AddSingleton(mongoClient);
+
+        services.AddSignalR();
+        services.AddHttpClient();
+
+        services.AddSpecialBsonRegistrations();
+
+        services.AddSingleton<TrackingService>();
+        services.AddTransient<PlayerAkaProvider>();
+        services.AddTransient<PersonalSettingsProvider>();
+        services.AddTransient<MatchmakingProvider>();
+
+        services.AddMemoryCache();
+        services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
+        services.Configure<CacheOptionsFor<SeasonMapInformation>>(
+            x =>
             {
-                c.Filters.Add<ValidationExceptionFilter>();
+                x.CacheDuration = TimeSpan.FromHours(1);
             });
 
-            services.AddSwaggerGen(f => {
-                f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1"});
+        services.Configure<CacheOptionsFor<List<PlayerAka>>>(
+            x =>
+            {
+                x.CacheDuration = TimeSpan.FromHours(1);
             });
 
-            var startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
-            var mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+        services.AddTransient<IMatchEventRepository, MatchEventRepository>();
+        services.AddTransient<IVersionRepository, VersionRepository>();
+        services.AddTransient<IMatchRepository, MatchRepository>();
+        services.AddSingleton<IPlayerRepository, PlayerRepository>();
+        services.AddTransient<IRankRepository, RankRepository>();
+        services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
+        services.AddTransient<IW3StatsRepo, W3StatsRepo>();
+        services.AddTransient<IPatchRepository, PatchRepository>();
+        services.AddTransient<IAdminRepository, AdminRepository>();
+        services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
+        services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
+        services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
+        services.AddTransient<HeroStatsQueryHandler>();
+        services.AddTransient<PortraitCommandHandler>();
+        services.AddTransient<MmrDistributionHandler>();
+        services.AddTransient<RankQueryHandler>();
+        services.AddTransient<GameModeStatQueryHandler>();
+        services.AddTransient<IClanRepository, ClanRepository>();
+        services.AddTransient<INewsRepository, NewsRepository>();
+        services.AddTransient<IPortraitRepository, PortraitRepository>();
+        services.AddTransient<IInformationMessagesRepository, InformationMessagesRepository>();
+        services.AddTransient<ClanCommandHandler>();
 
-            var mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
-            mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
-            mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
+        // Actionfilters
+        services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
+        services.AddTransient<CheckIfBattleTagIsAdminFilter>();
+        services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
+        services.AddTransient<HasPermissionsPermissionFilter>();
+        services.AddTransient<HasModerationPermissionFilter>();
+        services.AddTransient<HasQueuePermissionFilter>();
+        services.AddTransient<HasLogsPermissionFilter>();
+        services.AddTransient<HasMapsPermissionFilter>();
+        services.AddTransient<HasTournamentsPermissionFilter>();
+        services.AddTransient<HasContentPermissionFilter>();
+        services.AddTransient<HasProxiesPermissionFilter>();
 
-            var mongoClient = new MongoClient(mongoSettings);
-            services.AddSingleton(mongoClient);
+        services.AddSingleton<MatchmakingServiceClient>();
+        services.AddSingleton<UpdateServiceClient>();
+        services.AddSingleton<ReplayServiceClient>();
+        services.AddTransient<MatchQueryHandler>();
+        services.AddSingleton<ChatServiceClient>();
+        services.AddTransient<IFriendRepository, FriendRepository>();
+        services.AddTransient<PlayerStatisticsService>();
+        services.AddTransient<PlayerService>();
+        services.AddTransient<IPermissionsRepository, PermissionsRepository>();
+        services.AddTransient<ILogsRepository, LogsRepository>();
 
-            services.AddSignalR();
-            services.AddHttpClient();
+        services.AddDirectoryBrowser();
 
-            services.AddSpecialBsonRegistrations();
-
-            services.AddSingleton<TrackingService>();
-            services.AddTransient<PlayerAkaProvider>();
-            services.AddTransient<PersonalSettingsProvider>();
-            services.AddTransient<MatchmakingProvider>();
-
-            services.AddMemoryCache();
-            services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
-            services.Configure<CacheOptionsFor<SeasonMapInformation>>(
-                x =>
-                {
-                    x.CacheDuration = TimeSpan.FromHours(1);
-                });
-
-            services.Configure<CacheOptionsFor<List<PlayerAka>>>(
-                x =>
-                {
-                    x.CacheDuration = TimeSpan.FromHours(1);
-                });
-
-            services.AddTransient<IMatchEventRepository, MatchEventRepository>();
-            services.AddTransient<IVersionRepository, VersionRepository>();
-            services.AddTransient<IMatchRepository, MatchRepository>();
-            services.AddSingleton<IPlayerRepository, PlayerRepository>();
-            services.AddTransient<IRankRepository, RankRepository>();
-            services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
-            services.AddTransient<IW3StatsRepo, W3StatsRepo>();
-            services.AddTransient<IPatchRepository, PatchRepository>();
-            services.AddTransient<IAdminRepository, AdminRepository>();
-            services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
-            services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
-            services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
-            services.AddTransient<HeroStatsQueryHandler>();
-            services.AddTransient<PortraitCommandHandler>();
-            services.AddTransient<MmrDistributionHandler>();
-            services.AddTransient<RankQueryHandler>();
-            services.AddTransient<GameModeStatQueryHandler>();
-            services.AddTransient<IClanRepository, ClanRepository>();
-            services.AddTransient<INewsRepository, NewsRepository>();
-            services.AddTransient<IPortraitRepository, PortraitRepository>();
-            services.AddTransient<IInformationMessagesRepository, InformationMessagesRepository>();
-            services.AddTransient<ClanCommandHandler>();
-
-            // Actionfilters
-            services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
-            services.AddTransient<CheckIfBattleTagIsAdminFilter>();
-            services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
-            services.AddTransient<HasPermissionsPermissionFilter>();
-            services.AddTransient<HasModerationPermissionFilter>();
-            services.AddTransient<HasQueuePermissionFilter>();
-            services.AddTransient<HasLogsPermissionFilter>();
-            services.AddTransient<HasMapsPermissionFilter>();
-            services.AddTransient<HasTournamentsPermissionFilter>();
-            services.AddTransient<HasContentPermissionFilter>();
-            services.AddTransient<HasProxiesPermissionFilter>();
-
-            services.AddSingleton<MatchmakingServiceClient>();
-            services.AddSingleton<UpdateServiceClient>();
-            services.AddSingleton<ReplayServiceClient>();
-            services.AddTransient<MatchQueryHandler>();
-            services.AddSingleton<ChatServiceClient>();
-            services.AddTransient<IFriendRepository, FriendRepository>();
-            services.AddTransient<PlayerStatisticsService>();
-            services.AddTransient<PlayerService>();
-            services.AddTransient<IPermissionsRepository, PermissionsRepository>();
-            services.AddTransient<ILogsRepository, LogsRepository>();
-
-            services.AddDirectoryBrowser();
-
-            if (startHandlers == "true")
-            {
-                // PlayerProfile
-                services.AddReadModelService<PlayerOverallStatsHandler>();
-                services.AddReadModelService<PlayOverviewHandler>();
-                services.AddReadModelService<PlayerWinrateHandler>();
-
-                // PlayerStats
-                services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
-                services.AddReadModelService<PlayerHeroStatsHandler>();
-                services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
-                services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
-                services.AddReadModelService<PlayerMmrRpTimelineHandler>();
-
-                // General Stats
-                services.AddReadModelService<GamesPerDayHandler>();
-                services.AddReadModelService<GameLengthStatHandler>();
-                services.AddReadModelService<DistinctPlayersPerDayHandler>();
-                services.AddReadModelService<PopularHoursStatHandler>();
-                services.AddReadModelService<HeroPlayedStatHandler>();
-                services.AddReadModelService<MapsPerSeasonHandler>();
-
-                // Game Balance Stats
-                services.AddReadModelService<OverallRaceAndWinStatHandler>();
-                services.AddReadModelService<OverallHeroWinRatePerHeroModelHandler>();
-
-                // Ladder Syncs
-                services.AddReadModelService<MatchReadModelHandler>();
-
-                // On going matches
-                services.AddUnversionedReadModelService<OngoingMatchesHandler>();
-
-                services.AddUnversionedReadModelService<RankSyncHandler>();
-                services.AddUnversionedReadModelService<LeagueSyncHandler>();
-            }
-        }
-
-        public void Configure(
-            IApplicationBuilder app,
-            IWebHostEnvironment env)
+        if (startHandlers == "true")
         {
-            // without that, nginx forwarding in docker wont work
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            });
-            app.UseRouting();
-            app.UseHttpMetrics();
-            app.UseCors(builder =>
-                builder
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .SetIsOriginAllowed(_ => true)
-                    .AllowCredentials());
+            // PlayerProfile
+            services.AddReadModelService<PlayerOverallStatsHandler>();
+            services.AddReadModelService<PlayOverviewHandler>();
+            services.AddReadModelService<PlayerWinrateHandler>();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapControllers();
-                endpoints.MapMetrics();
-            });
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "w3champions");
-            });
+            // PlayerStats
+            services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
+            services.AddReadModelService<PlayerHeroStatsHandler>();
+            services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
+            services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
+            services.AddReadModelService<PlayerMmrRpTimelineHandler>();
 
-            // Configure log path
-            var fileProvider = new PhysicalFileProvider(System.IO.Path.Combine(env.ContentRootPath, "Logs"));
-            var requestPath = "/logs";
+            // General Stats
+            services.AddReadModelService<GamesPerDayHandler>();
+            services.AddReadModelService<GameLengthStatHandler>();
+            services.AddReadModelService<DistinctPlayersPerDayHandler>();
+            services.AddReadModelService<PopularHoursStatHandler>();
+            services.AddReadModelService<HeroPlayedStatHandler>();
+            services.AddReadModelService<MapsPerSeasonHandler>();
 
-            // Allow serving files with .log extension
-            var contentTypeProvider = new FileExtensionContentTypeProvider();
-            contentTypeProvider.Mappings[".log"] = "text/plain";
+            // Game Balance Stats
+            services.AddReadModelService<OverallRaceAndWinStatHandler>();
+            services.AddReadModelService<OverallHeroWinRatePerHeroModelHandler>();
 
-            // Serve files in the logs directory
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = fileProvider,
-                ContentTypeProvider = contentTypeProvider,
-                RequestPath = requestPath
-            });
+            // Ladder Syncs
+            services.AddReadModelService<MatchReadModelHandler>();
 
-            // Allow browsing the logs directory
-            app.UseDirectoryBrowser(new DirectoryBrowserOptions
-            {
-                FileProvider = fileProvider,
-                RequestPath = requestPath
-            });
+            // On going matches
+            services.AddUnversionedReadModelService<OngoingMatchesHandler>();
+
+            services.AddUnversionedReadModelService<RankSyncHandler>();
+            services.AddUnversionedReadModelService<LeagueSyncHandler>();
         }
     }
 
-    public static class ReadModelExtensions
+    public void Configure(
+        IApplicationBuilder app,
+        IWebHostEnvironment env)
     {
-        public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
+        // without that, nginx forwarding in docker wont work
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
         {
-            services.AddTransient<T>();
-            services.AddTransient<ReadModelHandler<T>>();
-            services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
-            return services;
-        }
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        });
+        app.UseRouting();
+        app.UseHttpMetrics();
+        app.UseCors(builder =>
+            builder
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .SetIsOriginAllowed(_ => true)
+                .AllowCredentials());
 
-        public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
+        app.UseEndpoints(endpoints =>
         {
-            services.AddTransient<T>();
-            services.AddSingleton<IHostedService, AsyncServiceBase<T>>();
-            return services;
-        }
+            endpoints.MapControllers();
+            endpoints.MapMetrics();
+        });
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "w3champions");
+        });
+
+        // Configure log path
+        var fileProvider = new PhysicalFileProvider(System.IO.Path.Combine(env.ContentRootPath, "Logs"));
+        var requestPath = "/logs";
+
+        // Allow serving files with .log extension
+        var contentTypeProvider = new FileExtensionContentTypeProvider();
+        contentTypeProvider.Mappings[".log"] = "text/plain";
+
+        // Serve files in the logs directory
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = fileProvider,
+            ContentTypeProvider = contentTypeProvider,
+            RequestPath = requestPath
+        });
+
+        // Allow browsing the logs directory
+        app.UseDirectoryBrowser(new DirectoryBrowserOptions
+        {
+            FileProvider = fileProvider,
+            RequestPath = requestPath
+        });
+    }
+}
+
+public static class ReadModelExtensions
+{
+    public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
+    {
+        services.AddTransient<T>();
+        services.AddTransient<ReadModelHandler<T>>();
+        services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
+        return services;
+    }
+
+    public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
+    {
+        services.AddTransient<T>();
+        services.AddSingleton<IHostedService, AsyncServiceBase<T>>();
+        return services;
     }
 }

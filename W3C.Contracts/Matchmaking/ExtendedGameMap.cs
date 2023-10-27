@@ -1,7 +1,6 @@
-﻿namespace W3C.Contracts.Matchmaking
+﻿namespace W3C.Contracts.Matchmaking;
+
+public class ExtendedGameMap : GameMap
 {
-    public class ExtendedGameMap : GameMap
-    {
-        public string Path { get; set; }
-    }
+    public string Path { get; set; }
 }

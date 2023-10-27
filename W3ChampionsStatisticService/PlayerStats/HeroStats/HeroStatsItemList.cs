@@ -2,28 +2,27 @@
 using System.Linq;
 using W3C.Contracts.GameObjects;
 
-namespace W3ChampionsStatisticService.PlayerStats.HeroStats
+namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
+
+public class HeroStatsItemList : List<HeroStatsItem>
 {
-    public class HeroStatsItemList : List<HeroStatsItem>
+    public static HeroStatsItemList Create()
     {
-        public static HeroStatsItemList Create()
+        return new HeroStatsItemList();
+    }
+
+    public List<HeroStatsItem> HeroStats { get; set; }
+
+    public void AddWin(string heroId, Race myRace, Race enemyRace, string mapName, in bool won)
+    {
+        var heroStats = this.SingleOrDefault(r => r.HeroId == heroId);
+        
+        if (heroStats == null)
         {
-            return new HeroStatsItemList();
+            heroStats = HeroStatsItem.Create(heroId);
+            this.Add(heroStats);
         }
 
-        public List<HeroStatsItem> HeroStats { get; set; }
-
-        public void AddWin(string heroId, Race myRace, Race enemyRace, string mapName, in bool won)
-        {
-            var heroStats = this.SingleOrDefault(r => r.HeroId == heroId);
-            
-            if (heroStats == null)
-            {
-                heroStats = HeroStatsItem.Create(heroId);
-                this.Add(heroStats);
-            }
-
-            heroStats.AddWin(myRace, enemyRace, mapName, won);
-        }
+        heroStats.AddWin(myRace, enemyRace, mapName, won);
     }
 }

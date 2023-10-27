@@ -1,21 +1,20 @@
-namespace W3C.Domain.CommonValueObjects
+namespace W3C.Domain.CommonValueObjects;
+
+public class WinLoss
 {
-    public class WinLoss
+    public void RecordWin(bool win)
     {
-        public void RecordWin(bool win)
+        if (win)
         {
-            if (win)
-            {
-                Wins++;
-            }
-            else
-            {
-                Losses++;
-            }
+            Wins++;
         }
-        public int Wins { get; set; }
-        public int Losses { get; set; }
-        public int Games => Wins + Losses;
-        public double Winrate => new WinRate(Wins, Losses).Rate;
+        else
+        {
+            Losses++;
+        }
     }
+    public int Wins { get; set; }
+    public int Losses { get; set; }
+    public int Games => Wins + Losses;
+    public double Winrate => new WinRate(Wins, Losses).Rate;
 }

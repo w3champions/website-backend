@@ -1,22 +1,21 @@
 using W3C.Domain.CommonValueObjects;
 
-namespace W3ChampionsStatisticService.PersonalSettings
-{
-    public class AkaSettings
-    {
-        
-        public bool showAka { get; set; }
-        public bool showW3info { get; set; }
-        public bool showLiquipedia { get; set; }
+namespace W3ChampionsStatisticService.PersonalSettings;
 
-        public static AkaSettings Default()
+public class AkaSettings
+{
+    
+    public bool showAka { get; set; }
+    public bool showW3info { get; set; }
+    public bool showLiquipedia { get; set; }
+
+    public static AkaSettings Default()
+    {
+        return new AkaSettings()
         {
-            return new AkaSettings()
-            {
-                showAka = true,
-                showW3info = true,
-                showLiquipedia = true
-            };
-        }
+            showAka = true,
+            showW3info = true,
+            showLiquipedia = true
+        };
     }
 }

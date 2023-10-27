@@ -6,55 +6,54 @@ using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 
-namespace W3ChampionsStatisticService.PlayerProfiles
+namespace W3ChampionsStatisticService.PlayerProfiles;
+
+public class PlayerOverallStats
 {
-    public class PlayerOverallStats
+    [BsonId]
+    public string BattleTag { get; set; }
+    public string Name { get; set; }
+    public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
+    public List<RaceWinLoss> WinLosses { get; set; }
+    public Player PlayerAkaData { get; set; }
+
+    public static PlayerOverallStats Create(string battleTag)
     {
-        [BsonId]
-        public string BattleTag { get; set; }
-        public string Name { get; set; }
-        public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
-        public List<RaceWinLoss> WinLosses { get; set; }
-        public Player PlayerAkaData { get; set; }
-
-        public static PlayerOverallStats Create(string battleTag)
+        return new PlayerOverallStats
         {
-            return new PlayerOverallStats
+            Name = battleTag.Split("#")[0],
+            BattleTag = battleTag,
+            WinLosses = new List<RaceWinLoss>
             {
-                Name = battleTag.Split("#")[0],
-                BattleTag = battleTag,
-                WinLosses = new List<RaceWinLoss>
-                {
-                    new RaceWinLoss(Race.HU),
-                    new RaceWinLoss(Race.OC),
-                    new RaceWinLoss(Race.NE),
-                    new RaceWinLoss(Race.UD),
-                    new RaceWinLoss(Race.RnD)
-                }
-            };
-        }
-
-        public void RecordWin(Race race, int season, bool won)
-        {
-            if (!ParticipatedInSeasons.Select(s => s.Id).Contains(season))
-            {
-                ParticipatedInSeasons.Insert(0, new Season(season));
+                new RaceWinLoss(Race.HU),
+                new RaceWinLoss(Race.OC),
+                new RaceWinLoss(Race.NE),
+                new RaceWinLoss(Race.UD),
+                new RaceWinLoss(Race.RnD)
             }
+        };
+    }
 
-            if (season != 0)
-            {
-                WinLosses.Single(w => w.Race == race).RecordWin(won);
-            }
-        }
-
-        public int GetWinsPerRace(Race race)
+    public void RecordWin(Race race, int season, bool won)
+    {
+        if (!ParticipatedInSeasons.Select(s => s.Id).Contains(season))
         {
-            return WinLosses.Single(w => w.Race == race).Wins;
+            ParticipatedInSeasons.Insert(0, new Season(season));
         }
 
-        public int GetTotalWins()
+        if (season != 0)
         {
-            return WinLosses.Sum(w => w.Wins);
+            WinLosses.Single(w => w.Race == race).RecordWin(won);
         }
+    }
+
+    public int GetWinsPerRace(Race race)
+    {
+        return WinLosses.Single(w => w.Race == race).Wins;
+    }
+
+    public int GetTotalWins()
+    {
+        return WinLosses.Sum(w => w.Wins);
     }
 }
