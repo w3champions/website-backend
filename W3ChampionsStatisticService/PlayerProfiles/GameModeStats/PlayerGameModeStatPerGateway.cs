@@ -6,73 +6,66 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 using W3C.Contracts.Matchmaking;
 
-namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+
+public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
 {
-    public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
+    public static PlayerGameModeStatPerGateway Create(BattleTagIdCombined id)
     {
-        public static PlayerGameModeStatPerGateway Create(BattleTagIdCombined id)
+        return new PlayerGameModeStatPerGateway
         {
-            return new PlayerGameModeStatPerGateway
-            {
-                Id = id.Id,
-                Season = id.Season,
-                GateWay = id.GateWay,
-                GameMode = id.GameMode,
-                PlayerIds = id.BattleTags,
-                Race = id.Race
+            Id = id.Id,
+            Season = id.Season,
+            GateWay = id.GateWay,
+            GameMode = id.GameMode,
+            PlayerIds = id.BattleTags,
+            Race = id.Race
+        };
+    }
+
+    public Race? Race { get; set; }
+    public GameMode GameMode { get; set; }
+    public GateWay GateWay { get; set; }
+    public List<PlayerId> PlayerIds { get; set; }
+    public int Season { get; set; }
+    public string Id { get; set; }
+    public int MMR { set; get; }
+    public double RankingPoints { get; set; }
+    public int Rank { get; set; }
+    public int LeagueId { get; set; }
+    public int LeagueOrder { get; set; }
+    public int Division { get; set; }
+    public float? Quantile { get; set; }
+
+    public RankProgression RankingPointsProgress
+    {
+        get
+        {
+            if (LastGameWasBefore8Hours()) return new RankProgression();
+            return new RankProgression  {
+                MMR = MMR - RankProgressionStart.MMR,
+                RankingPoints = RankingPoints - RankProgressionStart.RankingPoints,
             };
         }
-
-        public Race? Race { get; set; }
-
-        public GameMode GameMode { get; set; }
-
-        public GateWay GateWay { get; set; }
-
-        public List<PlayerId> PlayerIds { get; set; }
-
-        public int Season { get; set; }
-
-        public string Id { get; set; }
-
-        public int MMR { set; get; }
-        public double RankingPoints { get; set; }
-        public int Rank { get; set; }
-        public int LeagueId { get; set; }
-        public int LeagueOrder { get; set; }
-        public int Division { get; set; }
-        public float? Quantile { get; set; }
-
-        public RankProgression RankingPointsProgress
-        {
-            get
-            {
-                if (LastGameWasBefore8Hours()) return new RankProgression();
-                return new RankProgression  {
-                    MMR = MMR - RankProgressionStart.MMR,
-                    RankingPoints = RankingPoints - RankProgressionStart.RankingPoints,
-                };
-            }
-        }
-
-        public void RecordRanking(in int mmr, in double rankingPoints)
-        {
-            if (RankProgressionStart == null || LastGameWasBefore8Hours())
-            {
-                RankProgressionStart = RankProgression.Create(mmr, rankingPoints);
-            }
-
-            MMR = mmr;
-            RankingPoints = rankingPoints;
-        }
-
-        private bool LastGameWasBefore8Hours()
-        {
-            if (RankProgressionStart == null) return true;
-            return RankProgressionStart.Date < DateTimeOffset.UtcNow - TimeSpan.FromHours(8);
-        }
-
-        [JsonIgnore]
-        public RankProgression RankProgressionStart { get; set; }
     }
+
+    public void RecordRanking(in int mmr, in double rankingPoints)
+    {
+        if (RankProgressionStart == null || LastGameWasBefore8Hours())
+        {
+            RankProgressionStart = RankProgression.Create(mmr, rankingPoints);
+        }
+
+        MMR = mmr;
+        RankingPoints = rankingPoints;
+    }
+
+    private bool LastGameWasBefore8Hours()
+    {
+        if (RankProgressionStart == null) return true;
+        return RankProgressionStart.Date < DateTimeOffset.UtcNow - TimeSpan.FromHours(8);
+    }
+
+    [JsonIgnore]
+    public RankProgression RankProgressionStart { get; set; }
 }

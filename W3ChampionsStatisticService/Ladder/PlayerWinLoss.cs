@@ -1,27 +1,26 @@
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 
-namespace W3ChampionsStatisticService.Ladder
+namespace W3ChampionsStatisticService.Ladder;
+
+public class PlayerWinLoss : IIdentifiable
 {
-    public class PlayerWinLoss : IIdentifiable
+    public string Id { get; set; }
+    public WinLoss Stats { get; set; } = new WinLoss();
+    public int Season { get; set; }
+
+    public PlayerWinLoss Apply(in bool won)
     {
-        public string Id { get; set; }
-        public WinLoss Stats { get; set; } = new WinLoss();
-        public int Season { get; set; }
+        Stats.RecordWin(won);
+        return this;
+    }
 
-        public PlayerWinLoss Apply(in bool won)
+    public static PlayerWinLoss Create(string battleTag, int season)
+    {
+        return new PlayerWinLoss
         {
-            Stats.RecordWin(won);
-            return this;
-        }
-
-        public static PlayerWinLoss Create(string battleTag, int season)
-        {
-            return new PlayerWinLoss
-            {
-                Id = $"{season}_{battleTag}",
-                Season = season
-            };
-        }
+            Id = $"{season}_{battleTag}",
+            Season = season
+        };
     }
 }

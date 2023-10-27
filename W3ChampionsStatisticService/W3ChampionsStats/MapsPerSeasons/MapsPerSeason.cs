@@ -5,44 +5,43 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
+namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
+
+public class MapsPerSeason : IIdentifiable
 {
-    public class MapsPerSeason : IIdentifiable
+    public List<MatchOnMapPerMode> MatchesOnMapPerModes { get; set; } = new List<MatchOnMapPerMode>();
+
+    [JsonIgnore]
+    public string Id => Season.ToString();
+
+    public static MapsPerSeason Create(int season)
     {
-        public List<MatchOnMapPerMode> MatchesOnMapPerModes { get; set; } = new List<MatchOnMapPerMode>();
-
-        [JsonIgnore]
-        public string Id => Season.ToString();
-
-        public static MapsPerSeason Create(int season)
+        return new MapsPerSeason
         {
-            return new MapsPerSeason
-            {
-                Season = season
-            };
+            Season = season
+        };
+    }
+
+    public int Season { get; set; }
+
+    public void Count(string map, GameMode gameMode)
+    {
+        var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);
+        if (matchOnMapOverall == null)
+        {
+            MatchesOnMapPerModes.Add(MatchOnMapPerMode.Create(GameMode.Undefined));
         }
 
-        public int Season { get; set; }
+        matchOnMapOverall = MatchesOnMapPerModes.Single(m => m.GameMode == GameMode.Undefined);
+        matchOnMapOverall.CountMatch(map);
 
-        public void Count(string map, GameMode gameMode)
+        var matchOnMap = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == gameMode);
+        if (matchOnMap == null)
         {
-            var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);
-            if (matchOnMapOverall == null)
-            {
-                MatchesOnMapPerModes.Add(MatchOnMapPerMode.Create(GameMode.Undefined));
-            }
-
-            matchOnMapOverall = MatchesOnMapPerModes.Single(m => m.GameMode == GameMode.Undefined);
-            matchOnMapOverall.CountMatch(map);
-
-            var matchOnMap = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == gameMode);
-            if (matchOnMap == null)
-            {
-                MatchesOnMapPerModes.Add(MatchOnMapPerMode.Create(gameMode));
-            }
-
-            matchOnMap = MatchesOnMapPerModes.Single(m => m.GameMode == gameMode);
-            matchOnMap.CountMatch(map);
+            MatchesOnMapPerModes.Add(MatchOnMapPerMode.Create(gameMode));
         }
+
+        matchOnMap = MatchesOnMapPerModes.Single(m => m.GameMode == gameMode);
+        matchOnMap.CountMatch(map);
     }
 }

@@ -1,18 +1,17 @@
 using System.Collections.Generic;
 using W3C.Contracts.GameObjects;
 
-namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
+
+public class WinLossesPerMapAndRace
 {
-    public class WinLossesPerMapAndRace
+    public Race Race { get; set; }
+    public List<WinLossesPerMap> WinLossesOnMap { get; set; } = new List<WinLossesPerMap>();
+    public static WinLossesPerMapAndRace Create(Race race)
     {
-        public Race Race { get; set; }
-        public List<WinLossesPerMap> WinLossesOnMap { get; set; } = new List<WinLossesPerMap>();
-        public static WinLossesPerMapAndRace Create(Race race)
+        return new WinLossesPerMapAndRace
         {
-            return new WinLossesPerMapAndRace
-            {
-                Race = race
-            };
-        }
+            Race = race
+        };
     }
 }

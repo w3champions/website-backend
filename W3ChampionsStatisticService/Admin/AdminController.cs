@@ -9,260 +9,259 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
 using System.Net.Http;
 
-namespace W3ChampionsStatisticService.Admin
+namespace W3ChampionsStatisticService.Admin;
+
+[ApiController]
+[Route("api/admin")]
+public class AdminController : ControllerBase
 {
-    [ApiController]
-    [Route("api/admin")]
-    public class AdminController : ControllerBase
+    private readonly IMatchRepository _matchRepository;
+    private readonly MatchmakingServiceClient _matchmakingServiceRepository;
+    private readonly INewsRepository _newsRepository;
+    private readonly IInformationMessagesRepository _informationMessagesRepository;
+    private readonly IAdminRepository _adminRepository;
+    private readonly IRankRepository _rankRepository;
+
+    public AdminController(
+        IMatchRepository matchRepository,
+        MatchmakingServiceClient matchmakingServiceRepository,
+        INewsRepository newsRepository,
+        IInformationMessagesRepository informationMessagesRepository,
+        IAdminRepository adminRepository,
+        IRankRepository rankRepository)
     {
-        private readonly IMatchRepository _matchRepository;
-        private readonly MatchmakingServiceClient _matchmakingServiceRepository;
-        private readonly INewsRepository _newsRepository;
-        private readonly IInformationMessagesRepository _informationMessagesRepository;
-        private readonly IAdminRepository _adminRepository;
-        private readonly IRankRepository _rankRepository;
+        _matchRepository = matchRepository;
+        _matchmakingServiceRepository = matchmakingServiceRepository;
+        _newsRepository = newsRepository;
+        _informationMessagesRepository = informationMessagesRepository;
+        _adminRepository = adminRepository;
+        _rankRepository = rankRepository;
+    }
 
-        public AdminController(
-            IMatchRepository matchRepository,
-            MatchmakingServiceClient matchmakingServiceRepository,
-            INewsRepository newsRepository,
-            IInformationMessagesRepository informationMessagesRepository,
-            IAdminRepository adminRepository,
-            IRankRepository rankRepository)
-        {
-            _matchRepository = matchRepository;
-            _matchmakingServiceRepository = matchmakingServiceRepository;
-            _newsRepository = newsRepository;
-            _informationMessagesRepository = informationMessagesRepository;
-            _adminRepository = adminRepository;
-            _rankRepository = rankRepository;
+    [HttpGet("health-check")]
+    public IActionResult HealthCheck()
+    {
+        return Ok();
+    }
+
+    [HttpGet("db-health-check")]
+    public async Task<IActionResult> DatabaseHealthCheck()
+    {
+        var ongoingMatches = await _matchRepository.LoadOnGoingMatches(
+            GameMode.GM_1v1, GateWay.Europe);
+
+        return Ok(ongoingMatches.Count);
+    }
+
+    [HttpGet("bannedPlayers")]
+    [HasModerationPermission]
+    public async Task<IActionResult> GetBannedPlayers()
+    {
+        try {
+            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+            return Ok(bannedPlayers);
+        } catch (HttpRequestException ex) {
+            return StatusCode((int)ex.StatusCode, ex.Message);
         }
+    }
 
-        [HttpGet("health-check")]
-        public IActionResult HealthCheck()
-        {
+    [HttpPost("bannedPlayers")]
+    [HasModerationPermission]
+    public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
+    {
+        try {
+            await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
             return Ok();
+        } catch (HttpRequestException ex) {
+            return StatusCode((int)ex.StatusCode, ex.Message);
         }
+    }
 
-        [HttpGet("db-health-check")]
-        public async Task<IActionResult> DatabaseHealthCheck()
-        {
-            var ongoingMatches = await _matchRepository.LoadOnGoingMatches(
-                GameMode.GM_1v1, GateWay.Europe);
-
-            return Ok(ongoingMatches.Count);
-        }
-
-        [HttpGet("bannedPlayers")]
-        [HasModerationPermission]
-        public async Task<IActionResult> GetBannedPlayers()
-        {
-            try {
-                var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
-                return Ok(bannedPlayers);
-            } catch (HttpRequestException ex) {
-                return StatusCode((int)ex.StatusCode, ex.Message);
-            }
-        }
-
-        [HttpPost("bannedPlayers")]
-        [HasModerationPermission]
-        public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-        {
-            try {
-                await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-                return Ok();
-            } catch (HttpRequestException ex) {
-                return StatusCode((int)ex.StatusCode, ex.Message);
-            }
-        }
-
-        [HttpDelete("bannedPlayers")]
-        [HasModerationPermission]
-        public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-        {
-            try {
-                await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
-                return Ok();
-            } catch (HttpRequestException ex) {
-                return StatusCode((int)ex.StatusCode, ex.Message);
-            }
-        }
-
-        [HttpGet("news")]
-        public async Task<IActionResult> GetNews(int? limit)
-        {
-            return Ok(await _newsRepository.Get(limit));
-        }
-
-        [HttpPut("news/{newsId}")]
-        [HasContentPermission]
-        public async Task<IActionResult> UpdateNews(string newsId, [FromBody] NewsMessage newsMessage)
-        {
-            newsMessage.Id = new ObjectId(newsId);
-            await _newsRepository.UpsertNews(newsMessage);
+    [HttpDelete("bannedPlayers")]
+    [HasModerationPermission]
+    public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
+    {
+        try {
+            await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
             return Ok();
+        } catch (HttpRequestException ex) {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
+    }
+
+    [HttpGet("news")]
+    public async Task<IActionResult> GetNews(int? limit)
+    {
+        return Ok(await _newsRepository.Get(limit));
+    }
+
+    [HttpPut("news/{newsId}")]
+    [HasContentPermission]
+    public async Task<IActionResult> UpdateNews(string newsId, [FromBody] NewsMessage newsMessage)
+    {
+        newsMessage.Id = new ObjectId(newsId);
+        await _newsRepository.UpsertNews(newsMessage);
+        return Ok();
+    }
+
+    [HttpPut("news")]
+    [HasContentPermission]
+    public async Task<IActionResult> UpdateNews([FromBody] NewsMessage newsMessage)
+    {
+        newsMessage.Id = ObjectId.GenerateNewId();
+        await _newsRepository.UpsertNews(newsMessage);
+        return Ok();
+    }
+
+    [HttpDelete("news/{newsId}")]
+    [HasContentPermission]
+    public async Task<IActionResult> DeleteNews(string newsId)
+    {
+        await _newsRepository.DeleteNews(new ObjectId(newsId));
+        return Ok();
+    }
+
+    [HttpGet("loadingScreenTips")]
+    public async Task<IActionResult> GetTips(int? limit)
+    {
+        return Ok(await _informationMessagesRepository.GetTips(limit));
+    }
+    
+    [HttpGet("motd")] // Message Of The Day
+    public async Task<IActionResult> GetMotd()
+    {
+        return Ok(await _informationMessagesRepository.GetMotd());
+    }
+
+    [HttpPut("motd")]
+    [HasContentPermission]
+    public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
+    {
+        if (motd.motd.Length > 400)
+        {
+            return new BadRequestObjectResult("The motd exceeded 400 characters. We can't display messages this long!");
         }
 
-        [HttpPut("news")]
-        [HasContentPermission]
-        public async Task<IActionResult> UpdateNews([FromBody] NewsMessage newsMessage)
-        {
-            newsMessage.Id = ObjectId.GenerateNewId();
-            await _newsRepository.UpsertNews(newsMessage);
-            return Ok();
-        }
+        await _informationMessagesRepository.SetMotd(motd);
+        return Ok();
+    }
 
-        [HttpDelete("news/{newsId}")]
-        [HasContentPermission]
-        public async Task<IActionResult> DeleteNews(string newsId)
-        {
-            await _newsRepository.DeleteNews(new ObjectId(newsId));
-            return Ok();
-        }
+    [HttpGet("loadingScreenTips/randomTip")]
+    public async Task<IActionResult> GetRandomTip()
+    {
+        return Ok(await _informationMessagesRepository.GetRandomTip());
+    }
 
-        [HttpGet("loadingScreenTips")]
-        public async Task<IActionResult> GetTips(int? limit)
+    [HttpPut("loadingScreenTips/{tipId}")]
+    [HasContentPermission]
+    public async Task<IActionResult> UpdateTips(string tipId, [FromBody] LoadingScreenTip loadingScreenTip)
+    {
+        if (loadingScreenTip.Message.Length > 200)
         {
-            return Ok(await _informationMessagesRepository.GetTips(limit));
+            return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
         }
-        
-        [HttpGet("motd")] // Message Of The Day
-        public async Task<IActionResult> GetMotd()
-        {
-            return Ok(await _informationMessagesRepository.GetMotd());
-        }
+        loadingScreenTip.Id = new ObjectId(tipId);
+        await _informationMessagesRepository.UpsertTip(loadingScreenTip);
+        return Ok();
+    }
 
-        [HttpPut("motd")]
-        [HasContentPermission]
-        public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
+    [HttpPut("loadingScreenTips")]
+    [HasContentPermission]
+    public async Task<IActionResult> UpdateTips([FromBody] LoadingScreenTip loadingScreenTip)
+    {
+        if (loadingScreenTip.Message.Length > 200)
         {
-            if (motd.motd.Length > 400)
-            {
-                return new BadRequestObjectResult("The motd exceeded 400 characters. We can't display messages this long!");
-            }
-
-            await _informationMessagesRepository.SetMotd(motd);
-            return Ok();
+            return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
         }
+        loadingScreenTip.Id = ObjectId.GenerateNewId();
+        await _informationMessagesRepository.UpsertTip(loadingScreenTip);
+        return Ok();
+    }
 
-        [HttpGet("loadingScreenTips/randomTip")]
-        public async Task<IActionResult> GetRandomTip()
-        {
-            return Ok(await _informationMessagesRepository.GetRandomTip());
-        }
+    [HttpDelete("loadingScreenTips/{tipId}")]
+    [HasContentPermission]
+    public async Task<IActionResult> DeleteTip(string tipId)
+    {
+        await _informationMessagesRepository.DeleteTip(new ObjectId(tipId));
+        return Ok();
+    }
 
-        [HttpPut("loadingScreenTips/{tipId}")]
-        [HasContentPermission]
-        public async Task<IActionResult> UpdateTips(string tipId, [FromBody] LoadingScreenTip loadingScreenTip)
-        {
-            if (loadingScreenTip.Message.Length > 200)
-            {
-                return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
-            }
-            loadingScreenTip.Id = new ObjectId(tipId);
-            await _informationMessagesRepository.UpsertTip(loadingScreenTip);
-            return Ok();
-        }
+    [HttpGet("queue-data")]
+    [HasQueuePermission]
+    public async Task<IActionResult> GetQueueData()
+    {
+        var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+        return Ok(queueData);
+    }
 
-        [HttpPut("loadingScreenTips")]
-        [HasContentPermission]
-        public async Task<IActionResult> UpdateTips([FromBody] LoadingScreenTip loadingScreenTip)
-        {
-            if (loadingScreenTip.Message.Length > 200)
-            {
-                return new BadRequestObjectResult("The tip exceeded 200 characters. We can't display messages this long!");
-            }
-            loadingScreenTip.Id = ObjectId.GenerateNewId();
-            await _informationMessagesRepository.UpsertTip(loadingScreenTip);
-            return Ok();
-        }
+    [HttpGet("proxies")]
+    [HasProxiesPermission]
+    public async Task<IActionResult> GetProxies()
+    {
+        return Ok(await _adminRepository.GetProxies());
+    }
 
-        [HttpDelete("loadingScreenTips/{tipId}")]
-        [HasContentPermission]
-        public async Task<IActionResult> DeleteTip(string tipId)
-        {
-            await _informationMessagesRepository.DeleteTip(new ObjectId(tipId));
-            return Ok();
-        }
+    [HttpGet("proxies-for/{tag}")]
+    [HasProxiesPermission]
+    public async Task<IActionResult> GetProxiesFor([FromRoute] string tag)
+    {
+        return Ok(await _adminRepository.GetProxiesFor(tag));
+    }
 
-        [HttpGet("queue-data")]
-        [HasQueuePermission]
-        public async Task<IActionResult> GetQueueData()
-        {
-            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
-            return Ok(queueData);
-        }
+    [HttpPut("update-proxies/{tag}")]
+    [HasProxiesPermission]
+    public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string tag)
+    {
+        await _adminRepository.UpdateProxies(proxyUpdateData, tag);
+        return Ok();
+    }
 
-        [HttpGet("proxies")]
-        [HasProxiesPermission]
-        public async Task<IActionResult> GetProxies()
-        {
-            return Ok(await _adminRepository.GetProxies());
-        }
+    [HttpGet("search/{tagSearch}")]
+    [HasProxiesPermission]
+    public async Task<IActionResult> SearchPlayer([FromRoute] string tagSearch)
+    {
+        var playerInstances = await _rankRepository.SearchAllPlayersForProxy(tagSearch);
+        return Ok(playerInstances);
+    }
 
-        [HttpGet("proxies-for/{tag}")]
-        [HasProxiesPermission]
-        public async Task<IActionResult> GetProxiesFor([FromRoute] string tag)
-        {
-            return Ok(await _adminRepository.GetProxiesFor(tag));
-        }
+    [HttpGet("alts/{tag}")]
+    [HasModerationPermission]
+    public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
+    {
+        var smurfs = await _adminRepository.SearchSmurfsFor(tag);
+        return Ok(smurfs);
+    }
 
-        [HttpPut("update-proxies/{tag}")]
-        [HasProxiesPermission]
-        public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string tag)
-        {
-            await _adminRepository.UpdateProxies(proxyUpdateData, tag);
-            return Ok();
-        }
+    [HttpGet("globalChatBans")]
+    [HasModerationPermission]
+    public async Task<IActionResult> SearchChatbans()
+    {
+        var chatBans = await _adminRepository.GetChatBans();
+        return Ok(chatBans);
+    }
 
-        [HttpGet("search/{tagSearch}")]
-        [HasProxiesPermission]
-        public async Task<IActionResult> SearchPlayer([FromRoute] string tagSearch)
-        {
-            var playerInstances = await _rankRepository.SearchAllPlayersForProxy(tagSearch);
-            return Ok(playerInstances);
-        }
+    [HttpPut("globalChatBans")]
+    [HasModerationPermission]
+    public async Task<IActionResult> PutChatBan([FromBody] ChatBanPutDto chatBan)
+    {
+        await _adminRepository.PutChatBan(chatBan);
+        return Ok();
+    }
 
-        [HttpGet("alts/{tag}")]
-        [HasModerationPermission]
-        public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
-        {
-            var smurfs = await _adminRepository.SearchSmurfsFor(tag);
-            return Ok(smurfs);
-        }
+    [HttpDelete("globalChatBans/{id}")]
+    [HasModerationPermission]
+    public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
+    {
+        await _adminRepository.DeleteChatBan(id);
+        return Ok();
+    }
 
-        [HttpGet("globalChatBans")]
-        [HasModerationPermission]
-        public async Task<IActionResult> SearchChatbans()
-        {
-            var chatBans = await _adminRepository.GetChatBans();
-            return Ok(chatBans);
-        }
-
-        [HttpPut("globalChatBans")]
-        [HasModerationPermission]
-        public async Task<IActionResult> PutChatBan([FromBody] ChatBanPutDto chatBan)
-        {
-            await _adminRepository.PutChatBan(chatBan);
-            return Ok();
-        }
-
-        [HttpDelete("globalChatBans/{id}")]
-        [HasModerationPermission]
-        public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
-        {
-            await _adminRepository.DeleteChatBan(id);
-            return Ok();
-        }
-
-        // This API endpoint just runs the 'CheckIfBattleTagIsAdmin' filter which then checks the jwt lifetime.
-        // Returns a 200 OK if it passes validation and a 401 Unauthorized if it's expired.
-        [HttpGet("checkJwtLifetime")]
-        [CheckIfBattleTagIsAdmin]
-        public IActionResult CheckJwtLifetime()
-        {
-            return Ok();
-        }
+    // This API endpoint just runs the 'CheckIfBattleTagIsAdmin' filter which then checks the jwt lifetime.
+    // Returns a 200 OK if it passes validation and a 401 Unauthorized if it's expired.
+    [HttpGet("checkJwtLifetime")]
+    [CheckIfBattleTagIsAdmin]
+    public IActionResult CheckJwtLifetime()
+    {
+        return Ok();
     }
 }

@@ -2,33 +2,32 @@ using System.Collections.Generic;
 using System.Linq;
 using W3C.Contracts.Matchmaking;
 
-namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons
+namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
+
+public class MatchOnMapPerMode
 {
-    public class MatchOnMapPerMode
+    public static MatchOnMapPerMode Create(GameMode gameMode)
     {
-        public static MatchOnMapPerMode Create(GameMode gameMode)
+        return new MatchOnMapPerMode
         {
-            return new MatchOnMapPerMode
-            {
-                GameMode = gameMode
-            };
-        }
-
-        public GameMode GameMode { get; set; }
-
-        public void CountMatch(string map)
-        {
-            var gamesOnMode = Maps.SingleOrDefault(g => g.Map == map);
-            if (gamesOnMode == null)
-            {
-                Maps.Add(GamesPlayedOnMap.Create(map));
-            }
-
-            gamesOnMode = Maps.Single(g => g.Map == map);
-            Maps = Maps.OrderBy(m => m.Map).ToList();
-            gamesOnMode.CountMatch();
-        }
-
-        public List<GamesPlayedOnMap> Maps { get; set; } = new List<GamesPlayedOnMap>();
+            GameMode = gameMode
+        };
     }
+
+    public GameMode GameMode { get; set; }
+
+    public void CountMatch(string map)
+    {
+        var gamesOnMode = Maps.SingleOrDefault(g => g.Map == map);
+        if (gamesOnMode == null)
+        {
+            Maps.Add(GamesPlayedOnMap.Create(map));
+        }
+
+        gamesOnMode = Maps.Single(g => g.Map == map);
+        Maps = Maps.OrderBy(m => m.Map).ToList();
+        gamesOnMode.CountMatch();
+    }
+
+    public List<GamesPlayedOnMap> Maps { get; set; } = new List<GamesPlayedOnMap>();
 }

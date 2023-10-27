@@ -1,9 +1,8 @@
 ﻿using System.Threading.Tasks;
 
-namespace W3ChampionsStatisticService.ReadModelBase
+namespace W3ChampionsStatisticService.ReadModelBase;
+
+public interface IAsyncUpdatable
 {
-    public interface IAsyncUpdatable
-    {
-        Task Update();
-    }
+    Task Update();
 }

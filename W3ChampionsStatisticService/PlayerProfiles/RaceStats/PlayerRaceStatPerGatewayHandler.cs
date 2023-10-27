@@ -3,32 +3,31 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats
+namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+
+public class PlayerRaceStatPerGatewayHandler : IReadModelHandler
 {
-    public class PlayerRaceStatPerGatewayHandler : IReadModelHandler
+    private readonly IPlayerRepository _playerRepository;
+
+    public PlayerRaceStatPerGatewayHandler(
+        IPlayerRepository playerRepository
+        )
     {
-        private readonly IPlayerRepository _playerRepository;
+        _playerRepository = playerRepository;
+    }
 
-        public PlayerRaceStatPerGatewayHandler(
-            IPlayerRepository playerRepository
-            )
+    public async Task Update(MatchFinishedEvent nextEvent)
+    {
+        var match = nextEvent.match;
+
+        foreach (var player in match.players)
         {
-            _playerRepository = playerRepository;
-        }
+            var stat = await _playerRepository.LoadRaceStatPerGateway(player.battleTag, player.race, match.gateway, match.season)
+                        ?? new PlayerRaceStatPerGateway(player.battleTag, player.race, match.gateway, match.season);
 
-        public async Task Update(MatchFinishedEvent nextEvent)
-        {
-            var match = nextEvent.match;
+            stat.RecordWin(player.won);
 
-            foreach (var player in match.players)
-            {
-                var stat = await _playerRepository.LoadRaceStatPerGateway(player.battleTag, player.race, match.gateway, match.season)
-                           ?? new PlayerRaceStatPerGateway(player.battleTag, player.race, match.gateway, match.season);
-
-                stat.RecordWin(player.won);
-
-                await _playerRepository.UpsertPlayerRaceStat(stat);
-            }
+            await _playerRepository.UpsertPlayerRaceStat(stat);
         }
     }
 }

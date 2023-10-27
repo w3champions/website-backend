@@ -8,142 +8,141 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
 
-namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats
+namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+
+public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
 {
-    public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
+    private readonly IPlayerRepository _playerRepository;
+
+    public PlayerGameModeStatPerGatewayHandler(
+        IPlayerRepository playerRepository
+        )
     {
-        private readonly IPlayerRepository _playerRepository;
+        _playerRepository = playerRepository;
+    }
 
-        public PlayerGameModeStatPerGatewayHandler(
-            IPlayerRepository playerRepository
-            )
+    public async Task Update(MatchFinishedEvent nextEvent)
+    {
+        var match = nextEvent.match;
+
+        var winners = match.players.Where(p => p.won).ToList();
+
+        var losers = match.players.Where(p => !p.won).ToList();
+
+        if (winners.Count == 0 || losers.Count == 0)
         {
-            _playerRepository = playerRepository;
+            // We should log the bad event here
+            return;
         }
 
-        public async Task Update(MatchFinishedEvent nextEvent)
+        if ((nextEvent.match.gameMode == GameMode.GM_2v2
+                || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
+            && winners.Count != 2 && losers.Count != 2 )
         {
-            var match = nextEvent.match;
-
-            var winners = match.players.Where(p => p.won).ToList();
-
-            var losers = match.players.Where(p => !p.won).ToList();
-
-            if (winners.Count == 0 || losers.Count == 0)
-            {
-                // We should log the bad event here
-                return;
-            }
-
-            if ((nextEvent.match.gameMode == GameMode.GM_2v2
-                 || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
-                && winners.Count != 2 && losers.Count != 2 )
-            {
-                return;
-            }
-
-            await RecordWinners(match, winners);
-
-            await RecordLosers(match, losers);
+            return;
         }
 
-        private async Task RecordLosers(Match match, List<PlayerMMrChange> losers)
-        {
-            var atPlayers = losers.Where(x => x.IsAt);
-            foreach (var losingTeam in atPlayers.GroupBy(x => x.team))
-            {
-                await RecordLoss(match, losingTeam.ToList());
-            }
+        await RecordWinners(match, winners);
 
-            var restPlayers = losers.Where(x => !x.IsAt);
-            foreach (var losingPlayer in restPlayers)
-            {
-                await RecordLoss(match, new List<PlayerMMrChange>() { losingPlayer });
-            }
+        await RecordLosers(match, losers);
+    }
+
+    private async Task RecordLosers(Match match, List<PlayerMMrChange> losers)
+    {
+        var atPlayers = losers.Where(x => x.IsAt);
+        foreach (var losingTeam in atPlayers.GroupBy(x => x.team))
+        {
+            await RecordLoss(match, losingTeam.ToList());
         }
 
-        private async Task RecordLoss(Match match, List<PlayerMMrChange> losingTeam)
+        var restPlayers = losers.Where(x => !x.IsAt);
+        foreach (var losingPlayer in restPlayers)
         {
-            var gameMode = GetGameModeStatGameMode(match.gameMode, losingTeam[0]);
+            await RecordLoss(match, new List<PlayerMMrChange>() { losingPlayer });
+        }
+    }
 
-            var loserId = new BattleTagIdCombined(
-              losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
-              match.gateway,
-              gameMode,
-              match.season,
-              match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) losingTeam.Single().race : null);
+    private async Task RecordLoss(Match match, List<PlayerMMrChange> losingTeam)
+    {
+        var gameMode = GetGameModeStatGameMode(match.gameMode, losingTeam[0]);
 
-            var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
+        var loserId = new BattleTagIdCombined(
+            losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
+            match.gateway,
+            gameMode,
+            match.season,
+            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) losingTeam.Single().race : null);
 
-            loser.RecordWin(false);
+        var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
 
-            var firstLooser = losingTeam.First();
+        loser.RecordWin(false);
 
-            loser.RecordRanking(
-                (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
-                firstLooser.updatedRanking?.rp ?? firstLooser.ranking?.rp ?? 0);
+        var firstLooser = losingTeam.First();
 
-            await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
+        loser.RecordRanking(
+            (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
+            firstLooser.updatedRanking?.rp ?? firstLooser.ranking?.rp ?? 0);
+
+        await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
+    }
+
+    private async Task RecordWinners(Match match, List<PlayerMMrChange> winners)
+    {
+        var atPlayers = winners.Where(x => x.IsAt);
+        foreach (var losingTeam in atPlayers.GroupBy(x => x.team))
+        {
+            await RecordWin(match, losingTeam.ToList());
         }
 
-        private async Task RecordWinners(Match match, List<PlayerMMrChange> winners)
+        var restPlayers = winners.Where(x => !x.IsAt);
+        foreach (var losingPlayer in restPlayers)
         {
-            var atPlayers = winners.Where(x => x.IsAt);
-            foreach (var losingTeam in atPlayers.GroupBy(x => x.team))
-            {
-                await RecordWin(match, losingTeam.ToList());
-            }
+            await RecordWin(match, new List<PlayerMMrChange>() { losingPlayer });
+        }
+    }
 
-            var restPlayers = winners.Where(x => !x.IsAt);
-            foreach (var losingPlayer in restPlayers)
-            {
-                await RecordWin(match, new List<PlayerMMrChange>() { losingPlayer });
-            }
+    private async Task RecordWin(Match match, List<PlayerMMrChange> winners)
+    {
+        var gameMode = GetGameModeStatGameMode(match.gameMode, winners[0]);
+
+        var winnerId = new BattleTagIdCombined(
+            winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
+            match.gateway,
+            gameMode,
+            match.season,
+            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) winners.Single().race : null);
+
+        var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
+        winner.RecordWin(true);
+        winner.RecordRanking(
+            (int?)winners.First().updatedMmr?.rating ?? (int?)winners.First().mmr?.rating ?? 0,
+            winners.First().updatedRanking?.rp ?? winners.First().ranking?.rp ?? 0);
+
+        await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
+    }
+
+    private GameMode GetGameModeStatGameMode(GameMode gameMode, PlayerMMrChange player)
+    {
+        if (gameMode == GameMode.GM_2v2 && player.IsAt)
+        {
+            return GameMode.GM_2v2_AT;
         }
 
-        private async Task RecordWin(Match match, List<PlayerMMrChange> winners)
+        if (gameMode == GameMode.GM_4v4 && player.IsAt)
         {
-            var gameMode = GetGameModeStatGameMode(match.gameMode, winners[0]);
-
-            var winnerId = new BattleTagIdCombined(
-                winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
-                match.gateway,
-                gameMode,
-                match.season,
-                match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) winners.Single().race : null);
-
-            var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
-            winner.RecordWin(true);
-            winner.RecordRanking(
-                (int?)winners.First().updatedMmr?.rating ?? (int?)winners.First().mmr?.rating ?? 0,
-                winners.First().updatedRanking?.rp ?? winners.First().ranking?.rp ?? 0);
-
-            await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
+            return GameMode.GM_4v4_AT;
         }
 
-        private GameMode GetGameModeStatGameMode(GameMode gameMode, PlayerMMrChange player)
+        if (gameMode == GameMode.GM_LEGION_4v4_x20 && player.IsAt)
         {
-            if (gameMode == GameMode.GM_2v2 && player.IsAt)
-            {
-                return GameMode.GM_2v2_AT;
-            }
-
-            if (gameMode == GameMode.GM_4v4 && player.IsAt)
-            {
-                return GameMode.GM_4v4_AT;
-            }
-
-            if (gameMode == GameMode.GM_LEGION_4v4_x20 && player.IsAt)
-            {
-                return GameMode.GM_LEGION_4v4_x20_AT;
-            }
-
-            if (gameMode == GameMode.GM_DOTA_5ON5 && player.IsAt)
-            {
-                return GameMode.GM_DOTA_5ON5_AT;
-            }
-
-            return gameMode;
+            return GameMode.GM_LEGION_4v4_x20_AT;
         }
+
+        if (gameMode == GameMode.GM_DOTA_5ON5 && player.IsAt)
+        {
+            return GameMode.GM_DOTA_5ON5_AT;
+        }
+
+        return gameMode;
     }
 }

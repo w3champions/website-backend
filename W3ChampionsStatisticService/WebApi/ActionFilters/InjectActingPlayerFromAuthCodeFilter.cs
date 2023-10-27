@@ -5,34 +5,33 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
-namespace W3ChampionsStatisticService.WebApi.ActionFilters
-{
-    public class InjectActingPlayerFromAuthCodeFilter : IAsyncActionFilter {
-        private readonly IW3CAuthenticationService _authService;
+namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-        public InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService authService)
-        {
-            _authService = authService;
-        }
+public class InjectActingPlayerFromAuthCodeFilter : IAsyncActionFilter {
+    private readonly IW3CAuthenticationService _authService;
 
-        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    public InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService authService)
+    {
+        _authService = authService;
+    }
+
+    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        var queryString = HttpUtility.ParseQueryString(context.HttpContext.Request.QueryString.Value);
+        if (queryString.AllKeys.Contains("authorization"))
         {
-            var queryString = HttpUtility.ParseQueryString(context.HttpContext.Request.QueryString.Value);
-            if (queryString.AllKeys.Contains("authorization"))
+            var auth = queryString["authorization"];
+            var res = _authService.GetUserByToken(auth);
+
+            var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
+            if (actingPlayerContent != null)
             {
-                var auth = queryString["authorization"];
-                var res = _authService.GetUserByToken(auth);
-
-                var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
-                if (actingPlayerContent != null)
-                {
-                    context.ActionArguments["actingPlayer"] = res.BattleTag;
-                    await next.Invoke();
-                }
+                context.ActionArguments["actingPlayer"] = res.BattleTag;
+                await next.Invoke();
             }
-
-            var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
-            context.Result = unauthorizedResult;
         }
+
+        var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
+        context.Result = unauthorizedResult;
     }
 }

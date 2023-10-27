@@ -1,9 +1,8 @@
-namespace W3C.Contracts.Matchmaking
+namespace W3C.Contracts.Matchmaking;
+
+public enum GateWay
 {
-    public enum GateWay
-    {
-        Undefined = 0,
-        America = 10,
-        Europe = 20
-    }
+    Undefined = 0,
+    America = 10,
+    Europe = 20
 }

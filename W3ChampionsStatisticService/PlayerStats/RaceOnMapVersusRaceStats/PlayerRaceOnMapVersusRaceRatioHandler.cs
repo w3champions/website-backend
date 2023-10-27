@@ -6,73 +6,72 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 
-namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats
+namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
+
+public class PlayerRaceOnMapVersusRaceRatioHandler : IReadModelHandler
 {
-    public class PlayerRaceOnMapVersusRaceRatioHandler : IReadModelHandler
+    private readonly IPlayerStatsRepository _playerRepository;
+    private readonly IPatchRepository _patchRepository;
+
+    public PlayerRaceOnMapVersusRaceRatioHandler(
+        IPlayerStatsRepository playerRepository,
+        IPatchRepository patchRepository
+        )
     {
-        private readonly IPlayerStatsRepository _playerRepository;
-        private readonly IPatchRepository _patchRepository;
+        _playerRepository = playerRepository;
+        _patchRepository = patchRepository;
+    }
 
-        public PlayerRaceOnMapVersusRaceRatioHandler(
-            IPlayerStatsRepository playerRepository,
-            IPatchRepository patchRepository
-            )
+    public async Task Update(MatchFinishedEvent nextEvent)
+    {
+        if (nextEvent.WasFakeEvent) return;
+
+        var dataPlayers = nextEvent.match.players;
+        if (dataPlayers.Count == 2)
         {
-            _playerRepository = playerRepository;
-            _patchRepository = patchRepository;
-        }
+            var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].battleTag, nextEvent.match.season)
+                        ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[0].battleTag, nextEvent.match.season);
+            var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag, nextEvent.match.season)
+                        ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag, nextEvent.match.season);
 
-        public async Task Update(MatchFinishedEvent nextEvent)
-        {
-            if (nextEvent.WasFakeEvent) return;
+            DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            DateTime date = start.AddMilliseconds(nextEvent.match.startTime);
+            var patch = await _patchRepository.GetPatchVersionFromDate(date);
 
-            var dataPlayers = nextEvent.match.players;
-            if (dataPlayers.Count == 2)
-            {
-                var p1 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[0].battleTag, nextEvent.match.season)
-                         ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[0].battleTag, nextEvent.match.season);
-                var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag, nextEvent.match.season)
-                         ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag, nextEvent.match.season);
-
-                DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                DateTime date = start.AddMilliseconds(nextEvent.match.startTime);
-                var patch = await _patchRepository.GetPatchVersionFromDate(date);
-
-                p1.AddMapWin(dataPlayers[0].race,
-                    dataPlayers[1].race,
-                    "Overall",
-                    dataPlayers[0].won, patch);
-                p1.AddMapWin(dataPlayers[0].race,
+            p1.AddMapWin(dataPlayers[0].race,
                 dataPlayers[1].race,
                 "Overall",
-                dataPlayers[0].won, "All");
-                p2.AddMapWin(dataPlayers[1].race,
-                    dataPlayers[0].race,
-                    "Overall",
-                    dataPlayers[1].won, patch);
-                p2.AddMapWin(dataPlayers[1].race,
-                                    dataPlayers[0].race,
-                                    "Overall",
-                                    dataPlayers[1].won, "All");
-                p1.AddMapWin(dataPlayers[0].race,
-                    dataPlayers[1].race,
-                    new MapName(nextEvent.match.map).Name,
-                    dataPlayers[0].won, patch);
-                p1.AddMapWin(dataPlayers[0].race,
+                dataPlayers[0].won, patch);
+            p1.AddMapWin(dataPlayers[0].race,
+            dataPlayers[1].race,
+            "Overall",
+            dataPlayers[0].won, "All");
+            p2.AddMapWin(dataPlayers[1].race,
+                dataPlayers[0].race,
+                "Overall",
+                dataPlayers[1].won, patch);
+            p2.AddMapWin(dataPlayers[1].race,
+                                dataPlayers[0].race,
+                                "Overall",
+                                dataPlayers[1].won, "All");
+            p1.AddMapWin(dataPlayers[0].race,
                 dataPlayers[1].race,
                 new MapName(nextEvent.match.map).Name,
-                dataPlayers[0].won, "All");
-                p2.AddMapWin(dataPlayers[1].race,
-                    dataPlayers[0].race,
-                    new MapName(nextEvent.match.map).Name,
-                    dataPlayers[1].won, patch);
-                p2.AddMapWin(dataPlayers[1].race,
-                    dataPlayers[0].race,
-                    new MapName(nextEvent.match.map).Name,
-                    dataPlayers[1].won, "All");
-                await _playerRepository.UpsertMapAndRaceStat(p1);
-                await _playerRepository.UpsertMapAndRaceStat(p2);
-            }
+                dataPlayers[0].won, patch);
+            p1.AddMapWin(dataPlayers[0].race,
+            dataPlayers[1].race,
+            new MapName(nextEvent.match.map).Name,
+            dataPlayers[0].won, "All");
+            p2.AddMapWin(dataPlayers[1].race,
+                dataPlayers[0].race,
+                new MapName(nextEvent.match.map).Name,
+                dataPlayers[1].won, patch);
+            p2.AddMapWin(dataPlayers[1].race,
+                dataPlayers[0].race,
+                new MapName(nextEvent.match.map).Name,
+                dataPlayers[1].won, "All");
+            await _playerRepository.UpsertMapAndRaceStat(p1);
+            await _playerRepository.UpsertMapAndRaceStat(p2);
         }
     }
 }

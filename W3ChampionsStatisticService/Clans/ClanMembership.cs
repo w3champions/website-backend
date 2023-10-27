@@ -3,55 +3,54 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using W3C.Domain.Repositories;
 
-namespace W3ChampionsStatisticService.Clans
+namespace W3ChampionsStatisticService.Clans;
+
+public class ClanMembership : IIdentifiable, IVersionable
 {
-    public class ClanMembership : IIdentifiable, IVersionable
+    public string BattleTag { get; set; }
+    public string ClanId { get; set; }
+    public string PendingInviteFromClan { get; set; }
+    public string ClanName { get; set; }
+    public DateTimeOffset LastUpdated  { get; set; }
+
+    [JsonIgnore]
+    public string Id => BattleTag;
+    public void JoinClan(Clan clan)
     {
-        public string BattleTag { get; set; }
-        public string ClanId { get; set; }
-        public string PendingInviteFromClan { get; set; }
-        public string ClanName { get; set; }
-        public DateTimeOffset LastUpdated  { get; set; }
+        if (ClanId != null) throw new ValidationException("User Allready in clan");
+        if (clan.ClanId != PendingInviteFromClan) throw new ValidationException("Invite to another clan still pending");
 
-        [JsonIgnore]
-        public string Id => BattleTag;
-        public void JoinClan(Clan clan)
+        ClanId = clan.ClanId;
+        PendingInviteFromClan = null;
+        ClanName = clan.ClanName;
+    }
+
+    public static ClanMembership Create(string battleTag)
+    {
+        return new ClanMembership
         {
-            if (ClanId != null) throw new ValidationException("User Allready in clan");
-            if (clan.ClanId != PendingInviteFromClan) throw new ValidationException("Invite to another clan still pending");
+            BattleTag = battleTag
+        };
+    }
 
-            ClanId = clan.ClanId;
-            PendingInviteFromClan = null;
-            ClanName = clan.ClanName;
-        }
+    public void Invite(Clan clan)
+    {
+        if (PendingInviteFromClan != null) throw new ValidationException("Player already invited to different clan");
+        if (ClanId != null) throw new ValidationException("Player already part of a different clan");
 
-        public static ClanMembership Create(string battleTag)
-        {
-            return new ClanMembership
-            {
-                BattleTag = battleTag
-            };
-        }
+        PendingInviteFromClan = clan.ClanId;
+        ClanName = clan.ClanName;
+    }
 
-        public void Invite(Clan clan)
-        {
-            if (PendingInviteFromClan != null) throw new ValidationException("Player already invited to different clan");
-            if (ClanId != null) throw new ValidationException("Player already part of a different clan");
+    public void LeaveClan()
+    {
+        ClanId = null;
+        ClanName = null;
+    }
 
-            PendingInviteFromClan = clan.ClanId;
-            ClanName = clan.ClanName;
-        }
-
-        public void LeaveClan()
-        {
-            ClanId = null;
-            ClanName = null;
-        }
-
-        public void RevokeInvite()
-        {
-            PendingInviteFromClan = null;
-            ClanName = null;
-        }
+    public void RevokeInvite()
+    {
+        PendingInviteFromClan = null;
+        ClanName = null;
     }
 }

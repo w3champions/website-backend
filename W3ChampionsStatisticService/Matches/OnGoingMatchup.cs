@@ -3,59 +3,58 @@ using System.Collections.Generic;
 using System.Linq;
 using W3C.Domain.MatchmakingService;
 
-namespace W3ChampionsStatisticService.Matches
+namespace W3ChampionsStatisticService.Matches;
+
+public class OnGoingMatchup: Matchup
 {
-    public class OnGoingMatchup: Matchup
+    public static OnGoingMatchup Create(MatchStartedEvent matchStartedEvent)
     {
-        public static OnGoingMatchup Create(MatchStartedEvent matchStartedEvent)
+        var match = matchStartedEvent.match;
+
+        var startTime = DateTimeOffset.FromUnixTimeMilliseconds(match.startTime);
+
+        var result = new OnGoingMatchup()
         {
-            var match = matchStartedEvent.match;
+            Id = matchStartedEvent.Id,
+            Map = new MapName(match.map).Name,
+            MapId = match.mapId,
+            MapName = match.mapName,
+            MatchId = match.id,
+            GateWay = match.gateway,
+            GameMode = match.gameMode,
+            StartTime = startTime,
+        };
 
-            var startTime = DateTimeOffset.FromUnixTimeMilliseconds(match.startTime);
+        result.SetServerInfo(match, match.gameMode);
 
-            var result = new OnGoingMatchup()
-            {
-                Id = matchStartedEvent.Id,
-                Map = new MapName(match.map).Name,
-                MapId = match.mapId,
-                MapName = match.mapName,
-                MatchId = match.id,
-                GateWay = match.gateway,
-                GameMode = match.gameMode,
-                StartTime = startTime,
-            };
+        var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
 
-            result.SetServerInfo(match, match.gameMode);
-
-            var teamGroups = SplitPlayersIntoTeams(match.players, match.gameMode);
-
-            foreach (var team in teamGroups)
-            {
-                result.Teams.Add(CreateTeam(team.Value));
-            }
-
-            SetTeamPlayers(result);
-
-            return result;
+        foreach (var team in teamGroups)
+        {
+            result.Teams.Add(CreateTeam(team.Value));
         }
 
-        private static Team CreateTeam(IEnumerable<UnfinishedMatchPlayer> players)
-        {
-            var team = new Team();
-            team.Players.AddRange(CreatePlayerArray(players));
-            return team;
-        }
+        SetTeamPlayers(result);
 
-        private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(IEnumerable<UnfinishedMatchPlayer> players)
+        return result;
+    }
+
+    private static Team CreateTeam(IEnumerable<UnfinishedMatchPlayer> players)
+    {
+        var team = new Team();
+        team.Players.AddRange(CreatePlayerArray(players));
+        return team;
+    }
+
+    private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(IEnumerable<UnfinishedMatchPlayer> players)
+    {
+        return players.Select(w => new PlayerOverviewMatches
         {
-            return players.Select(w => new PlayerOverviewMatches
-            {
-                Name = w.battleTag.Split("#")[0],
-                BattleTag = w.battleTag,
-                OldMmr = (int)w.mmr.rating,
-                Race = w.race,
-                Location = w.country
-            });
-        }
+            Name = w.battleTag.Split("#")[0],
+            BattleTag = w.battleTag,
+            OldMmr = (int)w.mmr.rating,
+            Race = w.race,
+            Location = w.country
+        });
     }
 }

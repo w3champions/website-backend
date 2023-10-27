@@ -2,16 +2,15 @@ using System;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace W3ChampionsStatisticService.WebApi.ActionFilters
-{
-    [AttributeUsage(AttributeTargets.Method)]
-    public class HasMapsPermission : Attribute, IFilterFactory
-    {
-        public bool IsReusable => false;
+namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-        public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
-        {
-            return serviceProvider.GetService<HasMapsPermissionFilter>();
-        }
+[AttributeUsage(AttributeTargets.Method)]
+public class HasMapsPermission : Attribute, IFilterFactory
+{
+    public bool IsReusable => false;
+
+    public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
+    {
+        return serviceProvider.GetService<HasMapsPermissionFilter>();
     }
 }

@@ -1,8 +1,7 @@
-﻿namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats
+﻿namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
+
+public class PlayerMmrRank
 {
-    public class PlayerMmrRank
-    {
-        public int Mmr { get; set; }
-        public int Rank { get; set; }
-    }
+    public int Mmr { get; set; }
+    public int Rank { get; set; }
 }

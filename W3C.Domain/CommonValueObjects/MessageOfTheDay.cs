@@ -1,7 +1,6 @@
-﻿namespace W3C.Domain.CommonValueObjects
+﻿namespace W3C.Domain.CommonValueObjects;
+
+public class MessageOfTheDay
 {
-    public class MessageOfTheDay
-    {
-        public string motd { get; set; }
-    }
+    public string motd { get; set; }
 }
