@@ -4,6 +4,7 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net.Http;
 using System.Net.Mime;
+using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.Admin.Logs;
 
@@ -20,7 +21,7 @@ public class LogsController : ControllerBase
     }
 
     [HttpGet]
-    [HasLogsPermission]
+    [HasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> GetLogfileNames()
     {
         try {
@@ -32,7 +33,7 @@ public class LogsController : ControllerBase
     }
 
     [HttpGet("{logfileName}")]
-    [HasLogsPermission]
+    [HasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> GetLogContent([FromRoute] string logfileName)
     {
         try {
@@ -44,7 +45,7 @@ public class LogsController : ControllerBase
     }
 
     [HttpGet("download/{logfileName}")]
-    [HasLogsPermission]
+    [HasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> DownloadLog([FromRoute] string logfileName)
     {
         try {

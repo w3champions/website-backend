@@ -11,23 +11,20 @@ using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-public class HasTournamentsPermissionFilter : IAsyncActionFilter {
-    private readonly IW3CAuthenticationService _authService;
-
-    public HasTournamentsPermissionFilter(IW3CAuthenticationService authService)
-    {
-        _authService = authService;
-    }
+[AttributeUsage(AttributeTargets.Method)]
+public class HasPermissionFilter : Attribute, IAsyncActionFilter {
+    public EPermission Permission { get; set; }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        W3CAuthenticationService authService = new W3CAuthenticationService();
         var queryString = HttpUtility.ParseQueryString(context.HttpContext.Request.QueryString.Value);
         if (queryString.AllKeys.Contains("authorization"))
         {
             try {
                 var auth = queryString["authorization"];
-                var res = _authService.GetUserByToken(auth);
-                var hasPermission = res.Permissions.Contains(nameof(EPermission.Tournaments));
+                var res = authService.GetUserByToken(auth);
+                var hasPermission = res.Permissions.Contains(Permission.ToString());
                 if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
                 {
                     context.ActionArguments["battleTag"] = res.BattleTag;

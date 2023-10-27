@@ -8,6 +8,7 @@ using System.ComponentModel.DataAnnotations;
 using W3C.Contracts.Admin.CloudStorage;
 using W3ChampionsStatisticService.Admin.CloudStorage.S3;
 using W3ChampionsStatisticService.Admin.CloudStorage.Alibaba;
+using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.Admin.CloudStorage;
 
@@ -16,7 +17,7 @@ namespace W3ChampionsStatisticService.Admin.CloudStorage;
 public class CloudStorageController : ControllerBase
 {
     [HttpGet("alibaba")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult ListAlibabaFiles()
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -29,7 +30,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpGet("s3")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> ListS3Files()
     {
         S3Service s3Service = new S3Service();
@@ -42,7 +43,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpPost("alibaba/upload")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult UploadAlibabaFile([FromBody] UploadFileRequest req)
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -61,7 +62,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpPost("s3/upload")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UploadS3File([FromBody] UploadFileRequest req)
     {
         S3Service s3Service = new S3Service();
@@ -80,7 +81,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpGet("alibaba/download/{fileName}")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DownloadAlibabaFile([FromRoute] string fileName)
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -101,7 +102,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpGet("s3/download/{fileName}")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DownloadS3File([FromRoute] string fileName)
     {
         S3Service s3Service = new S3Service();
@@ -122,7 +123,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpDelete("alibaba/{fileName}")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult DeleteAlibabaFile([FromRoute] string fileName)
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -141,7 +142,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpDelete("s3/{fileName}")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteS3File([FromRoute] string fileName)
     {
         S3Service s3Service = new S3Service();

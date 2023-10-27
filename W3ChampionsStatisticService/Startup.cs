@@ -128,14 +128,7 @@ public class Startup
         services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
         services.AddTransient<CheckIfBattleTagIsAdminFilter>();
         services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
-        services.AddTransient<HasPermissionsPermissionFilter>();
-        services.AddTransient<HasModerationPermissionFilter>();
-        services.AddTransient<HasQueuePermissionFilter>();
-        services.AddTransient<HasLogsPermissionFilter>();
-        services.AddTransient<HasMapsPermissionFilter>();
-        services.AddTransient<HasTournamentsPermissionFilter>();
-        services.AddTransient<HasContentPermissionFilter>();
-        services.AddTransient<HasProxiesPermissionFilter>();
+        services.AddTransient<HasPermissionFilter>();
 
         services.AddSingleton<MatchmakingServiceClient>();
         services.AddSingleton<UpdateServiceClient>();

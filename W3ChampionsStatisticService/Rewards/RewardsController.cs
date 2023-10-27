@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -22,7 +23,7 @@ public class RewardsController : ControllerBase
     }
 
     [HttpPut("portraits")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
     {
         await _portraitCommandHandler.UpsertSpecialPortraits(command);
@@ -30,7 +31,7 @@ public class RewardsController : ControllerBase
     }
 
     [HttpDelete("portraits")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeletePortraits([FromBody] PortraitsCommand command)
     {
         await _portraitCommandHandler.DeleteSpecialPortraits(command);
@@ -38,7 +39,7 @@ public class RewardsController : ControllerBase
     }
 
     [HttpGet("portrait-definitions")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> GetPortraitDefinitions()
     {
         var portraits = await _portraitCommandHandler.GetPortraitDefinitions();
@@ -46,7 +47,7 @@ public class RewardsController : ControllerBase
     }
 
     [HttpPost("portrait-definitions")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> CreatePortraits([FromBody] PortraitsDefinitionCommand command)
     {
         await _portraitCommandHandler.AddPortraitDefinitions(command);
@@ -54,7 +55,7 @@ public class RewardsController : ControllerBase
     }
 
     [HttpPut("portrait-definitions")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DefinePortraits([FromBody] PortraitsDefinitionCommand command)
     {
         await _portraitCommandHandler.UpdatePortraitDefinitions(command);
@@ -62,7 +63,7 @@ public class RewardsController : ControllerBase
     }
 
     [HttpDelete("portrait-definitions")]
-    [HasContentPermission]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> RemovePortraits([FromBody] PortraitsDefinitionCommand command)
     {
         await _portraitCommandHandler.RemovePortraitDefinitions(command);
