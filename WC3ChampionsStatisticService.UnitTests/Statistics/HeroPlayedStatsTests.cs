@@ -6,44 +6,43 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 
-namespace WC3ChampionsStatisticService.Tests.Statistics
+namespace WC3ChampionsStatisticService.Tests.Statistics;
+
+[TestFixture]
+public class HeroPlayedStatsTests : IntegrationTestBase
 {
-    [TestFixture]
-    public class HeroPlayedStatsTests : IntegrationTestBase
+    [Test]
+    public async Task HappyPath()
     {
-        [Test]
-        public async Task HappyPath()
+        var w3StatsRepo = new W3StatsRepo(MongoClient);
+        var heroPlayedModelHandler = new HeroPlayedStatHandler(w3StatsRepo);
+
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+
+        matchFinishedEvent.result.players[0].heroes = new List<Hero>
         {
-            var w3StatsRepo = new W3StatsRepo(MongoClient);
-            var heroPlayedModelHandler = new HeroPlayedStatHandler(w3StatsRepo);
+            new Hero { icon = "archmage"},
+            new Hero { icon = "mountainking"}
+        };
+        matchFinishedEvent.result.players[1].heroes = new List<Hero>
+        {
+            new Hero { icon = "mountainking"}
+        };
 
-            var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        await heroPlayedModelHandler.Update(matchFinishedEvent);
 
-            matchFinishedEvent.result.players[0].heroes = new List<Hero>
-            {
-                new Hero { icon = "archmage"},
-                new Hero { icon = "mountainking"}
-            };
-            matchFinishedEvent.result.players[1].heroes = new List<Hero>
-            {
-                new Hero { icon = "mountainking"}
-            };
+        var loadHeroPlayedStat = await w3StatsRepo.LoadHeroPlayedStat();
 
-            await heroPlayedModelHandler.Update(matchFinishedEvent);
+        // Overall Picks
+        Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "archmage").Count);
+        Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "mountainking").Count);
+        Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats[0].Count);
 
-            var loadHeroPlayedStat = await w3StatsRepo.LoadHeroPlayedStat();
+        // First Picks
+        Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "archmage").Count);
+        Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "mountainking").Count);
 
-            // Overall Picks
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "archmage").Count);
-            Assert.AreEqual(2, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats.Single(h => h.Icon == "mountainking").Count);
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[0].Stats[0].Count);
-
-            // First Picks
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "archmage").Count);
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[1].Stats.Single(h => h.Icon == "mountainking").Count);
-
-            // Second Picks
-            Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[2].Stats.Single(h => h.Icon == "mountainking").Count);
-        }
+        // Second Picks
+        Assert.AreEqual(1, loadHeroPlayedStat.Stats[0].OrderedPicks[2].Stats.Single(h => h.Icon == "mountainking").Count);
     }
 }
