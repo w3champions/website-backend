@@ -164,6 +164,13 @@ public class PlayersController : ControllerBase
         var player = await _playerAkaProvider.GetPlayerAkaDataAsync(battleTag.ToLower());
         return Ok(player);
     }
+
+    [HttpGet("{battleTag}/game-length-stats")]
+    public async Task<IActionResult> GetPlayerGameLengthStats([FromRoute] string battleTag, int season)
+    {
+        var lengthStats = await _playerRepository.LoadGameLengthForPlayerStats(battleTag, season);
+        return Ok(lengthStats);
+    }
 }
 
 public class ProfilePictureDto

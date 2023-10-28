@@ -35,6 +35,7 @@ using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.DistinctPlayersPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
+using W3ChampionsStatisticService.W3ChampionsStats.GameLengthForPlayerStatistics;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
@@ -160,6 +161,7 @@ public class Startup
             // General Stats
             services.AddReadModelService<GamesPerDayHandler>();
             services.AddReadModelService<GameLengthStatHandler>();
+            services.AddReadModelService<GameLengthForPlayerStatisticsHandler>();
             services.AddReadModelService<DistinctPlayersPerDayHandler>();
             services.AddReadModelService<PopularHoursStatHandler>();
             services.AddReadModelService<HeroPlayedStatHandler>();

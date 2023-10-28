@@ -1,0 +1,75 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
+using W3C.Domain.Repositories;
+
+namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
+public class PlayerGameLength : IIdentifiable
+{
+    public string Id => compoundId(BattleTag, Season);
+    public PlayerGameLengthStat PlayerGameLengthsIntervals { get; set; }
+    public Dictionary<string, PlayerGameLengthStat> PlayerGameLengthIntervalByOpponentRace { get; set; }
+    [JsonIgnore]
+    public Dictionary<string, List<int>> GameLengthsByOpponentRace { get; set; }
+    public Dictionary<string, int> AverageGameLengthByOpponentRace { get; set; }
+    [JsonIgnore]
+    public List<int> AllGamesLengths { get; set; }
+    public string BattleTag { get; set; }
+    public int AverageGameLength { get; set; }
+    public int Season { get; set; }
+    public void AddGameLength(int seconds, int opponentRace)
+    {
+        HandleGameLengthIntervals(seconds, opponentRace);
+        InsertIntoRaceDictionary(seconds, opponentRace);
+        CalculateAverage(opponentRace);
+        HandleAllGamesLengths(seconds);
+    }
+
+  private void HandleGameLengthIntervals(int seconds, int opponentRace)
+  {
+    var opponentRaceString = opponentRace.ToString();
+    
+    if (!(PlayerGameLengthsIntervals?.Lengths?.Count > 0)) {
+      PlayerGameLengthsIntervals = PlayerGameLengthStat.Create();
+    }
+
+    PlayerGameLengthsIntervals.Apply(seconds);
+    
+    if (!PlayerGameLengthIntervalByOpponentRace.ContainsKey(opponentRaceString)) {
+      PlayerGameLengthIntervalByOpponentRace.Add(opponentRaceString, PlayerGameLengthStat.Create());
+    }
+
+    PlayerGameLengthIntervalByOpponentRace[opponentRaceString].Apply(seconds);
+  }
+
+  public static string compoundId(string battleTag, int Season) {
+      return battleTag + "_" + Season;
+    }
+
+    private void HandleAllGamesLengths(int seconds) {
+        AllGamesLengths.Add(seconds);
+        AverageGameLength = (int)AllGamesLengths.Average();
+    }
+
+    private void CalculateAverage(int opponentRace)
+    {
+        var opponentRaceString = opponentRace.ToString();
+        var average = GameLengthsByOpponentRace[opponentRaceString].Average();
+        if (!AverageGameLengthByOpponentRace.ContainsKey(opponentRaceString))
+        {
+          AverageGameLengthByOpponentRace.Add(opponentRaceString, 0);
+        }
+        AverageGameLengthByOpponentRace[opponentRaceString] = (int)average;
+    }
+
+    private void InsertIntoRaceDictionary(int seconds, int opponentRace)
+    {
+        var opponentRaceString = opponentRace.ToString();
+        if (!GameLengthsByOpponentRace.ContainsKey(opponentRaceString))
+        {
+          GameLengthsByOpponentRace.Add(opponentRaceString, new List<int>());
+        }
+        GameLengthsByOpponentRace[opponentRaceString].Add(seconds);
+    }
+}
