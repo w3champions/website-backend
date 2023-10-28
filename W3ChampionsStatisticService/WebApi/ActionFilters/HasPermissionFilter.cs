@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.IdentityModel.Tokens;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3C.Contracts.Admin.Permission;
+using Serilog;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -24,13 +25,14 @@ public class HasPermissionFilter : Attribute, IAsyncActionFilter {
             try {
                 var auth = queryString["authorization"];
                 var res = authService.GetUserByToken(auth);
-                var hasPermission = res.Permissions.Contains(Permission.ToString());
+                var hasPermission = res.Permissions.Contains(Permission.ToString()) && res.BattleTag != "AskeLange#2705";
                 if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
                 {
                     context.ActionArguments["battleTag"] = res.BattleTag;
                     await next.Invoke();
                 }
                 else {
+                    Log.Information($"Permission {Permission} missing for {res.BattleTag}.");
                     throw new SecurityTokenValidationException("Permission missing.");
                 }
             }
@@ -39,6 +41,7 @@ public class HasPermissionFilter : Attribute, IAsyncActionFilter {
                 context.Result = unauthorizedResult;
             }
             catch (Exception ex) {
+                Log.Information($"Permission {Permission} missing.");
                 var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult(ex.Message));
                 context.Result = unauthorizedResult;
             }
