@@ -230,11 +230,10 @@ public class FriendsController : ControllerBase
         var friendlist = await _friendRepository.LoadFriendlist(battleTag);
         var battleTags = friendlist.Friends.ToArray();
         var personalSettings = await _personalSettingsRepository.LoadMany(battleTags);
-        var profilePictures = personalSettings.Select(s => s.ProfilePicture).ToList();
-        List<FriendDto> namesAndPictures = profilePictures.Select((p, index) =>
+        List<FriendDto> namesAndPictures = personalSettings.Select((x) =>
             new FriendDto {
-                BattleTag = battleTags[index],
-                ProfilePicture = p
+                BattleTag = x.Id,
+                ProfilePicture = x.ProfilePicture
             }
         ).ToList();
         return Ok(namesAndPictures);
