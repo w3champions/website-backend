@@ -8,7 +8,6 @@ namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 public class PlayerGameLength : IIdentifiable
 {
     public string Id => compoundId(BattleTag, Season);
-    public PlayerGameLengthStat PlayerGameLengthsIntervals { get; set; }
     public Dictionary<string, PlayerGameLengthStat> PlayerGameLengthIntervalByOpponentRace { get; set; }
     [JsonIgnore]
     public Dictionary<string, List<int>> GameLengthsByOpponentRace { get; set; }
@@ -27,17 +26,18 @@ public class PlayerGameLength : IIdentifiable
   {
     var opponentRaceString = opponentRace.ToString();
     
-    if (!(PlayerGameLengthsIntervals?.Lengths?.Count > 0)) {
-      PlayerGameLengthsIntervals = PlayerGameLengthStat.Create();
-    }
-
-    PlayerGameLengthsIntervals.Apply(seconds);
-    
     if (!PlayerGameLengthIntervalByOpponentRace.ContainsKey(opponentRaceString)) {
       PlayerGameLengthIntervalByOpponentRace.Add(opponentRaceString, PlayerGameLengthStat.Create());
     }
 
+    var raceTotalInt = (int) Race.Total;
+    var raceTotalString = raceTotalInt.ToString();
+    if (!PlayerGameLengthIntervalByOpponentRace.ContainsKey(raceTotalString)) {
+      PlayerGameLengthIntervalByOpponentRace.Add(raceTotalString, PlayerGameLengthStat.Create());
+    }
+
     PlayerGameLengthIntervalByOpponentRace[opponentRaceString].Apply(seconds);
+    PlayerGameLengthIntervalByOpponentRace[raceTotalString].Apply(seconds);
   }
 
   public static string compoundId(string battleTag, int Season) {

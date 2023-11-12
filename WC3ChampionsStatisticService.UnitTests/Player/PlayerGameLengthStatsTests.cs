@@ -52,7 +52,7 @@ public class PlayerGameLengthStatsTests : IntegrationTestBase
         Assert.False(gameLengthForPlayerStatistic1.GameLengthsByOpponentRace.ContainsKey(Race.HU.ToString("D")));
         
         // check intervals
-        Assert.AreEqual(4, gameLengthForPlayerStatistic1.PlayerGameLengthsIntervals.Lengths["0"]);
+        Assert.AreEqual(4, gameLengthForPlayerStatistic1.PlayerGameLengthIntervalByOpponentRace[Race.Total.ToString("D")].Lengths["0"]);
         Assert.AreEqual(2, gameLengthForPlayerStatistic1.PlayerGameLengthIntervalByOpponentRace[Race.NE.ToString("D")].Lengths["0"]);
         Assert.AreEqual(2, gameLengthForPlayerStatistic1.PlayerGameLengthIntervalByOpponentRace[Race.UD.ToString("D")].Lengths["0"]);
 

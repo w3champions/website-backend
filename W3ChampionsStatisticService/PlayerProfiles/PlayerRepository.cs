@@ -169,7 +169,6 @@ public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
         return new PlayerGameLength {
             BattleTag = battleTag,
             Season = season,
-            PlayerGameLengthsIntervals = PlayerGameLengthStat.Create(),
             PlayerGameLengthIntervalByOpponentRace = new Dictionary<string, PlayerGameLengthStat>(),
             GameLengthsByOpponentRace = new Dictionary<string, List<int>>(),
             AverageGameLengthByOpponentRace = new Dictionary<string, int>()
