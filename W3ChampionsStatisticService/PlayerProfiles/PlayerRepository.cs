@@ -12,6 +12,7 @@ using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
+using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
@@ -144,5 +145,37 @@ public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
     public Task UpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline)
     {
         return Upsert(mmrRpTimeline);
+    }
+    
+    public Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season)
+    {
+        var compoundId = PlayerGameLength.compoundId(battleTag, season);
+        return LoadFirst<PlayerGameLength>(compoundId);
+    }
+
+    public async Task<PlayerGameLength> LoadOrCreateGameLengthForPlayerStats(string battleTag, int season)
+    {
+        var mongoCollection = CreateCollection<PlayerGameLength>();
+        var compoundId = PlayerGameLength.compoundId(battleTag, season);
+
+        var gameLengthsForPlayer = await mongoCollection.Find(s =>
+                s.Id == compoundId)
+            .ToListAsync();
+
+        if (gameLengthsForPlayer.Count > 0) {
+          return gameLengthsForPlayer[0];
+        }
+
+        return new PlayerGameLength {
+            BattleTag = battleTag,
+            Season = season,
+            PlayerGameLengthIntervalByOpponentRace = new Dictionary<string, PlayerGameLengthStat>(),
+            GameLengthsByOpponentRace = new Dictionary<string, List<int>>(),
+            AverageGameLengthByOpponentRace = new Dictionary<string, int>()
+        };
+    }
+    public Task Save(PlayerGameLength gameLengthStats)
+    {
+        return Upsert(gameLengthStats);
     }
 }

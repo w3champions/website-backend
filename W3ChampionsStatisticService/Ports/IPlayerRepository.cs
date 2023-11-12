@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 
 namespace W3ChampionsStatisticService.Ports;
 
@@ -31,4 +32,7 @@ public interface IPlayerRepository
     Task UpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline);
     Task<List<PlayerOverview>> LoadOverviews(int season);
     Task<Dictionary<string, PlayerOverallStats>> GetPlayerBattleTagsAsync(ICollection<string> personalSettingIds);
+    Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season);
+    Task<PlayerGameLength> LoadOrCreateGameLengthForPlayerStats(string battleTag, int season);
+    Task Save(PlayerGameLength gameLengthStats);
 }
