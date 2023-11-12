@@ -34,16 +34,16 @@ public class PlayerGameLengthStatsTests : IntegrationTestBase
             + gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.UD.ToString("D")].Count;
 
         // check first element
-        Assert.AreEqual(5, gameLengthForPlayerStatistic1.AllGamesLengths[0]);
+        Assert.AreEqual(5, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.Total.ToString("D")][0]);
         
         // check count of lengths
-        Assert.AreEqual(4, gameLengthForPlayerStatistic1.AllGamesLengths.Count);
-        Assert.AreEqual(sumOpponentRaceLengths, gameLengthForPlayerStatistic1.AllGamesLengths.Count);
+        Assert.AreEqual(4, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.Total.ToString("D")].Count);
+        Assert.AreEqual(sumOpponentRaceLengths, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.Total.ToString("D")].Count);
         Assert.AreEqual(2, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.NE.ToString("D")].Count);
         Assert.AreEqual(2, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.UD.ToString("D")].Count);
         
         // check avg
-        Assert.AreEqual(10, gameLengthForPlayerStatistic1.AverageGameLength);
+        Assert.AreEqual(10, gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace[Race.Total.ToString("D")]);
         Assert.AreEqual(10, gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace[Race.NE.ToString("D")]);
         Assert.AreEqual(10, gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace[Race.UD.ToString("D")]);
         
@@ -61,9 +61,9 @@ public class PlayerGameLengthStatsTests : IntegrationTestBase
 
         // assure generated data for opponent as well
         var gameLengthForPlayerStatistic2 = await playerRepo.LoadGameLengthForPlayerStats("crazy#2", 5);
-        Assert.AreEqual(2, gameLengthForPlayerStatistic2.AllGamesLengths.Count);
-        Assert.AreEqual(15, gameLengthForPlayerStatistic2.AllGamesLengths[0]);
-        Assert.AreEqual(15, gameLengthForPlayerStatistic2.AverageGameLength);
+        Assert.AreEqual(2, gameLengthForPlayerStatistic2.GameLengthsByOpponentRace[Race.Total.ToString("D")].Count);
+        Assert.AreEqual(15, gameLengthForPlayerStatistic2.GameLengthsByOpponentRace[Race.Total.ToString("D")][0]);
+        Assert.AreEqual(15, gameLengthForPlayerStatistic2.AverageGameLengthByOpponentRace[Race.Total.ToString("D")]);
         Assert.AreEqual(2, gameLengthForPlayerStatistic2.GameLengthsByOpponentRace[Race.HU.ToString("D")].Count);
         Assert.AreEqual(15, gameLengthForPlayerStatistic2.AverageGameLengthByOpponentRace[Race.HU.ToString("D")]);
         Assert.False(gameLengthForPlayerStatistic2.AverageGameLengthByOpponentRace.ContainsKey(Race.UD.ToString("D")));

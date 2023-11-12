@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
@@ -13,10 +13,7 @@ public class PlayerGameLength : IIdentifiable
     [JsonIgnore]
     public Dictionary<string, List<int>> GameLengthsByOpponentRace { get; set; }
     public Dictionary<string, int> AverageGameLengthByOpponentRace { get; set; }
-    [JsonIgnore]
-    public List<int> AllGamesLengths { get; set; }
     public string BattleTag { get; set; }
-    public int AverageGameLength { get; set; }
     public int Season { get; set; }
     public void AddGameLength(int seconds, int opponentRace)
     {
@@ -48,8 +45,9 @@ public class PlayerGameLength : IIdentifiable
     }
 
     private void HandleAllGamesLengths(int seconds) {
-        AllGamesLengths.Add(seconds);
-        AverageGameLength = (int)AllGamesLengths.Average();
+        var total = (int) Race.Total;
+        InsertIntoRaceDictionary(seconds, total);
+        CalculateAverage(total);
     }
 
     private void CalculateAverage(int opponentRace)
