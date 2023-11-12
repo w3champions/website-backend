@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using W3ChampionsStatisticService.Ports;
 using System.ComponentModel.DataAnnotations;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.Friends;
 
@@ -15,14 +16,17 @@ public class FriendsController : ControllerBase
 {
     private readonly IFriendRepository _friendRepository;
     private readonly IPlayerRepository _playerRepository;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
     public FriendsController(
         IFriendRepository friendRepository,
-        IPlayerRepository playerRepository
+        IPlayerRepository playerRepository,
+        IPersonalSettingsRepository personalSettingsRepository
     )
     {
         _friendRepository = friendRepository;
         _playerRepository = playerRepository;
+        _personalSettingsRepository = personalSettingsRepository;
     }
 
     [HttpGet("{battleTag}")]
@@ -35,26 +39,26 @@ public class FriendsController : ControllerBase
 
     [HttpPost("{battleTag}/make-request")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> MakeFriendRequest(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> MakeFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
-            var player = await _playerRepository.LoadPlayerProfile(data.otherBattleTag);
+            var player = await _playerRepository.LoadPlayerProfile(otherBattleTag);
             if (player == null) {
-                return BadRequest($"Player {data.otherBattleTag} not found.");
+                return BadRequest($"Player {otherBattleTag} not found.");
             }
-            if (battleTag.ToLower() == data.otherBattleTag.ToLower()) {
+            if (battleTag.ToLower() == otherBattleTag.ToLower()) {
                 return BadRequest($"Cannot request yourself as a friend.");
             }
             var allRequestsMadeByPlayer = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
             if (allRequestsMadeByPlayer.Count() > 10) {
                 return BadRequest($"You have too many pending friend requests.");
             }
-            var request = new FriendRequest(battleTag, data.otherBattleTag);
-            var otherUserFriendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
-            await canMakeFriendRequest(otherUserFriendlist, request);
+            var request = new FriendRequest(battleTag, otherBattleTag);
+            var otherUserFriendlist = await _friendRepository.LoadFriendlist(otherBattleTag);
+            await CanMakeFriendRequest(otherUserFriendlist, request);
             await _friendRepository.CreateFriendRequest(request);
 
-            return Ok($"Friend request sent to {data.otherBattleTag}!");
+            return Ok($"Friend request sent to {otherBattleTag}!");
         } catch (ValidationException ex) {
             return BadRequest(ex.Message);
         } catch (Exception ex) {
@@ -64,12 +68,12 @@ public class FriendsController : ControllerBase
 
     [HttpPost("{battleTag}/accept-request")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> AcceptFriendRequest(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> AcceptFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
             var currentUserFriendlist = await _friendRepository.LoadFriendlist(battleTag);
-            var otherUserFriendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
-            var request = await _friendRepository.LoadFriendRequest(data.otherBattleTag, battleTag);
+            var otherUserFriendlist = await _friendRepository.LoadFriendlist(otherBattleTag);
+            var request = await _friendRepository.LoadFriendRequest(otherBattleTag, battleTag);
 
             if (request == null) {
                 return BadRequest("Could not find a friend request to accept.");
@@ -77,8 +81,8 @@ public class FriendsController : ControllerBase
 
             await _friendRepository.DeleteFriendRequest(request);
 
-            if (!currentUserFriendlist.Friends.Contains(data.otherBattleTag)) {
-                currentUserFriendlist.Friends.Add(data.otherBattleTag);
+            if (!currentUserFriendlist.Friends.Contains(otherBattleTag)) {
+                currentUserFriendlist.Friends.Add(otherBattleTag);
             }
             await _friendRepository.UpsertFriendlist(currentUserFriendlist);
 
@@ -86,13 +90,13 @@ public class FriendsController : ControllerBase
                 otherUserFriendlist.Friends.Add(battleTag);
             }
 
-            var reciprocalRequest = await _friendRepository.LoadFriendRequest(battleTag, data.otherBattleTag);
+            var reciprocalRequest = await _friendRepository.LoadFriendRequest(battleTag, otherBattleTag);
             if (reciprocalRequest != null) {
                 await _friendRepository.DeleteFriendRequest(reciprocalRequest);
             }
 
             await _friendRepository.UpsertFriendlist(otherUserFriendlist);
-            return Ok($"Friend request from {data.otherBattleTag} accepted!");
+            return Ok($"Friend request from {otherBattleTag} accepted!");
         } catch (Exception ex) {
             return StatusCode(500, ex.Message);
         }
@@ -100,10 +104,10 @@ public class FriendsController : ControllerBase
 
     [HttpPost("{battleTag}/deny-request")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> DenyFriendRequest(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> DenyFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
-            var request = await _friendRepository.LoadFriendRequest(data.otherBattleTag, battleTag);
+            var request = await _friendRepository.LoadFriendRequest(otherBattleTag, battleTag);
 
             if (request == null) {
                 return BadRequest("Could not find a friend request to deny.");
@@ -111,7 +115,7 @@ public class FriendsController : ControllerBase
 
             await _friendRepository.DeleteFriendRequest(request);
 
-            return Ok($"Friend request from {data.otherBattleTag} denied!");
+            return Ok($"Friend request from {otherBattleTag} denied!");
         } catch (Exception ex) {
             return StatusCode(500, ex.Message);
         }
@@ -119,24 +123,24 @@ public class FriendsController : ControllerBase
 
     [HttpPost("{battleTag}/block-request")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> BlockRequest(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> BlockRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
             var friendlist = await _friendRepository.LoadFriendlist(battleTag);
-            canBlock(friendlist, data.otherBattleTag);
+            CanBlock(friendlist, otherBattleTag);
 
-            var request = await _friendRepository.LoadFriendRequest(data.otherBattleTag, battleTag);
-            // var itemToRemove = friendlist.ReceivedFriendRequests.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+            var request = await _friendRepository.LoadFriendRequest(otherBattleTag, battleTag);
+            // var itemToRemove = friendlist.ReceivedFriendRequests.SingleOrDefault(bTag => bTag == otherBattleTag);
             if (request == null) {
                 return BadRequest("Could not find a friend request to block.");
             }
 
             await _friendRepository.DeleteFriendRequest(request);
 
-            friendlist.BlockedBattleTags.Add(data.otherBattleTag);
+            friendlist.BlockedBattleTags.Add(otherBattleTag);
             await _friendRepository.UpsertFriendlist(friendlist);
 
-            return Ok($"Friend requests from {data.otherBattleTag} blocked!");
+            return Ok($"Friend requests from {otherBattleTag} blocked!");
         } catch (Exception ex) {
             return StatusCode(500, ex.Message);
         }
@@ -144,24 +148,24 @@ public class FriendsController : ControllerBase
 
     [HttpPost("{battleTag}/remove-friend")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> RemoveFriend(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> RemoveFriend(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
             var currentUserFriendlist = await _friendRepository.LoadFriendlist(battleTag);
-            var friendRelation1 = currentUserFriendlist.Friends.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+            var friendRelation1 = currentUserFriendlist.Friends.SingleOrDefault(bTag => bTag == otherBattleTag);
             if (friendRelation1 != null) {
                 currentUserFriendlist.Friends.Remove(friendRelation1);
             }
             await _friendRepository.UpsertFriendlist(currentUserFriendlist);
 
-            var otherUserFriendlist = await _friendRepository.LoadFriendlist(data.otherBattleTag);
+            var otherUserFriendlist = await _friendRepository.LoadFriendlist(otherBattleTag);
             var friendRelation2 = otherUserFriendlist.Friends.SingleOrDefault(bTag => bTag == battleTag);
             if (friendRelation2 != null) {
                 otherUserFriendlist.Friends.Remove(friendRelation2);
             }
             await _friendRepository.UpsertFriendlist(otherUserFriendlist);
 
-            return Ok($"Removed {data.otherBattleTag} from friends.");
+            return Ok($"Removed {otherBattleTag} from friends.");
         } catch (Exception ex) {
             return StatusCode(500, ex.Message);
         }
@@ -169,35 +173,35 @@ public class FriendsController : ControllerBase
 
     [HttpPost("{battleTag}/unblock-request")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> UnblockRequest(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> UnblockRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
             var friendlist = await _friendRepository.LoadFriendlist(battleTag);
-            var itemToRemove = friendlist.BlockedBattleTags.SingleOrDefault(bTag => bTag == data.otherBattleTag);
+            var itemToRemove = friendlist.BlockedBattleTags.SingleOrDefault(bTag => bTag == otherBattleTag);
             if (itemToRemove != null) {
                 friendlist.BlockedBattleTags.Remove(itemToRemove);
             }
             await _friendRepository.UpsertFriendlist(friendlist);
 
-            return Ok($"Friend requests from {data.otherBattleTag} unblocked!");
+            return Ok($"Friend requests from {otherBattleTag} unblocked!");
         } catch (Exception ex) {
             return StatusCode(500, ex.Message);
         }
     }
 
-    [HttpPost("{battleTag}/delete-request")]
+    [HttpDelete("{battleTag}/delete-request")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> DeleteOutgoingFriendRequest(string battleTag, [FromBody] FriendData data)
+    public async Task<IActionResult> DeleteOutgoingFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
-            var request = await _friendRepository.LoadFriendRequest(battleTag, data.otherBattleTag);
+            var request = await _friendRepository.LoadFriendRequest(battleTag, otherBattleTag);
             if (request == null) {
                 return BadRequest("Could not find a friend request to delete.");
             }
 
             await _friendRepository.DeleteFriendRequest(request);
 
-            return Ok($"Friend request to {data.otherBattleTag} deleted!");
+            return Ok($"Friend request to {otherBattleTag} deleted!");
         } catch (Exception ex) {
             return StatusCode(500, ex.Message);
         }
@@ -205,7 +209,7 @@ public class FriendsController : ControllerBase
 
     [HttpGet("{battleTag}/received-requests")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> LoadReceivedFriendRequests(string battleTag, string sender)
+    public async Task<IActionResult> LoadReceivedFriendRequests(string battleTag)
     {
         var friendlist = await _friendRepository.LoadAllFriendRequestsSentToPlayer(battleTag);
         return Ok(friendlist);
@@ -213,13 +217,30 @@ public class FriendsController : ControllerBase
 
     [HttpGet("{battleTag}/sent-requests")]
     [CheckIfBattleTagBelongsToAuthCode]
-    public async Task<IActionResult> LoadSentFriendRequests(string battleTag, string sender)
+    public async Task<IActionResult> LoadSentFriendRequests(string battleTag)
     {
         var friendlist = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
         return Ok(friendlist);
     }
 
-    private async Task canMakeFriendRequest(Friendlist friendlist, FriendRequest req) {
+    [HttpGet("{battleTag}/friends")]
+    [CheckIfBattleTagBelongsToAuthCode]
+    public async Task<IActionResult> LoadFriends(string battleTag)
+    {
+        var friendlist = await _friendRepository.LoadFriendlist(battleTag);
+        var battleTags = friendlist.Friends.ToArray();
+        var personalSettings = await _personalSettingsRepository.LoadMany(battleTags);
+        var profilePictures = personalSettings.Select(s => s.ProfilePicture).ToList();
+        List<FriendDto> namesAndPictures = profilePictures.Select((p, index) =>
+            new FriendDto {
+                BattleTag = battleTags[index],
+                ProfilePicture = p
+            }
+        ).ToList();
+        return Ok(namesAndPictures);
+    }
+
+    private async Task CanMakeFriendRequest(Friendlist friendlist, FriendRequest req) {
         if (friendlist.BlockAllRequests || friendlist.BlockedBattleTags.Contains(req.Sender)) {
             throw new ValidationException("This player is not accepting friend requests.");
         }
@@ -233,7 +254,7 @@ public class FriendsController : ControllerBase
         }
     }
 
-    private void canBlock(Friendlist friendlist, string battleTag) {
+    private static void CanBlock(Friendlist friendlist, string battleTag) {
         if (friendlist.BlockedBattleTags.Contains(battleTag)) {
             throw new ValidationException("You have already blocked this player.");
         }
@@ -243,7 +264,8 @@ public class FriendsController : ControllerBase
     }
 }
 
-public class FriendData
+public class FriendDto
 {
-    public string otherBattleTag { get; set; }
+    public string BattleTag { get; set; }
+    public ProfilePicture ProfilePicture { get; set; }
 }
