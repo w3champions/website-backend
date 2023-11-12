@@ -30,13 +30,20 @@ public class PersonalSettingsController : ControllerBase
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPersonalSetting(string battleTag)
     {
-        var setting = await _personalSettingsRepository.Load(battleTag);
-        if (setting == null)
+        try
         {
-            var player = await _playerRepository.LoadPlayerProfile(battleTag);
-            return Ok(new PersonalSetting(battleTag) { RaceWins = player });
+            var setting = await _personalSettingsRepository.Load(battleTag);
+            if (setting == null)
+            {
+                var player = await _playerRepository.LoadPlayerProfile(battleTag);
+                return Ok(new PersonalSetting(battleTag) { RaceWins = player });
+            }
+            return Ok(setting);
         }
-        return Ok(setting);
+        catch
+        {
+            return StatusCode(503, "Failed to load personal settings.");
+        }
     }
 
     [HttpGet("{commaSeparatedBattleTags}/many")]

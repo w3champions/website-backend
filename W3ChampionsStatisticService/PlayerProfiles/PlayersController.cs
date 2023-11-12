@@ -60,7 +60,7 @@ public class PlayersController : ControllerBase
 
         if (player == null) {
             if (authorization == null) {
-                return NotFound("Player not found.");
+                return NotFound($"Player {battleTag} not found.");
             } else {
                 try {
                     _authenticationService.GetUserByToken(authorization, false);
