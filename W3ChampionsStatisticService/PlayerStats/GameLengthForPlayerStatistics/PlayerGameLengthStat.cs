@@ -12,8 +12,8 @@ public class PlayerGameLengthStat
 
     public void Record(int duration)
     {
-        var groupInterval = 30;
-        var maxGroupValue = 120;
+        var groupInterval = 60;
+        var maxGroupValue = 60;
         var group = (int)duration / groupInterval;
         group = group > maxGroupValue ? maxGroupValue : group;
         group*=30;
