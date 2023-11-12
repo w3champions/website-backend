@@ -29,7 +29,9 @@ public class PersonalSettingsRepository : MongoDbRepositoryBase, IPersonalSettin
         var playersStatsCollection = CreateCollection<PlayerOverallStats>();
         var playerStats = (await playersStatsCollection.FindAsync(x => x.BattleTag == battletag)).FirstOrDefault();
 
-        personalSettings.RaceWins = playerStats;
+        if (playerStats != null) {
+            personalSettings.RaceWins = playerStats;
+        }
 
         return personalSettings;
     }
