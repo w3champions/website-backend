@@ -6,7 +6,7 @@ namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 
 public class PlayerGameLengthStat
 {
-    // the dictionary key is the interval start: 0, 30, 60, 90, 120..
+    // the dictionary key is the interval start: 0, 60, 120.. (according to the groupInterval definition)
     // the dictionary value is the number of games
     public Dictionary<string, int> Lengths { get; set; }
 
