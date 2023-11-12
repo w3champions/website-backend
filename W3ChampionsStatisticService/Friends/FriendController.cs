@@ -211,16 +211,16 @@ public class FriendsController : ControllerBase
     [CheckIfBattleTagBelongsToAuthCode]
     public async Task<IActionResult> LoadReceivedFriendRequests(string battleTag)
     {
-        var friendlist = await _friendRepository.LoadAllFriendRequestsSentToPlayer(battleTag);
-        return Ok(friendlist);
+        var requests = await _friendRepository.LoadAllFriendRequestsSentToPlayer(battleTag);
+        return Ok(requests);
     }
 
     [HttpGet("{battleTag}/sent-requests")]
     [CheckIfBattleTagBelongsToAuthCode]
     public async Task<IActionResult> LoadSentFriendRequests(string battleTag)
     {
-        var friendlist = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
-        return Ok(friendlist);
+        var requests = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
+        return Ok(requests);
     }
 
     [HttpGet("{battleTag}/friends")]
