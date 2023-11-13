@@ -26,6 +26,7 @@ using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using W3ChampionsStatisticService.PlayerStats;
+using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
