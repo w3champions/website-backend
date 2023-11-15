@@ -14,6 +14,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
+using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
@@ -159,5 +160,19 @@ public class W3StatsRepo : MongoDbRepositoryBase, IW3StatsRepo
     public Task<List<MapsPerSeason>> LoadMatchesOnMap()
     {
         return LoadAll<MapsPerSeason>();
+    }
+
+    Task Save(MatchupLength matchupLength) 
+    {
+        return Upsert(matchupLength);
+    }
+    async Task<MatchupLength> LoadMatchupLength(string matchupId, int minMmr, int maxMmr)
+    {
+        var mongoCollection = CreateCollection<MatchupLength>();
+
+        var stats = await mongoCollection.Find(s => s.Id == matchupId)
+            .ToListAsync();
+
+        return stats[0];
     }
 }
