@@ -24,10 +24,10 @@ public class MatchupLengthsHandler : IReadModelHandler
         GameMode mode = nextEvent.match.gameMode;
         if (nextEvent.WasFakeEvent || mode != GameMode.GM_1v1) return;
         var players = nextEvent.match.players;
-        var race1 = players[0].race
+        var race1 = players[0].race;
+        var race2 = players[1].race;
 
         for (var i = 0; i < 2; i++) {
-            var players = nextEvent.match.players;
             var player = players[i];
             var opponent = i == 0 ? players[1] : players[0];
             var opponentRace = opponent.race;
