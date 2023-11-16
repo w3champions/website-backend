@@ -52,8 +52,12 @@ public class PlayerGameLength : IIdentifiable
 
     private void CalculateAverage(int opponentRace)
     {
+        var minLength = 120;
         var opponentRaceString = opponentRace.ToString();
-        var average = GameLengthsByOpponentRace[opponentRaceString].Average();
+        // short games are stored, but they are ignored to calculate average, and they are not shown in chart
+        var raceLengths = GameLengthsByOpponentRace[opponentRaceString];
+        var ignoredShortGames = raceLengths.Where(length => length >= minLength).ToList();
+        var average = ignoredShortGames.Count > 0 ? ignoredShortGames.Average() : 0;
         if (!AverageGameLengthByOpponentRace.ContainsKey(opponentRaceString))
         {
           AverageGameLengthByOpponentRace.Add(opponentRaceString, 0);
