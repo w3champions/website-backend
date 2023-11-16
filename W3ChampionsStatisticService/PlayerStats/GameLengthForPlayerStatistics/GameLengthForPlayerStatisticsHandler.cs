@@ -19,18 +19,21 @@ public class GameLengthForPlayerStatisticsHandler : IReadModelHandler
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {
-        if (nextEvent.WasFakeEvent || nextEvent.match.gameMode != GameMode.GM_1v1) return;
+        var match = nextEvent.match;
+        
+        if (nextEvent.WasFakeEvent || match.gameMode != GameMode.GM_1v1) return;
 
+        var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime);
+        var startTime = DateTimeOffset.FromUnixTimeMilliseconds(match.startTime);
+        var duration = endTime - startTime;
+        var season = match.season;
+        
         for (var i = 0; i < 2; i++) {
-            var players = nextEvent.match.players;
+            var players = match.players;
             var player = players[i];
             var opponent = i == 0 ? players[1] : players[0];
             var opponentRace = opponent.race;
             var battleTag = player.battleTag;
-            var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
-            var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
-            var duration = endTime - startTime;
-            var season = nextEvent.match.season;
             PlayerGameLength gameLengthStats = await _playerRepo.LoadOrCreateGameLengthForPlayerStats(battleTag, season);
             gameLengthStats.AddGameLength((int)duration.TotalSeconds, (int)opponentRace);
             await _playerRepo.Save(gameLengthStats);
