@@ -20,25 +20,23 @@ public class MatchupLengthsHandler : IReadModelHandler
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {
-        if (nextEvent.WasFakeEvent) return;
-        GameMode mode = nextEvent.match.gameMode;
-        if (nextEvent.WasFakeEvent || mode != GameMode.GM_1v1) return;
-        var players = nextEvent.match.players;
-        var race1 = players[0].race;
-        var race2 = players[1].race;
+        var match = nextEvent.match;
+        GameMode mode = match.gameMode;
+        var isFakeEvent = nextEvent.WasFakeEvent;
+        var isNot1v1 = mode != GameMode.GM_1v1;
+        if (isFakeEvent || isNot1v1) return;
 
-        for (var i = 0; i < 2; i++) {
-            var player = players[i];
-            var opponent = i == 0 ? players[1] : players[0];
-            var opponentRace = opponent.race;
-            var battleTag = player.battleTag;
-            var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
-            var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
-            var duration = endTime - startTime;
-            var season = nextEvent.match.season;
-            PlayerGameLength gameLengthStats = await _playerRepo.LoadOrCreateGameLengthForPlayerStats(battleTag, season);
-            gameLengthStats.AddGameLength((int)duration.TotalSeconds, (int)opponentRace);
-            await _playerRepo.Save(gameLengthStats);
-        }
+        var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime);
+        var startTime = DateTimeOffset.FromUnixTimeMilliseconds(match.startTime);
+        var duration = endTime - startTime;
+        var durationSeconds = (int) duration.TotalSeconds;
+        var players = match.players;
+        var race1 = players[0].race.ToString();
+        var race2 = players[1].race.ToString();
+        var season = match.season;
+        var matchupLength = await _w3Stats.LoadMatchupLengthOrCreate(race1, race2, season);
+        var mmr = (int) Math.Max(players[0].mmr.rating, players[1].mmr.rating);
+        matchupLength.Apply(durationSeconds, mmr);
+        await _w3Stats.Save(matchupLength);
     }
 }

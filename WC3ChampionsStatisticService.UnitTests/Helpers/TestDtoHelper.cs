@@ -6,6 +6,7 @@ using MongoDB.Bson;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Contracts.Matchmaking;
+using W3C.Contracts.GameObjects;
 
 namespace WC3ChampionsStatisticService.Tests;
 
@@ -281,5 +282,29 @@ public static class TestDtoHelper
         fakePatch2.StartDate = patch2_date;
 
         return new List<Patch>() { fakePatch, fakePatch2 };
+    }
+
+    public static MatchFinishedEvent CreateMatchFinishedEvent(
+        string btag1,
+        string btag2,
+        int season,
+        long startTime,
+        long endTime,
+        Race race1,
+        Race race2,
+        int mmr1 = 1000,
+        int mmr2 = 1000)
+    {
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent.match.players[0].battleTag = btag1;
+        matchFinishedEvent.match.players[1].battleTag = btag2;
+        matchFinishedEvent.match.players[0].race = race1;
+        matchFinishedEvent.match.players[1].race = race2;
+        matchFinishedEvent.match.startTime = startTime;
+        matchFinishedEvent.match.endTime = endTime;
+        matchFinishedEvent.match.season = season;
+        matchFinishedEvent.match.players[0].mmr.rating = mmr1;
+        matchFinishedEvent.match.players[1].mmr.rating = mmr2;
+        return matchFinishedEvent;
     }
 }

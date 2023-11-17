@@ -162,17 +162,24 @@ public class W3StatsRepo : MongoDbRepositoryBase, IW3StatsRepo
         return LoadAll<MapsPerSeason>();
     }
 
-    Task Save(MatchupLength matchupLength) 
+    public Task Save(MatchupLength matchupLength) 
     {
         return Upsert(matchupLength);
     }
-    async Task<MatchupLength> LoadMatchupLength(string matchupId, int minMmr, int maxMmr)
+    public async Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, int season)
     {
         var mongoCollection = CreateCollection<MatchupLength>();
+        var matchupId = MatchupLength.CompoundNormalizedId(race1, race2, season);
 
-        var stats = await mongoCollection.Find(s => s.Id == matchupId)
+        var stats = await mongoCollection
+            .Find(s => s.Id == matchupId)
             .ToListAsync();
+        
+        if (stats.Count > 0)
+        {
+            return stats[0];
+        }
 
-        return stats[0];
+        return MatchupLength.Create(race1, race2, season);
     }
 }

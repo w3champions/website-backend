@@ -7,10 +7,10 @@ using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
+using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
-using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
 namespace W3ChampionsStatisticService.Ports;
 
@@ -40,5 +40,5 @@ public interface IW3StatsRepo
     Task Save(MapsPerSeason mapsPerSeason);
     Task<List<MapsPerSeason>> LoadMatchesOnMap();
     Task Save(MatchupLength matchupLength);
-    Task<MatchupLength> LoadMatchupLength(string matchupId);
+    Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, int season);
 }
