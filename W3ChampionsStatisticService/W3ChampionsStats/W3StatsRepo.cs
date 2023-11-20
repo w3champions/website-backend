@@ -166,7 +166,7 @@ public class W3StatsRepo : MongoDbRepositoryBase, IW3StatsRepo
     {
         return Upsert(matchupLength);
     }
-    public async Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, int season)
+    public async Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, string season)
     {
         var mongoCollection = CreateCollection<MatchupLength>();
         var matchupId = MatchupLength.CompoundNormalizedId(race1, race2, season);

@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using System.Linq;
+using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
@@ -54,6 +55,13 @@ public class W3CStatsController : ControllerBase
     {
         var stats = await _w3StatsRepo.LoadAllGameLengths();
         return Ok(stats);
+    }
+
+    [HttpGet("matchup-lengths")]
+    public async Task<IActionResult> GetMatchupLengths(Race race1, Race race2, string season)
+    {
+        var matchupLength = await _w3StatsRepo.LoadMatchupLengthOrCreate(race1.ToString(), race2.ToString(), season);
+        return Ok(matchupLength);
     }
 
     [HttpGet("popular-hours")]

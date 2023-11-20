@@ -40,5 +40,5 @@ public interface IW3StatsRepo
     Task Save(MapsPerSeason mapsPerSeason);
     Task<List<MapsPerSeason>> LoadMatchesOnMap();
     Task Save(MatchupLength matchupLength);
-    Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, int season);
+    Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, string season);
 }

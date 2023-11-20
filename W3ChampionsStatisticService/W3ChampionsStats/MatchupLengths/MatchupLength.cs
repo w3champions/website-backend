@@ -9,12 +9,12 @@ public class MatchupLength : IIdentifiable
     public string Id => CompoundNormalizedId(Race1, Race2, Season);
     public string Race1 { get; set; }
     public string Race2 { get; set; }
-    public int Season { get; set; }
+    public string Season { get; set; }
     public Dictionary<string, List<GameLength>> LengthsByMmrRange { get; set; }
 
     private static string ALL_MMR = "all";
 
-    public static string CompoundNormalizedId(string race1, string race2, int season) {
+    public static string CompoundNormalizedId(string race1, string race2, string season) {
       var races = new List<string>{ race1.ToLower(), race2.ToLower()};
       races.Sort();
       return races[0] + "_vs_" + races[1] + "_" + season;
@@ -51,7 +51,7 @@ public class MatchupLength : IIdentifiable
         Record(duration, mmr);
     }
 
-    public static MatchupLength Create(string race1, string race2, int season)
+    public static MatchupLength Create(string race1, string race2, string season)
     {
         return new MatchupLength
         {
