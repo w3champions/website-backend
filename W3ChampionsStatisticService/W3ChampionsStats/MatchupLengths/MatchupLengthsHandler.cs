@@ -47,7 +47,7 @@ public class MatchupLengthsHandler : IReadModelHandler
         await _w3StatsRepo.Save(matchupLength);
 
         // record for all season
-        var matchupLengthAllSeasons = await _w3StatsRepo.LoadMatchupLengthOrCreate(race1.ToString(), race2.ToString(), season.ToString());
+        var matchupLengthAllSeasons = await _w3StatsRepo.LoadMatchupLengthOrCreate(race1.ToString(), race2.ToString(), "all");
         matchupLengthAllSeasons.Apply(durationSeconds, mmr);
         await _w3StatsRepo.Save(matchupLengthAllSeasons);
     }
