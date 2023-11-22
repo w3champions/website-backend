@@ -5,6 +5,7 @@ public enum GameMode
     Undefined = 0,
     GM_1v1 = 1,
     GM_2v2 = 2,
+    GM_3v3 = 3,
     GM_4v4 = 4,
     FFA = 5,
     GM_2v2_AT = 6,
