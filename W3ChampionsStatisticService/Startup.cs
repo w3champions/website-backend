@@ -49,6 +49,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.StaticFiles;
 using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Admin.Logs;
+using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
 namespace W3ChampionsStatisticService;
 
@@ -157,11 +158,12 @@ public class Startup
             services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
             services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
             services.AddReadModelService<PlayerMmrRpTimelineHandler>();
+            services.AddReadModelService<GameLengthForPlayerStatisticsHandler>();
 
             // General Stats
             services.AddReadModelService<GamesPerDayHandler>();
             services.AddReadModelService<GameLengthStatHandler>();
-            services.AddReadModelService<GameLengthForPlayerStatisticsHandler>();
+            services.AddReadModelService<MatchupLengthsHandler>();
             services.AddReadModelService<DistinctPlayersPerDayHandler>();
             services.AddReadModelService<PopularHoursStatHandler>();
             services.AddReadModelService<HeroPlayedStatHandler>();

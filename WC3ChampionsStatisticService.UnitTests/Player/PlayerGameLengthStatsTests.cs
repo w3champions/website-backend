@@ -17,16 +17,16 @@ public class PlayerGameLengthStatsTests : IntegrationTestBase
         var playerRepo = new PlayerRepository(MongoClient);
         var gameLengthForPlayerStatHandler = new GameLengthForPlayerStatisticsHandler(playerRepo);
 
-        var mfe1 = CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448821000, Race.HU, Race.NE);
-        var mfe2 = CreateMatchFinishedEvent("mad#1", "crazy#2", 5, 1699448631000, 1699448821000, Race.HU, Race.NE);
-        var mfe3 = CreateMatchFinishedEvent("mad#1", "crazy#2", 5, 1699448631000, 1699448821000, Race.HU, Race.UD);
-        var mfe4 = CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448821000, Race.HU, Race.UD);
+        var mfe1 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448821000, Race.HU, Race.NE);
+        var mfe2 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#2", 5, 1699448631000, 1699448821000, Race.HU, Race.NE);
+        var mfe3 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#2", 5, 1699448631000, 1699448821000, Race.HU, Race.UD);
+        var mfe4 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448821000, Race.HU, Race.UD);
 
         // short games with less than 120 seconds
         // shouldn't alter the final average
-        var mfe5 = CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448631000, Race.HU, Race.NE);
-        var mfe6 = CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448631000, Race.HU, Race.NE);
-        var mfe7 = CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448631000, Race.HU, Race.NE);
+        var mfe5 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448631000, Race.HU, Race.NE);
+        var mfe6 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448631000, Race.HU, Race.NE);
+        var mfe7 = TestDtoHelper.CreateMatchFinishedEvent("mad#1", "crazy#1", 5, 1699448621000, 1699448631000, Race.HU, Race.NE);
 
         await gameLengthForPlayerStatHandler.Update(mfe1);
         await gameLengthForPlayerStatHandler.Update(mfe2);
@@ -77,25 +77,5 @@ public class PlayerGameLengthStatsTests : IntegrationTestBase
         Assert.AreEqual(190, gameLengthForPlayerStatistic2.AverageGameLengthByOpponentRace[Race.HU.ToString("D")]);
         Assert.False(gameLengthForPlayerStatistic2.AverageGameLengthByOpponentRace.ContainsKey(Race.UD.ToString("D")));
         Assert.False(gameLengthForPlayerStatistic2.GameLengthsByOpponentRace.ContainsKey(Race.NE.ToString("D")));
-    }
-
-    private MatchFinishedEvent CreateMatchFinishedEvent(
-        string btag1,
-        string btag2,
-        int season,
-        long startTime,
-        long endTime,
-        Race race1,
-        Race race2)
-    {
-        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
-        matchFinishedEvent.match.players[0].battleTag = btag1;
-        matchFinishedEvent.match.players[1].battleTag = btag2;
-        matchFinishedEvent.match.players[0].race = race1;
-        matchFinishedEvent.match.players[1].race = race2;
-        matchFinishedEvent.match.startTime = startTime;
-        matchFinishedEvent.match.endTime = endTime;
-        matchFinishedEvent.match.season = season;
-        return matchFinishedEvent;
     }
 }
