@@ -28,8 +28,8 @@ public class MatchesController : ControllerBase
         GameMode gameMode = GameMode.Undefined)
     {
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(16, gameMode, offset, pageSize);
-        var count = await _matchRepository.Count(16, gameMode);
+        var matches = await _matchRepository.Load(17, gameMode, offset, pageSize);
+        var count = await _matchRepository.Count(17, gameMode);
         return Ok(new { matches, count });
     }
 
