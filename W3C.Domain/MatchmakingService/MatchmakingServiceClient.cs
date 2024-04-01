@@ -335,6 +335,7 @@ public class MatchmakingServiceClient
         if (updates.ShowWinnerTimeHours != null) {
             data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
         }
+        data.maxPlayers = updates.MaxPlayers;
         data.matcherinoUrl = updates.MatcherinoUrl;
         data.secret = AdminSecret;
 
@@ -499,4 +500,5 @@ public class TournamentUpdateBody
     public int? ReadyTimeSeconds { get; set; }
     public int? VetoTimeSeconds { get; set; }
     public int? ShowWinnerTimeHours { get; set; }
+    public int MaxPlayers { get; set; }
 }

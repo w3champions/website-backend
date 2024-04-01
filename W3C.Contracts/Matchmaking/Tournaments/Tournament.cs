@@ -26,4 +26,5 @@ public class Tournament
     public int? ReadyTimeSeconds { get; set; }
     public int? VetoTimeSeconds { get; set; }
     public int? ShowWinnerTimeHours { get; set; }
+    public int MaxPlayers { get; set; }
 }
