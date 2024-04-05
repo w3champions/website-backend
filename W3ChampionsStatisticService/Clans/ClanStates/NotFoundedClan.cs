@@ -14,7 +14,7 @@ public class NotFoundedClan : ClanState
     {
         FoundingFathers.Add(membership.BattleTag);
 
-        if (FoundingFathers.Count >= 7)
+        if (FoundingFathers.Count >= 2)
         {
             return new FoundedClan(FoundingFathers, ChiefTain);
         }
