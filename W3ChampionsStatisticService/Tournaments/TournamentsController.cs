@@ -47,6 +47,13 @@ public class TournamentsController : ControllerBase
         return Ok(tournament);
     }
 
+    [HttpGet("flo-nodes")]
+    public async Task<IActionResult> GetEnabledFloNodes()
+    {
+        var enabledNodes = await _matchmakingServiceRepository.GetEnabledFloNodes();
+        return Ok(enabledNodes);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTournament(string id)
     {
