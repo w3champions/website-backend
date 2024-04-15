@@ -26,5 +26,13 @@ public class Tournament
     public int? ReadyTimeSeconds { get; set; }
     public int? VetoTimeSeconds { get; set; }
     public int? ShowWinnerTimeHours { get; set; }
-    public int MaxPlayers { get; set; }
+    public int? MaxPlayers { get; set; }
+    public TournamentFloNode FloNode { get; set; }
+    public int? FloNodeMaxPing { get; set; }
+}
+
+public class TournamentFloNode
+{
+    public string Name { get; set; }
+    public int? Id { get; set; }
 }

@@ -184,6 +184,17 @@ public class MatchmakingServiceClient
         }
     }
 
+    public async Task<List<TournamentFloNode>> GetEnabledFloNodes() {
+        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments/flo-nodes");
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<List<TournamentFloNode>>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
     public async Task<TournamentsResponse> GetTournaments()
     {
         var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments");
@@ -336,6 +347,8 @@ public class MatchmakingServiceClient
             data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
         }
         data.maxPlayers = updates.MaxPlayers;
+        data.floNode = updates.FloNode;
+        data.floNodeMaxPing = updates.FloNodeMaxPing;
         data.matcherinoUrl = updates.MatcherinoUrl;
         data.secret = AdminSecret;
 
@@ -500,5 +513,7 @@ public class TournamentUpdateBody
     public int? ReadyTimeSeconds { get; set; }
     public int? VetoTimeSeconds { get; set; }
     public int? ShowWinnerTimeHours { get; set; }
-    public int MaxPlayers { get; set; }
+    public int? MaxPlayers { get; set; }
+    public TournamentFloNode FloNode { get; set; }
+    public int? FloNodeMaxPing { get; set; }
 }
