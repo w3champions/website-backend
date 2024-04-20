@@ -91,9 +91,9 @@ public class MapsController : ControllerBase
     }
 
     [HttpGet("tournaments")]
-    public async Task<IActionResult> GetTournamentMaps([FromQuery] bool? active)
+    public async Task<IActionResult> GetTournamentMaps()
     {
-        var maps = await _matchmakingServiceClient.GetTournamentMaps(active);
+        var maps = await _matchmakingServiceClient.GetTournamentMaps();
         return Ok(maps);
     }
 }
