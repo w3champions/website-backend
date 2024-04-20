@@ -143,13 +143,9 @@ public class MatchmakingServiceClient
         return null;
     }
 
-    public async Task<GetMapsResponse> GetTournamentMaps(bool? active)
+    public async Task<GetMapsResponse> GetTournamentMaps()
     {
         var url = $"{MatchmakingApiUrl}/maps/tournaments";
-        if (active.HasValue) {
-            string activeStr = active.Value ? "true" : "false";
-            url += $"?active={activeStr}";
-        }
         var response = await _httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
