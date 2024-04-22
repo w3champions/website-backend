@@ -9,6 +9,6 @@ public class TournamentMatch
     public string _Id { get; set; }
     public string Id => _Id.ToString();
     public TournamentMatchState State { get; set; }
-    public int MapId { get; set; }
+    public int? MapId { get; set; }
     public List<TournamentMatchPlayer> players { get; set; }
 }

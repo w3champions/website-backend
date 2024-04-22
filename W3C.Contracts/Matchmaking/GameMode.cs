@@ -11,6 +11,9 @@ public enum GameMode
     GM_2v2_AT = 6,
     GM_4v4_AT = 8,
     CUSTOM = 9,
+
+    GM_1ON1_TOURNAMENT = 11,
+
     GM_FOOTMEN_FRENZY = 101,
 
     GM_LEGION_4v4_x3 = 201,
