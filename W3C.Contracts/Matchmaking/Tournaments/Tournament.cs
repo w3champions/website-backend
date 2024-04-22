@@ -29,6 +29,7 @@ public class Tournament
     public int? MaxPlayers { get; set; }
     public TournamentFloNode FloNode { get; set; }
     public int? FloNodeMaxPing { get; set; }
+    public GameMode RelatedLadder { get; set; }
 }
 
 public class TournamentFloNode
