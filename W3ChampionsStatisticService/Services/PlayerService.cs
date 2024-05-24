@@ -5,6 +5,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Cache;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.Ports;
@@ -88,14 +89,35 @@ public class PlayerService
         // Fetch entire cache
         var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
-        // Filter cached personal settings
-        var result = personalSettings
-            .Where(ps => ps.Id.ToLower().Contains(searchLower)
-                            && ps.Id.CompareTo(lastObjectId) > 0)
-            .OrderBy(ps => ps.Id)
+        List<PersonalSetting> matchingEntries = personalSettings
+            .Where(ps => ps.Id.ToLower().Contains(searchLower))
+            .ToList();
+
+        List<(PersonalSetting, int)> searchRelevance = new List<(PersonalSetting, int)>();
+        foreach (var ps in matchingEntries) {
+            (PersonalSetting, int) searchRelevanceItem = (ps, 10);
+            string nameLower = ps.Id.ToLower().Split('#').ElementAtOrDefault(0);
+            if (nameLower == null) {
+                continue;
+            }
+            // Exact match
+            if (nameLower == searchLower) {
+                searchRelevanceItem.Item2 = 1;
+            }
+            // Start with
+            else if (nameLower.StartsWith(searchLower)) {
+                searchRelevanceItem.Item2 = 2;
+            }
+            searchRelevance.Add(searchRelevanceItem);
+        }
+
+        List<PlayerSearchInfo> result = searchRelevance
+            .OrderBy(x => x.Item2)
+            .Select(x => x.Item1)
             .Take(pageSize)
             .Select(ps => new PlayerSearchInfo(ps))
             .ToList();
+
         var personalSettingIds = result.Select(ps => ps.BattleTag).ToHashSet();
 
         var playerStatsMap = await _playerRepository.GetPlayerBattleTagsAsync(personalSettingIds);
