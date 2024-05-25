@@ -5,6 +5,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Cache;
+using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.Ports;
@@ -79,7 +80,7 @@ public class PlayerService
 
     public async Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(
         string search,
-        string lastObjectId = "",
+        string lastRelevanceId = "",
         int pageSize = 20
     )
     {
@@ -88,14 +89,35 @@ public class PlayerService
         // Fetch entire cache
         var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
-        // Filter cached personal settings
-        var result = personalSettings
-            .Where(ps => ps.Id.ToLower().Contains(searchLower)
-                            && ps.Id.CompareTo(lastObjectId) > 0)
-            .OrderBy(ps => ps.Id)
-            .Take(pageSize)
-            .Select(ps => new PlayerSearchInfo(ps))
+        List<PersonalSetting> matchingEntries = personalSettings
+            .Where(ps => ps.Id.ToLower().Contains(searchLower))
             .ToList();
+
+        var searchRelevance = new List<PlayerSearchRelevance>();
+        foreach (var ps in matchingEntries) {
+            int relevance = 9;
+            string nameLower = ps.Id.ToLower().Split('#').ElementAtOrDefault(0);
+            if (nameLower == null) {
+                continue;
+            }
+            // Exact match
+            if (nameLower == searchLower) {
+                relevance = 1;
+            }
+            // Start with
+            else if (nameLower.StartsWith(searchLower)) {
+                relevance = 2;
+            }
+            searchRelevance.Add(new PlayerSearchRelevance(ps, relevance));
+        }
+
+        List<PlayerSearchInfo> result = searchRelevance
+            .OrderBy(x => x.RelevanceId)
+            .Where(x => x.RelevanceId.CompareTo(lastRelevanceId) > 0)
+            .Take(pageSize)
+            .Select(x => new PlayerSearchInfo(x.Player, x.RelevanceId))
+            .ToList();
+
         var personalSettingIds = result.Select(ps => ps.BattleTag).ToHashSet();
 
         var playerStatsMap = await _playerRepository.GetPlayerBattleTagsAsync(personalSettingIds);

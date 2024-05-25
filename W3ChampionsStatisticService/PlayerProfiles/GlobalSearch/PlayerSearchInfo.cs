@@ -13,13 +13,15 @@ public class PlayerSearchInfo
     public string Name { get; set; }
     public List<Season> Seasons { get; set; }
     public ProfilePicture ProfilePicture { get; set; }
+    public string RelevanceId { get; set; }
 
-    public PlayerSearchInfo(PersonalSetting p)
+    public PlayerSearchInfo(PersonalSetting p, string relevanceId)
     {
         BattleTag = p.Id;
         Name = p.Id.Split("#")[0];
         Seasons = new List<Season>();
         ProfilePicture = p.ProfilePicture;
+        RelevanceId = relevanceId;
     }
 
     public void SetSeasons(PlayerOverallStats p)
