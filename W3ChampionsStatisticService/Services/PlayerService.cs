@@ -80,7 +80,7 @@ public class PlayerService
 
     public async Task<List<PlayerSearchInfo>> GlobalSearchForPlayer(
         string search,
-        string lastObjectId = "",
+        string lastRelevanceId = "",
         int pageSize = 20
     )
     {
@@ -93,29 +93,29 @@ public class PlayerService
             .Where(ps => ps.Id.ToLower().Contains(searchLower))
             .ToList();
 
-        List<(PersonalSetting, int)> searchRelevance = new List<(PersonalSetting, int)>();
+        var searchRelevance = new List<PlayerSearchRelevance>();
         foreach (var ps in matchingEntries) {
-            (PersonalSetting, int) searchRelevanceItem = (ps, 10);
+            int relevance = 9;
             string nameLower = ps.Id.ToLower().Split('#').ElementAtOrDefault(0);
             if (nameLower == null) {
                 continue;
             }
             // Exact match
             if (nameLower == searchLower) {
-                searchRelevanceItem.Item2 = 1;
+                relevance = 1;
             }
             // Start with
             else if (nameLower.StartsWith(searchLower)) {
-                searchRelevanceItem.Item2 = 2;
+                relevance = 2;
             }
-            searchRelevance.Add(searchRelevanceItem);
+            searchRelevance.Add(new PlayerSearchRelevance(ps, relevance));
         }
 
         List<PlayerSearchInfo> result = searchRelevance
-            .OrderBy(x => x.Item2)
-            .Select(x => x.Item1)
+            .OrderBy(x => x.RelevanceId)
+            .Where(x => x.RelevanceId.CompareTo(lastRelevanceId) > 0)
             .Take(pageSize)
-            .Select(ps => new PlayerSearchInfo(ps))
+            .Select(x => new PlayerSearchInfo(x.Player, x.RelevanceId))
             .ToList();
 
         var personalSettingIds = result.Select(ps => ps.BattleTag).ToHashSet();

@@ -46,10 +46,10 @@ public class PlayersController : ControllerBase
     }
 
     [HttpGet("global-search")]
-    public async Task<IActionResult> GlobalSearchPlayer(string search, string lastObjectId = "", int pageSize = 20)
+    public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
     {
         if (pageSize > 20) pageSize = 20;
-        var players = await _playerService.GlobalSearchForPlayer(search, lastObjectId, pageSize);
+        var players = await _playerService.GlobalSearchForPlayer(search, lastRelevanceId, pageSize);
         return Ok(players);
     }
 
