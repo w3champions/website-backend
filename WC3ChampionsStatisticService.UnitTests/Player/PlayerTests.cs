@@ -106,7 +106,7 @@ public class PlayerTests : IntegrationTestBase
         Assert.AreEqual(player2.Id, players[0].BattleTag);
         Assert.AreEqual(player1.Id, players[1].BattleTag);
 
-        players = await playerService.GlobalSearchForPlayer("under", "ThunderHorn#21132");
+        players = await playerService.GlobalSearchForPlayer("under", "9_ThunderHorn#21132");
         Assert.AreEqual(1, players.Count);
         Assert.AreEqual(player1.Id, players[0].BattleTag);
         Assert.AreEqual(player1.ProfilePicture.PictureId, players[0].ProfilePicture.PictureId);
