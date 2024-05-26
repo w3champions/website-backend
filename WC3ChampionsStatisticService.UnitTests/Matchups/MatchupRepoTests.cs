@@ -487,6 +487,4 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.AreEqual(storedEvent.match.id, result.MatchId);
         Assert.AreEqual(notCachedEvent.match.id, result2.MatchId);
     }
-
-
 }

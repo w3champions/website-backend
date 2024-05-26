@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
-using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Ladder;
 
@@ -26,9 +25,22 @@ public class LeagueSyncHandler : IAsyncUpdatable
         var loadLeagueConstellation = await _matchEventRepository.LoadLeagueConstellationChanged();
 
         var leagueConstellations = loadLeagueConstellation.Select(l =>
-            new LeagueConstellation(l.season, l.gateway, l.gameMode, l.leagues.Select(le =>
-                new League(le.id, le.order, le.name.Replace("League", "").Trim(), le.division)
-            ).OrderBy(l => l.Order).ThenBy(l => l.Division).ToList().ToList())
+            new LeagueConstellation(
+                    l.season, 
+                    l.gateway, 
+                    l.gameMode, 
+                    l.leagues.Select(le =>
+                        new League(
+                            le.id, 
+                            le.order, 
+                            le.name
+                                .Replace("League", "")
+                                .Trim(), 
+                            le.division))
+                    .OrderBy(l => l.Order)
+                    .ThenBy(l => l.Division)
+                    .ToList()
+                    .ToList())
         ).ToList();
 
         await _rankRepository.InsertLeagues(leagueConstellations);

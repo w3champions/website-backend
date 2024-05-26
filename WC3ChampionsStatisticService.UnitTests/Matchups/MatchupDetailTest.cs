@@ -16,6 +16,7 @@ public class MatchupDetailTests : IntegrationTestBase
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent.match.id = "nmhcCLaRc7";
         matchFinishedEvent.Id = ObjectId.GenerateNewId();
+        matchFinishedEvent.match.season = 1;
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
@@ -103,6 +104,7 @@ public class MatchupDetailTests : IntegrationTestBase
         matchFinishedEvent.match.id = "nmhcCLaRc7";
         matchFinishedEvent.Id = ObjectId.GenerateNewId();
         matchFinishedEvent.result = null;
+        matchFinishedEvent.match.season = 1;
 
         var player = matchFinishedEvent.match.players[0];
 

@@ -24,7 +24,6 @@ public class MatchReadModelHandler : IReadModelHandler
         {
             if (nextEvent.WasFakeEvent) return;
             var matchup = Matchup.Create(nextEvent);
-
             await _matchRepository.Insert(matchup);
             await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
         }

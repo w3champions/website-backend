@@ -38,7 +38,7 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
         int offset = 0,
         int season = 1)
     {
-        var mongoCollection = CreateCollection<Matchup>();
+        var mongoCollection = CreateSeasonalCollection<Matchup>(season);
         var textSearchOpts = new TextSearchOptions();
         if (string.IsNullOrEmpty(opponentId))
         {
@@ -47,8 +47,7 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
                     && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
-                    && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
-                    && (m.Season == season))
+                    && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag)))
                 .SortByDescending(s => s.Id)
                 .Skip(offset)
                 .Limit(pageSize)
@@ -59,8 +58,7 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
             .Find(m =>
                 Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
                 && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                && (m.Season == season))
+                && (gateWay == GateWay.Undefined || m.GateWay == gateWay))
             .SortByDescending(s => s.Id)
             .Skip(offset)
             .Limit(pageSize)
@@ -77,7 +75,7 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
         int season = 1)
     {
         var textSearchOpts = new TextSearchOptions();
-        var mongoCollection = CreateCollection<Matchup>();
+        var mongoCollection = CreateSeasonalCollection<Matchup>(season);
         if (string.IsNullOrEmpty(opponentId))
         {
             return mongoCollection.CountDocumentsAsync(m =>
@@ -85,21 +83,19 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
                 && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                 && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                 && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
-                && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
-                && (m.Season == season));
+                && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag)));
         }
 
         return mongoCollection.CountDocumentsAsync(m =>
             Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
             && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-            && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-            && (m.Season == season));
+            && (gateWay == GateWay.Undefined || m.GateWay == gateWay));
     }
 
     public async Task<MatchupDetail> LoadDetails(ObjectId id)
     {
         var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.Id == id);
-        var match = await LoadFirst<Matchup>(t => t.Id == id);
+        var match = await LoadFirst<Matchup>(t => t.Id == id, originalMatch?.match?.season);
 
         return new MatchupDetail
         {
@@ -163,9 +159,9 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
         int offset = 0,
         int pageSize = 100)
     {
-        var mongoCollection = CreateCollection<Matchup>();
+        var mongoCollection = CreateSeasonalCollection<Matchup>(season);
         return mongoCollection
-            .Find(m => gameMode == m.GameMode && m.Season == season)
+            .Find(m => gameMode == m.GameMode)
             .SortByDescending(s => s.EndTime)
             .Skip(offset)
             .Limit(pageSize)
@@ -179,12 +175,9 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(
-        int season,
-        GameMode gameMode)
+    public Task<long> Count(int season, GameMode gameMode)
     {
-        return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                gameMode == m.GameMode && m.Season == season);
+        return CreateSeasonalCollection<Matchup>(season).CountDocumentsAsync(m => gameMode == m.GameMode);
     }
 
     public Task InsertOnGoingMatch(OnGoingMatchup matchup)
