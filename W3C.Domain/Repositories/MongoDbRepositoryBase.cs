@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 
@@ -23,9 +24,17 @@ public class MongoDbRepositoryBase
         return database;
     }
 
-    protected Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
+    protected Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression, int? season = 1)
     {
-        var mongoCollection = CreateCollection<T>();
+        IMongoCollection<T> mongoCollection;
+        if (typeof(ISeasonal).IsAssignableFrom(typeof(T)))
+        {
+            mongoCollection = CreateSeasonalCollection<T>(season ?? 1);
+        }
+        else
+        {
+            mongoCollection = CreateCollection<T>();
+        }
         return mongoCollection.FindSync(expression).FirstOrDefaultAsync();
     }
 
@@ -60,12 +69,27 @@ public class MongoDbRepositoryBase
         return mongoCollection;
     }
 
-    protected async Task Upsert<T>(T insertObject, Expression<Func<T, bool>> identityQuerry)
+    protected IMongoCollection<T> CreateSeasonalCollection<T>(int season, string collectionName = null)
     {
         var mongoDatabase = CreateClient();
-        var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+        var mongoCollection = mongoDatabase.GetCollection<T>(String.Format(collectionName ?? "{0}_{1}", typeof(T).Name, season));
+        return mongoCollection;
+    }
+
+    protected async Task Upsert<T>(T insertObject, Expression<Func<T, bool>> identityQuery)
+    {
+        var mongoDatabase = CreateClient();
+        IMongoCollection<T> mongoCollection;
+        if (insertObject is ISeasonal seasonalObj)
+        {
+            mongoCollection = mongoDatabase.GetCollection<T>(String.Format("{0}_{1}", typeof(T).Name, seasonalObj.Season));
+        } 
+        else
+        {
+            mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+        }
         await mongoCollection.FindOneAndReplaceAsync(
-            identityQuerry,
+            identityQuery,
             insertObject,
             new FindOneAndReplaceOptions<T> {IsUpsert = true});
     }

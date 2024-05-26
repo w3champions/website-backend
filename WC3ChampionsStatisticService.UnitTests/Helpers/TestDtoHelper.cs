@@ -27,7 +27,7 @@ public static class TestDtoHelper
 
         fakeEvent.match.gateway = GateWay.Europe;
         fakeEvent.match.gameMode = GameMode.GM_1v1;
-        fakeEvent.match.season = 0;
+        fakeEvent.match.season = 1;
 
         fakeEvent.match.players.First().battleTag = name1;
         fakeEvent.match.players.First().won = true;

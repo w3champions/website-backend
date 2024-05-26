@@ -8,10 +8,11 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.GameModes;
+using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class Matchup
+public class Matchup : ISeasonal
 {
     public string Map { get; set; }
     public string MapName { get; set; }
