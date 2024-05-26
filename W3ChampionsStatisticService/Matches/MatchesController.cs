@@ -25,11 +25,12 @@ public class MatchesController : ControllerBase
     public async Task<IActionResult> GetMatches(
         int offset = 0,
         int pageSize = 100,
-        GameMode gameMode = GameMode.Undefined)
+        GameMode gameMode = GameMode.Undefined,
+        int season = 18)
     {
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(18, gameMode, offset, pageSize);
-        var count = await _matchRepository.Count(18, gameMode);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize);
+        var count = await _matchRepository.Count(season, gameMode);
         return Ok(new { matches, count });
     }
 
