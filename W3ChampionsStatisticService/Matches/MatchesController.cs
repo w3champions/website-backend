@@ -26,8 +26,13 @@ public class MatchesController : ControllerBase
         int offset = 0,
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
-        int season = 18)
+        int season = 0)
     {
+        if (season <= 0)
+        {
+            var lastSeason = await _matchRepository.LoadLastSeason();
+            season = lastSeason.Id;
+        }
         if (pageSize > 100) pageSize = 100;
         var matches = await _matchRepository.Load(season, gameMode, offset, pageSize);
         var count = await _matchRepository.Count(season, gameMode);

@@ -9,6 +9,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3C.Contracts.GameObjects;
+using W3ChampionsStatisticService.Ladder;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
 
@@ -488,5 +489,15 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.AreEqual(notCachedEvent.match.id, result2.MatchId);
     }
 
-
+    [Test]
+    public async Task LoadLastSeason()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        await rankRepository.UpsertSeason(new Season(1));
+        await rankRepository.UpsertSeason(new Season(2));
+        var result = await matchRepository.LoadLastSeason();
+        Assert.IsNotNull(result);
+        Assert.AreEqual(2, result.Id);
+    }
 }

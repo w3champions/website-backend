@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
+using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.Ports;
@@ -68,6 +69,7 @@ public interface IMatchRepository
     Task EnsureIndices();
 
     Task<int> GetFloIdFromId(string gameId);
+    Task<Season> LoadLastSeason();
 }
 
 public class MatchupDetail
