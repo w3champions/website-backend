@@ -26,9 +26,9 @@ public class MatchesController : ControllerBase
         int offset = 0,
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
-        int season = 0)
+        int season = -1)
     {
-        if (season <= 0)
+        if (season < 0)
         {
             var lastSeason = await _matchRepository.LoadLastSeason();
             season = lastSeason.Id;
