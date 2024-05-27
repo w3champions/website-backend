@@ -10,6 +10,7 @@ using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -241,4 +242,9 @@ public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
         return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
     }
 
+    public Task<Season> LoadLastSeason()
+    {
+        var mongoCollection = CreateCollection<Season>();
+        return mongoCollection.AsQueryable().OrderByDescending(c => c.Id).FirstOrDefaultAsync();
+    }
 }
