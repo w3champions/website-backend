@@ -109,7 +109,7 @@ public class ClanController : ControllerBase
     }
 
     [HttpDelete("{clanId}/members/{battleTag}")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuth]
     public async Task<IActionResult> RevokeInvitationToClan(
         string clanId,
         string battleTag)
@@ -130,7 +130,7 @@ public class ClanController : ControllerBase
     }
 
     [HttpPut("{clanId}/invites/{battleTag}")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuth]
     public async Task<IActionResult> AcceptInvite(string clanId, string battleTag)
     {
         var clan = await _clanCommandHandler.AcceptInvite(battleTag, clanId);
@@ -138,7 +138,7 @@ public class ClanController : ControllerBase
     }
 
     [HttpDelete("{clanId}/invites/{battleTag}")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuth]
     public async Task<IActionResult> RejectInvite(string clanId, string battleTag)
     {
         var clan = await _clanCommandHandler.RejectInvite(clanId, battleTag);
