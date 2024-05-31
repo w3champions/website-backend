@@ -55,7 +55,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("bannedPlayers")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayers()
     {
         try {
@@ -67,7 +67,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("bannedPlayers")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
         try {
@@ -79,7 +79,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("bannedPlayers")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
         try {
@@ -188,7 +188,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("queue-data")]
-    [HasPermissionFilter(Permission = EPermission.Queue)]
+    [BearerHasPermissionFilter(Permission = EPermission.Queue)]
     public async Task<IActionResult> GetQueueData()
     {
         var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
@@ -196,21 +196,21 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("proxies")]
-    [HasPermissionFilter(Permission = EPermission.Proxies)]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> GetProxies()
     {
         return Ok(await _adminRepository.GetProxies());
     }
 
     [HttpGet("proxies-for/{tag}")]
-    [HasPermissionFilter(Permission = EPermission.Proxies)]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> GetProxiesFor([FromRoute] string tag)
     {
         return Ok(await _adminRepository.GetProxiesFor(tag));
     }
 
     [HttpPut("update-proxies/{tag}")]
-    [HasPermissionFilter(Permission = EPermission.Proxies)]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string tag)
     {
         await _adminRepository.UpdateProxies(proxyUpdateData, tag);
@@ -218,7 +218,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("search/{tagSearch}")]
-    [HasPermissionFilter(Permission = EPermission.Proxies)]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> SearchPlayer([FromRoute] string tagSearch)
     {
         var playerInstances = await _rankRepository.SearchAllPlayersForProxy(tagSearch);
@@ -226,7 +226,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("alts/{tag}")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
     {
         var smurfs = await _adminRepository.SearchSmurfsFor(tag);
@@ -234,7 +234,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("globalChatBans")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> SearchChatbans()
     {
         var chatBans = await _adminRepository.GetChatBans();
@@ -242,7 +242,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("globalChatBans")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PutChatBan([FromBody] ChatBanPutDto chatBan)
     {
         await _adminRepository.PutChatBan(chatBan);
@@ -250,7 +250,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("globalChatBans/{id}")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteChatBan([FromRoute] string id)
     {
         await _adminRepository.DeleteChatBan(id);
