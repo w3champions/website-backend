@@ -97,7 +97,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("news/{newsId}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateNews(string newsId, [FromBody] NewsMessage newsMessage)
     {
         newsMessage.Id = new ObjectId(newsId);
@@ -106,7 +106,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("news")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateNews([FromBody] NewsMessage newsMessage)
     {
         newsMessage.Id = ObjectId.GenerateNewId();
@@ -115,7 +115,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("news/{newsId}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteNews(string newsId)
     {
         await _newsRepository.DeleteNews(new ObjectId(newsId));
@@ -135,7 +135,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("motd")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
     {
         if (motd.motd.Length > 400)
@@ -154,7 +154,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("loadingScreenTips/{tipId}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateTips(string tipId, [FromBody] LoadingScreenTip loadingScreenTip)
     {
         if (loadingScreenTip.Message.Length > 200)
@@ -167,7 +167,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("loadingScreenTips")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateTips([FromBody] LoadingScreenTip loadingScreenTip)
     {
         if (loadingScreenTip.Message.Length > 200)
@@ -180,7 +180,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("loadingScreenTips/{tipId}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Content)]
+    [HasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteTip(string tipId)
     {
         await _informationMessagesRepository.DeleteTip(new ObjectId(tipId));
