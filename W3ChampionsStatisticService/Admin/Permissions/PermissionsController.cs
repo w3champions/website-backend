@@ -20,7 +20,7 @@ public class PermissionsController : ControllerBase
     }
 
     [HttpGet]
-    [HasPermissionFilter(Permission = EPermission.Permissions)]
+    [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     public async Task<IActionResult> GetPermissions([FromQuery] string authorization)
     {
         try {
@@ -32,7 +32,7 @@ public class PermissionsController : ControllerBase
     }
 
     [HttpPost("add")]
-    [HasPermissionFilter(Permission = EPermission.Permissions)]
+    [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     public async Task<IActionResult> AddAdmin([FromBody] Permission permission, [FromQuery] string authorization)
     {
         try {
@@ -44,7 +44,7 @@ public class PermissionsController : ControllerBase
     }
 
     [HttpPut("edit")]
-    [HasPermissionFilter(Permission = EPermission.Permissions)]
+    [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     public async Task<IActionResult> EditAdmin([FromBody] Permission permission, [FromQuery] string authorization)
     {
         try {
@@ -56,7 +56,7 @@ public class PermissionsController : ControllerBase
     }
 
     [HttpDelete("delete")]
-    [HasPermissionFilter(Permission = EPermission.Permissions)]
+    [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     public async Task<IActionResult> DeleteAdmin([FromQuery] string id, string authorization)
     {
         try {

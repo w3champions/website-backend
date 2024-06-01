@@ -21,7 +21,7 @@ public class LogsController : ControllerBase
     }
 
     [HttpGet]
-    [HasPermissionFilter(Permission = EPermission.Logs)]
+    [BearerHasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> GetLogfileNames()
     {
         try {
@@ -33,7 +33,7 @@ public class LogsController : ControllerBase
     }
 
     [HttpGet("{logfileName}")]
-    [HasPermissionFilter(Permission = EPermission.Logs)]
+    [BearerHasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> GetLogContent([FromRoute] string logfileName)
     {
         try {
@@ -45,7 +45,7 @@ public class LogsController : ControllerBase
     }
 
     [HttpGet("download/{logfileName}")]
-    [HasPermissionFilter(Permission = EPermission.Logs)]
+    [BearerHasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> DownloadLog([FromRoute] string logfileName)
     {
         try {

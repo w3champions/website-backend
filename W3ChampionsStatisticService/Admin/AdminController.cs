@@ -97,7 +97,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("news/{newsId}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateNews(string newsId, [FromBody] NewsMessage newsMessage)
     {
         newsMessage.Id = new ObjectId(newsId);
@@ -106,7 +106,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("news")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateNews([FromBody] NewsMessage newsMessage)
     {
         newsMessage.Id = ObjectId.GenerateNewId();
@@ -115,7 +115,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("news/{newsId}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteNews(string newsId)
     {
         await _newsRepository.DeleteNews(new ObjectId(newsId));
@@ -135,7 +135,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("motd")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
     {
         if (motd.motd.Length > 400)
@@ -167,7 +167,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("loadingScreenTips")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateTips([FromBody] LoadingScreenTip loadingScreenTip)
     {
         if (loadingScreenTip.Message.Length > 200)
@@ -180,7 +180,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("loadingScreenTips/{tipId}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteTip(string tipId)
     {
         await _informationMessagesRepository.DeleteTip(new ObjectId(tipId));

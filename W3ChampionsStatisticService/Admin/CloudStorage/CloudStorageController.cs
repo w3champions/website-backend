@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Admin.CloudStorage;
 public class CloudStorageController : ControllerBase
 {
     [HttpGet("alibaba")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult ListAlibabaFiles()
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -30,7 +30,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpGet("s3")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> ListS3Files()
     {
         S3Service s3Service = new S3Service();
@@ -43,7 +43,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpPost("alibaba/upload")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult UploadAlibabaFile([FromBody] UploadFileRequest req)
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -62,7 +62,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpPost("s3/upload")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UploadS3File([FromBody] UploadFileRequest req)
     {
         S3Service s3Service = new S3Service();
@@ -81,7 +81,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpGet("alibaba/download/{fileName}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DownloadAlibabaFile([FromRoute] string fileName)
     {
         AlibabaService alibabaService = new AlibabaService();
@@ -102,7 +102,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpGet("s3/download/{fileName}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DownloadS3File([FromRoute] string fileName)
     {
         S3Service s3Service = new S3Service();
@@ -123,7 +123,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpDelete("alibaba/{fileName}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult DeleteAlibabaFile([FromRoute] string fileName)
     {
         AlibabaService alibabaService = new AlibabaService();
