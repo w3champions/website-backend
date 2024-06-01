@@ -154,7 +154,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("loadingScreenTips/{tipId}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UpdateTips(string tipId, [FromBody] LoadingScreenTip loadingScreenTip)
     {
         if (loadingScreenTip.Message.Length > 200)
