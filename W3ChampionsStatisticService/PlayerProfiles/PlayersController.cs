@@ -171,6 +171,14 @@ public class PlayersController : ControllerBase
         var lengthStats = await _playerRepository.LoadGameLengthForPlayerStats(battleTag, season);
         return Ok(lengthStats);
     }
+
+    // Called by Player-Service to get battleTag and profile picture. Returns null if player isn't found.
+    [HttpGet("{battleTag}/user-brief")]
+    public async Task<IActionResult> GetUserBrief([FromRoute] string battleTag)
+    {
+        PersonalSetting settings = await _personalSettingsRepository.Find(battleTag);
+        return Ok(settings == null ? null : new UserBrief(settings.Id, settings.ProfilePicture));
+    }
 }
 
 public class ProfilePictureDto
@@ -207,6 +215,20 @@ public class ChatDetailsDto
     public ChatDetailsDto(string clanId, ProfilePicture profilePicture)
     {
         ClanId = clanId;
+        ProfilePicture = profilePicture;
+    }
+}
+
+public class UserBrief
+{
+    public string BattleTag { get; }
+    public string Name { get; }
+    public ProfilePicture ProfilePicture { get; }
+
+    public UserBrief(string battleTag, ProfilePicture profilePicture)
+    {
+        BattleTag = battleTag;
+        Name = battleTag.Split("#")[0];
         ProfilePicture = profilePicture;
     }
 }

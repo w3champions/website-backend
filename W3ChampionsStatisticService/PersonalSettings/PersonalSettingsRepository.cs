@@ -36,6 +36,11 @@ public class PersonalSettingsRepository : MongoDbRepositoryBase, IPersonalSettin
         return personalSettings;
     }
 
+    public async Task<PersonalSetting> Find(string battletag)
+    {
+        return await LoadFirst<PersonalSetting>(battletag);
+    }
+
     public Task<List<PersonalSetting>> LoadSince(DateTimeOffset from)
     {
         return LoadSince<PersonalSetting>(from);
