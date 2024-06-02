@@ -142,7 +142,7 @@ public class CloudStorageController : ControllerBase
     }
 
     [HttpDelete("s3/{fileName}")]
-    [HasPermissionFilter(Permission = EPermission.Content)]
+    [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteS3File([FromRoute] string fileName)
     {
         S3Service s3Service = new S3Service();
