@@ -177,7 +177,10 @@ public class PlayersController : ControllerBase
     public async Task<IActionResult> GetUserBrief([FromRoute] string battleTag)
     {
         PersonalSetting settings = await _personalSettingsRepository.Find(battleTag);
-        return Ok(settings == null ? null : new UserBrief(settings.Id, settings.ProfilePicture));
+        if (settings == null) {
+            return NotFound();
+        }
+        return Ok(new UserBrief(settings.Id, settings.ProfilePicture));
     }
 }
 
