@@ -176,11 +176,20 @@ public class PlayersController : ControllerBase
     [HttpGet("{battleTag}/user-brief")]
     public async Task<IActionResult> GetUserBrief([FromRoute] string battleTag)
     {
-        PersonalSetting settings = await _personalSettingsRepository.Find(battleTag);
-        if (settings == null) {
+        PersonalSetting personalSetting = await _personalSettingsRepository.Find(battleTag);
+        if (personalSetting == null) {
             return NotFound();
         }
-        return Ok(new UserBrief(settings.Id, settings.ProfilePicture));
+        return Ok(new UserBrief(personalSetting.Id, personalSetting.ProfilePicture));
+    }
+
+    [HttpGet("{commaSeparatedBattleTags}/user-brief/many")]
+    public async Task<IActionResult> LoadFriends([FromRoute] string commaSeparatedBattleTags)
+    {
+        var battleTags = commaSeparatedBattleTags.Split(',');
+        List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(battleTags);
+        List<UserBrief> users = personalSettings.Select((x) => new UserBrief(x.Id, x.ProfilePicture)).ToList();
+        return Ok(users);
     }
 }
 
