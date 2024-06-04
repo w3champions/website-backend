@@ -184,7 +184,7 @@ public class PlayersController : ControllerBase
     }
 
     [HttpGet("{commaSeparatedBattleTags}/user-brief/many")]
-    public async Task<IActionResult> LoadFriends([FromRoute] string commaSeparatedBattleTags)
+    public async Task<IActionResult> GetUserBriefMany([FromRoute] string commaSeparatedBattleTags)
     {
         var battleTags = commaSeparatedBattleTags.Split(',');
         List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(battleTags);
