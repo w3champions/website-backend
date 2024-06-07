@@ -30,7 +30,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpGet("{battleTag}")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> LoadFriendlist(string battleTag)
     {
         var friendlist = await _friendRepository.LoadFriendlist(battleTag);
@@ -38,7 +38,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpPost("{battleTag}/make-request")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> MakeFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -67,7 +67,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpPost("{battleTag}/accept-request")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> AcceptFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -103,7 +103,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpPost("{battleTag}/deny-request")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> DenyFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -122,7 +122,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpPost("{battleTag}/block-request")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> BlockRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -147,7 +147,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpPost("{battleTag}/remove-friend")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> RemoveFriend(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -172,7 +172,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpPost("{battleTag}/unblock-request")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> UnblockRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -190,7 +190,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpDelete("{battleTag}/delete-request")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> DeleteOutgoingFriendRequest(string battleTag, [FromBody] string otherBattleTag)
     {
         try {
@@ -208,7 +208,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpGet("{battleTag}/received-requests")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> LoadReceivedFriendRequests(string battleTag)
     {
         var requests = await _friendRepository.LoadAllFriendRequestsSentToPlayer(battleTag);
@@ -216,7 +216,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpGet("{battleTag}/sent-requests")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> LoadSentFriendRequests(string battleTag)
     {
         var requests = await _friendRepository.LoadAllFriendRequestsSentByPlayer(battleTag);
@@ -224,7 +224,7 @@ public class FriendsController : ControllerBase
     }
 
     [HttpGet("{battleTag}/friends")]
-    [CheckIfBattleTagBelongsToAuthCode]
+    [BearerCheckIfBattleTagBelongsToAuthAttribute]
     public async Task<IActionResult> LoadFriends(string battleTag)
     {
         var friendlist = await _friendRepository.LoadFriendlist(battleTag);
