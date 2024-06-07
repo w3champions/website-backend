@@ -33,7 +33,7 @@ public class TournamentsController : ControllerBase
     }
 
     [HttpPost("")]
-    [HasPermissionFilter(Permission = EPermission.Tournaments)]
+    [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> CreateTournament([FromBody] TournamentUpdateBody tournamentData)
     {
         var tournament = await _matchmakingServiceRepository.CreateTournament(tournamentData);
@@ -62,7 +62,7 @@ public class TournamentsController : ControllerBase
     }
 
     [HttpPatch("{id}")]
-    [HasPermissionFilter(Permission = EPermission.Tournaments)]
+    [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> UpdateTournament(string id, [FromBody] TournamentUpdateBody updates)
     {
         var tournament = await _matchmakingServiceRepository.UpdateTournament(id, updates);
@@ -70,7 +70,7 @@ public class TournamentsController : ControllerBase
     }
 
     [HttpPost("{id}/players")]
-    [HasPermissionFilter(Permission = EPermission.Tournaments)]
+    [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> RegisterPlayer(string id, [FromBody] RegisterPlayerBody body)
     {
         var personalSetting = await _personalSettingsRepository.Load(body.BattleTag);
@@ -79,7 +79,7 @@ public class TournamentsController : ControllerBase
     }
 
     [HttpDelete("{id}/players")]
-    [HasPermissionFilter(Permission = EPermission.Tournaments)]
+    [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> UnregisterPlayer(string id, [FromBody] UnregisterPlayerBody body)
     {
         var tournament = await _matchmakingServiceRepository.UnregisterPlayer(id, body.BattleTag);
