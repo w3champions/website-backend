@@ -34,7 +34,7 @@ public class ReplaysController : ControllerBase
     }
 
     [HttpGet("{gameId}/chats")]
-    [HasPermissionFilter(Permission = EPermission.Moderation)]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetReplayChatLogs(string gameId)
     {
         var floMatchId = await _matchRepository.GetFloIdFromId(gameId);

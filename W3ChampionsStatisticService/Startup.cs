@@ -127,11 +127,9 @@ public class Startup
         services.AddTransient<ClanCommandHandler>();
 
         // Actionfilters
-        services.AddTransient<CheckIfBattleTagBelongsToAuthCodeFilter>();
         services.AddTransient<BearerCheckIfBattleTagBelongsToAuthFilter>();
         services.AddTransient<CheckIfBattleTagIsAdminFilter>();
         services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
-        services.AddTransient<HasPermissionFilter>();
         services.AddTransient<BearerHasPermissionFilter>();
 
         services.AddSingleton<MatchmakingServiceClient>();
