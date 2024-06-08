@@ -17,7 +17,6 @@ public class InjectAuthTokenFilter : IAsyncActionFilter {
         {
             context.ActionArguments["authToken"] = token;
             await next.Invoke();
-
         }
         var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
         context.Result = unauthorizedResult;
