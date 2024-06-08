@@ -131,6 +131,7 @@ public class Startup
         services.AddTransient<CheckIfBattleTagIsAdminFilter>();
         services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
         services.AddTransient<BearerHasPermissionFilter>();
+        services.AddTransient<InjectAuthTokenFilter>();
 
         services.AddSingleton<MatchmakingServiceClient>();
         services.AddSingleton<UpdateServiceClient>();
