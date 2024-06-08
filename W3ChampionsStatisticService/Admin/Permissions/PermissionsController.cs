@@ -21,10 +21,10 @@ public class PermissionsController : ControllerBase
 
     [HttpGet]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
-    public async Task<IActionResult> GetPermissions([FromQuery] string authorization)
+    public async Task<IActionResult> GetPermissions(string token)
     {
         try {
-            var permissions = await _permissionsRepository.GetPermissions(authorization);
+            var permissions = await _permissionsRepository.GetPermissions(token);
             return Ok(permissions);
         } catch (HttpRequestException ex) {
             return StatusCode((int)ex.StatusCode, ex.Message);
@@ -33,10 +33,10 @@ public class PermissionsController : ControllerBase
 
     [HttpPost("add")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
-    public async Task<IActionResult> AddAdmin([FromBody] Permission permission, [FromQuery] string authorization)
+    public async Task<IActionResult> AddAdmin([FromBody] Permission permission, string token)
     {
         try {
-            await _permissionsRepository.AddAdmin(permission, authorization);
+            await _permissionsRepository.AddAdmin(permission, token);
             return Ok();
         } catch (HttpRequestException ex) {
             return StatusCode((int)ex.StatusCode, ex.Message);
@@ -45,10 +45,10 @@ public class PermissionsController : ControllerBase
 
     [HttpPut("edit")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
-    public async Task<IActionResult> EditAdmin([FromBody] Permission permission, [FromQuery] string authorization)
+    public async Task<IActionResult> EditAdmin([FromBody] Permission permission, string token)
     {
         try {
-            await _permissionsRepository.EditAdmin(permission, authorization);
+            await _permissionsRepository.EditAdmin(permission, token);
             return Ok();
         } catch (HttpRequestException ex) {
             return StatusCode((int)ex.StatusCode, ex.Message);
@@ -57,10 +57,10 @@ public class PermissionsController : ControllerBase
 
     [HttpDelete("delete")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
-    public async Task<IActionResult> DeleteAdmin([FromQuery] string id, string authorization)
+    public async Task<IActionResult> DeleteAdmin([FromQuery] string id, string token)
     {
         try {
-            await _permissionsRepository.DeleteAdmin(id, authorization);
+            await _permissionsRepository.DeleteAdmin(id, token);
             return Ok();
         } catch (HttpRequestException ex) {
             return StatusCode((int)ex.StatusCode, ex.Message);
