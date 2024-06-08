@@ -31,7 +31,6 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
                     if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
                     {
                         context.ActionArguments["battleTag"] = res.BattleTag;
-                        context.ActionArguments["token"] = token;
                         await next.Invoke();
                     }
                     else
