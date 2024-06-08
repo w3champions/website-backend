@@ -12,7 +12,7 @@ public class InjectAuthTokenFilter : IAsyncActionFilter {
     
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var token= GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
+        var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
         if (!string.IsNullOrEmpty(token))
         {
             context.ActionArguments["authToken"] = token;
