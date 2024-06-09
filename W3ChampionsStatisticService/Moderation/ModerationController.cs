@@ -21,16 +21,18 @@ public class ModerationController : ControllerBase
     }
 
     [HttpGet("loungeMute")]
+    [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> GetLoungeMutes(string authorization)
+    public async Task<IActionResult> GetLoungeMutes(string authToken)
     {
-        var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authorization);
+        var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
         return Ok(loungeMutes);
     }
 
     [HttpPost("loungeMute")]
+    [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authorization)
+    public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authToken)
     {
         if (loungeMute.battleTag == "") {
             return BadRequest("BattleTag cannot be empty.");
@@ -40,7 +42,7 @@ public class ModerationController : ControllerBase
             return BadRequest("Ban End Date must be set.");
         }
 
-        var result = await _chatServiceRepository.PostLoungeMute(loungeMute, authorization);
+        var result = await _chatServiceRepository.PostLoungeMute(loungeMute, authToken);
         if (result.StatusCode == HttpStatusCode.Forbidden) {
             return StatusCode(403);
         }
@@ -55,10 +57,11 @@ public class ModerationController : ControllerBase
     }
 
     [HttpDelete("loungeMute/{bTag}")]
+    [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authorization)
+    public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authToken)
     {
-        var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authorization);
+        var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authToken);
         if (result.StatusCode == HttpStatusCode.BadRequest) {
             var reason = result.Content.ReadAsStringAsync().Result;
             return BadRequest(reason);
