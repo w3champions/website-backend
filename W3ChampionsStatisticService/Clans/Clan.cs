@@ -57,7 +57,6 @@ public class Clan
         if (ChiefTain != personWhoInvitesBattleTag && !Shamans.Contains(personWhoInvitesBattleTag)) throw new ValidationException("Only chieftains and shamans can invite");
         if (PendingInvites.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
         if (Members.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
-        if (FoundingFathers.Contains(clanMemberShip.BattleTag)) throw new ValidationException("Can not invite player twice");
 
         clanMemberShip.Invite(this);
 
