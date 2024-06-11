@@ -86,14 +86,8 @@ public class Clan
 
         ClanState = ClanState.LeaveClan(clanMemberShip);
 
-        if (!IsSuccesfullyFounded)
-        {
-            FoundingFathers.Remove(clanMemberShip.BattleTag);
-        }
-        else
-        {
-            Members.Remove(clanMemberShip.BattleTag);
-        }
+        Members.Remove(clanMemberShip.BattleTag);
+        Shamans.Remove(clanMemberShip.BattleTag);
     }
 
     public void AddShaman(string shamanId, string actingPlayer)
