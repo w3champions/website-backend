@@ -93,6 +93,7 @@ public class Clan
         else
         {
             Members.Remove(clanMemberShip.BattleTag);
+            Shamans.Remove(clanMemberShip.BattleTag);
         }
     }
 
