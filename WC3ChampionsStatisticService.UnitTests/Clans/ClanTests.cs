@@ -515,6 +515,24 @@ public class ClanTests : IntegrationTestBase
         Assert.AreEqual("Wood", clanLoaded.Ranks.First().LeagueName);
         Assert.AreEqual(5, clanLoaded.Ranks.First().LeagueDivision);
     }
+    [Test]
+    public async Task LeaveClanAsShaman()
+    {
+        await CreateFoundedClanForTest();
+
+        await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
+        await _handler.AcceptInvite("Wolf#456", "CS");
+        await _handler.AddShamanToClan("Wolf#456", "CS", "Peter#123");
+
+        var clanLoaded = await _clanRepository.LoadClan("CS");
+
+        Assert.AreEqual("Wolf#456", clanLoaded.Shamans.Single());
+        var clan = await _handler.LeaveClan("CS", "Wolf#456");
+        var result = clan.Shamans.Contains("Wolf#456");
+        Assert.IsFalse(result);
+        result = clan.Members.Contains("Wolf#456");
+        Assert.IsFalse(result);
+    }
 
     private async Task<Clan> CreateFoundedClanForTest(string clanId = "CS", string warchief = "Peter#123")
     {
