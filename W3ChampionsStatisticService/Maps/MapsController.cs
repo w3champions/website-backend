@@ -30,7 +30,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpGet("")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> GetMaps([FromQuery] GetMapsRequest request)
     {
         var maps = await _matchmakingServiceClient.GetMaps(request);
@@ -38,7 +39,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpPost("")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> CreateMap([FromBody] MapContract request)
     {
         try {
@@ -50,7 +52,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
     public async Task<IActionResult> UpdateMap(int id, [FromBody] MapContract request)
     {
         var map = await _matchmakingServiceClient.UpdateMap(id, request);
@@ -58,7 +61,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpGet("{id}/files")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
     public async Task<IActionResult> GetMapFiles(int id)
     {
         var mapFiles = await _updateServiceClient.GetMapFiles(id);
@@ -66,7 +70,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpPost("{id}/files")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
     public async Task<IActionResult> CreateMapFile()
     {
         HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(Request.HttpContext);
@@ -75,7 +80,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpGet("files/{fileId}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
     public async Task<IActionResult> GetMapFile(string fileId)
     {
         var mapFile = await _updateServiceClient.GetMapFile(fileId);
@@ -83,7 +89,8 @@ public class MapsController : ControllerBase
     }
 
     [HttpDelete("files/{fileId}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [HasPermissionFilter(Permission = EPermission.Maps)]
+    [AuthFilter]
     public async Task<IActionResult> DeleteMapFile(string fileId)
     {
         await _updateServiceClient.DeleteMapFile(fileId);
