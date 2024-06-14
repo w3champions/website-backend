@@ -47,6 +47,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.StaticFiles;
+using W3C.Domain.IdentificationService;
 using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Admin.Logs;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
@@ -132,10 +133,13 @@ public class Startup
         services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
         services.AddTransient<BearerHasPermissionFilter>();
         services.AddTransient<InjectAuthTokenFilter>();
+        services.AddTransient<AuthFilter>();
+        services.AddTransient<HasPermissionFilter>();
 
         services.AddSingleton<MatchmakingServiceClient>();
         services.AddSingleton<UpdateServiceClient>();
         services.AddSingleton<ReplayServiceClient>();
+        services.AddSingleton<IdentificationServiceClient>();
         services.AddTransient<MatchQueryHandler>();
         services.AddSingleton<ChatServiceClient>();
         services.AddTransient<IFriendRepository, FriendRepository>();
