@@ -14,7 +14,7 @@ namespace W3C.Domain.IdentificationService;
 public class IdentificationServiceClient
 {
     private readonly HttpClient _httpClient;
-    private readonly string _identificationSecret = Environment.GetEnvironmentVariable("IDENTIFICATION_SECRET") ?? "testFOO123";
+    private readonly string _identificationSecret = Environment.GetEnvironmentVariable("WEBSITE_BACKEND_TO_ID_SERVICE_SECRET");
     private static readonly string ServiceApiUrl = Environment.GetEnvironmentVariable("IDENTIFICATION_API") ?? "http://localhost:8081";
     private string _cachedToken;
     private DateTime _tokenExpiryTime;
