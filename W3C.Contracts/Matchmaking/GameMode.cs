@@ -39,4 +39,7 @@ public enum GameMode
     GM_DOTA_5ON5_AT = 902,
 
     GM_SC_FFA_4 = 1001,
+
+    GM_DS = 1101,
+    GM_DS_AT = 1102,
 }
