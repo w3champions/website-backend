@@ -26,7 +26,8 @@ public class W3CStatsController : ControllerBase
         HeroStatsQueryHandler heroStatsQueryHandler,
         MmrDistributionHandler mmrDistributionHandler,
         PlayerStatisticsService statisticsService,
-        W3StatsService w3StatsService)
+        W3StatsService w3StatsService
+        )
     {
         _w3StatsRepo = w3StatsRepo;
         _heroStatsQueryHandler = heroStatsQueryHandler;
@@ -43,9 +44,9 @@ public class W3CStatsController : ControllerBase
     }
 
     [HttpGet("map-race-recent-wins")]
-    public async Task<IActionResult> GetRecentRaceVersusRaceStat()
+    public async Task<IActionResult> GetRecentRaceVersusRaceStat(int n = 3)
     {
-        var stats = await _w3StatsService.LoadNRaceVsRaceStats();
+        var stats = await _w3StatsService.LoadNRaceVsRaceStats(n);
         return Ok(stats);
     }
 
