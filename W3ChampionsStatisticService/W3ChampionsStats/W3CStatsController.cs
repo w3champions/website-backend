@@ -19,23 +19,33 @@ public class W3CStatsController : ControllerBase
     private readonly HeroStatsQueryHandler _heroStatsQueryHandler;
     private readonly MmrDistributionHandler _mmrDistributionHandler;
     private readonly PlayerStatisticsService _statisticsService;
+    private readonly W3StatsService _w3StatsService;
 
     public W3CStatsController(
         IW3StatsRepo w3StatsRepo,
         HeroStatsQueryHandler heroStatsQueryHandler,
         MmrDistributionHandler mmrDistributionHandler,
-        PlayerStatisticsService statisticsService)
+        PlayerStatisticsService statisticsService,
+        W3StatsService w3StatsService)
     {
         _w3StatsRepo = w3StatsRepo;
         _heroStatsQueryHandler = heroStatsQueryHandler;
         _mmrDistributionHandler = mmrDistributionHandler;
         _statisticsService = statisticsService;
+        _w3StatsService = w3StatsService;
     }
 
     [HttpGet("map-race-wins")]
     public async Task<IActionResult> GetRaceVersusRaceStat()
     {
         var stats = await _w3StatsRepo.LoadRaceVsRaceStats();
+        return Ok(stats);
+    }
+
+    [HttpGet("map-race-recent-wins")]
+    public async Task<IActionResult> GetRecentRaceVersusRaceStat()
+    {
+        var stats = await _w3StatsService.LoadNRaceVsRaceStats();
         return Ok(stats);
     }
 
