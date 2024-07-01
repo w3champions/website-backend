@@ -242,6 +242,7 @@ public class Matchup
         {
             Name = w.battleTag.Split("#")[0],
             BattleTag = w.battleTag,
+            InviteName = w.inviteName,
             CurrentMmr = (int?)w.updatedMmr?.rating ?? (int)w.mmr.rating,
             OldMmr = (int)w.mmr.rating,
             Won = w.won,
