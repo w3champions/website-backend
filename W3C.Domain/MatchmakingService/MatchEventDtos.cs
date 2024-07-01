@@ -43,6 +43,7 @@ public class UnfinishedMatchPlayer : IMatchPlayerServerInfo
     public int team { get; set; }
     public string id { get; set; }
     public string battleTag { get; set; }
+    public string inviteName { get; set; }
     public Race race { get; set; }
     public Mmr mmr { get; set; }
     public Ranking ranking { get; set; }
