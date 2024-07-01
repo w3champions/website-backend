@@ -141,6 +141,7 @@ public class Startup
         services.AddTransient<IFriendRepository, FriendRepository>();
         services.AddTransient<PlayerStatisticsService>();
         services.AddTransient<PlayerService>();
+        services.AddTransient<W3StatsService>();
         services.AddTransient<IPermissionsRepository, PermissionsRepository>();
         services.AddTransient<ILogsRepository, LogsRepository>();
 
