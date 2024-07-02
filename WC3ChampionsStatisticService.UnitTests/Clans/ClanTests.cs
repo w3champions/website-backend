@@ -519,7 +519,6 @@ public class ClanTests : IntegrationTestBase
     public async Task LeaveClanAsShaman()
     {
         await CreateFoundedClanForTest();
-
         await _handler.InviteToClan("Wolf#456", "CS", "Peter#123");
         await _handler.AcceptInvite("Wolf#456", "CS");
         await _handler.AddShamanToClan("Wolf#456", "CS", "Peter#123");
@@ -532,6 +531,7 @@ public class ClanTests : IntegrationTestBase
         Assert.IsFalse(result);
         result = clan.Members.Contains("Wolf#456");
         Assert.IsFalse(result);
+        await _clanRepository.DeleteClan("CS");
     }
 
     private async Task<Clan> CreateFoundedClanForTest(string clanId = "CS", string warchief = "Peter#123")
