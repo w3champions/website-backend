@@ -8,17 +8,12 @@ using Serilog;
 
 namespace W3ChampionsStatisticService.ReadModelBase;
 
-public class AsyncServiceBase<T> : IHostedService where T : IAsyncUpdatable
+public class AsyncServiceBase<T>(IServiceScopeFactory serviceScopeFactory) : IHostedService where T : IAsyncUpdatable
 {
-    protected readonly IServiceScopeFactory ServiceScopeFactory;
+    protected readonly IServiceScopeFactory ServiceScopeFactory = serviceScopeFactory;
 
     private Task _executingTask;
     private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
-
-    public AsyncServiceBase(IServiceScopeFactory serviceScopeFactory)
-    {
-        ServiceScopeFactory = serviceScopeFactory;
-    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {

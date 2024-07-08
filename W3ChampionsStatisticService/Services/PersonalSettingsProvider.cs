@@ -1,5 +1,4 @@
 using MongoDB.Driver;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
@@ -9,14 +8,9 @@ using W3ChampionsStatisticService.PersonalSettings;
 namespace W3ChampionsStatisticService.Services;
 
 // TODO: It is a repository with a cache
-public class PersonalSettingsProvider : MongoDbRepositoryBase
+public class PersonalSettingsProvider(MongoClient mongoClient, ICachedDataProvider<List<PersonalSetting>> cachedDataProvider) : MongoDbRepositoryBase(mongoClient)
 {
-    private readonly ICachedDataProvider<List<PersonalSetting>> _cachedDataProvider;
-
-    public PersonalSettingsProvider(MongoClient mongoClient, ICachedDataProvider<List<PersonalSetting>> cachedDataProvider) : base(mongoClient)
-    {
-        _cachedDataProvider = cachedDataProvider;
-    }
+    private readonly ICachedDataProvider<List<PersonalSetting>> _cachedDataProvider = cachedDataProvider;
 
     public Task<List<PersonalSetting>> GetPersonalSettingsAsync()
     {

@@ -7,15 +7,10 @@ namespace W3ChampionsStatisticService.Clans;
 
 [ApiController]
 [Route("api/clans")]
-public class ClanController : ControllerBase
+public class ClanController(
+    ClanCommandHandler clanCommandHandler) : ControllerBase
 {
-    private readonly ClanCommandHandler _clanCommandHandler;
-
-    public ClanController(
-        ClanCommandHandler clanCommandHandler)
-    {
-        _clanCommandHandler = clanCommandHandler;
-    }
+    private readonly ClanCommandHandler _clanCommandHandler = clanCommandHandler;
 
     [HttpPost]
     [InjectActingPlayerAuthCode]

@@ -6,16 +6,9 @@ using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
-public class GameLengthForPlayerStatisticsHandler : IReadModelHandler
+public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) : IReadModelHandler
 {
-    private readonly IPlayerRepository _playerRepo;
-
-    public GameLengthForPlayerStatisticsHandler(
-        IPlayerRepository playerRepo
-        )
-    {
-        _playerRepo = playerRepo;
-    }
+    private readonly IPlayerRepository _playerRepo = playerRepo;
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

@@ -9,14 +9,9 @@ using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.Services;
 
-public class PlayerAkaProvider
+public class PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccountsCached)
 {
-    private readonly ICachedDataProvider<List<PlayerAka>> _userAccountsCached;
-
-    public PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccountsCached)
-    {
-        _userAccountsCached = userAccountsCached;
-    }
+    private readonly ICachedDataProvider<List<PlayerAka>> _userAccountsCached = userAccountsCached;
 
     public static async Task<List<PlayerAka>> GetAkaReferencesAsync() // list of all Akas requested from W3info
     {
