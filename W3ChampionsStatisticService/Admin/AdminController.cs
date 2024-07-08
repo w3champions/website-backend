@@ -14,30 +14,20 @@ namespace W3ChampionsStatisticService.Admin;
 
 [ApiController]
 [Route("api/admin")]
-public class AdminController : ControllerBase
+public class AdminController(
+    IMatchRepository matchRepository,
+    MatchmakingServiceClient matchmakingServiceRepository,
+    INewsRepository newsRepository,
+    IInformationMessagesRepository informationMessagesRepository,
+    IAdminRepository adminRepository,
+    IRankRepository rankRepository) : ControllerBase
 {
-    private readonly IMatchRepository _matchRepository;
-    private readonly MatchmakingServiceClient _matchmakingServiceRepository;
-    private readonly INewsRepository _newsRepository;
-    private readonly IInformationMessagesRepository _informationMessagesRepository;
-    private readonly IAdminRepository _adminRepository;
-    private readonly IRankRepository _rankRepository;
-
-    public AdminController(
-        IMatchRepository matchRepository,
-        MatchmakingServiceClient matchmakingServiceRepository,
-        INewsRepository newsRepository,
-        IInformationMessagesRepository informationMessagesRepository,
-        IAdminRepository adminRepository,
-        IRankRepository rankRepository)
-    {
-        _matchRepository = matchRepository;
-        _matchmakingServiceRepository = matchmakingServiceRepository;
-        _newsRepository = newsRepository;
-        _informationMessagesRepository = informationMessagesRepository;
-        _adminRepository = adminRepository;
-        _rankRepository = rankRepository;
-    }
+    private readonly IMatchRepository _matchRepository = matchRepository;
+    private readonly MatchmakingServiceClient _matchmakingServiceRepository = matchmakingServiceRepository;
+    private readonly INewsRepository _newsRepository = newsRepository;
+    private readonly IInformationMessagesRepository _informationMessagesRepository = informationMessagesRepository;
+    private readonly IAdminRepository _adminRepository = adminRepository;
+    private readonly IRankRepository _rankRepository = rankRepository;
 
     [HttpGet("health-check")]
     public IActionResult HealthCheck()
