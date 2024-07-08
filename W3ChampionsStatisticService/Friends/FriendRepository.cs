@@ -1,18 +1,13 @@
-﻿using MongoDB.Bson;
-using MongoDB.Driver;
-using System;
+﻿using MongoDB.Driver;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Friends;
 
-public class FriendRepository : MongoDbRepositoryBase, IFriendRepository
+public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IFriendRepository
 {
-    public FriendRepository(MongoClient mongoClient) : base(mongoClient) {}
-
     public async Task<Friendlist> LoadFriendlist(string battleTag)
     {
         var friendlist = await LoadFirst<Friendlist>(battleTag);

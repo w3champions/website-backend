@@ -81,7 +81,7 @@ public class PersonalSettingsController : ControllerBase
     }
 
     [HttpPut("{battleTag}/profile-picture")]
-    [BearerCheckIfBattleTagBelongsToAuthAttribute]
+    [BearerCheckIfBattleTagBelongsToAuth]
     public async Task<IActionResult> SetProfilePicture(
         string battleTag,
         [FromBody] SetPictureCommand command)
