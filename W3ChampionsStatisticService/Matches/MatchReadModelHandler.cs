@@ -7,16 +7,9 @@ using Serilog;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class MatchReadModelHandler : IReadModelHandler
+public class MatchReadModelHandler(IMatchRepository matchRepository) : IReadModelHandler
 {
-    private readonly IMatchRepository _matchRepository;
-
-    public MatchReadModelHandler(
-        IMatchRepository matchRepository
-        )
-    {
-        _matchRepository = matchRepository;
-    }
+    private readonly IMatchRepository _matchRepository = matchRepository;
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

@@ -11,13 +11,9 @@ using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class RankRepository : MongoDbRepositoryBase, IRankRepository
+public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : MongoDbRepositoryBase(mongoClient), IRankRepository
 {
-    public RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : base(mongoClient)
-    {
-        _personalSettingsProvider = personalSettingsProvider;
-    }
-    private PersonalSettingsProvider _personalSettingsProvider;
+    private PersonalSettingsProvider _personalSettingsProvider = personalSettingsProvider;
 
     public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
     {

@@ -6,12 +6,8 @@ using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Rewards.Portraits;
 
-public class PortraitRepository : MongoDbRepositoryBase, IPortraitRepository
+public class PortraitRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPortraitRepository
 {
-    public PortraitRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-    }
-
     public Task<List<PortraitDefinition>> LoadPortraitDefinitions()
     {
         return LoadAll<PortraitDefinition>();

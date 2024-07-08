@@ -6,21 +6,14 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class RankQueryHandler
+public class RankQueryHandler(
+    IRankRepository rankRepository,
+    IPlayerRepository playerRepository,
+    IClanRepository clanRepository)
 {
-    private readonly IRankRepository _rankRepository;
-    private readonly IPlayerRepository _playerRepository;
-    private readonly IClanRepository _clanRepository;
-
-    public RankQueryHandler(
-        IRankRepository rankRepository,
-        IPlayerRepository playerRepository,
-        IClanRepository clanRepository)
-    {
-        _rankRepository = rankRepository;
-        _playerRepository = playerRepository;
-        _clanRepository = clanRepository;
-    }
+    private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly IClanRepository _clanRepository = clanRepository;
 
     public async Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
     {

@@ -9,17 +9,12 @@ namespace W3ChampionsStatisticService.Maps;
 
 [ApiController]
 [Route("api/replays")]
-public class ReplaysController : ControllerBase
+public class ReplaysController(
+    ReplayServiceClient replayServiceClient,
+    IMatchRepository matchRepository) : ControllerBase
 {
-    private readonly ReplayServiceClient _replayServiceClient;
-    private readonly IMatchRepository _matchRepository;
-    public ReplaysController(
-        ReplayServiceClient replayServiceClient,
-        IMatchRepository matchRepository)
-    {
-        _replayServiceClient = replayServiceClient;
-        _matchRepository = matchRepository;
-    }
+    private readonly ReplayServiceClient _replayServiceClient = replayServiceClient;
+    private readonly IMatchRepository _matchRepository = matchRepository;
 
     [HttpGet("{gameId}")]
     public async Task<IActionResult> GetReplay(string gameId)

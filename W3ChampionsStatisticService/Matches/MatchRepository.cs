@@ -14,14 +14,9 @@ using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class MatchRepository : MongoDbRepositoryBase, IMatchRepository
+public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : MongoDbRepositoryBase(mongoClient), IMatchRepository
 {
-    private readonly IOngoingMatchesCache _cache;
-
-    public MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : base(mongoClient)
-    {
-        _cache = cache;
-    }
+    private readonly IOngoingMatchesCache _cache = cache;
 
     public Task Insert(Matchup matchup)
     {

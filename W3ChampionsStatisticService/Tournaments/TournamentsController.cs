@@ -11,19 +11,13 @@ namespace W3ChampionsStatisticService.Tournaments;
 
 [ApiController]
 [Route("api/tournaments")]
-public class TournamentsController : ControllerBase
+public class TournamentsController(
+    MatchmakingServiceClient matchmakingServiceRepository,
+    IPersonalSettingsRepository personalSettingsRepository
+    ) : ControllerBase
 {
-    private readonly IPersonalSettingsRepository _personalSettingsRepository;
-    private readonly MatchmakingServiceClient _matchmakingServiceRepository;
-
-    public TournamentsController(
-        MatchmakingServiceClient matchmakingServiceRepository,
-        IPersonalSettingsRepository personalSettingsRepository
-    )
-    {
-        _personalSettingsRepository = personalSettingsRepository;
-        _matchmakingServiceRepository = matchmakingServiceRepository;
-    }
+    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
+    private readonly MatchmakingServiceClient _matchmakingServiceRepository = matchmakingServiceRepository;
 
     [HttpGet("")]
     public async Task<IActionResult> GetTournaments()
