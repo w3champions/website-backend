@@ -11,17 +11,12 @@ using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
-using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
-public class PlayerRepository : MongoDbRepositoryBase, IPlayerRepository
+public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
-    public PlayerRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-    }
-
     public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
     {
         await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);

@@ -8,42 +8,28 @@ using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
-using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
-using System.Collections.Generic;
-using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [ApiController]
 [Route("api/players")]
-public class PlayersController : ControllerBase
+public class PlayersController(
+    IPlayerRepository playerRepository,
+    GameModeStatQueryHandler queryHandler,
+    IPersonalSettingsRepository personalSettingsRepository,
+    IClanRepository clanRepository,
+    IW3CAuthenticationService authenticationService,
+    PlayerAkaProvider playerAkaProvider,
+    PlayerService playerService) : ControllerBase
 {
-    private readonly IPlayerRepository _playerRepository;
-    private readonly GameModeStatQueryHandler _queryHandler;
-    private readonly IPersonalSettingsRepository _personalSettingsRepository;
-    private readonly IClanRepository _clanRepository;
-    private readonly IW3CAuthenticationService _authenticationService;
-    private readonly PlayerAkaProvider _playerAkaProvider;
-    private readonly PlayerService _playerService;
-
-    public PlayersController(
-        IPlayerRepository playerRepository,
-        GameModeStatQueryHandler queryHandler,
-        IPersonalSettingsRepository personalSettingsRepository,
-        IClanRepository clanRepository,
-        IW3CAuthenticationService authenticationService,
-        PlayerAkaProvider playerAkaProvider,
-        PlayerService playerService)
-    {
-        _playerRepository = playerRepository;
-        _queryHandler = queryHandler;
-        _personalSettingsRepository = personalSettingsRepository;
-        _clanRepository = clanRepository;
-        _authenticationService = authenticationService;
-        _playerAkaProvider = playerAkaProvider;
-        _playerService = playerService;
-    }
+    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly GameModeStatQueryHandler _queryHandler = queryHandler;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
+    private readonly IClanRepository _clanRepository = clanRepository;
+    private readonly IW3CAuthenticationService _authenticationService = authenticationService;
+    private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
+    private readonly PlayerService _playerService = playerService;
 
     [HttpGet("global-search")]
     public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
