@@ -10,16 +10,9 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class PlayOverviewHandler : IReadModelHandler
+public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadModelHandler
 {
-    private readonly IPlayerRepository _playerRepository;
-
-    public PlayOverviewHandler(
-        IPlayerRepository playerRepository
-        )
-    {
-        _playerRepository = playerRepository;
-    }
+    private readonly IPlayerRepository _playerRepository = playerRepository;
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

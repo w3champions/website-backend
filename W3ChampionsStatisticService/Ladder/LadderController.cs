@@ -9,27 +9,18 @@ namespace W3ChampionsStatisticService.Ladder;
 
 [ApiController]
 [Route("api/ladder")]
-public class LadderController : ControllerBase
+public class LadderController(
+    IRankRepository rankRepository,
+    IPlayerRepository playerRepository,
+    RankQueryHandler rankQueryHandler,
+    PlayerAkaProvider playerAkaProvider,
+    MatchmakingProvider matchmakingProvider) : ControllerBase
 {
-    private readonly IRankRepository _rankRepository;
-    private readonly IPlayerRepository _playerRepository;
-    private readonly RankQueryHandler _rankQueryHandler;
-    private readonly PlayerAkaProvider _playerAkaProvider;
-    private readonly MatchmakingProvider _matchmakingProvider;
-
-    public LadderController(
-        IRankRepository rankRepository,
-        IPlayerRepository playerRepository,
-        RankQueryHandler rankQueryHandler,
-        PlayerAkaProvider playerAkaProvider,
-        MatchmakingProvider matchmakingProvider)
-    {
-        _rankRepository = rankRepository;
-        _playerRepository = playerRepository;
-        _rankQueryHandler = rankQueryHandler;
-        _playerAkaProvider = playerAkaProvider;
-        _matchmakingProvider = matchmakingProvider;
-    }
+    private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly RankQueryHandler _rankQueryHandler = rankQueryHandler;
+    private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
+    private readonly MatchmakingProvider _matchmakingProvider = matchmakingProvider;
 
     [HttpGet("search")]
     public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode

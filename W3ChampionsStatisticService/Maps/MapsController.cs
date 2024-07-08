@@ -5,7 +5,6 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using W3ChampionsStatisticService.Services;
 using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
 
@@ -13,21 +12,12 @@ namespace W3ChampionsStatisticService.Maps;
 
 [ApiController]
 [Route("api/maps")]
-public class MapsController : ControllerBase
+public class MapsController(
+    MatchmakingServiceClient matchmakingServiceClient,
+    UpdateServiceClient updateServiceClient) : ControllerBase
 {
-    private readonly MatchmakingProvider _matchmakingProvider;
-    private readonly MatchmakingServiceClient _matchmakingServiceClient;
-    private readonly UpdateServiceClient _updateServiceClient;
-
-    public MapsController(
-        MatchmakingServiceClient matchmakingServiceClient,
-        MatchmakingProvider matchmakingProvider,
-        UpdateServiceClient updateServiceClient)
-    {
-        _matchmakingServiceClient = matchmakingServiceClient;
-        _matchmakingProvider = matchmakingProvider;
-        _updateServiceClient = updateServiceClient;
-    }
+    private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
+    private readonly UpdateServiceClient _updateServiceClient = updateServiceClient;
 
     [HttpGet("")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
