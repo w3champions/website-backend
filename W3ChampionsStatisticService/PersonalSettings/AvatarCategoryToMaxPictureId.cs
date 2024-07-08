@@ -2,14 +2,8 @@ using W3C.Domain.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
-public class AvatarCategoryToMaxPictureId
+public class AvatarCategoryToMaxPictureId(AvatarCategory avatarType, long max)
 {
-    public AvatarCategory AvatarType { get; }
-    public long Max { get; }
-
-    public AvatarCategoryToMaxPictureId(AvatarCategory avatarType, long max)
-    {
-        AvatarType = avatarType;
-        Max = max;
-    }
+    public AvatarCategory AvatarType { get; } = avatarType;
+    public long Max { get; } = max;
 }

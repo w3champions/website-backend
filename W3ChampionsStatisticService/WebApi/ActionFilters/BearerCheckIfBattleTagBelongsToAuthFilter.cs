@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Primitives;
@@ -12,14 +10,9 @@ using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-public class BearerCheckIfBattleTagBelongsToAuthFilter : IAsyncActionFilter
+public class BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService authService) : IAsyncActionFilter
 {
-    private readonly IW3CAuthenticationService _authService;
-
-    public BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService authService)
-    {
-        _authService = authService;
-    }
+    private readonly IW3CAuthenticationService _authService = authService;
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {

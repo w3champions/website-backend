@@ -9,13 +9,8 @@ using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-public class InjectActingPlayerFromAuthCodeFilter : IAsyncActionFilter {
-    private readonly IW3CAuthenticationService _authService;
-
-    public InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService authService)
-    {
-        _authService = authService;
-    }
+public class InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService authService) : IAsyncActionFilter {
+    private readonly IW3CAuthenticationService _authService = authService;
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
