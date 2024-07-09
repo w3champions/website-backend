@@ -6,9 +6,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 
-public class PopularHoursStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class PopularHoursStatHandler : IReadModelHandler
 {
-    private readonly IW3StatsRepo _w3Stats = w3Stats;
+    private readonly IW3StatsRepo _w3Stats;
+
+    public PopularHoursStatHandler(
+        IW3StatsRepo w3Stats
+        )
+    {
+        _w3Stats = w3Stats;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

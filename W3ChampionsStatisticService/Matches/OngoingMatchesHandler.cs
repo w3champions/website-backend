@@ -7,14 +7,21 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class OngoingMatchesHandler(
-    IMatchEventRepository eventRepository,
-    IMatchRepository matchRepository,
-    IPersonalSettingsRepository personalSettingsRepository) : IAsyncUpdatable
+public class OngoingMatchesHandler : IAsyncUpdatable
 {
-    private readonly IMatchEventRepository _eventRepository = eventRepository;
-    private readonly IMatchRepository _matchRepository = matchRepository;
-    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
+    private readonly IMatchEventRepository _eventRepository;
+    private readonly IMatchRepository _matchRepository;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository;
+
+    public OngoingMatchesHandler(
+        IMatchEventRepository eventRepository,
+        IMatchRepository matchRepository,
+        IPersonalSettingsRepository personalSettingsRepository)
+    {
+        _eventRepository = eventRepository;
+        _matchRepository = matchRepository;
+        _personalSettingsRepository = personalSettingsRepository;
+    }
 
     public async Task Update()
     {

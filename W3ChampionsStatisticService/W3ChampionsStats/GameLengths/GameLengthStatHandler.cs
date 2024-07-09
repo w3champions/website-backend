@@ -7,9 +7,16 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 
-public class GameLengthStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class GameLengthStatHandler : IReadModelHandler
 {
-    private readonly IW3StatsRepo _w3Stats = w3Stats;
+    private readonly IW3StatsRepo _w3Stats;
+
+    public GameLengthStatHandler(
+        IW3StatsRepo w3Stats
+        )
+    {
+        _w3Stats = w3Stats;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

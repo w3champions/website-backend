@@ -8,9 +8,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
-public class GamesPerDayHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class GamesPerDayHandler : IReadModelHandler
 {
-    private readonly IW3StatsRepo _w3Stats = w3Stats;
+    private readonly IW3StatsRepo _w3Stats;
+
+    public GamesPerDayHandler(
+        IW3StatsRepo w3Stats
+        )
+    {
+        _w3Stats = w3Stats;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

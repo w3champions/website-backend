@@ -3,16 +3,23 @@ using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class LeagueSyncHandler(
-    IRankRepository rankRepository,
-    IMatchEventRepository matchEventRepository
-    ) : IAsyncUpdatable
+public class LeagueSyncHandler : IAsyncUpdatable
 {
-    private readonly IMatchEventRepository _matchEventRepository = matchEventRepository;
-    private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly IMatchEventRepository _matchEventRepository;
+    private readonly IRankRepository _rankRepository;
+
+    public LeagueSyncHandler(
+        IRankRepository rankRepository,
+        IMatchEventRepository matchEventRepository
+    )
+    {
+        _rankRepository = rankRepository;
+        _matchEventRepository = matchEventRepository;
+    }
 
     public async Task Update()
     {

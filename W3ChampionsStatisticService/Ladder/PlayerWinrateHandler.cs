@@ -6,9 +6,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class PlayerWinrateHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerWinrateHandler : IReadModelHandler
 {
-    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly IPlayerRepository _playerRepository;
+
+    public PlayerWinrateHandler(
+        IPlayerRepository playerRepository
+        )
+    {
+        _playerRepository = playerRepository;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

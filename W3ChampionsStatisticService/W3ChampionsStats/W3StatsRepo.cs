@@ -18,8 +18,12 @@ using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
-public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IW3StatsRepo
+public class W3StatsRepo : MongoDbRepositoryBase, IW3StatsRepo
 {
+    public W3StatsRepo(MongoClient mongoClient) : base(mongoClient)
+    {
+    }
+
     public Task<List<OverallRaceAndWinStat>> LoadRaceVsRaceStats()
     {
         return LoadAll<OverallRaceAndWinStat>();

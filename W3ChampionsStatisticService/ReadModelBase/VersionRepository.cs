@@ -6,9 +6,13 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.ReadModelBase;
 
-public class VersionRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IVersionRepository
+public class VersionRepository : MongoDbRepositoryBase, IVersionRepository
 {
     private readonly string _collection = "HandlerVersions";
+
+    public VersionRepository(MongoClient mongoClient) : base(mongoClient)
+    {
+    }
 
     public async Task<HandlerVersion> GetLastVersion<T>()
     {

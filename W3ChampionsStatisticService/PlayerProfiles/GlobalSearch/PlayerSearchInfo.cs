@@ -6,14 +6,23 @@ using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 
-public class PlayerSearchInfo(PersonalSetting p, string relevanceId)
+public class PlayerSearchInfo
 {
     [BsonId]
-    public string BattleTag { get; set; } = p.Id;
-    public string Name { get; set; } = p.Id.Split("#")[0];
-    public List<Season> Seasons { get; set; } = new List<Season>();
-    public ProfilePicture ProfilePicture { get; set; } = p.ProfilePicture;
-    public string RelevanceId { get; set; } = relevanceId;
+    public string BattleTag { get; set; }
+    public string Name { get; set; }
+    public List<Season> Seasons { get; set; }
+    public ProfilePicture ProfilePicture { get; set; }
+    public string RelevanceId { get; set; }
+
+    public PlayerSearchInfo(PersonalSetting p, string relevanceId)
+    {
+        BattleTag = p.Id;
+        Name = p.Id.Split("#")[0];
+        Seasons = new List<Season>();
+        ProfilePicture = p.ProfilePicture;
+        RelevanceId = relevanceId;
+    }
 
     public void SetSeasons(PlayerOverallStats p)
     {

@@ -9,14 +9,21 @@ using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Clans;
 
-public class ClanCommandHandler(
-    IClanRepository clanRepository,
-    IRankRepository rankRepository,
-    TrackingService trackingService)
+public class ClanCommandHandler
+
 {
-    private readonly IClanRepository _clanRepository = clanRepository;
-    private readonly TrackingService _trackingService = trackingService;
-    private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly IClanRepository _clanRepository;
+    private readonly TrackingService _trackingService;
+    private readonly IRankRepository _rankRepository;
+
+    public ClanCommandHandler(IClanRepository clanRepository,
+        IRankRepository rankRepository,
+        TrackingService trackingService)
+    {
+        _clanRepository = clanRepository;
+        _trackingService = trackingService;
+        _rankRepository = rankRepository;
+    }
 
     public async Task<Clan> CreateClan(string clanName, string clanAbbrevation, string battleTagOfFounder)
     {

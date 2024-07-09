@@ -3,16 +3,23 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
+using System.Collections.Generic;
 using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.Matches;
 
 [ApiController]
 [Route("api/matches")]
-public class MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler) : ControllerBase
+public class MatchesController : ControllerBase
 {
-    private readonly IMatchRepository _matchRepository = matchRepository;
-    private readonly MatchQueryHandler _matchQueryHandler = matchQueryHandler;
+    private readonly IMatchRepository _matchRepository;
+    private readonly MatchQueryHandler _matchQueryHandler;
+
+    public MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler)
+    {
+        _matchRepository = matchRepository;
+        _matchQueryHandler = matchQueryHandler;
+    }
 
     [HttpGet("")]
     public async Task<IActionResult> GetMatches(

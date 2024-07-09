@@ -5,11 +5,20 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 
-public class PlayerRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season) : WinLoss, IIdentifiable
+public class PlayerRaceStatPerGateway : WinLoss, IIdentifiable
 {
-    public Race Race { get; set; } = race;
-    public GateWay GateWay { get; set; } = gateWay;
-    public int Season { get; set; } = season;
-    public string Id { get; set; } = $"{season}_{battleTag}_@{gateWay}_{race}";
-    public string BattleTag { get; set; } = battleTag;
+    public PlayerRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
+    {
+        Id = $"{season}_{battleTag}_@{gateWay}_{race}";
+        Race = race;
+        GateWay = gateWay;
+        BattleTag = battleTag;
+        Season = season;
+    }
+
+    public Race Race { get; set; }
+    public GateWay GateWay { get; set; }
+    public int Season { get; set; }
+    public string Id { get; set; }
+    public string BattleTag { get; set; }
 }

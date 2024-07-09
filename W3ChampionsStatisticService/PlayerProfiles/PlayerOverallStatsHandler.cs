@@ -6,12 +6,18 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
-public class PlayerOverallStatsHandler(
-    IPlayerRepository playerRepository,
-    IPersonalSettingsRepository personalSettingsRepository) : IReadModelHandler
+public class PlayerOverallStatsHandler : IReadModelHandler
 {
-    private readonly IPlayerRepository _playerRepository = playerRepository;
-    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
+    private readonly IPlayerRepository _playerRepository;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository;
+
+    public PlayerOverallStatsHandler(
+        IPlayerRepository playerRepository,
+        IPersonalSettingsRepository personalSettingsRepository)
+    {
+        _playerRepository = playerRepository;
+        _personalSettingsRepository = personalSettingsRepository;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

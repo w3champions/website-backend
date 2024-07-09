@@ -1,6 +1,11 @@
 namespace W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
-public class ErrorResult(string error)
+public class ErrorResult
 {
-    public string Error { get; } = error;
+    public string Error { get; }
+
+    public ErrorResult(string error)
+    {
+        Error = error;
+    }
 }

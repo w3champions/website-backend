@@ -6,9 +6,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
 
-public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : IReadModelHandler
+public class PlayerHeroStatsHandler : IReadModelHandler
 {
-    private readonly IPlayerStatsRepository _playerRepository = playerRepository;
+    private readonly IPlayerStatsRepository _playerRepository;
+
+    public PlayerHeroStatsHandler(
+        IPlayerStatsRepository playerRepository
+        )
+    {
+        _playerRepository = playerRepository;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

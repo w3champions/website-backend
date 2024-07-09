@@ -6,11 +6,11 @@ public class FloProxies
 {
     public FloProxies()
     {
-        nodeOverrides = new List<string>();
-        automaticNodeOverrides = new List<string>();
-        _id = "";
-        _created_at = "";
-        _updated_at = "";
+        this.nodeOverrides = new List<string>();
+        this.automaticNodeOverrides = new List<string>();
+        this._id = "";
+        this._created_at = "";
+        this._updated_at = "";
     }
     public List<string> nodeOverrides { get; set; }
     public List<string> automaticNodeOverrides { get; set; }

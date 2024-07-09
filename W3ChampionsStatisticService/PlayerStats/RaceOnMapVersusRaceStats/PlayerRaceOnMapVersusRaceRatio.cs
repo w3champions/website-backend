@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using W3C.Contracts.GameObjects;
+using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
