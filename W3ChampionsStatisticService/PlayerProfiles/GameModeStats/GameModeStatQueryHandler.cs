@@ -56,8 +56,12 @@ public class GameModeStatQueryHandler
         try
         {
             if (rank.RankNumber == 0) return;
-            var leagueConstellation = allLeagues.Single(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
-
+            var leagueConstellation = allLeagues.SingleOrDefault(l => l.Gateway == rank.Gateway && l.Season == rank.Season && l.GameMode == rank.GameMode);
+            if (leagueConstellation == null)
+            {
+                Log.Error($"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League}");
+                return;
+            };
             // There are some Ranks with Leagues that do not exist in
             // Season 0 LeagueConstellations, which we should ignore.
             // (Data integrity issue)
@@ -67,11 +71,9 @@ public class GameModeStatQueryHandler
 
             if (league == null) return;
 
-
             var gameModeStat = player.SingleOrDefault(g => g.Id == rank.Id);
 
             if (gameModeStat == null) return;
-
 
             gameModeStat.Division = league.Division;
             gameModeStat.LeagueOrder = league.Order;
@@ -82,8 +84,7 @@ public class GameModeStatQueryHandler
         }
         catch (Exception e)
         {
-            _trackingService.TrackException(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} Leage: {rank.League}");
-            Log.Error($"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League} {e.Message}");
+            _trackingService.TrackException(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League}");
         }
     }
 
