@@ -10,15 +10,10 @@ namespace W3ChampionsStatisticService.Admin.Logs;
 
 [ApiController]
 [Route("api/admin/logs")]
-public class LogsController : ControllerBase
+public class LogsController(
+    ILogsRepository logsRepository) : ControllerBase
 {
-    private readonly ILogsRepository _logsRepository;
-
-    public LogsController(
-        ILogsRepository logsRepository)
-    {
-        _logsRepository = logsRepository;
-    }
+    private readonly ILogsRepository _logsRepository = logsRepository;
 
     [HttpGet]
     [BearerHasPermissionFilter(Permission = EPermission.Logs)]

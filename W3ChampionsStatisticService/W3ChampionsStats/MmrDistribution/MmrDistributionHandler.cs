@@ -7,14 +7,9 @@ using System;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 
-public class MmrDistributionHandler
+public class MmrDistributionHandler(IPlayerRepository playerRepository)
 {
-    private readonly IPlayerRepository _playerRepository;
-
-    public MmrDistributionHandler(IPlayerRepository playerRepository)
-    {
-        _playerRepository = playerRepository;
-    }
+    private readonly IPlayerRepository _playerRepository = playerRepository;
 
     public async Task<MmrStats> GetDistributions(int season, GateWay gateWay, GameMode gameMode)
     {

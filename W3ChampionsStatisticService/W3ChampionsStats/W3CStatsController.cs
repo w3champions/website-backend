@@ -13,24 +13,16 @@ namespace W3ChampionsStatisticService.W3ChampionsStats;
 
 [ApiController]
 [Route("api/w3c-stats")]
-public class W3CStatsController : ControllerBase
+public class W3CStatsController(
+    IW3StatsRepo w3StatsRepo,
+    HeroStatsQueryHandler heroStatsQueryHandler,
+    MmrDistributionHandler mmrDistributionHandler,
+    PlayerStatisticsService statisticsService) : ControllerBase
 {
-    private readonly IW3StatsRepo _w3StatsRepo;
-    private readonly HeroStatsQueryHandler _heroStatsQueryHandler;
-    private readonly MmrDistributionHandler _mmrDistributionHandler;
-    private readonly PlayerStatisticsService _statisticsService;
-
-    public W3CStatsController(
-        IW3StatsRepo w3StatsRepo,
-        HeroStatsQueryHandler heroStatsQueryHandler,
-        MmrDistributionHandler mmrDistributionHandler,
-        PlayerStatisticsService statisticsService)
-    {
-        _w3StatsRepo = w3StatsRepo;
-        _heroStatsQueryHandler = heroStatsQueryHandler;
-        _mmrDistributionHandler = mmrDistributionHandler;
-        _statisticsService = statisticsService;
-    }
+    private readonly IW3StatsRepo _w3StatsRepo = w3StatsRepo;
+    private readonly HeroStatsQueryHandler _heroStatsQueryHandler = heroStatsQueryHandler;
+    private readonly MmrDistributionHandler _mmrDistributionHandler = mmrDistributionHandler;
+    private readonly PlayerStatisticsService _statisticsService = statisticsService;
 
     [HttpGet("map-race-wins")]
     public async Task<IActionResult> GetRaceVersusRaceStat()

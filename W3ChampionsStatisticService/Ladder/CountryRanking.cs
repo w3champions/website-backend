@@ -1,24 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class CountryRanking
+public class CountryRanking(int league, string name, int division, int order, IEnumerable<Rank> ranks)
 {
-    public CountryRanking(int league, string name, int division, int order, IEnumerable<Rank> ranks)
-    {
-        League = league;
-        LeagueName = name;
-        LeagueDivision = division;
-        LeagueOrder = order;
-        Ranks = ranks;
-    }
-
-    public int League { get; private set; }
-    public string LeagueName { get; private set; }
-    public int LeagueDivision { get; private set; }
-    public int LeagueOrder { get; private set; }
-    public IEnumerable<Rank> Ranks { get; private set; }
+    public int League { get; private set; } = league;
+    public string LeagueName { get; private set; } = name;
+    public int LeagueDivision { get; private set; } = division;
+    public int LeagueOrder { get; private set; } = order;
+    public IEnumerable<Rank> Ranks { get; private set; } = ranks;
 }

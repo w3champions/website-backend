@@ -1,23 +1,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using W3C.Contracts.GameObjects;
-using W3C.Domain.CommonValueObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
-public class OverallRaceAndWinStat
+public class OverallRaceAndWinStat(int mmrRange)
 {
-    public int MmrRange { get; set; }
-
-    public OverallRaceAndWinStat(int mmrRange)
-    {
-        MmrRange = mmrRange;
-        PatchToStatsPerModes = new Dictionary<string, List<MapToRaceVsRaceRatio>>();
-    }
+    public int MmrRange { get; set; } = mmrRange;
 
     public int Id => MmrRange;
 
-    public Dictionary<string, List<MapToRaceVsRaceRatio>> PatchToStatsPerModes { get; set; }
+    public Dictionary<string, List<MapToRaceVsRaceRatio>> PatchToStatsPerModes { get; set; } = new Dictionary<string, List<MapToRaceVsRaceRatio>>();
 
     public List<MapToRaceVsRaceRatio> StatsPerModes { get; set; } = new List<MapToRaceVsRaceRatio>();
 

@@ -12,18 +12,11 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Services;
 
-public class PlayerService
+public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvider<List<MmrRank>> mmrCachedDataProvider, PersonalSettingsProvider personalSettingsProvider)
 {
-    private readonly ICachedDataProvider<List<MmrRank>> _mmrCachedDataProvider;
-    private readonly IPlayerRepository _playerRepository;
-    private readonly PersonalSettingsProvider _personalSettingsProvider;
-
-    public PlayerService(IPlayerRepository playerRepository, ICachedDataProvider<List<MmrRank>> mmrCachedDataProvider, PersonalSettingsProvider personalSettingsProvider)
-    {
-        _playerRepository = playerRepository;
-        _mmrCachedDataProvider = mmrCachedDataProvider;
-        _personalSettingsProvider = personalSettingsProvider;
-    }
+    private readonly ICachedDataProvider<List<MmrRank>> _mmrCachedDataProvider = mmrCachedDataProvider;
+    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly PersonalSettingsProvider _personalSettingsProvider = personalSettingsProvider;
 
     public async Task<float?> GetQuantileForPlayer(List<PlayerId> playerIds, GateWay gateWay, GameMode gameMode, Race? race, int season)
     {

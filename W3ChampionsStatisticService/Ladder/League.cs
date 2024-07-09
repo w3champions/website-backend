@@ -1,17 +1,9 @@
 namespace W3ChampionsStatisticService.Ladder;
 
-public class League
+public class League(int id, int order, string name, int division)
 {
-    public League(int id, int order, string name, int division)
-    {
-        Division = division;
-        Id = id;
-        Name = name;
-        Order = order;
-    }
-
-    public int Division { get; set; }
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public int Order { get; set; }
+    public int Division { get; set; } = division;
+    public int Id { get; set; } = id;
+    public string Name { get; set; } = name;
+    public int Order { get; set; } = order;
 }

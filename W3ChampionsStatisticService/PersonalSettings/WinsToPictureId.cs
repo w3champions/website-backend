@@ -1,13 +1,7 @@
 namespace W3ChampionsStatisticService.PersonalSettings;
 
-public class WinsToPictureId
+public class WinsToPictureId(int pictureId, int neededWins)
 {
-    public int PictureId { get; }
-    public int NeededWins { get; }
-
-    public WinsToPictureId(int pictureId, int neededWins)
-    {
-        PictureId = pictureId;
-        NeededWins = neededWins;
-    }
+    public int PictureId { get; } = pictureId;
+    public int NeededWins { get; } = neededWins;
 }

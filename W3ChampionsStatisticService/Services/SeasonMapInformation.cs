@@ -2,16 +2,11 @@
 
 namespace W3ChampionsStatisticService.Services;
 
-public class SeasonMapInformation
+public class SeasonMapInformation(IReadOnlyDictionary<string, string> mapNames)
 {
     public static readonly SeasonMapInformation Empty = new(new Dictionary<string, string>());
 
-    private readonly IReadOnlyDictionary<string, string> _mapNames;
-
-    public SeasonMapInformation(IReadOnlyDictionary<string, string> mapNames)
-    {
-        _mapNames = mapNames;
-    }
+    private readonly IReadOnlyDictionary<string, string> _mapNames = mapNames;
 
     public string GetMapName(string map)
     {

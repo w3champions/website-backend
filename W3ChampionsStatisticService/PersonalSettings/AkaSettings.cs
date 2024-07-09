@@ -1,5 +1,3 @@
-using W3C.Domain.CommonValueObjects;
-
 namespace W3ChampionsStatisticService.PersonalSettings;
 
 public class AkaSettings

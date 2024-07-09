@@ -4,17 +4,12 @@ using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Rewards.Portraits;
 
-public class PortraitDefinition : IIdentifiable
+public class PortraitDefinition(int _id, List<string> _group = null) : IIdentifiable
 {
-    public PortraitDefinition(int _id, List<string> _group = null)
-    {
-        Id = _id.ToString();
-        Groups = _group;
-    }
     [BsonId]
-    public string Id { get; set; }
+    public string Id { get; set; } = _id.ToString();
 
-    public List<string> Groups { get; set; }
+    public List<string> Groups { get; set; } = _group;
 }
 
 public class SinglePortraitDefinitionAndGroup
