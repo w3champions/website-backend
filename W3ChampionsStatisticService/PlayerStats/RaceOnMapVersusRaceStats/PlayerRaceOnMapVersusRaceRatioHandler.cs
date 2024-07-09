@@ -8,13 +8,19 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
-public class PlayerRaceOnMapVersusRaceRatioHandler(
-    IPlayerStatsRepository playerRepository,
-    IPatchRepository patchRepository
-        ) : IReadModelHandler
+public class PlayerRaceOnMapVersusRaceRatioHandler : IReadModelHandler
 {
-    private readonly IPlayerStatsRepository _playerRepository = playerRepository;
-    private readonly IPatchRepository _patchRepository = patchRepository;
+    private readonly IPlayerStatsRepository _playerRepository;
+    private readonly IPatchRepository _patchRepository;
+
+    public PlayerRaceOnMapVersusRaceRatioHandler(
+        IPlayerStatsRepository playerRepository,
+        IPatchRepository patchRepository
+        )
+    {
+        _playerRepository = playerRepository;
+        _patchRepository = patchRepository;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

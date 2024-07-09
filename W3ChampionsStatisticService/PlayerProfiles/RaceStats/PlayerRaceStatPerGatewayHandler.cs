@@ -5,9 +5,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 
-public class PlayerRaceStatPerGatewayHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerRaceStatPerGatewayHandler : IReadModelHandler
 {
-    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly IPlayerRepository _playerRepository;
+
+    public PlayerRaceStatPerGatewayHandler(
+        IPlayerRepository playerRepository
+        )
+    {
+        _playerRepository = playerRepository;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

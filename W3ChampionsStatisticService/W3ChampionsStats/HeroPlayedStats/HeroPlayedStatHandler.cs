@@ -7,9 +7,16 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 
-public class HeroPlayedStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class HeroPlayedStatHandler : IReadModelHandler
 {
-    private readonly IW3StatsRepo _w3Stats = w3Stats;
+    private readonly IW3StatsRepo _w3Stats;
+
+    public HeroPlayedStatHandler(
+        IW3StatsRepo w3Stats
+        )
+    {
+        _w3Stats = w3Stats;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

@@ -9,9 +9,16 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 
-public class OverallHeroWinRatePerHeroModelHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class OverallHeroWinRatePerHeroModelHandler : IReadModelHandler
 {
-    private readonly IW3StatsRepo _w3Stats = w3Stats;
+    private readonly IW3StatsRepo _w3Stats;
+
+    public OverallHeroWinRatePerHeroModelHandler(
+        IW3StatsRepo w3Stats
+        )
+    {
+        _w3Stats = w3Stats;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {

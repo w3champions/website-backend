@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PlayerStats;
 
-public class PlayerStatsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerStatsRepository
+public class PlayerStatsRepository : MongoDbRepositoryBase, IPlayerStatsRepository
 {
     public Task<PlayerRaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag, int season)
     {
@@ -27,5 +27,9 @@ public class PlayerStatsRepository(MongoClient mongoClient) : MongoDbRepositoryB
     public Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats)
     {
         return Upsert(playerHeroStats);
+    }
+
+    public PlayerStatsRepository(MongoClient mongoClient) : base(mongoClient)
+    {
     }
 }

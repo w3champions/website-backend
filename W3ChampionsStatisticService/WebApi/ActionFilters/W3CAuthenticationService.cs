@@ -38,14 +38,13 @@ public class W3CUserAuthenticationDto
             ValidateTokenReplay = false,
             ValidateActor = false,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new RsaSecurityKey(rsa),
-            ClockSkew = TimeSpan.Zero
+            IssuerSigningKey = new RsaSecurityKey(rsa)
         };
 
         var handler = new JwtSecurityTokenHandler();
         var claims = handler.ValidateToken(jwt, validationParameters, out _);
         var btag = claims.Claims.First(c => c.Type == "battleTag").Value;
-        var isAdmin = bool.Parse(claims.Claims.First(c => c.Type == "isAdmin").Value);
+        var isAdmin = Boolean.Parse(claims.Claims.First(c => c.Type == "isAdmin").Value);
         var name = claims.Claims.First(c => c.Type == "name").Value;
         var permissions = claims.Claims
             .Where(claim => claim.Type == "permissions")

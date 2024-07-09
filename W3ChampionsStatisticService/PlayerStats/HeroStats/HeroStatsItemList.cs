@@ -16,7 +16,7 @@ public class HeroStatsItemList : List<HeroStatsItem>
     public void AddWin(string heroId, Race myRace, Race enemyRace, string mapName, in bool won)
     {
         var heroStats = this.SingleOrDefault(r => r.HeroId == heroId);
-
+        
         if (heroStats == null)
         {
             heroStats = HeroStatsItem.Create(heroId);

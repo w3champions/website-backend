@@ -2,18 +2,27 @@
 using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Admin;
 
 namespace W3ChampionsStatisticService.Rewards.Portraits;
 
-public class PortraitCommandHandler(
-    IPersonalSettingsRepository personalSettingsRepository,
-    IPlayerRepository playerRepository,
-    IPortraitRepository portraitRepository)
+public class PortraitCommandHandler
 {
-    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
-    private readonly IPlayerRepository _playerRepository = playerRepository;
-    private readonly IPortraitRepository _portraitRepository = portraitRepository;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository;
+    private readonly IPlayerRepository _playerRepository;
+    private readonly IPortraitRepository _portraitRepository;
+
+    public PortraitCommandHandler(
+        IPersonalSettingsRepository personalSettingsRepository,
+        IPlayerRepository playerRepository,
+        IPortraitRepository portraitRepository)
+    {
+        _personalSettingsRepository = personalSettingsRepository;
+        _playerRepository = playerRepository;
+        _portraitRepository = portraitRepository;
+    }
 
     public async Task<bool> UpdatePicture(string battleTag, SetPictureCommand command)
     {

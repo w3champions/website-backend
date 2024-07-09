@@ -6,8 +6,8 @@ public class ProxyUpdate
 {
     public ProxyUpdate()
     {
-        nodeOverrides = new List<string>();
-        automaticNodeOverrides = new List<string>();
+        this.nodeOverrides = new List<string>();
+        this.automaticNodeOverrides = new List<string>();
     }
     public List<string> nodeOverrides { get; set; }
     public List<string> automaticNodeOverrides { get; set; }

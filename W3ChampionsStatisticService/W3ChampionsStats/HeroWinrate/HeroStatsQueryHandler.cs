@@ -7,9 +7,14 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 
-public class HeroStatsQueryHandler(IW3StatsRepo w3StatsRepo)
+public class HeroStatsQueryHandler
 {
-    private readonly IW3StatsRepo _w3StatsRepo = w3StatsRepo;
+    private readonly IW3StatsRepo _w3StatsRepo;
+
+    public HeroStatsQueryHandler(IW3StatsRepo w3StatsRepo)
+    {
+        _w3StatsRepo = w3StatsRepo;
+    }
 
     public async Task<WinLoss> GetStats(
         string first,

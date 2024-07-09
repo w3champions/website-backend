@@ -10,16 +10,24 @@ using Serilog;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
-public class GameModeStatQueryHandler(
-    IPlayerRepository playerRepository,
-    PlayerService playerService,
-    TrackingService trackingService,
-    IRankRepository rankRepository)
+public class GameModeStatQueryHandler
 {
-    private readonly IPlayerRepository _playerRepository = playerRepository;
-    private readonly PlayerService _playerService = playerService;
-    private readonly TrackingService _trackingService = trackingService;
-    private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly IPlayerRepository _playerRepository;
+    private readonly PlayerService _playerService;
+    private readonly TrackingService _trackingService;
+    private readonly IRankRepository _rankRepository;
+
+    public GameModeStatQueryHandler(
+        IPlayerRepository playerRepository,
+        PlayerService playerService,
+        TrackingService trackingService,
+        IRankRepository rankRepository)
+    {
+        _playerRepository = playerRepository;
+        _playerService = playerService;
+        _trackingService = trackingService;
+        _rankRepository = rankRepository;
+    }
 
     public async Task<List<PlayerGameModeStatPerGateway>> LoadPlayerStatsWithRanks(
         string battleTag,

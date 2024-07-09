@@ -12,10 +12,14 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Admin;
 
-public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IAdminRepository
+public class AdminRepository : MongoDbRepositoryBase, IAdminRepository
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
     private static readonly string MatchmakingAdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+
+    public AdminRepository(MongoClient mongoClient) : base(mongoClient)
+    {
+    }
 
     public async Task<List<ProxiesResponse>> GetProxies()
     {

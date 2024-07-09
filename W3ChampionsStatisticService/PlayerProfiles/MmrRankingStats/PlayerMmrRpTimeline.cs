@@ -6,11 +6,16 @@ using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
-public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode) : IIdentifiable
+public class PlayerMmrRpTimeline : IIdentifiable
 {
-    public string Id { get; set; } = $"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}";
-    public List<MmrRpAtDate> MmrRpAtDates { get; set; } = new List<MmrRpAtDate>();
-
+    public PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode)
+    {
+        Id = $"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}";
+        MmrRpAtDates = new List<MmrRpAtDate>();
+    }
+    public string Id { get; set; }
+    public List<MmrRpAtDate> MmrRpAtDates { get; set; }
+    
     public void UpdateTimeline(MmrRpAtDate mmrRpAtDate)
     {
         // Empty?

@@ -11,9 +11,14 @@ using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService) : IAsyncActionFilter
+public class CheckIfBattleTagIsAdminFilter : IAsyncActionFilter
 {
-    private readonly IW3CAuthenticationService _authService = authService;
+    private readonly IW3CAuthenticationService _authService;
+
+    public CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService)
+    {
+        _authService = authService;
+    }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {

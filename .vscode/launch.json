@@ -6,10 +6,14 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/W3ChampionsStatisticService/bin/Debug/net8.0/W3ChampionsStatisticService.dll",
+            "program": "${workspaceFolder}/W3ChampionsStatisticService/bin/Debug/net6.0/W3ChampionsStatisticService.dll",
             "args": [],
             "cwd": "${workspaceFolder}/W3ChampionsStatisticService",
             "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },

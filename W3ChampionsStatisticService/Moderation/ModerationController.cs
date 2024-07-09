@@ -10,9 +10,15 @@ namespace W3ChampionsStatisticService.Moderation;
 
 [ApiController]
 [Route("api/moderation")]
-public class ModerationController(ChatServiceClient chatServiceRepository) : ControllerBase
+public class ModerationController : ControllerBase
 {
-    private readonly ChatServiceClient _chatServiceRepository = chatServiceRepository;
+    private readonly ChatServiceClient _chatServiceRepository;
+
+    public ModerationController(
+        ChatServiceClient chatServiceRepository)
+    {
+        _chatServiceRepository = chatServiceRepository;
+    }
 
     [HttpGet("loungeMute")]
     [InjectAuthToken]

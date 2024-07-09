@@ -9,12 +9,18 @@ namespace W3ChampionsStatisticService.Rewards;
 
 [Route("api/rewards")]
 [ApiController]
-public class RewardsController(
-    IPortraitRepository portraitRepository,
-    PortraitCommandHandler portraitCommandHandler) : ControllerBase
+public class RewardsController : ControllerBase
 {
-    private readonly PortraitCommandHandler _portraitCommandHandler = portraitCommandHandler;
-    private readonly IPortraitRepository _portraitRepository = portraitRepository;
+    private readonly PortraitCommandHandler _portraitCommandHandler;
+    private readonly IPortraitRepository _portraitRepository;
+
+    public RewardsController(
+        IPortraitRepository portraitRepository,
+        PortraitCommandHandler portraitCommandHandler)
+    {
+        _portraitRepository = portraitRepository;
+        _portraitCommandHandler = portraitCommandHandler;
+    }
 
     [HttpPut("portraits")]
     [BearerHasPermissionFilter(Permission = EPermission.Content)]

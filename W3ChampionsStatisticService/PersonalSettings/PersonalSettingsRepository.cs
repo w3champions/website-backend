@@ -10,8 +10,12 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
-public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPersonalSettingsRepository
+public class PersonalSettingsRepository : MongoDbRepositoryBase, IPersonalSettingsRepository
 {
+    public PersonalSettingsRepository(MongoClient mongoClient) : base(mongoClient)
+    {
+    }
+
     public async Task<PersonalSetting> Load(string battletag)
     {
         var personalSettings = await LoadFirst<PersonalSetting>(battletag);

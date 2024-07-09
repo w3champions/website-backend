@@ -3,12 +3,20 @@ using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
-public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerMmrRpTimelineHandler : IReadModelHandler
 {
-    private readonly IPlayerRepository _playerRepository = playerRepository;
+    private readonly IPlayerRepository _playerRepository;
+
+    public PlayerMmrRpTimelineHandler(
+        IPlayerRepository playerRepository
+        )
+    {
+        _playerRepository = playerRepository;
+    }
 
     public async Task Update(MatchFinishedEvent nextEvent) 
     {

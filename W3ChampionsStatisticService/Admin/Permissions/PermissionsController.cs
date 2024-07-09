@@ -9,10 +9,15 @@ namespace W3ChampionsStatisticService.Admin.Permissions;
 
 [ApiController]
 [Route("api/admin/permissions")]
-public class PermissionsController(
-    IPermissionsRepository permissionsRepository) : ControllerBase
+public class PermissionsController : ControllerBase
 {
-    private readonly IPermissionsRepository _permissionsRepository = permissionsRepository;
+    private readonly IPermissionsRepository _permissionsRepository;
+
+    public PermissionsController(
+        IPermissionsRepository permissionsRepository)
+    {
+        _permissionsRepository = permissionsRepository;
+    }
 
     [HttpGet]
     [InjectAuthToken]

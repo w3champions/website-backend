@@ -5,10 +5,15 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class MatchQueryHandler(IPersonalSettingsRepository personalSettingsRepository)
+public class MatchQueryHandler
 {
-    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository;
 
+    public MatchQueryHandler(IPersonalSettingsRepository personalSettingsRepository)
+    {
+        _personalSettingsRepository = personalSettingsRepository;
+    }
+    
     public async Task PopulatePlayerInfos(List<OnGoingMatchup> matches)
     {
         var battleTags = matches.SelectMany(match => match.Teams).SelectMany(team => team.Players).Select(player => player.BattleTag);
