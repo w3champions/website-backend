@@ -23,6 +23,11 @@ public class PlayerAkaProvider
         var war3infoApiKey = Environment.GetEnvironmentVariable("WAR3_INFO_API_KEY"); // Change this to secret for dev
         var war3infoApiUrl = "https://warcraft3.info/api/v1/aka/battle_net";
 
+        // Do not send a request if the warcraft3.info API key is not set.
+        if (war3infoApiKey == null) {
+            return new List<PlayerAka>();
+        }
+
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
 
