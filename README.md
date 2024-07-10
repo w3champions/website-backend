@@ -12,8 +12,8 @@ docker run mongo
 and your local service should be able to connect to this default mongo address. The default is our open test db with connectionstring `mongodb://157.90.1.251:3513`
 
 If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
-set it to the corresponding connection string. You can also just replace the line in the Startup.cs with the needed
-connection string (Line 57).
+set it to the corresponding connection string. You can also just replace the line in the Program.cs with your own
+connection string.
 
 CAUTION:
 When running locally, the readmodel handling is turned off, unless you set the corresponding env variable. But only
@@ -95,9 +95,6 @@ mongorestore --uri="mongodb://localhost:27017" dump/
 We also have an open tests db here, but be warned it may be unstable due to people adding new properties or collections, feel free to edit it as you require, or run integration tests against it `mongodb://157.90.1.251:3512`
     
 If you need access to the test environment database, ask a Dev and they can give you the connection string.
-
-Change this line to your localhost, and you should be good to go!
-https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/W3ChampionsStatisticService/Startup.cs#L63
 
 To run integration tests against the local database, edit this line:
 https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/WC3ChampionsStatisticService.UnitTests/IntegrationTestBase.cs#L14
