@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
@@ -84,8 +83,6 @@ builder.Services.AddSwaggerGen(f =>
     f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1"});
 });
 
-string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
-
 // Configure and add MongoDB
 string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
 MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
@@ -158,6 +155,8 @@ builder.Services.AddTransient<IPermissionsRepository, PermissionsRepository>();
 builder.Services.AddTransient<ILogsRepository, LogsRepository>();
 
 builder.Services.AddDirectoryBrowser();
+
+string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
 
 if (startHandlers == "true")
 {
@@ -250,21 +249,3 @@ app.UseDirectoryBrowser(new DirectoryBrowserOptions
 });
 
 app.Run();
-
-public static class ReadModelExtensions
-{
-    public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
-    {
-        services.AddTransient<T>();
-        services.AddTransient<ReadModelHandler<T>>();
-        services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
-        return services;
-    }
-
-    public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
-    {
-        services.AddTransient<T>();
-        services.AddSingleton<IHostedService, AsyncServiceBase<T>>();
-        return services;
-    }
-}
