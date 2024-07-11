@@ -1,3 +1,4 @@
+using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
@@ -23,6 +24,7 @@ using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Friends;
+using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
@@ -91,12 +93,21 @@ mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
 var mongoClient = new MongoClient(mongoSettings);
 builder.Services.AddSingleton(mongoClient);
 
+// Add SignalR for using websockets
 builder.Services.AddSignalR();
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddHttpClient();
 
 builder.Services.AddSpecialBsonRegistrations();
 
+// Add Application Insights
 builder.Services.AddSingleton<TrackingService>();
+string disableTelemetry = Environment.GetEnvironmentVariable("DISABLE_TELEMETRY");
+if (disableTelemetry == "true") {
+    TelemetryDebugWriter.IsTracingDisabled = true;
+}
+
 builder.Services.AddTransient<PlayerAkaProvider>();
 builder.Services.AddTransient<PersonalSettingsProvider>();
 builder.Services.AddTransient<MatchmakingProvider>();
@@ -153,6 +164,11 @@ builder.Services.AddTransient<PlayerStatisticsService>();
 builder.Services.AddTransient<PlayerService>();
 builder.Services.AddTransient<IPermissionsRepository, PermissionsRepository>();
 builder.Services.AddTransient<ILogsRepository, LogsRepository>();
+
+// Websocket services
+builder.Services.AddSingleton<ConnectionMapping>();
+builder.Services.AddSingleton<FriendRequestCache, FriendRequestCache>();
+builder.Services.AddTransient<FriendRepository>();
 
 builder.Services.AddDirectoryBrowser();
 
@@ -247,5 +263,8 @@ app.UseDirectoryBrowser(new DirectoryBrowserOptions
     FileProvider = fileProvider,
     RequestPath = requestPath
 });
+
+// Add SignalR FriendHub
+app.MapHub<WebsiteBackendHub>("/websiteBackendHub");
 
 app.Run();
