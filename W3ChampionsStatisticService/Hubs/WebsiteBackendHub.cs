@@ -49,14 +49,16 @@ public class WebsiteBackendHub(
     internal async Task LoginAsAuthenticated(WebSocketUser user)
     {
         _connections.Add(Context.ConnectionId, user);
-        await LoadFriendListAndRequests(user.BattleTag);
+        await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString());
     }
 
-    private async Task LoadFriendListAndRequests(string battleTag)
+    public async Task LoadFriendListAndRequests()
     {
-        Friendlist friendList = await _friendRepository.LoadFriendlist(battleTag);
-        List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(battleTag);
-        List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(battleTag);
+        var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (currentUser == null) return;
+        Friendlist friendList = await _friendRepository.LoadFriendlist(currentUser);
+        List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
+        List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
         await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
     }
 
