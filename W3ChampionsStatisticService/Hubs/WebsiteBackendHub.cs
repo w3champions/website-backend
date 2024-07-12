@@ -30,7 +30,7 @@ public class WebsiteBackendHub(
     public override async Task OnConnectedAsync()
     {
         var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"];
-        W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken);
+        W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
         if (w3cUserAuthentication == null)
         {
             await Clients.Caller.SendAsync("AuthorizationFailed");
@@ -245,6 +245,7 @@ public class WebsiteBackendHub(
     private async Task<List<FriendUser>> GetFriends(string battleTag)
     {
         Friendlist friendList = await _friendRepository.LoadFriendlist(battleTag);
+        if (friendList.Friends.Count == 0) return [];
         List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(friendList.Friends.ToArray());
         List<FriendUser> friends = personalSettings.Select(x => new FriendUser {
             BattleTag = x.Id,
