@@ -49,7 +49,7 @@ public class WebsiteBackendHub(
     internal async Task LoginAsAuthenticated(WebSocketUser user)
     {
         _connections.Add(Context.ConnectionId, user);
-        await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString(), user.BattleTag);
+        await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString());
     }
 
     public async Task LoadFriendListAndRequests()
