@@ -42,8 +42,8 @@ public class WebsiteBackendHub(
             BattleTag = w3cUserAuthentication.BattleTag,
             ConnectionId = Context.ConnectionId,
         };
-        await LoginAsAuthenticated(user);
-        await base.OnConnectedAsync();
+        // await LoginAsAuthenticated(user);
+        // await base.OnConnectedAsync();
     }
 
     internal async Task LoginAsAuthenticated(WebSocketUser user)
