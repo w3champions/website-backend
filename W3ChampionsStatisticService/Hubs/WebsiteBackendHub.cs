@@ -54,12 +54,12 @@ public class WebsiteBackendHub(
 
     public async Task LoadFriendListAndRequests()
     {
-        var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
-        if (currentUser == null) return;
-        Friendlist friendList = await _friendRepository.LoadFriendlist(currentUser);
-        List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
-        List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
-        await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
+        // var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        // if (currentUser == null) return;
+        // Friendlist friendList = await _friendRepository.LoadFriendlist(currentUser);
+        // List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
+        // List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
+        // await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
     }
 
     public async Task LoadFriendsWithPictures()
