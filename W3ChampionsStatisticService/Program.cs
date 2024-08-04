@@ -265,6 +265,6 @@ app.UseDirectoryBrowser(new DirectoryBrowserOptions
 });
 
 // Add SignalR FriendHub
-// app.MapHub<WebsiteBackendHub>("/websiteBackendHub");
+app.MapHub<WebsiteBackendHub>("/websiteBackendHub");
 
 app.Run();
