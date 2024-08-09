@@ -11,6 +11,7 @@ public class GameMap
     public long Crc32 { get; set; }
     public string Description { get; set; }
     public string Author { get; set; }
+    public string Path { get; set; }
     public int Width { get; set; }
     public int Height { get; set; }
     [JsonProperty("suggested_players")]
@@ -21,4 +22,7 @@ public class GameMap
     public int NumPlayers { get; set; }
     public GameMapForce[] Forces { get; set; } = new GameMapForce[0];
     public GameMapPlayer[] Players { get; set; } = new GameMapPlayer[0];
+    [JsonProperty("is_twelve_p")]
+    [JsonPropertyName("is_twelve_p")]
+    public bool IsTwelveP { get; set; }
 }
