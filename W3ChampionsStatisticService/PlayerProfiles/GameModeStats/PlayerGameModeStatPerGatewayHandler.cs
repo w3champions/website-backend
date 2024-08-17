@@ -143,6 +143,11 @@ public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
             return GameMode.GM_DOTA_5ON5_AT;
         }
 
+        if (gameMode == GameMode.GM_DS && player.IsAt)
+        {
+            return GameMode.GM_DS_AT;
+        }
+
         return gameMode;
     }
 }
