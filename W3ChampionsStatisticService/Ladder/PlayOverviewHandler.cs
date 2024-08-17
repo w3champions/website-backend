@@ -112,7 +112,7 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadMode
 
         if (gameMode == GameMode.GM_DS && player.IsAt)
         {
-            return Gamemode.GM_DS_AT;
+            return GameMode.GM_DS_AT;
         }
 
         return gameMode;
