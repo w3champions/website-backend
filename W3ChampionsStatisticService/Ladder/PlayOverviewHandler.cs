@@ -110,6 +110,11 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadMode
             return GameMode.GM_DOTA_5ON5_AT;
         }
 
+        if (gameMode == GameMode.GM_DS && player.IsAt)
+        {
+            return Gamemode.GM_DS_AT;
+        }
+
         return gameMode;
     }
 }
