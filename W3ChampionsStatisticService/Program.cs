@@ -59,7 +59,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.MaxRequestBodySize = 100_000_000;
+    serverOptions.Limits.MaxRequestBodySize = 0x8000000; // 128 MiB
 });
 
 builder.Services.AddControllers(c => 
