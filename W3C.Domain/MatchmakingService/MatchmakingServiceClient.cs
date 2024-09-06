@@ -209,12 +209,9 @@ public class MatchmakingServiceClient
         return deserializeObject;
     }
 
-    public async Task<TournamentResponse> GetUpcomingTournament(GateWay gateway)
+    public async Task<TournamentResponse> GetUpcomingTournament()
     {
         var url = $"{MatchmakingApiUrl}/tournaments/upcoming";
-        if (gateway != GateWay.Undefined) {
-            url += $"?gateway={(int) gateway}";
-        }
         var result = await _httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
@@ -272,9 +269,6 @@ public class MatchmakingServiceClient
         if (updates.State != null) {
             data.state = updates.State;
         }
-        if (updates.Gateway != null) {
-            data.gateway = updates.Gateway;
-        }
         if (updates.Mode != null) {
             data.mode = updates.Mode;
         }
@@ -317,9 +311,6 @@ public class MatchmakingServiceClient
         }
         if (updates.StartDateTime != null) {
             data.startDateTime = updates.StartDateTime;
-        }
-        if (updates.Gateway != null) {
-            data.gateway = updates.Gateway;
         }
         if (updates.Mode != null) {
             data.mode = updates.Mode;
@@ -499,7 +490,6 @@ public class TournamentUpdateBody
 {
     public string Name { get; set; }
     public DateTime? StartDateTime { get; set; }
-    public GateWay? Gateway { get; set; }
     public GameMode? Mode { get; set; }
     public TournamentFormat? Format { get; set; }
     public TournamentState? State { get; set; }
