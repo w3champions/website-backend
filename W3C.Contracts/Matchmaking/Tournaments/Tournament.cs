@@ -13,7 +13,6 @@ public class Tournament
     public GameMode Mode { get; set; }
     public TournamentFormat Format { get; set; }
     public TournamentType Type { get; set; }
-    public GateWay Gateway { get; set; }
     public TournamentState State { get; set; }
     public DateTime StartDateTime { get; set; }
     public List<int> MapPool { get; set; }

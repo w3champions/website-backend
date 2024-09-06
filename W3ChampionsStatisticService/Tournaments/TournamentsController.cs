@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Domain.MatchmakingService;
-using W3C.Contracts.Matchmaking;
 using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Ports;
@@ -35,9 +34,9 @@ public class TournamentsController(
     }
 
     [HttpGet("upcoming")]
-    public async Task<IActionResult> GetUpcomingTournament([FromQuery] GateWay gateway)
+    public async Task<IActionResult> GetUpcomingTournament()
     {
-        var tournament = await _matchmakingServiceRepository.GetUpcomingTournament(gateway);
+        var tournament = await _matchmakingServiceRepository.GetUpcomingTournament();
         return Ok(tournament);
     }
 
