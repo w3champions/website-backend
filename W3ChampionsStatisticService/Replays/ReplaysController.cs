@@ -49,7 +49,7 @@ public class ReplaysController(
             return NotFound();
         }
         var replayStream = await _replayServiceClient.GenerateReplay(floMatchId);
-        return File(replayStream, "application/octet-stream", $"{gameId}.w3g");
+        return File(replayStream, "application/octet-stream", $"{floMatchId}.w3g");
     }
 
     [HttpGet("by-flo-id/{floMatchId}/chats")]
