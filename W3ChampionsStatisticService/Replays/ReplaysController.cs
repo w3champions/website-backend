@@ -40,4 +40,27 @@ public class ReplaysController(
         var data = await _replayServiceClient.GetChatLogs(floMatchId);
         return Ok(data);
     }
+
+    [HttpGet("by-flo-id/{floMatchId}")]
+    public async Task<IActionResult> GetReplay(int floMatchId)
+    {
+        if (floMatchId == 0)
+        {
+            return NotFound();
+        }
+        var replayStream = await _replayServiceClient.GenerateReplay(floMatchId);
+        return File(replayStream, "application/octet-stream", $"{gameId}.w3g");
+    }
+
+    [HttpGet("by-flo-id/{floMatchId}/chats")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetReplayChatLogs(int floMatchId)
+    {
+        if (floMatchId == 0)
+        {
+            return NotFound();
+        }
+        var data = await _replayServiceClient.GetChatLogs(floMatchId);
+        return Ok(data);
+    }
 }
