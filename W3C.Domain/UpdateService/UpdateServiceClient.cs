@@ -21,6 +21,11 @@ public class UpdateServiceClient
     {
         var result = await _httpClient.GetAsync($"{UpdateServiceUrl}/api/content/maps?secret={AdminSecret}&mapId={mapId}");
         var content = await result.Content.ReadAsStringAsync();
+        if (!result.IsSuccessStatusCode)
+        {
+            var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
+            throw new Exception(errMessage.message);
+        }
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<MapFileData[]>(content);
         return deserializeObject;
@@ -30,7 +35,12 @@ public class UpdateServiceClient
     {
         var response = await _httpClient.PostAsync($"{UpdateServiceUrl}/api/content/maps?secret={AdminSecret}", request.Content);
         var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
+        if (string.IsNullOrEmpty(content)) throw new Exception("Map creation failed!");
+        if (!response.IsSuccessStatusCode)
+        {
+            var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
+            throw new Exception(errMessage.message);
+        }
         var result = JsonConvert.DeserializeObject<MapFileData>(content);
         return result;
     }
@@ -39,6 +49,11 @@ public class UpdateServiceClient
     {
         var result = await _httpClient.GetAsync($"{UpdateServiceUrl}/api/content/maps/{fileId}?secret={AdminSecret}");
         var content = await result.Content.ReadAsStringAsync();
+        if (!result.IsSuccessStatusCode)
+        {
+            var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
+            throw new Exception(errMessage.message);
+        }
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<MapFileData>(content);
         return deserializeObject;
