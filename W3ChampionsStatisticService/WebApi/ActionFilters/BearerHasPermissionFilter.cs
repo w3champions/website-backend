@@ -25,22 +25,20 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
             try
             {
                 var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
+                var res = authService.GetUserByToken(token, true);
+                var hasPermission = res.Permissions.Contains(Permission.ToString()) && res.BattleTag != "AskeLange#2705";
+                if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
                 {
-                    var res = authService.GetUserByToken(token);
-                    var hasPermission = res.Permissions.Contains(Permission.ToString()) && res.BattleTag != "AskeLange#2705";
-                    if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
-                    {
-                        context.ActionArguments["battleTag"] = res.BattleTag;
-                        await next.Invoke();
-                    }
-                    else
-                    {
-                        Log.Information($"Permission {Permission} missing for {res.BattleTag}.");
-                        throw new SecurityTokenValidationException("Permission missing.");
-                    }
+                    context.ActionArguments["battleTag"] = res.BattleTag;
+                    await next.Invoke();
                 }
-
-            } catch (SecurityTokenExpiredException)
+                else
+                {
+                    Log.Information($"Permission {Permission} missing for {res.BattleTag}.");
+                    throw new SecurityTokenValidationException("Permission missing.");
+                }
+            }
+            catch (SecurityTokenExpiredException)
             {
                 var unauthorizedResult = new UnauthorizedObjectResult(new
                 {
@@ -49,7 +47,8 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
                     Message = "Token expired."
                 });
                 context.Result = unauthorizedResult;
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Log.Information($"Permission {Permission} missing.");
                 var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult(ex.Message));

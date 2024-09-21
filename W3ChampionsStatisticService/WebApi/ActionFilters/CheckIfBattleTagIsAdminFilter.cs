@@ -20,13 +20,14 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
         try
         {
             var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
-            var res = _authService.GetUserByToken(token);
+            var res = _authService.GetUserByToken(token, true);
             if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin)
             {
                 context.ActionArguments["battleTag"] = res.BattleTag;
                 await next.Invoke();
             }
-        } catch (SecurityTokenExpiredException)
+        }
+        catch (SecurityTokenExpiredException)
         {
             var unauthorizedResult = new UnauthorizedObjectResult(new
             {
@@ -35,7 +36,8 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
                 Message = "Token expired."
             });
             context.Result = unauthorizedResult;
-        } catch (Exception)
+        }
+        catch (Exception)
         {
             var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
             context.Result = unauthorizedResult;

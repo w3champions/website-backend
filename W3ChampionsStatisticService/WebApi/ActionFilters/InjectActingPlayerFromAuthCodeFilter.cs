@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -14,22 +15,26 @@ public class InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService auth
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
-        if (token != null)
+        try
         {
-            var res = _authService.GetUserByToken(token);
-            var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
-            if (actingPlayerContent != null)
+            var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
+            if (token != null)
             {
-                context.ActionArguments["actingPlayer"] = res.BattleTag;
-                await next.Invoke();
+                var res = _authService.GetUserByToken(token, false);
+                var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
+                if (actingPlayerContent != null)
+                {
+                    context.ActionArguments["actingPlayer"] = res.BattleTag;
+                    await next.Invoke();
+                }
             }
         }
-
-        var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
-        context.Result = unauthorizedResult;
+        catch (Exception ex)
+        {
+            context.Result = new UnauthorizedObjectResult(new ErrorResult(ex.Message));
+        }
     }
-    
+
     private static string GetToken(StringValues authorization)
     {
         if (AuthenticationHeaderValue.TryParse(authorization, out var headerValue))
