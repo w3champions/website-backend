@@ -13,9 +13,9 @@ public class ClanRepository : MongoDbRepositoryBase, IClanRepository
     public async Task TryInsertClan(Clan clan)
     {
         var clanFoundById = await LoadFirst<Clan>(c => c.ClanId == clan.ClanId);
-        if (clanFoundById != null) throw new ValidationException("Clan abbreviation already taken");
+        if (clanFoundById != null) throw new ValidationException($"Clan abbreviation already taken: {clan.ClanId}");
         var clanFoundByName = await LoadFirst<Clan>(c => c.ClanName == clan.ClanName);
-        if (clanFoundByName != null) throw new ValidationException("Clan name already taken");
+        if (clanFoundByName != null) throw new ValidationException($"Clan name already taken: {clan.ClanName}");
         await Insert(clan);
     }
 
