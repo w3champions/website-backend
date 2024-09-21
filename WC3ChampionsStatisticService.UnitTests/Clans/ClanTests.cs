@@ -433,8 +433,8 @@ public class ClanTests : IntegrationTestBase
     [Test]
     public async Task UserWithPendingInviteGetsNoInvite()
     {
-        await CreateFoundedClanForTest("AB", "Crank#123");
-        await CreateFoundedClanForTest("CD", "Wolf#456");
+        await CreateFoundedClanForTest("AB1", "AB", "Crank#123");
+        await CreateFoundedClanForTest("CD1", "CD", "Wolf#456");
 
         await _handler.InviteToClan("Merlin#123", "AB", "Crank#123");
         var exception = Assert.ThrowsAsync<ValidationException>(async () =>
@@ -457,8 +457,8 @@ public class ClanTests : IntegrationTestBase
     [Test]
     public async Task UserInActiveClanGetsNoInvite()
     {
-        await CreateFoundedClanForTest("AB", "Crank#123");
-        await CreateFoundedClanForTest("CD", "Wolf#456");
+        await CreateFoundedClanForTest("AB1", "AB", "Crank#123");
+        await CreateFoundedClanForTest("CD1", "CD", "Wolf#456");
 
         await _handler.InviteToClan("Merlin#123", "AB", "Crank#123");
         await _handler.AcceptInvite("Merlin#123", "AB");
@@ -534,9 +534,9 @@ public class ClanTests : IntegrationTestBase
         Assert.IsFalse(result);
     }
 
-    private async Task<Clan> CreateFoundedClanForTest(string clanId = "CS", string warchief = "Peter#123")
+    private async Task<Clan> CreateFoundedClanForTest(string clanName = "Cool Stuff", string clanId = "CS", string warchief = "Peter#123")
     {
-        var clan = await _handler.CreateClan("Cool Stuff", clanId, warchief);
+        var clan = await _handler.CreateClan(clanName, clanId, warchief);
         for (int i = 0; i < 6; i++)
         {
             var newGuid = Guid.NewGuid();
