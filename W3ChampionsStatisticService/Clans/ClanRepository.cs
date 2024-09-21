@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
@@ -9,12 +10,13 @@ namespace W3ChampionsStatisticService.Clans;
 
 public class ClanRepository : MongoDbRepositoryBase, IClanRepository
 {
-    public async Task<bool> TryInsertClan(Clan clan)
+    public async Task TryInsertClan(Clan clan)
     {
-        var clanFound = await LoadFirst<Clan>(c => c.ClanId == clan.ClanId);
-        if (clanFound != null) return false;
+        var clanFoundById = await LoadFirst<Clan>(c => c.ClanId == clan.ClanId);
+        if (clanFoundById != null) throw new ValidationException("Clan abbreviation already taken");
+        var clanFoundByName = await LoadFirst<Clan>(c => c.ClanName == clan.ClanName);
+        if (clanFoundByName != null) throw new ValidationException("Clan name already taken");
         await Insert(clan);
-        return true;
     }
 
     public Task UpsertClan(Clan clan)
