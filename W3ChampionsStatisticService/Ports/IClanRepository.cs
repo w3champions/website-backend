@@ -7,7 +7,7 @@ namespace W3ChampionsStatisticService.Ports;
 
 public interface IClanRepository
 {
-    Task<bool> TryInsertClan(Clan clan);
+    Task TryInsertClan(Clan clan);
     Task<Clan> LoadClan(string clanId);
     Task UpsertClan(Clan clan);
     Task<ClanMembership> LoadMemberShip(string battleTag);

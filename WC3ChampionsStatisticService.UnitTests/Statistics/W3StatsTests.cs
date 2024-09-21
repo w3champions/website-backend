@@ -233,11 +233,10 @@ public class W3Stats : IntegrationTestBase
     }
 
     [Test]
-    [Ignore("Ignored due to error: 'Lifetime validation failed. The token is missing an Expiration Time.'")]
     public void GetToken()
     {
         var w3CAuthenticationService = new W3CAuthenticationService();
-        var userByToken1 = w3CAuthenticationService.GetUserByToken(_jwt);
+        var userByToken1 = w3CAuthenticationService.GetUserByToken(_jwt, false);
 
         Assert.AreEqual("modmoto#2809", userByToken1.BattleTag);
     }
