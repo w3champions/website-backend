@@ -31,15 +31,8 @@ public class ClanCommandHandler(
 
     public async Task InviteToClan(string battleTag, string clanId, string personWhoInvitesBattleTag)
     {
-        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag)
-                                ?? ClanMembership.Create(battleTag);
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null)
-        {
-            throw new ValidationException("Clan not found");
-        }
-
+        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? ClanMembership.Create(battleTag);
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.Invite(clanMemberShip, personWhoInvitesBattleTag);
 
         await _clanRepository.UpsertClan(clan);
@@ -60,12 +53,12 @@ public class ClanCommandHandler(
     {
         var clan = await _clanRepository.LoadClan(clanId);
         if (clan.ChiefTain != actingPlayer) throw new ValidationException("Only Chieftain can delete the clan");
-        
+
         await _clanRepository.DeleteClan(clanId);
 
         var allMembers = new List<string>();
-        allMembers.AddRange(clan.FoundingFathers);
         allMembers.AddRange(clan.Members);
+        allMembers.AddRange(clan.Shamans);
         allMembers.Add(clan.ChiefTain);
 
         var memberShips = await _clanRepository.LoadMemberShips(allMembers);
@@ -100,11 +93,8 @@ public class ClanCommandHandler(
 
     public async Task RevokeInvitationToClan(string battleTag, string clanId, string personWhoInvitesBattleTag)
     {
-        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
-
+        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? throw new ValidationException("Clan member not found");
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.RevokeInvite(clanMemberShip, personWhoInvitesBattleTag);
 
         await _clanRepository.UpsertClan(clan);
@@ -113,11 +103,8 @@ public class ClanCommandHandler(
 
     public async Task<Clan> RejectInvite(string clanId, string battleTag)
     {
-        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
-
+        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? throw new ValidationException("Clan member not found");
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.RejectInvite(clanMemberShip);
 
         await _clanRepository.UpsertClan(clan);
@@ -128,11 +115,8 @@ public class ClanCommandHandler(
 
     public async Task<Clan> LeaveClan(string clanId, string battleTag)
     {
-        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
-
+        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? throw new ValidationException("Clan member not found");
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.LeaveClan(clanMemberShip);
 
         await _clanRepository.UpsertClan(clan);
@@ -143,10 +127,7 @@ public class ClanCommandHandler(
 
     public async Task<Clan> RemoveShamanFromClan(string shamanId, string clanId, string actingPlayer)
     {
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null) throw new ValidationException("Clan not found");
-
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.RemoveShaman(shamanId, actingPlayer);
 
         await _clanRepository.UpsertClan(clan);
@@ -156,10 +137,7 @@ public class ClanCommandHandler(
 
     public async Task<Clan> AddShamanToClan(string shamanId, string clanId, string actingPlayer)
     {
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null) throw new ValidationException("Clan not found");
-
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.AddShaman(shamanId, actingPlayer);
 
         await _clanRepository.UpsertClan(clan);
@@ -169,11 +147,8 @@ public class ClanCommandHandler(
 
     public async Task<Clan> KickPlayer(string battleTag, string clanId, string actingPlayer)
     {
-        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag);
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null || clanMemberShip == null) throw new ValidationException("Clan or member not found");
-
+        var clanMemberShip = await _clanRepository.LoadMemberShip(battleTag) ?? throw new ValidationException("Clan member not found");
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.KickPlayer(clanMemberShip, actingPlayer);
 
         await _clanRepository.UpsertMemberShip(clanMemberShip);
@@ -184,10 +159,7 @@ public class ClanCommandHandler(
 
     public async Task<Clan> SwitchChieftain(string newChieftain, string clanId, string actingPlayer)
     {
-        var clan = await _clanRepository.LoadClan(clanId);
-
-        if (clan == null) throw new ValidationException("Clan not found");
-
+        var clan = await _clanRepository.LoadClan(clanId) ?? throw new ValidationException("Clan not found");
         clan.SwitchChieftain(newChieftain, actingPlayer);
 
         await _clanRepository.UpsertClan(clan);
