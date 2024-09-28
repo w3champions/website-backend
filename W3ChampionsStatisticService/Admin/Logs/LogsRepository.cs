@@ -20,7 +20,8 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var response = await httpClient.GetAsync($"{MatchmakingApiUrl}/admin/logs");
+        var url = $"{MatchmakingApiUrl}/admin/logs?secret={AdminSecret}";
+        var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return new List<string> {"Unable to get logfiles."};
         if (response.StatusCode != HttpStatusCode.OK) {
@@ -34,7 +35,8 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var response = await httpClient.GetAsync($"{MatchmakingApiUrl}/admin/logs/{logfileName}");
+        var url = $"{MatchmakingApiUrl}/admin/logs/{logfileName}?secret={AdminSecret}";
+        var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return new List<string> {"Unable to get log content."};
         if (response.StatusCode != HttpStatusCode.OK) {
@@ -48,7 +50,8 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var response = await httpClient.GetAsync($"{MatchmakingApiUrl}/admin/logs/download/{logfileName}");
+        var url = $"{MatchmakingApiUrl}/admin/logs/download/{logfileName}?secret={AdminSecret}";
+        var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (response.StatusCode != HttpStatusCode.OK) {
             throw new HttpRequestException(content, null, response.StatusCode);
