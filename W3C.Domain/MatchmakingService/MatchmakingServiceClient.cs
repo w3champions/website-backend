@@ -30,7 +30,6 @@ public class MatchmakingServiceClient
     public MatchmakingServiceClient(IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClientFactory.CreateClient();
-        _httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
 
         _jsonSerializerSettings = new JsonSerializerSettings()
         {
@@ -44,7 +43,11 @@ public class MatchmakingServiceClient
 
     public async Task<BannedPlayerResponse> GetBannedPlayers()
     {
-        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/bannedPlayers");
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
         if (response.IsSuccessStatusCode)
         {
             return await GetResult<BannedPlayerResponse>(response);
@@ -56,8 +59,13 @@ public class MatchmakingServiceClient
 
     public async Task<HttpResponseMessage> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
     {
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/bannedPlayers", httpcontent);
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
         if (response.IsSuccessStatusCode)
         {
             return response;
@@ -70,7 +78,11 @@ public class MatchmakingServiceClient
     public async Task<HttpResponseMessage> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
     {
         var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
-        var response = await _httpClient.DeleteAsync($"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}");
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}";
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
         if (response.IsSuccessStatusCode)
         {
             return response;
@@ -82,8 +94,12 @@ public class MatchmakingServiceClient
 
     public async Task<List<MappedQueue>> GetLiveQueueData()
     {
-        var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/queue/snapshots");
-        var content = await result.Content.ReadAsStringAsync();
+        var url = $"{MatchmakingApiUrl}/queue/snapshots";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
         return FormatQueueData(deserializeObject); // formatted for easy use on frontend
@@ -98,7 +114,8 @@ public class MatchmakingServiceClient
             queryParams.Add($"filter={request.Filter}");
         }
 
-        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}");
+        var url = $"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}";
+        var response = await _httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
@@ -107,7 +124,8 @@ public class MatchmakingServiceClient
 
     public async Task<MapContract> GetMap(int id)
     {
-        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/maps/{id}");
+        var url = $"{MatchmakingApiUrl}/maps/{id}";
+        var response = await _httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<MapContract>(content);
@@ -116,8 +134,13 @@ public class MatchmakingServiceClient
 
     public async Task<MapContract> CreateMap(MapContract newMap)
     {
+        var url = $"{MatchmakingApiUrl}/maps";
         var httpcontent = new StringContent(SerializeData(newMap), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync($"{MatchmakingApiUrl}/maps", httpcontent);
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
         if (response.IsSuccessStatusCode)
         {
             return await GetResult<MapContract>(response);
@@ -129,8 +152,12 @@ public class MatchmakingServiceClient
 
     public async Task<MapContract> UpdateMap(int id, MapContract map)
     {
+        var url = $"{MatchmakingApiUrl}/maps/{id}";
         var httpcontent = new StringContent(SerializeData(map), Encoding.UTF8, "application/json");
-        var response = await _httpClient.PutAsync($"{MatchmakingApiUrl}/maps/{id}", httpcontent);
+        var request = new HttpRequestMessage(HttpMethod.Put, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
         {
@@ -153,7 +180,8 @@ public class MatchmakingServiceClient
 
     public async Task<MessageOfTheDay> GetMotd()
     {
-        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/admin/motd/");
+        var url = $"{MatchmakingApiUrl}/admin/motd/";
+        var response = await _httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         return JsonConvert.DeserializeObject<MessageOfTheDay>(content);
@@ -161,13 +189,22 @@ public class MatchmakingServiceClient
 
     public async Task<HttpStatusCode> SetMotd(MessageOfTheDay motd)
     {
+        var url = $"{MatchmakingApiUrl}/admin/motd";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(motd), Encoding.UTF8, "application/json");
-        var result = await _httpClient.PostAsync($"{MatchmakingApiUrl}/admin/motd", httpcontent);
-        return result.StatusCode;
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        return response.StatusCode;
     }
 
     public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes() {
-        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/ladder/active-modes");
+        var url = $"{MatchmakingApiUrl}/ladder/active-modes";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
         if (response.IsSuccessStatusCode) {
             var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
@@ -179,7 +216,9 @@ public class MatchmakingServiceClient
     }
 
     public async Task<List<TournamentFloNode>> GetEnabledFloNodes() {
-        var response = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments/flo-nodes");
+        var url = $"{MatchmakingApiUrl}/tournaments/flo-nodes";
+        var response = await _httpClient.GetAsync(url);
+
         if (response.IsSuccessStatusCode)
         {
             return await GetResult<List<TournamentFloNode>>(response);
@@ -191,7 +230,8 @@ public class MatchmakingServiceClient
 
     public async Task<TournamentsResponse> GetTournaments()
     {
-        var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments");
+        var url = $"{MatchmakingApiUrl}/tournaments";
+        var result = await _httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<TournamentsResponse>(content);
@@ -200,7 +240,8 @@ public class MatchmakingServiceClient
 
     public async Task<TournamentResponse> GetTournament(string id)
     {
-        var result = await _httpClient.GetAsync($"{MatchmakingApiUrl}/tournaments/{id}");
+        var url = $"{MatchmakingApiUrl}/tournaments/{id}";
+        var result = await _httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
@@ -220,7 +261,6 @@ public class MatchmakingServiceClient
     public async Task<TournamentResponse> RegisterPlayer(string id, string battleTag, Race race, string countryCode)
     {
         var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
-
         var data = new
         {
             battleTag,
@@ -228,8 +268,13 @@ public class MatchmakingServiceClient
             countryCode,
         };
         JsonContent postBody = JsonContent.Create(data);
-        var result = await _httpClient.PostAsync(url, postBody);
-        var content = await result.Content.ReadAsStringAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = postBody;
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
         return deserializeObject;
@@ -243,9 +288,10 @@ public class MatchmakingServiceClient
             battleTag,
         };
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
         request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
-        var result = await _httpClient.SendAsync(request);
-        var content = await result.Content.ReadAsStringAsync();
+        var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
         return deserializeObject;
@@ -289,8 +335,12 @@ public class MatchmakingServiceClient
         data.matcherinoUrl = updates.MatcherinoUrl;
 
         JsonContent patchBody = JsonContent.Create(data);
-        var result = await _httpClient.PatchAsync(url, patchBody);
-        var content = await result.Content.ReadAsStringAsync();
+        var request = new HttpRequestMessage(HttpMethod.Patch, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = patchBody;
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
         return deserializeObject;
@@ -334,8 +384,12 @@ public class MatchmakingServiceClient
         data.matcherinoUrl = updates.MatcherinoUrl;
 
         JsonContent postBody = JsonContent.Create(data);
-        var result = await _httpClient.PostAsync(url, postBody);
-        var content = await result.Content.ReadAsStringAsync();
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = postBody;
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<TournamentResponse>(content);
         return deserializeObject;
