@@ -51,33 +51,61 @@ public class MapsController(
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> GetMapFiles(int id)
     {
-        var mapFiles = await _updateServiceClient.GetMapFiles(id);
-        return Ok(mapFiles);
+        try
+        {
+            var mapFiles = await _updateServiceClient.GetMapFiles(id);
+            return Ok(mapFiles);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
     }
 
     [HttpPost("{id}/files")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> CreateMapFile()
     {
-        HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(Request.HttpContext);
-        var map = await _updateServiceClient.CreateMapFromFormAsync(hreqmf.HttpRequestMessage);
-        return Ok(map);
+        try
+        {
+            HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(Request.HttpContext);
+            var map = await _updateServiceClient.CreateMapFromFormAsync(hreqmf.HttpRequestMessage);
+            return Ok(map);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
     }
 
     [HttpGet("files/{fileId}")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> GetMapFile(string fileId)
     {
-        var mapFile = await _updateServiceClient.GetMapFile(fileId);
-        return Ok(mapFile);
+        try
+        {
+            var mapFile = await _updateServiceClient.GetMapFile(fileId);
+            return Ok(mapFile);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
     }
 
     [HttpDelete("files/{fileId}")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> DeleteMapFile(string fileId)
     {
-        await _updateServiceClient.DeleteMapFile(fileId);
-        return NoContent();
+        try
+        {
+            await _updateServiceClient.DeleteMapFile(fileId);
+            return NoContent();
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
     }
 
     [HttpGet("tournaments")]

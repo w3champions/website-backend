@@ -32,8 +32,11 @@ public class ChatServiceClient
     public async Task<LoungeMuteResponse[]> GetLoungeMutes(string authorization)
     {
         var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
-        var result = await _httpClient.GetAsync(url);
-        var content = await result.Content.ReadAsStringAsync();
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteResponse[]>(content);
         return deserializeObject;
@@ -41,17 +44,24 @@ public class ChatServiceClient
 
     public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute, string authorization)
     {
-        var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
         var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
-        var result = await _httpClient.PostAsync(url, httpcontent);
-        return result;
+        var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        return response;
     }
 
     public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag, string authorization)
     {
         var encodedTag = HttpUtility.UrlEncode(battleTag);
         var url = $"{ChatServiceApiUrl}/api/loungeMute/{encodedTag}?authorization={authorization}&secret={AdminSecret}";
-        var result = await _httpClient.DeleteAsync(url);
-        return result;
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        return response;
     }
 }
