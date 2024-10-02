@@ -43,7 +43,7 @@ public class MatchmakingServiceClient
 
     public async Task<BannedPlayerResponse> GetBannedPlayers()
     {
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
@@ -59,7 +59,7 @@ public class MatchmakingServiceClient
 
     public async Task<HttpResponseMessage> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
@@ -78,7 +78,7 @@ public class MatchmakingServiceClient
     public async Task<HttpResponseMessage> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
     {
         var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}";
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
@@ -94,7 +94,7 @@ public class MatchmakingServiceClient
 
     public async Task<List<MappedQueue>> GetLiveQueueData()
     {
-        var url = $"{MatchmakingApiUrl}/queue/snapshots?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/queue/snapshots";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
@@ -134,7 +134,7 @@ public class MatchmakingServiceClient
 
     public async Task<MapContract> CreateMap(MapContract newMap)
     {
-        var url = $"{MatchmakingApiUrl}/maps?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/maps";
         var httpcontent = new StringContent(SerializeData(newMap), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
@@ -152,7 +152,7 @@ public class MatchmakingServiceClient
 
     public async Task<MapContract> UpdateMap(int id, MapContract map)
     {
-        var url = $"{MatchmakingApiUrl}/maps/{id}?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/maps/{id}";
         var httpcontent = new StringContent(SerializeData(map), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Put, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
@@ -189,7 +189,7 @@ public class MatchmakingServiceClient
 
     public async Task<HttpStatusCode> SetMotd(MessageOfTheDay motd)
     {
-        var url = $"{MatchmakingApiUrl}/admin/motd?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/motd";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(motd), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
@@ -200,7 +200,7 @@ public class MatchmakingServiceClient
     }
 
     public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes() {
-        var url = $"{MatchmakingApiUrl}/ladder/active-modes?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/ladder/active-modes";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
@@ -260,7 +260,7 @@ public class MatchmakingServiceClient
 
     public async Task<TournamentResponse> RegisterPlayer(string id, string battleTag, Race race, string countryCode)
     {
-        var url = $"{MatchmakingApiUrl}/tournaments/{id}/players?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
         var data = new
         {
             battleTag,
@@ -282,7 +282,7 @@ public class MatchmakingServiceClient
 
     public async Task<TournamentResponse> UnregisterPlayer(string id, string battleTag)
     {
-        var url = $"{MatchmakingApiUrl}/tournaments/{id}/players?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/tournaments/{id}/players";
         var data = new
         {
             battleTag,
@@ -299,7 +299,7 @@ public class MatchmakingServiceClient
 
     public async Task<TournamentResponse> UpdateTournament(string id, TournamentUpdateBody updates)
     {
-        var url = $"{MatchmakingApiUrl}/tournaments/{id}?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/tournaments/{id}";
 
         dynamic data = new ExpandoObject();
         if (updates.Name != null) {
@@ -348,7 +348,7 @@ public class MatchmakingServiceClient
 
     public async Task<TournamentResponse> CreateTournament(TournamentUpdateBody updates)
     {
-        var url = $"{MatchmakingApiUrl}/tournaments?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/tournaments";
 
         dynamic data = new ExpandoObject();
         if (updates.Name != null) {

@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using W3C.Domain.UpdateService.Contracts;
@@ -19,52 +20,69 @@ public class UpdateServiceClient
 
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {
-        var result = await _httpClient.GetAsync($"{UpdateServiceUrl}/api/content/maps?secret={AdminSecret}&mapId={mapId}");
-        var content = await result.Content.ReadAsStringAsync();
-        if (!result.IsSuccessStatusCode)
+        var url = $"{UpdateServiceUrl}/api/content/maps?mapId={mapId}";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
         {
             var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
-            throw new Exception(errMessage.message);
+            throw new HttpRequestException(errMessage.message, null, response.StatusCode);
         }
-        if (string.IsNullOrEmpty(content)) return null;
+        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Unable to get map files!", null, HttpStatusCode.ServiceUnavailable);
+
         var deserializeObject = JsonConvert.DeserializeObject<MapFileData[]>(content);
         return deserializeObject;
     }
 
-    public async Task<MapFileData> CreateMapFromFormAsync(HttpRequestMessage request)
+    public async Task<MapFileData> CreateMapFromFormAsync(HttpRequestMessage req)
     {
-        var response = await _httpClient.PostAsync($"{UpdateServiceUrl}/api/content/maps?secret={AdminSecret}", request.Content);
+        var url = $"{UpdateServiceUrl}/api/content/maps";
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = req.Content;
+        var response = await _httpClient.SendAsync(request);
+
         var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) throw new Exception("Map creation failed!");
         if (!response.IsSuccessStatusCode)
         {
             var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
-            throw new Exception(errMessage.message);
+            throw new HttpRequestException(errMessage.message, null, response.StatusCode);
         }
-        var result = JsonConvert.DeserializeObject<MapFileData>(content);
-        return result;
+        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Map creation failed!", null, HttpStatusCode.ServiceUnavailable);
+
+        var deserializeObject = JsonConvert.DeserializeObject<MapFileData>(content);
+        return deserializeObject;
     }
 
     public async Task<MapFileData> GetMapFile(string fileId)
     {
-        var result = await _httpClient.GetAsync($"{UpdateServiceUrl}/api/content/maps/{fileId}?secret={AdminSecret}");
-        var content = await result.Content.ReadAsStringAsync();
-        if (!result.IsSuccessStatusCode)
+        var url = $"{UpdateServiceUrl}/api/content/maps/{fileId}";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var response = await _httpClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
         {
             var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
-            throw new Exception(errMessage.message);
+            throw new HttpRequestException(errMessage.message, null, response.StatusCode);
         }
-        if (string.IsNullOrEmpty(content)) return null;
+        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Unable to get map file!", null, HttpStatusCode.ServiceUnavailable);
         var deserializeObject = JsonConvert.DeserializeObject<MapFileData>(content);
         return deserializeObject;
     }
 
     public async Task DeleteMapFile(string fileId)
     {
-        var result = await _httpClient.DeleteAsync($"{UpdateServiceUrl}/api/content/maps/{fileId}?secret={AdminSecret}");
-        if (!result.IsSuccessStatusCode)
+        var url = $"{UpdateServiceUrl}/api/content/maps/{fileId}";
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
         {
-            throw new Exception($"Unable to delete map file with id {fileId}");
+            throw new HttpRequestException($"Unable to delete map file with id {fileId}", null, response.StatusCode);
         }
     }
 }
