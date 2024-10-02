@@ -34,7 +34,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         
@@ -71,7 +71,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         // send request to mm with all the node values
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var serializedObject = JsonConvert.SerializeObject(newProxiesBeingAdded);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
         var byteContent = new ByteArrayContent(buffer);
@@ -85,7 +85,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/flo/proxies?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/flo/proxies";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
@@ -105,7 +105,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(tag)}/alts?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(tag)}/alts";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
@@ -118,7 +118,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/flo/globalChatBans?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
@@ -158,7 +158,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/flo/globalChatBans?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         var serializedObject = JsonConvert.SerializeObject(chatBan);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
         var byteContent = new ByteArrayContent(buffer);
@@ -171,7 +171,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/flo/globalChatBans/{id}?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/flo/globalChatBans/{id}";
         var result = await httpClient.DeleteAsync(url);
         return result.StatusCode;
     }

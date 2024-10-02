@@ -20,7 +20,7 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/admin/logs?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/logs";
         var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return new List<string> {"Unable to get logfiles."};
@@ -35,7 +35,7 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/admin/logs/{logfileName}?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/logs/{logfileName}";
         var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return new List<string> {"Unable to get log content."};
@@ -50,7 +50,7 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/admin/logs/download/{logfileName}?secret={AdminSecret}";
+        var url = $"{MatchmakingApiUrl}/admin/logs/download/{logfileName}";
         var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (response.StatusCode != HttpStatusCode.OK) {
