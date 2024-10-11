@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
@@ -90,7 +91,15 @@ public class LadderController(
     [HttpGet("active-modes")]
     public async Task<IActionResult> GetActiveGameModes()
     {
-        var currentlyActiveModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
-        return Ok(currentlyActiveModes);
+        try
+        {
+            var currentlyActiveModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
+            return Ok(currentlyActiveModes);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
+
     }
 }

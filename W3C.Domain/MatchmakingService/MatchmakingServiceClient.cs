@@ -205,13 +205,13 @@ public class MatchmakingServiceClient
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
 
+        var content = await response.Content.ReadAsStringAsync();
         if (response.IsSuccessStatusCode) {
-            var content = await response.Content.ReadAsStringAsync();
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<ActiveGameMode>>(content);
             return deserializeObject;
         } else {
-            return null;
+            throw new HttpRequestException(content, null, response.StatusCode);
         }
     }
 
