@@ -100,9 +100,16 @@ public class MatchmakingServiceClient
         var response = await _httpClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
-        return FormatQueueData(deserializeObject); // formatted for easy use on frontend
+        if (response.IsSuccessStatusCode)
+        {
+            if (string.IsNullOrEmpty(content)) return null;
+            var deserializeObject = JsonConvert.DeserializeObject<List<Queue>>(content);
+            return FormatQueueData(deserializeObject); // formatted for easy use on frontend
+        }
+        else
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
     }
 
     public async Task<GetMapsResponse> GetMaps(GetMapsRequest request)
@@ -206,11 +213,14 @@ public class MatchmakingServiceClient
         var response = await _httpClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
-        if (response.IsSuccessStatusCode) {
+        if (response.IsSuccessStatusCode)
+        {
             if (string.IsNullOrEmpty(content)) return null;
             var deserializeObject = JsonConvert.DeserializeObject<List<ActiveGameMode>>(content);
             return deserializeObject;
-        } else {
+        }
+        else
+        {
             throw new HttpRequestException(content, null, response.StatusCode);
         }
     }

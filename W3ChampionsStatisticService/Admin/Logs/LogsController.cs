@@ -19,11 +19,15 @@ public class LogsController(
     [BearerHasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> GetLogfileNames()
     {
-        try {
+        try
+        {
             var logfileNames = await _logsRepository.GetLogfileNames();
             return Ok(logfileNames);
-        } catch (HttpRequestException ex) {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
         }
     }
 
@@ -31,11 +35,15 @@ public class LogsController(
     [BearerHasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> GetLogContent([FromRoute] string logfileName)
     {
-        try {
+        try
+        {
             var logContent = await _logsRepository.GetLogContent(logfileName);
             return Ok(logContent);
-        } catch (HttpRequestException ex) {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
         }
     }
 
@@ -43,11 +51,15 @@ public class LogsController(
     [BearerHasPermissionFilter(Permission = EPermission.Logs)]
     public async Task<IActionResult> DownloadLog([FromRoute] string logfileName)
     {
-        try {
+        try
+        {
             var content = await _logsRepository.DownloadLog(logfileName);
             return File(content, MediaTypeNames.Text.Plain, logfileName);
-        } catch (HttpRequestException ex) {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
         }
     }
 }
