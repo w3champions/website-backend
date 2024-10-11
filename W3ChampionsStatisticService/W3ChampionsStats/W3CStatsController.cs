@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using System.Linq;
 using W3C.Contracts.GameObjects;
+using System.Net.Http;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
@@ -103,8 +104,16 @@ public class W3CStatsController(
     [HttpGet("matches-on-map")]
     public async Task<IActionResult> GetMatchesOnMap()
     {
-        var mmrs = await _statisticsService.LoadMatchesOnMapAsync();
-        return Ok(mmrs);
+        try
+        {
+            var mmrs = await _statisticsService.LoadMatchesOnMapAsync();
+            return Ok(mmrs);
+        }
+        catch (HttpRequestException ex)
+        {
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
+        }
     }
 
     private DateTimeOffset GetDefaultMinDateOffset()

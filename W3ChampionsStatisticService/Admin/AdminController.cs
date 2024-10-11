@@ -181,8 +181,16 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Queue)]
     public async Task<IActionResult> GetQueueData()
     {
-        var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
-        return Ok(queueData);
+        try
+        {
+            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+            return Ok(queueData);
+        }
+        catch (HttpRequestException ex)
+        {
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
+        }
     }
 
     [HttpGet("proxies")]
