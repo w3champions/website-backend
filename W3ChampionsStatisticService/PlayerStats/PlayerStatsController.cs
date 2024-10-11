@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.Ports;
@@ -22,8 +23,16 @@ public class PlayerStatsController : ControllerBase
     [HttpGet("{battleTag}/race-on-map-versus-race")]
     public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag, int season)
     {
-        var stats = await _playerStatisticsService.GetMapAndRaceStatAsync(battleTag, season);
-        return Ok(stats);
+        try
+        {
+            var stats = await _playerStatisticsService.GetMapAndRaceStatAsync(battleTag, season);
+            return Ok(stats);
+        }
+        catch (HttpRequestException ex)
+        {
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
+        }
     }
 
     [HttpGet("{battleTag}/hero-on-map-versus-race")]

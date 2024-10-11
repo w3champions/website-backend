@@ -98,8 +98,8 @@ public class LadderController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
+            return StatusCode(statusCode, ex.Message);
         }
-
     }
 }
