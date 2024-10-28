@@ -389,6 +389,20 @@ public class MatchupRepoTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SearchForGateway_NotFound()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        var matches = await matchRepository.Load(0, GateWay.America, GameMode.GM_1v1);
+
+        Assert.AreEqual(0, matches.Count);
+    }
+    
+    [Test]
     public async Task SearchForGameMode2v2_LoadDefault()
     {
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
