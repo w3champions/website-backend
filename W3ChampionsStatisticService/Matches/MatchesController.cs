@@ -19,7 +19,8 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int offset = 0,
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
-        int season = -1)
+        int season = -1,
+        string map = "Overall")
     {
         if (season < 0)
         {
@@ -27,8 +28,8 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize);
-        var count = await _matchRepository.Count(season, gameMode);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, map);
+        var count = await _matchRepository.Count(season, gameMode, map);
         return Ok(new { matches, count });
     }
 

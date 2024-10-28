@@ -33,7 +33,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-        var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gameMode);
+        var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gameMode, map: "Overall");
 
         Assert.AreEqual(2, matches.Count);
     }
@@ -86,10 +86,11 @@ public class MatchupRepoTests : IntegrationTestBase
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        var mapName = new MapName(matchFinishedEvent.match.map).Name;
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
-        var matches = await matchRepository.Load(matchFinishedEvent.match.season, matchFinishedEvent.match.gameMode);
+        var matches = await matchRepository.Load(matchFinishedEvent.match.season, matchFinishedEvent.match.gameMode, map: mapName);
 
         Assert.AreEqual(1, matches.Count);
     }
