@@ -154,6 +154,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
     }
 
     public Task<List<Matchup>> Load(int season,
+        GateWay gateWay,
         GameMode gameMode,
         int offset = 0,
         int pageSize = 100,
@@ -161,7 +162,10 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
     {
         var mongoCollection = CreateCollection<Matchup>();
         return mongoCollection
-            .Find(m => gameMode == m.GameMode && m.Season == season && (map == "Overall" || m.Map == map))
+            .Find(m => gameMode == m.GameMode &&
+                       m.Season == season &&
+                       (map == "Overall" || m.Map == map) &&
+                       (gateWay == GateWay.Undefined || m.GateWay == gateWay))
             .SortByDescending(s => s.EndTime)
             .Skip(offset)
             .Limit(pageSize)
@@ -175,13 +179,16 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(
-        int season,
+    public Task<long> Count(int season,
+        GateWay gateWay,
         GameMode gameMode,
         string map = "Overall")
     {
         return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                gameMode == m.GameMode && m.Season == season && (map == "Overall" || m.Map == map));
+                gameMode == m.GameMode &&
+                m.Season == season &&
+                (map == "Overall" || m.Map == map) &&
+                (gateWay == GateWay.Undefined || m.GateWay == gateWay));
     }
 
     public Task InsertOnGoingMatch(OnGoingMatchup matchup)

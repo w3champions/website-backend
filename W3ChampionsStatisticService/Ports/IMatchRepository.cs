@@ -12,13 +12,14 @@ namespace W3ChampionsStatisticService.Ports;
 public interface IMatchRepository
 {
     Task<List<Matchup>> Load(int season,
+        GateWay gateWay,
         GameMode gameMode,
         int offset = 0,
         int pageSize = 100,
         string map = "Overall");
 
-    Task<long> Count(
-        int season,
+    Task<long> Count(int season,
+        GateWay gateWay,
         GameMode gameMode,
         string map = "Overall");
 
