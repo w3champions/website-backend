@@ -371,6 +371,22 @@ public class MatchupRepoTests : IntegrationTestBase
 
         Assert.AreEqual(1, matches.Count);
     }
+    
+    [Test]
+    public async Task SearchForMap()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent1.match.map = "Maps/frozenthrone/(4)TurtleRock.w3x";
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        var mapName = new MapName(matchFinishedEvent1.match.map).Name;
+        
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        var matches = await matchRepository.Load(0, GameMode.GM_1v1, map: mapName);
+
+        Assert.AreEqual(1, matches.Count);
+    }
 
     [Test]
     public async Task SearchForGameMode2v2_LoadDefault()
