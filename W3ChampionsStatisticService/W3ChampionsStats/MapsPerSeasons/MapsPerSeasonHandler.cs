@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
@@ -20,8 +21,8 @@ public class MapsPerSeasonHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadMode
 
         var statCurrent = await _w3Stats.LoadMapsPerSeason(match.season) ?? MapsPerSeason.Create(match.season);
 
-        statOverall.Count(new MapName(match.map).Name, match.gameMode);
-        statCurrent.Count(new MapName(match.map).Name, match.gameMode);
+        statOverall.Count(new MapName(match.map).Name, nextEvent.MapName, match.gameMode);
+        statCurrent.Count(new MapName(match.map).Name, nextEvent.MapName, match.gameMode);
 
         await _w3Stats.Save(statOverall);
         await _w3Stats.Save(statCurrent);

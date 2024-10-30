@@ -4,17 +4,16 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 
 public class GamesPlayedOnMap
 {
-    public static GamesPlayedOnMap Create(string map)
+    public static GamesPlayedOnMap Create(string map, string mapName)
     {
         return new GamesPlayedOnMap
         {
-            Map = map
+            Map = map,
+            MapName = mapName
         };
     }
 
     public string Map { get; set; }
-
-    [BsonIgnore]
     public string MapName { get; set; }
 
     public void CountMatch()

@@ -60,7 +60,9 @@ public class PlayerStatisticsService(
                         .SelectMany(x => x.MatchesOnMapPerModes)
                         .SelectMany(x => x.Maps))
         {
-            mapsPerSeason.MapName = mapInformation.GetMapName(mapsPerSeason.Map);
+            if (mapsPerSeason.MapName == null) {
+                mapsPerSeason.MapName = mapInformation.GetMapName(mapsPerSeason.Map);
+            }
         }
 
         return loadMatchesOnMap;

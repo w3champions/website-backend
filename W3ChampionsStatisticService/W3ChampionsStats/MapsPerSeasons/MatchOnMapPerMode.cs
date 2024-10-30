@@ -16,17 +16,34 @@ public class MatchOnMapPerMode
 
     public GameMode GameMode { get; set; }
 
-    public void CountMatch(string map)
+    public void CountMatch(string map, string mapName)
     {
         var gamesOnMode = Maps.SingleOrDefault(g => g.Map == map);
         if (gamesOnMode == null)
         {
-            Maps.Add(GamesPlayedOnMap.Create(map));
+            Maps.Add(GamesPlayedOnMap.Create(map, mapName));
         }
 
         gamesOnMode = Maps.Single(g => g.Map == map);
         Maps = Maps.OrderBy(m => m.Map).ToList();
         gamesOnMode.CountMatch();
+    }
+
+    // Return true if an update was made
+    public bool UpdateMapName(string map, string mapName) {
+        var gamesOnMode = Maps.SingleOrDefault(g => g.Map == map);
+        if (gamesOnMode == null) {
+            // No record of this map
+            return false;
+        }
+
+        gamesOnMode = Maps.Single(g => g.Map == map);
+        if (gamesOnMode.MapName != null && gamesOnMode.MapName.Equals(mapName)) {
+            // MapName is already up to date
+            return false;
+        }
+        gamesOnMode.MapName = mapName;
+        return true;
     }
 
     public List<GamesPlayedOnMap> Maps { get; set; } = new List<GamesPlayedOnMap>();

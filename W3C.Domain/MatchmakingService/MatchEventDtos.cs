@@ -291,6 +291,7 @@ public class MatchFinishedEvent : MatchmakingEvent
     public Result result { get; set; }
     public bool WasFromSync { get; set; }
     public bool WasFakeEvent { get; set; }
+    public string MapName => match?.mapName;
 }
 
 [BsonIgnoreExtraElements]
