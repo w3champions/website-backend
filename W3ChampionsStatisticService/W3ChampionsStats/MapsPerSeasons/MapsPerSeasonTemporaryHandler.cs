@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasonTemporaryHandler;
 
-// This handler will add mapNames to previously stored GamesPlayedOnMap documents in the MapsPerSeason collection
+// This handler will add mapNames to previously stored GamesPlayedOnMap objects in the MapsPerSeason collection
 // This handler could be removed after going through currently stored MatchFinishedEvents
 public class MapsPerSeasonTemporaryHandler(IW3StatsRepo w3Stats) : IReadModelHandler
 {
