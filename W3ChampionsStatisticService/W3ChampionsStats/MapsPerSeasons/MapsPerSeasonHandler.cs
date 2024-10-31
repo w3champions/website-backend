@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
