@@ -54,7 +54,7 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     {
         lock (_lock)
         {
-            _requests = _requests.Where(m => m.Sender != req.Sender && m.Receiver != req.Receiver).ToList();
+            _requests.Remove(req);
         }
     }
 
