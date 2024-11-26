@@ -157,14 +157,49 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int season,
         GameMode gameMode,
         int offset = 0,
-        int pageSize = 100)
+        int pageSize = 100,
+        string map = "Overall",
+        int minMmr = 0,
+        int maxMmr = 3000,
+        string sort = "endTime",
+        string sortDirection = "desc")
     {
-        var mongoCollection = CreateCollection<Matchup>();
-        return mongoCollection
-            .Find(m => gameMode == m.GameMode && m.Season == season)
-            .SortByDescending(s => s.EndTime)
+        var query = CreateCollection<Matchup>()
+            .AsQueryable()
+            .Where(m => m.GameMode == gameMode)
+            .Where(m => m.Season == season);
+
+        if (map != "Overall")
+        {
+            query = query.Where(m => m.MapName.Contains(map));
+        }
+
+        if (minMmr > 0)
+        {
+            query = query.Where(m => !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)));
+        }
+
+        if (maxMmr < 3000)
+        {
+            query = query.Where(m => !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr)));
+        }
+
+        query = sort.ToLower() switch
+        {
+            "mmr" => sortDirection.ToLower() == "asc"
+                ? query.OrderBy(m => m.Teams.Max(t => t.Players.Max(p => p.OldMmr)))
+                : query.OrderByDescending(m => m.Teams.Max(t => t.Players.Max(p => p.OldMmr))),
+            "startTime" => sortDirection.ToLower() == "asc"
+                ? query.OrderBy(m => m.StartTime)
+                : query.OrderByDescending(m => m.StartTime),
+             _ => sortDirection.ToLower() == "asc"
+                ? query.OrderBy(m => m.EndTime)
+                : query.OrderByDescending(m => m.EndTime),
+        };
+
+        return query
             .Skip(offset)
-            .Limit(pageSize)
+            .Take(pageSize)
             .ToListAsync();
     }
 
@@ -177,10 +212,17 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public Task<long> Count(
         int season,
-        GameMode gameMode)
+        GameMode gameMode,
+        string map = "Overall",
+        int minMmr = 0,
+        int maxMmr = 3000)
     {
         return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                gameMode == m.GameMode && m.Season == season);
+            gameMode == m.GameMode
+            && m.Season == season
+            && (map == "Overall" || m.MapName.Contains(map))
+            && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
+            && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
     }
 
     public Task InsertOnGoingMatch(OnGoingMatchup matchup)
@@ -195,7 +237,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         var mongoCollection = CreateCollection<OnGoingMatchup>();
 
         return mongoCollection
-            .Find(m => m.Team1Players.Contains(playerId) 
+            .Find(m => m.Team1Players.Contains(playerId)
                     || m.Team2Players.Contains(playerId)
                     || m.Team3Players.Contains(playerId)
                     || m.Team4Players.Contains(playerId)
@@ -222,9 +264,10 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000,
-        string sort = "startTimeDescending")
+        string sort = "startTime",
+        string sortDirection = "asc")
     {
-        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
+        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, sortDirection);
     }
 
     public Task<long> CountOnGoingMatches(

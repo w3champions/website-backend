@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Contracts.Matchmaking;
@@ -19,16 +20,21 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int offset = 0,
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
-        int season = -1)
+        int season = -1,
+        string map = "Overall",
+        int minMmr = 0,
+        int maxMmr = 3000,
+        string sort = "endTime",
+        string sortDirection = "asc")
     {
-        if (season < 0)
+
         {
             var lastSeason = await _matchRepository.LoadLastSeason();
             season = lastSeason.Id;
         }
-        if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize);
-        var count = await _matchRepository.Count(season, gameMode);
+        pageSize = Math.Min(pageSize, 100);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, map, minMmr, maxMmr, sort, sortDirection);
+        var count = await _matchRepository.Count(season, gameMode, map, minMmr, maxMmr);
         return Ok(new { matches, count });
     }
 
@@ -82,15 +88,15 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000,
-        string sort = "startTimeDescending"
-        )
+        string sort = "startTime",
+        string sortDirection = "asc")
     {
-        if (pageSize > 200) pageSize = 200;
-        var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
+        pageSize = Math.Min(pageSize, 200);
+        var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, sortDirection);
         var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
 
         await _matchQueryHandler.PopulatePlayerInfos(matches);
-        
+
         PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
         return Ok(new { matches, count });
