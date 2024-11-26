@@ -15,11 +15,19 @@ public interface IMatchRepository
         int season,
         GameMode gameMode,
         int offset = 0,
-        int pageSize = 100);
+        int pageSize = 100,
+        string map = "Overall",
+        int minMmr = 0,
+        int maxMmr = 3000,
+        string sort = "endTime",
+        string sortDirection = "desc");
 
     Task<long> Count(
         int season,
-        GameMode gameMode);
+        GameMode gameMode,
+        string map = "Overall",
+        int minMmr = 0,
+        int maxMmr = 3000);
 
     Task Insert(Matchup matchup);
 
@@ -57,7 +65,8 @@ public interface IMatchRepository
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000,
-        string sort = "startTimeDescending");
+        string sort = "startTime",
+        string sortDirection = "asc");
 
     Task<long> CountOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,

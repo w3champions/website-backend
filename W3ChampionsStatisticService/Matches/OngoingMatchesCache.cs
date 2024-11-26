@@ -23,7 +23,7 @@ public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
         await UpdateCacheIfNeeded();
         return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                                    && (map == "Overall" || m.Map == map)
+                                    && (map == "Overall" || m.MapName.Contains(map))
                                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
                                     && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
     }
@@ -36,33 +36,35 @@ public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
         string map,
         int minMmr,
         int maxMmr,
-        string sort)
+        string sort,
+        string sortDirection)
     {
         await UpdateCacheIfNeeded();
 
         var matches = _values
             .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                        && (map == "Overall" || m.Map == map)
+                        && (map == "Overall" || m.MapName.Contains(map))
                         && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
                         && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
-        if (sort == "mmrDescending") {
-            matches = matches.OrderByDescending(m => getMaxMmrInMatch(m));
-        }
+        matches = sort.ToLower() switch
+        {
+            "mmr" => sortDirection.ToLower() == "asc"
+                ? matches.OrderBy(m => m.Teams.Max(t => t.Players.Max(p => p.OldMmr)))
+                : matches.OrderByDescending(m => m.Teams.Max(t => t.Players.Max(p => p.OldMmr))),
+             "endTime" => sortDirection.ToLower() == "asc"
+                ? matches.OrderBy(m => m.EndTime)
+                : matches.OrderByDescending(m => m.EndTime),
+             _ => sortDirection.ToLower() == "asc"
+                ? matches.OrderBy(m => m.StartTime)
+                : matches.OrderByDescending(m => m.StartTime),
+        };
 
         return matches
             .Skip(offset)
             .Take(pageSize)
             .ToList();
-    }
-
-    public int getMaxMmrInTeam(Team team) {
-        return team.Players.Max(p => p.OldMmr);
-    }
-
-    public int getMaxMmrInMatch(OnGoingMatchup match) {
-        return match.Teams.Max(t => getMaxMmrInTeam(t));
     }
 
     public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
@@ -123,7 +125,8 @@ public interface IOngoingMatchesCache
         string map,
         int minMmr,
         int maxMmr,
-        string sort);
+        string sort,
+        string sortDirection);
 
     Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
     void Upsert(OnGoingMatchup matchup);
