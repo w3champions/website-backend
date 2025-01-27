@@ -1,21 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Aliyun.OSS.SDK.NetCore" Version="2.13.0" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.205.12" />
-    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.14.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.WebApiCompatShim" Version="2.2.0" />
-    <PackageReference Include="MongoDB.Driver" Version="2.25.0" />
-    <PackageReference Include="prometheus-net.AspNetCore" Version="6.0.0" />
-    <PackageReference Include="Serilog" Version="2.12.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.8.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="6.4.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.4.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.4.0" />
+    <PackageReference Include="Aliyun.OSS.SDK.NetCore" />
+    <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.WebApiCompatShim" />
+    <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="prometheus-net.AspNetCore" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="countries.json">
