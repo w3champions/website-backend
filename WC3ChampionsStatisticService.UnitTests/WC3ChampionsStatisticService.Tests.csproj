@@ -1,21 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
 
-    <ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="AutoFixture" />
-        <PackageReference Include="FluentAssertions" />
-        <PackageReference Include="Moq" />
-        <PackageReference Include="nunit" />
+		<PackageReference Include="FluentAssertions" />
+		<PackageReference Include="Moq" />
+		<PackageReference Include="nunit" />
 		<PackageReference Include="NUnit3TestAdapter" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    </ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\W3C.Domain\W3C.Domain.csproj" />
-      <ProjectReference Include="..\W3ChampionsStatisticService\W3ChampionsStatisticService.csproj" />
-    </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\W3C.Domain\W3C.Domain.csproj" />
+		<ProjectReference Include="..\W3ChampionsStatisticService\W3ChampionsStatisticService.csproj" />
+	</ItemGroup>
 
 </Project>
