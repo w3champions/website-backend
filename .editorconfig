@@ -4,4 +4,4 @@ root = true
 charset = utf-8
 tab_width = 4
 indent_size = 2
-ident_style = space
+indent_style = space
