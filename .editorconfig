@@ -1,6 +1,6 @@
 root = true
 
-[*]
+[*.csproj]
 charset = utf-8
 tab_width = 4
 indent_size = 2
