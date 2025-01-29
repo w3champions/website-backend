@@ -1,25 +1,25 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-	<ItemGroup>
-		<PackageReference Include="Aliyun.OSS.SDK.NetCore" />
-		<PackageReference Include="AWSSDK.S3" />
-		<PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
-		<PackageReference Include="Microsoft.AspNetCore.Http" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.WebApiCompatShim" />
-		<PackageReference Include="MongoDB.Driver" />
-		<PackageReference Include="prometheus-net.AspNetCore" />
-		<PackageReference Include="Serilog" />
-		<PackageReference Include="Serilog.Sinks.File" />
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-		<PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
-		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
-		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
-	</ItemGroup>
-	<ItemGroup>
-		<Content Update="countries.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\W3C.Domain\W3C.Domain.csproj" />
-	</ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+	<PackageReference Include="Aliyun.OSS.SDK.NetCore" />
+	<PackageReference Include="AWSSDK.S3" />
+	<PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
+	<PackageReference Include="Microsoft.AspNetCore.Http" />
+	<PackageReference Include="Microsoft.AspNetCore.Mvc.WebApiCompatShim" />
+	<PackageReference Include="MongoDB.Driver" />
+	<PackageReference Include="prometheus-net.AspNetCore" />
+	<PackageReference Include="Serilog" />
+	<PackageReference Include="Serilog.Sinks.File" />
+	<PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+	<PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
+	<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
+	<PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+  </ItemGroup>
+  <ItemGroup>
+	<Content Update="countries.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
+  </ItemGroup>
+  <ItemGroup>
+	<ProjectReference Include="..\W3C.Domain\W3C.Domain.csproj" />
+  </ItemGroup>
 </Project>

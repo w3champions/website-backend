@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AD706C47-31D2-4B0F-B459-BFF80BF0A5A1}"
 	ProjectSection(SolutionItems) = preProject
 		.dockerignore = .dockerignore
+		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		azure-pipelines.yml = azure-pipelines.yml
 		Directory.Build.props = Directory.Build.props
