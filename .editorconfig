@@ -5,3 +5,9 @@ charset = utf-8
 tab_width = 4
 indent_size = 2
 ident_style = space
+
+[*.props]
+charset = utf-8
+tab_width = 4
+indent_size = 2
+ident_style = space
