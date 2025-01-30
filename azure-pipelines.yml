@@ -37,19 +37,19 @@ steps:
         **/*.token.yml => *.yml
 
   - task: UseDotNet@2
-    displayName: .NET 8.0 SDK
+    displayName: use .NET 8.0 SDK
     inputs:
       packageType: 'sdk'
       version: '8.0.x'
 
   - task: DotNetCoreCLI@2
-    displayName: restore
+    displayName: dotnet restore
     inputs:
       command: 'restore'
       feedsToUse: 'select'
 
   - task: DotNetCoreCLI@2
-    displayName: build
+    displayName: dotnet build
     inputs:
       command: 'build'
 
@@ -59,6 +59,7 @@ steps:
       command: 'test'
 
   - task: Docker@2
+    displayName: build and push docker image
     inputs:
       containerRegistry: 'official-docker-modmoto'
       repository: 'modmoto/w3champions-statistic-service'
