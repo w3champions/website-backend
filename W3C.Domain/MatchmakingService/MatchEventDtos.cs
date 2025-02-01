@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using Serilog;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -185,8 +186,13 @@ public class Hero
     {
         get
         {
+            if (!_icon.StartsWith("UI/Glues/ScoreScreen/")) return _icon;
             var strings = _icon.Replace(".blp", "").Replace(".png", "").Split("-");
-            if (strings.Length < 3) return _icon;
+            if (strings.Length < 3)
+            {
+                Log.Warning("Icon was split but didn't have enough elements! {icon}", _icon);
+                return _icon;
+            }
             return strings[2];
         }
         set => _icon = value;
