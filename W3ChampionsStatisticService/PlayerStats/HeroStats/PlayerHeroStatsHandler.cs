@@ -3,6 +3,7 @@ using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
 
@@ -31,14 +32,16 @@ public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : I
             var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag, nextEvent.match.season)
                         ?? PlayerHeroStats.Create(eventPlayer2.battleTag, nextEvent.match.season);
 
-            p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
-                eventPlayer2.race,
-                "Overall",
-                dataPlayers[0].won);
-            p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
-                eventPlayer1.race,
-                "Overall",
-                dataPlayers[1].won);
+            if (GameModesHelper.IsMeleeGameMode(nextEvent.match.gameMode)) {
+                p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
+                    eventPlayer2.race,
+                    "Overall",
+                    dataPlayers[0].won);
+                p2.AddMapWin(blizzardInfoPlayer2, eventPlayer2.race,
+                    eventPlayer1.race,
+                    "Overall",
+                    dataPlayers[1].won);
+            }
 
             p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
                 eventPlayer2.race,
