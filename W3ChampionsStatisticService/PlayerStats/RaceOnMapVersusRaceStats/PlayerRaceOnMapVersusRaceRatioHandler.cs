@@ -5,6 +5,7 @@ using W3ChampionsStatisticService.Matches;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
@@ -32,30 +33,34 @@ public class PlayerRaceOnMapVersusRaceRatioHandler(
             DateTime date = start.AddMilliseconds(nextEvent.match.startTime);
             var patch = await _patchRepository.GetPatchVersionFromDate(date);
 
-            p1.AddMapWin(dataPlayers[0].race,
-                dataPlayers[1].race,
-                "Overall",
-                dataPlayers[0].won, patch);
-            p1.AddMapWin(dataPlayers[0].race,
-            dataPlayers[1].race,
-            "Overall",
-            dataPlayers[0].won, "All");
-            p2.AddMapWin(dataPlayers[1].race,
-                dataPlayers[0].race,
-                "Overall",
-                dataPlayers[1].won, patch);
-            p2.AddMapWin(dataPlayers[1].race,
-                                dataPlayers[0].race,
-                                "Overall",
-                                dataPlayers[1].won, "All");
+            if (GameModesHelper.IsMeleeGameMode(nextEvent.match.gameMode))
+            {
+                p1.AddMapWin(dataPlayers[0].race,
+                    dataPlayers[1].race,
+                    "Overall",
+                    dataPlayers[0].won, patch);
+                p1.AddMapWin(dataPlayers[0].race,
+                    dataPlayers[1].race,
+                    "Overall",
+                    dataPlayers[0].won, "All");
+                p2.AddMapWin(dataPlayers[1].race,
+                    dataPlayers[0].race,
+                    "Overall",
+                    dataPlayers[1].won, patch);
+                p2.AddMapWin(dataPlayers[1].race,
+                    dataPlayers[0].race,
+                    "Overall",
+                    dataPlayers[1].won, "All");
+            }
+
             p1.AddMapWin(dataPlayers[0].race,
                 dataPlayers[1].race,
                 new MapName(nextEvent.match.map).Name,
                 dataPlayers[0].won, patch);
             p1.AddMapWin(dataPlayers[0].race,
-            dataPlayers[1].race,
-            new MapName(nextEvent.match.map).Name,
-            dataPlayers[0].won, "All");
+                dataPlayers[1].race,
+                new MapName(nextEvent.match.map).Name,
+                dataPlayers[0].won, "All");
             p2.AddMapWin(dataPlayers[1].race,
                 dataPlayers[0].race,
                 new MapName(nextEvent.match.map).Name,
@@ -64,6 +69,7 @@ public class PlayerRaceOnMapVersusRaceRatioHandler(
                 dataPlayers[0].race,
                 new MapName(nextEvent.match.map).Name,
                 dataPlayers[1].won, "All");
+
             await _playerRepository.UpsertMapAndRaceStat(p1);
             await _playerRepository.UpsertMapAndRaceStat(p2);
         }
