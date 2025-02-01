@@ -186,7 +186,7 @@ public class Hero
         get
         {
             var strings = _icon.Replace(".blp", "").Replace(".png", "").Split("-");
-            if (strings.Length < 2) return _icon;
+            if (strings.Length < 3) return _icon;
             return strings[2];
         }
         set => _icon = value;
