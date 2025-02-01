@@ -1,4 +1,5 @@
-﻿using W3C.Contracts.GameObjects;
+﻿using Serilog;
+using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
@@ -25,14 +26,17 @@ public class PlayerHeroStats : IIdentifiable
 
     public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string mapName, bool won)
     {
-        if (playerBlizzard.heroes == null)
+        if (playerBlizzard.heroes is { Count: > 0 })
         {
-            return;
-        }
-
-        foreach (var hero in playerBlizzard.heroes)
-        {
-            HeroStatsItemList.AddWin(hero.icon.ParseReforgedName(), myRace, enemyRace, mapName, won);
+            foreach (var hero in playerBlizzard.heroes)
+            {
+                if (hero == null)
+                {
+                    Log.Error("Got null hero for {battleTag}", playerBlizzard.battleTag);
+                    continue;
+                }
+                HeroStatsItemList.AddWin(hero.icon.ParseReforgedName(), myRace, enemyRace, mapName, won);
+            }
         }
     }
 }
