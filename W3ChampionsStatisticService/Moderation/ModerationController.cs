@@ -28,23 +28,28 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authToken)
     {
-        if (loungeMute.battleTag == "") {
+        if (loungeMute.battleTag == "")
+        {
             return BadRequest("BattleTag cannot be empty.");
         }
 
-        if (loungeMute.endDate == "") {
+        if (loungeMute.endDate == "")
+        {
             return BadRequest("Ban End Date must be set.");
         }
 
         var result = await _chatServiceRepository.PostLoungeMute(loungeMute, authToken);
-        if (result.StatusCode == HttpStatusCode.Forbidden) {
+        if (result.StatusCode == HttpStatusCode.Forbidden)
+        {
             return StatusCode(403);
         }
-        if (result.StatusCode == HttpStatusCode.BadRequest) {
+        if (result.StatusCode == HttpStatusCode.BadRequest)
+        {
             var reason = result.Content.ReadAsStringAsync().Result;
             return BadRequest(reason);
         }
-        if (result.StatusCode == HttpStatusCode.OK) {
+        if (result.StatusCode == HttpStatusCode.OK)
+        {
             return Ok();
         }
         return StatusCode(500);
@@ -56,18 +61,22 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authToken)
     {
         var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authToken);
-        if (result.StatusCode == HttpStatusCode.BadRequest) {
+        if (result.StatusCode == HttpStatusCode.BadRequest)
+        {
             var reason = result.Content.ReadAsStringAsync().Result;
             return BadRequest(reason);
         }
-        if (result.StatusCode == HttpStatusCode.Forbidden) {
+        if (result.StatusCode == HttpStatusCode.Forbidden)
+        {
             return StatusCode(403);
         }
-        if (result.StatusCode == HttpStatusCode.NotFound) {
+        if (result.StatusCode == HttpStatusCode.NotFound)
+        {
             var reason = result.Content.ReadAsStringAsync().Result;
             return NotFound(reason);
         }
-        if (result.StatusCode == HttpStatusCode.OK) {
+        if (result.StatusCode == HttpStatusCode.OK)
+        {
             return Ok();
         }
         return StatusCode(500);

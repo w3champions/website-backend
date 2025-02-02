@@ -16,7 +16,7 @@ public class HeroWinratesOverallStatsTests : IntegrationTestBase
         var w3StatsRepo = new W3StatsRepo(MongoClient);
         var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
-        var matchFinishedEvent = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
+        var matchFinishedEvent = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage" });
 
         await handler.Update(matchFinishedEvent);
 
@@ -38,10 +38,10 @@ public class HeroWinratesOverallStatsTests : IntegrationTestBase
         var w3StatsRepo = new W3StatsRepo(MongoClient);
         var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
-        var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
-        var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
-        var matchFinishedEvent3 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "moutainking" });
-        var matchFinishedEvent4 = CreatFakeEvent(new []{ "moutainking" }, new []{"deathknight", "lich"});
+        var matchFinishedEvent1 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage" });
+        var matchFinishedEvent2 = CreatFakeEvent(new[] { "lich", }, new[] { "archmage" });
+        var matchFinishedEvent3 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "moutainking" });
+        var matchFinishedEvent4 = CreatFakeEvent(new[] { "moutainking" }, new[] { " deathknight", "lich" });
 
         await handler.Update(matchFinishedEvent1);
         await handler.Update(matchFinishedEvent2);
@@ -70,11 +70,11 @@ public class HeroWinratesOverallStatsTests : IntegrationTestBase
         var w3StatsRepo = new W3StatsRepo(MongoClient);
         var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
-        var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
-        var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
-        var matchFinishedEvent3 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage", "moutainking" });
-        var matchFinishedEvent4 = CreatFakeEvent(new []{ "archmage", "bloodmage" }, new []{"deathknight", "lich"});
-        var matchFinishedEvent5 = CreatFakeEvent(new []{ "bloodmage" }, new []{"deathknight", "lich"});
+        var matchFinishedEvent1 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage" });
+        var matchFinishedEvent2 = CreatFakeEvent(new[] { "lich", }, new[] { "archmage" });
+        var matchFinishedEvent3 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage", "moutainking" });
+        var matchFinishedEvent4 = CreatFakeEvent(new[] { "archmage", "bloodmage" }, new[] { "deathknight", "lich" });
+        var matchFinishedEvent5 = CreatFakeEvent(new[] { "bloodmage" }, new[] { "deathknight", "lich" });
 
         await handler.Update(matchFinishedEvent1);
         await handler.Update(matchFinishedEvent2);
@@ -95,11 +95,11 @@ public class HeroWinratesOverallStatsTests : IntegrationTestBase
         var w3StatsRepo = new W3StatsRepo(MongoClient);
         var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
-        var matchFinishedEvent1 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage" });
-        var matchFinishedEvent2 = CreatFakeEvent(new []{"lich", }, new []{ "archmage" });
-        var matchFinishedEvent3 = CreatFakeEvent(new []{"deathknight", "lich"}, new []{ "archmage", "moutainking" });
-        var matchFinishedEvent4 = CreatFakeEvent(new []{ "archmage", "bloodmage" }, new []{"deathknight"});
-        var matchFinishedEvent5 = CreatFakeEvent(new []{ "bloodmage" }, new []{"deathknight", "lich"});
+        var matchFinishedEvent1 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage" });
+        var matchFinishedEvent2 = CreatFakeEvent(new[] { "lich", }, new[] { "archmage" });
+        var matchFinishedEvent3 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage", "moutainking" });
+        var matchFinishedEvent4 = CreatFakeEvent(new[] { "archmage", "bloodmage" }, new[] { "deathknight" });
+        var matchFinishedEvent5 = CreatFakeEvent(new[] { "bloodmage" }, new[] { "deathknight", "lich" });
 
         await handler.Update(matchFinishedEvent1);
         await handler.Update(matchFinishedEvent2);
@@ -120,11 +120,11 @@ public class HeroWinratesOverallStatsTests : IntegrationTestBase
         var w3StatsRepo = new W3StatsRepo(MongoClient);
         var handler = new OverallHeroWinRatePerHeroModelHandler(w3StatsRepo);
 
-        await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));
-        await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));
-        await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));
-        await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));
-        await handler.Update(CreatFakeEvent(new []{ "archmage", "mountainking", "paladin" }, new []{"archmage", "mountainking", "paladin"}));
+        await handler.Update(CreatFakeEvent(new[] { "archmage", "mountainking", "paladin" }, new[] { "archmage", "mountainking", "paladin" }));
+        await handler.Update(CreatFakeEvent(new[] { "archmage", "mountainking", "paladin" }, new[] { "archmage", "mountainking", "paladin" }));
+        await handler.Update(CreatFakeEvent(new[] { "archmage", "mountainking", "paladin" }, new[] { "archmage", "mountainking", "paladin" }));
+        await handler.Update(CreatFakeEvent(new[] { "archmage", "mountainking", "paladin" }, new[] { "archmage", "mountainking", "paladin" }));
+        await handler.Update(CreatFakeEvent(new[] { "archmage", "mountainking", "paladin" }, new[] { "archmage", "mountainking", "paladin" }));
 
         var heroStatsQueryHandler = new HeroStatsQueryHandler(new W3StatsRepo(MongoClient));
         var heroWinrateDto = await heroStatsQueryHandler.GetStats("archmage", "all", "all", "archmage", "all", "all");

@@ -4,14 +4,14 @@ using Newtonsoft.Json;
 
 namespace W3ChampionsStatisticService.Admin;
 
-public class GlobalChatBan 
+public class GlobalChatBan
 {
     public int id { get; set; }
     public string battleTag { get; set; }
     public DateTime? expiresAt { get; set; }
 }
 
-public class PlayerChatBanWrapper 
+public class PlayerChatBanWrapper
 {
     [JsonProperty("player_bans")]
     public List<PlayerChatBan> playerBansList { get; set; }
@@ -38,12 +38,12 @@ public class PlayerChatBanPlayerData
     public PlayerChatBanPlayerDataRealm realm { get; set; }
 }
 
-public class PlayerChatBanPlayerDataRealm 
+public class PlayerChatBanPlayerDataRealm
 {
     public int value { get; set; }
 }
 
-public class PlayerChatBanTimestamp 
+public class PlayerChatBanTimestamp
 {
     public uint seconds { get; set; }
     public int nanos { get; set; }

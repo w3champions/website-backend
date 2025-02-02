@@ -98,7 +98,7 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
         return LoadAll<LeagueConstellation>(l => season == null || l.Season == season);
     }
 
-    private async Task<List<Rank>> JoinWith(Expression<Func<Rank,bool>> matchExpression)
+    private async Task<List<Rank>> JoinWith(Expression<Func<Rank, bool>> matchExpression)
     {
         var ranks = CreateCollection<Rank>();
         var players = CreateCollection<PlayerOverview>();

@@ -26,7 +26,7 @@ public class HeroStatsQueryHandler(IW3StatsRepo w3StatsRepo)
             if (second != "none") searchString += $"_{second}";
             if (third != "none") searchString += $"_{third}";
             var stats = await _w3StatsRepo.LoadHeroWinrate(searchString);
-            return HeroWinrateDto(new List<OverallHeroWinRatePerHero> {stats}, opFirst, opSecond, opThird);
+            return HeroWinrateDto(new List<OverallHeroWinRatePerHero> { stats }, opFirst, opSecond, opThird);
         }
         else
         {

@@ -21,7 +21,7 @@ public class PlayerOverviewTests : IntegrationTestBase
     {
         var playerRepository = new PlayerRepository(MongoClient);
 
-        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 0, null);
         await playerRepository.UpsertPlayerOverview(player);
         var playerLoaded = await playerRepository.LoadOverview(player.Id);
 
@@ -32,7 +32,7 @@ public class PlayerOverviewTests : IntegrationTestBase
     [Test]
     public void UpdateOverview()
     {
-        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 0, null);
         player.RecordWin(true, 1230);
         player.RecordWin(false, 1240);
         player.RecordWin(false, 1250);
@@ -49,7 +49,7 @@ public class PlayerOverviewTests : IntegrationTestBase
     [Test]
     public void UpdateOverview_2v2AT()
     {
-        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123")}, GateWay.Europe, GameMode.GM_2v2_AT, 0, null);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#123") }, GateWay.Europe, GameMode.GM_2v2_AT, 0, null);
         player.RecordWin(true, 1230);
 
         Assert.AreEqual(1, player.Games);

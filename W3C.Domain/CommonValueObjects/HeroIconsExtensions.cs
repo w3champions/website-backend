@@ -4,7 +4,8 @@ public static class HeroIconsExtensions
 {
     public static string ParseReforgedName(this string heroIcon)
     {
-        if (string.IsNullOrEmpty(heroIcon)) {
+        if (string.IsNullOrEmpty(heroIcon))
+        {
             return "unknown";
         }
 

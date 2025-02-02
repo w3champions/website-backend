@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,8 +8,8 @@ namespace W3ChampionsStatisticService.Friends;
 
 public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient)
 {
-    private List<FriendRequest> _requests = new List<FriendRequest>();
-    private Object _lock = new Object();
+    private List<FriendRequest> _requests = [];
+    private readonly object _lock = new();
 
     public async Task<List<FriendRequest>> LoadAllFriendRequests()
     {
@@ -21,13 +20,13 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     public async Task<List<FriendRequest>> LoadSentFriendRequests(string sender)
     {
         await UpdateCacheIfNeeded();
-        return _requests.Where(x => x.Sender == sender).ToList();
+        return [.. _requests.Where(x => x.Sender == sender)];
     }
 
     public async Task<List<FriendRequest>> LoadReceivedFriendRequests(string receiver)
     {
         await UpdateCacheIfNeeded();
-        return _requests.Where(x => x.Receiver == receiver).ToList();
+        return [.. _requests.Where(x => x.Receiver == receiver)];
     }
 
     public async Task<FriendRequest> LoadFriendRequest(FriendRequest req)
@@ -46,7 +45,7 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     {
         lock (_lock)
         {
-            _requests = _requests.Append(req).ToList();
+            _requests = [.. _requests, req];
         }
     }
 

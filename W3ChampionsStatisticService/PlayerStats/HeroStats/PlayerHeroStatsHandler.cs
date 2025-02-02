@@ -32,7 +32,8 @@ public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : I
             var p2 = await _playerRepository.LoadHeroStat(eventPlayer2.battleTag, nextEvent.match.season)
                         ?? PlayerHeroStats.Create(eventPlayer2.battleTag, nextEvent.match.season);
 
-            if (GameModesHelper.IsMeleeGameMode(nextEvent.match.gameMode)) {
+            if (GameModesHelper.IsMeleeGameMode(nextEvent.match.gameMode))
+            {
                 p1.AddMapWin(blizzardInfoPlayer1, eventPlayer1.race,
                     eventPlayer2.race,
                     "Overall",

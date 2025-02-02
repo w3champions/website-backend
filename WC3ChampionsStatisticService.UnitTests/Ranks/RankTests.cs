@@ -60,7 +60,7 @@ public class RankTests : IntegrationTestBase
         var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 12.5, null, GateWay.America,
         GameMode.GM_1v1, 0)};
         await rankRepository.InsertRanks(ranks);
-        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.America, GameMode.GM_1v1, 0, null);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 0, null);
         player.RecordWin(true, 1234);
         await playerRepository.UpsertPlayerOverview(player);
         await playerRepository.UpsertPlayerOverview(player);
@@ -81,9 +81,9 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
-        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 4.2, null, GateWay.Europe, GameMode.GM_1v1, 0)};
+        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 4.2, null, GateWay.Europe, GameMode.GM_1v1, 0) };
         await rankRepository.InsertRanks(ranks);
-        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 0, null);
         await playerRepository.UpsertPlayerOverview(player);
         var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 0, GateWay.America, GameMode.GM_1v1);
 
@@ -96,11 +96,11 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
-        var ranks1 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0)};
-        var ranks2 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 8, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0)};
+        var ranks1 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0) };
+        var ranks2 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 8, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0) };
         await rankRepository.InsertRanks(ranks1);
         await rankRepository.InsertRanks(ranks2);
-        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 0, null);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 0, null);
         await playerRepository.UpsertPlayerOverview(player);
         var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 0, GateWay.Europe, GameMode.GM_1v1);
 
@@ -120,9 +120,9 @@ public class RankTests : IntegrationTestBase
             new Rank(new List<string> { "peter#123" }, 1, 8, 1456, Race.NE, GateWay.Europe, GameMode.GM_1v1, 2)
         };
         await rankRepository.InsertRanks(ranks);
-        var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 2, Race.HU);
+        var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 2, Race.HU);
         await playerRepository.UpsertPlayerOverview(player1);
-        var player2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123")}, GateWay.Europe, GameMode.GM_1v1, 2, Race.NE);
+        var player2 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 2, Race.NE);
         await playerRepository.UpsertPlayerOverview(player2);
 
         var playerLoaded = await rankRepository.LoadPlayersOfLeague(1, 2, GateWay.Europe, GameMode.GM_1v1);
@@ -144,7 +144,7 @@ public class RankTests : IntegrationTestBase
         matchFinishedEvent.match.gameMode = GameMode.GM_1v1;
         matchFinishedEvent.match.gateway = GateWay.America;
 
-        rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
+        rankingChangedEvent.ranks[0].battleTags = new List<string> { "peTer#123" };
         rankingChangedEvent.gateway = GateWay.America;
         rankingChangedEvent.gameMode = GameMode.GM_1v1;
 
@@ -180,7 +180,7 @@ public class RankTests : IntegrationTestBase
         matchFinishedEvent.match.season = 2;
         matchFinishedEvent.match.gateway = GateWay.America;
 
-        rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
+        rankingChangedEvent.ranks[0].battleTags = new List<string> { "peTer#123" };
         rankingChangedEvent.ranks[0].race = Race.NE;
         rankingChangedEvent.gateway = GateWay.America;
         rankingChangedEvent.gameMode = GameMode.GM_1v1;
@@ -218,7 +218,7 @@ public class RankTests : IntegrationTestBase
         matchFinishedEvent.match.season = 1;
         matchFinishedEvent.match.gateway = GateWay.America;
 
-        rankingChangedEvent.ranks[0].battleTags = new List<string> {"peTer#123"};
+        rankingChangedEvent.ranks[0].battleTags = new List<string> { "peTer#123" };
         rankingChangedEvent.ranks[0].race = Race.NE;
         rankingChangedEvent.gateway = GateWay.America;
         rankingChangedEvent.gameMode = GameMode.GM_1v1;
@@ -336,7 +336,7 @@ public class RankTests : IntegrationTestBase
             BattleTag = "peter#123",
         };
         await playerRepository.UpsertPlayer(playerStats);
-        await clanRepository.UpsertMemberShip(new ClanMembership { BattleTag = "peter#123", ClanId = "W3C"} );
+        await clanRepository.UpsertMemberShip(new ClanMembership { BattleTag = "peter#123", ClanId = "W3C" });
 
         // Act
         var playerLoaded = await queryHandler.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);

@@ -11,7 +11,7 @@ public class ClanMembership : IIdentifiable, IVersionable
     public string ClanId { get; set; }
     public string PendingInviteFromClan { get; set; }
     public string ClanName { get; set; }
-    public DateTimeOffset LastUpdated  { get; set; }
+    public DateTimeOffset LastUpdated { get; set; }
 
     [JsonIgnore]
     public string Id => BattleTag;

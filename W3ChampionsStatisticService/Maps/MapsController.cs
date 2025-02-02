@@ -31,10 +31,13 @@ public class MapsController(
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> CreateMap([FromBody] MapContract request)
     {
-        try {
+        try
+        {
             var map = await _matchmakingServiceClient.CreateMap(request);
             return Ok(map);
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }

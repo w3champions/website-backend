@@ -28,7 +28,8 @@ public class BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService
                 context.ActionArguments["battleTag"] = res.BattleTag;
                 await next.Invoke();
             }
-        } catch (Exception)
+        }
+        catch (Exception)
         {
             var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
             context.Result = unauthorizedResult;

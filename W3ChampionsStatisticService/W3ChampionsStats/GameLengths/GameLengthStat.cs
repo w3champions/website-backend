@@ -42,7 +42,7 @@ public class GameLengthStat : IIdentifiable
         var lengths = new List<GameLength>();
         for (var i = 0; i <= iterations; i++)
         {
-            lengths.Add(new GameLength {Seconds = i * interval});
+            lengths.Add(new GameLength { Seconds = i * interval });
         }
 
         return lengths;

@@ -14,10 +14,11 @@ public class MatchupLength : IIdentifiable
 
     private static string ALL_MMR = "all";
 
-    public static string CompoundNormalizedId(string race1, string race2, string season) {
-      var races = new List<string>{ race1.ToLower(), race2.ToLower()};
-      races.Sort();
-      return races[0] + "_vs_" + races[1] + "_" + season;
+    public static string CompoundNormalizedId(string race1, string race2, string season)
+    {
+        var races = new List<string> { race1.ToLower(), race2.ToLower() };
+        races.Sort();
+        return races[0] + "_vs_" + races[1] + "_" + season;
     }
 
     public void Record(int duration, int mmr)
@@ -41,7 +42,7 @@ public class MatchupLength : IIdentifiable
     private void RecordForMmrRange(int duration, int mmr)
     {
         var mmrInterval = 200;
-        var mmrRange = (int) mmr / mmrInterval;
+        var mmrRange = (int)mmr / mmrInterval;
         mmrRange = mmrInterval * mmrRange;
         RecordForKey(duration, mmrRange.ToString());
     }
@@ -69,7 +70,7 @@ public class MatchupLength : IIdentifiable
         var lengths = new List<GameLength>();
         for (var i = 0; i <= iterations; i++)
         {
-            lengths.Add(new GameLength {Seconds = i * interval});
+            lengths.Add(new GameLength { Seconds = i * interval });
         }
 
         return lengths;

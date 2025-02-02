@@ -39,27 +39,27 @@ public class PlayerGameLengthStatsTests : IntegrationTestBase
         var gameLengthForPlayerStatistic1 = await playerRepo.LoadGameLengthForPlayerStats("mad#1", 5);
 
         var sumOpponentRaceLengths =
-            gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.NE.ToString("D")].Count 
-            + gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.UD.ToString("D")].Count;
+            gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.NE.ToString("D")].Count +
+            gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.UD.ToString("D")].Count;
 
         // check first element
         Assert.AreEqual(200, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.Total.ToString("D")][0]);
-        
+
         // check count of lengths
         Assert.AreEqual(7, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.Total.ToString("D")].Count);
         Assert.AreEqual(sumOpponentRaceLengths, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.Total.ToString("D")].Count);
         Assert.AreEqual(5, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.NE.ToString("D")].Count);
         Assert.AreEqual(2, gameLengthForPlayerStatistic1.GameLengthsByOpponentRace[Race.UD.ToString("D")].Count);
-        
+
         // check avg
         Assert.AreEqual(195, gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace[Race.UD.ToString("D")]);
         Assert.AreEqual(195, gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace[Race.NE.ToString("D")]);
         Assert.AreEqual(195, gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace[Race.Total.ToString("D")]);
-        
+
         // should not have key that did not play against
         Assert.False(gameLengthForPlayerStatistic1.AverageGameLengthByOpponentRace.ContainsKey(Race.HU.ToString("D")));
         Assert.False(gameLengthForPlayerStatistic1.GameLengthsByOpponentRace.ContainsKey(Race.HU.ToString("D")));
-        
+
         // check intervals
         Assert.AreEqual(4, gameLengthForPlayerStatistic1.PlayerGameLengthIntervalByOpponentRace[Race.Total.ToString("D")].Lengths["180"]);
         Assert.AreEqual(2, gameLengthForPlayerStatistic1.PlayerGameLengthIntervalByOpponentRace[Race.NE.ToString("D")].Lengths["180"]);

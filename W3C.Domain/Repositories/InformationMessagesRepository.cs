@@ -13,7 +13,7 @@ public class InformationMessagesRepository : MongoDbRepositoryBase, IInformation
 {
     MatchmakingServiceClient _matchmakingServiceClient;
     public InformationMessagesRepository(
-        MongoClient mongoClient, 
+        MongoClient mongoClient,
         MatchmakingServiceClient matchmakingServiceClient) : base(mongoClient)
     {
         _matchmakingServiceClient = matchmakingServiceClient;

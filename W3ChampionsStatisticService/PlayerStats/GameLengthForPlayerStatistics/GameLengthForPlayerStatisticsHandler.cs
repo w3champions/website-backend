@@ -13,15 +13,16 @@ public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) 
     public async Task Update(MatchFinishedEvent nextEvent)
     {
         var match = nextEvent.match;
-        
+
         if (nextEvent.WasFakeEvent || match.gameMode != GameMode.GM_1v1) return;
 
         var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime);
         var startTime = DateTimeOffset.FromUnixTimeMilliseconds(match.startTime);
         var duration = endTime - startTime;
         var season = match.season;
-        
-        for (var i = 0; i < 2; i++) {
+
+        for (var i = 0; i < 2; i++)
+        {
             var players = match.players;
             var player = players[i];
             var opponent = i == 0 ? players[1] : players[0];

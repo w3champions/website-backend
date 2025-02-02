@@ -39,7 +39,9 @@ public class VersionRepository(MongoClient mongoClient) : MongoDbRepositoryBase(
         {
             await mongoCollection.InsertOneAsync(new VersionDto
             {
-                LastVersion = lastVersion, Season = season, HandlerName =HandlerName<T>()
+                LastVersion = lastVersion,
+                Season = season,
+                HandlerName = HandlerName<T>()
             });
         }
     }

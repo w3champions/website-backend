@@ -8,8 +8,8 @@ using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
-public class InjectAuthTokenFilter : IAsyncActionFilter {
-    
+public class InjectAuthTokenFilter : IAsyncActionFilter
+{
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
@@ -21,7 +21,7 @@ public class InjectAuthTokenFilter : IAsyncActionFilter {
         var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
         context.Result = unauthorizedResult;
     }
-    
+
     private static string GetToken(StringValues authorization)
     {
         if (AuthenticationHeaderValue.TryParse(authorization, out var headerValue))

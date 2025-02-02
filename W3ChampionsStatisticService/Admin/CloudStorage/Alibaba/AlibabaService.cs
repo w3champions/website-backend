@@ -28,7 +28,8 @@ public class AlibabaService : IAlibabaService
         var result = client.ListObjects(listObjectsRequest);
         return result.ObjectSummaries
             .Where(x => x.Size != 0) // Filter out the directory containing the files
-            .Select(x => new CloudFile {
+            .Select(x => new CloudFile
+            {
                 Name = x.Key.Substring(x.Key.LastIndexOf('/') + 1), // Do not include the prefix
                 Size = x.Size / 1024, // Size in kilobytes
                 LastModified = x.LastModified

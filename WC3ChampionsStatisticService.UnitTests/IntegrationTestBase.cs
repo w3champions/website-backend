@@ -24,7 +24,7 @@ public class IntegrationTestBase
     public async Task Setup()
     {
         await MongoClient.DropDatabaseAsync("W3Champions-Statistic-Service");
-        personalSettingsProvider= new PersonalSettingsProvider(MongoClient, CreateTestCache<List<PersonalSetting>>());
+        personalSettingsProvider = new PersonalSettingsProvider(MongoClient, CreateTestCache<List<PersonalSetting>>());
     }
 
     protected ICachedDataProvider<T> CreateTestCache<T>() where T : class
@@ -48,9 +48,9 @@ public class IntegrationTestBase
         var mongoDatabase = database;
         var mongoCollection = mongoDatabase.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent));
         await mongoCollection.FindOneAndReplaceAsync(
-            (Expression<Func<MatchFinishedEvent, bool>>) (ev => ev.match.id == newEvent.match.id),
+            (Expression<Func<MatchFinishedEvent, bool>>)(ev => ev.match.id == newEvent.match.id),
             newEvent,
-            new FindOneAndReplaceOptions<MatchFinishedEvent> {IsUpsert = true});
+            new FindOneAndReplaceOptions<MatchFinishedEvent> { IsUpsert = true });
     }
 
     protected async Task InsertMatchStartedEvent(MatchStartedEvent newEvent)
@@ -59,9 +59,9 @@ public class IntegrationTestBase
         var mongoDatabase = database;
         var mongoCollection = mongoDatabase.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
         await mongoCollection.FindOneAndReplaceAsync(
-            (Expression<Func<MatchStartedEvent, bool>>) (ev => ev.match.id == newEvent.match.id),
+            (Expression<Func<MatchStartedEvent, bool>>)(ev => ev.match.id == newEvent.match.id),
             newEvent,
-            new FindOneAndReplaceOptions<MatchStartedEvent> {IsUpsert = true});
+            new FindOneAndReplaceOptions<MatchStartedEvent> { IsUpsert = true });
     }
 
     protected async Task InsertRankChangedEvent(RankingChangedEvent newEvent)
@@ -70,8 +70,8 @@ public class IntegrationTestBase
         var mongoDatabase = database;
         var mongoCollection = mongoDatabase.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
         await mongoCollection.FindOneAndReplaceAsync(
-            (Expression<Func<RankingChangedEvent, bool>>) (ev => ev.id == newEvent.id),
+            (Expression<Func<RankingChangedEvent, bool>>)(ev => ev.id == newEvent.id),
             newEvent,
-            new FindOneAndReplaceOptions<RankingChangedEvent> {IsUpsert = true});
+            new FindOneAndReplaceOptions<RankingChangedEvent> { IsUpsert = true });
     }
 }

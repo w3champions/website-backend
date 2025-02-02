@@ -31,7 +31,8 @@ public class S3Service : IS3Service
             Prefix = S3Prefix
         };
         ListObjectsResponse listObjectsResponse = await client.ListObjectsAsync(listObjectsRequest);
-        return listObjectsResponse.S3Objects.Select(x => new CloudFile {
+        return listObjectsResponse.S3Objects.Select(x => new CloudFile
+        {
             Name = x.Key.Substring(x.Key.LastIndexOf('/') + 1), // Do not include the prefix
             Size = x.Size / 1024, // Size in kilobytes
             LastModified = x.LastModified

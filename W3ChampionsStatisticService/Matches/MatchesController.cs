@@ -90,7 +90,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
 
         await _matchQueryHandler.PopulatePlayerInfos(matches);
-        
+
         PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
 
         return Ok(new { matches, count });

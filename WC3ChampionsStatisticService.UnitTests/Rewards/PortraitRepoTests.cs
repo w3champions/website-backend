@@ -82,7 +82,7 @@ public class PortraitRepoTests : IntegrationTestBase
 
         // act
         await portraitRepository.UpdatePortraitDefinition(
-            new List<int>() { portraitIds[0] }, 
+            new List<int>() { portraitIds[0] },
             groupsToAdd.ToList());
 
         // assert
@@ -103,11 +103,11 @@ public class PortraitRepoTests : IntegrationTestBase
         string[] startingGroups = { "bronze", "silver" };
         string[] groupsToAdd = { "gold", "platinum" };
         await portraitRepository.SaveNewPortraitDefinitions(
-            portraitIds.ToList(), 
+            portraitIds.ToList(),
             startingGroups.ToList());
 
         // act
-        await portraitRepository.UpdatePortraitDefinition(new List<int>() { portraitIds[0]}, groupsToAdd.ToList());
+        await portraitRepository.UpdatePortraitDefinition(new List<int>() { portraitIds[0] }, groupsToAdd.ToList());
 
         // assert
         var portraits = await portraitRepository.LoadPortraitDefinitions();

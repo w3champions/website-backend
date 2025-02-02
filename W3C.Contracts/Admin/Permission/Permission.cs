@@ -9,7 +9,8 @@ public class Permission
     public string Author { get; set; }
 }
 
-public enum EPermission {
+public enum EPermission
+{
     Permissions,
     Moderation,
     Queue,

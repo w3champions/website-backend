@@ -14,14 +14,14 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     public void UpdateTimeline(MmrRpAtDate mmrRpAtDate)
     {
         // Empty?
-        if (MmrRpAtDates.Count == 0) 
+        if (MmrRpAtDates.Count == 0)
         {
             MmrRpAtDates.Add(mmrRpAtDate);
             return;
         }
 
         // Insert at last pos?
-        int index = MmrRpAtDates.Count - 1; 
+        int index = MmrRpAtDates.Count - 1;
         if (MmrRpAtDates[index].Date <= mmrRpAtDate.Date)
         {
             if (CheckDateExists(index, mmrRpAtDate))
@@ -34,7 +34,7 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
         }
 
         // Insert at first pos?
-        index = 0; 
+        index = 0;
         {
             if (MmrRpAtDates[index].Date >= mmrRpAtDate.Date)
             {
@@ -73,7 +73,7 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     {
         var neighbour = MmrRpAtDates[oldId];
         if (mmrRpAtDate.HasSameYearMonthDayAs(neighbour))
-        { 
+        {
             return true;
         }
         return false;
@@ -84,7 +84,7 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
         var neighbour = MmrRpAtDates[oldId];
         //if (mmrRpAtDate.Mmr > neighbour.Mmr)
         if (mmrRpAtDate.Date > neighbour.Date)
-            {
+        {
             MmrRpAtDates[oldId] = mmrRpAtDate;
         }
     }
@@ -92,7 +92,8 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
 
 public class MmrRpAtDate : IComparable
 {
-    public MmrRpAtDate(int mmr, double? rp, DateTimeOffset date) {
+    public MmrRpAtDate(int mmr, double? rp, DateTimeOffset date)
+    {
         Mmr = mmr;
         Rp = rp;
         Date = date;

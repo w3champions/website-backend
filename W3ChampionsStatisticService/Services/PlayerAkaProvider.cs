@@ -23,7 +23,8 @@ public class PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccounts
 
         var response = await httpClient.GetAsync(war3infoApiUrl);
 
-        if (!response.IsSuccessStatusCode) {
+        if (!response.IsSuccessStatusCode)
+        {
             return new List<PlayerAka>();
         }
 
@@ -39,7 +40,8 @@ public class PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccounts
         var akas = await _userAccountsCached.GetCachedOrRequestAsync(GetAkaReferencesAsync, null);
         var aka = akas.Find(x => x.aka == battleTag);
 
-        if (aka != null) {
+        if (aka != null)
+        {
             return aka.player;
         }
         return new Player(); // returns an default values if they are not in the database
@@ -53,7 +55,8 @@ public class PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccounts
         {
             var modifiedAka = new Player();
 
-            if (settings.AliasSettings.showAka) {
+            if (settings.AliasSettings.showAka)
+            {
                 modifiedAka.name = playerAkaData.name;
                 modifiedAka.main_race = playerAkaData.main_race;
                 modifiedAka.country = playerAkaData.country;

@@ -48,8 +48,8 @@ public class PopularHoursStatTests : IntegrationTestBase
 
         var popularHoursStats = PopularHoursStat.Create(GameMode.GM_1v1);
 
-        popularHoursStats.Apply(GameMode.GM_1v1,  todayMidnight.AddDays(-1));
-        popularHoursStats.Apply(GameMode.GM_1v1,  todayMidnight.AddDays(-2));
+        popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddDays(-1));
+        popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddDays(-2));
 
         Assert.AreEqual(1, popularHoursStats.PopularHoursTwoWeeks[12].Timeslots[0].Games);
         Assert.AreEqual(1, popularHoursStats.PopularHoursTwoWeeks[11].Timeslots[0].Games);
@@ -69,7 +69,8 @@ public class PopularHoursStatTests : IntegrationTestBase
         popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddDays(-15));
 
         int games = 0;
-        foreach (var timeslot in popularHoursStats.PopularHoursTotal.Timeslots) {
+        foreach (var timeslot in popularHoursStats.PopularHoursTotal.Timeslots)
+        {
             games += timeslot.Games;
         }
 
@@ -87,7 +88,8 @@ public class PopularHoursStatTests : IntegrationTestBase
         popularHoursStats.Apply(GameMode.GM_1v1, todayMidnight.AddDays(-14));
 
         int games = 0;
-        foreach (var timeslot in popularHoursStats.PopularHoursTotal.Timeslots) {
+        foreach (var timeslot in popularHoursStats.PopularHoursTotal.Timeslots)
+        {
             games += timeslot.Games;
         }
 

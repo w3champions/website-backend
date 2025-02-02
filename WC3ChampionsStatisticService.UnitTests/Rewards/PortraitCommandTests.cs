@@ -74,7 +74,7 @@ public class PortraitCommandTests : IntegrationTestBase
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
         var playerTag = "cepheid#1467";
-        var personalSettings = new PersonalSetting(playerTag) {SpecialPictures = null};
+        var personalSettings = new PersonalSetting(playerTag) { SpecialPictures = null };
         await personalSettingsRepository.Save(personalSettings);
 
         var portraitsCommand = new PortraitsCommand();

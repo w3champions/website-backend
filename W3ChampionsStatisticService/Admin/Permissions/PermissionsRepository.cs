@@ -26,7 +26,8 @@ public class PermissionsRepository : MongoDbRepositoryBase, IPermissionsReposito
         var response = await httpClient.GetAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}");
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             throw new HttpRequestException(content, null, response.StatusCode);
         }
         var permissionList = JsonConvert.DeserializeObject<List<Permission>>(content);
@@ -46,7 +47,8 @@ public class PermissionsRepository : MongoDbRepositoryBase, IPermissionsReposito
         var byteContent = new ByteArrayContent(buffer);
         byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
         var response = await httpClient.PostAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}", byteContent);
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             var content = await response.Content.ReadAsStringAsync();
             throw new HttpRequestException(content, null, response.StatusCode);
         }
@@ -61,7 +63,8 @@ public class PermissionsRepository : MongoDbRepositoryBase, IPermissionsReposito
         var byteContent = new ByteArrayContent(buffer);
         byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
         var response = await httpClient.PutAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}", byteContent);
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             var content = await response.Content.ReadAsStringAsync();
             throw new HttpRequestException(content, null, response.StatusCode);
         }
@@ -73,7 +76,8 @@ public class PermissionsRepository : MongoDbRepositoryBase, IPermissionsReposito
         var httpClient = new HttpClient();
         var encodedTag = HttpUtility.UrlEncode(id);
         var response = await httpClient.DeleteAsync($"{IdentityApiUrl}/api/permissions?id={encodedTag}&authorization={authorization}");
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             var content = await response.Content.ReadAsStringAsync();
             throw new HttpRequestException(content, null, response.StatusCode);
         }

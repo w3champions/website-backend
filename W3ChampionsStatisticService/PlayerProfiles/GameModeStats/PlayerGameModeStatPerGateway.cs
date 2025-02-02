@@ -42,7 +42,8 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
         get
         {
             if (LastGameWasBefore8Hours()) return new RankProgression();
-            return new RankProgression  {
+            return new RankProgression
+            {
                 MMR = MMR - RankProgressionStart.MMR,
                 RankingPoints = RankingPoints - RankProgressionStart.RankingPoints,
             };

@@ -14,11 +14,10 @@ public class BearerTest
     {
         Assert.Throws<SecurityTokenValidationException>(() => BearerHasPermissionFilter.GetToken(StringValues.Empty));
     }
-    
+
     [Test]
     public void GetTokenSuccess()
     {
-        
         var result = BearerHasPermissionFilter.GetToken(new StringValues("Bearer fake_token_value"));
         Assert.AreEqual("fake_token_value", result);
     }

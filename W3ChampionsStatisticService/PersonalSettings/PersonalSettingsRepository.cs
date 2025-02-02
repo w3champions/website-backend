@@ -25,7 +25,8 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
         var playersStatsCollection = CreateCollection<PlayerOverallStats>();
         var playerStats = (await playersStatsCollection.FindAsync(x => x.BattleTag == battletag)).FirstOrDefault();
 
-        if (playerStats != null) {
+        if (playerStats != null)
+        {
             personalSettings.RaceWins = playerStats;
         }
 

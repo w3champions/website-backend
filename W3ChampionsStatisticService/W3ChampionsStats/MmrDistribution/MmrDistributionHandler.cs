@@ -62,7 +62,7 @@ public class MmrStats
     {
         if (!values.Any())
         {
-        return 0.0;
+            return 0.0;
         }
 
         double average = values.Average();

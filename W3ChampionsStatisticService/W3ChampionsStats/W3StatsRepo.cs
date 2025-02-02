@@ -96,7 +96,7 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
         var americaStats = stats.Where(g => g.GateWay == GateWay.America).ToList();
         var euStats = stats.Where(g => g.GateWay == GateWay.Europe).ToList();
         var allStats = stats.Where(g => g.GateWay == GateWay.Undefined).ToList();
-        var gamesPerDays = new [] { allStats, americaStats, euStats };
+        var gamesPerDays = new[] { allStats, americaStats, euStats };
         return gamesPerDays.Select(s =>
             s.GroupBy(gamesPerDay => gamesPerDay.GameMode)
             .Select(g => new GameDayGroup(g.Key, g.ToList()))
@@ -158,7 +158,7 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
         return LoadAll<MapsPerSeason>();
     }
 
-    public Task Save(MatchupLength matchupLength) 
+    public Task Save(MatchupLength matchupLength)
     {
         return Upsert(matchupLength);
     }
@@ -170,7 +170,7 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
         var stats = await mongoCollection
             .Find(s => s.Id == matchupId)
             .ToListAsync();
-        
+
         if (stats.Count > 0)
         {
             return stats[0];
