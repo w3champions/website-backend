@@ -52,6 +52,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroPlayedStats;
 using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
+using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasonTemporaryHandler;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
@@ -197,6 +198,7 @@ if (startHandlers == "true")
     builder.Services.AddReadModelService<PopularHoursStatHandler>();
     builder.Services.AddReadModelService<HeroPlayedStatHandler>();
     builder.Services.AddReadModelService<MapsPerSeasonHandler>();
+    builder.Services.AddReadModelService<MapsPerSeasonTemporaryHandler>();
 
     // Game Balance Stats
     builder.Services.AddReadModelService<OverallRaceAndWinStatHandler>();
