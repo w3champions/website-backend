@@ -186,6 +186,7 @@ public class Hero
     {
         get
         {
+            _icon.Replace('\\', '/');
             if (!_icon.Contains("UI/Glues/ScoreScreen/")) return _icon;
             var strings = _icon.Replace(".blp", "").Replace(".png", "").Split("-");
             if (strings.Length < 3)
