@@ -26,7 +26,7 @@ public class Rank : IIdentifiable
         RankNumber = rankNumber;
         RankingPoints = rankingPoints;
         Race = race;
-        var btags = playerIds.Select(b => $"{b}@{(int) gateway}").OrderBy(t => t);
+        var btags = playerIds.Select(b => $"{b}@{(int)gateway}").OrderBy(t => t);
         var createPlayerId = $"{season}_{string.Join("_", btags)}_{gameMode}";
         if (race != null)
         {

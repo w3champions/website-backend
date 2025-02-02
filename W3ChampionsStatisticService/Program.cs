@@ -62,7 +62,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     serverOptions.Limits.MaxRequestBodySize = 0x8000000; // 128 MiB
 });
 
-builder.Services.AddControllers(c => 
+builder.Services.AddControllers(c =>
 {
     c.Filters.Add<ValidationExceptionFilter>();
 });
@@ -82,11 +82,11 @@ builder.Services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = app
 // Add Swagger
 builder.Services.AddSwaggerGen(f =>
 {
-    f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1"});
+    f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1" });
 });
 
 // Configure and add MongoDB
-string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING")  ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
 MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
 mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
 mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
@@ -104,7 +104,8 @@ builder.Services.AddSpecialBsonRegistrations();
 // Add Application Insights
 builder.Services.AddSingleton<TrackingService>();
 string disableTelemetry = Environment.GetEnvironmentVariable("DISABLE_TELEMETRY");
-if (disableTelemetry == "true") {
+if (disableTelemetry == "true")
+{
     TelemetryDebugWriter.IsTracingDisabled = true;
 }
 

@@ -48,10 +48,13 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayers()
     {
-        try {
+        try
+        {
             var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
             return Ok(bannedPlayers);
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }
@@ -60,10 +63,13 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        try {
+        try
+        {
             await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
             return Ok();
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }
@@ -72,10 +78,13 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        try {
+        try
+        {
             await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
             return Ok();
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }
@@ -117,7 +126,7 @@ public class AdminController(
     {
         return Ok(await _informationMessagesRepository.GetTips(limit));
     }
-    
+
     [HttpGet("motd")] // Message Of The Day
     public async Task<IActionResult> GetMotd()
     {

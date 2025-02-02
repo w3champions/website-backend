@@ -18,10 +18,13 @@ public class PermissionsController(
     [InjectAuthToken]
     public async Task<IActionResult> GetPermissions(string authToken)
     {
-        try {
+        try
+        {
             var permissions = await _permissionsRepository.GetPermissions(authToken);
             return Ok(permissions);
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }
@@ -30,10 +33,13 @@ public class PermissionsController(
     [InjectAuthToken]
     public async Task<IActionResult> AddAdmin([FromBody] Permission permission, string authToken)
     {
-        try {
+        try
+        {
             await _permissionsRepository.AddAdmin(permission, authToken);
             return Ok();
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }
@@ -42,10 +48,13 @@ public class PermissionsController(
     [InjectAuthToken]
     public async Task<IActionResult> EditAdmin([FromBody] Permission permission, string authToken)
     {
-        try {
+        try
+        {
             await _permissionsRepository.EditAdmin(permission, authToken);
             return Ok();
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }
@@ -54,10 +63,13 @@ public class PermissionsController(
     [InjectAuthToken]
     public async Task<IActionResult> DeleteAdmin([FromQuery] string id, string authToken)
     {
-        try {
+        try
+        {
             await _permissionsRepository.DeleteAdmin(id, authToken);
             return Ok();
-        } catch (HttpRequestException ex) {
+        }
+        catch (HttpRequestException ex)
+        {
             return StatusCode((int)ex.StatusCode, ex.Message);
         }
     }

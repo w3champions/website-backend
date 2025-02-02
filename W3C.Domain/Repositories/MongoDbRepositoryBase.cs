@@ -67,7 +67,7 @@ public class MongoDbRepositoryBase
         await mongoCollection.FindOneAndReplaceAsync(
             identityQuerry,
             insertObject,
-            new FindOneAndReplaceOptions<T> {IsUpsert = true});
+            new FindOneAndReplaceOptions<T> { IsUpsert = true });
     }
 
     protected Task UpsertTimed<T>(T insertObject, Expression<Func<T, bool>> identityQuerry) where T : IVersionable
@@ -76,7 +76,7 @@ public class MongoDbRepositoryBase
         return Upsert(insertObject, identityQuerry);
     }
 
-    protected Task Upsert<T>(T insertObject)  where T : IIdentifiable
+    protected Task Upsert<T>(T insertObject) where T : IIdentifiable
     {
         return Upsert(insertObject, x => x.Id == insertObject.Id);
     }
@@ -88,7 +88,8 @@ public class MongoDbRepositoryBase
         var collection = CreateCollection<T>();
         var bulkOps = insertObject
             .Select(record => new ReplaceOneModel<T>(Builders<T>.Filter
-            .Where(x => x.Id == record.Id), record) {IsUpsert = true})
+            .Where(x => x.Id == record.Id), record)
+            { IsUpsert = true })
             .Cast<WriteModel<T>>().ToList();
         return collection.BulkWriteAsync(bulkOps);
     }

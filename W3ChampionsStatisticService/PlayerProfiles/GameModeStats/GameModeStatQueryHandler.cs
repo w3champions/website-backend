@@ -83,7 +83,7 @@ public class GameModeStatQueryHandler(
     {
         foreach (var gameModeStat in playerGameModeStats)
         {
-            gameModeStat.Quantile =  await _playerService.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
+            gameModeStat.Quantile = await _playerService.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
         }
     }
 }

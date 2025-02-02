@@ -13,7 +13,7 @@ public class PlayerOverallStats
     [BsonId]
     public string BattleTag { get; set; }
     public string Name { get; set; }
-    public List<Season> ParticipatedInSeasons  { get; set; } = new List<Season>();
+    public List<Season> ParticipatedInSeasons { get; set; } = new List<Season>();
     public List<RaceWinLoss> WinLosses { get; set; }
     public Player PlayerAkaData { get; set; }
 

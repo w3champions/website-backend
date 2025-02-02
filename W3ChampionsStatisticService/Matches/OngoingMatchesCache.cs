@@ -47,8 +47,9 @@ public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
                         && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
                         && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
-        if (sort == "mmrDescending") {
-            matches = matches.OrderByDescending(m => getMaxMmrInMatch(m));
+        if (sort == "mmrDescending")
+        {
+            matches = matches.OrderByDescending(m => GetMaxMmrInMatch(m));
         }
 
         return matches
@@ -57,12 +58,14 @@ public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
             .ToList();
     }
 
-    public int getMaxMmrInTeam(Team team) {
+    public int GetMaxMmrInTeam(Team team)
+    {
         return team.Players.Max(p => p.OldMmr);
     }
 
-    public int getMaxMmrInMatch(OnGoingMatchup match) {
-        return match.Teams.Max(t => getMaxMmrInTeam(t));
+    public int GetMaxMmrInMatch(OnGoingMatchup match)
+    {
+        return match.Teams.Max(t => GetMaxMmrInTeam(t));
     }
 
     public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)

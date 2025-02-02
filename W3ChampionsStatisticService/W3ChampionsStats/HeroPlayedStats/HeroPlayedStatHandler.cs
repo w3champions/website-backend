@@ -18,7 +18,7 @@ public class HeroPlayedStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
         if (nextEvent.result == null) return;
 
         var heroes = nextEvent.result.players.SelectMany(p =>
-                p.heroes.Select((h, index) => new HeroPickDto(h.icon, (EPick) index + 1))).ToList();
+            p.heroes.Select((h, index) => new HeroPickDto(h.icon, (EPick)index + 1))).ToList();
         stat.AddHeroes(heroes, nextEvent.match.gameMode);
         await _w3Stats.Save(stat);
     }
@@ -31,7 +31,7 @@ public class HeroPickDto
 
     public HeroPickDto(string icon, in EPick pick)
     {
-        Icon = icon.ParseReforgedName();;
+        Icon = icon.ParseReforgedName();
         Pick = pick;
     }
 }

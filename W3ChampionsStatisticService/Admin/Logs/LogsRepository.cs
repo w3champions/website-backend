@@ -23,8 +23,9 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
         var url = $"{MatchmakingApiUrl}/admin/logs";
         var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return new List<string> {"Unable to get logfiles."};
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (string.IsNullOrEmpty(content)) return new List<string> { "Unable to get logfiles." };
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             throw new HttpRequestException(content, null, response.StatusCode);
         }
         var logfileNames = JsonConvert.DeserializeObject<List<string>>(content);
@@ -38,8 +39,9 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
         var url = $"{MatchmakingApiUrl}/admin/logs/{logfileName}";
         var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return new List<string> {"Unable to get log content."};
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (string.IsNullOrEmpty(content)) return new List<string> { "Unable to get log content." };
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             throw new HttpRequestException(content, null, response.StatusCode);
         }
         var logfileContent = JsonConvert.DeserializeObject<List<string>>(content);
@@ -53,7 +55,8 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
         var url = $"{MatchmakingApiUrl}/admin/logs/download/{logfileName}";
         var response = await httpClient.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
-        if (response.StatusCode != HttpStatusCode.OK) {
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
             throw new HttpRequestException(content, null, response.StatusCode);
         }
         Stream stream = await response.Content.ReadAsStreamAsync();

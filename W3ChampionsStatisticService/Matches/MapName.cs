@@ -9,7 +9,7 @@ public class MapName
         Name = map.Split('/', '\\')
             .Last()
             .Replace(".w3x", "")
-            .Replace(".w3m","")
+            .Replace(".w3m", "")
             .Replace("_lv", "")
             .Substring(3)
             .Replace("_lv_anon", "")
@@ -25,7 +25,7 @@ public class MapName
             .Replace("goleminthemist", "golemsinthemist")
             .Replace("_cd", "")
             .Replace("_", "")
-            .Replace(".","_");
+            .Replace(".", "_");
     }
 
     public string Name { get; }

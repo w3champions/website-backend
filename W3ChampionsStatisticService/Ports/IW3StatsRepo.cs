@@ -30,7 +30,7 @@ public interface IW3StatsRepo
     Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to);
     Task<PopularHoursStat> LoadPopularHoursStat(GameMode mode);
     Task Save(PopularHoursStat stat);
-    Task <List<PopularHoursStat>>LoadAllPopularHoursStat();
+    Task<List<PopularHoursStat>> LoadAllPopularHoursStat();
     Task<HeroPlayedStat> LoadHeroPlayedStat();
     Task Save(HeroPlayedStat stat);
     Task<OverallHeroWinRatePerHero> LoadHeroWinrate(string heroComboId);

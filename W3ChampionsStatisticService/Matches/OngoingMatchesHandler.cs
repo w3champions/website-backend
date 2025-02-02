@@ -32,12 +32,14 @@ public class OngoingMatchesHandler(
                         foreach (var player in team.Players)
                         {
                             var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
-                            if (foundMatchForPlayer != null) {
+                            if (foundMatchForPlayer != null)
+                            {
                                 await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
                             }
 
                             var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
-                            if (personalSettings != null) {
+                            if (personalSettings != null)
+                            {
                                 player.CountryCode = personalSettings.CountryCode;
                             }
                         }

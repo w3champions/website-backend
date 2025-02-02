@@ -35,9 +35,8 @@ public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
             return;
         }
 
-        if ((nextEvent.match.gameMode == GameMode.GM_2v2
-                || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
-            && winners.Count != 2 && losers.Count != 2 )
+        if ((nextEvent.match.gameMode == GameMode.GM_2v2 || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
+            && winners.Count != 2 && losers.Count != 2)
         {
             return;
         }
@@ -71,7 +70,7 @@ public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
             match.gateway,
             gameMode,
             match.season,
-            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) losingTeam.Single().race : null);
+            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?)losingTeam.Single().race : null);
 
         var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
 
@@ -110,7 +109,7 @@ public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
             match.gateway,
             gameMode,
             match.season,
-            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?) winners.Single().race : null);
+            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?)winners.Single().race : null);
 
         var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
         winner.RecordWin(true);

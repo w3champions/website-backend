@@ -59,42 +59,51 @@ public class ReplayTests
         var result = JsonConvert.DeserializeObject<ReplayChatsData>(_json);
 
         var players = new List<ReplayChatsPlayerInfo>();
-        players.Add(new ReplayChatsPlayerInfo {
+        players.Add(new ReplayChatsPlayerInfo
+        {
             Id = 1,
             Name = "p1#1",
             Team = 0,
             Color = 1
         });
-        players.Add(new ReplayChatsPlayerInfo {
+        players.Add(new ReplayChatsPlayerInfo
+        {
             Id = 2,
             Name = "p2#2",
             Team = 1,
             Color = 2
         });
         var messages = new List<ReplayChatsMessage>();
-        messages.Add(new ReplayChatsMessage {
+        messages.Add(new ReplayChatsMessage
+        {
             FromPlayer = 1,
-            Scope = new ReplayChatsScope {
+            Scope = new ReplayChatsScope
+            {
                 Type = ReplayChatsScopeType.All,
             },
             Content = "p1 all",
         });
-        messages.Add(new ReplayChatsMessage {
+        messages.Add(new ReplayChatsMessage
+        {
             FromPlayer = 2,
-            Scope = new ReplayChatsScope {
+            Scope = new ReplayChatsScope
+            {
                 Type = ReplayChatsScopeType.Allies,
             },
             Content = "p2 allies",
         });
-        messages.Add(new ReplayChatsMessage {
+        messages.Add(new ReplayChatsMessage
+        {
             FromPlayer = 2,
-            Scope = new ReplayChatsScope {
+            Scope = new ReplayChatsScope
+            {
                 Type = ReplayChatsScopeType.Player,
                 Id = 1
             },
             Content = "p2 to p1",
         });
-        result.Should().BeEquivalentTo(new ReplayChatsData {
+        result.Should().BeEquivalentTo(new ReplayChatsData
+        {
             Players = players,
             Messages = messages,
         });

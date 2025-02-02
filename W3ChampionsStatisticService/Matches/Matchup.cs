@@ -155,7 +155,7 @@ public class Matchup
     }
 
     protected static Dictionary<int, List<T>> SplitPlayersIntoTeams<T>(List<T> players, GameMode gameMode)
-        where T: UnfinishedMatchPlayer
+        where T : UnfinishedMatchPlayer
     {
         var teams = players.GroupBy(x => x.team)
             .ToDictionary(x => x.Key, x => x.ToList());

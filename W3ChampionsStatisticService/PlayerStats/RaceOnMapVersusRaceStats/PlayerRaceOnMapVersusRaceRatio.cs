@@ -26,11 +26,13 @@ public class PlayerRaceOnMapVersusRaceRatio : IIdentifiable
 
     public void AddMapWin(Race myRace, Race enemyRace, string mapName, bool won, string patch)
     {
-        if(RaceWinsOnMapByPatch == null){
+        if (RaceWinsOnMapByPatch == null)
+        {
             RaceWinsOnMapByPatch = new Dictionary<string, MapWinsPerRaceList>();
         }
 
-        if(!RaceWinsOnMapByPatch.ContainsKey(patch)){
+        if (!RaceWinsOnMapByPatch.ContainsKey(patch))
+        {
             RaceWinsOnMapByPatch[patch] = MapWinsPerRaceList.Create();
         }
 

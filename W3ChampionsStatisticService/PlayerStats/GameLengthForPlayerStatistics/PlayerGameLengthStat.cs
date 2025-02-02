@@ -14,9 +14,10 @@ public class PlayerGameLengthStat
         var maxGroupValue = 60;
         var group = (int)duration / groupInterval;
         group = group > maxGroupValue ? maxGroupValue : group;
-        group*=groupInterval;
+        group *= groupInterval;
         var groupString = group.ToString();
-        if (!Lengths.ContainsKey(groupString)) {
+        if (!Lengths.ContainsKey(groupString))
+        {
             Lengths.Add(groupString, 0);
         }
         Lengths[groupString]++;

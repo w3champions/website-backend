@@ -206,7 +206,8 @@ public class MatchmakingServiceClient
         return response.StatusCode;
     }
 
-    public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes() {
+    public async Task<List<ActiveGameMode>> GetCurrentlyActiveGameModes()
+    {
         var url = $"{MatchmakingApiUrl}/ladder/active-modes";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
@@ -225,7 +226,8 @@ public class MatchmakingServiceClient
         }
     }
 
-    public async Task<List<TournamentFloNode>> GetEnabledFloNodes() {
+    public async Task<List<TournamentFloNode>> GetEnabledFloNodes()
+    {
         var url = $"{MatchmakingApiUrl}/tournaments/flo-nodes";
         var response = await _httpClient.GetAsync(url);
 
@@ -312,34 +314,44 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/tournaments/{id}";
 
         dynamic data = new ExpandoObject();
-        if (updates.Name != null) {
+        if (updates.Name != null)
+        {
             data.name = updates.Name;
         }
-        if (updates.StartDateTime != null) {
+        if (updates.StartDateTime != null)
+        {
             data.startDateTime = updates.StartDateTime;
         }
-        if (updates.State != null) {
+        if (updates.State != null)
+        {
             data.state = updates.State;
         }
-        if (updates.Mode != null) {
+        if (updates.Mode != null)
+        {
             data.mode = updates.Mode;
         }
-        if (updates.Format != null) {
+        if (updates.Format != null)
+        {
             data.format = updates.Format;
         }
-        if (updates.MapPool != null) {
+        if (updates.MapPool != null)
+        {
             data.mapPool = updates.MapPool;
         }
-        if (updates.RegistrationTimeMinutes != null) {
+        if (updates.RegistrationTimeMinutes != null)
+        {
             data.registrationTimeMinutes = updates.RegistrationTimeMinutes;
         }
-        if (updates.ReadyTimeSeconds != null) {
+        if (updates.ReadyTimeSeconds != null)
+        {
             data.readyTimeSeconds = updates.ReadyTimeSeconds;
         }
-        if (updates.VetoTimeSeconds != null) {
+        if (updates.VetoTimeSeconds != null)
+        {
             data.vetoTimeSeconds = updates.VetoTimeSeconds;
         }
-        if (updates.ShowWinnerTimeHours != null) {
+        if (updates.ShowWinnerTimeHours != null)
+        {
             data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
         }
         data.matcherinoUrl = updates.MatcherinoUrl;
@@ -361,31 +373,40 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/tournaments";
 
         dynamic data = new ExpandoObject();
-        if (updates.Name != null) {
+        if (updates.Name != null)
+        {
             data.name = updates.Name;
         }
-        if (updates.StartDateTime != null) {
+        if (updates.StartDateTime != null)
+        {
             data.startDateTime = updates.StartDateTime;
         }
-        if (updates.Mode != null) {
+        if (updates.Mode != null)
+        {
             data.mode = updates.Mode;
         }
-        if (updates.Format != null) {
+        if (updates.Format != null)
+        {
             data.format = updates.Format;
         }
-        if (updates.MapPool != null) {
+        if (updates.MapPool != null)
+        {
             data.mapPool = updates.MapPool;
         }
-        if (updates.RegistrationTimeMinutes != null) {
+        if (updates.RegistrationTimeMinutes != null)
+        {
             data.registrationTimeMinutes = updates.RegistrationTimeMinutes;
         }
-        if (updates.ReadyTimeSeconds != null) {
+        if (updates.ReadyTimeSeconds != null)
+        {
             data.readyTimeSeconds = updates.ReadyTimeSeconds;
         }
-        if (updates.VetoTimeSeconds != null) {
+        if (updates.VetoTimeSeconds != null)
+        {
             data.vetoTimeSeconds = updates.VetoTimeSeconds;
         }
-        if (updates.ShowWinnerTimeHours != null) {
+        if (updates.ShowWinnerTimeHours != null)
+        {
             data.showWinnerTimeHours = updates.ShowWinnerTimeHours;
         }
         data.maxPlayers = updates.MaxPlayers;
@@ -431,15 +452,17 @@ public class MatchmakingServiceClient
         try
         {
             var formattedAllQueueData = new List<MappedQueue>();
-            if (allQueues != null) {
+            if (allQueues != null)
+            {
                 foreach (var queue in allQueues)
                 {
                     var gameModeQueue = new MappedQueue();
                     gameModeQueue.gameMode = queue.gameMode;
-                    
+
                     var formattedSingleQueueData = new List<MappedPlayerData>();
 
-                    if (queue.snapshot.Count > 0) {
+                    if (queue.snapshot.Count > 0)
+                    {
                         foreach (var playerData in queue.snapshot)
                         {
                             var mappedPlayerData = new MappedPlayerData();
@@ -453,15 +476,15 @@ public class MatchmakingServiceClient
                             }
 
                             mappedPlayerData.battleTag = string.Join(" / ", playerBattleTagStrings);
-                            mappedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr),0);
-                            mappedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd),0);
-                            mappedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile),3);
-                            mappedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile),3);
+                            mappedPlayerData.mmr = Math.Round(Convert.ToDouble(playerData.mmr), 0);
+                            mappedPlayerData.rd = Math.Round(Convert.ToDouble(playerData.rd), 0);
+                            mappedPlayerData.quantile = Math.Round(Convert.ToDouble(playerData.quantiles.quantile), 3);
+                            mappedPlayerData.activityQuantile = Math.Round(Convert.ToDouble(playerData.quantiles.activityQuantile), 3);
                             mappedPlayerData.queueTime = playerData.queueTime;
                             mappedPlayerData.isFloConnected = playerData.isFloConnected;
                             mappedPlayerData.location = playerData.playerData[0].location;
                             mappedPlayerData.serverOption = playerData.playerData[0].serverOption;
-                            
+
                             formattedSingleQueueData.Add(mappedPlayerData);
                         }
                     }
@@ -515,7 +538,7 @@ public class BannedPlayerReadmodel : IIdentifiable
     public string banReason { get; set; }
     public string Id => battleTag;
     public string banInsertDate { get; set; }
-    public string author { get; set;}
+    public string author { get; set; }
 }
 
 public class ActiveGameMode

@@ -44,13 +44,20 @@ public class PlayersController(
     {
         var player = await _playerRepository.LoadPlayerProfile(battleTag);
 
-        if (player == null) {
-            if (authorization == null) {
+        if (player == null)
+        {
+            if (authorization == null)
+            {
                 return NotFound($"Player {battleTag} not found.");
-            } else {
-                try {
+            }
+            else
+            {
+                try
+                {
                     _authenticationService.GetUserByToken(authorization, false);
-                } catch (Exception) {
+                }
+                catch (Exception)
+                {
                     return Unauthorized("Sorry Hackerboi");
                 }
                 player = PlayerOverallStats.Create(battleTag);
@@ -163,7 +170,8 @@ public class PlayersController(
     public async Task<IActionResult> GetUserBrief([FromRoute] string battleTag)
     {
         PersonalSetting settings = await _personalSettingsRepository.Find(battleTag);
-        if (settings == null) {
+        if (settings == null)
+        {
             return NotFound();
         }
         return Ok(new UserBrief(settings.Id, settings.ProfilePicture));

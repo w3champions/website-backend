@@ -30,9 +30,9 @@ public class RankQueryHandler(
 
         await PopulatePlayerInfos(playerRanks);
         await PopulateLeagueInfo(playerRanks, season, gateWay, gameMode);
-        if (gameMode == GameMode.GM_2v2_AT 
-            || gameMode == GameMode.GM_4v4_AT 
-            || gameMode == GameMode.GM_LEGION_4v4_x20_AT 
+        if (gameMode == GameMode.GM_2v2_AT
+            || gameMode == GameMode.GM_4v4_AT
+            || gameMode == GameMode.GM_LEGION_4v4_x20_AT
             || gameMode == GameMode.GM_DOTA_5ON5_AT
             || gameMode == GameMode.GM_DS_AT)
         {
@@ -105,7 +105,7 @@ public class RankQueryHandler(
                 rank.LeagueName = league.Name;
                 rank.LeagueDivision = league.Division;
                 rank.LeagueOrder = league.Order;
-            }                
+            }
         }
     }
 

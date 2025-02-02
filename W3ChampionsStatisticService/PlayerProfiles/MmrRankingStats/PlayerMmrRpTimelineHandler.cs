@@ -10,7 +10,7 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IR
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 
-    public async Task Update(MatchFinishedEvent nextEvent) 
+    public async Task Update(MatchFinishedEvent nextEvent)
     {
         var match = nextEvent.match;
 
@@ -22,7 +22,7 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IR
             mmrRpTimeline.UpdateTimeline(new MmrRpAtDate(
                 mmr: (int)player.updatedMmr.rating,
                 rp: player.ranking?.rp,
-                date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));;
+                date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime)));
             await _playerRepository.UpsertPlayerMmrRpTimeline(mmrRpTimeline);
         }
     }

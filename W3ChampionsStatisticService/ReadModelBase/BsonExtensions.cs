@@ -9,7 +9,8 @@ public static class BsonExtensions
 {
     public static IServiceCollection AddSpecialBsonRegistrations(this IServiceCollection services)
     {
-        BsonClassMap.RegisterClassMap<ClanState>(cm => {
+        BsonClassMap.RegisterClassMap<ClanState>(cm =>
+        {
             cm.AutoMap();
             cm.SetIsRootClass(true);
 

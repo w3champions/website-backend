@@ -11,7 +11,7 @@ public class ProfilePicture
         return new ProfilePicture()
         {
             Race = AvatarCategory.Starter,
-            PictureId = random.Next(1,5),
+            PictureId = random.Next(1, 5),
         };
     }
 

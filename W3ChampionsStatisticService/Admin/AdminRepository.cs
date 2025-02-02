@@ -37,10 +37,10 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
-        
+
         if (result.StatusCode == HttpStatusCode.NotFound) return new FloProxies();
         //if (string.IsNullOrEmpty(content)) return null;
-        
+
         var deserializeObject = JsonConvert.DeserializeObject<FloProxies>(content);
 
         return deserializeObject;
@@ -62,7 +62,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         {
             newProxiesBeingAdded.nodeOverrides.Add(nodeOverride);
         }
-        
+
         foreach (var autoNodeOverride in proxyUpdateData.automaticNodeOverrides)
         {
             newProxiesBeingAdded.automaticNodeOverrides.Add(autoNodeOverride);
@@ -110,7 +110,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<Aliases>(content);
-        
+
         return deserializeObject.smurfs;
     }
 

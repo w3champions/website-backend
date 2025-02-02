@@ -189,7 +189,7 @@ public class MatchupRepoTests : IntegrationTestBase
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
-    
+
         matchFinishedEvent1.match.players[0].race = Race.UD;
         matchFinishedEvent1.match.players[1].race = Race.HU;
 
@@ -227,12 +227,12 @@ public class MatchupRepoTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-        var matches = await matchRepository.LoadFor("peter#123", null, season : season);
-        var count = await matchRepository.CountFor("peter#123", null, season : season);
+        var matches = await matchRepository.LoadFor("peter#123", null, season: season);
+        var count = await matchRepository.CountFor("peter#123", null, season: season);
 
         Assert.AreEqual(1, count);
         Assert.AreEqual("peter#123", matches.Single().Teams.First().Players.Single().BattleTag);
-        Assert.AreEqual(playerTwo, matches.Single().Teams.Last().Players.Single().BattleTag);  
+        Assert.AreEqual(playerTwo, matches.Single().Teams.Last().Players.Single().BattleTag);
     }
 
     [TestCase(1)]
@@ -248,8 +248,8 @@ public class MatchupRepoTests : IntegrationTestBase
         matchFinishedEvent1.match.players[1].battleTag = "ANDERER#456";
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-        var matches = await matchRepository.LoadFor("peter#123", null, season : season);
-        var count = await matchRepository.CountFor("peter#123", null, season : season);
+        var matches = await matchRepository.LoadFor("peter#123", null, season: season);
+        var count = await matchRepository.CountFor("peter#123", null, season: season);
 
         Assert.AreEqual(0, count);
     }
@@ -393,7 +393,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
         matchFinishedEvent1.match.players[0].battleTag = "peter#123";
         matchFinishedEvent1.result.players[0].battleTag = "peter#123";
-        matchFinishedEvent1.result.players[0].heroes = new List<Hero> { new Hero { icon = "jainasea"}};
+        matchFinishedEvent1.result.players[0].heroes = new List<Hero> { new Hero { icon = "jainasea" } };
 
         await InsertMatchEvent(matchFinishedEvent1);
 

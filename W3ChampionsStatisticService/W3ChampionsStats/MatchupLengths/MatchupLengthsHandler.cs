@@ -21,7 +21,7 @@ public class MatchupLengthsHandler(IW3StatsRepo w3Stats) : IReadModelHandler
         var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime);
         var startTime = DateTimeOffset.FromUnixTimeMilliseconds(match.startTime);
         var duration = endTime - startTime;
-        var durationSeconds = (int) duration.TotalSeconds;
+        var durationSeconds = (int)duration.TotalSeconds;
         var isShortGame = durationSeconds < 120;
         var players = match.players;
         var race1 = players[0].race;
@@ -33,8 +33,8 @@ public class MatchupLengthsHandler(IW3StatsRepo w3Stats) : IReadModelHandler
         var mmr1 = players[0].mmr.rating;
         var mmr2 = players[1].mmr.rating;
         var season = match.season;
-        var mmr = (int) Math.Max(mmr1, mmr2);
-        
+        var mmr = (int)Math.Max(mmr1, mmr2);
+
         var matchupLength = await _w3StatsRepo.LoadMatchupLengthOrCreate(race1.ToString(), race2.ToString(), season.ToString());
         matchupLength.Apply(durationSeconds, mmr);
         await _w3StatsRepo.Save(matchupLength);

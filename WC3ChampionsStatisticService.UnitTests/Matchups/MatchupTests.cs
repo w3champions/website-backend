@@ -64,7 +64,8 @@ public class MatchupTests
 
     [Test]
     public void MapMatch_MMr()
-    {  var fakeEvent = TestDtoHelper.CreateFakeEvent();
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
         fakeEvent.match.players[0].won = true;
         fakeEvent.match.players[0].mmr.rating = 1437.0358093886573;
         fakeEvent.match.players[0].updatedMmr.rating = 1453.5974731933813;

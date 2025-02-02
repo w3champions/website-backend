@@ -10,7 +10,8 @@ public class ReplayChatsData
     public List<ReplayChatsMessage> Messages { get; set; }
 }
 
-public class ReplayChatsPlayerInfo {
+public class ReplayChatsPlayerInfo
+{
     public int Id { get; set; }
 
     public string Name { get; set; }
@@ -20,7 +21,8 @@ public class ReplayChatsPlayerInfo {
     public int Color { get; set; }
 }
 
-public class ReplayChatsMessage {
+public class ReplayChatsMessage
+{
     [JsonProperty("from_player")]
     public int FromPlayer { get; set; }
 
@@ -29,13 +31,15 @@ public class ReplayChatsMessage {
     public string Content { get; set; }
 }
 
-public class ReplayChatsScope {
+public class ReplayChatsScope
+{
     public ReplayChatsScopeType Type { get; set; }
 
     public int? Id { get; set; }
 }
 
-public enum ReplayChatsScopeType {
+public enum ReplayChatsScopeType
+{
     All,
     Allies,
     Observers,

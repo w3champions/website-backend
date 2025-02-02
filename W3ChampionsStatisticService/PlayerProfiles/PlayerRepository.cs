@@ -141,27 +141,29 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
     {
         return Upsert(mmrRpTimeline);
     }
-    
+
     public Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season)
     {
-        var compoundId = PlayerGameLength.compoundId(battleTag, season);
+        var compoundId = PlayerGameLength.CompoundId(battleTag, season);
         return LoadFirst<PlayerGameLength>(compoundId);
     }
 
     public async Task<PlayerGameLength> LoadOrCreateGameLengthForPlayerStats(string battleTag, int season)
     {
         var mongoCollection = CreateCollection<PlayerGameLength>();
-        var compoundId = PlayerGameLength.compoundId(battleTag, season);
+        var compoundId = PlayerGameLength.CompoundId(battleTag, season);
 
         var gameLengthsForPlayer = await mongoCollection.Find(s =>
                 s.Id == compoundId)
             .ToListAsync();
 
-        if (gameLengthsForPlayer.Count > 0) {
-          return gameLengthsForPlayer[0];
+        if (gameLengthsForPlayer.Count > 0)
+        {
+            return gameLengthsForPlayer[0];
         }
 
-        return new PlayerGameLength {
+        return new PlayerGameLength
+        {
             BattleTag = battleTag,
             Season = season,
             PlayerGameLengthIntervalByOpponentRace = new Dictionary<string, PlayerGameLengthStat>(),

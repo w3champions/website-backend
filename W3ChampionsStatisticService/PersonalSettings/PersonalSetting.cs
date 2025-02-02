@@ -56,12 +56,12 @@ public class PersonalSetting : IVersionable, IIdentifiable
             case AvatarCategory.Special:
                 isValid = SpecialPictures == null ? false : SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
                 break;
-            
+
             case AvatarCategory.Total:
                 var totalWins = RaceWins?.GetTotalWins();
                 isValid = totalWins >= TotalPictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;
                 break;
-            
+
             default:
                 var winsPerRace = RaceWins?.GetWinsPerRace((Race)cmd.avatarCategory);
                 isValid = winsPerRace >= RacePictureRange.FirstOrDefault(p => p.PictureId == cmd.pictureId)?.NeededWins;

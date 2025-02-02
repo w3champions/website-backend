@@ -87,18 +87,22 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
             .ToList();
 
         var searchRelevance = new List<PlayerSearchRelevance>();
-        foreach (var ps in matchingEntries) {
+        foreach (var ps in matchingEntries)
+        {
             int relevance = 9;
             string nameLower = ps.Id.ToLower().Split('#').ElementAtOrDefault(0);
-            if (nameLower == null) {
+            if (nameLower == null)
+            {
                 continue;
             }
             // Exact match
-            if (nameLower == searchLower) {
+            if (nameLower == searchLower)
+            {
                 relevance = 1;
             }
             // Start with
-            else if (nameLower.StartsWith(searchLower)) {
+            else if (nameLower.StartsWith(searchLower))
+            {
                 relevance = 2;
             }
             searchRelevance.Add(new PlayerSearchRelevance(ps, relevance));
@@ -116,9 +120,11 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
         var playerStatsMap = await _playerRepository.GetPlayerBattleTagsAsync(personalSettingIds);
 
         // Populate seasons for each player
-        foreach (var player in result) {
+        foreach (var player in result)
+        {
             playerStatsMap.TryGetValue(player.BattleTag, out var y);
-            if (y != null) {
+            if (y != null)
+            {
                 player.SetSeasons(y);
             }
         }
@@ -136,7 +142,7 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
         {
             if (gameMode == GameMode.GM_1v1)
             {
-                return $"{ playerIds[0].BattleTag}_{ race}";
+                return $"{playerIds[0].BattleTag}_{race}";
             }
 
             return playerIds[0].BattleTag;

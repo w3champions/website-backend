@@ -195,7 +195,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         var mongoCollection = CreateCollection<OnGoingMatchup>();
 
         return mongoCollection
-            .Find(m => m.Team1Players.Contains(playerId) 
+            .Find(m => m.Team1Players.Contains(playerId)
                     || m.Team2Players.Contains(playerId)
                     || m.Team3Players.Contains(playerId)
                     || m.Team4Players.Contains(playerId)

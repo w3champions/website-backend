@@ -246,7 +246,7 @@ public static class TestDtoHelper
 
     public static MatchStartedEvent Create1v1StartedEvent()
     {
-        var fixture = new Fixture {RepeatCount = 2};
+        var fixture = new Fixture { RepeatCount = 2 };
         var fakeEvent = fixture.Build<MatchStartedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         var name1 = "peter#123";

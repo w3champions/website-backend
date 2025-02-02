@@ -54,7 +54,7 @@ public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
         return Checkout<RankingChangedEvent>();
     }
 
-    private async Task<List<T>> Checkout<T>() where T: ISyncable
+    private async Task<List<T>> Checkout<T>() where T : ISyncable
     {
         var mongoCollection = CreateCollection<T>();
         var ids = await mongoCollection

@@ -46,7 +46,8 @@ public class PersonalSettingsController(
 
         if (settings != null)
         {
-            return Ok(settings.Select(x => new {
+            return Ok(settings.Select(x => new
+            {
                 x.Id,
                 x.CountryCode,
                 x.Location,

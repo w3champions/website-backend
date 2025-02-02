@@ -5,7 +5,7 @@ using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class OnGoingMatchup: Matchup
+public class OnGoingMatchup : Matchup
 {
     public static OnGoingMatchup Create(MatchStartedEvent matchStartedEvent)
     {
