@@ -186,13 +186,13 @@ public class Hero
     {
         get
         {
-            _icon.Replace('\\', '/');
-            if (!_icon.Contains("UI/Glues/ScoreScreen/")) return _icon;
-            var strings = _icon.Replace(".blp", "").Replace(".png", "").Split("-");
+            var path = _icon.Replace('\\', '/');
+            if (!path.Contains("UI/Glues/ScoreScreen/")) return path;
+            var strings = path.Replace(".blp", "").Replace(".png", "").Split("-");
             if (strings.Length < 3)
             {
-                Log.Warning("Icon was split but didn't have enough elements! {icon}", _icon);
-                return _icon;
+                Log.Warning("Icon was split but didn't have enough elements! {icon}", path);
+                return path;
             }
             return strings[2];
         }
