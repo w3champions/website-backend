@@ -41,7 +41,7 @@ public class HeroWinratesOverallStatsTests : IntegrationTestBase
         var matchFinishedEvent1 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "archmage" });
         var matchFinishedEvent2 = CreatFakeEvent(new[] { "lich", }, new[] { "archmage" });
         var matchFinishedEvent3 = CreatFakeEvent(new[] { "deathknight", "lich" }, new[] { "moutainking" });
-        var matchFinishedEvent4 = CreatFakeEvent(new[] { "moutainking" }, new[] { " deathknight", "lich" });
+        var matchFinishedEvent4 = CreatFakeEvent(new[] { "moutainking" }, new[] { "deathknight", "lich" });
 
         await handler.Update(matchFinishedEvent1);
         await handler.Update(matchFinishedEvent2);
