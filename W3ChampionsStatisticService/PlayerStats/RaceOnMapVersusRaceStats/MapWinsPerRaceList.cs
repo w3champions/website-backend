@@ -21,7 +21,7 @@ public class MapWinsPerRaceList : List<WinLossesPerMapAndRace>
 
     public void AddWin(Race myRace, Race enemyRace, string mapName, in bool won)
     {
-        var raceResult = this.Single(r => r.Race == myRace);
+    var raceResult = this.Single(r => r.Race == myRace);
         var totalReslt = this.Single(r => r.Race == Race.Total);
         var mapOfRace = WinLossesPerMap(mapName, raceResult);
         var mapOfTotal = WinLossesPerMap(mapName, totalReslt);
