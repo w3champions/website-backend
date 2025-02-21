@@ -45,7 +45,7 @@ public enum GameMode
     GM_DS_AT = 1102,
 
     GM_WARHAMMER_1ON1 = 1201,
-    
+
     GM_CF = 1301,
     GM_CF_AT = 1302,
 }
