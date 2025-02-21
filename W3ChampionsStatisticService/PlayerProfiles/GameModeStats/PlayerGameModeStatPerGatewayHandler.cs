@@ -147,6 +147,11 @@ public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
             return GameMode.GM_DS_AT;
         }
 
+        if (gameMode == GameMode.GM_CF && player.IsAt)
+        {
+            return GameMode.GM_CF_AT;
+        }
+
         return gameMode;
     }
 }

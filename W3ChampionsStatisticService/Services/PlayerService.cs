@@ -138,7 +138,8 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
             && gameMode != GameMode.GM_4v4_AT
             && gameMode != GameMode.GM_LEGION_4v4_x20_AT
             && gameMode != GameMode.GM_DOTA_5ON5_AT
-            && gameMode != GameMode.GM_DS_AT)
+            && gameMode != GameMode.GM_DS_AT
+            && gameMode != GameMode.GM_CF_AT)
         {
             if (gameMode == GameMode.GM_1v1)
             {

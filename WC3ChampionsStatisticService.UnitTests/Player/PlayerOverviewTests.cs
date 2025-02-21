@@ -338,7 +338,9 @@ public class PlayerOverviewTests : IntegrationTestBase
                     || gameMode == GameMode.GM_DOTA_5ON5
                     || gameMode == GameMode.GM_DOTA_5ON5_AT
                     || gameMode == GameMode.GM_DS
-                    || gameMode == GameMode.GM_DS_AT) continue;
+                    || gameMode == GameMode.GM_DS_AT
+                    || gameMode == GameMode.GM_CF
+                    || gameMode == GameMode.GM_CF_AT) continue;
 
                 var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
                 matchFinishedEvent1.match.players[0].battleTag = "peter#123";
