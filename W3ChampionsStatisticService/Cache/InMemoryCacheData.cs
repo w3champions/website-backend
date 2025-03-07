@@ -26,13 +26,6 @@ public class InMemoryCachedDataProvider<T> : ICachedDataProvider<T> where T : cl
         string key = null,
         TimeSpan? customExpiration = null)
     {
-        if (_memoryCache.TryGetValue(typeof(T).FullName + key, out T cachedValue))
-        {
-            Console.WriteLine($"Cache HIT for key: {key}");
-        } else {
-            Console.WriteLine($"Cache MISS for key: {key}");
-        }
-        
         if (_cacheOptions.LockDuringFetch)
         {
             await _semaphoreSlim.WaitAsync();
