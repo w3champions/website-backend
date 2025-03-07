@@ -4,15 +4,17 @@ using MongoDB.Bson;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.GameObjects;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Matches;
 
 [ApiController]
 [Route("api/matches")]
-public class MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler) : ControllerBase
+public class MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler, MatchService matchService) : ControllerBase
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly MatchQueryHandler _matchQueryHandler = matchQueryHandler;
+    private readonly MatchService _matchService = matchService;
 
     [HttpGet("")]
     public async Task<IActionResult> GetMatches(
@@ -67,8 +69,9 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int pageSize = 100)
     {
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.LoadFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, pageSize, offset, season);
-        var count = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season);
+        
+        var matches = matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, pageSize, offset);
+        var count = matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace);
         return Ok(new { matches, count });
     }
 

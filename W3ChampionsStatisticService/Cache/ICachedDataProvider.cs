@@ -5,5 +5,5 @@ namespace W3ChampionsStatisticService.Cache;
 
 public interface ICachedDataProvider<T>
 {
-    Task<T> GetCachedOrRequestAsync(Func<Task<T>> requestDataCallbackAsync, string key);
+    Task<T> GetCachedOrRequestAsync(Func<Task<T>> requestDataCallbackAsync, string key, TimeSpan? customExpiration = null);
 }
