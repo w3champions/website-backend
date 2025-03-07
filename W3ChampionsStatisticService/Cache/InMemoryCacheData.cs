@@ -36,7 +36,7 @@ public class InMemoryCachedDataProvider<T> : ICachedDataProvider<T> where T : cl
             return await _memoryCache.GetOrCreateAsync(typeof(T).FullName + key, async cacheEntry =>
             {
                 var expiration = customExpiration ?? _cacheOptions.CacheDuration;
-                
+
                 if (expiration.HasValue)
                 {
                     cacheEntry.SetAbsoluteExpiration(expiration.Value);

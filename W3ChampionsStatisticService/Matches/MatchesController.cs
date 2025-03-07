@@ -69,7 +69,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int pageSize = 100)
     {
         if (pageSize > 100) pageSize = 100;
-        
+
         var matches = await matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, pageSize, offset);
         var count = await matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace);
         return Ok(new { matches, count });

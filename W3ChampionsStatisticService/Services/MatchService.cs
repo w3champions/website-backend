@@ -10,7 +10,8 @@ using W3ChampionsStatisticService.Ports;
 namespace W3ChampionsStatisticService.Services;
 
 // ICachedDataProvider can't cache primitives so we wrap long
-public class CachedLong {
+public class CachedLong
+{
     public long Value { get; set; }
 }
 
@@ -18,7 +19,8 @@ public class CachedLong {
 public class MatchService(
     IMatchRepository matchRepository,
     ICachedDataProvider<List<Matchup>> cachedMatchesProvider,
-    ICachedDataProvider<CachedLong> cachedMatchCountProvider) {
+    ICachedDataProvider<CachedLong> cachedMatchCountProvider)
+{
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly ICachedDataProvider<List<Matchup>> _cachedMatchesProvider = cachedMatchesProvider;
     private readonly ICachedDataProvider<CachedLong> _cachedMatchCountProvider = cachedMatchCountProvider;
@@ -32,7 +34,8 @@ public class MatchService(
         Race playerRace,
         Race opponentRace,
         int offset,
-        int pageSize) {
+        int pageSize)
+    {
         // Generate a unique cache key based on the request parameters
         string cacheKeyMatches =
             $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}";
@@ -58,13 +61,15 @@ public class MatchService(
         GameMode gameMode,
         GateWay gateWay,
         Race playerRace,
-        Race opponentRace) {
+        Race opponentRace)
+    {
         // Generate a unique cache key based on the request parameters
         string cacheKeyCount =
             $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}";
 
         var count = await _cachedMatchCountProvider.GetCachedOrRequestAsync(
-            async () => new CachedLong {
+            async () => new CachedLong
+            {
                 Value = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace,
                     opponentRace, season)
             }, cacheKeyCount, TimeSpan.FromSeconds(15));
