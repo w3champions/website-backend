@@ -35,11 +35,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int season = 1)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        var textSearchOpts = new TextSearchOptions();
         if (string.IsNullOrEmpty(opponentId))
         {
             return await mongoCollection
-                .Find(m => Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
+                .Find(
+                    m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
                     && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                     && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
@@ -53,7 +53,8 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
         return await mongoCollection
             .Find(m =>
-                Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
+                m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
+                && m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId))
                 && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                 && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                 && (m.Season == season))
@@ -72,12 +73,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race opponentRace = Race.Total,
         int season = 1)
     {
-        var textSearchOpts = new TextSearchOptions();
         var mongoCollection = CreateCollection<Matchup>();
         if (string.IsNullOrEmpty(opponentId))
         {
             return mongoCollection.CountDocumentsAsync(m =>
-                Builders<Matchup>.Filter.Text($"\"{playerId}\"", textSearchOpts).Inject()
+                m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
                 && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                 && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                 && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
@@ -86,7 +86,8 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         }
 
         return mongoCollection.CountDocumentsAsync(m =>
-            Builders<Matchup>.Filter.Text($"\"{playerId}\" \"{opponentId}\"", textSearchOpts).Inject()
+            m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
+            && m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId))
             && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
             && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
             && (m.Season == season));
