@@ -163,6 +163,7 @@ builder.Services.AddSingleton<ChatServiceClient>();
 builder.Services.AddTransient<IFriendRepository, FriendRepository>();
 builder.Services.AddTransient<PlayerStatisticsService>();
 builder.Services.AddTransient<PlayerService>();
+builder.Services.AddTransient<MatchService>();
 builder.Services.AddTransient<IPermissionsRepository, PermissionsRepository>();
 builder.Services.AddTransient<ILogsRepository, LogsRepository>();
 

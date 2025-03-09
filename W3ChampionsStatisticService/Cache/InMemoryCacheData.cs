@@ -21,7 +21,10 @@ public class InMemoryCachedDataProvider<T> : ICachedDataProvider<T> where T : cl
         _memoryCache = memoryCache;
     }
 
-    public async Task<T> GetCachedOrRequestAsync(Func<Task<T>> requestDataCallbackAsync, string key = null)
+    public async Task<T> GetCachedOrRequestAsync(
+        Func<Task<T>> requestDataCallbackAsync,
+        string key = null,
+        TimeSpan? customExpiration = null)
     {
         if (_cacheOptions.LockDuringFetch)
         {
@@ -32,9 +35,11 @@ public class InMemoryCachedDataProvider<T> : ICachedDataProvider<T> where T : cl
         {
             return await _memoryCache.GetOrCreateAsync(typeof(T).FullName + key, async cacheEntry =>
             {
-                if (_cacheOptions.CacheDuration.HasValue)
+                var expiration = customExpiration ?? _cacheOptions.CacheDuration;
+
+                if (expiration.HasValue)
                 {
-                    cacheEntry.SetAbsoluteExpiration(_cacheOptions.CacheDuration.Value);
+                    cacheEntry.SetAbsoluteExpiration(expiration.Value);
                 }
 
                 return await requestDataCallbackAsync();
