@@ -50,7 +50,7 @@ public class MatchService(
                 opponentRace,
                 pageSize,
                 offset,
-                season), cacheKeyMatches, TimeSpan.FromSeconds(15));
+                season), cacheKeyMatches, TimeSpan.FromSeconds(5));
         return matches;
     }
 
@@ -72,7 +72,7 @@ public class MatchService(
             {
                 Value = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace,
                     opponentRace, season)
-            }, cacheKeyCount, TimeSpan.FromSeconds(15));
+            }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
     }
 }
