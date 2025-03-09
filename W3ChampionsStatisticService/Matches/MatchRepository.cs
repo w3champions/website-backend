@@ -154,15 +154,19 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public Task<List<Matchup>> Load(
-        int season,
+    public Task<List<Matchup>> Load(int season,
+        GateWay gateWay,
         GameMode gameMode,
         int offset = 0,
-        int pageSize = 100)
+        int pageSize = 100,
+        string map = "Overall")
     {
         var mongoCollection = CreateCollection<Matchup>();
         return mongoCollection
-            .Find(m => gameMode == m.GameMode && m.Season == season)
+            .Find(m => gameMode == m.GameMode &&
+                       m.Season == season &&
+                       (map == "Overall" || m.Map == map) &&
+                       (gateWay == GateWay.Undefined || m.GateWay == gateWay))
             .SortByDescending(s => s.EndTime)
             .Skip(offset)
             .Limit(pageSize)
@@ -176,12 +180,16 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(
-        int season,
-        GameMode gameMode)
+    public Task<long> Count(int season,
+        GateWay gateWay,
+        GameMode gameMode,
+        string map = "Overall")
     {
         return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                gameMode == m.GameMode && m.Season == season);
+                gameMode == m.GameMode &&
+                m.Season == season &&
+                (map == "Overall" || m.Map == map) &&
+                (gateWay == GateWay.Undefined || m.GateWay == gateWay));
     }
 
     public Task InsertOnGoingMatch(OnGoingMatchup matchup)
