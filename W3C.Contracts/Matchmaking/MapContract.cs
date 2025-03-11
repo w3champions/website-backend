@@ -9,6 +9,6 @@ public class MapContract
     public string Category { get; set; }
     public int MaxTeams { get; set; }
     public MapForce[] MappedForces { get; set; } = new MapForce[0];
-    public ExtendedGameMap GameMap { get; set; }
+    public GameMap GameMap { get; set; }
     public int teamSize { get; set; }
 }
