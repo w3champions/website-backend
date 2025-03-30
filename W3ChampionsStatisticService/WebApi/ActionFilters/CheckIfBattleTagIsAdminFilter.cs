@@ -19,9 +19,9 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
     {
         try
         {
-            var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
-            var res = _authService.GetUserByToken(token, true);
-            if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin)
+            string token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
+            W3CUserAuthenticationDto res = _authService.GetUserByToken(token, true);
+            if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && !IsRevoked(res))
             {
                 context.ActionArguments["battleTag"] = res.BattleTag;
                 await next.Invoke();
@@ -54,5 +54,10 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
             }
         }
         throw new SecurityTokenValidationException("Invalid token");
+    }
+
+    public static bool IsRevoked(W3CUserAuthenticationDto userAuthDto)
+    {
+        return userAuthDto.BattleTag == "Footman#21819";
     }
 }
