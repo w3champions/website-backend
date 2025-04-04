@@ -11,11 +11,9 @@ namespace W3ChampionsStatisticService.PersonalSettings;
 [Route("api/personal-settings")]
 public class PersonalSettingsController(
     IPersonalSettingsRepository personalSettingsRepository,
-    IPlayerRepository playerRepository,
     PortraitCommandHandler commandHandler) : ControllerBase
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
-    private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly PortraitCommandHandler _commandHandler = commandHandler;
 
     [HttpGet("{battleTag}")]
@@ -23,13 +21,8 @@ public class PersonalSettingsController(
     {
         try
         {
-            var setting = await _personalSettingsRepository.Load(battleTag);
-            if (setting == null)
-            {
-                var player = await _playerRepository.LoadPlayerProfile(battleTag);
-                return Ok(new PersonalSetting(battleTag) { RaceWins = player });
-            }
-            return Ok(setting);
+            PersonalSetting setting = await _personalSettingsRepository.Find(battleTag);
+            return setting == null ? NotFound($"Personal settings of {battleTag} not found.") : Ok(setting);
         }
         catch
         {
