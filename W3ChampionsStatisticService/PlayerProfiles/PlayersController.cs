@@ -73,16 +73,6 @@ public class PlayersController(
         return Ok(player);
     }
 
-    [HttpGet("{battleTag}/clan-and-picture")]
-    [Obsolete("Should be removed when correct sync is done")]
-    public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
-    {
-        var playersClan = await _clanRepository.LoadMemberShip(battleTag);
-        var settings = await _personalSettingsRepository.Load(battleTag);
-
-        return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture));
-    }
-
     [HttpGet("clan-memberships")]
     public async Task<IActionResult> GetPlayerClanSince([FromRoute] DateTimeOffset from)
     {
