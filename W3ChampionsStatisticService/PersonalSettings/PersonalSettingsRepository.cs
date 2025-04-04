@@ -22,11 +22,8 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
             {
                 return null;
             }
-            else
-            {
-                personalSettings = new PersonalSetting(battletag);
-                await Upsert(personalSettings);
-            }
+            personalSettings = new PersonalSetting(battletag);
+            await Upsert(personalSettings);
         }
 
         PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
