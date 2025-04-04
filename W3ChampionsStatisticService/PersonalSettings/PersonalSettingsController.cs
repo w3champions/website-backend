@@ -21,7 +21,7 @@ public class PersonalSettingsController(
     {
         try
         {
-            PersonalSetting setting = await _personalSettingsRepository.Find(battleTag);
+            PersonalSetting setting = await _personalSettingsRepository.Load(battleTag, false);
             return setting == null ? NotFound($"Personal settings of {battleTag} not found.") : Ok(setting);
         }
         catch

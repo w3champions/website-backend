@@ -89,7 +89,7 @@ public class PersonalSettingsTests : IntegrationTestBase
     public void SetProfilePicture_SpecialAvatar_ButSpecialPicturesNull_DoesNotThrow()
     {
         var player = PlayerOverallStats.Create("peter#123");
-        var personalSetting = new PersonalSetting("peter#123") { SpecialPictures = null };
+        var personalSetting = new PersonalSetting("peter#123");
         personalSetting.RaceWins = player;
         var expectedProfilePic = ProfilePicture.Default();
 
@@ -176,7 +176,7 @@ public class PersonalSettingsTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         var player = PlayerOverallStats.Create("modmoto#123");
         for (int i = 0; i < 30; i++)
