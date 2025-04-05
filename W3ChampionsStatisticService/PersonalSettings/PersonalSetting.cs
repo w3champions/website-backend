@@ -12,10 +12,10 @@ namespace W3ChampionsStatisticService.PersonalSettings;
 
 public class PersonalSetting : IVersionable, IIdentifiable
 {
-    public PersonalSetting(string battleTag, PlayerOverallStats playerStats = null)
+    public PersonalSetting(string battleTag)
     {
         Id = battleTag;
-        RaceWins = playerStats ?? PlayerOverallStats.Create(Id);
+        RaceWins = PlayerOverallStats.Create(Id);
         AliasSettings = new AkaSettings();
     }
 
@@ -110,7 +110,6 @@ public class PersonalSetting : IVersionable, IIdentifiable
 
     private long GetMaxPictureIdForAllWins()
     {
-
         var minimumWinsNeededForAllIcon = TotalPictureRange.First().NeededWins;
         var raceWinsForAll = RaceWins.GetTotalWins();
 

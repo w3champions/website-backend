@@ -8,21 +8,14 @@ namespace W3ChampionsStatisticService.Rewards.Portraits;
 
 public class PortraitCommandHandler(
     IPersonalSettingsRepository personalSettingsRepository,
-    IPlayerRepository playerRepository,
     IPortraitRepository portraitRepository)
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
-    private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly IPortraitRepository _portraitRepository = portraitRepository;
 
     public async Task<bool> UpdatePicture(string battleTag, SetPictureCommand command)
     {
         var setting = await _personalSettingsRepository.Load(battleTag);
-        if (setting == null)
-        {
-            var playerProfile = await _playerRepository.LoadPlayerProfile(battleTag);
-            setting = new PersonalSetting(battleTag, playerProfile);
-        }
 
         var result = setting.SetProfilePicture(command);
 
