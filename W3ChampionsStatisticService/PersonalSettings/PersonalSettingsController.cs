@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Rewards.Portraits;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
@@ -11,10 +12,12 @@ namespace W3ChampionsStatisticService.PersonalSettings;
 [Route("api/personal-settings")]
 public class PersonalSettingsController(
     IPersonalSettingsRepository personalSettingsRepository,
-    PortraitCommandHandler commandHandler) : ControllerBase
+    PortraitCommandHandler commandHandler,
+    IdentityServiceClient identityServiceClient) : ControllerBase
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly PortraitCommandHandler _commandHandler = commandHandler;
+    private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
 
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPersonalSetting(string battleTag)
@@ -22,7 +25,16 @@ public class PersonalSettingsController(
         try
         {
             PersonalSetting setting = await _personalSettingsRepository.Load(battleTag);
-            return setting == null ? NotFound($"Personal settings of {battleTag} not found.") : Ok(setting);
+            if (setting == null)
+            {
+                bool userExists = await _identityServiceClient.UserExists(battleTag);
+                if (!userExists)
+                {
+                    return NotFound($"Personal settings of {battleTag} not found.");
+                }
+                setting = await _personalSettingsRepository.LoadOrCreate(battleTag);
+            }
+            return Ok(setting);
         }
         catch
         {

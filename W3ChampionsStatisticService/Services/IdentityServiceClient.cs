@@ -77,4 +77,13 @@ public class IdentityServiceClient()
         }
         return response.StatusCode;
     }
+
+    public async Task<bool> UserExists(string battletag)
+    {
+        var httpClient = new HttpClient();
+        var encodedTag = HttpUtility.UrlEncode(battletag);
+        string url = $"{IdentityApiUrl}/api/users/exists?id={encodedTag}";
+        var response = await httpClient.GetAsync(url);
+        return response.StatusCode == HttpStatusCode.OK;
+    }
 }
