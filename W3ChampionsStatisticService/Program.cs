@@ -95,6 +95,7 @@ builder.Services.AddSingleton(mongoClient);
 
 // Add SignalR for using websockets
 builder.Services.AddSignalR();
+
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddHttpClient();
@@ -164,7 +165,7 @@ builder.Services.AddTransient<IFriendRepository, FriendRepository>();
 builder.Services.AddTransient<PlayerStatisticsService>();
 builder.Services.AddTransient<PlayerService>();
 builder.Services.AddTransient<MatchService>();
-builder.Services.AddTransient<IPermissionsRepository, PermissionsRepository>();
+builder.Services.AddTransient<IdentityServiceClient>();
 builder.Services.AddTransient<ILogsRepository, LogsRepository>();
 
 // Websocket services

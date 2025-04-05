@@ -1,24 +1,18 @@
-using MongoDB.Driver;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
-using W3C.Domain.Repositories;
-using W3ChampionsStatisticService.Ports;
+using Newtonsoft.Json;
 using W3C.Contracts.Admin.Permission;
 
-namespace W3ChampionsStatisticService.Admin.Permissions;
+namespace W3ChampionsStatisticService.Services;
 
-public class PermissionsRepository : MongoDbRepositoryBase, IPermissionsRepository
+public class IdentityServiceClient()
 {
     private static readonly string IdentityApiUrl = Environment.GetEnvironmentVariable("IDENTIFICATION_SERVICE_URI") ?? "https://identification-service.test.w3champions.com";
-    public PermissionsRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-    }
 
     public async Task<List<Permission>> GetPermissions(string authorization)
     {
