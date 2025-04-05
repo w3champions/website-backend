@@ -21,18 +21,21 @@ public class PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccounts
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("client-id", war3infoApiKey);
 
-        var response = await httpClient.GetAsync(war3infoApiUrl);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            return new List<PlayerAka>();
+            var response = await httpClient.GetAsync(war3infoApiUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                return [];
+            }
+            string data = await response.Content.ReadAsStringAsync();
+            var stringData = JsonSerializer.Deserialize<List<PlayerAka>>(data);
+            return stringData;
         }
-
-        string data = await response.Content.ReadAsStringAsync();
-
-        var stringData = JsonSerializer.Deserialize<List<PlayerAka>>(data);
-
-        return stringData;
+        catch
+        {
+            return [];
+        }
     }
 
     public async Task<Player> GetPlayerAkaDataAsync(string battleTag) // string should be received all lower-case.
