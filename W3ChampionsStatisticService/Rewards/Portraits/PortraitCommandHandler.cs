@@ -15,7 +15,7 @@ public class PortraitCommandHandler(
 
     public async Task<bool> UpdatePicture(string battleTag, SetPictureCommand command)
     {
-        var setting = await _personalSettingsRepository.Load(battleTag);
+        var setting = await _personalSettingsRepository.LoadOrCreate(battleTag);
 
         var result = setting.SetProfilePicture(command);
 

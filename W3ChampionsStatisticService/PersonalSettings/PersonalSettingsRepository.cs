@@ -12,16 +12,33 @@ namespace W3ChampionsStatisticService.PersonalSettings;
 
 public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPersonalSettingsRepository
 {
-    public async Task<PersonalSetting> Load(string battletag, bool create = true)
+    public async Task<PersonalSetting> Load(string battletag)
     {
         PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battletag);
 
         if (personalSettings == null)
         {
-            if (!create)
-            {
-                return null;
-            }
+            return null;
+        }
+
+        PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
+            .Find(x => x.BattleTag == battletag)
+            .FirstOrDefaultAsync();
+
+        if (playerStats != null)
+        {
+            personalSettings.RaceWins = playerStats;
+        }
+
+        return personalSettings;
+    }
+
+    public async Task<PersonalSetting> LoadOrCreate(string battletag)
+    {
+        PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battletag);
+
+        if (personalSettings == null)
+        {
             personalSettings = new PersonalSetting(battletag);
             await Upsert(personalSettings);
         }

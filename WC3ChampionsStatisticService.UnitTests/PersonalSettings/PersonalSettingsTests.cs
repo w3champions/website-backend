@@ -148,7 +148,7 @@ public class PersonalSettingsTests : IntegrationTestBase
         await playerRepo.UpsertPlayer(player);
         await settingsRepo.Save(personalSetting);
 
-        var loaded = await settingsRepo.Load("peter#123");
+        var loaded = await settingsRepo.LoadOrCreate("peter#123");
 
         Assert.AreEqual(20, loaded.RaceWins.GetWinsPerRace(Race.HU));
     }
@@ -165,7 +165,7 @@ public class PersonalSettingsTests : IntegrationTestBase
         await playerRepo.UpsertPlayer(player);
         await settingsRepo.Save(personalSetting);
 
-        var loaded = await settingsRepo.Load("peter#123");
+        var loaded = await settingsRepo.LoadOrCreate("peter#123");
 
         Assert.AreEqual(0, loaded.RaceWins.GetWinsPerRace(Race.HU));
     }
@@ -190,7 +190,7 @@ public class PersonalSettingsTests : IntegrationTestBase
             new SetPictureCommand { avatarCategory = AvatarCategory.NE, pictureId = 2 });
 
         Assert.IsTrue(result);
-        var settings = await personalSettingsRepository.Load("modmoto#123");
+        var settings = await personalSettingsRepository.LoadOrCreate("modmoto#123");
 
         Assert.AreEqual(2, settings.ProfilePicture.PictureId);
     }
@@ -208,7 +208,7 @@ public class PersonalSettingsTests : IntegrationTestBase
         await personalSettingsRepository.Save(playerSettings);
 
         // act
-        var settings = await personalSettingsRepository.Load("cepheid#1467");
+        var settings = await personalSettingsRepository.LoadOrCreate("cepheid#1467");
 
         // assert
         Assert.IsNotNull(settings.SpecialPictures);

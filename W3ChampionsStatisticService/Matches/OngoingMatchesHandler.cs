@@ -37,7 +37,7 @@ public class OngoingMatchesHandler(
                                 await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
                             }
 
-                            var personalSettings = await _personalSettingsRepository.Load(player.BattleTag);
+                            var personalSettings = await _personalSettingsRepository.LoadOrCreate(player.BattleTag);
                             if (personalSettings != null)
                             {
                                 player.CountryCode = personalSettings.CountryCode;

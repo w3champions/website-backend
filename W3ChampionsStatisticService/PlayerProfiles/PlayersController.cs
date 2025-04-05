@@ -50,7 +50,7 @@ public class PlayersController(
         }
 
         // Akas are stored in cache - preferences for showing akas are stored in DB
-        PersonalSetting settings = await _personalSettingsRepository.Load(battleTag);
+        PersonalSetting settings = await _personalSettingsRepository.LoadOrCreate(battleTag);
         player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferencesAsync(battleTag, settings);
 
         await _playerRepository.UpsertPlayer(player);

@@ -21,7 +21,7 @@ public class PersonalSettingsController(
     {
         try
         {
-            PersonalSetting setting = await _personalSettingsRepository.Load(battleTag, false);
+            PersonalSetting setting = await _personalSettingsRepository.Load(battleTag);
             return setting == null ? NotFound($"Personal settings of {battleTag} not found.") : Ok(setting);
         }
         catch
@@ -56,7 +56,7 @@ public class PersonalSettingsController(
         string battleTag,
         [FromBody] PersonalSettingsDTO dto)
     {
-        var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
+        var setting = await _personalSettingsRepository.LoadOrCreate(battleTag) ?? new PersonalSetting(battleTag);
 
         setting.Update(dto);
 
