@@ -42,7 +42,7 @@ public class PlayersController(
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
     {
-        PlayerOverallStats player = await _playerRepository.LoadPlayerProfile(battleTag);
+        PlayerOverallStats player = await _playerRepository.LoadPlayerOverallStats(battleTag);
 
         if (player == null)
         {

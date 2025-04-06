@@ -24,7 +24,7 @@ public class PlayerTests : IntegrationTestBase
 
         var player = PlayerOverallStats.Create("peter#123");
         await playerRepository.UpsertPlayer(player);
-        var playerLoaded = await playerRepository.LoadPlayerProfile(player.BattleTag);
+        var playerLoaded = await playerRepository.LoadPlayerOverallStats(player.BattleTag);
 
         Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
     }
@@ -121,11 +121,11 @@ public class PlayerTests : IntegrationTestBase
         var player = PlayerOverallStats.Create("peter#123");
         player.RecordWin(Race.HU, 0, true);
         await playerRepository.UpsertPlayer(player);
-        var playerLoaded = await playerRepository.LoadPlayerProfile(player.BattleTag);
+        var playerLoaded = await playerRepository.LoadPlayerOverallStats(player.BattleTag);
         playerLoaded.RecordWin(Race.UD, 0, false);
         await playerRepository.UpsertPlayer(playerLoaded);
 
-        var playerLoadedAgain = await playerRepository.LoadPlayerProfile(player.BattleTag);
+        var playerLoadedAgain = await playerRepository.LoadPlayerOverallStats(player.BattleTag);
 
         Assert.AreEqual(player.BattleTag, playerLoaded.BattleTag);
         Assert.AreEqual(player.BattleTag, playerLoadedAgain.BattleTag);
@@ -166,7 +166,7 @@ public class PlayerTests : IntegrationTestBase
         await playerRepository.UpsertPlayer(player1);
         await playerRepository.UpsertPlayer(player2);
 
-        var playerLoaded = await playerRepository.LoadPlayerProfile(player2.BattleTag);
+        var playerLoaded = await playerRepository.LoadPlayerOverallStats(player2.BattleTag);
 
         Assert.IsNotNull(playerLoaded);
         Assert.AreEqual(player2.BattleTag, playerLoaded.BattleTag);

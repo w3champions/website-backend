@@ -36,7 +36,7 @@ public class FriendController(
     {
         try
         {
-            var player = await _playerRepository.LoadPlayerProfile(otherBattleTag);
+            var player = await _playerRepository.LoadPlayerOverallStats(otherBattleTag);
             if (player == null)
             {
                 return BadRequest($"Player {otherBattleTag} not found.");

@@ -17,7 +17,7 @@ public class PlayerOverallStatsHandler(
     {
         foreach (var playerRaw in nextEvent.match.players)
         {
-            var player = await _playerRepository.LoadPlayerProfile(playerRaw.battleTag)
+            var player = await _playerRepository.LoadPlayerOverallStats(playerRaw.battleTag)
                             ?? PlayerOverallStats.Create(playerRaw.battleTag);
             player.RecordWin(
                 playerRaw.race,

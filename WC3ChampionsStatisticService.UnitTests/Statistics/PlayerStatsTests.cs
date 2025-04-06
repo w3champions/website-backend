@@ -218,7 +218,7 @@ public class PlayerStatsTests : IntegrationTestBase
         await playerHeroStatsHandler.Update(matchFinishedEvent2);
         await playerHeroStatsHandler.Update(matchFinishedEvent3);
 
-        var enemyStatsVsPlayerRace = await playerRepository.LoadPlayerProfile(matchFinishedEvent1.match.players[0].battleTag);
+        var enemyStatsVsPlayerRace = await playerRepository.LoadPlayerOverallStats(matchFinishedEvent1.match.players[0].battleTag);
 
         Assert.AreEqual(2, enemyStatsVsPlayerRace.ParticipatedInSeasons.Count);
         Assert.AreEqual(1, enemyStatsVsPlayerRace.ParticipatedInSeasons[0].Id);

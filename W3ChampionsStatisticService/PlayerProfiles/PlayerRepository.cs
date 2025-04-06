@@ -106,7 +106,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         return Upsert(stat);
     }
 
-    public Task<PlayerOverallStats> LoadPlayerProfile(string battleTag)
+    public Task<PlayerOverallStats> LoadPlayerOverallStats(string battleTag)
     {
         return LoadFirst<PlayerOverallStats>(p => p.BattleTag == battleTag);
     }
