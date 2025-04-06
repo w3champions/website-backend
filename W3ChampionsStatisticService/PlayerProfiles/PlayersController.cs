@@ -21,7 +21,8 @@ public class PlayersController(
     IClanRepository clanRepository,
     IW3CAuthenticationService authenticationService,
     PlayerAkaProvider playerAkaProvider,
-    PlayerService playerService) : ControllerBase
+    PlayerService playerService,
+    IdentityServiceClient identityServiceClient) : ControllerBase
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly GameModeStatQueryHandler _queryHandler = queryHandler;
@@ -30,6 +31,7 @@ public class PlayersController(
     private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
     private readonly PlayerService _playerService = playerService;
+    private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
 
     [HttpGet("global-search")]
     public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
@@ -42,11 +44,16 @@ public class PlayersController(
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
     {
-        PlayerOverallStats player = await _playerRepository.LoadPlayerProfile(battleTag);
+        PlayerOverallStats player = await _playerRepository.LoadPlayerOverallStats(battleTag);
 
         if (player == null)
         {
-            return NotFound($"Player {battleTag} not found.");
+            bool userExists = await _identityServiceClient.UserExists(battleTag);
+            if (!userExists)
+            {
+                return NotFound($"Player {battleTag} not found.");
+            }
+            player = PlayerOverallStats.Create(battleTag);
         }
 
         // Akas are stored in cache - preferences for showing akas are stored in DB

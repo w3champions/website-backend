@@ -15,7 +15,7 @@ public interface IPlayerRepository
 {
     Task UpsertPlayer(PlayerOverallStats playerOverallStats);
     Task UpsertPlayerOverview(PlayerOverview playerOverview);
-    Task<PlayerOverallStats> LoadPlayerProfile(string battleTag);
+    Task<PlayerOverallStats> LoadPlayerOverallStats(string battleTag);
     Task<PlayerOverview> LoadOverview(string battleTag);
     Task<PlayerWinLoss> LoadPlayerWinrate(string playerId, int season);
     Task<List<PlayerDetails>> LoadPlayersRaceWins(List<string> playerIds);

@@ -33,18 +33,18 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
         return personalSettings;
     }
 
-    public async Task<PersonalSetting> LoadOrCreate(string battletag)
+    public async Task<PersonalSetting> LoadOrCreate(string battleTag)
     {
-        PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battletag);
+        PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battleTag);
 
         if (personalSettings == null)
         {
-            personalSettings = new PersonalSetting(battletag);
+            personalSettings = new PersonalSetting(battleTag);
             await Upsert(personalSettings);
         }
 
         PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
-            .Find(x => x.BattleTag == battletag)
+            .Find(x => x.BattleTag == battleTag)
             .FirstOrDefaultAsync();
 
         if (playerStats != null)
