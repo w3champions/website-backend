@@ -32,7 +32,7 @@ public class PersonalSettingsController(
                 {
                     return NotFound($"Personal settings of {battleTag} not found.");
                 }
-                setting = await _personalSettingsRepository.LoadOrCreate(battleTag);
+                setting = new PersonalSetting(battleTag);
             }
             return Ok(setting);
         }
