@@ -14,7 +14,28 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
 {
     public async Task<PersonalSetting> Load(string battletag)
     {
-        var personalSettings = await LoadFirst<PersonalSetting>(battletag);
+        PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battletag);
+
+        if (personalSettings == null)
+        {
+            return null;
+        }
+
+        PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
+            .Find(x => x.BattleTag == battletag)
+            .FirstOrDefaultAsync();
+
+        if (playerStats != null)
+        {
+            personalSettings.RaceWins = playerStats;
+        }
+
+        return personalSettings;
+    }
+
+    public async Task<PersonalSetting> LoadOrCreate(string battletag)
+    {
+        PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battletag);
 
         if (personalSettings == null)
         {
@@ -22,8 +43,9 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
             await Upsert(personalSettings);
         }
 
-        var playersStatsCollection = CreateCollection<PlayerOverallStats>();
-        var playerStats = (await playersStatsCollection.FindAsync(x => x.BattleTag == battletag)).FirstOrDefault();
+        PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
+            .Find(x => x.BattleTag == battletag)
+            .FirstOrDefaultAsync();
 
         if (playerStats != null)
         {

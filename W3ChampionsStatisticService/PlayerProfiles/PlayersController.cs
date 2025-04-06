@@ -40,47 +40,22 @@ public class PlayersController(
     }
 
     [HttpGet("{battleTag}")]
-    public async Task<IActionResult> GetPlayer([FromRoute] string battleTag, [FromQuery] string authorization)
+    public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
     {
-        var player = await _playerRepository.LoadPlayerProfile(battleTag);
+        PlayerOverallStats player = await _playerRepository.LoadPlayerProfile(battleTag);
 
         if (player == null)
         {
-            if (authorization == null)
-            {
-                return NotFound($"Player {battleTag} not found.");
-            }
-            else
-            {
-                try
-                {
-                    _authenticationService.GetUserByToken(authorization, false);
-                }
-                catch (Exception)
-                {
-                    return Unauthorized("Sorry Hackerboi");
-                }
-                player = PlayerOverallStats.Create(battleTag);
-            }
+            return NotFound($"Player {battleTag} not found.");
         }
 
         // Akas are stored in cache - preferences for showing akas are stored in DB
-        var settings = await _personalSettingsRepository.Load(battleTag);
+        PersonalSetting settings = await _personalSettingsRepository.LoadOrCreate(battleTag);
         player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferencesAsync(battleTag, settings);
 
         await _playerRepository.UpsertPlayer(player);
 
         return Ok(player);
-    }
-
-    [HttpGet("{battleTag}/clan-and-picture")]
-    [Obsolete("Should be removed when correct sync is done")]
-    public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
-    {
-        var playersClan = await _clanRepository.LoadMemberShip(battleTag);
-        var settings = await _personalSettingsRepository.Load(battleTag);
-
-        return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture));
     }
 
     [HttpGet("clan-memberships")]

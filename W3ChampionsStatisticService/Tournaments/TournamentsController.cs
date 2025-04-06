@@ -66,7 +66,7 @@ public class TournamentsController(
     [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> RegisterPlayer(string id, [FromBody] RegisterPlayerBody body)
     {
-        var personalSetting = await _personalSettingsRepository.Load(body.BattleTag);
+        var personalSetting = await _personalSettingsRepository.LoadOrCreate(body.BattleTag);
         var tournament = await _matchmakingServiceRepository.RegisterPlayer(id, body.BattleTag, body.Race, personalSetting.CountryCode);
         return Ok(tournament);
     }

@@ -32,7 +32,7 @@ public class PlayerOverallStatsHandler(
     {
         if (!string.IsNullOrEmpty(player.country))
         {
-            var setting = await _personalSettingsRepository.Load(player.battleTag) ?? new PersonalSetting(player.battleTag);
+            var setting = await _personalSettingsRepository.LoadOrCreate(player.battleTag) ?? new PersonalSetting(player.battleTag);
 
             setting.Location = player.country;
 

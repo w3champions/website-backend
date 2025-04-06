@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Rewards.Portraits;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
@@ -11,23 +12,27 @@ namespace W3ChampionsStatisticService.PersonalSettings;
 [Route("api/personal-settings")]
 public class PersonalSettingsController(
     IPersonalSettingsRepository personalSettingsRepository,
-    IPlayerRepository playerRepository,
-    PortraitCommandHandler commandHandler) : ControllerBase
+    PortraitCommandHandler commandHandler,
+    IdentityServiceClient identityServiceClient) : ControllerBase
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
-    private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly PortraitCommandHandler _commandHandler = commandHandler;
+    private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
 
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPersonalSetting(string battleTag)
     {
         try
         {
-            var setting = await _personalSettingsRepository.Load(battleTag);
+            PersonalSetting setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                var player = await _playerRepository.LoadPlayerProfile(battleTag);
-                return Ok(new PersonalSetting(battleTag) { RaceWins = player });
+                bool userExists = await _identityServiceClient.UserExists(battleTag);
+                if (!userExists)
+                {
+                    return NotFound($"Personal settings of {battleTag} not found.");
+                }
+                setting = await _personalSettingsRepository.LoadOrCreate(battleTag);
             }
             return Ok(setting);
         }
@@ -63,7 +68,7 @@ public class PersonalSettingsController(
         string battleTag,
         [FromBody] PersonalSettingsDTO dto)
     {
-        var setting = await _personalSettingsRepository.Load(battleTag) ?? new PersonalSetting(battleTag);
+        var setting = await _personalSettingsRepository.LoadOrCreate(battleTag) ?? new PersonalSetting(battleTag);
 
         setting.Update(dto);
 

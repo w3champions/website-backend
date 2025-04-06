@@ -39,7 +39,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 5 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -55,7 +55,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
 
-        var settings = await personalSettingsRepository.Load(playerTag);
+        var settings = await personalSettingsRepository.LoadOrCreate(playerTag);
 
         Assert.AreEqual(1, settings.SpecialPictures.Count());
         Assert.AreEqual(5, settings.SpecialPictures.First().PictureId);
@@ -68,13 +68,13 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 5 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
 
         var playerTag = "cepheid#1467";
-        var personalSettings = new PersonalSetting(playerTag) { SpecialPictures = null };
+        var personalSettings = new PersonalSetting(playerTag);
         await personalSettingsRepository.Save(personalSettings);
 
         var portraitsCommand = new PortraitsCommand();
@@ -84,7 +84,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         Assert.DoesNotThrowAsync(async () => await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand));
 
-        var settings = await personalSettingsRepository.Load(playerTag);
+        var settings = await personalSettingsRepository.LoadOrCreate(playerTag);
 
         Assert.AreEqual(1, settings.SpecialPictures.Count());
         Assert.AreEqual(5, settings.SpecialPictures.First().PictureId);
@@ -97,7 +97,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 3 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -114,7 +114,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
 
-        var settings = await personalSettingsRepository.Load(playerTag);
+        var settings = await personalSettingsRepository.LoadOrCreate(playerTag);
 
         Assert.AreEqual(1, settings.SpecialPictures.Count());
         Assert.AreEqual(3, settings.SpecialPictures.First().PictureId);
@@ -128,7 +128,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 5 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -145,7 +145,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
 
-        var settings = await personalSettingsRepository.Load(playerTagA);
+        var settings = await personalSettingsRepository.LoadOrCreate(playerTagA);
 
         Assert.AreEqual(1, settings.SpecialPictures.Count());
         Assert.AreEqual(5, settings.SpecialPictures.First().PictureId);
@@ -158,7 +158,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 8 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -194,7 +194,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 1, 50, 500, 5000 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -240,7 +240,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 1, 50, 500, 5000 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -282,7 +282,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 5, 50, 500, 5000 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -329,7 +329,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         int[] validPortraits = { 5, 50, 500, 5000 };
         await portraitCommandHandler.AddPortraitDefinitions(CreatePortraitsDefinitionCommand(validPortraits.ToList(), new List<string>()));
@@ -359,7 +359,7 @@ public class PortraitCommandTests : IntegrationTestBase
         deleteCommand.Tooltip = "this text is irrelevant";
 
         await portraitCommandHandler.DeleteSpecialPortraits(deleteCommand);
-        var settings = await personalSettingsRepository.Load(playerTags[0]);
+        var settings = await personalSettingsRepository.LoadOrCreate(playerTags[0]);
 
         Assert.AreEqual(4, settings.SpecialPictures.Count());
     }
@@ -370,7 +370,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var playerRepo = new PlayerRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, playerRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(personalSettingsRepository, portraitRepo);
 
         string playerTag = "cepheid#1467";
         var personalSettings = new PersonalSetting(playerTag);
@@ -383,7 +383,7 @@ public class PortraitCommandTests : IntegrationTestBase
         deleteCommand.Tooltip = "this text is irrelevant";
 
         Assert.DoesNotThrowAsync(async () => await portraitCommandHandler.DeleteSpecialPortraits(deleteCommand));
-        var settings = await personalSettingsRepository.Load(playerTag);
+        var settings = await personalSettingsRepository.LoadOrCreate(playerTag);
 
         Assert.IsEmpty(settings.SpecialPictures);
     }
@@ -394,7 +394,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var settingsRepo = new PersonalSettingsRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
         var playeRepo = new PlayerRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, portraitRepo);
         int[] portraitIds = { 1, 2, 3, 4 };
         string[] portraitGroups = { "brozne", "silver" };
         var defineCommand = CreatePortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
@@ -421,7 +421,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var settingsRepo = new PersonalSettingsRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
         var playeRepo = new PlayerRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, portraitRepo);
         int[] portraitIds = { 1, 2, 3, 4 };
         string[] portraitGroups = { "bronze", "silver" };
         var defineCommand = CreatePortraitsDefinitionCommand(portraitIds.ToList(), portraitGroups.ToList());
@@ -443,7 +443,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var settingsRepo = new PersonalSettingsRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
         var playeRepo = new PlayerRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, portraitRepo);
 
         int[] portraitIds = { 1, 2, 3, 4 };
         string[] portraitGroups = { "brozne", "silver" };
@@ -453,7 +453,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var tag = "cepheid#1467";
 
         await settingsRepo.Save(new PersonalSetting(tag));
-        var settings = await settingsRepo.Load(tag);
+        var settings = await settingsRepo.LoadOrCreate(tag);
         Assert.AreEqual(0, settings.SpecialPictures.Count());
         await settingsRepo.UnsetOne("SpecialPictures", tag);
 
@@ -464,7 +464,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
 
-        settings = await settingsRepo.Load(tag);
+        settings = await settingsRepo.LoadOrCreate(tag);
         Assert.AreEqual(1, settings.SpecialPictures.Count());
     }
 
@@ -474,7 +474,7 @@ public class PortraitCommandTests : IntegrationTestBase
         var settingsRepo = new PersonalSettingsRepository(MongoClient);
         var portraitRepo = new PortraitRepository(MongoClient);
         var playeRepo = new PlayerRepository(MongoClient);
-        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, playeRepo, portraitRepo);
+        var portraitCommandHandler = new PortraitCommandHandler(settingsRepo, portraitRepo);
 
         int[] portraitIds = { 1, 2, 3, 4 };
         string[] portraitGroups = { "gym" };
@@ -499,7 +499,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await settingsRepo.UnsetOne("SpecialPictures", btags[0]); // Cepheid#1467 as the old schema
 
-        var flossSettings = await settingsRepo.Load(btags[1]);
+        var flossSettings = await settingsRepo.LoadOrCreate(btags[1]);
         Assert.AreEqual(3, flossSettings.SpecialPictures.Count());
 
         var portraitsCommand2 = new PortraitsCommand();
@@ -509,8 +509,8 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand2);
 
-        var cephSettings = await settingsRepo.Load(btags[0]);
-        flossSettings = await settingsRepo.Load(btags[1]);
+        var cephSettings = await settingsRepo.LoadOrCreate(btags[0]);
+        flossSettings = await settingsRepo.LoadOrCreate(btags[1]);
         Assert.AreEqual(4, flossSettings.SpecialPictures.Count());
         Assert.IsNotNull(cephSettings.SpecialPictures);
         Assert.AreEqual(1, cephSettings.SpecialPictures.Count());
