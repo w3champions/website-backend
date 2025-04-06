@@ -65,6 +65,16 @@ public class PlayersController(
         return Ok(player);
     }
 
+    // Used by ChatService to get the clan and profile picture of a chat user
+    [HttpGet("{battleTag}/clan-and-picture")]
+    public async Task<IActionResult> GetClanAndPicture([FromRoute] string battleTag)
+    {
+        var playersClan = await _clanRepository.LoadMemberShip(battleTag);
+        var settings = await _personalSettingsRepository.Load(battleTag);
+
+        return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture));
+    }
+
     [HttpGet("clan-memberships")]
     public async Task<IActionResult> GetPlayerClanSince([FromRoute] DateTimeOffset from)
     {
