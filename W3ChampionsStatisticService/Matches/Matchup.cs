@@ -110,10 +110,8 @@ public class Matchup
 
         foreach (var team in teamGroups)
         {
-            result.Teams.Add(CreateTeam(team.Value));
-            result.Teams = result.Teams
-                .OrderByDescending(x => x.Players.Any(y => y.Won))
-                .ToList();
+            result.Teams.Add(CreateTeam(team.Value, matchFinishedEvent.result?.players));
+            result.Teams = result.Teams.OrderByDescending(x => x.Players.Any(y => y.Won)).ToList();
         }
 
         SetTeamPlayers(result);
@@ -229,14 +227,20 @@ public class Matchup
         }
     }
 
-    private static Team CreateTeam(IEnumerable<PlayerMMrChange> players)
+    private static Team CreateTeam(
+        IEnumerable<PlayerMMrChange> players,
+        List<PlayerBlizzard> playerResults
+    )
     {
         var team = new Team();
-        team.Players.AddRange(CreatePlayerArray(players));
+        team.Players.AddRange(CreatePlayerArray(players, playerResults));
         return team;
     }
 
-    private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(IEnumerable<PlayerMMrChange> players)
+    private static IEnumerable<PlayerOverviewMatches> CreatePlayerArray(
+        IEnumerable<PlayerMMrChange> players,
+        List<PlayerBlizzard> playerResults
+    )
     {
         return players.Select(w => new PlayerOverviewMatches
         {
@@ -247,7 +251,8 @@ public class Matchup
             OldMmr = (int)w.mmr.rating,
             Won = w.won,
             Race = w.race,
-            RndRace = w.rndRace
+            RndRace = w.rndRace,
+            Heroes = playerResults.Find(result => w.battleTag == result.battleTag)?.heroes,
         });
     }
 }

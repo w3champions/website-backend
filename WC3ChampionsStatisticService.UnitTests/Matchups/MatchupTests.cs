@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Matches;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
@@ -100,5 +102,35 @@ public class MatchupTests
         fakeEvent.match.gameMode = GameMode.GM_1v1;
         var matchup = Matchup.Create(fakeEvent);
         Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
+    }
+
+    [Test]
+    public void MapMatch_Heroes()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        fakeEvent.result.players[0].heroes =
+        [
+            new Hero { icon = "UI/Glues/ScoreScreen/scorescreen-hero-keeperofthegrove.blp", level = 4 },
+            new Hero { icon = "UI/Glues/ScoreScreen/scorescreen-hero-alchemist.blp", level  = 2 },
+            new Hero { icon = "UI/Glues/ScoreScreen/scorescreen-hero-priestessofthemoon.blp", level = 1 }
+        ];
+        fakeEvent.result.players[1].heroes =
+        [
+            new Hero { icon = "UI/Glues/ScoreScreen/scorescreen-hero-pitlord.blp", level = 3 },
+        ];
+        var matchup = Matchup.Create(fakeEvent);
+        
+        Assert.AreEqual(3, matchup.Teams[0].Players[0].Heroes.Count);
+        Assert.AreEqual(1, matchup.Teams[1].Players[0].Heroes.Count);
+
+        Assert.AreEqual("keeperofthegrove", matchup.Teams[0].Players[0].Heroes[0].icon);
+        Assert.AreEqual(4, matchup.Teams[0].Players[0].Heroes[0].level);
+        Assert.AreEqual("alchemist", matchup.Teams[0].Players[0].Heroes[1].icon);
+        Assert.AreEqual(2, matchup.Teams[0].Players[0].Heroes[1].level);
+        Assert.AreEqual("priestessofthemoon", matchup.Teams[0].Players[0].Heroes[2].icon);
+        Assert.AreEqual(1, matchup.Teams[0].Players[0].Heroes[2].level);
+        
+        Assert.AreEqual("pitlord", matchup.Teams[1].Players[0].Heroes[0].icon);
+        Assert.AreEqual(3, matchup.Teams[1].Players[0].Heroes[0].level);
     }
 }
