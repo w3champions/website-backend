@@ -22,7 +22,7 @@ public class GameMap
     public int NumPlayers { get; set; }
     public GameMapForce[] Forces { get; set; } = new GameMapForce[0];
     public GameMapPlayer[] Players { get; set; } = new GameMapPlayer[0];
-    [JsonProperty("is_twelve_p")]
-    [JsonPropertyName("is_twelve_p")]
-    public bool IsTwelveP { get; set; }
+    [JsonProperty("twelve_p")]
+    [JsonPropertyName("twelve_p")]
+    public bool TwelveP { get; set; }
 }
