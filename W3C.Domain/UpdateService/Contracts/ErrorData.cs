@@ -1,8 +1,6 @@
-﻿namespace W3C.Domain.UpdateService.Contracts
+﻿namespace W3C.Domain.UpdateService.Contracts;
 
+internal class ErrorData
 {
-    internal class ErrorData
-    {
-        public string message { get; set; }
-    }
+    public string message { get; set; }
 }

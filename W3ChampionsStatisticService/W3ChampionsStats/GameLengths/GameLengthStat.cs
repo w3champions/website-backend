@@ -20,7 +20,7 @@ public class GameLengthStat : IIdentifiable
         gameLength.AddGame();
     }
 
-    public void Apply(GameMode gameMode, TimeSpan duration)
+    public void Apply(TimeSpan duration)
     {
         Record(duration);
     }
