@@ -17,4 +17,4 @@ csharp_style_namespace_declarations = file_scoped
 dotnet_diagnostic.IDE0161.severity = error
 
 csharp_style_prefer_primary_constructors = true
-dotnet_diagnostic.IDE0290.severity = warning
+dotnet_diagnostic.IDE0290.severity = none
