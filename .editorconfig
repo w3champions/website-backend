@@ -12,3 +12,6 @@ insert_final_newline = true
 
 dotnet_code_quality_unused_parameters = all
 dotnet_diagnostic.IDE0060.severity = error
+
+csharp_style_namespace_declarations = file_scoped
+dotnet_diagnostic.IDE0161.severity = error
