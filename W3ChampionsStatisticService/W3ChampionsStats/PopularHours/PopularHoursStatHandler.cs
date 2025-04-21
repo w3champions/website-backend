@@ -23,7 +23,7 @@ public class PopularHoursStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
 
         var mode = nextEvent.match.gameMode;
         var stat = await _w3Stats.LoadPopularHoursStat(mode) ?? PopularHoursStat.Create(mode);
-        stat.Apply(mode, startTime.UtcDateTime);
+        stat.Apply(startTime.UtcDateTime);
         await _w3Stats.Save(stat);
     }
 }

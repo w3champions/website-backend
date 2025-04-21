@@ -19,7 +19,7 @@ public class GameLengthStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
         var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
         var startTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.startTime);
         var duration = endTime - startTime;
-        stat.Apply(mode, duration);
+        stat.Apply(duration);
         await _w3Stats.Save(stat);
     }
 }

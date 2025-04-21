@@ -13,7 +13,7 @@ public static class RaceExtensions
         { RaceId.UD, Race.UD }
     };
 
-    public static Race FromRaceId(this Race race, RaceId raceId)
+    public static Race FromRaceId(this Race _, RaceId raceId)
     {
         return raceIdMap[raceId];
     }

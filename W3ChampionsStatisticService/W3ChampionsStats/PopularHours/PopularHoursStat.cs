@@ -13,7 +13,7 @@ public class PopularHoursStat : IIdentifiable
     public List<DayOfTimeslots> PopularHoursTwoWeeks { get; set; } = new List<DayOfTimeslots>();
     public DayOfTimeslots PopularHoursTotal { get; set; } = new DayOfTimeslots();
 
-    public void Apply(GameMode gameMode, DateTime gameStartTime)
+    public void Apply(DateTime gameStartTime)
     {
         var now = DateTime.UtcNow.Date;
         var daysOfDifference = now - gameStartTime.Date;
@@ -29,7 +29,7 @@ public class PopularHoursStat : IIdentifiable
         if (popularHoursStat == null)
         {
             PopularHoursTwoWeeks.Remove(PopularHoursTwoWeeks.First());
-            AddDay(PopularHoursTwoWeeks, gameMode, 0, gameStartTime.Date);
+            AddDay(PopularHoursTwoWeeks, 0, gameStartTime.Date);
 
             popularHoursStat = PopularHoursTwoWeeks.SingleOrDefault(m => m.Day.Date == gameStartTime.Date);
         }
@@ -69,25 +69,25 @@ public class PopularHoursStat : IIdentifiable
         return new PopularHoursStat
         {
             GameMode = mode,
-            PopularHoursTwoWeeks = Create14Days(today, mode),
+            PopularHoursTwoWeeks = Create14Days(today),
             PopularHoursTotal = hours
         };
     }
 
-    private static List<DayOfTimeslots> Create14Days(DateTime day, GameMode mode)
+    private static List<DayOfTimeslots> Create14Days(DateTime day)
     {
         var hours = new List<DayOfTimeslots>();
 
         // Start adding days from 2 weeks ago, going forward, until today's date.
         for (int i = 13; i >= 0; i--)
         {
-            AddDay(hours, mode, i, day);
+            AddDay(hours, i, day);
         }
 
         return hours;
     }
 
-    private static void AddDay(List<DayOfTimeslots> twoWeekStats, GameMode gameMode, int i, DateTime day)
+    private static void AddDay(List<DayOfTimeslots> twoWeekStats, int i, DateTime day)
     {
         twoWeekStats.Add(new DayOfTimeslots
         {
