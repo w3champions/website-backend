@@ -1,6 +1,7 @@
 using AspNetCore.Authentication.Basic;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Threading.Tasks;
 
 namespace W3ChampionsStatisticService.WebApi.Authorization
 {
@@ -20,7 +21,7 @@ namespace W3ChampionsStatisticService.WebApi.Authorization
                     options.Realm = "W3Champions Metrics";
                     options.Events = new BasicEvents
                     {
-                        OnValidateCredentials = async (context) =>
+                        OnValidateCredentials = (context) =>
                         {
                             if (context.Username == username && context.Password == password)
                             {
@@ -28,7 +29,10 @@ namespace W3ChampionsStatisticService.WebApi.Authorization
                                 context.Principal = new System.Security.Claims.ClaimsPrincipal(
                                     new System.Security.Claims.ClaimsIdentity(claims, context.Scheme.Name));
                                 context.Success();
+                            } else {
+                                context.Fail("Invalid username or password");
                             }
+                            return Task.CompletedTask;
                         }
                     };
                 });
