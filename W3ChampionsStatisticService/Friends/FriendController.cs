@@ -269,6 +269,35 @@ public class FriendController(
         return Ok(namesAndPictures);
     }
 
+    [HttpGet("internal/check")]
+    [CheckIfInternalService]
+    public async Task<IActionResult> CheckFriendshipInternal([FromQuery] string userA, [FromQuery] string userB)
+    {
+        if (string.IsNullOrEmpty(userA) || string.IsNullOrEmpty(userB))
+        {
+            return BadRequest("Parameters userA and userB are required.");
+        }
+
+        try
+        {
+            var friendlistA = await _friendRepository.LoadFriendlist(userA);
+
+            if (friendlistA == null)
+            {
+                return Ok(false);
+            }
+
+            bool areFriends = friendlistA.Friends.Exists(friend => 
+                string.Equals(friend, userB, StringComparison.OrdinalIgnoreCase));
+
+            return Ok(areFriends);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "An error occurred while checking friendship.");
+        }
+    }
+
     private async Task CanMakeFriendRequest(Friendlist friendlist, FriendRequest req)
     {
         if (friendlist.BlockAllRequests || friendlist.BlockedBattleTags.Contains(req.Sender))
