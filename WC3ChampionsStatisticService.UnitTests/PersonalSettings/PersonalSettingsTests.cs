@@ -27,7 +27,7 @@ public class PersonalSettingsTests : IntegrationTestBase
         }
 
         personalSetting.RaceWins = player;
-        SetPictureCommand cmd = new SetPictureCommand()
+        SetPictureCommand cmd = new()
         {
             avatarCategory = AvatarCategory.HU,
             pictureId = 2
@@ -51,14 +51,14 @@ public class PersonalSettingsTests : IntegrationTestBase
         }
 
         personalSetting.RaceWins = player;
-        SetPictureCommand cmd1 = new SetPictureCommand()
+        SetPictureCommand cmd1 = new()
         {
             avatarCategory = AvatarCategory.HU,
             pictureId = 1
         };
         personalSetting.SetProfilePicture(cmd1);
 
-        SetPictureCommand cmd2 = new SetPictureCommand()
+        SetPictureCommand cmd2 = new()
         {
             avatarCategory = AvatarCategory.HU,
             pictureId = 3
@@ -93,7 +93,7 @@ public class PersonalSettingsTests : IntegrationTestBase
         personalSetting.RaceWins = player;
         var expectedProfilePic = ProfilePicture.Default();
 
-        SetPictureCommand cmd = new SetPictureCommand()
+        SetPictureCommand cmd = new()
         {
             avatarCategory = AvatarCategory.Special,
             pictureId = 2

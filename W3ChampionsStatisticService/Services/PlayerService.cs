@@ -39,7 +39,7 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
     private async Task<List<MmrRank>> FetchMmrRanks(int season)
     {
         var overviews = await _playerRepository.LoadOverviews(season);
-        List<MmrRank> result = new List<MmrRank>();
+        List<MmrRank> result = new();
         foreach (var overViewsByGateway in overviews.GroupBy(x => x.GateWay))
         {
             foreach (var overViewsByGatewayGameMode in overViewsByGateway.GroupBy(x => x.GameMode))

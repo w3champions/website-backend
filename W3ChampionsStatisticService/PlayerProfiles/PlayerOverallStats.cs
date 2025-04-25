@@ -23,14 +23,14 @@ public class PlayerOverallStats
         {
             Name = battleTag.Split("#")[0],
             BattleTag = battleTag,
-            WinLosses = new List<RaceWinLoss>
-            {
-                new RaceWinLoss(Race.HU),
-                new RaceWinLoss(Race.OC),
-                new RaceWinLoss(Race.NE),
-                new RaceWinLoss(Race.UD),
-                new RaceWinLoss(Race.RnD)
-            }
+            WinLosses =
+            [
+                new(Race.HU),
+                new(Race.OC),
+                new(Race.NE),
+                new(Race.UD),
+                new(Race.RnD)
+            ]
         };
     }
 

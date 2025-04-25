@@ -13,7 +13,7 @@ public class AsyncServiceBase<T>(IServiceScopeFactory serviceScopeFactory) : IHo
     protected readonly IServiceScopeFactory ServiceScopeFactory = serviceScopeFactory;
 
     private Task _executingTask;
-    private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
+    private readonly CancellationTokenSource _stoppingCts = new();
 
     public Task StartAsync(CancellationToken cancellationToken)
     {

@@ -10,8 +10,8 @@ namespace W3ChampionsStatisticService.Matches;
 
 public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
 {
-    private List<OnGoingMatchup> _values = new List<OnGoingMatchup>();
-    private Object _lock = new Object();
+    private List<OnGoingMatchup> _values = [];
+    private readonly object _lock = new();
 
     public async Task<long> CountOnGoingMatches(
         GameMode gameMode,

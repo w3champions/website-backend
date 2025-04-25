@@ -20,12 +20,12 @@ public class S3Service : IS3Service
 
     public async Task<List<CloudFile>> ListFiles()
     {
-        AmazonS3Config config = new AmazonS3Config
+        AmazonS3Config config = new()
         {
             ServiceURL = S3Endpoint
         };
         var client = new AmazonS3Client(S3AccessKey, S3SecretKey, config);
-        ListObjectsRequest listObjectsRequest = new ListObjectsRequest
+        ListObjectsRequest listObjectsRequest = new()
         {
             BucketName = S3BucketName,
             Prefix = S3Prefix
@@ -41,13 +41,13 @@ public class S3Service : IS3Service
 
     public async Task UploadFile(UploadFileRequest file)
     {
-        AmazonS3Config config = new AmazonS3Config
+        AmazonS3Config config = new()
         {
             ServiceURL = S3Endpoint
         };
         var client = new AmazonS3Client(S3AccessKey, S3SecretKey, config);
         byte[] bytes = Convert.FromBase64String(file.Content);
-        PutObjectRequest putObjectRequest = new PutObjectRequest
+        PutObjectRequest putObjectRequest = new()
         {
             BucketName = S3BucketName,
             Key = $"{S3Prefix}{file.Name}",
@@ -60,14 +60,14 @@ public class S3Service : IS3Service
 
     public async Task<byte[]> DownloadFile(string fileName)
     {
-        AmazonS3Config config = new AmazonS3Config
+        AmazonS3Config config = new()
         {
             ServiceURL = S3Endpoint
         };
         var client = new AmazonS3Client(S3AccessKey, S3SecretKey, config);
         MemoryStream ms = null;
 
-        GetObjectRequest getObjectRequest = new GetObjectRequest
+        GetObjectRequest getObjectRequest = new()
         {
             BucketName = S3BucketName,
             Key = $"{S3Prefix}{fileName}"
@@ -92,7 +92,7 @@ public class S3Service : IS3Service
 
     public async Task DeleteFile(string fileName)
     {
-        AmazonS3Config config = new AmazonS3Config
+        AmazonS3Config config = new()
         {
             ServiceURL = S3Endpoint
         };

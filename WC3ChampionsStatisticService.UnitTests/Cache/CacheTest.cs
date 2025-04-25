@@ -28,7 +28,7 @@ public class CacheTest
     {
         var serviceProvider = _serviceCollection.BuildServiceProvider();
         //Simulate parallel requests to test the cache locking
-        ConcurrentBag<TestData> data = new ConcurrentBag<TestData>();
+        ConcurrentBag<TestData> data = new();
 
         await Parallel.ForEachAsync(Enumerable.Range(1, 2), async (_, _) =>
         {
@@ -48,7 +48,7 @@ public class CacheTest
 
         var serviceProvider = _serviceCollection.BuildServiceProvider();
         //Simulate parallel requests to test the cache without locking
-        ConcurrentBag<TestData> data = new ConcurrentBag<TestData>();
+        ConcurrentBag<TestData> data = new();
 
         await Parallel.ForEachAsync(Enumerable.Range(1, 2), async (_, _) =>
         {

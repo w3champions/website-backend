@@ -393,7 +393,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
         matchFinishedEvent1.match.players[0].battleTag = "peter#123";
         matchFinishedEvent1.result.players[0].battleTag = "peter#123";
-        matchFinishedEvent1.result.players[0].heroes = new List<Hero> { new Hero { icon = "jainasea" } };
+        matchFinishedEvent1.result.players[0].heroes = [ new() { icon = "jainasea" } ];
 
         await InsertMatchEvent(matchFinishedEvent1);
 

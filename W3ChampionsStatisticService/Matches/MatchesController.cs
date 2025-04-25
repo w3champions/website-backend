@@ -35,7 +35,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetMatcheDetails(string id)
+    public async Task<IActionResult> GetMatchDetails(string id)
     {
         var match = await _matchRepository.LoadDetails(new ObjectId(id));
         return Ok(match);
@@ -50,7 +50,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
     }
 
     [HttpGet("by-ongoing-match-id/{id}")]
-    public async Task<IActionResult> GetMatcheDetailsByOngoingMatchId(string id)
+    public async Task<IActionResult> GetMatchDetailsByOngoingMatchId(string id)
     {
         var match = await _matchRepository.LoadDetailsByOngoingMatchId(id);
         return Ok(match);

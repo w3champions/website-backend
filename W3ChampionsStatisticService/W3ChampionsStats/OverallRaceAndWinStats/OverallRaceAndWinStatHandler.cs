@@ -33,7 +33,7 @@ public class OverallRaceAndWinStatHandler(
             }
 
             var averageMmr = players.Average(p => p.mmr.rating);
-            DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            DateTime start = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             DateTime date = start.AddMilliseconds(nextEvent.match.startTime);
             var patch = await _patchRepository.GetPatchVersionFromDate(date);
 

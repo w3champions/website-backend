@@ -86,7 +86,7 @@ public class PlayerTests : IntegrationTestBase
         var playerStats = PlayerOverallStats.Create("ThunderHorn#2481");
         playerStats.RecordWin(Race.HU, 1, true);
         player1.RaceWins = playerStats;
-        SetPictureCommand cmd = new SetPictureCommand()
+        SetPictureCommand cmd = new()
         {
             avatarCategory = AvatarCategory.HU,
             pictureId = 2

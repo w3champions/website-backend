@@ -21,7 +21,7 @@ public class PortraitCommandTests : IntegrationTestBase
         List<SpecialPicture> specialPictures = [new SpecialPicture(1, "one")];
         personalSettings.UpdateSpecialPictures(specialPictures.ToArray());
 
-        Assert.AreEqual(1, personalSettings.SpecialPictures.Count());
+        Assert.AreEqual(1, personalSettings.SpecialPictures.Length);
         Assert.AreEqual(specialPictures.First().PictureId, personalSettings.SpecialPictures.First().PictureId);
 
         specialPictures.RemoveAll(x => x.PictureId == 1);
@@ -435,7 +435,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         var portraits = await portraitCommandHandler.GetPortraitDefinitions();
 
-        Assert.AreEqual(4, portraits.Count());
+        Assert.AreEqual(4, portraits.Count);
     }
 
     [Test]
@@ -454,7 +454,7 @@ public class PortraitCommandTests : IntegrationTestBase
 
         await settingsRepo.Save(new PersonalSetting(tag));
         var settings = await settingsRepo.LoadOrCreate(tag);
-        Assert.AreEqual(0, settings.SpecialPictures.Count());
+        Assert.AreEqual(0, settings.SpecialPictures.Length);
         await settingsRepo.UnsetOne("SpecialPictures", tag);
 
         var portraitsCommand = new PortraitsCommand();
@@ -465,7 +465,7 @@ public class PortraitCommandTests : IntegrationTestBase
         await portraitCommandHandler.UpsertSpecialPortraits(portraitsCommand);
 
         settings = await settingsRepo.LoadOrCreate(tag);
-        Assert.AreEqual(1, settings.SpecialPictures.Count());
+        Assert.AreEqual(1, settings.SpecialPictures.Length);
     }
 
     [Test]
@@ -512,16 +512,18 @@ public class PortraitCommandTests : IntegrationTestBase
 
         var cephSettings = await settingsRepo.LoadOrCreate(btags[0]);
         flossSettings = await settingsRepo.LoadOrCreate(btags[1]);
-        Assert.AreEqual(4, flossSettings.SpecialPictures.Count());
+        Assert.AreEqual(4, flossSettings.SpecialPictures.Length);
         Assert.IsNotNull(cephSettings.SpecialPictures);
-        Assert.AreEqual(1, cephSettings.SpecialPictures.Count());
+        Assert.AreEqual(1, cephSettings.SpecialPictures.Length);
     }
 
-    public PortraitsDefinitionCommand CreatePortraitsDefinitionCommand(List<int> ids, List<string> groups)
+    public static PortraitsDefinitionCommand CreatePortraitsDefinitionCommand(List<int> ids, List<string> groups)
     {
-        var pdc = new PortraitsDefinitionCommand();
-        pdc.Ids = ids;
-        pdc.Groups = groups;
+        var pdc = new PortraitsDefinitionCommand
+        {
+            Ids = ids,
+            Groups = groups
+        };
         return pdc;
     }
 }

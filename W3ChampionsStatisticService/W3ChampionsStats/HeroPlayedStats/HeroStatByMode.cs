@@ -9,10 +9,10 @@ public class HeroStatByMode
     public GameMode GameMode { get; set; }
     public List<HeroStatByPick> OrderedPicks { get; set; } = new List<HeroStatByPick>
     {
-        new HeroStatByPick { Pick = EPick.Overall },
-        new HeroStatByPick { Pick = EPick.First },
-        new HeroStatByPick { Pick = EPick.Second },
-        new HeroStatByPick { Pick = EPick.Third }
+        new() { Pick = EPick.Overall },
+        new() { Pick = EPick.First },
+        new() { Pick = EPick.Second },
+        new() { Pick = EPick.Third }
     };
 
     public void AddHeroes(List<HeroPickDto> heroes)

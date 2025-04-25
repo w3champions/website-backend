@@ -37,7 +37,7 @@ public class WebsiteBackendHub(
             Context.Abort();
             return;
         }
-        WebSocketUser user = new WebSocketUser()
+        WebSocketUser user = new()
         {
             BattleTag = w3cUserAuthentication.BattleTag,
             ConnectionId = Context.ConnectionId,

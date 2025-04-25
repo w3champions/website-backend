@@ -50,7 +50,7 @@ public class AlibabaService : IAlibabaService
         var client = new OssClient(alibabaEndpoint, alibabaAccessKey, alibabaSecretKey);
         MemoryStream ms = null;
 
-        GetObjectRequest getObjectRequest = new GetObjectRequest(alibabaBucketName, $"{alibabaPrefix}{fileName}");
+        GetObjectRequest getObjectRequest = new(alibabaBucketName, $"{alibabaPrefix}{fileName}");
 
         using var response = client.GetObject(getObjectRequest);
         if (response.HttpStatusCode == HttpStatusCode.OK)

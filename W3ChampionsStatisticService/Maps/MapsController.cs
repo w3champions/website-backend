@@ -71,7 +71,7 @@ public class MapsController(
     {
         try
         {
-            HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(Request.HttpContext);
+            HttpRequestMessageFeature hreqmf = new(Request.HttpContext);
             var map = await _updateServiceClient.CreateMapFromFormAsync(hreqmf.HttpRequestMessage);
             return Ok(map);
         }

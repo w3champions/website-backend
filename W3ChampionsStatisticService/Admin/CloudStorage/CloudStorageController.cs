@@ -20,7 +20,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult ListAlibabaFiles()
     {
-        AlibabaService alibabaService = new AlibabaService();
+        AlibabaService alibabaService = new();
         try
         {
             var fileList = alibabaService.ListFiles();
@@ -36,7 +36,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> ListS3Files()
     {
-        S3Service s3Service = new S3Service();
+        S3Service s3Service = new();
         try
         {
             var fileList = await s3Service.ListFiles();
@@ -52,7 +52,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult UploadAlibabaFile([FromBody] UploadFileRequest req)
     {
-        AlibabaService alibabaService = new AlibabaService();
+        AlibabaService alibabaService = new();
         try
         {
             var fileList = alibabaService.ListFiles();
@@ -77,7 +77,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> UploadS3File([FromBody] UploadFileRequest req)
     {
-        S3Service s3Service = new S3Service();
+        S3Service s3Service = new();
         try
         {
             var fileList = await s3Service.ListFiles();
@@ -102,7 +102,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DownloadAlibabaFile([FromRoute] string fileName)
     {
-        AlibabaService alibabaService = new AlibabaService();
+        AlibabaService alibabaService = new();
         try
         {
             var fileList = alibabaService.ListFiles();
@@ -131,7 +131,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DownloadS3File([FromRoute] string fileName)
     {
-        S3Service s3Service = new S3Service();
+        S3Service s3Service = new();
         try
         {
             var fileList = await s3Service.ListFiles();
@@ -160,7 +160,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public IActionResult DeleteAlibabaFile([FromRoute] string fileName)
     {
-        AlibabaService alibabaService = new AlibabaService();
+        AlibabaService alibabaService = new();
         try
         {
             var fileList = alibabaService.ListFiles();
@@ -185,7 +185,7 @@ public class CloudStorageController : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeleteS3File([FromRoute] string fileName)
     {
-        S3Service s3Service = new S3Service();
+        S3Service s3Service = new();
         try
         {
             var fileList = await s3Service.ListFiles();

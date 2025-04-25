@@ -138,7 +138,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return collection.Indexes.CreateOneAsync(textIndex);
     }
 
-    private PlayerScore CreateDetail(PlayerBlizzard playerBlizzard)
+    private static PlayerScore CreateDetail(PlayerBlizzard playerBlizzard)
     {
         foreach (var player in playerBlizzard.heroes)
         {

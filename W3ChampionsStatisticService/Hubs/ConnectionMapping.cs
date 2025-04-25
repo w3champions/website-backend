@@ -5,7 +5,7 @@ namespace W3ChampionsStatisticService.Hubs;
 
 public class ConnectionMapping
 {
-    private readonly Dictionary<string, WebSocketUser> _connections = new Dictionary<string, WebSocketUser>();
+    private readonly Dictionary<string, WebSocketUser> _connections = new();
 
     public List<WebSocketUser> GetUsers()
     {

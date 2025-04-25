@@ -487,14 +487,14 @@ public class ClanTests : IntegrationTestBase
         await _rankRepository.UpsertSeason(new Season(1));
         await _rankRepository.InsertRanks(new List<Rank>
         {
-            new Rank(new List<string> { clan.Members[0] }, 1, 5, 1500, null, GateWay.Europe, GameMode.GM_1v1, 1)
+            new(new List<string> { clan.Members[0] }, 1, 5, 1500, null, GateWay.Europe, GameMode.GM_1v1, 1)
         });
 
         await _rankRepository.InsertLeagues(new List<LeagueConstellation>
         {
-            new LeagueConstellation(1, GateWay.Europe, GameMode.GM_1v1, new List<League>
+            new(1, GateWay.Europe, GameMode.GM_1v1, new List<League>
             {
-                new League(1, 2, "Wood", 5)
+                new(1, 2, "Wood", 5)
             })
         });
 

@@ -20,7 +20,7 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        W3CAuthenticationService authService = new W3CAuthenticationService();
+        W3CAuthenticationService authService = new();
         {
             try
             {

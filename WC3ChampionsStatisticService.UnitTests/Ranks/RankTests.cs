@@ -57,7 +57,7 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
-        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 12.5, null, GateWay.America,
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 12.5, null, GateWay.America,
         GameMode.GM_1v1, 0)};
         await rankRepository.InsertRanks(ranks);
         var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 0, null);
@@ -81,7 +81,7 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
-        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 4.2, null, GateWay.Europe, GameMode.GM_1v1, 0) };
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 4.2, null, GateWay.Europe, GameMode.GM_1v1, 0) };
         await rankRepository.InsertRanks(ranks);
         var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 0, null);
         await playerRepository.UpsertPlayerOverview(player);
@@ -96,8 +96,8 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
-        var ranks1 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0) };
-        var ranks2 = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 8, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0) };
+        var ranks1 = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0) };
+        var ranks2 = new List<Rank> { new(new List<string> { "peter#123" }, 1, 8, 6.1, null, GateWay.Europe, GameMode.GM_1v1, 0) };
         await rankRepository.InsertRanks(ranks1);
         await rankRepository.InsertRanks(ranks2);
         var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 0, null);
@@ -116,8 +116,8 @@ public class RankTests : IntegrationTestBase
 
         var ranks = new List<Rank>
         {
-            new Rank(new List<string> { "peter#123" }, 1, 12, 1456, Race.HU, GateWay.Europe, GameMode.GM_1v1, 2),
-            new Rank(new List<string> { "peter#123" }, 1, 8, 1456, Race.NE, GateWay.Europe, GameMode.GM_1v1, 2)
+            new(new List<string> { "peter#123" }, 1, 12, 1456, Race.HU, GateWay.Europe, GameMode.GM_1v1, 2),
+            new(new List<string> { "peter#123" }, 1, 8, 1456, Race.NE, GateWay.Europe, GameMode.GM_1v1, 2)
         };
         await rankRepository.InsertRanks(ranks);
         var player1 = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 2, Race.HU);
@@ -250,7 +250,7 @@ public class RankTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
 
         var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
@@ -292,7 +292,7 @@ public class RankTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
 
         var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
@@ -324,7 +324,7 @@ public class RankTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
 
-        var ranks = new List<Rank> { new Rank(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
 
         var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
@@ -358,8 +358,8 @@ public class RankTests : IntegrationTestBase
 
         var ranks = new List<Rank>
         {
-            new Rank(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
-            new Rank(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
+            new(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
+            new(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
         };
         await rankRepository.InsertRanks(ranks);
 
@@ -389,8 +389,8 @@ public class RankTests : IntegrationTestBase
 
         var ranks = new List<Rank>
         {
-            new Rank(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
-            new Rank(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
+            new(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
+            new(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
         };
         await rankRepository.InsertRanks(ranks);
 
@@ -421,11 +421,11 @@ public class RankTests : IntegrationTestBase
         var ranks = new List<Rank>
         {
             //old one
-            new Rank(new List<string> { "peter#123" }, 1, 2, 1000, null, GateWay.America, GameMode.GM_1v1, 1),
+            new(new List<string> { "peter#123" }, 1, 2, 1000, null, GateWay.America, GameMode.GM_1v1, 1),
 
             //mmr based
-            new Rank(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
-            new Rank(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
+            new(new List<string> { "peter#123" }, 1, 2, 1000, Race.HU, GateWay.America, GameMode.GM_1v1, 2),
+            new(new List<string> { "peter#123" }, 1, 3, 2000, Race.NE, GateWay.America, GameMode.GM_1v1, 2)
         };
         await rankRepository.InsertRanks(ranks);
 

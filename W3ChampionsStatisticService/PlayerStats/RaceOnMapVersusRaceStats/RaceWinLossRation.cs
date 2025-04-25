@@ -13,14 +13,14 @@ public class RaceWinLossRation
         return new RaceWinLossRation
         {
             Race = race,
-            WinLosses = new List<RaceWinLoss>
-            {
-                new RaceWinLoss(Race.RnD),
-                new RaceWinLoss(Race.HU),
-                new RaceWinLoss(Race.OC),
-                new RaceWinLoss(Race.UD),
-                new RaceWinLoss(Race.NE)
-            }
+            WinLosses =
+            [
+                new(Race.RnD),
+                new(Race.HU),
+                new(Race.OC),
+                new(Race.UD),
+                new(Race.NE)
+            ]
         };
     }
 }

@@ -29,7 +29,7 @@ public class PlayerRaceOnMapVersusRaceRatioHandler(
             var p2 = await _playerRepository.LoadMapAndRaceStat(dataPlayers[1].battleTag, nextEvent.match.season)
                         ?? PlayerRaceOnMapVersusRaceRatio.Create(dataPlayers[1].battleTag, nextEvent.match.season);
 
-            DateTime start = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            DateTime start = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             DateTime date = start.AddMilliseconds(nextEvent.match.startTime);
             var patch = await _patchRepository.GetPatchVersionFromDate(date);
 

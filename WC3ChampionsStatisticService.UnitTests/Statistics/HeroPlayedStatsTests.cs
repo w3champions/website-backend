@@ -21,12 +21,12 @@ public class HeroPlayedStatsTests : IntegrationTestBase
 
         matchFinishedEvent.result.players[0].heroes = new List<Hero>
         {
-            new Hero { icon = "archmage"},
-            new Hero { icon = "mountainking"}
+            new() { icon = "archmage"},
+            new() { icon = "mountainking"}
         };
         matchFinishedEvent.result.players[1].heroes = new List<Hero>
         {
-            new Hero { icon = "mountainking"}
+            new() { icon = "mountainking"}
         };
 
         await heroPlayedModelHandler.Update(matchFinishedEvent);

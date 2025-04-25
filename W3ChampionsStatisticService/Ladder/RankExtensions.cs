@@ -24,8 +24,7 @@ public static class RankExtensions
             {
                 PlayerOverview.Create(new List<PlayerId>
                 {
-                    new PlayerId
-                    {
+                    new() {
                         BattleTag = stats.BattleTag,
                         Name = stats.Name
                     }
