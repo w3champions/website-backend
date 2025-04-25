@@ -43,6 +43,7 @@ using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.WebApi.Authorization;
 using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
@@ -101,6 +102,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 
 builder.Services.AddSpecialBsonRegistrations();
+
+// Add BasicAuth for metrics endpoint
+builder.Services.AddBasicAuthForMetrics();
 
 // Add Application Insights
 builder.Services.AddSingleton<TrackingService>();
@@ -224,9 +228,13 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.UseRouting();
 
+// Add authentication and authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Collect metrics for Prometheus
 app.UseHttpMetrics();
-app.MapMetrics();
+app.MapMetrics().RequireAuthorization(BasicAuthConfiguration.ReadMetricsPolicy);
 
 app.UseCors(builder =>
     builder
