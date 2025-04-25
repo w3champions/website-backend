@@ -35,12 +35,13 @@ public class PortraitCommandHandler(
 
         foreach (var playerSettings in settings)
         {
-            var specialPortraitsList = playerSettings.SpecialPictures != null ? new List<SpecialPicture>(playerSettings.SpecialPictures) : new List<SpecialPicture>();
+            var specialPortraitsList = playerSettings.SpecialPictures != null ? new List<SpecialPicture>(playerSettings.SpecialPictures) : [];
             foreach (var portraitId in command.Portraits)
             {
-                if (!specialPortraitsList.Exists(x => x.PictureId == portraitId) &&
-                    validPortraits.Any(x => x.Id == portraitId.ToString()))
+                if (validPortraits.Any(x => x.Id == portraitId.ToString()))
                 {
+                    if (specialPortraitsList.Exists(x => x.PictureId == portraitId))
+                        specialPortraitsList.RemoveAll(x => x.PictureId == portraitId);
                     specialPortraitsList.Add(new SpecialPicture(portraitId, command.Tooltip));
                 }
             }

@@ -6,8 +6,8 @@ public class PortraitsCommand
 {
     public PortraitsCommand()
     {
-        BnetTags = new List<string>();
-        Portraits = new List<int>();
+        BnetTags = [];
+        Portraits = [];
         Tooltip = "";
     }
 
