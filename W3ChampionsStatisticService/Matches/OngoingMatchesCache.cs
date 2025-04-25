@@ -100,7 +100,18 @@ public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
         if (_values.Count == 0)
         {
             var mongoCollection = CreateCollection<OnGoingMatchup>();
-            _values = await mongoCollection.Find(r => true).SortByDescending(s => s.Id).ToListAsync();
+            var values = await mongoCollection.Find(r => true).SortByDescending(s => s.Id).ToListAsync();
+            lock (_lock)
+            {
+                if (_values.Count == 0)
+                {
+                    _values = values;
+                }
+                else
+                {
+                    _values = _values.Union(values).ToList();
+                }
+            }
         }
     }
 

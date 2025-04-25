@@ -38,7 +38,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
     public string Id { get; set; }
 
     [BsonIgnoreIfNull]
-    public SpecialPicture[] SpecialPictures { get; set; } = new SpecialPicture[0];
+    public SpecialPicture[] SpecialPictures { get; set; } = [];
     public string ChatAlias { get; set; }
     public string ChatColor { get; set; }
     public AkaSettings AliasSettings { get; set; }
@@ -54,7 +54,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
                 break;
 
             case AvatarCategory.Special:
-                isValid = SpecialPictures == null ? false : SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
+                isValid = SpecialPictures != null && SpecialPictures.Any(x => x.PictureId == cmd.pictureId);
                 break;
 
             case AvatarCategory.Total:
@@ -86,15 +86,15 @@ public class PersonalSetting : IVersionable, IIdentifiable
         SpecialPictures = specialPictures;
     }
 
-    public List<AvatarCategoryToMaxPictureId> PickablePictures => new List<AvatarCategoryToMaxPictureId>
-    {
-        new AvatarCategoryToMaxPictureId(AvatarCategory.HU, GetMaxPictureIdForRace(Race.HU)),
-        new AvatarCategoryToMaxPictureId(AvatarCategory.OC, GetMaxPictureIdForRace(Race.OC)),
-        new AvatarCategoryToMaxPictureId(AvatarCategory.NE, GetMaxPictureIdForRace(Race.NE)),
-        new AvatarCategoryToMaxPictureId(AvatarCategory.UD, GetMaxPictureIdForRace(Race.UD)),
-        new AvatarCategoryToMaxPictureId(AvatarCategory.RnD, GetMaxPictureIdForRace(Race.RnD)),
-        new AvatarCategoryToMaxPictureId(AvatarCategory.Total, GetMaxPictureIdForAllWins()),
-    };
+    public List<AvatarCategoryToMaxPictureId> PickablePictures =>
+    [
+        new(AvatarCategory.HU, GetMaxPictureIdForRace(Race.HU)),
+        new(AvatarCategory.OC, GetMaxPictureIdForRace(Race.OC)),
+        new(AvatarCategory.NE, GetMaxPictureIdForRace(Race.NE)),
+        new(AvatarCategory.UD, GetMaxPictureIdForRace(Race.UD)),
+        new(AvatarCategory.RnD, GetMaxPictureIdForRace(Race.RnD)),
+        new(AvatarCategory.Total, GetMaxPictureIdForAllWins()),
+    ];
 
     private long GetMaxPictureIdForRace(Race race)
     {
@@ -136,72 +136,73 @@ public class PersonalSetting : IVersionable, IIdentifiable
     public DateTimeOffset LastUpdated { get; set; }
 
     [BsonIgnore]
-    public List<WinsToPictureId> RacePictureRange => new List<WinsToPictureId>
-    {
-        new WinsToPictureId(1, 5),
-        new WinsToPictureId(2, 10),
-        new WinsToPictureId(3, 25),
-        new WinsToPictureId(4, 50),
-        new WinsToPictureId(5, 100),
-        new WinsToPictureId(6, 150),
-        new WinsToPictureId(7, 250),
-        new WinsToPictureId(8, 350),
-        new WinsToPictureId(9, 500),
-        new WinsToPictureId(10, 750),
-        new WinsToPictureId(11, 1000),
-        new WinsToPictureId(12, 1250),
-        new WinsToPictureId(13, 1500),
-        new WinsToPictureId(14, 1750),
-        new WinsToPictureId(15, 2000),
-        new WinsToPictureId(16, 2500),
-        new WinsToPictureId(17, 3500),
-        new WinsToPictureId(18, 5000)
-    };
+    public List<WinsToPictureId> RacePictureRange =>
+    [
+        new(1, 5),
+        new(2, 10),
+        new(3, 25),
+        new(4, 50),
+        new(5, 100),
+        new(6, 150),
+        new(7, 250),
+        new(8, 350),
+        new(9, 500),
+        new(10, 750),
+        new(11, 1000),
+        new(12, 1250),
+        new(13, 1500),
+        new(14, 1750),
+        new(15, 2000),
+        new(16, 2500),
+        new(17, 3500),
+        new(18, 5000)
+    ];
 
     [BsonIgnore]
-    public List<WinsToPictureId> TotalPictureRange => new List<WinsToPictureId>
-    {
-        new WinsToPictureId(1, 15),
-        new WinsToPictureId(2, 30),
-        new WinsToPictureId(3, 75),
-        new WinsToPictureId(4, 150),
-        new WinsToPictureId(5, 300),
-        new WinsToPictureId(6, 450),
-        new WinsToPictureId(7, 750),
-        new WinsToPictureId(8, 1000),
-        new WinsToPictureId(9, 1500),
-        new WinsToPictureId(10, 2250),
-        new WinsToPictureId(11, 3000),
-        new WinsToPictureId(12, 3750),
-        new WinsToPictureId(13, 4500),
-        new WinsToPictureId(14, 5250),
-        new WinsToPictureId(15, 6000),
-        new WinsToPictureId(16, 7500),
-        new WinsToPictureId(17, 10000),
-        new WinsToPictureId(18, 15000)
-    };
+    public List<WinsToPictureId> TotalPictureRange =>
+    [
+        new(1, 15),
+        new(2, 30),
+        new(3, 75),
+        new(4, 150),
+        new(5, 300),
+        new(6, 450),
+        new(7, 750),
+        new(8, 1000),
+        new(9, 1500),
+        new(10, 2250),
+        new(11, 3000),
+        new(12, 3750),
+        new(13, 4500),
+        new(14, 5250),
+        new(15, 6000),
+        new(16, 7500),
+        new(17, 10000),
+        new(18, 15000)
+    ];
 
     [BsonIgnore]
-    public List<WinsToPictureId> TournamentPicturerange => new List<WinsToPictureId>
+    public List<WinsToPictureId> TournamentPictureRange =>
+
     // for future use with autotours
-    {
-        new WinsToPictureId(1, 1),
-        new WinsToPictureId(2, 5),
-        new WinsToPictureId(3, 10),
-        new WinsToPictureId(4, 20),
-        new WinsToPictureId(5, 30),
-        new WinsToPictureId(6, 50),
-        new WinsToPictureId(7, 75),
-        new WinsToPictureId(8, 100),
-        new WinsToPictureId(9, 125),
-        new WinsToPictureId(10, 150),
-        new WinsToPictureId(11, 200),
-        new WinsToPictureId(12, 300),
-        new WinsToPictureId(13, 400),
-        new WinsToPictureId(14, 500),
-        new WinsToPictureId(15, 750),
-        new WinsToPictureId(16, 1000),
-        new WinsToPictureId(17, 1250),
-        new WinsToPictureId(18, 1500)
-    };
+    [
+        new(1, 1),
+        new(2, 5),
+        new(3, 10),
+        new(4, 20),
+        new(5, 30),
+        new(6, 50),
+        new(7, 75),
+        new(8, 100),
+        new(9, 125),
+        new(10, 150),
+        new(11, 200),
+        new(12, 300),
+        new(13, 400),
+        new(14, 500),
+        new(15, 750),
+        new(16, 1000),
+        new(17, 1250),
+        new(18, 1500)
+    ];
 }

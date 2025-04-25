@@ -20,7 +20,7 @@ public class OngoingMatchesHandler(
     {
         var nextEvents = await _eventRepository.LoadStartedMatches();
 
-        while (nextEvents.Any())
+        while (nextEvents.Count != 0)
         {
             foreach (var nextEvent in nextEvents)
             {

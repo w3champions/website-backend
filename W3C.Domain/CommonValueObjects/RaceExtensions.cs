@@ -5,7 +5,7 @@ namespace W3C.Domain.CommonValueObjects;
 
 public static class RaceExtensions
 {
-    static Dictionary<RaceId, Race> raceIdMap = new Dictionary<RaceId, Race>() {
+    static readonly Dictionary<RaceId, Race> raceIdMap = new() {
         { RaceId.RnD, Race.RnD },
         { RaceId.HU, Race.HU },
         { RaceId.OC, Race.OC },
