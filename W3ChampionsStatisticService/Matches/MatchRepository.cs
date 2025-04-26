@@ -211,8 +211,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public Task DeleteOnGoingMatch(string matchId)
     {
-        _cache.Delete(matchId);
-        return Delete<OnGoingMatchup>(x => x.MatchId == matchId);
+        return Delete<OnGoingMatchup>(x => x.MatchId == matchId).ContinueWith(_ => _cache.Delete(matchId));
     }
 
     public Task<List<OnGoingMatchup>> LoadOnGoingMatches(
