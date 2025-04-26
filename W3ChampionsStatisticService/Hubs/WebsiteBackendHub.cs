@@ -274,11 +274,19 @@ public class WebsiteBackendHub(
     {
         Friendlist friendList = await _friendRepository.LoadFriendlist(battleTag);
         if (friendList.Friends.Count == 0) return [];
-        List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(friendList.Friends.ToArray());
-        List<FriendUser> friends = personalSettings.Select(x => new FriendUser
+
+        // TODO: Uncomment after the launcher has been updated to avoid querying the db excessively after a website-backend restart/deploy.
+        // List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(friendList.Friends.ToArray());
+        // List<FriendUser> friends = personalSettings.Select(x => new FriendUser
+        // {
+        //     BattleTag = x.Id,
+        //     ProfilePicture = x.ProfilePicture
+        // }).ToList();
+
+        List<FriendUser> friends = friendList.Friends.Select(x => new FriendUser
         {
-            BattleTag = x.Id,
-            ProfilePicture = x.ProfilePicture
+            BattleTag = x,
+            ProfilePicture = ProfilePicture.Default(),
         }).ToList();
         return friends ?? [];
     }
