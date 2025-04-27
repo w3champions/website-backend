@@ -200,6 +200,15 @@ public class Hero
     }
 
     public int level { get; set; }
+
+    // Only used for accessing icon field during Matchup creation without having parsing.
+    // FIXME: Remove default parsing of icon, atm other things depend on it existing
+    [JsonIgnore]
+    [BsonIgnore]
+    public string iconPath
+    {
+        get { return _icon; }
+    }
 }
 
 [BsonIgnoreExtraElements]
