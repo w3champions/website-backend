@@ -38,8 +38,9 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
     {
+        var search = searchFor.ToLower();
         return JoinWith(rank =>
-            rank.PlayerId.Contains(searchFor, StringComparison.CurrentCultureIgnoreCase)
+            rank.PlayerId.ToLower().Contains(search)
             && rank.Gateway == gateWay
             && (gameMode == GameMode.Undefined || rank.GameMode == gameMode)
             && rank.Season == season);
@@ -49,19 +50,18 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
     {
         // searches through all battletags that have ever played a game on the system - does not return duplicates or AT teams
 
-        var ranksList = await JoinWith(rank => rank.PlayerId.Contains(tagSearch, StringComparison.CurrentCultureIgnoreCase));
+        var search = tagSearch.ToLower();
+        var ranksList = await JoinWith(rank => rank.PlayerId.ToLower().Contains(search));
 
         var listOfProxyData = new List<PlayerInfoForProxy>();
 
         foreach (var rank in ranksList)
         {
-            var playerInfo = new PlayerInfoForProxy
-            {
-                GameMode = rank.GameMode,
-                Players = rank.Players
-            };
+            var playerInfo = new PlayerInfoForProxy();
+            playerInfo.GameMode = rank.GameMode;
+            playerInfo.Players = rank.Players;
 
-            if (!Equals(playerInfo.GameMode, GameMode.GM_2v2_AT))
+            if (!Enum.Equals(playerInfo.GameMode, GameMode.GM_2v2_AT))
             {
                 if (listOfProxyData.Count > 0)
                 {
@@ -89,7 +89,8 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
     {
-        return JoinWith(rank => rank.Id.Contains(searchFor, StringComparison.CurrentCultureIgnoreCase) && rank.Season == season);
+        var search = searchFor.ToLower();
+        return JoinWith(rank => rank.Id.ToLower().Contains(search) && rank.Season == season);
     }
 
     public Task<List<LeagueConstellation>> LoadLeagueConstellation(int? season = null)

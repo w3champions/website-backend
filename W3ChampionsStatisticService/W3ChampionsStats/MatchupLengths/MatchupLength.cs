@@ -12,7 +12,7 @@ public class MatchupLength : IIdentifiable
     public string Season { get; set; }
     public Dictionary<string, List<GameLength>> LengthsByMmrRange { get; set; }
 
-    private static readonly string ALL_MMR = "all";
+    private static string ALL_MMR = "all";
 
     public static string CompoundNormalizedId(string race1, string race2, string season)
     {
