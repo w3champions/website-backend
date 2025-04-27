@@ -41,7 +41,7 @@ public class FriendController(
             {
                 return BadRequest($"Player {otherBattleTag} not found.");
             }
-            if (battleTag.ToLower() == otherBattleTag.ToLower())
+            if (battleTag == otherBattleTag)
             {
                 return BadRequest($"Cannot request yourself as a friend.");
             }
