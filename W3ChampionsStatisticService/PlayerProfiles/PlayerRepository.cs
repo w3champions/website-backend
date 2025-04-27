@@ -98,7 +98,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
     {
-        return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag.ToLower() == battleTag.ToLower() && t.Season == season && t.GateWay == gateWay && t.Race == race);
+        return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay && t.Race == race);
     }
 
     public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
