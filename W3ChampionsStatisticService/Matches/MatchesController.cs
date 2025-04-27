@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Services;
@@ -21,7 +22,9 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int offset = 0,
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
-        int season = -1)
+        int season = -1,
+        HeroType hero = HeroType.AllFilter
+    )
     {
         if (season < 0)
         {
@@ -29,8 +32,8 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize);
-        var count = await _matchRepository.Count(season, gameMode);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero);
+        var count = await _matchRepository.Count(season, gameMode, hero);
         return Ok(new { matches, count });
     }
 
