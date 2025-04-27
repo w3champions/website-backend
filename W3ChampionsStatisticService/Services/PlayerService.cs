@@ -77,29 +77,31 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
         int pageSize = 20
     )
     {
+        var searchLower = search.ToLower();
+
         // Fetch entire cache
         var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
         List<PersonalSetting> matchingEntries = personalSettings
-            .Where(ps => ps.Id.Contains(search, System.StringComparison.CurrentCultureIgnoreCase))
+            .Where(ps => ps.Id.ToLower().Contains(searchLower))
             .ToList();
 
         var searchRelevance = new List<PlayerSearchRelevance>();
         foreach (var ps in matchingEntries)
         {
             int relevance = 9;
-            string matchingName = ps.Id.Split('#').ElementAtOrDefault(0);
-            if (matchingName == null)
+            string nameLower = ps.Id.ToLower().Split('#').ElementAtOrDefault(0);
+            if (nameLower == null)
             {
                 continue;
             }
             // Exact match
-            if (matchingName.Equals(search, System.StringComparison.CurrentCultureIgnoreCase))
+            if (nameLower == searchLower)
             {
                 relevance = 1;
             }
             // Start with
-            else if (matchingName.StartsWith(search, System.StringComparison.CurrentCultureIgnoreCase))
+            else if (nameLower.StartsWith(searchLower))
             {
                 relevance = 2;
             }

@@ -66,7 +66,8 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public Task<List<PlayerOverallStats>> SearchForPlayer(string search)
     {
-        return LoadAll<PlayerOverallStats>(p => p.BattleTag.Contains(search, System.StringComparison.CurrentCultureIgnoreCase));
+        var lower = search.ToLower();
+        return LoadAll<PlayerOverallStats>(p => p.BattleTag.ToLower().Contains(lower));
     }
 
     public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
@@ -85,7 +86,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         int season)
     {
         return LoadAll<PlayerGameModeStatPerGateway>(t =>
-            t.PlayerIds.Any(player => player.BattleTag == battleTag) &&
+            t.PlayerIds.Any(player => player.BattleTag.ToLower() == battleTag.ToLower()) &&
             t.GateWay == gateWay &&
             t.Season == season);
     }
@@ -97,7 +98,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
     {
-        return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay && t.Race == race);
+        return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag.ToLower() == battleTag.ToLower() && t.Season == season && t.GateWay == gateWay && t.Race == race);
     }
 
     public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
