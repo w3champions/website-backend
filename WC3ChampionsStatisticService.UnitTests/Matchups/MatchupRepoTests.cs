@@ -33,7 +33,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
-        var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gameMode);
+        var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gateway, matchFinishedEvent1.match.gameMode, map: "Overall");
 
         Assert.AreEqual(2, matches.Count);
     }
@@ -86,10 +86,11 @@ public class MatchupRepoTests : IntegrationTestBase
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        var mapName = new MapName(matchFinishedEvent.match.map).Name;
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
-        var matches = await matchRepository.Load(matchFinishedEvent.match.season, matchFinishedEvent.match.gameMode);
+        var matches = await matchRepository.Load(matchFinishedEvent.match.season, matchFinishedEvent.match.gateway, matchFinishedEvent.match.gameMode, map: mapName);
 
         Assert.AreEqual(1, matches.Count);
     }
@@ -353,7 +354,7 @@ public class MatchupRepoTests : IntegrationTestBase
         matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-        var matches = await matchRepository.Load(0, GameMode.GM_2v2_AT);
+        var matches = await matchRepository.Load(0, GateWay.Undefined, GameMode.GM_2v2_AT);
 
         Assert.AreEqual(0, matches.Count);
     }
@@ -366,11 +367,41 @@ public class MatchupRepoTests : IntegrationTestBase
         matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-        var matches = await matchRepository.Load(0, GameMode.GM_2v2_AT);
+        var matches = await matchRepository.Load(0, GateWay.Undefined, GameMode.GM_2v2_AT);
+
+        Assert.AreEqual(1, matches.Count);
+    }
+    
+    [Test]
+    public async Task SearchForMap()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent1.match.map = "Maps/frozenthrone/(4)TurtleRock.w3x";
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        var mapName = new MapName(matchFinishedEvent1.match.map).Name;
+        
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        var matches = await matchRepository.Load(0, GateWay.Undefined, GameMode.GM_1v1, map: mapName);
 
         Assert.AreEqual(1, matches.Count);
     }
 
+    [Test]
+    public async Task SearchForGateway_NotFound()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        var matches = await matchRepository.Load(0, GateWay.America, GameMode.GM_1v1);
+
+        Assert.AreEqual(0, matches.Count);
+    }
+    
     [Test]
     public async Task SearchForGameMode2v2_LoadDefault()
     {
@@ -379,7 +410,7 @@ public class MatchupRepoTests : IntegrationTestBase
         matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
-        var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gameMode);
+        var matches = await matchRepository.Load(matchFinishedEvent1.match.season, matchFinishedEvent1.match.gateway, matchFinishedEvent1.match.gameMode);
 
         Assert.AreEqual(1, matches.Count);
     }

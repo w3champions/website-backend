@@ -112,7 +112,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
 
-        var matches = await matchRepository.Load(1, GameMode.GM_1v1);
+        var matches = await matchRepository.Load(1, GateWay.Undefined, GameMode.GM_1v1);
 
         Assert.AreEqual(1, version.Season);
         Assert.AreEqual(fakeEvent5.Id.ToString(), version.Version);
