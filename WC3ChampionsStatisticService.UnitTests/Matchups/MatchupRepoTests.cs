@@ -404,7 +404,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
         var result = await matchRepository.LoadDetails(matchFinishedEvent1.Id);
 
-        Assert.AreEqual("archmage", result.PlayerScores[0].Heroes[0].icon);
+        Assert.AreEqual("archmage", result.PlayerScores[0].Heroes[0].Icon);
     }
 
     [Test]

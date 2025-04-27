@@ -42,8 +42,8 @@ public class MatchupDetailTests : IntegrationTestBase
         var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
 
         Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
-        Assert.AreEqual("Archmage", result.PlayerScores[0].Heroes[0].icon);
-        Assert.AreEqual("Warden", result.PlayerScores[1].Heroes[0].icon);
+        Assert.AreEqual("Archmage", result.PlayerScores[0].Heroes[0].Icon);
+        Assert.AreEqual("Warden", result.PlayerScores[1].Heroes[0].Icon);
     }
 
     [Test]
