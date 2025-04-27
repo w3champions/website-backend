@@ -219,12 +219,17 @@ if (startHandlers == "true")
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
 }
 
+var runBackfill = System.Environment.GetEnvironmentVariable("RUN_BACKFILL");
+
+if (runBackfill == "true")
+{
+    // Not a read model service but uses the same functionality to do async background processing to backfill data.
+    builder.Services.AddUnversionedReadModelService<MatchupHeroBackfillService>();
+}
+
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
 
 app.UseRouting();
 
