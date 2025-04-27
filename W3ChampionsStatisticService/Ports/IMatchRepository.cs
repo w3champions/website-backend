@@ -18,7 +18,8 @@ public interface IMatchRepository
 
     Task<long> Count(
         int season,
-        GameMode gameMode);
+        GameMode gameMode,
+        HeroType hero = HeroType.AllFilter);
 
     Task Insert(Matchup matchup);
 

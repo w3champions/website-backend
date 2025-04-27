@@ -188,7 +188,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
         if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
         {
-            var heroFilter = builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Any(h => h.Id == hero))));
+            var heroFilter = builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Count > 0 && p.Heroes[0].Id == hero)));
             filter &= heroFilter;
         }
 

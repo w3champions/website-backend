@@ -17,24 +17,17 @@ namespace W3ChampionsStatisticService.Heroes;
 public class Hero
 {
     [BsonRepresentation(BsonType.Int32)]
-    public HeroType Id { get; set; } = HeroType.Unknown;
+    public HeroType Id { get; set; }
 
     [BsonIgnore()]
-    public string Name
-    {
-        // Front End uses lowercase for translation keys
-        get { return Enum.GetName(Id).ToLower(); }
-    }
+    public string Name => Enum.GetName(Id)?.ToLower(); // Frontend uses lowercase for translation keys
 
     /// <summary>
     /// For backwards compatibility to not break the frontend
     /// </summary>
     [BsonIgnore()]
     [JsonPropertyName("icon")]
-    public string Icon
-    {
-        get { return Name; }
-    }
+    public string Icon => Name;
 
     public int Level { get; set; }
 
