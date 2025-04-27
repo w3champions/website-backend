@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace W3ChampionsStatisticService.Heroes;
 
+// Cache for 7 days, this isn't likely to change.
 [ApiController]
 [Route("api/hero")]
+[ResponseCache(Duration = 60 * 60 * 24 * 7)]
 public class HeroController() : ControllerBase
 {
     [HttpGet("filters")]
