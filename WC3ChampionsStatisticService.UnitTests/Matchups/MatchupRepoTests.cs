@@ -39,6 +39,117 @@ public class MatchupRepoTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task LoadWithHeroFilter()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent.result.players.First().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.Archmage,
+                W3ChampionsStatisticService.Heroes.HeroType.BansheeRanger,
+            }
+        );
+        matchFinishedEvent.result.players.Last().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.Blademaster,
+                W3ChampionsStatisticService.Heroes.HeroType.Farseer,
+            }
+        );
+
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent2.result.players.First().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.PriestessOfTheMoon,
+                W3ChampionsStatisticService.Heroes.HeroType.BansheeRanger,
+            }
+        );
+        matchFinishedEvent2.result.players.Last().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.Blademaster,
+                W3ChampionsStatisticService.Heroes.HeroType.Farseer,
+                W3ChampionsStatisticService.Heroes.HeroType.DeathKnight,
+            }
+        );
+
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        var matches = await matchRepository.Load(
+            matchFinishedEvent.match.season,
+            matchFinishedEvent.match.gameMode,
+            hero: W3ChampionsStatisticService.Heroes.HeroType.Archmage
+        );
+
+        Assert.AreEqual(1, matches.Count);
+        Assert.AreEqual(matchFinishedEvent.Id, matches.First().Id);
+
+        var firstPlayerHeroes = matches.First().Teams.First().Players.First().Heroes;
+        var expectedHeroes = matchFinishedEvent.result.players.First().heroes.Select(h => new W3ChampionsStatisticService.Heroes.Hero(h)).ToList();
+        Assert.AreEqual(expectedHeroes.Count, firstPlayerHeroes.Count);
+        Assert.AreEqual(expectedHeroes.First().Id, firstPlayerHeroes.First().Id);
+        Assert.AreEqual(expectedHeroes.Last().Id, firstPlayerHeroes.Last().Id);
+
+        var secondPlayerHeroes = matches.First().Teams.Last().Players.First().Heroes;
+        var secondExpectedHeroes = matchFinishedEvent.result.players.Last().heroes.Select(h => new W3ChampionsStatisticService.Heroes.Hero(h)).ToList();
+        Assert.AreEqual(secondExpectedHeroes.Count, secondPlayerHeroes.Count);
+        Assert.AreEqual(secondExpectedHeroes.First().Id, secondPlayerHeroes.First().Id);
+        Assert.AreEqual(secondExpectedHeroes.Last().Id, secondPlayerHeroes.Last().Id);
+    }
+
+    [Test]
+    public async Task LoadWithHeroFilterNoResults()
+    {
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent.result.players.First().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.Archmage,
+                W3ChampionsStatisticService.Heroes.HeroType.BansheeRanger,
+            }
+        );
+        matchFinishedEvent.result.players.Last().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.Blademaster,
+                W3ChampionsStatisticService.Heroes.HeroType.Farseer,
+            }
+        );
+
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent2.result.players.First().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.PriestessOfTheMoon,
+                W3ChampionsStatisticService.Heroes.HeroType.BansheeRanger,
+            }
+        );
+        matchFinishedEvent2.result.players.Last().heroes = TestDtoHelper.CreateHeroList(
+            new List<W3ChampionsStatisticService.Heroes.HeroType>
+            {
+                W3ChampionsStatisticService.Heroes.HeroType.Blademaster,
+                W3ChampionsStatisticService.Heroes.HeroType.Farseer,
+                W3ChampionsStatisticService.Heroes.HeroType.DeathKnight,
+            }
+        );
+
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        var matches = await matchRepository.Load(
+            matchFinishedEvent.match.season,
+            matchFinishedEvent.match.gameMode,
+            hero: W3ChampionsStatisticService.Heroes.HeroType.KeeperOfTheGrove
+        );
+
+        Assert.AreEqual(0, matches.Count);
+    }
+
+    [Test]
     public async Task LoadAndSearch()
     {
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));

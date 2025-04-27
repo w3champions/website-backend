@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Matches;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
@@ -100,5 +102,23 @@ public class MatchupTests
         fakeEvent.match.gameMode = GameMode.GM_1v1;
         var matchup = Matchup.Create(fakeEvent);
         Assert.AreEqual(GameMode.GM_1v1, matchup.GameMode);
+    }
+
+    [Test]
+    public void MapResult_Heroes()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        fakeEvent.result.players[0].heroes = TestDtoHelper.CreateHeroList(new List<HeroType> { HeroType.Archmage });
+        fakeEvent.result.players[1].heroes = TestDtoHelper.CreateHeroList(new List<HeroType> { HeroType.Farseer, HeroType.Blademaster });
+
+        var matchup = Matchup.Create(fakeEvent);
+        var firstPlayer = matchup.Teams[0].Players[0];
+        Assert.AreEqual(1, firstPlayer.Heroes.Count);
+        Assert.AreEqual(HeroType.Archmage, firstPlayer.Heroes[0].Id);
+
+        var secondPlayer = matchup.Teams[1].Players[0];
+        Assert.AreEqual(2, secondPlayer.Heroes.Count);
+        Assert.AreEqual(HeroType.Farseer, secondPlayer.Heroes[0]);
+        Assert.AreEqual(HeroType.Blademaster, secondPlayer.Heroes[1]);
     }
 }

@@ -183,13 +183,18 @@ public class Matchup
 
     protected static void SetPlayerHeroes(Matchup matchup, Result matchResult)
     {
+        if (matchResult.players.Count == 0)
+        {
+            return;
+        }
+        
         foreach (var team in matchup.Teams)
         {
             foreach (var player in team.Players)
             {
                 player.Heroes = matchResult
-                    .players.First(p => p.battleTag == player.BattleTag)
-                    .heroes.Select(resultHero => new Heroes.Hero(resultHero))
+                    .players.FirstOrDefault(p => p.battleTag == player.BattleTag)?
+                    .heroes?.Select(resultHero => new Heroes.Hero(resultHero))
                     .ToList();
             }
         }
