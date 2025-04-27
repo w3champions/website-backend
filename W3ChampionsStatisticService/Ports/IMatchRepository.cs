@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
+using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
 
@@ -11,11 +12,7 @@ namespace W3ChampionsStatisticService.Ports;
 
 public interface IMatchRepository
 {
-    Task<List<Matchup>> Load(
-        int season,
-        GameMode gameMode,
-        int offset = 0,
-        int pageSize = 100);
+    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter);
 
     Task<long> Count(
         int season,

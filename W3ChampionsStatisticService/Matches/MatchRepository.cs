@@ -1,15 +1,19 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Matches;
@@ -148,25 +152,20 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return new PlayerScore(
             playerBlizzard.battleTag,
             playerBlizzard.unitScore,
-            playerBlizzard.heroes,
+            playerBlizzard.heroes.Select(h => new Heroes.Hero(h)).ToList(),
             playerBlizzard.heroScore,
             playerBlizzard.resourceScore,
             playerBlizzard.teamIndex);
     }
 
-    public Task<List<Matchup>> Load(
-        int season,
-        GameMode gameMode,
-        int offset = 0,
-        int pageSize = 100)
+    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        return mongoCollection
-            .Find(m => gameMode == m.GameMode && m.Season == season)
-            .SortByDescending(s => s.EndTime)
-            .Skip(offset)
-            .Limit(pageSize)
-            .ToListAsync();
+        var filter = GetLoadFilter(season, gameMode, hero);
+
+        var results = mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
+
+        return results;
     }
 
     public async Task<int> GetFloIdFromId(string gameId)
@@ -176,12 +175,24 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(
-        int season,
-        GameMode gameMode)
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
     {
-        return CreateCollection<Matchup>().CountDocumentsAsync(m =>
-                gameMode == m.GameMode && m.Season == season);
+        var filter = GetLoadFilter(season, gameMode, hero);
+        return CreateCollection<Matchup>().CountDocumentsAsync(filter);
+    }
+
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
+    {
+        var builder = Builders<Matchup>.Filter;
+        var filter = builder.Eq(m => m.GameMode, gameMode) & builder.Eq(m => m.Season, season);
+
+        if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
+        {
+            var heroFilter = builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Any(h => h.Id == hero))));
+            filter &= heroFilter;
+        }
+
+        return filter;
     }
 
     public Task InsertOnGoingMatch(OnGoingMatchup matchup)
