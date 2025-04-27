@@ -1,5 +1,7 @@
 ﻿using MongoDB.Bson;
+﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
@@ -67,6 +69,8 @@ public interface IMatchRepository
 
     Task<int> GetFloIdFromId(string gameId);
     Task<Season> LoadLastSeason();
+
+    Task<DateTimeOffset?> AddPlayerHeroes(DateTimeOffset startTime, int pageSize);
 }
 
 public class MatchupDetail

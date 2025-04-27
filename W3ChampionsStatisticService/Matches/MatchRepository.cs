@@ -253,4 +253,105 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         var mongoCollection = CreateCollection<Season>();
         return mongoCollection.AsQueryable().OrderByDescending(c => c.Id).FirstOrDefaultAsync();
     }
+
+    public async Task<DateTimeOffset?> AddPlayerHeroes(DateTimeOffset startTime, int pageSize)
+    {
+        var matchupCollection = CreateCollection<Matchup>();
+        var finishedMatchCollection = CreateCollection<MatchFinishedEvent>();
+
+        var playerFilter = Builders<PlayerOverviewMatches>.Filter.Exists(p => p.Heroes, true);
+        var teamFilter = Builders<Team>.Filter.ElemMatch(t => t.Players, playerFilter);
+        var matchupBuilder = Builders<Matchup>.Filter;
+
+        var teamPlayersFilter = matchupBuilder.ElemMatch(m => m.Teams, teamFilter);
+
+        var matchupFilter = matchupBuilder.Lt(m => m.StartTime, startTime) & matchupBuilder.Not(teamPlayersFilter);
+
+        // Get all matchups where all players in a matchup don't have a `Heroes` field from before startTime.
+        var matches = await matchupCollection.Find(matchupFilter).SortByDescending(m => m.StartTime).Limit(pageSize).ToListAsync();
+
+        if (!matches.Any())
+        {
+            return null;
+        }
+
+        // Get all matching `MatchFinishedEvent` docs
+        var matchIds = matches.Select(m => m.Id).ToList();
+        var finishedFilter = Builders<MatchFinishedEvent>.Filter.In(f => f.Id, matchIds);
+        var finishedMatchesDict = (await finishedMatchCollection.Find(finishedFilter).ToListAsync()).ToDictionary(f => f.Id);
+
+        var writes = new List<WriteModel<Matchup>>();
+        var anyDocumentsModified = false;
+
+        // For all matchups found, update the doc in memory and create a WriteModel to update the doc
+        foreach (var match in matches)
+        {
+            if (!finishedMatchesDict.TryGetValue(match.Id, out var finished))
+            {
+                Log.Warning("Missing MatchFinishedData for {@matchId}", match.Id);
+                continue;
+            }
+
+            var finishedPlayersDict = finished?.result?.players?.ToDictionary(p => p.battleTag);
+            if (finishedMatchesDict == null)
+            {
+                Log.Warning("Missing player data in finished match {@matchId}", match.Id);
+                continue;
+            }
+
+            var isMatchModified = false;
+
+            foreach (var team in match.Teams)
+            {
+                foreach (var player in team.Players)
+                {
+                    if (player.Heroes != null && player.Heroes.Any())
+                    {
+                        Log.Warning("Player {@player} in match {@matchId} already has hero data", player.BattleTag, match.Id);
+                        continue;
+                    }
+                    // Only update if the result.player has heroes
+                    if (
+                        finishedPlayersDict.TryGetValue(player.BattleTag, out var finishedPlayer)
+                        && finishedPlayer.heroes != null
+                        && finishedPlayer.heroes.Any()
+                    )
+                    {
+                        player.Heroes = finishedPlayer.heroes.Select(h => new Heroes.Hero(h)).ToList();
+                        isMatchModified = true;
+                    }
+                }
+            }
+
+            if (isMatchModified)
+            {
+                anyDocumentsModified = true;
+                var filter = Builders<Matchup>.Filter.Eq(m => m.Id, match.Id);
+                writes.Add(new ReplaceOneModel<Matchup>(filter, match));
+            }
+        }
+
+        if (writes.Any())
+        {
+            try
+            {
+                var bulkResult = await matchupCollection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false });
+                Log.Information(
+                    "Updated Matchup Finished. Matched: {@matchedCount}, Modified: {@modifiedCount}",
+                    bulkResult.MatchedCount,
+                    bulkResult.ModifiedCount
+                );
+            }
+            catch (MongoBulkWriteException bwe)
+            {
+                Log.Error(bwe, "Bulk Replace Error during Matchup update");
+            }
+        }
+        else if (anyDocumentsModified)
+        {
+            Log.Warning("Matchup documents were modified in memory but not updated in the database. Matches Count: {@count}", matches.Count);
+        }
+
+        return matches.LastOrDefault()?.StartTime;
+    }
 }
