@@ -187,7 +187,7 @@ public class Matchup
         {
             return;
         }
-        
+
         foreach (var team in matchup.Teams)
         {
             foreach (var player in team.Players)
