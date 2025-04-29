@@ -11,6 +11,7 @@ using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.Matches;
 
+[MongoDB.Bson.Serialization.Attributes.BsonIgnoreExtraElements]
 public class Matchup
 {
     public string Map { get; set; }
@@ -117,6 +118,7 @@ public class Matchup
         }
 
         SetTeamPlayers(result);
+        SetPlayerHeroes(result, matchFinishedEvent.result);
 
         return result;
     }
@@ -177,6 +179,25 @@ public class Matchup
         }
 
         return teams;
+    }
+
+    protected static void SetPlayerHeroes(Matchup matchup, Result matchResult)
+    {
+        if (matchResult?.players == null || matchResult.players?.Count == 0)
+        {
+            return;
+        }
+        
+        foreach (var team in matchup.Teams)
+        {
+            foreach (var player in team.Players)
+            {
+                player.Heroes = matchResult
+                    .players?.FirstOrDefault(p => p.battleTag == player.BattleTag)?
+                    .heroes?.Select(resultHero => new Heroes.Hero(resultHero))
+                    .ToList();
+            }
+        }
     }
 
     protected static void SetTeamPlayers(Matchup result)

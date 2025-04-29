@@ -307,4 +307,9 @@ public static class TestDtoHelper
         matchFinishedEvent.match.players[1].mmr.rating = mmr2;
         return matchFinishedEvent;
     }
+
+    public static List<Hero> CreateHeroList(IList<W3ChampionsStatisticService.Heroes.HeroType> heroes)
+    {
+        return heroes.Select((hero, index) => new Hero { icon = $"{Enum.GetName(hero).ToLower()}.png", level = index + 1 }).ToList();
+    }
 }

@@ -24,6 +24,7 @@ using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Friends;
+using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
@@ -219,12 +220,26 @@ if (startHandlers == "true")
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
 }
 
+var runBackfill = System.Environment.GetEnvironmentVariable("RUN_BACKFILL");
+
+if (runBackfill == "true")
+{
+    // Not a read model service but uses the same functionality to do async background processing to backfill data.
+    builder.Services.AddUnversionedReadModelService<MatchupHeroBackfillService>();
+}
+
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
+
+app.Use(
+    (context, next) =>
+    {
+        // Sets header for api/heroes/filter cache response Vary header
+        context.Response.Headers["HeroFilterVersion"] = HeroFilter.AllowedHeroTypes.GetHashCode().ToString();
+        return next.Invoke();
+    }
+);
 
 app.UseRouting();
 
