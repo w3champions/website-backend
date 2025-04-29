@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -20,7 +21,7 @@ public class Hero
     public HeroType Id { get; set; }
 
     [BsonIgnore()]
-    public string Name => Enum.GetName(Id)?.ToLower(); // Frontend uses lowercase for translation keys
+    public string Name { get; private set; }
 
     /// <summary>
     /// For backwards compatibility to not break the frontend
@@ -31,10 +32,25 @@ public class Hero
 
     public int Level { get; set; }
 
+    // Don't need to store in MongoDB cos can infer from Id values. Whether hero data is for classic, reforged, custom, etc
+    [BsonIgnore()]
+    public HeroSource Source { get; private set; }
+
     public Hero(W3C.Domain.MatchmakingService.Hero heroData)
     {
         Id = ParseHeroIcon(heroData.iconPath);
         Level = heroData.level;
+        Source = ParseHeroSource(Id);
+        Name = ParseHeroName(Id, Source);
+    }
+
+    [BsonConstructor("Id", "Level")]
+    public Hero(HeroType type, int level)
+    {
+        Id = type;
+        Level = level;
+        Source = ParseHeroSource(Id);
+        Name = ParseHeroName(Id, Source);
     }
 
     /// <summary>
@@ -61,10 +77,6 @@ public class Hero
         {
             return (HeroType)parsedHeroId;
         }
-        else if (Enum.TryParse(typeof(ReforgedHeroType), heroName, true, out var parsedReforgedId))
-        {
-            return MapReforged((ReforgedHeroType)parsedReforgedId);
-        }
         else
         {
             // TODO: Add custom game mapping
@@ -74,19 +86,62 @@ public class Hero
     }
 
     /// <summary>
+    /// Parses a HeroType and HeroSource to determine the string name to use.
+    /// Lowercase as the frontend uses the strings for translation keys and hero icon asset paths
+    /// </summary>
+    public static string ParseHeroName(HeroType type, HeroSource source)
+    {
+        var value = (int)type;
+        switch (source)
+        {
+            case HeroSource.Unknown:
+            case HeroSource.Classic:
+                return Enum.GetName(type)?.ToLower();
+            case HeroSource.Reforged:
+                return Enum.GetName(MapReforged(type))?.ToLower();
+            default:
+                return Enum.GetName(HeroType.Unknown)?.ToLower();
+        }
+    }
+
+    /// <summary>
+    /// Parses a HeroType to determine the source based on the int value from HeroType. <br />
+    /// Unknown: -1 <br />
+    /// AllFilter: 0, used for query filtering and the frontend for dropdowns <br />
+    /// Classic HeroTypes: 1-99 <br />
+    /// Reforged HeroTypes: 100+ <br />
+    /// </summary>
+    public static HeroSource ParseHeroSource(HeroType type)
+    {
+        int value = (int)type;
+        if (value > 0 && value < 100)
+        {
+            return HeroSource.Classic;
+        }
+        else if (value >= 100)
+        {
+            return HeroSource.Reforged;
+        }
+        else
+        {
+            return HeroSource.Unknown;
+        }
+    }
+
+    /// <summary>
     /// Maps Reforged heroes to the base heroes.
     /// </summary>
-    public HeroType MapReforged(ReforgedHeroType reforgedHero)
+    public static HeroType MapReforged(HeroType reforgedHero)
     {
         switch (reforgedHero)
         {
-            case ReforgedHeroType.JainaSea:
+            case HeroType.JainaSea:
                 return HeroType.Archmage;
-            case ReforgedHeroType.ThrallChampion:
+            case HeroType.ThrallChampion:
                 return HeroType.Farseer;
-            case ReforgedHeroType.FallenKingArthas:
+            case HeroType.FallenKingArthas:
                 return HeroType.DeathKnight;
-            case ReforgedHeroType.CenariusNightmare:
+            case HeroType.CenariusNightmare:
                 return HeroType.KeeperOfTheGrove;
             default:
                 return HeroType.Unknown;
@@ -98,18 +153,22 @@ public class Hero
 /// KeyValue type used for the frontend to provide filtering, giving the enum value and string name.
 /// The enum value is used in APIs, the string name is used in the frontend for icons, translations, etc.
 /// </summary>
-public class HeroFilter
+public class HeroFilter(HeroType type)
 {
-    public HeroType Type { get; set; }
-    public string Name { get; set; }
+    public HeroType Type { get; } = type;
+    public string Name { get; } = Enum.GetName(type)?.ToLower();
+
+    public static List<HeroType> AllowedHeroTypes => Enum.GetValues<HeroType>().Where(hero => (int)hero >= 0 && (int)hero < 100).ToList();
 }
 
-public enum ReforgedHeroType
+/// <summary>
+/// The source of where the hero data comes from, e.g. Classic, Reforged, Custom, etc
+/// </summary>
+public enum HeroSource
 {
-    JainaSea,
-    ThrallChampion,
-    FallenKingArthas,
-    CenariusNightmare,
+    Unknown,
+    Classic,
+    Reforged,
 }
 
 /// <summary>
@@ -143,4 +202,10 @@ public enum HeroType
     TaurenChieftain,
     Tinker,
     Warden,
+
+    // Reforged
+    JainaSea = 100,
+    ThrallChampion,
+    FallenKingArthas,
+    CenariusNightmare,
 }

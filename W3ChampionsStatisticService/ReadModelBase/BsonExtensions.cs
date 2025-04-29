@@ -15,9 +15,13 @@ public static class BsonExtensions
             cm.SetIsRootClass(true);
 
             var featureType = typeof(ClanState);
-            featureType.Assembly.GetTypes()
-                .Where(type => featureType.IsAssignableFrom(type)).ToList()
-                .ForEach(type => cm.AddKnownType(type));
+            featureType.Assembly.GetTypes().Where(type => featureType.IsAssignableFrom(type)).ToList().ForEach(type => cm.AddKnownType(type));
+        });
+
+        BsonClassMap.RegisterClassMap<Heroes.Hero>(heroMapper =>
+        {
+            heroMapper.AutoMap();
+            heroMapper.MapCreator(hero => new Heroes.Hero(hero.Id, hero.Level));
         });
 
         return services;

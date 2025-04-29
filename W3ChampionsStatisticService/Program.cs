@@ -24,6 +24,7 @@ using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Friends;
+using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
@@ -230,6 +231,15 @@ if (runBackfill == "true")
 var app = builder.Build();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
+
+app.Use(
+    (context, next) =>
+    {
+        // Sets header for api/heroes/filter cache response Vary header
+        context.Response.Headers["HeroFilterVersion"] = HeroFilter.AllowedHeroTypes.GetHashCode().ToString();
+        return next.Invoke();
+    }
+);
 
 app.UseRouting();
 

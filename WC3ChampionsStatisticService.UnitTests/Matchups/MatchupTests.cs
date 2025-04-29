@@ -118,7 +118,7 @@ public class MatchupTests
 
         var secondPlayer = matchup.Teams[1].Players[0];
         Assert.AreEqual(2, secondPlayer.Heroes.Count);
-        Assert.AreEqual(HeroType.Farseer, secondPlayer.Heroes[0]);
-        Assert.AreEqual(HeroType.Blademaster, secondPlayer.Heroes[1]);
+        Assert.AreEqual(HeroType.Farseer, secondPlayer.Heroes[0].Id);
+        Assert.AreEqual(HeroType.Blademaster, secondPlayer.Heroes[1].Id);
     }
 }
