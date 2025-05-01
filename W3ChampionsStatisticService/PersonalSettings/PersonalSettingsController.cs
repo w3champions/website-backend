@@ -64,6 +64,7 @@ public class PersonalSettingsController(
     }
 
     [HttpPut("{battleTag}")]
+    [BearerCheckIfBattleTagBelongsToAuth]
     public async Task<IActionResult> SetPersonalSetting(
         string battleTag,
         [FromBody] PersonalSettingsDTO dto)
