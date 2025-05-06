@@ -36,7 +36,7 @@ public class PlayersController(
     [HttpGet("global-search")]
     public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
     {
-        if (pageSize > 20) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
         var players = await _playerService.GlobalSearchForPlayer(search, lastRelevanceId, pageSize);
         return Ok(players);
     }
