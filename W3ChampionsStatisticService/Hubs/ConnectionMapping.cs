@@ -42,6 +42,19 @@ public class ConnectionMapping
         }
     }
 
+    public HashSet<string> GetConnectionId(string battleTag)
+    {
+        lock (_lock)
+        {
+            // It's possible for a single user to have multiple websocket connections,
+            if (_onlineUsersByBattleTag.TryGetValue(battleTag, out var connections))
+            {
+                return connections;
+            }
+            return new HashSet<string>();
+        }
+    }
+
     public bool IsUserOnline(string battleTag)
     {
         lock (_lock)

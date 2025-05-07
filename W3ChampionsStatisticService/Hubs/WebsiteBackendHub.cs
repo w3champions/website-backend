@@ -40,6 +40,7 @@ public class WebsiteBackendHub(
         }
         WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
         await LoginAsAuthenticated(user);
+        await NotifyFriendsWithStatus(user.BattleTag, true);
         await base.OnConnectedAsync();
     }
 
@@ -402,6 +403,17 @@ public class WebsiteBackendHub(
             _connections.Remove(Context.ConnectionId);
         }
 
+        await NotifyFriendsWithStatus(user.BattleTag, false);
         await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task NotifyFriendsWithStatus(string battleTag, bool isOnline)
+    {
+        var friendList = await _friendRepository.LoadFriendlist(battleTag);
+        var onlineFriends = friendList
+            .Friends.Where(tag => _connections.IsUserOnline(tag))
+            .Select(tag => _connections.GetConnectionId(tag))
+            .SelectMany(connection => connection);
+        await Clients.Clients(onlineFriends).SendAsync(FriendResponseType.FriendOnlineStatus.ToString(), isOnline);
     }
 }
