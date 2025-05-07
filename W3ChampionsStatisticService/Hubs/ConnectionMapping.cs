@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace W3ChampionsStatisticService.Hubs;
 
@@ -7,19 +8,25 @@ public class ConnectionMapping
 {
     private readonly Dictionary<string, WebSocketUser> _connections = new();
     private readonly Dictionary<string, HashSet<string>> _onlineUsersByBattleTag = new();
-    private readonly object _lock = new();
+    private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
     public List<WebSocketUser> GetUsers()
     {
-        lock (_lock)
+        _lock.EnterReadLock();
+        try
         {
             return _connections.Values.Select(v => v).OrderBy(r => r.BattleTag).ToList();
+        }
+        finally
+        {
+            _lock.ExitReadLock();
         }
     }
 
     public void Add(string connectionId, WebSocketUser user)
     {
-        lock (_lock)
+        _lock.EnterWriteLock();
+        try
         {
             if (!_connections.ContainsKey(connectionId))
             {
@@ -31,20 +38,30 @@ public class ConnectionMapping
                 _onlineUsersByBattleTag[user.BattleTag].Add(connectionId);
             }
         }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
     }
 
     public WebSocketUser GetUser(string connectionId)
     {
-        lock (_lock)
+        _lock.EnterReadLock();
+        try
         {
             _connections.TryGetValue(connectionId, out WebSocketUser user);
             return user;
+        }
+        finally
+        {
+            _lock.ExitReadLock();
         }
     }
 
     public HashSet<string> GetConnectionId(string battleTag)
     {
-        lock (_lock)
+        _lock.EnterReadLock();
+        try
         {
             // It's possible for a single user to have multiple websocket connections,
             if (_onlineUsersByBattleTag.TryGetValue(battleTag, out var connections))
@@ -53,19 +70,29 @@ public class ConnectionMapping
             }
             return new HashSet<string>();
         }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
     }
 
     public bool IsUserOnline(string battleTag)
     {
-        lock (_lock)
+        _lock.EnterReadLock();
+        try
         {
             return _onlineUsersByBattleTag.ContainsKey(battleTag) && _onlineUsersByBattleTag[battleTag].Count > 0;
+        }
+        finally
+        {
+            _lock.ExitReadLock();
         }
     }
 
     public void Remove(string connectionId)
     {
-        lock (_lock)
+        _lock.EnterWriteLock();
+        try
         {
             if (_connections.TryGetValue(connectionId, out var user))
             {
@@ -81,5 +108,14 @@ public class ConnectionMapping
                 }
             }
         }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+    }
+
+    public void Dispose()
+    {
+        _lock.Dispose();
     }
 }
