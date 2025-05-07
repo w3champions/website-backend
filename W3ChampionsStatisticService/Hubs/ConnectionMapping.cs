@@ -89,6 +89,25 @@ public class ConnectionMapping
         }
     }
 
+    public Dictionary<string, bool> GetUsersOnlineStatus(List<string> battleTags)
+    {
+        _lock.EnterReadLock();
+        try
+        {
+            var userStatus = new Dictionary<string, bool>();
+            foreach (var battleTag in battleTags)
+            {
+                var isOnline = _onlineUsersByBattleTag.ContainsKey(battleTag) && _onlineUsersByBattleTag[battleTag].Count > 0;
+                userStatus.Add(battleTag, isOnline);
+            }
+            return userStatus;
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
+    }
+
     public void Remove(string connectionId)
     {
         _lock.EnterWriteLock();

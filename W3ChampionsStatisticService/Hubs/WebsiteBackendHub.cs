@@ -40,7 +40,7 @@ public class WebsiteBackendHub(
         }
         WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
         await LoginAsAuthenticated(user);
-        await NotifyFriendsWithStatus(user.BattleTag, true);
+        await NotifyFriendsWithIsOnline(user.BattleTag, true);
         await base.OnConnectedAsync();
     }
 
@@ -330,14 +330,16 @@ public class WebsiteBackendHub(
         //     ProfilePicture = x.ProfilePicture
         // }).ToList();
 
-        List<FriendUser> friends = friendList
-            .Friends.Select(battleTag => new FriendUser
+        var friendStatus = _connections.GetUsersOnlineStatus(friendList.Friends);
+        List<FriendUser> friends = friendStatus
+            .Select(friend => new FriendUser
             {
-                BattleTag = battleTag,
+                BattleTag = friend.Key,
                 ProfilePicture = ProfilePicture.Default(),
-                IsOnline = connections.IsUserOnline(battleTag),
+                IsOnline = friend.Value,
             })
             .ToList();
+
         return friends ?? [];
     }
 
@@ -403,11 +405,11 @@ public class WebsiteBackendHub(
             _connections.Remove(Context.ConnectionId);
         }
 
-        await NotifyFriendsWithStatus(user.BattleTag, false);
+        await NotifyFriendsWithIsOnline(user.BattleTag, false);
         await base.OnDisconnectedAsync(exception);
     }
 
-    private async Task NotifyFriendsWithStatus(string battleTag, bool isOnline)
+    private async Task NotifyFriendsWithIsOnline(string battleTag, bool isOnline)
     {
         var friendList = await _friendRepository.LoadFriendlist(battleTag);
         var onlineFriends = friendList
