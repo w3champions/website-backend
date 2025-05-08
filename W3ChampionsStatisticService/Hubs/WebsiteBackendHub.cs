@@ -416,6 +416,7 @@ public class WebsiteBackendHub(
             .Friends.Where(tag => _connections.IsUserOnline(tag))
             .Select(tag => _connections.GetConnectionId(tag))
             .SelectMany(connection => connection);
-        await Clients.Clients(onlineFriends).SendAsync(FriendResponseType.FriendOnlineStatus.ToString(), isOnline);
+
+        await Clients.Clients(onlineFriends).SendAsync(FriendResponseType.FriendOnlineStatus.ToString(), battleTag, isOnline);
     }
 }
