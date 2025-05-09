@@ -7,6 +7,7 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
+using Serilog;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
@@ -31,13 +32,14 @@ public class PlayerGameModeStatPerGatewayHandler : IReadModelHandler
 
         if (winners.Count == 0 || losers.Count == 0)
         {
-            // We should log the bad event here
+            Log.Error("No winners or losers when processing MatchFinishedEvent for {MatchId} in PlayerGameModeStatPerGatewayHandler", nextEvent.match.id);
             return;
         }
 
         if ((nextEvent.match.gameMode == GameMode.GM_2v2 || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
             && winners.Count != 2 && losers.Count != 2)
         {
+            Log.Error("Invalid number of winners or losers when processing MatchFinishedEvent for {MatchId} in PlayerGameModeStatPerGatewayHandler", nextEvent.match.id);
             return;
         }
 

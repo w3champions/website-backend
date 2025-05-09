@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.Tests;
 
 public class IntegrationTestBase
 {
-    //protected readonly MongoClient MongoClient = new MongoClient("mongodb://localhost:27017/");
+    //protected readonly MongoClient MongoClient = new MongoClient("mongodb://w3champions:XXXX@localhost:3510?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&replicaSet=rs0");
     protected readonly MongoClient MongoClient = new("mongodb://157.90.1.251:3512/");
 
     protected PersonalSettingsProvider personalSettingsProvider;

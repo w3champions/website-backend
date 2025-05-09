@@ -12,18 +12,21 @@ public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
     private readonly IMatchEventRepository _eventRepository;
     private readonly IVersionRepository _versionRepository;
     private readonly T _innerHandler;
-    private readonly TrackingService _trackingService;
+    private readonly ITrackingService _trackingService;
+    private readonly ITransactionCoordinator _transactionCoordinator;
 
     public ReadModelHandler(
         IMatchEventRepository eventRepository,
         IVersionRepository versionRepository,
         T innerHandler,
-        TrackingService trackingService = null)
+        ITransactionCoordinator transactionCoordinator,
+        ITrackingService trackingService = null)
     {
         _eventRepository = eventRepository;
         _versionRepository = versionRepository;
         _innerHandler = innerHandler;
         _trackingService = trackingService;
+        _transactionCoordinator = transactionCoordinator ?? throw new ArgumentNullException(nameof(transactionCoordinator));
     }
 
     public async Task Update()
@@ -31,31 +34,34 @@ public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
         var lastVersion = await _versionRepository.GetLastVersion<T>();
         var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
 
-        while (nextEvents.Any())
+        while (nextEvents.Count != 0)
         {
             foreach (var nextEvent in nextEvents)
             {
+                if (lastVersion.IsStopped) return;
                 try
                 {
-                    if (lastVersion.IsStopped) return;
-
-                    if (nextEvent.match.season > lastVersion.Season)
+                    await using (var transaction = await AsyncTransactionScope.CreateAsync(_transactionCoordinator))
                     {
-                        await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
-                        lastVersion = await _versionRepository.GetLastVersion<T>();
-                    }
+                        if (nextEvent.match.season > lastVersion.Season)
+                        {
+                            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
+                            lastVersion = await _versionRepository.GetLastVersion<T>();
+                        }
 
-                    // Skip the cancel events for now
-                    if (nextEvent.match.state != 3 && nextEvent.match.season == lastVersion.Season)
-                    {
-                        await _innerHandler.Update(nextEvent);
-                    }
+                        // Skip the cancel events for now
+                        if (nextEvent.match.state != 3 && nextEvent.match.season == lastVersion.Season)
+                        {
+                            await _innerHandler.Update(nextEvent);
+                        }
 
-                    await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
+                        await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
+                        transaction.Complete();
+                    }
                 }
                 catch (Exception e)
                 {
-                    _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
+                    _trackingService?.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
                     throw;
                 }
             }

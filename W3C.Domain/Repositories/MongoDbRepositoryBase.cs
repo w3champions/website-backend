@@ -11,10 +11,12 @@ public class MongoDbRepositoryBase
 {
     private readonly MongoClient _mongoClient;
     private readonly string _databaseName = "W3Champions-Statistic-Service";
+    private readonly ITransactionCoordinator _transactionCoordinator;
 
-    public MongoDbRepositoryBase(MongoClient mongoClient)
+    public MongoDbRepositoryBase(MongoClient mongoClient, ITransactionCoordinator transactionCoordinator = null)
     {
-        _mongoClient = mongoClient;
+        _mongoClient = mongoClient ?? throw new ArgumentNullException(nameof(mongoClient));
+        _transactionCoordinator = transactionCoordinator;
     }
 
     protected IMongoDatabase CreateClient()
@@ -26,7 +28,10 @@ public class MongoDbRepositoryBase
     protected Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
     {
         var mongoCollection = CreateCollection<T>();
-        return mongoCollection.FindSync(expression).FirstOrDefaultAsync();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? mongoCollection.Find(session, expression).FirstOrDefaultAsync()
+            : mongoCollection.Find(expression).FirstOrDefaultAsync();
     }
 
     protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
@@ -37,15 +42,28 @@ public class MongoDbRepositoryBase
     protected Task Insert<T>(T element)
     {
         var mongoCollection = CreateCollection<T>();
-        return mongoCollection.InsertOneAsync(element);
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? mongoCollection.InsertOneAsync(session, element)
+            : mongoCollection.InsertOneAsync(element);
     }
 
     protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null, int? limit = null)
     {
-        if (expression == null) expression = l => true;
+        expression ??= l => true;
         var mongoCollection = CreateCollection<T>();
-        var elements = await mongoCollection.Find(expression).Limit(limit).ToListAsync();
-        return elements;
+        var session = _transactionCoordinator?.GetCurrentSession();
+
+        var findFluent = session != null
+            ? mongoCollection.Find(session, expression)
+            : mongoCollection.Find(expression);
+
+        if (limit.HasValue)
+        {
+            findFluent = findFluent.Limit(limit);
+        }
+
+        return await findFluent.ToListAsync();
     }
 
     protected Task<List<T>> LoadSince<T>(DateTimeOffset since) where T : IVersionable
@@ -62,12 +80,18 @@ public class MongoDbRepositoryBase
 
     protected async Task Upsert<T>(T insertObject, Expression<Func<T, bool>> identityQuerry)
     {
-        var mongoDatabase = CreateClient();
-        var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
-        await mongoCollection.FindOneAndReplaceAsync(
-            identityQuerry,
-            insertObject,
-            new FindOneAndReplaceOptions<T> { IsUpsert = true });
+        var mongoCollection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        var options = new FindOneAndReplaceOptions<T> { IsUpsert = true };
+
+        if (session != null)
+        {
+            await mongoCollection.FindOneAndReplaceAsync(session, identityQuerry, insertObject, options);
+        }
+        else
+        {
+            await mongoCollection.FindOneAndReplaceAsync(identityQuerry, insertObject, options);
+        }
     }
 
     protected Task UpsertTimed<T>(T insertObject, Expression<Func<T, bool>> identityQuerry) where T : IVersionable
@@ -81,24 +105,36 @@ public class MongoDbRepositoryBase
         return Upsert(insertObject, x => x.Id == insertObject.Id);
     }
 
-    protected Task UpsertMany<T>(List<T> insertObject) where T : IIdentifiable
+    protected Task UpsertMany<T>(List<T> insertObjects) where T : IIdentifiable
     {
-        if (!insertObject.Any()) return Task.CompletedTask;
+        if (!insertObjects.Any()) return Task.CompletedTask;
 
         var collection = CreateCollection<T>();
-        var bulkOps = insertObject
+        var session = _transactionCoordinator?.GetCurrentSession();
+        var bulkOps = insertObjects
             .Select(record => new ReplaceOneModel<T>(Builders<T>.Filter
             .Where(x => x.Id == record.Id), record)
             { IsUpsert = true })
             .Cast<WriteModel<T>>().ToList();
-        return collection.BulkWriteAsync(bulkOps);
+
+        return session != null
+            ? collection.BulkWriteAsync(session, bulkOps)
+            : collection.BulkWriteAsync(bulkOps);
     }
 
     protected async Task Delete<T>(Expression<Func<T, bool>> deleteQuery)
     {
-        var mongoDatabase = CreateClient();
-        var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
-        await mongoCollection.DeleteOneAsync<T>(deleteQuery);
+        var mongoCollection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+
+        if (session != null)
+        {
+            await mongoCollection.DeleteOneAsync(session, deleteQuery);
+        }
+        else
+        {
+            await mongoCollection.DeleteOneAsync(deleteQuery);
+        }
     }
 
     protected Task Delete<T>(string id) where T : IIdentifiable
@@ -108,11 +144,19 @@ public class MongoDbRepositoryBase
 
     protected async Task UnsetOne<T>(FieldDefinition<T> fieldName, string id) where T : IIdentifiable
     {
-        // $unset
-        var mongoDatabase = CreateClient();
-        var mongoCollection = mongoDatabase.GetCollection<T>(typeof(T).Name);
+        var mongoCollection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
         var updateDefinition = Builders<T>.Update.Unset(fieldName);
-        await mongoCollection.UpdateOneAsync(x => x.Id == id, updateDefinition);
+        var filter = Builders<T>.Filter.Eq(x => x.Id, id);
+
+        if (session != null)
+        {
+            await mongoCollection.UpdateOneAsync(session, filter, updateDefinition);
+        }
+        else
+        {
+            await mongoCollection.UpdateOneAsync(filter, updateDefinition);
+        }
     }
 }
 
