@@ -11,10 +11,34 @@ namespace W3C.Domain.Repositories;
 public class MongoDbTransactionCoordinator : ITransactionCoordinator
 {
     private readonly IMongoClient _mongoClient;
-    private IClientSessionHandle _session;
+    private IClientSessionHandle _session => IsTransactionActive ? _sessionDictionary[_currentTransactionId.Value] : null;
     private ConcurrentQueue<Func<Task>> _onSuccessHandlers;
+    private AsyncLocal<Guid> _currentTransactionId = new AsyncLocal<Guid>();
+    private ConcurrentDictionary<Guid, IClientSessionHandle> _sessionDictionary = new ConcurrentDictionary<Guid, IClientSessionHandle>();
 
-    public bool IsTransactionActive => _session != null && _session.IsInTransaction;
+    public bool IsTransactionActive
+    {
+        get {
+            if (_currentTransactionId.Value == Guid.Empty) return false;
+            _sessionDictionary.TryGetValue(_currentTransactionId.Value, out var session);
+            if (session == null) return false;
+            return session.IsInTransaction;
+        }
+    }
+
+    public Guid CurrentTransactionId => _currentTransactionId.Value;
+
+    public Guid InitializeTransaction()
+    {
+        if (_currentTransactionId.Value != Guid.Empty)
+        {
+            throw new InvalidOperationException("Transaction already initialized.");
+        }
+
+        var guid = Guid.NewGuid();
+        _currentTransactionId.Value = guid;
+        return guid;
+    }
 
     public MongoDbTransactionCoordinator(IMongoClient mongoClient)
     {
@@ -22,18 +46,26 @@ public class MongoDbTransactionCoordinator : ITransactionCoordinator
         _onSuccessHandlers = new ConcurrentQueue<Func<Task>>();
     }
 
-    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task BeginTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default)
     {
         if (IsTransactionActive)
         {
             throw new InvalidOperationException("A transaction is already in progress.");
         }
-        _session = await _mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
-        _session.StartTransaction();
+        if (transactionId != _currentTransactionId.Value)
+        {
+            throw new InvalidOperationException("Transaction id mismatch: " + transactionId + " != " + _currentTransactionId.Value);
+        }
+        var session = await _mongoClient.StartSessionAsync(cancellationToken: cancellationToken);
+        session.StartTransaction();
+        if (!_sessionDictionary.TryAdd(transactionId, session))
+        {
+            throw new InvalidOperationException("Failed to add session to dictionary.");
+        }
         ClearQueue();
     }
 
-    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task CommitTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default)
     {
         if (!IsTransactionActive)
         {
@@ -44,7 +76,7 @@ public class MongoDbTransactionCoordinator : ITransactionCoordinator
         await ExecuteOnSuccessHandlersAsync();
     }
 
-    public async Task AbortTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task AbortTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default)
     {
         ClearQueue();
 
@@ -98,6 +130,7 @@ public class MongoDbTransactionCoordinator : ITransactionCoordinator
     {
         ClearQueue();
         _session?.Dispose();
-        _session = null;
+        _sessionDictionary.TryRemove(_currentTransactionId.Value, out _);
+        _currentTransactionId.Value = Guid.Empty;
     }
 }

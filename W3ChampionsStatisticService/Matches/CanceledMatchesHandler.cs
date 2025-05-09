@@ -32,8 +32,9 @@ public class CanceledMatchesHandler(
             {
                 try
                 {
-                    await using (var transaction = await AsyncTransactionScope.CreateAsync(_transactionCoordinator))
+                    await using (var transaction = AsyncTransactionScope.Create(_transactionCoordinator))
                     {
+                        await transaction.Start();
                         if (nextEvent.match.gameMode != GameMode.CUSTOM)
                         {
                             var ongoingMatch = await _matchRepository.LoadDetailsByOngoingMatchId(nextEvent.match.id);

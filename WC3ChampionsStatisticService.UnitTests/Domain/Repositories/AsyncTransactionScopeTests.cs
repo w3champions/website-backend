@@ -1,3 +1,4 @@
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using System;
@@ -6,65 +7,63 @@ using W3C.Domain.Repositories;
 namespace WC3ChampionsStatisticService.Tests.Domain.Repositories;
 
 [TestFixture]
-public class AsyncTransactionScopeTests
+public class AsyncTransactionScopeTests : IntegrationTestBase
 {
-    private Mock<ITransactionCoordinator> _mockCoordinator;
+    private MongoDbTransactionCoordinator _transactionCoordinator;
 
     [SetUp]
-    public void SetUp()
+    public void SetupTest()
     {
-        _mockCoordinator = new Mock<ITransactionCoordinator>();
-        // Default setup for IsTransactionActive, can be overridden in specific tests
-        _mockCoordinator.Setup(c => c.IsTransactionActive).Returns(true);
-    }
-
-    [Test]
-    public async Task CreateAsync_CallsBeginTransaction()
-    {
-        await using (var scope = await AsyncTransactionScope.CreateAsync(_mockCoordinator.Object))
-        {
-            _mockCoordinator.Verify(c => c.BeginTransactionAsync(default), Times.Once);
-        }
+        _transactionCoordinator = new MongoDbTransactionCoordinator(MongoClient);
     }
 
     [Test]
     public void CreateAsync_NullCoordinator_ThrowsArgumentNullException()
     {
-        Assert.ThrowsAsync<ArgumentNullException>(async () => await AsyncTransactionScope.CreateAsync(null));
+        Assert.Throws<ArgumentNullException>(() => AsyncTransactionScope.Create(null));
     }
 
     [Test]
     public async Task DisposeAsync_WhenCompleted_CallsCommitTransaction()
     {
-        await using (var scope = await AsyncTransactionScope.CreateAsync(_mockCoordinator.Object))
+        bool handlerRun = false;
+        await using (var scope = AsyncTransactionScope.Create(_transactionCoordinator))
         {
+            await scope.Start();
+            await scope.RegisterOnSuccessHandler(async () =>
+            {
+                handlerRun = true;
+            });
             scope.Complete();
         }
 
-        _mockCoordinator.Verify(c => c.CommitTransactionAsync(default), Times.Once);
-        _mockCoordinator.Verify(c => c.AbortTransactionAsync(default), Times.Never);
+        Assert.IsTrue(handlerRun);
     }
 
     [Test]
     public async Task DisposeAsync_WhenNotCompleted_CallsAbortTransaction()
     {
-        await using (var scope = await AsyncTransactionScope.CreateAsync(_mockCoordinator.Object))
+        bool handlerRun = false;
+        await using (var scope = AsyncTransactionScope.Create(_transactionCoordinator))
         {
+            await scope.Start();
+            await scope.RegisterOnSuccessHandler(async () =>
+            {
+                handlerRun = true;
+            });
             // No call to scope.Complete()
         }
 
-        _mockCoordinator.Verify(c => c.AbortTransactionAsync(default), Times.Once);
-        _mockCoordinator.Verify(c => c.CommitTransactionAsync(default), Times.Never);
+        Assert.IsFalse(handlerRun);
     }
 
 
     [Test]
     public async Task Complete_WhenTransactionNotActive_ThrowsInvalidOperationException()
     {
-        _mockCoordinator.Setup(c => c.IsTransactionActive).Returns(false); // Simulate transaction not active
-
-        await using (var scope = await AsyncTransactionScope.CreateAsync(_mockCoordinator.Object))
+        await using (var scope = AsyncTransactionScope.Create(_transactionCoordinator))
         {
+            // No call to scope.Start();
             Assert.Throws<InvalidOperationException>(() => scope.Complete());
         }
     }

@@ -7,9 +7,11 @@ namespace W3C.Domain.Repositories;
 
 public interface ITransactionCoordinator : IDisposable
 {
-    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
-    Task CommitTransactionAsync(CancellationToken cancellationToken = default);
-    Task AbortTransactionAsync(CancellationToken cancellationToken = default);
+    Guid InitializeTransaction();
+    Guid CurrentTransactionId { get; }
+    Task BeginTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default);
+    Task CommitTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default);
+    Task AbortTransactionAsync(Guid transactionId, CancellationToken cancellationToken = default);
     Task RegisterOnSuccessHandler(Func<Task> handler, bool executeImmediatelyWithoutTransaction = true);
     IClientSessionHandle GetCurrentSession();
     bool IsTransactionActive { get; }

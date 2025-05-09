@@ -46,9 +46,9 @@ public class CanceledMatchesHandlerTests
             _mockTransactionCoordinator.Object,
             _mockTrackingService.Object);
 
-        _mockTransactionCoordinator.Setup(t => t.BeginTransactionAsync(default)).Returns(Task.CompletedTask);
-        _mockTransactionCoordinator.Setup(t => t.CommitTransactionAsync(default)).Returns(Task.CompletedTask);
-        _mockTransactionCoordinator.Setup(t => t.AbortTransactionAsync(default)).Returns(Task.CompletedTask);
+        _mockTransactionCoordinator.Setup(t => t.BeginTransactionAsync(It.IsAny<Guid>(), default)).Returns(Task.CompletedTask);
+        _mockTransactionCoordinator.Setup(t => t.CommitTransactionAsync(It.IsAny<Guid>(), default)).Returns(Task.CompletedTask);
+        _mockTransactionCoordinator.Setup(t => t.AbortTransactionAsync(It.IsAny<Guid>(), default)).Returns(Task.CompletedTask);
         _mockTransactionCoordinator.Setup(t => t.IsTransactionActive).Returns(true);
     }
 
@@ -71,7 +71,7 @@ public class CanceledMatchesHandlerTests
 
         _mockMatchRepo.Verify(r => r.DeleteOnGoingMatch(It.IsAny<Matchup>()), Times.Never);
         _mockEventRepo.Verify(r => r.DeleteCanceledEvent(It.IsAny<ObjectId>()), Times.Never);
-        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(default), Times.Never);
+        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(It.IsAny<Guid>(),default), Times.Never);
     }
 
     [Test]
@@ -101,11 +101,11 @@ public class CanceledMatchesHandlerTests
 
         await _handler.Update();
 
-        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
         _mockMatchRepo.Verify(r => r.DeleteOnGoingMatch(It.IsAny<Matchup>()), Times.Once);
         _mockEventRepo.Verify(r => r.DeleteCanceledEvent(canceledEvent.Id), Times.Once);
-        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(default), Times.Once);
-        _mockTransactionCoordinator.Verify(t => t.AbortTransactionAsync(default), Times.Never);
+        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.AbortTransactionAsync(It.IsAny<Guid>(),default), Times.Never);
     }
 
     [Test]
@@ -120,11 +120,11 @@ public class CanceledMatchesHandlerTests
 
         await _handler.Update();
 
-        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
         _mockMatchRepo.Verify(r => r.DeleteOnGoingMatch(It.IsAny<Matchup>()), Times.Never);
         _mockMatchRepo.Verify(r => r.LoadDetailsByOngoingMatchId(It.IsAny<string>()), Times.Never);
         _mockEventRepo.Verify(r => r.DeleteCanceledEvent(canceledEvent.Id), Times.Once);
-        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
     }
 
     [Test]
@@ -142,10 +142,10 @@ public class CanceledMatchesHandlerTests
 
         await _handler.Update();
 
-        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
         _mockMatchRepo.Verify(r => r.DeleteOnGoingMatch(It.IsAny<Matchup>()), Times.Never);
         _mockEventRepo.Verify(r => r.DeleteCanceledEvent(canceledEvent.Id), Times.Once);
-        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
     }
 
     [Test]
@@ -165,9 +165,9 @@ public class CanceledMatchesHandlerTests
         // Use Throws.TypeOf to assert that an exception is thrown
         Assert.That(async () => await _handler.Update(), Throws.TypeOf<Exception>());
 
-        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(default), Times.Once);
-        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(default), Times.Never);
-        _mockTransactionCoordinator.Verify(t => t.AbortTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(It.IsAny<Guid>(),default), Times.Never);
+        _mockTransactionCoordinator.Verify(t => t.AbortTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
         _mockTrackingService.Verify(ts => ts.TrackException(expectedException, $"CanceledMatchesHandler died on event {canceledEvent.Id}"), Times.Once);
         _mockEventRepo.Verify(r => r.DeleteCanceledEvent(It.IsAny<ObjectId>()), Times.Never);
     }
@@ -189,9 +189,9 @@ public class CanceledMatchesHandlerTests
         // Use Throws.TypeOf to assert that an exception is thrown
         Assert.That(async () => await _handler.Update(), Throws.TypeOf<Exception>());
 
-        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(default), Times.Once);
-        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(default), Times.Never);
-        _mockTransactionCoordinator.Verify(t => t.AbortTransactionAsync(default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.BeginTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
+        _mockTransactionCoordinator.Verify(t => t.CommitTransactionAsync(It.IsAny<Guid>(),default), Times.Never);
+        _mockTransactionCoordinator.Verify(t => t.AbortTransactionAsync(It.IsAny<Guid>(),default), Times.Once);
         _mockTrackingService.Verify(ts => ts.TrackException(expectedException, $"CanceledMatchesHandler died on event {canceledEvent.Id}"), Times.Once);
     }
 }

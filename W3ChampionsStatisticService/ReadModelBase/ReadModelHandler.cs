@@ -41,8 +41,9 @@ public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
                 if (lastVersion.IsStopped) return;
                 try
                 {
-                    await using (var transaction = await AsyncTransactionScope.CreateAsync(_transactionCoordinator))
+                    await using (var transaction = AsyncTransactionScope.Create(_transactionCoordinator))
                     {
+                        await transaction.Start();
                         if (nextEvent.match.season > lastVersion.Season)
                         {
                             await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);

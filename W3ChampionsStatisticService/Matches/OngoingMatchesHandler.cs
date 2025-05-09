@@ -33,8 +33,9 @@ public class OngoingMatchesHandler(
             {
                 try
                 {
-                    await using (var transaction = await AsyncTransactionScope.CreateAsync(_transactionCoordinator))
+                    await using (var transaction = AsyncTransactionScope.Create(_transactionCoordinator))
                     {
+                        await transaction.Start();
                         if (nextEvent.match.gameMode != GameMode.CUSTOM)
                         {
                             var matchup = OnGoingMatchup.Create(nextEvent);
