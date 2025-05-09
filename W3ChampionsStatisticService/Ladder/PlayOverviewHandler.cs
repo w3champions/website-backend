@@ -7,7 +7,7 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
-
+using Serilog;
 namespace W3ChampionsStatisticService.Ladder;
 
 public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadModelHandler
@@ -21,7 +21,7 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadMode
 
         if (winners.Count == 0 || losers.Count == 0)
         {
-            // We should log the bad event here
+            Log.Error("No winners or losers when processing MatchFinishedEvent for {MatchId} in PlayOverviewHandler", nextEvent.match.id);
             return;
         }
 
@@ -29,6 +29,7 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadMode
                 || nextEvent.match.gameMode == GameMode.GM_2v2_AT)
             && winners.Count != 2 && losers.Count != 2)
         {
+            Log.Error("Invalid number of winners or losers when processing 2v2 MatchFinishedEvent for {MatchId} in PlayOverviewHandler", nextEvent.match.id);
             return;
         }
 

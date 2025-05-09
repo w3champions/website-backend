@@ -18,7 +18,7 @@ using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : MongoDbRepositoryBase(mongoClient), IMatchRepository
+public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache, ITransactionCoordinator transactionCoordinator) : MongoDbRepositoryBase(mongoClient, transactionCoordinator), IMatchRepository
 {
     private readonly IOngoingMatchesCache _cache = cache;
 
@@ -195,18 +195,18 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return filter;
     }
 
-    public Task InsertOnGoingMatch(OnGoingMatchup matchup)
+    public async Task InsertOnGoingMatch(OnGoingMatchup matchup)
     {
-        _cache.Upsert(matchup);
-        return Upsert(matchup, m => m.MatchId == matchup.MatchId);
+        await _cache.Upsert(matchup);
+        await Upsert(matchup, m => m.MatchId == matchup.MatchId);
     }
 
 
-    public Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+    public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
     {
         var mongoCollection = CreateCollection<OnGoingMatchup>();
 
-        return mongoCollection
+        return await mongoCollection
             .Find(m => m.Team1Players.Contains(playerId)
                     || m.Team2Players.Contains(playerId)
                     || m.Team3Players.Contains(playerId)
@@ -215,17 +215,18 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             .FirstOrDefaultAsync();
     }
 
-    public Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId)
+    public async Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId)
     {
-        return _cache.LoadOnGoingMatchForPlayer(playerId);
+        return await _cache.LoadOnGoingMatchForPlayer(playerId);
     }
 
-    public Task DeleteOnGoingMatch(string matchId)
+    public async Task DeleteOnGoingMatch(Matchup matchup)
     {
-        return Delete<OnGoingMatchup>(x => x.MatchId == matchId).ContinueWith(_ => _cache.Delete(matchId));
+        await Delete<OnGoingMatchup>(x => x.MatchId == matchup.MatchId);
+        await _cache.Delete(matchup);
     }
 
-    public Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+    public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,
         GateWay gateWay = GateWay.Undefined,
         int offset = 0,
@@ -235,17 +236,17 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int maxMmr = 3000,
         string sort = "startTimeDescending")
     {
-        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
+        return await _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
     }
 
-    public Task<long> CountOnGoingMatches(
+    public async Task<long> CountOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000)
     {
-        return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
+        return await _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
     }
 
     public Task<Season> LoadLastSeason()

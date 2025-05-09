@@ -30,11 +30,13 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         var mockMatchRepo = new Mock<IMatchRepository>();
 
         var versionRepository = new VersionRepository(MongoClient);
+        var transactionCoordinator = new MongoDbTransactionCoordinator(MongoClient);
 
         var handler = new ReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object));
+            new MatchReadModelHandler(mockMatchRepo.Object),
+            transactionCoordinator);
 
         await handler.Update();
 
@@ -56,11 +58,12 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         var mockMatchRepo = new Mock<IMatchRepository>();
 
         var versionRepository = new VersionRepository(MongoClient);
-
+        var transactionCoordinator = new MongoDbTransactionCoordinator(MongoClient);
         var handler = new ReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object));
+            new MatchReadModelHandler(mockMatchRepo.Object),
+            transactionCoordinator);
 
         await handler.Update();
 
@@ -100,13 +103,16 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var transactionCoordinator = new MongoDbTransactionCoordinator(MongoClient);
+        var ongoingMatchesCache = new OngoingMatchesCache(MongoClient, transactionCoordinator);
+        var matchRepository = new MatchRepository(MongoClient, ongoingMatchesCache, transactionCoordinator);
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new ReadModelHandler<MatchReadModelHandler>(
             new MatchEventRepository(MongoClient),
             versionRepository,
-            new MatchReadModelHandler(matchRepository));
+            new MatchReadModelHandler(matchRepository),
+            transactionCoordinator);
 
         await handler.Update();
 

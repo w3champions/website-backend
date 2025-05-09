@@ -4,19 +4,32 @@ using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.GameObjects;
+using W3C.Domain.Repositories;
+using Moq;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
 
 [TestFixture]
 public class MatchupDetailTests : IntegrationTestBase
 {
+    private MongoDbTransactionCoordinator _transactionCoordinator;
+
+    [SetUp]
+    public void SetupTest()
+    {
+        _transactionCoordinator = new MongoDbTransactionCoordinator(MongoClient);
+    }
+
     [Test]
     public async Task LoadDetails_NotDetailsAvailable()
     {
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent.match.id = "nmhcCLaRc7";
         matchFinishedEvent.Id = ObjectId.GenerateNewId();
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -35,7 +48,10 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await InsertMatchEvent(matchFinishedEvent);
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -59,7 +75,10 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await InsertMatchEvent(matchFinishedEvent);
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -85,7 +104,10 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await InsertMatchEvent(matchFinishedEvent);
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -111,7 +133,10 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await InsertMatchEvent(matchFinishedEvent);
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 

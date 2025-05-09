@@ -7,6 +7,8 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.W3ChampionsStats;
+using W3C.Domain.Repositories;
+using Moq;
 
 namespace WC3ChampionsStatisticService.Tests.Performance;
 
@@ -14,6 +16,14 @@ namespace WC3ChampionsStatisticService.Tests.Performance;
 [Ignore("Use only when performance testing DB")]
 public class DBPerformanceTest : IntegrationTestBase
 {
+    private MongoDbTransactionCoordinator _transactionCoordinator;
+
+    [SetUp]
+    public void SetupTest()
+    {
+        _transactionCoordinator = new MongoDbTransactionCoordinator(MongoClient);
+    }
+
     [Test]
     public async Task PopularHours_TimeslotsAreSetCorrectlyAfterLoad()
     {
@@ -32,7 +42,10 @@ public class DBPerformanceTest : IntegrationTestBase
     [Test]
     public async Task LoadMatchesColorful()
     {
-        var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchesRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
         Stopwatch sw = new();
         sw.Start();
         string playerId = "COLORFUL#5214";
@@ -56,7 +69,10 @@ public class DBPerformanceTest : IntegrationTestBase
     [Test]
     public async Task LoadCountColorful()
     {
-        var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchesRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
         Stopwatch sw = new();
         sw.Start();
         string playerId = "COLORFUL#5214";
@@ -78,7 +94,10 @@ public class DBPerformanceTest : IntegrationTestBase
     [Test]
     public async Task LoadMatchesShaDe()
     {
-        var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchesRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
         Stopwatch sw = new();
         sw.Start();
         string playerId = "ShaDeFaDe#2441";
@@ -102,7 +121,10 @@ public class DBPerformanceTest : IntegrationTestBase
     [Test]
     public async Task LoadCountShaDe()
     {
-        var matchesRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var matchesRepository = new MatchRepository(
+            MongoClient,
+            new OngoingMatchesCache(MongoClient, _transactionCoordinator),
+            _transactionCoordinator);
         Stopwatch sw = new();
         sw.Start();
         string playerId = "ShaDeFaDe#2441";

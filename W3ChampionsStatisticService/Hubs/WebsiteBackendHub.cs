@@ -89,7 +89,7 @@ public class WebsiteBackendHub(
             var receiverFriendlist = await _friendRepository.LoadFriendlist(req.Receiver);
             await CanMakeFriendRequest(receiverFriendlist, req);
             await _friendRepository.CreateFriendRequest(req);
-            _friendRequestCache.Insert(req);
+            await _friendRequestCache.Insert(req);
             sentRequests.Add(req);
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -114,7 +114,7 @@ public class WebsiteBackendHub(
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to delete.");
             await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendRequestCache.Delete(request);
 
             List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
             await Clients.Caller.SendAsync(
@@ -143,12 +143,12 @@ public class WebsiteBackendHub(
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to accept.");
             await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendRequestCache.Delete(request);
             var reciprocalRequest = await _friendRequestCache.LoadFriendRequest(new FriendRequest(req.Receiver, req.Sender));
             if (reciprocalRequest != null)
             {
                 await _friendRepository.DeleteFriendRequest(reciprocalRequest);
-                _friendRequestCache.Delete(reciprocalRequest);
+                await _friendRequestCache.Delete(reciprocalRequest);
             }
 
             if (!currentUserFriendlist.Friends.Contains(req.Sender))
@@ -192,7 +192,7 @@ public class WebsiteBackendHub(
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to deny.");
             await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendRequestCache.Delete(request);
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await Clients.Caller.SendAsync(
@@ -221,7 +221,7 @@ public class WebsiteBackendHub(
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to block.");
             await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendRequestCache.Delete(request);
 
             currentUserFriendlist.BlockedBattleTags.Add(req.Sender);
             await _friendRepository.UpsertFriendlist(currentUserFriendlist);

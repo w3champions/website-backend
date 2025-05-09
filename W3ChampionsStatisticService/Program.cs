@@ -88,12 +88,18 @@ builder.Services.AddSwaggerGen(f =>
 });
 
 // Configure and add MongoDB
-string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513?replicaSet=rs0"; // "mongodb://localhost:27017?replicaSet=rs0";
+if (!mongoConnectionString.Contains("replicaSet="))
+{
+    throw new Exception("replicaSet missing in MONGO_CONNECTION_STRING");
+}
 MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
 mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
 mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
 var mongoClient = new MongoClient(mongoSettings);
 builder.Services.AddSingleton(mongoClient);
+
+builder.Services.AddScoped<ITransactionCoordinator, MongoDbTransactionCoordinator>();
 
 // Add SignalR for using websockets
 builder.Services.AddSignalR();
@@ -108,7 +114,7 @@ builder.Services.AddSpecialBsonRegistrations();
 builder.Services.AddBasicAuthForMetrics();
 
 // Add Application Insights
-builder.Services.AddSingleton<TrackingService>();
+builder.Services.AddSingleton<ITrackingService, TrackingService>();
 string disableTelemetry = Environment.GetEnvironmentVariable("DISABLE_TELEMETRY");
 if (disableTelemetry == "true")
 {
@@ -215,6 +221,9 @@ if (startHandlers == "true")
 
     // On going matches
     builder.Services.AddUnversionedReadModelService<OngoingMatchesHandler>();
+
+    // Matches canceled by matchmaking
+    builder.Services.AddUnversionedReadModelService<CanceledMatchesHandler>();
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
