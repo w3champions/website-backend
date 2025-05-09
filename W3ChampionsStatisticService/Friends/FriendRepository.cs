@@ -23,7 +23,7 @@ public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public Task UpsertFriendlist(Friendlist friendlist)
     {
-        return Upsert(friendlist, p => p.Id == friendlist.Id);
+        return Upsert(friendlist, Builders<Friendlist>.Filter.Eq(p => p.Id, friendlist.Id));
     }
 
     public async Task<FriendRequest> CreateFriendRequest(FriendRequest request)
@@ -34,7 +34,10 @@ public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<FriendRequest> LoadFriendRequest(string sender, string receiver)
     {
-        return await LoadFirst<FriendRequest>(r => r.Sender == sender && r.Receiver == receiver);
+        return await LoadFirst<FriendRequest>(Builders<FriendRequest>.Filter.And(
+            Builders<FriendRequest>.Filter.Eq(r => r.Sender, sender),
+            Builders<FriendRequest>.Filter.Eq(r => r.Receiver, receiver)
+        ));
     }
 
     public async Task DeleteFriendRequest(FriendRequest request)
@@ -44,20 +47,23 @@ public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<bool> FriendRequestExists(FriendRequest request)
     {
-        var req = await LoadFirst<FriendRequest>(r => r.Sender == request.Sender && r.Receiver == request.Receiver);
+        var req = await LoadFirst(Builders<FriendRequest>.Filter.And(
+            Builders<FriendRequest>.Filter.Eq(r => r.Sender, request.Sender),
+            Builders<FriendRequest>.Filter.Eq(r => r.Receiver, request.Receiver)
+        ));
         if (req == null) return false;
         return true;
     }
 
     public async Task<List<FriendRequest>> LoadAllFriendRequestsSentByPlayer(string sender)
     {
-        var requests = await LoadAll<FriendRequest>(r => r.Sender == sender);
+        var requests = await LoadAll(Builders<FriendRequest>.Filter.Eq(r => r.Sender, sender));
         return requests;
     }
 
     public async Task<List<FriendRequest>> LoadAllFriendRequestsSentToPlayer(string receiver)
     {
-        var requests = await LoadAll<FriendRequest>(r => r.Receiver == receiver);
+        var requests = await LoadAll(Builders<FriendRequest>.Filter.Eq(r => r.Receiver, receiver));
         return requests;
     }
 }

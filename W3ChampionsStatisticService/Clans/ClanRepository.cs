@@ -12,31 +12,31 @@ public class ClanRepository : MongoDbRepositoryBase, IClanRepository
 {
     public async Task TryInsertClan(Clan clan)
     {
-        var clanFoundById = await LoadFirst<Clan>(c => c.ClanId == clan.ClanId);
+        var clanFoundById = await LoadFirst(Builders<Clan>.Filter.Eq(c => c.ClanId, clan.ClanId));
         if (clanFoundById != null) throw new ValidationException($"Clan abbreviation already taken: {clan.ClanId}");
-        var clanFoundByName = await LoadFirst<Clan>(c => c.ClanName == clan.ClanName);
+        var clanFoundByName = await LoadFirst(Builders<Clan>.Filter.Eq(c => c.ClanName, clan.ClanName));
         if (clanFoundByName != null) throw new ValidationException($"Clan name already taken: {clan.ClanName}");
         await Insert(clan);
     }
 
     public Task UpsertClan(Clan clan)
     {
-        return Upsert(clan, c => c.ClanId == clan.ClanId);
+        return Upsert(clan, Builders<Clan>.Filter.Eq(c => c.ClanId, clan.ClanId));
     }
 
     public Task<Clan> LoadClan(string clanId)
     {
-        return LoadFirst<Clan>(l => l.ClanId == clanId);
+        return LoadFirst(Builders<Clan>.Filter.Eq(l => l.ClanId, clanId));
     }
 
     public Task<ClanMembership> LoadMemberShip(string battleTag)
     {
-        return LoadFirst<ClanMembership>(m => m.BattleTag == battleTag);
+        return LoadFirst(Builders<ClanMembership>.Filter.Eq(m => m.BattleTag, battleTag));
     }
 
     public Task UpsertMemberShip(ClanMembership clanMemberShip)
     {
-        return UpsertTimed(clanMemberShip, c => c.BattleTag == clanMemberShip.BattleTag);
+        return UpsertTimed(clanMemberShip, Builders<ClanMembership>.Filter.Eq(c => c.BattleTag, clanMemberShip.BattleTag));
     }
 
     public Task DeleteClan(string clanId)
@@ -46,12 +46,12 @@ public class ClanRepository : MongoDbRepositoryBase, IClanRepository
 
     public Task<List<ClanMembership>> LoadMemberShips(List<string> clanMembers)
     {
-        return LoadAll<ClanMembership>(m => clanMembers.Contains(m.BattleTag));
+        return LoadAll(Builders<ClanMembership>.Filter.In(m => m.BattleTag, clanMembers));
     }
 
     public Task<List<ClanMembership>> LoadMemberShipsSince(DateTimeOffset from)
     {
-        return LoadSince<ClanMembership>(from);
+        return LoadManySince<ClanMembership>(from);
     }
 
     public Task SaveMemberShips(List<ClanMembership> clanMembers)

@@ -220,7 +220,7 @@ public static class TestDtoHelper
         };
     }
 
-    public static MatchStartedEvent CreateFakeStartedEvent()
+    public static MatchStartedEvent CreateFakeStartedEvent(long startTime = 1000000, int mmr = 2500)
     {
         var fixture = new Fixture { RepeatCount = 4 };
         var fakeEvent = fixture.Build<MatchStartedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
@@ -235,11 +235,17 @@ public static class TestDtoHelper
         fakeEvent.match.gateway = GateWay.America;
         fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
         fakeEvent.match.season = 0;
+        fakeEvent.match.startTime = startTime;
 
         fakeEvent.match.players[0].battleTag = name1;
         fakeEvent.match.players[1].battleTag = name2;
         fakeEvent.match.players[2].battleTag = name3;
         fakeEvent.match.players[3].battleTag = name4;
+
+        fakeEvent.match.players[0].mmr.rating = mmr;
+        fakeEvent.match.players[1].mmr.rating = mmr;
+        fakeEvent.match.players[2].mmr.rating = mmr;
+        fakeEvent.match.players[3].mmr.rating = mmr;
 
         return fakeEvent;
     }

@@ -21,9 +21,7 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
             return null;
         }
 
-        PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
-            .Find(x => x.BattleTag == battletag)
-            .FirstOrDefaultAsync();
+        PlayerOverallStats playerStats = await LoadFirst(Builders<PlayerOverallStats>.Filter.Eq(x => x.BattleTag, battletag));
 
         if (playerStats != null)
         {
@@ -43,9 +41,7 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
             await Upsert(personalSettings);
         }
 
-        PlayerOverallStats playerStats = await CreateCollection<PlayerOverallStats>()
-            .Find(x => x.BattleTag == battleTag)
-            .FirstOrDefaultAsync();
+        PlayerOverallStats playerStats = await LoadFirst(Builders<PlayerOverallStats>.Filter.Eq(x => x.BattleTag, battleTag));
 
         if (playerStats != null)
         {
@@ -62,17 +58,12 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
 
     public Task<List<PersonalSetting>> LoadSince(DateTimeOffset from)
     {
-        return LoadSince<PersonalSetting>(from);
+        return LoadAll(Builders<PersonalSetting>.Filter.Gt(p => p.LastUpdated, from));
     }
 
     public async Task<List<PersonalSetting>> LoadMany(string[] battletags)
     {
-        var settings = CreateCollection<PersonalSetting>();
-        var results = await settings
-            .Aggregate()
-            .Match(p => battletags.Contains(p.Id))
-            .ToListAsync();
-        return results;
+        return await LoadAll(Builders<PersonalSetting>.Filter.In(p => p.Id, battletags));
     }
 
     public Task<List<PersonalSetting>> LoadAll()
@@ -83,7 +74,7 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
     public Task Save(PersonalSetting setting)
     {
         setting.RaceWins = null;
-        return UpsertTimed(setting, p => p.Id == setting.Id);
+        return UpsertTimed(setting, Builders<PersonalSetting>.Filter.Eq(p => p.Id, setting.Id));
     }
 
     public Task SaveMany(List<PersonalSetting> settings)
@@ -105,7 +96,7 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
             if (!setting.ToBsonDocument().Contains("SpecialPictures"))
             {
                 setting.SpecialPictures = Array.Empty<SpecialPicture>();
-                outOfDateDocuments.Add(setting);
+            outOfDateDocuments.Add(setting);
             }
         }
 

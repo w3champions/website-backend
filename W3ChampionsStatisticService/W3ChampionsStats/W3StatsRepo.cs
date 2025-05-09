@@ -15,6 +15,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
+using System.ComponentModel;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
@@ -27,17 +28,17 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
 
     public Task<OverallRaceAndWinStat> LoadRaceVsRaceStat(int mmrRange)
     {
-        return LoadFirst<OverallRaceAndWinStat>(m => m.Id == mmrRange);
+        return LoadFirst(Builders<OverallRaceAndWinStat>.Filter.Eq(m => m.Id, mmrRange));
     }
 
     public Task Save(OverallRaceAndWinStat stat)
     {
-        return Upsert(stat, s => s.Id == stat.Id);
+        return Upsert(stat, Builders<OverallRaceAndWinStat>.Filter.Eq(s => s.Id, stat.Id));
     }
 
     public Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode gameMode, GateWay gateway)
     {
-        return LoadFirst<GamesPerDay>($"{gateway.ToString()}_{gameMode.ToString()}_{date:yyyy-MM-dd}");
+        return LoadFirst<GamesPerDay>($"{gateway}_{gameMode}_{date:yyyy-MM-dd}");
     }
 
     public Task Save(List<GamesPerDay> stat)
@@ -47,7 +48,7 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
 
     public Task<GameLengthStat> LoadGameLengths(GameMode mode)
     {
-        return LoadFirst<GameLengthStat>(stat => stat.GameMode == mode);
+        return LoadFirst(Builders<GameLengthStat>.Filter.Eq(stat => stat.GameMode, mode));
     }
 
     public Task<List<GameLengthStat>> LoadAllGameLengths()
@@ -72,40 +73,40 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
 
     public async Task<List<DistinctPlayersPerDay>> LoadPlayersPerDayBetween(DateTimeOffset from, DateTimeOffset to)
     {
-        var mongoCollection = CreateCollection<DistinctPlayersPerDay>();
-
-        var stats = await mongoCollection.Find(s => s.Date >= from && s.Date <= to)
-            .SortByDescending(s => s.Date)
-            .ToListAsync();
-
-        return stats;
+        return await LoadAll(
+            Builders<DistinctPlayersPerDay>.Filter.And(
+                Builders<DistinctPlayersPerDay>.Filter.Gte(s => s.Date, from),
+                Builders<DistinctPlayersPerDay>.Filter.Lte(s => s.Date, to)
+            ),
+            sortBy: Builders<DistinctPlayersPerDay>.Sort.Descending(s => s.Date)
+        );
     }
 
     public async Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(
         DateTimeOffset from,
         DateTimeOffset to)
     {
-        var mongoCollection = CreateCollection<GamesPerDay>();
-
-        var stats = await mongoCollection.Find(s =>
-                s.Date >= from
-                && s.Date <= to)
-            .SortBy(s => s.Date)
-            .ToListAsync();
+        var stats = await LoadAll(
+            Builders<GamesPerDay>.Filter.And(
+                Builders<GamesPerDay>.Filter.Gte(s => s.Date, from),
+                Builders<GamesPerDay>.Filter.Lte(s => s.Date, to)
+            ),
+            sortBy: Builders<GamesPerDay>.Sort.Ascending(s => s.Date)
+        );
 
         var americaStats = stats.Where(g => g.GateWay == GateWay.America).ToList();
         var euStats = stats.Where(g => g.GateWay == GateWay.Europe).ToList();
         var allStats = stats.Where(g => g.GateWay == GateWay.Undefined).ToList();
         var gamesPerDays = new[] { allStats, americaStats, euStats };
-        return gamesPerDays.Select(s =>
+        return [.. gamesPerDays.Select(s =>
             s.GroupBy(gamesPerDay => gamesPerDay.GameMode)
-            .Select(g => new GameDayGroup(g.Key, g.ToList()))
-            .OrderBy(g => g.GameMode).ToList()).ToList();
+            .Select(g => new GameDayGroup(g.Key, [.. g]))
+            .OrderBy(g => g.GameMode).ToList())];
     }
 
     public Task<PopularHoursStat> LoadPopularHoursStat(GameMode mode)
     {
-        return LoadFirst<PopularHoursStat>(stat => stat.GameMode == mode);
+        return LoadFirst(Builders<PopularHoursStat>.Filter.Eq(stat => stat.GameMode, mode));
     }
 
     public Task<List<PopularHoursStat>> LoadAllPopularHoursStat()
@@ -135,7 +136,7 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
 
     public Task<List<OverallHeroWinRatePerHero>> LoadHeroWinrateLike(string heroComboId)
     {
-        return LoadAll<OverallHeroWinRatePerHero>(h => h.Id.StartsWith(heroComboId));
+        return LoadAll(Builders<OverallHeroWinRatePerHero>.Filter.Regex(h => h.Id, $"^{heroComboId}"));
     }
 
     public Task Save(OverallHeroWinRatePerHero overallHeroWinrate)
@@ -164,16 +165,14 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
     }
     public async Task<MatchupLength> LoadMatchupLengthOrCreate(string race1, string race2, string season)
     {
-        var mongoCollection = CreateCollection<MatchupLength>();
         var matchupId = MatchupLength.CompoundNormalizedId(race1, race2, season);
 
-        var stats = await mongoCollection
-            .Find(s => s.Id == matchupId)
-            .ToListAsync();
+        // TODO: Verify this still works
+        var stats = await LoadFirst(Builders<MatchupLength>.Filter.Eq(s => s.Id, matchupId));
 
-        if (stats.Count > 0)
+        if (stats != null)
         {
-            return stats[0];
+            return stats;
         }
 
         return MatchupLength.Create(race1, race2, season);

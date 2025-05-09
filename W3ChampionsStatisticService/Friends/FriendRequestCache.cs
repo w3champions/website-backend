@@ -6,8 +6,10 @@ using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Friends;
 
-public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient)
+public class FriendRequestCache(MongoClient mongoClient, ITransactionCoordinator transactionCoordinator)
+    : MongoDbRepositoryBase(mongoClient, transactionCoordinator)
 {
+    private readonly ITransactionCoordinator _transactionCoordinator = transactionCoordinator;
     private List<FriendRequest> _requests = [];
     private readonly object _lock = new();
 
@@ -41,28 +43,35 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
         return _requests.SingleOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver) != null;
     }
 
-    public void Insert(FriendRequest req)
+    public async Task Insert(FriendRequest req)
     {
-        lock (_lock)
+        await _transactionCoordinator.RegisterOnSuccessHandler(() =>
         {
-            _requests = [.. _requests, req];
-        }
+            lock (_lock)
+            {
+                _requests = [.. _requests, req];
+            }
+            return Task.CompletedTask;
+        });
     }
 
-    public void Delete(FriendRequest req)
+    public async Task Delete(FriendRequest req)
     {
-        lock (_lock)
+        await _transactionCoordinator.RegisterOnSuccessHandler(() =>
         {
-            _requests.Remove(req);
-        }
+            lock (_lock)
+            {
+                _requests.Remove(req);
+            }
+            return Task.CompletedTask;
+        });
     }
 
     private async Task UpdateCacheIfNeeded()
     {
         if (_requests.Count == 0)
         {
-            var mongoCollection = CreateCollection<FriendRequest>();
-            _requests = await mongoCollection.Find(r => true).ToListAsync();
+            _requests = await LoadAll<FriendRequest>();
         }
     }
 }

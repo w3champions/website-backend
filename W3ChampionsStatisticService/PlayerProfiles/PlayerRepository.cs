@@ -19,7 +19,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 {
     public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
     {
-        await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
+        await Upsert(playerOverallStats, Builders<PlayerOverallStats>.Filter.Eq(p => p.BattleTag, playerOverallStats.BattleTag));
     }
 
     public async Task UpsertPlayerOverview(PlayerOverview playerOverview)
@@ -34,17 +34,15 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<List<PlayerDetails>> LoadPlayersRaceWins(List<string> playerIds)
     {
-        var playerRaceWins = CreateCollection<PlayerDetails>(nameof(PlayerOverallStats));
-        var personalSettings = CreateCollection<PersonalSetting>();
+        var aggregator = Aggregate<PlayerDetails>()
+            .Match(Builders<PlayerDetails>.Filter.In(p => p.Id, playerIds));
 
-        return await playerRaceWins
-            .Aggregate()
-            .Match(x => playerIds.Contains(x.Id))
-            .Lookup<PlayerDetails, PersonalSetting, PlayerDetails>(personalSettings,
+        var lookup = Lookup<PlayerDetails, PersonalSetting, PlayerDetails>(aggregator,
                 raceWins => raceWins.Id,
                 settings => settings.Id,
-                details => details.PersonalSettings)
-            .ToListAsync();
+                details => details.PersonalSettings);
+
+        return await lookup.ToListAsync();
     }
 
     public Task UpsertWins(List<PlayerWinLoss> winrate)
@@ -54,19 +52,22 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode)
     {
-        var mongoCollection = CreateCollection<PlayerOverview>();
-        var mmrs = await mongoCollection
-            .Find(p => p.Season == season &&
-                        p.GateWay == gateWay &&
-                        p.GameMode == gameMode)
-            .Project(p => p.MMR)
-            .ToListAsync();
+        var filter = Builders<PlayerOverview>.Filter.And(
+            Builders<PlayerOverview>.Filter.Eq(p => p.Season, season),
+            Builders<PlayerOverview>.Filter.Eq(p => p.GateWay, gateWay),
+            Builders<PlayerOverview>.Filter.Eq(p => p.GameMode, gameMode)
+        );
+        
+        var mmrs = await Find(filter).Project(p => p.MMR).ToListAsync();
         return mmrs;
     }
 
     public Task<List<PlayerOverallStats>> SearchForPlayer(string search)
     {
-        return LoadAll<PlayerOverallStats>(p => p.BattleTag.Contains(search, System.StringComparison.CurrentCultureIgnoreCase));
+        var filter = Builders<PlayerOverallStats>.Filter.Regex(
+            p => p.BattleTag, 
+            new MongoDB.Bson.BsonRegularExpression(search, "i"));
+        return LoadAll(filter);
     }
 
     public Task<PlayerGameModeStatPerGateway> LoadGameModeStatPerGateway(string id)
@@ -84,20 +85,36 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         GateWay gateWay,
         int season)
     {
-        return LoadAll<PlayerGameModeStatPerGateway>(t =>
-            t.PlayerIds.Any(player => player.BattleTag == battleTag) &&
-            t.GateWay == gateWay &&
-            t.Season == season);
+        return LoadAll(
+            Builders<PlayerGameModeStatPerGateway>.Filter.And(
+                Builders<PlayerGameModeStatPerGateway>.Filter.ElemMatch(p => p.PlayerIds, player => player.BattleTag == battleTag),
+                Builders<PlayerGameModeStatPerGateway>.Filter.Eq(p => p.GateWay, gateWay),
+                Builders<PlayerGameModeStatPerGateway>.Filter.Eq(p => p.Season, season)
+            )
+        );
     }
 
     public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
     {
-        return LoadAll<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay);
+        return LoadAll(
+            Builders<PlayerRaceStatPerGateway>.Filter.And(
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.BattleTag, battleTag),
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.Season, season),
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.GateWay, gateWay)
+            )
+        );
     }
 
     public Task<PlayerRaceStatPerGateway> LoadRaceStatPerGateway(string battleTag, Race race, GateWay gateWay, int season)
     {
-        return LoadFirst<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay && t.Race == race);
+        return LoadFirst(
+            Builders<PlayerRaceStatPerGateway>.Filter.And(
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.BattleTag, battleTag),
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.Season, season),
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.GateWay, gateWay),
+                Builders<PlayerRaceStatPerGateway>.Filter.Eq(p => p.Race, race)
+            )
+        );
     }
 
     public Task UpsertPlayerRaceStat(PlayerRaceStatPerGateway stat)
@@ -107,7 +124,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public Task<PlayerOverallStats> LoadPlayerOverallStats(string battleTag)
     {
-        return LoadFirst<PlayerOverallStats>(p => p.BattleTag == battleTag);
+        return LoadFirst(Builders<PlayerOverallStats>.Filter.Eq(p => p.BattleTag, battleTag));
     }
 
     public Task<PlayerOverview> LoadOverview(string battleTag)
@@ -117,16 +134,16 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public Task<List<PlayerOverview>> LoadOverviews(int season)
     {
-        return LoadAll<PlayerOverview>(t => t.Season == season);
+        return LoadAll(Builders<PlayerOverview>.Filter.Eq(p => p.Season, season));
     }
 
     public async Task<Dictionary<string, PlayerOverallStats>> GetPlayerBattleTagsAsync(
         ICollection<string> personalSettingIds)
     {
         // Fetch corresponding stats to fill in seasons
-        var playerStats = await CreateCollection<PlayerOverallStats>()
-            .Find(ps => personalSettingIds.Contains(ps.BattleTag))
-            .ToListAsync();
+        var playerStats = await LoadAll(
+            Builders<PlayerOverallStats>.Filter.In(p => p.BattleTag, personalSettingIds)
+        );
         var playerStatsMap = playerStats.ToDictionary(ps => ps.BattleTag);
         return playerStatsMap;
     }
@@ -149,12 +166,10 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<PlayerGameLength> LoadOrCreateGameLengthForPlayerStats(string battleTag, int season)
     {
-        var mongoCollection = CreateCollection<PlayerGameLength>();
         var compoundId = PlayerGameLength.CompoundId(battleTag, season);
-
-        var gameLengthsForPlayer = await mongoCollection.Find(s =>
-                s.Id == compoundId)
-            .ToListAsync();
+        var gameLengthsForPlayer = await LoadAll(
+            Builders<PlayerGameLength>.Filter.Eq(p => p.Id, compoundId)
+        );
 
         if (gameLengthsForPlayer.Count > 0)
         {

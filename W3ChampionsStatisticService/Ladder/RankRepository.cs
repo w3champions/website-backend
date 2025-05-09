@@ -17,39 +17,56 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
     {
-        return JoinWith(rank =>
-            rank.League == leagueId
-            && rank.Gateway == gateWay
-            && rank.GameMode == gameMode
-            && rank.Season == season);
+        return JoinWith(Builders<Rank>.Filter.And(
+            Builders<Rank>.Filter.Eq(rank => rank.League, leagueId),
+            Builders<Rank>.Filter.Eq(rank => rank.Gateway, gateWay),
+            Builders<Rank>.Filter.Eq(rank => rank.GameMode, gameMode),
+            Builders<Rank>.Filter.Eq(rank => rank.Season, season)
+        ));
     }
 
     public async Task<List<Rank>> LoadPlayersOfCountry(string countryCode, int season, GateWay gateWay, GameMode gameMode)
     {
+        // TODO: Don't return entire list and then filter, but apply filter to query directly
         var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
         var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
 
-        return await JoinWith(rank => rank.Gateway == gateWay
-                && rank.GameMode == gameMode
-                && rank.Season == season
-                && (battleTags.Contains(rank.Player1Id) || battleTags.Contains(rank.Player2Id)));
+        return await JoinWith(Builders<Rank>.Filter.And(
+            Builders<Rank>.Filter.Eq(rank => rank.Gateway, gateWay),
+            Builders<Rank>.Filter.Eq(rank => rank.GameMode, gameMode),
+            Builders<Rank>.Filter.Eq(rank => rank.Season, season),
+            Builders<Rank>.Filter.In(rank => rank.Player1Id, battleTags)
+        ));
     }
 
     public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
     {
-        return JoinWith(rank =>
-            rank.PlayerId.Contains(searchFor, StringComparison.CurrentCultureIgnoreCase)
-            && rank.Gateway == gateWay
-            && (gameMode == GameMode.Undefined || rank.GameMode == gameMode)
-            && rank.Season == season);
+        var filters = new List<FilterDefinition<Rank>>
+        {
+            Builders<Rank>.Filter.Regex(
+            rank => rank.PlayerId,
+            new MongoDB.Bson.BsonRegularExpression(searchFor, "i")),
+            Builders<Rank>.Filter.Eq(rank => rank.Gateway, gateWay),
+            Builders<Rank>.Filter.Eq(rank => rank.Season, season)
+        };
+        if (gameMode != GameMode.Undefined)
+        {
+            filters.Add(Builders<Rank>.Filter.Eq(rank => rank.GameMode, gameMode));
+        }
+
+        // TODO: add limit
+        return JoinWith(Builders<Rank>.Filter.And(filters));
     }
 
     public async Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string tagSearch)
     {
         // searches through all battletags that have ever played a game on the system - does not return duplicates or AT teams
 
-        var ranksList = await JoinWith(rank => rank.PlayerId.Contains(tagSearch, StringComparison.CurrentCultureIgnoreCase));
+        var ranksList = await JoinWith(Builders<Rank>.Filter.Regex(
+            rank => rank.PlayerId,
+            new MongoDB.Bson.BsonRegularExpression(tagSearch, "i"))
+        );
 
         var listOfProxyData = new List<PlayerInfoForProxy>();
 
@@ -89,28 +106,36 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
     {
-        return JoinWith(rank => rank.Id.Contains(searchFor, StringComparison.CurrentCultureIgnoreCase) && rank.Season == season);
+        return JoinWith(Builders<Rank>.Filter.And(
+            Builders<Rank>.Filter.Regex(
+            rank => rank.Id,
+            new MongoDB.Bson.BsonRegularExpression(searchFor, "i")),
+            Builders<Rank>.Filter.Eq(rank => rank.Season, season)
+        ));
     }
 
     public Task<List<LeagueConstellation>> LoadLeagueConstellation(int? season = null)
     {
-        return LoadAll<LeagueConstellation>(l => season == null || l.Season == season);
+        return LoadAll(
+            season != null ? Builders<LeagueConstellation>.Filter.Eq(l => l.Season, season)
+            :  Builders<LeagueConstellation>.Filter.Empty
+        );
     }
 
-    private async Task<List<Rank>> JoinWith(Expression<Func<Rank, bool>> matchExpression)
+    private async Task<List<Rank>> JoinWith(FilterDefinition<Rank> matchExpression)
     {
-        var ranks = CreateCollection<Rank>();
-        var players = CreateCollection<PlayerOverview>();
-        var result = await ranks
-            .Aggregate()
+        var aggregator = Aggregate<Rank>()
             .Match(matchExpression)
-            .SortBy(rank => rank.RankNumber)
-            .Lookup<Rank, PlayerOverview, Rank>(players,
+            .SortBy(rank => rank.RankNumber);
+
+        var lookup = Lookup<Rank, PlayerOverview, Rank>(aggregator,
                 rank => rank.PlayerId,
                 player => player.Id,
-                rank => rank.Players)
-            .ToListAsync();
-        return result.Where(r => r.Player != null).ToList();
+                rank => rank.Players);
+
+        var result = lookup.Match(Builders<Rank>.Filter.Ne(r => r.Players, null));
+
+        return await result.ToListAsync();
     }
 
     public Task InsertRanks(List<Rank> events)
@@ -125,7 +150,7 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task UpsertSeason(Season season)
     {
-        return Upsert(season, s => s.Id == season.Id);
+        return Upsert(season, Builders<Season>.Filter.Eq(s => s.Id, season.Id));
     }
 
     public Task<List<Season>> LoadSeasons()
@@ -135,7 +160,13 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season)
     {
-        return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
+        return JoinWith(Builders<Rank>.Filter.And(
+            Builders<Rank>.Filter.Or(
+                Builders<Rank>.Filter.In(r => r.Player1Id, list),
+                Builders<Rank>.Filter.In(r => r.Player2Id, list)
+            ),
+            Builders<Rank>.Filter.Eq(r => r.Season, season)
+        ));
     }
 
 }

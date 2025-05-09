@@ -15,7 +15,7 @@ namespace WC3ChampionsStatisticService.Tests;
 
 public class IntegrationTestBase
 {
-    //protected readonly MongoClient MongoClient = new MongoClient("mongodb://localhost:27017/");
+    //protected readonly MongoClient MongoClient = new MongoClient("mongodb://w3champions:XXX@localhost:3510?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin&replicaSet=rs0");
     protected readonly MongoClient MongoClient = new("mongodb://157.90.1.251:3512/");
 
     protected PersonalSettingsProvider personalSettingsProvider;
@@ -48,7 +48,7 @@ public class IntegrationTestBase
         var mongoDatabase = database;
         var mongoCollection = mongoDatabase.GetCollection<MatchFinishedEvent>(nameof(MatchFinishedEvent));
         await mongoCollection.FindOneAndReplaceAsync(
-            (Expression<Func<MatchFinishedEvent, bool>>)(ev => ev.match.id == newEvent.match.id),
+            Builders<MatchFinishedEvent>.Filter.Eq(ev => ev.match.id, newEvent.match.id),
             newEvent,
             new FindOneAndReplaceOptions<MatchFinishedEvent> { IsUpsert = true });
     }
@@ -59,7 +59,7 @@ public class IntegrationTestBase
         var mongoDatabase = database;
         var mongoCollection = mongoDatabase.GetCollection<MatchStartedEvent>(nameof(MatchStartedEvent));
         await mongoCollection.FindOneAndReplaceAsync(
-            (Expression<Func<MatchStartedEvent, bool>>)(ev => ev.match.id == newEvent.match.id),
+            Builders<MatchStartedEvent>.Filter.Eq(ev => ev.match.id, newEvent.match.id),
             newEvent,
             new FindOneAndReplaceOptions<MatchStartedEvent> { IsUpsert = true });
     }
@@ -70,7 +70,7 @@ public class IntegrationTestBase
         var mongoDatabase = database;
         var mongoCollection = mongoDatabase.GetCollection<RankingChangedEvent>(nameof(RankingChangedEvent));
         await mongoCollection.FindOneAndReplaceAsync(
-            (Expression<Func<RankingChangedEvent, bool>>)(ev => ev.id == newEvent.id),
+            Builders<RankingChangedEvent>.Filter.Eq(ev => ev.id, newEvent.id),
             newEvent,
             new FindOneAndReplaceOptions<RankingChangedEvent> { IsUpsert = true });
     }

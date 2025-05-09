@@ -8,9 +8,9 @@ namespace W3ChampionsStatisticService.Rewards.Portraits;
 
 public class PortraitRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPortraitRepository
 {
-    public Task<List<PortraitDefinition>> LoadPortraitDefinitions()
+    public async Task<List<PortraitDefinition>> LoadPortraitDefinitions()
     {
-        return LoadAll<PortraitDefinition>();
+        return await LoadAll<PortraitDefinition>();
     }
 
     public async Task SaveNewPortraitDefinitions(List<int> _ids, List<string> _group = null)
@@ -54,11 +54,10 @@ public class PortraitRepository(MongoClient mongoClient) : MongoDbRepositoryBase
 
     public async Task<List<PortraitGroup>> LoadDistinctPortraitGroups()
     {
-        var mongoCollection = CreateCollection<PortraitDefinition>();
+        var filter = Builders<PortraitDefinition>.Filter.Ne(p => p.Groups, []);
 
-        var pipeline = await mongoCollection
-            .Aggregate()
-            .Match(p => p.Groups.Count > 0)
+        var pipeline = await Aggregate<PortraitDefinition>()
+            .Match(filter)
             .Unwind<PortraitDefinition, SinglePortraitDefinitionAndGroup>(p => p.Groups)
             .ToListAsync();
 
@@ -69,6 +68,6 @@ public class PortraitRepository(MongoClient mongoClient) : MongoDbRepositoryBase
 
         }).ToList();
 
-        return grouped;
+        return grouped; 
     }
 }

@@ -4,6 +4,7 @@ using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -18,13 +19,59 @@ using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : MongoDbRepositoryBase(mongoClient), IMatchRepository
+public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache, ITransactionCoordinator transactionCoordinator) : MongoDbRepositoryBase(mongoClient, transactionCoordinator), IMatchRepository
 {
     private readonly IOngoingMatchesCache _cache = cache;
 
     public Task Insert(Matchup matchup)
     {
-        return Upsert(matchup, m => m.MatchId == matchup.MatchId);
+        return Upsert(matchup, Builders<Matchup>.Filter.Eq(m => m.MatchId, matchup.MatchId));
+    }
+
+    private FilterDefinition<Matchup> BuildMatchupFilter(
+        string playerId,
+        string opponentId = null,
+        GateWay gateWay = GateWay.Undefined,
+        GameMode gameMode = GameMode.Undefined,
+        Race playerRace = Race.Total,
+        Race opponentRace = Race.Total,
+        int season = 1)
+    {
+        var builder = Builders<Matchup>.Filter;
+        var filters = new List<FilterDefinition<Matchup>>
+        {
+            builder.ElemMatch(m => m.Teams, t => t.Players.Any(p => p.BattleTag == playerId)),
+            builder.Eq(m => m.Season, season)
+        };
+
+        if (!string.IsNullOrEmpty(opponentId))
+        {
+            filters.Add(builder.ElemMatch(m => m.Teams, t => t.Players.Any(p => p.BattleTag == opponentId)));
+        }
+
+        if (gameMode != GameMode.Undefined)
+        {
+            filters.Add(builder.Eq(m => m.GameMode, gameMode));
+        }
+
+        if (gateWay != GateWay.Undefined)
+        {
+            filters.Add(builder.Eq(m => m.GateWay, gateWay));
+        }
+
+        if (playerRace != Race.Total)
+        {
+            filters.Add(builder.ElemMatch(m => m.Teams, 
+                t => t.Players.Any(p => p.Race == playerRace && p.BattleTag == playerId)));
+        }
+
+        if (opponentRace != Race.Total)
+        {
+            filters.Add(builder.ElemMatch(m => m.Teams,
+                t => t.Players.Any(p => p.Race == opponentRace && p.BattleTag != playerId)));
+        }
+
+        return builder.And(filters);
     }
 
     public async Task<List<Matchup>> LoadFor(
@@ -38,37 +85,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int offset = 0,
         int season = 1)
     {
-        var mongoCollection = CreateCollection<Matchup>();
-        if (string.IsNullOrEmpty(opponentId))
-        {
-            return await mongoCollection
-                .Find(
-                    m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-                    && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
-                    && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
-                    && (m.Season == season))
-                .SortByDescending(s => s.Id)
-                .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
-        }
-
-        return await mongoCollection
-            .Find(m =>
-                m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-                && m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId))
-                && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                && (m.Season == season))
-            .SortByDescending(s => s.Id)
-            .Skip(offset)
-            .Limit(pageSize)
-            .ToListAsync();
+        var filter = BuildMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season);
+        return await LoadAll(filter, sortBy: Builders<Matchup>.Sort.Descending(m => m.Id), limit: pageSize, offset: offset);
     }
 
-    public Task<long> CountFor(
+    public async Task<long> CountFor(
         string playerId,
         string opponentId = null,
         GateWay gateWay = GateWay.Undefined,
@@ -77,30 +98,14 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race opponentRace = Race.Total,
         int season = 1)
     {
-        var mongoCollection = CreateCollection<Matchup>();
-        if (string.IsNullOrEmpty(opponentId))
-        {
-            return mongoCollection.CountDocumentsAsync(m =>
-                m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-                && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
-                && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
-                && (m.Season == season));
-        }
-
-        return mongoCollection.CountDocumentsAsync(m =>
-            m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-            && m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId))
-            && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-            && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-            && (m.Season == season));
+        var filter = BuildMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season);
+        return await Count(filter);
     }
 
     public async Task<MatchupDetail> LoadDetails(ObjectId id)
     {
-        var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.Id == id);
-        var match = await LoadFirst<Matchup>(t => t.Id == id);
+        var originalMatch = await LoadFirst(Builders<MatchFinishedEvent>.Filter.Eq(m => m.Id, id));
+        var match = await LoadFirst(Builders<Matchup>.Filter.Eq(m => m.Id, id));
 
         return new MatchupDetail
         {
@@ -111,8 +116,9 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public async Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id)
     {
-        var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.match.id == id);
-        var match = await LoadFirst<Matchup>(t => t.MatchId == id);
+        var idObj = new ObjectId(id);
+        var originalMatch = await LoadFirst(Builders<MatchFinishedEvent>.Filter.Eq(m => m.Id, idObj));
+        var match = await LoadFirst(Builders<Matchup>.Filter.Eq(m => m.MatchId, id));
 
         return new MatchupDetail
         {
@@ -123,13 +129,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public async Task<MatchFinishedEvent> LoadDetailsByGameName(string gameName)
     {
-        return await LoadFirst<MatchFinishedEvent>(t => t.match.gamename == gameName);
+        return await LoadFirst(Builders<MatchFinishedEvent>.Filter.Eq(m => m.match.gamename, gameName));
     }
 
     public Task EnsureIndices()
     {
-        var collection = CreateCollection<Matchup>();
-
         var matchUpLogBuilder = Builders<Matchup>.IndexKeys;
 
         var textIndex = new CreateIndexModel<Matchup>(
@@ -139,7 +143,8 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             .Text(x => x.Team3Players)
             .Text(x => x.Team4Players)
         );
-        return collection.Indexes.CreateOneAsync(textIndex);
+
+        return CreateIndexOneAsync(textIndex);
     }
 
     private static PlayerScore CreateDetail(PlayerBlizzard playerBlizzard)
@@ -160,25 +165,22 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter)
     {
-        var mongoCollection = CreateCollection<Matchup>();
         var filter = GetLoadFilter(season, gameMode, hero);
 
-        var results = mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
-
-        return results;
+        return LoadAll(filter, sortBy: Builders<Matchup>.Sort.Descending(m => m.EndTime), limit: pageSize, offset: offset);
     }
 
     public async Task<int> GetFloIdFromId(string gameId)
     {
         var gameIdObj = new ObjectId($"{gameId}");
-        var match = await LoadFirst<Matchup>(x => x.Id == gameIdObj);
+        var match = await LoadFirst(Builders<Matchup>.Filter.Eq(m => m.Id, gameIdObj));
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
     public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
     {
         var filter = GetLoadFilter(season, gameMode, hero);
-        return CreateCollection<Matchup>().CountDocumentsAsync(filter);
+        return Count(filter);
     }
 
     private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
@@ -195,37 +197,37 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return filter;
     }
 
-    public Task InsertOnGoingMatch(OnGoingMatchup matchup)
+    public async Task InsertOnGoingMatch(OnGoingMatchup matchup)
     {
-        _cache.Upsert(matchup);
-        return Upsert(matchup, m => m.MatchId == matchup.MatchId);
+        await _cache.Upsert(matchup);
+        await Upsert(matchup, Builders<OnGoingMatchup>.Filter.Eq(m => m.MatchId, matchup.MatchId));
     }
 
 
-    public Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+    public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
     {
-        var mongoCollection = CreateCollection<OnGoingMatchup>();
-
-        return mongoCollection
-            .Find(m => m.Team1Players.Contains(playerId)
-                    || m.Team2Players.Contains(playerId)
-                    || m.Team3Players.Contains(playerId)
-                    || m.Team4Players.Contains(playerId)
+        return await LoadFirst(
+            Builders<OnGoingMatchup>.Filter.Or(
+                Builders<OnGoingMatchup>.Filter.ElemMatch(m => m.Team1Players, playerId),
+                Builders<OnGoingMatchup>.Filter.ElemMatch(m => m.Team2Players, playerId),
+                Builders<OnGoingMatchup>.Filter.ElemMatch(m => m.Team3Players, playerId),
+                Builders<OnGoingMatchup>.Filter.ElemMatch(m => m.Team4Players, playerId)
             )
-            .FirstOrDefaultAsync();
+        );
     }
 
-    public Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId)
+    public async Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId)
     {
-        return _cache.LoadOnGoingMatchForPlayer(playerId);
+        return await _cache.LoadOnGoingMatchForPlayer(playerId);
     }
 
-    public Task DeleteOnGoingMatch(string matchId)
+    public async Task DeleteOnGoingMatch(Matchup matchup)
     {
-        return Delete<OnGoingMatchup>(x => x.MatchId == matchId).ContinueWith(_ => _cache.Delete(matchId));
+        await Delete<OnGoingMatchup>(x => x.MatchId == matchup.MatchId);
+        await _cache.Delete(matchup);
     }
 
-    public Task<List<OnGoingMatchup>> LoadOnGoingMatches(
+    public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,
         GateWay gateWay = GateWay.Undefined,
         int offset = 0,
@@ -235,30 +237,26 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int maxMmr = 3000,
         string sort = "startTimeDescending")
     {
-        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
+        return await _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
     }
 
-    public Task<long> CountOnGoingMatches(
+    public async Task<long> CountOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000)
     {
-        return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
+        return await _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
     }
 
     public Task<Season> LoadLastSeason()
     {
-        var mongoCollection = CreateCollection<Season>();
-        return mongoCollection.AsQueryable().OrderByDescending(c => c.Id).FirstOrDefaultAsync();
+        return AsQueryable<Season>().OrderByDescending(c => c.Id).FirstOrDefaultAsync();
     }
 
     public async Task<DateTimeOffset?> AddPlayerHeroes(DateTimeOffset startTime, int pageSize)
     {
-        var matchupCollection = CreateCollection<Matchup>();
-        var finishedMatchCollection = CreateCollection<MatchFinishedEvent>();
-
         var playerFilter = Builders<PlayerOverviewMatches>.Filter.Exists(p => p.Heroes, true);
         var teamFilter = Builders<Team>.Filter.ElemMatch(t => t.Players, playerFilter);
         var matchupBuilder = Builders<Matchup>.Filter;
@@ -268,7 +266,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         var matchupFilter = matchupBuilder.Lt(m => m.StartTime, startTime) & matchupBuilder.Not(teamPlayersFilter);
 
         // Get all matchups where all players in a matchup don't have a `Heroes` field from before startTime.
-        var matches = await matchupCollection.Find(matchupFilter).SortByDescending(m => m.StartTime).Limit(pageSize).ToListAsync();
+        var matches = await LoadAll(matchupFilter, sortBy: Builders<Matchup>.Sort.Descending(m => m.StartTime), limit: pageSize);
 
         if (!matches.Any())
         {
@@ -278,7 +276,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         // Get all matching `MatchFinishedEvent` docs
         var matchIds = matches.Select(m => m.Id).ToList();
         var finishedFilter = Builders<MatchFinishedEvent>.Filter.In(f => f.Id, matchIds);
-        var finishedMatchesDict = (await finishedMatchCollection.Find(finishedFilter).ToListAsync()).ToDictionary(f => f.Id);
+        var finishedMatchesDict = (await LoadAll(finishedFilter)).ToDictionary(f => f.Id);
 
         var writes = new List<WriteModel<Matchup>>();
         var anyDocumentsModified = false;
@@ -335,7 +333,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         {
             try
             {
-                var bulkResult = await matchupCollection.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false });
+                var bulkResult = await BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false });
                 Log.Information(
                     "Updated Matchup Finished. Matched: {@matchedCount}, Modified: {@modifiedCount}",
                     bulkResult.MatchedCount,

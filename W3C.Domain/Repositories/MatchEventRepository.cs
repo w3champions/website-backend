@@ -2,6 +2,7 @@
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 
@@ -15,37 +16,47 @@ public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
 
     public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
     {
-        lastObjectId ??= ObjectId.Empty.ToString();
+        var lastObject = string.IsNullOrEmpty(lastObjectId) ? ObjectId.Empty : new ObjectId(lastObjectId);
 
-        var mongoCollection = CreateCollection<MatchFinishedEvent>();
-
-        var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
-            .SortBy(s => s.Id)
-            .Limit(pageSize)
-            .ToListAsync();
-
-        return events;
+        return await LoadAll(
+            Builders<MatchFinishedEvent>.Filter.Gt(m => m.Id, lastObject), 
+            sortBy: Builders<MatchFinishedEvent>.Sort.Ascending(m => m.Id), 
+            limit: pageSize);
     }
 
     public Task<List<MatchStartedEvent>> LoadStartedMatches()
     {
         var delay = ObjectId.GenerateNewId(DateTime.Now.AddSeconds(-20));
-        return LoadAll<MatchStartedEvent>(m => m.Id < delay, 1000);
+        return LoadAll(Builders<MatchStartedEvent>.Filter.Lt(m => m.Id, delay), limit: 1000);
     }
 
-    public async Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0)
+    public Task<List<MatchCanceledEvent>> LoadCanceledMatches()
+    {
+        var now = ObjectId.GenerateNewId(DateTime.Now);
+        return LoadAll(Builders<MatchCanceledEvent>.Filter.Lt(m => m.Id, now), limit: 1000);
+    }
+
+    public async Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int attempt = 0)
     {
         matchFinishedEvent.WasFromSync = true;
-        var mongoCollection = CreateCollection<MatchFinishedEvent>();
-        var foundEvent = await mongoCollection.Find(e => e.match.id.Equals(matchFinishedEvent.match.id)).FirstOrDefaultAsync();
-        if (foundEvent == null)
+
+        var filter = Builders<MatchFinishedEvent>.Filter.Eq(e => e.match.id, matchFinishedEvent.match.id);
+        var update = Builders<MatchFinishedEvent>.Update
+            .SetOnInsert(e => e, matchFinishedEvent); // Only set on insert
+
+        var result = await UpdateOneAsync(
+            filter,
+            update,
+            new UpdateOptions { IsUpsert = true }
+        );
+
+        if (result.UpsertedId != null)
         {
-            await mongoCollection.InsertOneAsync(matchFinishedEvent);
-            Console.WriteLine($"({i}) INSERTED: {matchFinishedEvent.match.id}");
+            Console.WriteLine($"({attempt}) INSERTED: {matchFinishedEvent.match.id}");
             return true;
         }
 
-        Console.WriteLine($"({i}) EVENT WAS PRESENT ALLREADY: {foundEvent.match.id}");
+        Console.WriteLine($"({attempt}) ALREADY EXISTS: {matchFinishedEvent.match.id}");
         return false;
     }
 
@@ -56,15 +67,18 @@ public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
 
     private async Task<List<T>> Checkout<T>() where T : ISyncable
     {
-        var mongoCollection = CreateCollection<T>();
-        var ids = await mongoCollection
-            .Find(p => !p.wasSyncedJustNow)
-            .Project(p => p.id)
-            .ToListAsync();
-        var filterDefinition = Builders<T>.Filter.In(e => e.id, ids);
-        var updateDefinition = Builders<T>.Update.Set(e => e.wasSyncedJustNow, true);
-        await mongoCollection.UpdateManyAsync(filterDefinition, updateDefinition);
-        var items = await LoadAll<T>(r => ids.Contains(r.id));
+        var filter = Builders<T>.Filter.Eq(p => p.wasSyncedJustNow, false);
+        var items = await LoadAll(filter, limit: 1000);
+
+        if (items.Count == 0)
+            return items;
+
+        var ids = items.Select(p => p.id).ToList();
+        var updateFilter = Builders<T>.Filter.In(p => p.id, ids);
+        var update = Builders<T>.Update.Set(p => p.wasSyncedJustNow, true);
+
+        await UpdateManyAsync(updateFilter, update);
+
         return items;
     }
 
@@ -76,5 +90,10 @@ public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
     public Task DeleteStartedEvent(ObjectId nextEventId)
     {
         return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
+    }
+
+    public Task DeleteCanceledEvent(ObjectId nextEventId)
+    {
+        return Delete<MatchCanceledEvent>(e => e.Id == nextEventId);
     }
 }

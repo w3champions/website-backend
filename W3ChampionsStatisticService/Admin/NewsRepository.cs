@@ -15,11 +15,10 @@ public class NewsRepository : MongoDbRepositoryBase, INewsRepository
 
     public Task<List<NewsMessage>> Get(int? limit = 5)
     {
-        var mongoCollection = CreateCollection<NewsMessage>();
-        return mongoCollection
-            .Find(r => true)
-            .SortByDescending(m => m.Id)
-            .Limit(limit).ToListAsync();
+        return LoadAll(
+            sortBy: Builders<NewsMessage>.Sort.Descending(m => m.Id),
+            limit: limit
+        );
     }
 
     public Task Save(NewsMessage newsMessage)
@@ -34,6 +33,6 @@ public class NewsRepository : MongoDbRepositoryBase, INewsRepository
 
     public Task UpsertNews(NewsMessage newsMessage)
     {
-        return Upsert(newsMessage, n => n.Id == newsMessage.Id);
+        return Upsert(newsMessage, Builders<NewsMessage>.Filter.Eq(n => n.Id, newsMessage.Id));
     }
 }
