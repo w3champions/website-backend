@@ -18,8 +18,7 @@ public class WebsiteBackendHub(
     IHttpContextAccessor contextAccessor,
     FriendRequestCache friendRequestCache,
     IPersonalSettingsRepository personalSettingsRepository,
-    FriendCommandHandler friendCommandHandler,
-    FriendListCache friendListCache
+    FriendCommandHandler friendCommandHandler
 ) : Hub
 {
     private readonly IW3CAuthenticationService _authenticationService = authenticationService;
@@ -28,7 +27,6 @@ public class WebsiteBackendHub(
     private readonly FriendRequestCache _friendRequestCache = friendRequestCache;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly FriendCommandHandler _friendCommandHandler = friendCommandHandler;
-    private readonly FriendListCache _friendListCache = friendListCache;
 
     public override async Task OnConnectedAsync()
     {
@@ -59,7 +57,7 @@ public class WebsiteBackendHub(
         {
             return;
         }
-        Friendlist friendList = await _friendListCache.LoadFriendList(currentUser);
+        Friendlist friendList = await _friendCommandHandler.LoadFriendList(currentUser);
         List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
         List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
         await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
@@ -144,8 +142,8 @@ public class WebsiteBackendHub(
     {
         try
         {
-            var currentUserFriendlist = await _friendListCache.LoadFriendList(req.Receiver);
-            var senderFriendlist = await _friendListCache.LoadFriendList(req.Sender);
+            var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
+            var senderFriendlist = await _friendCommandHandler.LoadFriendList(req.Sender);
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to accept.");
             await _friendCommandHandler.DeleteFriendRequest(request);
@@ -208,7 +206,7 @@ public class WebsiteBackendHub(
     {
         try
         {
-            var currentUserFriendlist = await _friendListCache.LoadFriendList(req.Receiver);
+            var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
             CanBlock(currentUserFriendlist, req.Sender);
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to block.");
@@ -244,7 +242,7 @@ public class WebsiteBackendHub(
         }
         try
         {
-            var friendList = await _friendListCache.LoadFriendList(currentUser);
+            var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
 
             var itemToRemove =
                 friendList.BlockedBattleTags.SingleOrDefault(bTag => bTag == battleTag) ?? throw new ValidationException("Could not find a player to unblock.");
@@ -275,10 +273,10 @@ public class WebsiteBackendHub(
         }
         try
         {
-            var currentUserFriendlist = await _friendListCache.LoadFriendList(currentUser);
+            var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(currentUser);
             currentUserFriendlist = await _friendCommandHandler.RemoveFriend(currentUserFriendlist, friend);
 
-            var otherUserFriendlist = await _friendListCache.LoadFriendList(friend);
+            var otherUserFriendlist = await _friendCommandHandler.LoadFriendList(friend);
             otherUserFriendlist = await _friendCommandHandler.RemoveFriend(otherUserFriendlist, currentUser);
 
             await Clients.Caller.SendAsync(
