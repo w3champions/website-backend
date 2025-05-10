@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualBasic;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace W3C.Domain.Repositories;
 
@@ -19,24 +22,44 @@ public class MongoDbRepositoryBase
         _transactionCoordinator = transactionCoordinator;
     }
 
-    protected IMongoDatabase CreateClient()
+    private IMongoDatabase CreateClient()
     {
+        // Do not expose the client to derived classes to enforce the usage of this classes functions which are session aware!
         var database = _mongoClient.GetDatabase(_databaseName);
         return database;
     }
 
-    protected Task<T> LoadFirst<T>(Expression<Func<T, bool>> expression)
+    protected IFindFluent<T, T> LoadFirst<T>(FilterDefinition<T> filter)
     {
         var mongoCollection = CreateCollection<T>();
         var session = _transactionCoordinator?.GetCurrentSession();
         return session != null
-            ? mongoCollection.Find(session, expression).FirstOrDefaultAsync()
-            : mongoCollection.Find(expression).FirstOrDefaultAsync();
+            ? mongoCollection.Find(session, filter)
+            : mongoCollection.Find(filter);
     }
 
-    protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
+    protected IFindFluent<T, T> LoadFirst<T>(string id) where T : IIdentifiable
     {
-        return LoadFirst<T>(x => x.Id == id);
+        return LoadFirst(Builders<T>.Filter.Eq(x => x.Id, id));
+    }
+
+    protected IFindFluent<T, T> Find<T>(FilterDefinition<T> filter)
+    {
+        var collection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? collection.Find(session, filter)
+            : collection.Find(filter);
+    }
+
+    protected IMongoQueryable<TDocument> AsQueryable<TDocument>(AggregateOptions aggregateOptions = null)
+    {
+
+        var mongoCollection = CreateCollection<TDocument>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? mongoCollection.AsQueryable(session, aggregateOptions)
+            : mongoCollection.AsQueryable(aggregateOptions);
     }
 
     protected Task Insert<T>(T element)
@@ -48,31 +71,32 @@ public class MongoDbRepositoryBase
             : mongoCollection.InsertOneAsync(element);
     }
 
-    protected async Task<List<T>> LoadAll<T>(Expression<Func<T, bool>> expression = null, int? limit = null)
+    protected IFindFluent<T, T> LoadAll<T>(FilterDefinition<T> filter = null, int? limit = null)
     {
-        expression ??= l => true;
+        filter ??= Builders<T>.Filter.Empty;
         var mongoCollection = CreateCollection<T>();
         var session = _transactionCoordinator?.GetCurrentSession();
 
         var findFluent = session != null
-            ? mongoCollection.Find(session, expression)
-            : mongoCollection.Find(expression);
+            ? mongoCollection.Find(session, filter)
+            : mongoCollection.Find(filter);
 
         if (limit.HasValue)
         {
             findFluent = findFluent.Limit(limit);
         }
 
-        return await findFluent.ToListAsync();
+        return findFluent;
     }
 
-    protected Task<List<T>> LoadSince<T>(DateTimeOffset since) where T : IVersionable
+    protected IFindFluent<T, T> LoadSince<T>(DateTimeOffset since) where T : IVersionable
     {
-        return LoadAll<T>(m => m.LastUpdated > since);
+        return LoadAll<T>(Builders<T>.Filter.Gt(m => m.LastUpdated, since));
     }
 
-    protected IMongoCollection<T> CreateCollection<T>(string collectionName = null)
+    private IMongoCollection<T> CreateCollection<T>(string collectionName = null)
     {
+        // Do not expose the collection to derived classes to enforce the usage of this classes functions which are session aware!
         var mongoDatabase = CreateClient();
         var mongoCollection = mongoDatabase.GetCollection<T>((collectionName ?? typeof(T).Name));
         return mongoCollection;
@@ -113,8 +137,8 @@ public class MongoDbRepositoryBase
         var session = _transactionCoordinator?.GetCurrentSession();
         var bulkOps = insertObjects
             .Select(record => new ReplaceOneModel<T>(Builders<T>.Filter
-            .Where(x => x.Id == record.Id), record)
-            { IsUpsert = true })
+                .Where(x => x.Id == record.Id), record) 
+                { IsUpsert = true })
             .Cast<WriteModel<T>>().ToList();
 
         return session != null
@@ -158,6 +182,22 @@ public class MongoDbRepositoryBase
             await mongoCollection.UpdateOneAsync(filter, updateDefinition);
         }
     }
+
+    protected Task<BulkWriteResult<T>> BulkWriteAsync<T>(IEnumerable<WriteModel<T>> requests, BulkWriteOptions options = null)
+    {
+        var collection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? collection.BulkWriteAsync(session, requests, options)
+            : collection.BulkWriteAsync(requests, options);
+    }
+
+    protected Task<string> CreateIndexOneAsync<T>(CreateIndexModel<T> model, CreateOneIndexOptions options = null, CancellationToken cancellationToken = default)
+    {
+        var collection = CreateCollection<T>();
+        return collection.Indexes.CreateOneAsync(model, options, cancellationToken);
+    }
+
 }
 
 public interface IIdentifiable

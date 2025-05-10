@@ -89,6 +89,7 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> LoadPlayerOfLeague(string searchFor, int season)
     {
+        // TODO: Adjust filter
         return JoinWith(rank => rank.Id.Contains(searchFor, StringComparison.CurrentCultureIgnoreCase) && rank.Season == season);
     }
 
@@ -97,7 +98,7 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
         return LoadAll<LeagueConstellation>(l => season == null || l.Season == season);
     }
 
-    private async Task<List<Rank>> JoinWith(Expression<Func<Rank, bool>> matchExpression)
+    private async Task<List<Rank>> JoinWith(FilterDefinition<Rank> matchExpression)
     {
         var ranks = CreateCollection<Rank>();
         var players = CreateCollection<PlayerOverview>();
