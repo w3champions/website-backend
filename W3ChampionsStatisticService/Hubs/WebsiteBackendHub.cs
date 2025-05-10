@@ -16,17 +16,17 @@ public class WebsiteBackendHub(
     IW3CAuthenticationService authenticationService,
     ConnectionMapping connections,
     IHttpContextAccessor contextAccessor,
-    FriendRepository friendRepository,
     FriendRequestCache friendRequestCache,
-    IPersonalSettingsRepository personalSettingsRepository
+    IPersonalSettingsRepository personalSettingsRepository,
+    FriendCommandHandler friendCommandHandler
 ) : Hub
 {
     private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
-    private readonly FriendRepository _friendRepository = friendRepository;
     private readonly FriendRequestCache _friendRequestCache = friendRequestCache;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
+    private readonly FriendCommandHandler _friendCommandHandler = friendCommandHandler;
 
     public override async Task OnConnectedAsync()
     {
@@ -54,8 +54,10 @@ public class WebsiteBackendHub(
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
+        {
             return;
-        Friendlist friendList = await _friendRepository.LoadFriendlist(currentUser);
+        }
+        Friendlist friendList = await _friendCommandHandler.LoadFriendList(currentUser);
         List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
         List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
         await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
@@ -65,7 +67,9 @@ public class WebsiteBackendHub(
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
+        {
             return;
+        }
         List<FriendUser> friends = await GetFriends(currentUser);
         await Clients.Caller.SendAsync(FriendResponseType.FriendsWithPictures.ToString(), friends);
     }
@@ -86,11 +90,12 @@ public class WebsiteBackendHub(
             {
                 throw new ValidationException("You have too many pending friend requests.");
             }
-            var receiverFriendlist = await _friendRepository.LoadFriendlist(req.Receiver);
+
+            var receiverFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
             await CanMakeFriendRequest(receiverFriendlist, req);
-            await _friendRepository.CreateFriendRequest(req);
-            _friendRequestCache.Insert(req);
+            await _friendCommandHandler.CreateFriendRequest(req);
             sentRequests.Add(req);
+
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
                 null,
@@ -113,8 +118,7 @@ public class WebsiteBackendHub(
         try
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to delete.");
-            await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendCommandHandler.DeleteFriendRequest(request);
 
             List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
             await Clients.Caller.SendAsync(
@@ -138,30 +142,17 @@ public class WebsiteBackendHub(
     {
         try
         {
-            var currentUserFriendlist = await _friendRepository.LoadFriendlist(req.Receiver);
-            var senderFriendlist = await _friendRepository.LoadFriendlist(req.Sender);
+            var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
+            var senderFriendlist = await _friendCommandHandler.LoadFriendList(req.Sender);
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to accept.");
-            await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendCommandHandler.DeleteFriendRequest(request);
+
             var reciprocalRequest = await _friendRequestCache.LoadFriendRequest(new FriendRequest(req.Receiver, req.Sender));
-            if (reciprocalRequest != null)
-            {
-                await _friendRepository.DeleteFriendRequest(reciprocalRequest);
-                _friendRequestCache.Delete(reciprocalRequest);
-            }
+            await _friendCommandHandler.DeleteFriendRequest(reciprocalRequest);
 
-            if (!currentUserFriendlist.Friends.Contains(req.Sender))
-            {
-                currentUserFriendlist.Friends.Add(req.Sender);
-            }
-            await _friendRepository.UpsertFriendlist(currentUserFriendlist);
-
-            if (!senderFriendlist.Friends.Contains(req.Receiver))
-            {
-                senderFriendlist.Friends.Add(req.Receiver);
-            }
-            await _friendRepository.UpsertFriendlist(senderFriendlist);
+            currentUserFriendlist = await _friendCommandHandler.AddFriend(currentUserFriendlist, req.Sender);
+            senderFriendlist = await _friendCommandHandler.AddFriend(senderFriendlist, req.Receiver);
 
             List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Receiver);
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
@@ -191,8 +182,7 @@ public class WebsiteBackendHub(
         try
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to deny.");
-            await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendCommandHandler.DeleteFriendRequest(request);
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await Clients.Caller.SendAsync(
@@ -216,15 +206,14 @@ public class WebsiteBackendHub(
     {
         try
         {
-            var currentUserFriendlist = await _friendRepository.LoadFriendlist(req.Receiver);
+            var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
             CanBlock(currentUserFriendlist, req.Sender);
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to block.");
-            await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendCommandHandler.DeleteFriendRequest(request);
 
             currentUserFriendlist.BlockedBattleTags.Add(req.Sender);
-            await _friendRepository.UpsertFriendlist(currentUserFriendlist);
+            await _friendCommandHandler.UpsertFriendList(currentUserFriendlist);
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await Clients.Caller.SendAsync(
@@ -248,15 +237,18 @@ public class WebsiteBackendHub(
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
+        {
             return;
+        }
         try
         {
-            var friendList = await _friendRepository.LoadFriendlist(currentUser);
+            var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
 
             var itemToRemove =
                 friendList.BlockedBattleTags.SingleOrDefault(bTag => bTag == battleTag) ?? throw new ValidationException("Could not find a player to unblock.");
             friendList.BlockedBattleTags.Remove(itemToRemove);
-            await _friendRepository.UpsertFriendlist(friendList);
+
+            await _friendCommandHandler.UpsertFriendList(friendList);
 
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -276,24 +268,16 @@ public class WebsiteBackendHub(
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
+        {
             return;
+        }
         try
         {
-            var currentUserFriendlist = await _friendRepository.LoadFriendlist(currentUser);
-            var friendRelation1 = currentUserFriendlist.Friends.SingleOrDefault(bTag => bTag == friend);
-            if (friendRelation1 != null)
-            {
-                currentUserFriendlist.Friends.Remove(friendRelation1);
-            }
-            await _friendRepository.UpsertFriendlist(currentUserFriendlist);
+            var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(currentUser);
+            currentUserFriendlist = await _friendCommandHandler.RemoveFriend(currentUserFriendlist, friend);
 
-            var otherUserFriendlist = await _friendRepository.LoadFriendlist(friend);
-            var friendRelation2 = otherUserFriendlist.Friends.SingleOrDefault(bTag => bTag == currentUser);
-            if (friendRelation2 != null)
-            {
-                otherUserFriendlist.Friends.Remove(friendRelation2);
-            }
-            await _friendRepository.UpsertFriendlist(otherUserFriendlist);
+            var otherUserFriendlist = await _friendCommandHandler.LoadFriendList(friend);
+            otherUserFriendlist = await _friendCommandHandler.RemoveFriend(otherUserFriendlist, currentUser);
 
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -318,7 +302,7 @@ public class WebsiteBackendHub(
 
     private async Task<List<FriendUser>> GetFriends(string battleTag)
     {
-        Friendlist friendList = await _friendRepository.LoadFriendlist(battleTag);
+        Friendlist friendList = await _friendCommandHandler.LoadFriendList(battleTag);
         if (friendList.Friends.Count == 0)
             return [];
 
@@ -411,7 +395,7 @@ public class WebsiteBackendHub(
 
     private async Task NotifyFriendsWithIsOnline(string battleTag, bool isOnline)
     {
-        var friendList = await _friendRepository.LoadFriendlist(battleTag);
+        var friendList = await _friendCommandHandler.LoadFriendList(battleTag);
         var onlineFriends = friendList
             .Friends.Where(tag => _connections.IsUserOnline(tag))
             .Select(tag => _connections.GetConnectionId(tag))
