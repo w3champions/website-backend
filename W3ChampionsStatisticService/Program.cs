@@ -166,17 +166,21 @@ builder.Services.AddSingleton<UpdateServiceClient>();
 builder.Services.AddSingleton<ReplayServiceClient>();
 builder.Services.AddTransient<MatchQueryHandler>();
 builder.Services.AddSingleton<ChatServiceClient>();
-builder.Services.AddTransient<IFriendRepository, FriendRepository>();
 builder.Services.AddTransient<PlayerStatisticsService>();
 builder.Services.AddTransient<PlayerService>();
 builder.Services.AddTransient<MatchService>();
 builder.Services.AddTransient<IdentityServiceClient>();
 builder.Services.AddTransient<ILogsRepository, LogsRepository>();
 
+// Friends
+builder.Services.AddTransient<IFriendRepository, FriendRepository>();
+builder.Services.AddTransient<FriendCommandHandler>();
+builder.Services.AddSingleton<FriendRequestCache>();
+builder.Services.AddSingleton<FriendListCache>();
+builder.Services.AddTransient<FriendRepository>();
+
 // Websocket services
 builder.Services.AddSingleton<ConnectionMapping>();
-builder.Services.AddSingleton<FriendRequestCache, FriendRequestCache>();
-builder.Services.AddTransient<FriendRepository>();
 
 builder.Services.AddDirectoryBrowser();
 
