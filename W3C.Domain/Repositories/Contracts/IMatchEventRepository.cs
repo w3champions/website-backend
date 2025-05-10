@@ -9,8 +9,10 @@ public interface IMatchEventRepository
 {
     Task<List<MatchFinishedEvent>> Load(string lastObjectId, int pageSize = 100);
     Task<List<MatchStartedEvent>> LoadStartedMatches();
+    Task<List<MatchCanceledEvent>> LoadCanceledMatches();
     Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0);
     Task<List<RankingChangedEvent>> CheckoutForRead();
     Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
     Task DeleteStartedEvent(ObjectId nextEventId);
+    Task DeleteCanceledEvent(ObjectId nextEventId);
 }

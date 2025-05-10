@@ -12,13 +12,13 @@ public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
     private readonly IMatchEventRepository _eventRepository;
     private readonly IVersionRepository _versionRepository;
     private readonly T _innerHandler;
-    private readonly TrackingService _trackingService;
+    private readonly ITrackingService _trackingService;
 
     public ReadModelHandler(
         IMatchEventRepository eventRepository,
         IVersionRepository versionRepository,
         T innerHandler,
-        TrackingService trackingService = null)
+        ITrackingService trackingService = null)
     {
         _eventRepository = eventRepository;
         _versionRepository = versionRepository;
@@ -31,14 +31,13 @@ public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
         var lastVersion = await _versionRepository.GetLastVersion<T>();
         var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
 
-        while (nextEvents.Any())
+        while (nextEvents.Count != 0)
         {
             foreach (var nextEvent in nextEvents)
             {
+                if (lastVersion.IsStopped) return;
                 try
                 {
-                    if (lastVersion.IsStopped) return;
-
                     if (nextEvent.match.season > lastVersion.Season)
                     {
                         await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
@@ -55,7 +54,7 @@ public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
                 }
                 catch (Exception e)
                 {
-                    _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
+                    _trackingService?.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
                     throw;
                 }
             }
