@@ -114,7 +114,7 @@ builder.Services.AddSpecialBsonRegistrations();
 builder.Services.AddBasicAuthForMetrics();
 
 // Add Application Insights
-builder.Services.AddSingleton<TrackingService>();
+builder.Services.AddSingleton<ITrackingService, TrackingService>();
 string disableTelemetry = Environment.GetEnvironmentVariable("DISABLE_TELEMETRY");
 if (disableTelemetry == "true")
 {
@@ -225,6 +225,9 @@ if (startHandlers == "true")
 
     // On going matches
     builder.Services.AddUnversionedReadModelService<OngoingMatchesHandler>();
+
+    // Matches canceled by matchmaking
+    builder.Services.AddUnversionedReadModelService<CanceledMatchesHandler>();
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();

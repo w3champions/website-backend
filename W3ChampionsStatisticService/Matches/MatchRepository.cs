@@ -220,9 +220,10 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return _cache.LoadOnGoingMatchForPlayer(playerId);
     }
 
-    public Task DeleteOnGoingMatch(string matchId)
+    public async Task DeleteOnGoingMatch(Matchup matchup)
     {
-        return Delete<OnGoingMatchup>(x => x.MatchId == matchId).ContinueWith(_ => _cache.Delete(matchId));
+        await Delete<OnGoingMatchup>(x => x.MatchId == matchup.MatchId);
+        await _cache.Delete(matchup);
     }
 
     public Task<List<OnGoingMatchup>> LoadOnGoingMatches(

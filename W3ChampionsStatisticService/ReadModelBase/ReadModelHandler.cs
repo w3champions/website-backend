@@ -23,14 +23,13 @@ public class ReadModelHandler<T>(
         var lastVersion = await _versionRepository.GetLastVersion<T>();
         var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
 
-        while (nextEvents.Any())
+        while (nextEvents.Count != 0)
         {
             foreach (var nextEvent in nextEvents)
             {
+                if (lastVersion.IsStopped) return;
                 try
                 {
-                    if (lastVersion.IsStopped) return;
-
                     if (nextEvent.match.season > lastVersion.Season)
                     {
                         await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
@@ -47,7 +46,7 @@ public class ReadModelHandler<T>(
                 }
                 catch (Exception e)
                 {
-                    _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
+                    _trackingService?.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
                     throw;
                 }
             }

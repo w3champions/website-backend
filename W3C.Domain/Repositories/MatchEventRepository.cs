@@ -29,6 +29,13 @@ public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBa
         return LoadAll<MatchStartedEvent>(m => m.Id < delay, 1000);
     }
 
+
+    public Task<List<MatchCanceledEvent>> LoadCanceledMatches()
+    {
+        var now = ObjectId.GenerateNewId(DateTime.Now);
+        return LoadAll<MatchCanceledEvent>(m => m.Id < now, 1000);
+    }
+
     public async Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0)
     {
         matchFinishedEvent.WasFromSync = true;
@@ -72,5 +79,10 @@ public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBa
     public Task DeleteStartedEvent(ObjectId nextEventId)
     {
         return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
+    }
+
+    public Task DeleteCanceledEvent(ObjectId nextEventId)
+    {
+        return Delete<MatchCanceledEvent>(e => e.Id == nextEventId);
     }
 }

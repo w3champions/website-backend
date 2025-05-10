@@ -6,13 +6,24 @@ using Microsoft.Extensions.Logging;
 
 namespace W3ChampionsStatisticService.Services;
 
-public class TrackingService(
-    TelemetryClient telemetry,
-    ILogger<TrackingService> logger)
+public interface ITrackingService
 {
-    private TelemetryClient _telemetry = telemetry;
-    private readonly ILogger<TrackingService> _logger = logger;
+    void TrackUnauthorizedRequest(string authorization, ControllerBase controller);
+    void TrackException(Exception ex, string message);
+}
 
+public class TrackingService : ITrackingService
+{
+    private readonly TelemetryClient _telemetry;
+    private readonly ILogger<TrackingService> _logger;
+
+    public TrackingService(
+        TelemetryClient telemetry,
+        ILogger<TrackingService> logger)
+    {
+        _telemetry = telemetry;
+        _logger = logger;
+    }
     public void TrackUnauthorizedRequest(string authorization, ControllerBase controller)
     {
         try
