@@ -11,7 +11,7 @@ public interface IMatchEventRepository
 
     Task<List<MatchCanceledEvent>> LoadCanceledMatches();
     Task<List<MatchStartedEvent>> LoadStartedMatches();
-    Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0);
+    Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int attempt = 0);
     Task<List<RankingChangedEvent>> CheckoutForRead();
     Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
     Task DeleteStartedEvent(ObjectId nextEventId);

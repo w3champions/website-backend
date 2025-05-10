@@ -23,7 +23,7 @@ public class InformationMessagesRepository : MongoDbRepositoryBase, IInformation
     {
         // Do we really intend to allow limit to be null? And that means "give me everything"? 
         // The nullable int is a bit confusing here - assuming null means "give me everything" for now.
-        return FindMany(Builders<LoadingScreenTip>.Filter.Empty, m => m.Id, SortDirection.Descending, limit.GetValueOrDefault());
+        return Find(Builders<LoadingScreenTip>.Filter.Empty).SortByDescending(m => m.Id).Limit(limit.GetValueOrDefault()).ToListAsync();
     }
 
     public async Task<LoadingScreenTip> GetRandomTip()

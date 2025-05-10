@@ -29,28 +29,34 @@ public class MongoDbRepositoryBase
         return database;
     }
 
-    protected IFindFluent<T, T> LoadFirst<T>(FilterDefinition<T> filter)
+    protected Task<T> LoadFirst<T>(string id) where T : IIdentifiable
     {
-        var mongoCollection = CreateCollection<T>();
-        var session = _transactionCoordinator?.GetCurrentSession();
-        return session != null
-            ? mongoCollection.Find(session, filter)
-            : mongoCollection.Find(filter);
+        return Find(Builders<T>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync();
     }
 
-    protected IFindFluent<T, T> LoadFirst<T>(string id) where T : IIdentifiable
-    {
-        return LoadFirst(Builders<T>.Filter.Eq(x => x.Id, id));
-    }
-
-    protected IFindFluent<T, T> Find<T>(FilterDefinition<T> filter)
+    protected IFindFluent<T, T> Find<T>(
+        FilterDefinition<T> filter, 
+        SortDefinition<T> sortBy = null, 
+        int? limit = null,
+        int? offset = null)
     {
         var collection = CreateCollection<T>();
         var session = _transactionCoordinator?.GetCurrentSession();
-        return session != null
+        var findFluent = session != null
             ? collection.Find(session, filter)
             : collection.Find(filter);
+        
+        if (sortBy != null)
+        {
+            findFluent = findFluent.Sort(sortBy);
+        }
+        
+        findFluent = findFluent.Skip(offset);
+        findFluent = findFluent.Limit(limit);
+        
+        return findFluent;
     }
+
 
     protected IMongoQueryable<TDocument> AsQueryable<TDocument>(AggregateOptions aggregateOptions = null)
     {
@@ -71,27 +77,36 @@ public class MongoDbRepositoryBase
             : mongoCollection.InsertOneAsync(element);
     }
 
-    protected IFindFluent<T, T> LoadAll<T>(FilterDefinition<T> filter = null, int? limit = null)
+    protected Task<UpdateResult> UpdateOneAsync<T>(FilterDefinition<T> filter, UpdateDefinition<T> update, UpdateOptions options = null)
     {
-        filter ??= Builders<T>.Filter.Empty;
         var mongoCollection = CreateCollection<T>();
         var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? mongoCollection.UpdateOneAsync(session, filter, update, options)
+            : mongoCollection.UpdateOneAsync(filter, update, options);
+    }
 
-        var findFluent = session != null
-            ? mongoCollection.Find(session, filter)
-            : mongoCollection.Find(filter);
+    protected Task<UpdateResult> UpdateManyAsync<T>(FilterDefinition<T> filter, UpdateDefinition<T> update, UpdateOptions options = null)
+    {
+        var mongoCollection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? mongoCollection.UpdateManyAsync(session, filter, update, options)
+            : mongoCollection.UpdateManyAsync(filter, update, options);
+    }
 
-        if (limit.HasValue)
-        {
-            findFluent = findFluent.Limit(limit);
-        }
-
-        return findFluent;
+    protected Task<TProjection> FindOneAndUpdateAsync<T, TProjection>(FilterDefinition<T> filter, UpdateDefinition<T> update, FindOneAndUpdateOptions<T, TProjection> options = null, CancellationToken cancellationToken = default)
+    {
+        var mongoCollection = CreateCollection<T>();
+        var session = _transactionCoordinator?.GetCurrentSession();
+        return session != null
+            ? mongoCollection.FindOneAndUpdateAsync(session, filter, update, options, cancellationToken)
+            : mongoCollection.FindOneAndUpdateAsync(filter, update, options, cancellationToken);
     }
 
     protected IFindFluent<T, T> LoadSince<T>(DateTimeOffset since) where T : IVersionable
     {
-        return LoadAll<T>(Builders<T>.Filter.Gt(m => m.LastUpdated, since));
+        return Find(Builders<T>.Filter.Gt(m => m.LastUpdated, since));
     }
 
     private IMongoCollection<T> CreateCollection<T>(string collectionName = null)
