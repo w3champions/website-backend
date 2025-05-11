@@ -19,8 +19,9 @@
     <PackageVersion Include="nunit" Version="3.13.3" />
     <PackageVersion Include="NUnit3TestAdapter" Version="3.17.0" />
     <PackageVersion Include="prometheus-net.AspNetCore" Version="6.0.0" />
-    <PackageVersion Include="Serilog" Version="2.12.0" />
-    <PackageVersion Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageVersion Include="Serilog" Version="4.2.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="6.34.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="6.4.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.4.0" />
