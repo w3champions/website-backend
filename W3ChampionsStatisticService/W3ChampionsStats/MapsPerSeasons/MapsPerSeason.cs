@@ -23,7 +23,7 @@ public class MapsPerSeason : IIdentifiable
 
     public int Season { get; set; }
 
-    public void Count(string map, GameMode gameMode)
+    public void Count(string map, string mapName, GameMode gameMode)
     {
         var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);
         if (matchOnMapOverall == null)
@@ -32,7 +32,7 @@ public class MapsPerSeason : IIdentifiable
         }
 
         matchOnMapOverall = MatchesOnMapPerModes.Single(m => m.GameMode == GameMode.Undefined);
-        matchOnMapOverall.CountMatch(map);
+        matchOnMapOverall.CountMatch(map, mapName);
 
         var matchOnMap = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == gameMode);
         if (matchOnMap == null)
@@ -41,6 +41,21 @@ public class MapsPerSeason : IIdentifiable
         }
 
         matchOnMap = MatchesOnMapPerModes.Single(m => m.GameMode == gameMode);
-        matchOnMap.CountMatch(map);
+        matchOnMap.CountMatch(map, mapName);
+    }
+    
+    // Return true if updates were made
+    public bool UpdateMapName(string map, string mapName, GameMode gameMode)
+    {
+        var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);
+        var matchOnMap = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == gameMode);
+        if (matchOnMapOverall == null || matchOnMap == null) {
+            return false;
+        }
+
+        bool onMapUpdated = matchOnMap.UpdateMapName(map, mapName);
+        bool overallUpdated = matchOnMapOverall.UpdateMapName(map, mapName);
+
+        return overallUpdated && onMapUpdated;
     }
 }
