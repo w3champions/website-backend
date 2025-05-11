@@ -74,6 +74,8 @@ builder.Services.AddControllers(c =>
 // Create logs with format website-backend_yyyyMMdd.log
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .WriteTo.Console(new JsonFormatter(), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
     .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
