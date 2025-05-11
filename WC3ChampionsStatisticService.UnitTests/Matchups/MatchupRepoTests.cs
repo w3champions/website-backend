@@ -636,7 +636,7 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.AreEqual(2, result.Id);
     }
 
-        [TestCase(W3ChampionsStatisticService.Heroes.HeroType.Archmage, 1)]
+    [TestCase(W3ChampionsStatisticService.Heroes.HeroType.Archmage, 1)]
     [TestCase(W3ChampionsStatisticService.Heroes.HeroType.KeeperOfTheGrove, 0)]
     public async Task LoadHeroSelectionTests(W3ChampionsStatisticService.Heroes.HeroType searchHero, int expectedMatchCount)
     {
