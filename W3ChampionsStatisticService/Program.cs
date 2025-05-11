@@ -56,6 +56,8 @@ using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
+using Serilog.Events;
+using Serilog.Formatting.Json;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +74,7 @@ builder.Services.AddControllers(c =>
 // Create logs with format website-backend_yyyyMMdd.log
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
+    .WriteTo.Console(new JsonFormatter(), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
     .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
