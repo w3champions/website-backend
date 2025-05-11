@@ -20,7 +20,6 @@ using W3C.Domain.UpdateService;
 
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Admin.Logs;
-using W3ChampionsStatisticService.Admin.Permissions;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Friends;
@@ -79,6 +78,8 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(new JsonFormatter(), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
     .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
+// Tell the AspNetCore host to use Serilog for all logging
+builder.Host.UseSerilog();
 
 Log.Information("Starting server.");
 
