@@ -2,11 +2,9 @@ using System.Linq;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class MapName
+public class MapName(string map)
 {
-    public MapName(string map)
-    {
-        Name = map.Split('/', '\\')
+    public string Name { get; } = map.Split('/', '\\')
             .Last()
             .Replace(".w3x", "")
             .Replace(".w3m", "")
@@ -26,7 +24,4 @@ public class MapName
             .Replace("_cd", "")
             .Replace("_", "")
             .Replace(".", "_");
-    }
-
-    public string Name { get; }
 }

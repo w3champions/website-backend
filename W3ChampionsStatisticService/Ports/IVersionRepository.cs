@@ -8,16 +8,9 @@ public interface IVersionRepository
     Task SaveLastVersion<T>(string lastVersion, int season = 0);
 }
 
-public class HandlerVersion
+public class HandlerVersion(string version, int season, bool isStopped)
 {
-    public HandlerVersion(string version, int season, bool isStopped)
-    {
-        Version = version;
-        Season = season;
-        IsStopped = isStopped;
-    }
-
-    public string Version { get; set; }
-    public int Season { get; set; }
-    public bool IsStopped { get; set; }
+    public string Version { get; set; } = version;
+    public int Season { get; set; } = season;
+    public bool IsStopped { get; set; } = isStopped;
 }

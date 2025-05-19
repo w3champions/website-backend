@@ -7,12 +7,8 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Admin;
 
-public class NewsRepository : MongoDbRepositoryBase, INewsRepository
+public class NewsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), INewsRepository
 {
-    public NewsRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-    }
-
     public Task<List<NewsMessage>> Get(int? limit = 5)
     {
         var mongoCollection = CreateCollection<NewsMessage>();

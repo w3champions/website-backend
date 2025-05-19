@@ -8,7 +8,7 @@ using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Clans;
 
-public class ClanRepository : MongoDbRepositoryBase, IClanRepository
+public class ClanRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IClanRepository
 {
     public async Task TryInsertClan(Clan clan)
     {
@@ -57,9 +57,5 @@ public class ClanRepository : MongoDbRepositoryBase, IClanRepository
     public Task SaveMemberShips(List<ClanMembership> clanMembers)
     {
         return UpsertMany(clanMembers);
-    }
-
-    public ClanRepository(MongoClient mongoClient) : base(mongoClient)
-    {
     }
 }

@@ -7,16 +7,12 @@ using W3C.Domain.UpdateService.Contracts;
 
 namespace W3C.Domain.UpdateService;
 
-public class UpdateServiceClient
+public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
-    private readonly HttpClient _httpClient;
-    public UpdateServiceClient(IHttpClientFactory httpClientFactory)
-    {
-        _httpClient = httpClientFactory.CreateClient();
-    }
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {

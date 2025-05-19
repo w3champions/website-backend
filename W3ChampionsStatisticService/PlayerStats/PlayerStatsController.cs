@@ -9,16 +9,10 @@ namespace W3ChampionsStatisticService.PlayerStats;
 
 [ApiController]
 [Route("api/player-stats")]
-public class PlayerStatsController : ControllerBase
+public class PlayerStatsController(IPlayerStatsRepository playerRepository, PlayerStatisticsService playerStatisticsService) : ControllerBase
 {
-    private readonly IPlayerStatsRepository _playerRepository;
-    private readonly PlayerStatisticsService _playerStatisticsService;
-
-    public PlayerStatsController(IPlayerStatsRepository playerRepository, PlayerStatisticsService playerStatisticsService)
-    {
-        _playerRepository = playerRepository;
-        _playerStatisticsService = playerStatisticsService;
-    }
+    private readonly IPlayerStatsRepository _playerRepository = playerRepository;
+    private readonly PlayerStatisticsService _playerStatisticsService = playerStatisticsService;
 
     [HttpGet("{battleTag}/race-on-map-versus-race")]
     public async Task<IActionResult> GetRaceOnMapVersusRaceStat([FromRoute] string battleTag, int season)

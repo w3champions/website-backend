@@ -7,24 +7,16 @@ using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.ReadModelBase;
 
-public class ReadModelHandler<T> : IAsyncUpdatable where T : IReadModelHandler
+public class ReadModelHandler<T>(
+    IMatchEventRepository eventRepository,
+    IVersionRepository versionRepository,
+    T innerHandler,
+    TrackingService trackingService = null) : IAsyncUpdatable where T : IReadModelHandler
 {
-    private readonly IMatchEventRepository _eventRepository;
-    private readonly IVersionRepository _versionRepository;
-    private readonly T _innerHandler;
-    private readonly TrackingService _trackingService;
-
-    public ReadModelHandler(
-        IMatchEventRepository eventRepository,
-        IVersionRepository versionRepository,
-        T innerHandler,
-        TrackingService trackingService = null)
-    {
-        _eventRepository = eventRepository;
-        _versionRepository = versionRepository;
-        _innerHandler = innerHandler;
-        _trackingService = trackingService;
-    }
+    private readonly IMatchEventRepository _eventRepository = eventRepository;
+    private readonly IVersionRepository _versionRepository = versionRepository;
+    private readonly T _innerHandler = innerHandler;
+    private readonly TrackingService _trackingService = trackingService;
 
     public async Task Update()
     {

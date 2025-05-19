@@ -9,15 +9,11 @@ using W3C.Domain.MatchmakingService;
 
 namespace W3C.Domain.Repositories;
 
-public class InformationMessagesRepository : MongoDbRepositoryBase, IInformationMessagesRepository
+public class InformationMessagesRepository(
+    MongoClient mongoClient,
+    MatchmakingServiceClient matchmakingServiceClient) : MongoDbRepositoryBase(mongoClient), IInformationMessagesRepository
 {
-    MatchmakingServiceClient _matchmakingServiceClient;
-    public InformationMessagesRepository(
-        MongoClient mongoClient,
-        MatchmakingServiceClient matchmakingServiceClient) : base(mongoClient)
-    {
-        _matchmakingServiceClient = matchmakingServiceClient;
-    }
+    MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
 
     public Task<List<LoadingScreenTip>> GetTips(int? limit = 5)
     {

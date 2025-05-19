@@ -131,14 +131,9 @@ public class TestData
     public string Key { get; init; }
 }
 
-public class TestService : ITestService
+public class TestService(ICachedDataProvider<TestData> testCachedDataProvider) : ITestService
 {
-    private readonly ICachedDataProvider<TestData> _testCachedDataProvider;
-
-    public TestService(ICachedDataProvider<TestData> testCachedDataProvider)
-    {
-        _testCachedDataProvider = testCachedDataProvider;
-    }
+    private readonly ICachedDataProvider<TestData> _testCachedDataProvider = testCachedDataProvider;
 
     public async Task<TestData> GetTestDataAsync(string key)
     {

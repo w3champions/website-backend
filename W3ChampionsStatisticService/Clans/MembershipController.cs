@@ -6,15 +6,9 @@ namespace W3ChampionsStatisticService.Clans;
 
 [ApiController]
 [Route("api/memberships")]
-public class MembershipController : ControllerBase
+public class MembershipController(IClanRepository clanRepository) : ControllerBase
 {
-    private readonly IClanRepository _clanRepository;
-
-    public MembershipController(
-        IClanRepository clanRepository)
-    {
-        _clanRepository = clanRepository;
-    }
+    private readonly IClanRepository _clanRepository = clanRepository;
 
     [HttpGet("{membershipId}")]
     public async Task<IActionResult> GetMembership(string membershipId)

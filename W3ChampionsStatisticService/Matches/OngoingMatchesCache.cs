@@ -8,7 +8,7 @@ using W3C.Domain.Repositories;
 
 namespace W3ChampionsStatisticService.Matches;
 
-public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
+public class OngoingMatchesCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IOngoingMatchesCache
 {
     private List<OnGoingMatchup> _values = [];
     private readonly object _lock = new();
@@ -106,10 +106,6 @@ public class OngoingMatchesCache : MongoDbRepositoryBase, IOngoingMatchesCache
                 _values = values;
             }
         }
-    }
-
-    public OngoingMatchesCache(MongoClient mongoClient) : base(mongoClient)
-    {
     }
 }
 

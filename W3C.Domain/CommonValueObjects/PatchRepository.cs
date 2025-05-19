@@ -7,12 +7,8 @@ using W3C.Domain.Repositories;
 
 namespace W3C.Domain.CommonValueObjects;
 
-public class PatchRepository : MongoDbRepositoryBase, IPatchRepository
+public class PatchRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPatchRepository
 {
-    public PatchRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-    }
-
     public async Task<string> GetPatchVersionFromDate(DateTime dateTime)
     {
         var patches = await LoadPatches();

@@ -7,15 +7,10 @@ using MongoDB.Driver;
 
 namespace W3C.Domain.Repositories;
 
-public class MongoDbRepositoryBase
+public class MongoDbRepositoryBase(MongoClient mongoClient)
 {
-    private readonly MongoClient _mongoClient;
+    private readonly MongoClient _mongoClient = mongoClient;
     private readonly string _databaseName = "W3Champions-Statistic-Service";
-
-    public MongoDbRepositoryBase(MongoClient mongoClient)
-    {
-        _mongoClient = mongoClient;
-    }
 
     protected IMongoDatabase CreateClient()
     {

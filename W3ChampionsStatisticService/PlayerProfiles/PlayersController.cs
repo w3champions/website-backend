@@ -170,54 +170,28 @@ public class PlayersController(
     }
 }
 
-public class ProfilePictureDto
+public class ProfilePictureDto(DateTimeOffset lastUpdated, ProfilePicture profilePicture)
 {
-    public DateTimeOffset LastUpdated { get; }
-    public ProfilePicture ProfilePicture { get; }
-
-    public ProfilePictureDto(DateTimeOffset lastUpdated, ProfilePicture profilePicture)
-    {
-        LastUpdated = lastUpdated;
-        ProfilePicture = profilePicture;
-    }
+    public DateTimeOffset LastUpdated { get; } = lastUpdated;
+    public ProfilePicture ProfilePicture { get; } = profilePicture;
 }
 
-public class ClanMemberhipDto
+public class ClanMemberhipDto(string battleTag, string clanId, in DateTimeOffset lastUpdated)
 {
-    public string BattleTag { get; }
-    public string ClanId { get; }
-    public DateTimeOffset LastUpdated { get; }
-
-    public ClanMemberhipDto(string battleTag, string clanId, in DateTimeOffset lastUpdated)
-    {
-        BattleTag = battleTag;
-        ClanId = clanId;
-        LastUpdated = lastUpdated;
-    }
+    public string BattleTag { get; } = battleTag;
+    public string ClanId { get; } = clanId;
+    public DateTimeOffset LastUpdated { get; } = lastUpdated;
 }
 
-public class ChatDetailsDto
+public class ChatDetailsDto(string clanId, ProfilePicture profilePicture)
 {
-    public string ClanId { get; }
-    public ProfilePicture ProfilePicture { get; }
-
-    public ChatDetailsDto(string clanId, ProfilePicture profilePicture)
-    {
-        ClanId = clanId;
-        ProfilePicture = profilePicture;
-    }
+    public string ClanId { get; } = clanId;
+    public ProfilePicture ProfilePicture { get; } = profilePicture;
 }
 
-public class UserBrief
+public class UserBrief(string battleTag, ProfilePicture profilePicture)
 {
-    public string BattleTag { get; }
-    public string Name { get; }
-    public ProfilePicture ProfilePicture { get; }
-
-    public UserBrief(string battleTag, ProfilePicture profilePicture)
-    {
-        BattleTag = battleTag;
-        Name = battleTag.Split("#")[0];
-        ProfilePicture = profilePicture;
-    }
+    public string BattleTag { get; } = battleTag;
+    public string Name { get; } = battleTag.Split("#")[0];
+    public ProfilePicture ProfilePicture { get; } = profilePicture;
 }
