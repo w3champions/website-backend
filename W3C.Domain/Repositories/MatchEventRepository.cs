@@ -7,12 +7,8 @@ using W3C.Domain.MatchmakingService;
 
 namespace W3C.Domain.Repositories;
 
-public class MatchEventRepository : MongoDbRepositoryBase, IMatchEventRepository
+public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IMatchEventRepository
 {
-    public MatchEventRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-    }
-
     public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
     {
         lastObjectId ??= ObjectId.Empty.ToString();

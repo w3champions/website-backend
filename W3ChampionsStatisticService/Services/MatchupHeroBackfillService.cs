@@ -7,16 +7,10 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Services;
 
-public class MatchupHeroBackfillService : IAsyncUpdatable
+public class MatchupHeroBackfillService(IMatchRepository matchRepository) : IAsyncUpdatable
 {
-    private readonly IMatchRepository matchRepository;
-    private DateTimeOffset? startTime;
-
-    public MatchupHeroBackfillService(IMatchRepository matchRepository)
-    {
-        this.matchRepository = matchRepository;
-        startTime = DateTimeOffset.Now;
-    }
+    private readonly IMatchRepository matchRepository = matchRepository;
+    private DateTimeOffset? startTime = DateTimeOffset.Now;
 
     public async Task Update()
     {

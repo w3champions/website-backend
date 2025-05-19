@@ -24,14 +24,8 @@ public class HeroPlayedStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
     }
 }
 
-public class HeroPickDto
+public class HeroPickDto(string icon, in EPick pick)
 {
-    public string Icon { get; }
-    public EPick Pick { get; }
-
-    public HeroPickDto(string icon, in EPick pick)
-    {
-        Icon = icon.ParseReforgedName();
-        Pick = pick;
-    }
+    public string Icon { get; } = icon.ParseReforgedName();
+    public EPick Pick { get; } = pick;
 }

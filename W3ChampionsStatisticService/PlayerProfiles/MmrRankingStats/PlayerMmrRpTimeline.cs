@@ -90,17 +90,11 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     }
 }
 
-public class MmrRpAtDate : IComparable
+public class MmrRpAtDate(int mmr, double? rp, DateTimeOffset date) : IComparable
 {
-    public MmrRpAtDate(int mmr, double? rp, DateTimeOffset date)
-    {
-        Mmr = mmr;
-        Rp = rp;
-        Date = date;
-    }
-    public int Mmr { get; set; }
-    public double? Rp { get; set; }
-    public DateTimeOffset Date { get; set; }
+    public int Mmr { get; set; } = mmr;
+    public double? Rp { get; set; } = rp;
+    public DateTimeOffset Date { get; set; } = date;
 
     public Boolean HasSameYearMonthDayAs(MmrRpAtDate mRAT2)
     {

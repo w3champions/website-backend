@@ -6,20 +6,13 @@ using Microsoft.Extensions.Options;
 
 namespace W3ChampionsStatisticService.Cache;
 
-public class InMemoryCachedDataProvider<T> : ICachedDataProvider<T> where T : class
+public class InMemoryCachedDataProvider<T>(IOptions<CacheOptionsFor<T>> cacheDataOptions, IMemoryCache memoryCache) : ICachedDataProvider<T> where T : class
 {
     // NOTE: It is intentional to have different semaphores for different generic types
     // ReSharper disable once StaticMemberInGenericType
     private static readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-
-    private readonly CacheOptionsFor<T> _cacheOptions;
-    private readonly IMemoryCache _memoryCache;
-
-    public InMemoryCachedDataProvider(IOptions<CacheOptionsFor<T>> cacheDataOptions, IMemoryCache memoryCache)
-    {
-        _cacheOptions = cacheDataOptions.Value;
-        _memoryCache = memoryCache;
-    }
+    private readonly CacheOptionsFor<T> _cacheOptions = cacheDataOptions.Value;
+    private readonly IMemoryCache _memoryCache = memoryCache;
 
     public async Task<T> GetCachedOrRequestAsync(
         Func<Task<T>> requestDataCallbackAsync,
