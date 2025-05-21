@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class PlayerWinrateHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerWinrateHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

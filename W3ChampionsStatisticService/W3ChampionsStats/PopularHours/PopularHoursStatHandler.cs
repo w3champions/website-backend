@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 
-public class PopularHoursStatHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class PopularHoursStatHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadModelHandler
 {
     private readonly IW3StatsRepo _w3Stats = w3Stats;
 

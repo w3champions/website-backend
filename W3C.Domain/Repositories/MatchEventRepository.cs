@@ -9,11 +9,15 @@ namespace W3C.Domain.Repositories;
 
 public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IMatchEventRepository
 {
-    public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
+    public MatchEventRepository(MongoClient mongoClient) : base(mongoClient)
+    {
+    }
+
+    public async Task<List<T>> Load<T>(string lastObjectId, int pageSize = 100) where T : MatchmakingEvent
     {
         lastObjectId ??= ObjectId.Empty.ToString();
 
-        var mongoCollection = CreateCollection<MatchFinishedEvent>();
+        var mongoCollection = CreateCollection<T>();
 
         var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
             .SortBy(s => s.Id)

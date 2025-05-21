@@ -319,4 +319,19 @@ public static class TestDtoHelper
     {
         return heroes.Select((hero, index) => new Hero { icon = $"{Enum.GetName(hero).ToLower()}.png", level = index + 1 }).ToList();
     }
+
+    public static MatchCanceledEvent CreateFakeMatchCanceledEvent()
+    {
+        var fixture = new Fixture { RepeatCount = 2 };
+        var fakeEvent = fixture.Build<MatchCanceledEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
+
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.gameMode = GameMode.GM_1v1;
+        fakeEvent.match.season = 0;
+        fakeEvent.match.id = fakeEvent.Id.ToString();
+
+        return fakeEvent;
+    }
 }

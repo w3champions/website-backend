@@ -3,7 +3,13 @@ using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.ReadModelBase;
 
-public interface IReadModelHandler
+public interface IMatchFinishedReadModelHandler
 {
     Task Update(MatchFinishedEvent nextEvent);
 }
+
+public interface IMatchCanceledReadModelHandler
+{
+    Task Update(MatchCanceledEvent nextEvent);
+}
+
