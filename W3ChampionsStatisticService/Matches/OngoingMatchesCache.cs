@@ -34,11 +34,6 @@ public class OngoingMatchesCache(MongoClient mongoClient) : MongoDbRepositoryBas
 
     private bool _cachesInitialized = false;
 
-    public OngoingMatchesCache(MongoClient mongoClient)
-        : base(mongoClient)
-    {
-    }
-
     public class CacheResult<T>
     {
 #nullable enable

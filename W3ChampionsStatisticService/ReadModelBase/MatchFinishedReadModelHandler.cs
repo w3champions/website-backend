@@ -14,12 +14,12 @@ public class MatchFinishedReadModelHandler<T>(
     IVersionRepository versionRepository,
     T innerHandler,
     ITrackingService trackingService = null) : IAsyncUpdatable where T : IMatchFinishedReadModelHandler
-    {
-        private readonly IMatchEventRepository _eventRepository = eventRepository;
-        private readonly IVersionRepository _versionRepository = versionRepository;
-        private readonly T _innerHandler = innerHandler;
-        private readonly ITrackingService _trackingService = trackingService;
-    }
+{
+    private readonly IMatchEventRepository _eventRepository = eventRepository;
+    private readonly IVersionRepository _versionRepository = versionRepository;
+    private readonly T _innerHandler = innerHandler;
+    private readonly ITrackingService _trackingService = trackingService;
+
     public async Task Update()
     {
         var lastVersion = await _versionRepository.GetLastVersion<T>();
