@@ -7,11 +7,13 @@ using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Maps;
 
 [ApiController]
 [Route("api/maps")]
+[Trace]
 public class MapsController(
     MatchmakingServiceClient matchmakingServiceClient,
     UpdateServiceClient updateServiceClient) : ControllerBase

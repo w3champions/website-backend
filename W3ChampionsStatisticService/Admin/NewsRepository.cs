@@ -4,9 +4,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Admin;
 
+[Trace]
 public class NewsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), INewsRepository
 {
     public Task<List<NewsMessage>> Get(int? limit = 5)

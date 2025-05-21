@@ -3,9 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Ladder;
 
+[Trace]
 public class RankQueryHandler(
     IRankRepository rankRepository,
     IPlayerRepository playerRepository,

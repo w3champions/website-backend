@@ -5,11 +5,13 @@ using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Tournaments;
 
 [ApiController]
 [Route("api/tournaments")]
+[Trace]
 public class TournamentsController(
     MatchmakingServiceClient matchmakingServiceRepository,
     IPersonalSettingsRepository personalSettingsRepository

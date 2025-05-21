@@ -4,10 +4,12 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Cache;
 using W3C.Domain.MatchmakingService;
 using System.Collections.Generic;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
 // TODO: It is a repository with a cache
+[Trace]
 public class MatchmakingProvider(
     MongoClient mongoClient,
     MatchmakingServiceClient matchmakingServiceClient,

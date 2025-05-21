@@ -7,9 +7,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 
+[Trace]
 public class OverallRaceAndWinStatHandler(
     IW3StatsRepo w3Stats,
     IPatchRepository patchRepository
@@ -69,6 +71,7 @@ public class OverallRaceAndWinStatHandler(
         }
     }
 
+    [NoTrace]
     private int ToMaxMMr(double averageMmr)
     {
         if (averageMmr > 2200) return 2200;

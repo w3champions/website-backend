@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.IdentityModel.Tokens;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -51,6 +52,12 @@ public class W3CUserAuthenticationDto
             .Where(claim => claim.Type == "permissions")
             .Select(x => x.Value)
             .ToList();
+
+        if (!string.IsNullOrEmpty(btag))
+        {
+            Activity.Current?.AddBaggage(BaggageToTagProcessor.BattleTagKey, btag);
+            Activity.Current?.SetTag(BaggageToTagProcessor.BattleTagKey, btag);
+        }
 
         return new W3CUserAuthenticationDto
         {

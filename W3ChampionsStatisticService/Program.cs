@@ -11,6 +11,13 @@ using Prometheus;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+using OpenTelemetry;
+using System.Diagnostics;
 
 using W3C.Domain.ChatService;
 using W3C.Domain.CommonValueObjects;
@@ -57,6 +64,16 @@ using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 using Serilog.Events;
 using Serilog.Formatting.Json;
+using MongoDB.Driver.Core.Extensions.DiagnosticSources;
+using Castle.DynamicProxy;
+using W3ChampionsStatisticService.Services.Interceptors;
+using W3ChampionsStatisticService.Extensions;
+using Microsoft.AspNetCore.Http;
+using W3ChampionsStatisticService.Services.Tracing.Sampling;
+using W3ChampionsStatisticService.Filters;
+
+const string WEBSITE_BACKEND_HUB_PATH = "/websiteBackendHub";
+const double TRACING_DEFAULT_SAMPLING_RATE = 0.01;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -85,7 +102,7 @@ Log.Information("Starting server.");
 
 // Add telemetry
 string appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
-builder.Services.AddApplicationInsightsTelemetry(c => c.InstrumentationKey = appInsightsKey?.Replace("'", ""));
+builder.Services.AddApplicationInsightsTelemetry(c => c.ConnectionString = "InstrumentationKey=" + appInsightsKey?.Replace("'", ""));
 
 // Add Swagger
 builder.Services.AddSwaggerGen(f =>
@@ -94,12 +111,95 @@ builder.Services.AddSwaggerGen(f =>
 });
 
 // Configure and add MongoDB
-string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
+string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://localhost:27020";
 MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
 mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
 mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
+
+// Add OTEL MongoDB Instrumentation
+mongoSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
+mongoSettings.ApplicationName = "W3ChampionsStatisticService"; // Set
+
 var mongoClient = new MongoClient(mongoSettings);
 builder.Services.AddSingleton(mongoClient);
+
+// Configure OpenTelemetry
+var serviceName = "W3ChampionsStatisticService";
+var serviceVersion = "1.0.0";
+
+// Get OTLP endpoint from environment variable or use default
+var otlpEndpoint = Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4317";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(serviceName, serviceVersion: serviceVersion))
+    .WithTracing(tracing => tracing
+        .SetSampler(new ParentBasedSampler(new CustomRootSampler(TRACING_DEFAULT_SAMPLING_RATE)))
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.Filter = context =>
+            {
+                // Exclude OPTIONS requests
+                if (HttpMethods.IsOptions(context.Request.Method))
+                {
+                    return false;
+                }
+
+                // Exclude SignalR hub connections
+                if (context.Request.Path.Equals(WEBSITE_BACKEND_HUB_PATH))
+                {
+                    return false;
+                }
+
+                return true;
+            };
+            options.EnrichWithHttpRequest = (activity, httpRequest) =>
+            {
+                if (httpRequest.Headers.TryGetValue("x-faro-session-id", out var faroSessionIdValues))
+                {
+                    var faroSessionId = faroSessionIdValues.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(faroSessionId))
+                    {
+                        activity.SetTag(BaggageToTagProcessor.SessionIdKey, faroSessionId);
+                        activity.AddBaggage(BaggageToTagProcessor.SessionIdKey, faroSessionId); // Add to baggage for propagation
+                    }
+                }
+            };
+        })
+        .AddHttpClientInstrumentation(options =>
+        {
+            options.FilterHttpRequestMessage = request =>
+            {
+                // Filter out instance metadata calls (Azure, AWS, etc.)
+                return request.RequestUri?.Host != "169.254.169.254";
+            };
+            options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
+            {
+                // Activity here is the client activity, which should inherit baggage from the parent activity.
+                var faroSessionIdFromBaggage = activity.GetBaggageItem(BaggageToTagProcessor.SessionIdKey);
+                if (!string.IsNullOrEmpty(faroSessionIdFromBaggage))
+                {
+                    // Add it to the outgoing request headers
+                    httpRequestMessage.Headers.TryAddWithoutValidation("x-faro-session-id", faroSessionIdFromBaggage);
+                }
+            };
+        })
+        .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
+        .AddSource(serviceName)
+        .AddProcessor(new BaggageToTagProcessor())
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri(otlpEndpoint);
+        })
+        );
+
+
+// Tracing instrumentation
+builder.Services.AddSingleton(new ActivitySource(serviceName));
+builder.Services.AddSingleton<TracingService>();
+builder.Services.AddSingleton<ProxyGenerator>();
+builder.Services.AddSingleton<TracingInterceptor>();
+builder.Services.AddTransient<SignalRTraceContextFilter>();
 
 // Add SignalR for using websockets
 builder.Services.AddSignalR();
@@ -114,16 +214,16 @@ builder.Services.AddSpecialBsonRegistrations();
 builder.Services.AddBasicAuthForMetrics();
 
 // Add Application Insights
-builder.Services.AddSingleton<TrackingService>();
+builder.Services.AddInterceptedSingleton<TrackingService>();
 string disableTelemetry = Environment.GetEnvironmentVariable("DISABLE_TELEMETRY");
 if (disableTelemetry == "true")
 {
     TelemetryDebugWriter.IsTracingDisabled = true;
 }
 
-builder.Services.AddTransient<PlayerAkaProvider>();
-builder.Services.AddTransient<PersonalSettingsProvider>();
-builder.Services.AddTransient<MatchmakingProvider>();
+builder.Services.AddInterceptedTransient<PlayerAkaProvider>();
+builder.Services.AddInterceptedTransient<PersonalSettingsProvider>();
+builder.Services.AddInterceptedTransient<MatchmakingProvider>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
@@ -137,56 +237,56 @@ builder.Services.Configure<CacheOptionsFor<List<PlayerAka>>>(x =>
     x.CacheDuration = TimeSpan.FromHours(1);
 });
 
-builder.Services.AddTransient<IMatchEventRepository, MatchEventRepository>();
-builder.Services.AddTransient<IVersionRepository, VersionRepository>();
-builder.Services.AddTransient<IMatchRepository, MatchRepository>();
-builder.Services.AddSingleton<IPlayerRepository, PlayerRepository>();
-builder.Services.AddTransient<IRankRepository, RankRepository>();
-builder.Services.AddTransient<IPlayerStatsRepository, PlayerStatsRepository>();
-builder.Services.AddTransient<IW3StatsRepo, W3StatsRepo>();
-builder.Services.AddTransient<IPatchRepository, PatchRepository>();
-builder.Services.AddTransient<IAdminRepository, AdminRepository>();
-builder.Services.AddTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
-builder.Services.AddTransient<IW3CAuthenticationService, W3CAuthenticationService>();
-builder.Services.AddSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
-builder.Services.AddTransient<HeroStatsQueryHandler>();
-builder.Services.AddTransient<PortraitCommandHandler>();
-builder.Services.AddTransient<MmrDistributionHandler>();
-builder.Services.AddTransient<RankQueryHandler>();
-builder.Services.AddTransient<GameModeStatQueryHandler>();
-builder.Services.AddTransient<IClanRepository, ClanRepository>();
-builder.Services.AddTransient<INewsRepository, NewsRepository>();
-builder.Services.AddTransient<IPortraitRepository, PortraitRepository>();
-builder.Services.AddTransient<IInformationMessagesRepository, InformationMessagesRepository>();
-builder.Services.AddTransient<ClanCommandHandler>();
+builder.Services.AddInterceptedTransient<IMatchEventRepository, MatchEventRepository>();
+builder.Services.AddInterceptedTransient<IVersionRepository, VersionRepository>();
+builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
+builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
+builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
+builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
+builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
+builder.Services.AddInterceptedTransient<IPatchRepository, PatchRepository>();
+builder.Services.AddInterceptedTransient<IAdminRepository, AdminRepository>();
+builder.Services.AddInterceptedTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
+builder.Services.AddInterceptedTransient<IW3CAuthenticationService, W3CAuthenticationService>();
+builder.Services.AddInterceptedSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
+builder.Services.AddInterceptedTransient<HeroStatsQueryHandler>();
+builder.Services.AddInterceptedTransient<PortraitCommandHandler>();
+builder.Services.AddInterceptedTransient<MmrDistributionHandler>();
+builder.Services.AddInterceptedTransient<RankQueryHandler>();
+builder.Services.AddInterceptedTransient<GameModeStatQueryHandler>();
+builder.Services.AddInterceptedTransient<IClanRepository, ClanRepository>();
+builder.Services.AddInterceptedTransient<INewsRepository, NewsRepository>();
+builder.Services.AddInterceptedTransient<IPortraitRepository, PortraitRepository>();
+builder.Services.AddInterceptedTransient<IInformationMessagesRepository, InformationMessagesRepository>();
+builder.Services.AddInterceptedTransient<ClanCommandHandler>();
 
 // Actionfilters
-builder.Services.AddTransient<BearerCheckIfBattleTagBelongsToAuthFilter>();
-builder.Services.AddTransient<CheckIfBattleTagIsAdminFilter>();
-builder.Services.AddTransient<InjectActingPlayerFromAuthCodeFilter>();
-builder.Services.AddTransient<BearerHasPermissionFilter>();
-builder.Services.AddTransient<InjectAuthTokenFilter>();
+builder.Services.AddInterceptedTransient<BearerCheckIfBattleTagBelongsToAuthFilter>();
+builder.Services.AddInterceptedTransient<CheckIfBattleTagIsAdminFilter>();
+builder.Services.AddInterceptedTransient<InjectActingPlayerFromAuthCodeFilter>();
+builder.Services.AddInterceptedTransient<BearerHasPermissionFilter>();
+builder.Services.AddInterceptedTransient<InjectAuthTokenFilter>();
 
-builder.Services.AddSingleton<MatchmakingServiceClient>();
-builder.Services.AddSingleton<UpdateServiceClient>();
-builder.Services.AddSingleton<ReplayServiceClient>();
-builder.Services.AddTransient<MatchQueryHandler>();
-builder.Services.AddSingleton<ChatServiceClient>();
-builder.Services.AddTransient<PlayerStatisticsService>();
-builder.Services.AddTransient<PlayerService>();
-builder.Services.AddTransient<MatchService>();
-builder.Services.AddTransient<IdentityServiceClient>();
-builder.Services.AddTransient<ILogsRepository, LogsRepository>();
+builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
+builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
+builder.Services.AddInterceptedSingleton<ReplayServiceClient>();
+builder.Services.AddInterceptedTransient<MatchQueryHandler>();
+builder.Services.AddInterceptedSingleton<ChatServiceClient>();
+builder.Services.AddInterceptedTransient<PlayerStatisticsService>();
+builder.Services.AddInterceptedTransient<PlayerService>();
+builder.Services.AddInterceptedTransient<MatchService>();
+builder.Services.AddInterceptedTransient<IdentityServiceClient>();
+builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
-builder.Services.AddTransient<IFriendRepository, FriendRepository>();
-builder.Services.AddTransient<FriendCommandHandler>();
-builder.Services.AddSingleton<FriendRequestCache>();
-builder.Services.AddSingleton<FriendListCache>();
-builder.Services.AddTransient<FriendRepository>();
+builder.Services.AddInterceptedTransient<IFriendRepository, FriendRepository>();
+builder.Services.AddInterceptedTransient<FriendCommandHandler>();
+builder.Services.AddInterceptedSingleton<FriendRequestCache>();
+builder.Services.AddInterceptedSingleton<FriendListCache>();
+builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
-builder.Services.AddSingleton<ConnectionMapping>();
+builder.Services.AddInterceptedSingleton<ConnectionMapping>();
 
 builder.Services.AddDirectoryBrowser();
 
@@ -301,6 +401,41 @@ app.UseDirectoryBrowser(new DirectoryBrowserOptions
 });
 
 // Add SignalR FriendHub
-app.MapHub<WebsiteBackendHub>("/websiteBackendHub");
+app.MapHub<WebsiteBackendHub>(WEBSITE_BACKEND_HUB_PATH);
 
+Log.Information("Server started.");
 app.Run();
+
+// Renamed from SessionIdTaggerProcessor
+public class BaggageToTagProcessor : BaseProcessor<Activity>
+{
+    public const string SessionIdKey = "session_id"; // This key is used to correlate Faro traces across backend services
+    public const string BattleTagKey = "battle_tag";
+
+    public override void OnStart(Activity activity)
+    {
+        ProcessBaggageItem(activity, SessionIdKey);
+        ProcessBaggageItem(activity, BattleTagKey);
+    }
+
+    private void ProcessBaggageItem(Activity activity, string baggageKey)
+    {
+        var baggageValue = activity.GetBaggageItem(baggageKey);
+        if (!string.IsNullOrEmpty(baggageValue))
+        {
+            bool tagExists = false;
+            foreach (var tag in activity.TagObjects)
+            {
+                if (tag.Key == baggageKey)
+                {
+                    tagExists = true;
+                    break;
+                }
+            }
+            if (!tagExists)
+            {
+                activity.SetTag(baggageKey, baggageValue);
+            }
+        }
+    }
+}

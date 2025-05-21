@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Clans.ClanStates;
 
+[Trace]
 public class NotFoundedClan : ClanState
 {
     public NotFoundedClan(string founder)

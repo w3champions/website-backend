@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using W3C.Contracts.Admin.Moderation;
+using W3C.Domain.Tracing;
 
 namespace W3C.Domain.ChatService;
 
@@ -29,6 +30,7 @@ public class ChatServiceClient
         };
     }
 
+    [Trace]
     public async Task<LoungeMuteResponse[]> GetLoungeMutes(string authorization)
     {
         var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
@@ -42,6 +44,7 @@ public class ChatServiceClient
         return deserializeObject;
     }
 
+    [Trace]
     public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute, string authorization)
     {
         var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
@@ -54,6 +57,7 @@ public class ChatServiceClient
         return response;
     }
 
+    [Trace]
     public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag, string authorization)
     {
         var encodedTag = HttpUtility.UrlEncode(battleTag);

@@ -4,9 +4,11 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3C.Domain.Tracing;
 
 namespace W3C.Domain.Repositories;
 
+[Trace]
 public class MongoDbRepositoryBase(MongoClient mongoClient)
 {
     private readonly MongoClient _mongoClient = mongoClient;

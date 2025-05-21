@@ -5,9 +5,11 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
 using W3C.Contracts.GameObjects;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
+[Trace]
 public class MatchupLengthsHandler(IW3StatsRepo w3Stats) : IReadModelHandler
 {
     private readonly IW3StatsRepo _w3StatsRepo = w3Stats;

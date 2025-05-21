@@ -6,9 +6,12 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
+using W3C.Domain.Tracing;
+
 
 namespace W3ChampionsStatisticService.Services;
 
+[Trace]
 public class PlayerStatisticsService(
     IPlayerStatsRepository playerStatsRepository,
     MatchmakingProvider matchmakingProvider,

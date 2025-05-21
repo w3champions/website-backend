@@ -17,12 +17,5 @@ public class PlayerDetails
     public PersonalSetting[] PersonalSettings { get; set; }
     public Player PlayerAkaData { get; set; }
 
-    public Race GetMainRace()
-    {
-        var mostGamesRace = WinLosses?
-                .OrderByDescending(x => x.Games)
-                .FirstOrDefault();
-
-        return mostGamesRace != null ? mostGamesRace.Race : Race.RnD;
-    }
+    public Race GetMainRace() => WinLosses?.MaxBy(x => x.Games)?.Race ?? Race.RnD;
 }

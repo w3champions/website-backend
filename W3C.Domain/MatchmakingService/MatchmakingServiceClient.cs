@@ -17,9 +17,10 @@ using W3C.Contracts.Matchmaking;
 using W3C.Contracts.Matchmaking.Queue;
 using W3C.Domain.Repositories;
 using System.Net.Http.Json;
-
+using W3C.Domain.Tracing;
 namespace W3C.Domain.MatchmakingService;
 
+[Trace]
 public class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";

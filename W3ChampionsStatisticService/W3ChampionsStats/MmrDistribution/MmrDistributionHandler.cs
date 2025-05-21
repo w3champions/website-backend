@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using System;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 
+[Trace]
 public class MmrDistributionHandler(IPlayerRepository playerRepository)
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
@@ -22,6 +24,7 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository)
         return new MmrStats(grouped, orderedMMrs);
     }
 
+    [NoTrace]
     private static IEnumerable<int> Ranges(int max, int min, int steps)
     {
         while (max > min)
@@ -58,6 +61,7 @@ public class MmrStats
         StandardDeviation = CalculateStandardDeviation(mmrs);
     }
 
+    [Trace]
     private static double CalculateStandardDeviation(List<int> values)
     {
         if (!values.Any())

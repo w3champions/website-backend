@@ -4,18 +4,20 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.Services;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Admin.Permissions;
 
 [ApiController]
 [Route("api/admin/permissions")]
+[Trace]
 public class PermissionsController(IdentityServiceClient identityServiceClient) : ControllerBase
 {
     private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
 
     [HttpGet]
     [InjectAuthToken]
-    public async Task<IActionResult> GetPermissions(string authToken)
+    public async Task<IActionResult> GetPermissions([NoTrace] string authToken)
     {
         try
         {
@@ -30,7 +32,7 @@ public class PermissionsController(IdentityServiceClient identityServiceClient) 
 
     [HttpPost("add")]
     [InjectAuthToken]
-    public async Task<IActionResult> AddAdmin([FromBody] Permission permission, string authToken)
+    public async Task<IActionResult> AddAdmin([FromBody] Permission permission, [NoTrace] string authToken)
     {
         try
         {
@@ -45,7 +47,7 @@ public class PermissionsController(IdentityServiceClient identityServiceClient) 
 
     [HttpPut("edit")]
     [InjectAuthToken]
-    public async Task<IActionResult> EditAdmin([FromBody] Permission permission, string authToken)
+    public async Task<IActionResult> EditAdmin([FromBody] Permission permission, [NoTrace] string authToken)
     {
         try
         {
@@ -60,7 +62,7 @@ public class PermissionsController(IdentityServiceClient identityServiceClient) 
 
     [HttpDelete("delete")]
     [InjectAuthToken]
-    public async Task<IActionResult> DeleteAdmin([FromQuery] string id, string authToken)
+    public async Task<IActionResult> DeleteAdmin([FromQuery] string id, [NoTrace] string authToken)
     {
         try
         {

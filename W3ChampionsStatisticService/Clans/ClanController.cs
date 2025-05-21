@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Clans.Commands;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Clans;
 
 [ApiController]
 [Route("api/clans")]
+[Trace]
 public class ClanController(
     ClanCommandHandler clanCommandHandler) : ControllerBase
 {

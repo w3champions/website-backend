@@ -4,9 +4,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Domain.GameModes;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
 
+[Trace]
 public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : IReadModelHandler
 {
     private readonly IPlayerStatsRepository _playerRepository = playerRepository;

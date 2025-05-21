@@ -3,9 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Rewards.Portraits;
 
+[Trace]
 public class PortraitCommandHandler(
     IPersonalSettingsRepository personalSettingsRepository,
     IPortraitRepository portraitRepository)

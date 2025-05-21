@@ -3,9 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Friends;
 
+[Trace]
 public class FriendListCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient)
 {
     private List<Friendlist> _friendLists = [];

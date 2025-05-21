@@ -9,16 +9,20 @@ using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Hubs;
 
+[Trace]
 public class WebsiteBackendHub(
     IW3CAuthenticationService authenticationService,
     ConnectionMapping connections,
     IHttpContextAccessor contextAccessor,
     FriendRequestCache friendRequestCache,
     IPersonalSettingsRepository personalSettingsRepository,
-    FriendCommandHandler friendCommandHandler
+    FriendCommandHandler friendCommandHandler,
+    TracingService tracingService
 ) : Hub
 {
     private readonly IW3CAuthenticationService _authenticationService = authenticationService;
@@ -27,20 +31,26 @@ public class WebsiteBackendHub(
     private readonly FriendRequestCache _friendRequestCache = friendRequestCache;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly FriendCommandHandler _friendCommandHandler = friendCommandHandler;
+    private readonly TracingService _tracingService = tracingService;
 
+
+    [NoTrace]
     public override async Task OnConnectedAsync()
     {
-        var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"];
-        W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
-        if (w3cUserAuthentication == null)
-        {
-            await Clients.Caller.SendAsync("AuthorizationFailed");
-            Context.Abort();
-            return;
-        }
-        WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
-        await LoginAsAuthenticated(user);
-        await NotifyFriendsWithIsOnline(user.BattleTag, true);
+        // TODO: Extract tracing context
+        await _tracingService.ExecuteWithSpanAsync(this, async () => {
+            var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"];
+            W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
+            if (w3cUserAuthentication == null)
+            {
+                await Clients.Caller.SendAsync("AuthorizationFailed");
+                Context.Abort();
+                return;
+            }
+            WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
+            await LoginAsAuthenticated(user);
+            await NotifyFriendsWithIsOnline(user.BattleTag, true);
+        }, forceNewRoot: true);
         await base.OnConnectedAsync();
     }
 

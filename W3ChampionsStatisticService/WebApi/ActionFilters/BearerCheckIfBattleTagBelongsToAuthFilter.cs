@@ -7,13 +7,14 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
 public class BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService authService) : IAsyncActionFilter
 {
     private readonly IW3CAuthenticationService _authService = authService;
 
+    [Trace]
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         context.RouteData.Values.TryGetValue("battleTag", out var battleTag);

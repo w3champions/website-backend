@@ -3,9 +3,11 @@ using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Ladder;
 
+[Trace]
 public class RankSyncHandler(
     IRankRepository rankRepository,
     IMatchEventRepository matchEventRepository

@@ -7,9 +7,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
+[Trace]
 public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerRepository) : IReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
@@ -113,6 +115,7 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
         await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
     }
 
+    [NoTrace]
     private GameMode GetGameModeStatGameMode(GameMode gameMode, PlayerMMrChange player)
     {
         if (gameMode == GameMode.GM_2v2 && player.IsAt)

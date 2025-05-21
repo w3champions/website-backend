@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Hubs;
 
+[Trace]
 public class ConnectionMapping
 {
     private readonly Dictionary<string, WebSocketUser> _connections = new();

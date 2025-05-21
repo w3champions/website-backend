@@ -6,9 +6,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Domain.GameModes;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
+[Trace]
 public class PlayerRaceOnMapVersusRaceRatioHandler(
     IPlayerStatsRepository playerRepository,
     IPatchRepository patchRepository

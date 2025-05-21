@@ -9,11 +9,12 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
 using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Admin;
 
 [ApiController]
 [Route("api/admin")]
+[Trace]
 public class AdminController(
     IMatchRepository matchRepository,
     MatchmakingServiceClient matchmakingServiceRepository,
@@ -30,12 +31,14 @@ public class AdminController(
     private readonly IRankRepository _rankRepository = rankRepository;
 
     [HttpGet("health-check")]
+    [NoTrace]
     public IActionResult HealthCheck()
     {
         return Ok();
     }
 
     [HttpGet("db-health-check")]
+    [NoTrace]
     public async Task<IActionResult> DatabaseHealthCheck()
     {
         var ongoingMatches = await _matchRepository.LoadOnGoingMatches(
@@ -268,6 +271,7 @@ public class AdminController(
     // Returns a 200 OK if it passes validation and a 401 Unauthorized if it's expired.
     [HttpGet("checkJwtLifetime")]
     [CheckIfBattleTagIsAdmin]
+    [NoTrace]
     public IActionResult CheckJwtLifetime()
     {
         return Ok();

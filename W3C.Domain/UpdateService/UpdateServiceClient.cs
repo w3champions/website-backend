@@ -4,9 +4,11 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using W3C.Domain.UpdateService.Contracts;
+using W3C.Domain.Tracing;
 
 namespace W3C.Domain.UpdateService;
 
+[Trace]
 public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";

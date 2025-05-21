@@ -4,9 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
-
+using W3C.Domain.Tracing;
 namespace W3C.Domain.Repositories;
 
+[Trace]
 public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IMatchEventRepository
 {
     public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)

@@ -7,9 +7,11 @@ using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using Serilog;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
+[Trace]
 public class GameModeStatQueryHandler(
     IPlayerRepository playerRepository,
     PlayerService playerService,

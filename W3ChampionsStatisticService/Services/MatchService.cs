@@ -6,6 +6,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
@@ -16,6 +17,7 @@ public class CachedLong
 }
 
 // Calls MatchRepository and caches results
+[Trace]
 public class MatchService(
     IMatchRepository matchRepository,
     ICachedDataProvider<List<Matchup>> cachedMatchesProvider,

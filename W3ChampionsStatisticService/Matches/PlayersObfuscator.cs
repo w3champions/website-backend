@@ -1,8 +1,10 @@
 ﻿using System.Linq;
 using W3C.Domain.GameModes;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Matches;
 
+[Trace]
 public static class PlayersObfuscator
 {
     public static void ObfuscatePlayersForFFA(params OnGoingMatchup[] matches)

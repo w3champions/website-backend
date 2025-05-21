@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Heroes;
 
@@ -8,6 +9,7 @@ namespace W3ChampionsStatisticService.Heroes;
 [ApiController]
 [Route("api/hero")]
 [ResponseCache(Duration = 60 * 60 * 24 * 7, VaryByHeader = "HeroFilterVersion")]
+[Trace]
 public class HeroController() : ControllerBase
 {
     [HttpGet("filters")]

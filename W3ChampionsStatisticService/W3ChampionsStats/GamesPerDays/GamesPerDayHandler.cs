@@ -5,9 +5,11 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
+[Trace]
 public class GamesPerDayHandler(IW3StatsRepo w3Stats) : IReadModelHandler
 {
     private readonly IW3StatsRepo _w3Stats = w3Stats;

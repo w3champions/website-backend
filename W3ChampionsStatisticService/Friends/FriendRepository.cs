@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Friends;
 
+[Trace]
 public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IFriendRepository
 {
     public async Task<Friendlist> LoadFriendlist(string battleTag)

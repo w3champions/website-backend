@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 
+[Trace]
 public class HeroStatsQueryHandler(IW3StatsRepo w3StatsRepo)
 {
     private readonly IW3StatsRepo _w3StatsRepo = w3StatsRepo;
@@ -50,6 +52,7 @@ public class HeroStatsQueryHandler(IW3StatsRepo w3StatsRepo)
         return CombineWinrates(stats, s => s.HeroCombo == $"{opFirst}_{opSecond}_{opThird}");
     }
 
+    [NoTrace]
     private WinLoss CombineWinrates(
         List<OverallHeroWinRatePerHero> stats,
         Func<HeroWinRate, bool> func)
