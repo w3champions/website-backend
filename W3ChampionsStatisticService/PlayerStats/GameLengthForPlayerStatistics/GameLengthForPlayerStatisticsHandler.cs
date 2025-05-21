@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
-public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) : IReadModelHandler
+public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepo = playerRepo;
 

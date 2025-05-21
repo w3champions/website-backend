@@ -2,6 +2,7 @@ using MongoDB.Bson;
 using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
+using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Matches;
 
@@ -23,7 +24,7 @@ public class MatchupEventRepoTests : IntegrationTestBase
 
         await matchEventRepository.InsertIfNotExisting(matchFinishedEvent1);
 
-        var events = await matchEventRepository.Load();
+        var events = await matchEventRepository.Load<MatchFinishedEvent>(null);
 
         Assert.AreEqual(1, events.Count);
         Assert.AreEqual(false, events[0].WasFromSync);
@@ -45,7 +46,7 @@ public class MatchupEventRepoTests : IntegrationTestBase
         await matchEventRepository.InsertIfNotExisting(matchFinishedEvent1);
         await matchEventRepository.InsertIfNotExisting(matchFinishedEvent2);
 
-        var events = await matchEventRepository.Load();
+        var events = await matchEventRepository.Load<MatchFinishedEvent>(null);
 
         Assert.AreEqual(2, events.Count);
         Assert.AreEqual(false, events[0].WasFromSync);

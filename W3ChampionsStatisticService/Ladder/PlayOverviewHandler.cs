@@ -10,7 +10,7 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.Ladder;
 
-public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayOverviewHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

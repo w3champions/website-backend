@@ -64,6 +64,25 @@ public class IntegrationTestBase
             new FindOneAndReplaceOptions<MatchStartedEvent> { IsUpsert = true });
     }
 
+    protected async Task InsertMatchCanceledEvents(List<MatchCanceledEvent> newEvents)
+    {
+        foreach (var ev in newEvents)
+        {
+            await InsertMatchCanceledEvent(ev);
+        }
+    }
+
+    protected async Task InsertMatchCanceledEvent(MatchCanceledEvent newEvent)
+    {
+        var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");
+        var mongoDatabase = database;
+        var mongoCollection = mongoDatabase.GetCollection<MatchCanceledEvent>(nameof(MatchCanceledEvent));
+        await mongoCollection.FindOneAndReplaceAsync(
+            (Expression<Func<MatchCanceledEvent, bool>>)(ev => ev.match.id == newEvent.match.id),
+            newEvent,
+            new FindOneAndReplaceOptions<MatchCanceledEvent> { IsUpsert = true });
+    }
+
     protected async Task InsertRankChangedEvent(RankingChangedEvent newEvent)
     {
         var database = MongoClient.GetDatabase("W3Champions-Statistic-Service");

@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.ReadModelBase;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
-public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

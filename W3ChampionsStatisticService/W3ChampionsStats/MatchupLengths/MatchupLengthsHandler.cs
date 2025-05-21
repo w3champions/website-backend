@@ -8,7 +8,7 @@ using W3C.Contracts.GameObjects;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 
-public class MatchupLengthsHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class MatchupLengthsHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadModelHandler
 {
     private readonly IW3StatsRepo _w3StatsRepo = w3Stats;
 

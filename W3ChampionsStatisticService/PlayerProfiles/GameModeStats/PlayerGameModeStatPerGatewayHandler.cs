@@ -10,7 +10,7 @@ using W3C.Contracts.Matchmaking;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
-public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

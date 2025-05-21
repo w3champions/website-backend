@@ -220,7 +220,7 @@ public static class TestDtoHelper
         };
     }
 
-    public static MatchStartedEvent CreateFakeStartedEvent()
+    public static MatchStartedEvent CreateFakeStartedEvent(long startTime = 1000000, int mmr = 2500)
     {
         var fixture = new Fixture { RepeatCount = 4 };
         var fakeEvent = fixture.Build<MatchStartedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
@@ -235,11 +235,18 @@ public static class TestDtoHelper
         fakeEvent.match.gateway = GateWay.America;
         fakeEvent.match.gameMode = GameMode.GM_2v2_AT;
         fakeEvent.match.season = 0;
+        fakeEvent.match.startTime = startTime;
+
 
         fakeEvent.match.players[0].battleTag = name1;
         fakeEvent.match.players[1].battleTag = name2;
         fakeEvent.match.players[2].battleTag = name3;
         fakeEvent.match.players[3].battleTag = name4;
+
+        fakeEvent.match.players[0].mmr.rating = mmr;
+        fakeEvent.match.players[1].mmr.rating = mmr;
+        fakeEvent.match.players[2].mmr.rating = mmr;
+        fakeEvent.match.players[3].mmr.rating = mmr;
 
         return fakeEvent;
     }
@@ -311,5 +318,20 @@ public static class TestDtoHelper
     public static List<Hero> CreateHeroList(IList<W3ChampionsStatisticService.Heroes.HeroType> heroes)
     {
         return heroes.Select((hero, index) => new Hero { icon = $"{Enum.GetName(hero).ToLower()}.png", level = index + 1 }).ToList();
+    }
+
+    public static MatchCanceledEvent CreateFakeMatchCanceledEvent()
+    {
+        var fixture = new Fixture { RepeatCount = 2 };
+        var fakeEvent = fixture.Build<MatchCanceledEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
+
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.gameMode = GameMode.GM_1v1;
+        fakeEvent.match.season = 0;
+        fakeEvent.match.id = fakeEvent.Id.ToString();
+
+        return fakeEvent;
     }
 }

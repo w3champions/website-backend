@@ -9,11 +9,11 @@ namespace W3C.Domain.Repositories;
 
 public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IMatchEventRepository
 {
-    public async Task<List<MatchFinishedEvent>> Load(string lastObjectId = null, int pageSize = 100)
+    public async Task<List<T>> Load<T>(string lastObjectId, int pageSize = 100) where T : MatchmakingEvent
     {
         lastObjectId ??= ObjectId.Empty.ToString();
 
-        var mongoCollection = CreateCollection<MatchFinishedEvent>();
+        var mongoCollection = CreateCollection<T>();
 
         var events = await mongoCollection.Find(m => m.Id > ObjectId.Parse(lastObjectId))
             .SortBy(s => s.Id)
@@ -27,6 +27,13 @@ public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBa
     {
         var delay = ObjectId.GenerateNewId(DateTime.Now.AddSeconds(-20));
         return LoadAll<MatchStartedEvent>(m => m.Id < delay, 1000);
+    }
+
+
+    public Task<List<MatchCanceledEvent>> LoadCanceledMatches()
+    {
+        var now = ObjectId.GenerateNewId(DateTime.Now);
+        return LoadAll<MatchCanceledEvent>(m => m.Id < now, 1000);
     }
 
     public async Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0)
@@ -72,5 +79,10 @@ public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBa
     public Task DeleteStartedEvent(ObjectId nextEventId)
     {
         return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
+    }
+
+    public Task DeleteCanceledEvent(ObjectId nextEventId)
+    {
+        return Delete<MatchCanceledEvent>(e => e.Id == nextEventId);
     }
 }

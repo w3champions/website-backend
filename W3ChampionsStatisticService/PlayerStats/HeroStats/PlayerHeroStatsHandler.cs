@@ -7,7 +7,7 @@ using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
 
-public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : IReadModelHandler
+public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerStatsRepository _playerRepository = playerRepository;
 

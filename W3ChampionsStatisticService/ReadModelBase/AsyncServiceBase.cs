@@ -40,7 +40,7 @@ public class AsyncServiceBase<T>(IServiceScopeFactory serviceScopeFactory) : IHo
                 }
                 catch (Exception e)
                 {
-                    var telemetryClient = scope.ServiceProvider.GetService<TrackingService>();
+                    var telemetryClient = scope.ServiceProvider.GetService<ITrackingService>();
                     telemetryClient.TrackException(e, "Some Readmodelhandler is dying");
                     Log.Error($"Some Readmodelhandler is dying: {e.Message}");
                 }
