@@ -28,7 +28,7 @@ public class MatchCanceledModelHandler(IMatchRepository matchRepository) : IMatc
             Log.Warning($"Canceled match {nextEvent.match.id} not found");
             return;
         }
-        
+
         if (ongoingMatch.Match != null)
         {
             Log.Information($"Canceling ongoing match {ongoingMatch.Match.Id}");

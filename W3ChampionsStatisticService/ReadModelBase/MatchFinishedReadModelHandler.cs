@@ -42,7 +42,7 @@ public class MatchFinishedReadModelHandler<T>(
                     {
                         await _innerHandler.Update(nextEvent);
                     }
-                    else 
+                    else
                     {
                         Log.Error($"Old season event {nextEvent.match.season} detected during season {lastVersion.Season}. Skipping event...");
                     }

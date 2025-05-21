@@ -19,7 +19,7 @@ public static class ReadModelExtensions
         services.AddTransient<MatchCanceledReadModelHandler<T>>();
         services.AddSingleton<IHostedService, AsyncServiceBase<MatchCanceledReadModelHandler<T>>>();
         return services;
-    }    
+    }
 
     public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
     {

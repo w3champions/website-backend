@@ -9,24 +9,16 @@ using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.ReadModelBase;
 
-public class MatchCanceledReadModelHandler<T> : IAsyncUpdatable where T : IMatchCanceledReadModelHandler
+public class MatchCanceledReadModelHandler<T>(
+    IMatchEventRepository eventRepository,
+    IVersionRepository versionRepository,
+    T innerHandler,
+    ITrackingService trackingService = null) : IAsyncUpdatable where T : IMatchCanceledReadModelHandler
 {
-    private readonly IMatchEventRepository _eventRepository;
-    private readonly IVersionRepository _versionRepository;
-    private readonly T _innerHandler;
-    private readonly ITrackingService _trackingService;
-
-    public MatchCanceledReadModelHandler(
-        IMatchEventRepository eventRepository,
-        IVersionRepository versionRepository,
-        T innerHandler,
-        ITrackingService trackingService = null)
-    {
-        _eventRepository = eventRepository;
-        _versionRepository = versionRepository;
-        _innerHandler = innerHandler;
-        _trackingService = trackingService;
-    }
+    private readonly IMatchEventRepository _eventRepository = eventRepository;
+    private readonly IVersionRepository _versionRepository = versionRepository;
+    private readonly T _innerHandler = innerHandler;
+    private readonly ITrackingService _trackingService = trackingService;
 
     public async Task Update()
     {
@@ -46,16 +38,16 @@ public class MatchCanceledReadModelHandler<T> : IAsyncUpdatable where T : IMatch
                         await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
                         lastVersion = await _versionRepository.GetLastVersion<T>();
                     }
-                    
+
                     if (nextEvent.match.season == lastVersion.Season)
                     {
                         await _innerHandler.Update(nextEvent);
-                    } 
-                    else 
+                    }
+                    else
                     {
                         Log.Error($"Old season event {nextEvent.match.season} detected during season {lastVersion.Season}. Skipping event...");
                     }
-                    
+
                     await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
                 }
                 catch (Exception e)

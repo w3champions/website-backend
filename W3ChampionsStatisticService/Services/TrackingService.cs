@@ -12,18 +12,13 @@ public interface ITrackingService
     void TrackException(Exception ex, string message);
 }
 
-public class TrackingService : ITrackingService
+public class TrackingService(
+    TelemetryClient telemetry,
+    ILogger<TrackingService> logger) : ITrackingService
 {
-    private readonly TelemetryClient _telemetry;
-    private readonly ILogger<TrackingService> _logger;
+    private readonly TelemetryClient _telemetry = telemetry;
+    private readonly ILogger<TrackingService> _logger = logger;
 
-    public TrackingService(
-        TelemetryClient telemetry,
-        ILogger<TrackingService> logger)
-    {
-        _telemetry = telemetry;
-        _logger = logger;
-    }
     public void TrackUnauthorizedRequest(string authorization, ControllerBase controller)
     {
         try
