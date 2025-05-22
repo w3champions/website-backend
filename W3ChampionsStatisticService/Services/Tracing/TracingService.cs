@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Http;
+using W3ChampionsStatisticService.Services.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 

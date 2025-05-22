@@ -71,9 +71,9 @@ using W3ChampionsStatisticService.Extensions;
 using Microsoft.AspNetCore.Http;
 using W3ChampionsStatisticService.Services.Tracing.Sampling;
 using W3ChampionsStatisticService.Filters;
+using W3ChampionsStatisticService.Services.Tracing;
 
 const string WEBSITE_BACKEND_HUB_PATH = "/websiteBackendHub";
-const double TRACING_DEFAULT_SAMPLING_RATE = 0.01;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -130,76 +130,7 @@ var serviceVersion = "1.0.0";
 // Get OTLP endpoint from environment variable or use default
 var otlpEndpoint = Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4317";
 
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource
-        .AddService(serviceName, serviceVersion: serviceVersion))
-    .WithTracing(tracing => tracing
-        .SetSampler(new ParentBasedSampler(new CustomRootSampler(TRACING_DEFAULT_SAMPLING_RATE)))
-        .AddAspNetCoreInstrumentation(options =>
-        {
-            options.Filter = context =>
-            {
-                // Exclude OPTIONS requests
-                if (HttpMethods.IsOptions(context.Request.Method))
-                {
-                    return false;
-                }
-
-                // Exclude SignalR hub connections
-                if (context.Request.Path.Equals(WEBSITE_BACKEND_HUB_PATH))
-                {
-                    return false;
-                }
-
-                return true;
-            };
-            options.EnrichWithHttpRequest = (activity, httpRequest) =>
-            {
-                if (httpRequest.Headers.TryGetValue("x-faro-session-id", out var faroSessionIdValues))
-                {
-                    var faroSessionId = faroSessionIdValues.FirstOrDefault();
-                    if (!string.IsNullOrEmpty(faroSessionId))
-                    {
-                        activity.SetTag(BaggageToTagProcessor.SessionIdKey, faroSessionId);
-                        activity.AddBaggage(BaggageToTagProcessor.SessionIdKey, faroSessionId); // Add to baggage for propagation
-                    }
-                }
-            };
-        })
-        .AddHttpClientInstrumentation(options =>
-        {
-            options.FilterHttpRequestMessage = request =>
-            {
-                // Filter out instance metadata calls (Azure, AWS, etc.)
-                return request.RequestUri?.Host != "169.254.169.254";
-            };
-            options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
-            {
-                // Activity here is the client activity, which should inherit baggage from the parent activity.
-                var faroSessionIdFromBaggage = activity.GetBaggageItem(BaggageToTagProcessor.SessionIdKey);
-                if (!string.IsNullOrEmpty(faroSessionIdFromBaggage))
-                {
-                    // Add it to the outgoing request headers
-                    httpRequestMessage.Headers.TryAddWithoutValidation("x-faro-session-id", faroSessionIdFromBaggage);
-                }
-            };
-        })
-        .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
-        .AddSource(serviceName)
-        .AddProcessor(new BaggageToTagProcessor())
-        .AddOtlpExporter(options =>
-        {
-            options.Endpoint = new Uri(otlpEndpoint);
-        })
-        );
-
-
-// Tracing instrumentation
-builder.Services.AddSingleton(new ActivitySource(serviceName));
-builder.Services.AddSingleton<TracingService>();
-builder.Services.AddSingleton<ProxyGenerator>();
-builder.Services.AddSingleton<TracingInterceptor>();
-builder.Services.AddTransient<SignalRTraceContextFilter>();
+builder.Services.AddW3CTracing(serviceName, serviceVersion, otlpEndpoint, WEBSITE_BACKEND_HUB_PATH);
 
 // Add SignalR for using websockets
 builder.Services.AddSignalR();
@@ -405,37 +336,3 @@ app.MapHub<WebsiteBackendHub>(WEBSITE_BACKEND_HUB_PATH);
 
 Log.Information("Server started.");
 app.Run();
-
-// Renamed from SessionIdTaggerProcessor
-public class BaggageToTagProcessor : BaseProcessor<Activity>
-{
-    public const string SessionIdKey = "session_id"; // This key is used to correlate Faro traces across backend services
-    public const string BattleTagKey = "battle_tag";
-
-    public override void OnStart(Activity activity)
-    {
-        ProcessBaggageItem(activity, SessionIdKey);
-        ProcessBaggageItem(activity, BattleTagKey);
-    }
-
-    private void ProcessBaggageItem(Activity activity, string baggageKey)
-    {
-        var baggageValue = activity.GetBaggageItem(baggageKey);
-        if (!string.IsNullOrEmpty(baggageValue))
-        {
-            bool tagExists = false;
-            foreach (var tag in activity.TagObjects)
-            {
-                if (tag.Key == baggageKey)
-                {
-                    tagExists = true;
-                    break;
-                }
-            }
-            if (!tagExists)
-            {
-                activity.SetTag(baggageKey, baggageValue);
-            }
-        }
-    }
-}

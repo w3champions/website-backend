@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.Services.Tracing;
 
 namespace W3ChampionsStatisticService.Filters;
 
