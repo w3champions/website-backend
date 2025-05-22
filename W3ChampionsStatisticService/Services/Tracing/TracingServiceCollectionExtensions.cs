@@ -9,6 +9,10 @@ using System.Linq;
 using W3ChampionsStatisticService.Services.Tracing.Sampling;
 using W3ChampionsStatisticService.Services.Interceptors;
 using W3ChampionsStatisticService.Filters;
+using System.Reflection;
+using OpenTelemetry.Exporter;
+using MongoDB.Driver;
+using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 
 namespace W3ChampionsStatisticService.Services.Tracing;
 
@@ -16,18 +20,23 @@ public static class TracingServiceCollectionExtensions
 {
     const double TRACING_DEFAULT_SAMPLING_RATE = 0.01;
     const string TRACING_FARO_SESSION_ID_HTTP_HEADER = "x-faro-session-id";
+    static readonly string OTEL_SERVICE_NAME = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? "website-backend-undefined";
+    static readonly string OTEL_EXPORTER_OTLP_ENDPOINT = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
+    static readonly string OTEL_EXPORTER_OTLP_PROTOCOL = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL") ?? "Grpc";
+    static readonly string SERVICE_VERSION = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "undefined";
     public static IServiceCollection AddW3CTracing(
         this IServiceCollection services,
-        string serviceName,
-        string serviceVersion,
-        string otlpEndpoint,
-        string websiteBackendHubPath)
+        string websiteBackendHubPath,
+        MongoClientSettings mongoClientSettings)
     {
-        services.AddSingleton(new ActivitySource(serviceName));
+        mongoClientSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
+        mongoClientSettings.ApplicationName = OTEL_SERVICE_NAME;
+
+        services.AddSingleton(new ActivitySource(OTEL_SERVICE_NAME));
 
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
-                .AddService(serviceName, serviceVersion: serviceVersion))
+                .AddService(OTEL_SERVICE_NAME, serviceVersion: SERVICE_VERSION))
             .WithTracing(tracing => tracing
                 .SetSampler(new ParentBasedSampler(new CustomRootSampler(TRACING_DEFAULT_SAMPLING_RATE)))
                 .AddAspNetCoreInstrumentation(options =>
@@ -74,11 +83,12 @@ public static class TracingServiceCollectionExtensions
                     };
                 })
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
-                .AddSource(serviceName)
+                .AddSource(OTEL_SERVICE_NAME)
                 .AddProcessor(new BaggageToTagProcessor())
                 .AddOtlpExporter(options =>
                 {
-                    options.Endpoint = new Uri(otlpEndpoint);
+                    options.Endpoint = new Uri(OTEL_EXPORTER_OTLP_ENDPOINT);
+                    options.Protocol = Enum.Parse<OtlpExportProtocol>(OTEL_EXPORTER_OTLP_PROTOCOL);
                 })
             );
 

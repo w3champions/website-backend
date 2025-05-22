@@ -11,13 +11,6 @@ using Prometheus;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Metrics;
-using OpenTelemetry;
-using System.Diagnostics;
 
 using W3C.Domain.ChatService;
 using W3C.Domain.CommonValueObjects;
@@ -65,12 +58,7 @@ using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 using Serilog.Events;
 using Serilog.Formatting.Json;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
-using Castle.DynamicProxy;
-using W3ChampionsStatisticService.Services.Interceptors;
 using W3ChampionsStatisticService.Extensions;
-using Microsoft.AspNetCore.Http;
-using W3ChampionsStatisticService.Services.Tracing.Sampling;
-using W3ChampionsStatisticService.Filters;
 using W3ChampionsStatisticService.Services.Tracing;
 
 const string WEBSITE_BACKEND_HUB_PATH = "/websiteBackendHub";
@@ -116,21 +104,11 @@ MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mon
 mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
 mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
 
-// Add OTEL MongoDB Instrumentation
-mongoSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
-mongoSettings.ApplicationName = "W3ChampionsStatisticService"; // Set
+builder.Services.AddW3CTracing(WEBSITE_BACKEND_HUB_PATH, mongoSettings);
 
 var mongoClient = new MongoClient(mongoSettings);
 builder.Services.AddSingleton(mongoClient);
 
-// Configure OpenTelemetry
-var serviceName = "W3ChampionsStatisticService";
-var serviceVersion = "1.0.0";
-
-// Get OTLP endpoint from environment variable or use default
-var otlpEndpoint = Environment.GetEnvironmentVariable("OTLP_ENDPOINT") ?? "http://localhost:4317";
-
-builder.Services.AddW3CTracing(serviceName, serviceVersion, otlpEndpoint, WEBSITE_BACKEND_HUB_PATH);
 
 // Add SignalR for using websockets
 builder.Services.AddSignalR();
