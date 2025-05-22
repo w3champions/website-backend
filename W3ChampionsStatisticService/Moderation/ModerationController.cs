@@ -19,7 +19,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     [HttpGet("loungeMute")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> GetLoungeMutes([NoTrace]string authToken)
+    public async Task<IActionResult> GetLoungeMutes([NoTrace] string authToken)
     {
         var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
         return Ok(loungeMutes);

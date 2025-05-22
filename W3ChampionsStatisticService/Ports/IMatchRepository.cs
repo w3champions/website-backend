@@ -1,7 +1,6 @@
 ﻿using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;

@@ -71,7 +71,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
         // send request to mm with all the node values
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret); // TODO: ensure x-admin-secret is purged from spans
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
         var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var serializedObject = JsonConvert.SerializeObject(newProxiesBeingAdded);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);

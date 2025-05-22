@@ -37,8 +37,8 @@ public class WebsiteBackendHub(
     [NoTrace]
     public override async Task OnConnectedAsync()
     {
-        // TODO: Extract tracing context
-        await _tracingService.ExecuteWithSpanAsync(this, async () => {
+        await _tracingService.ExecuteWithSpanAsync(this, async () =>
+        {
             var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"];
             W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
             if (w3cUserAuthentication == null)

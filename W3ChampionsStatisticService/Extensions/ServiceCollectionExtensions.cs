@@ -1,11 +1,10 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Castle.DynamicProxy;
-using W3ChampionsStatisticService.Services.Interceptors; // Assuming TracingInterceptor is here
-using System.Linq; // Added for LINQ
-using System.Reflection; // Added for Assembly
+using W3ChampionsStatisticService.Services.Interceptors;
+using System.Linq;
 
-namespace W3ChampionsStatisticService.Extensions; // Or any other appropriate namespace
+namespace W3ChampionsStatisticService.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -20,7 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
-            var interceptor = serviceProvider.GetRequiredService<TracingInterceptor>(); 
+            var interceptor = serviceProvider.GetRequiredService<TracingInterceptor>();
             return ProxyGenerator.CreateInterfaceProxyWithTarget<TInterface>(implementation, interceptor);
         });
         return services;
@@ -73,7 +72,7 @@ public static class ServiceCollectionExtensions
             var constructorArgs = constructor.GetParameters()
                 .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
                 .ToArray();
-            
+
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
         });
         return services;
@@ -117,7 +116,7 @@ public static class ServiceCollectionExtensions
             var constructorArgs = constructor.GetParameters()
                 .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
                 .ToArray();
-            
+
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
         });
         return services;

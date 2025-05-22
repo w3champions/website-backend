@@ -6,4 +6,4 @@ namespace W3C.Domain.Tracing;
 public sealed class NoTraceAttribute : Attribute
 {
     public NoTraceAttribute() { }
-} 
+}

@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics; // Added for Activity.Current
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using Serilog;
-using W3ChampionsStatisticService.Services; // Assuming TracingService is here
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Filters;
 
@@ -18,7 +15,7 @@ public class SignalRTraceContextFilter(TracingService tracingService) : IHubFilt
     {
         public string TraceParent { get; set; }
         public string TraceState { get; set; }
-        public string FaroSessionId {get; set; } // Optional, based on your client structure
+        public string FaroSessionId { get; set; }
     }
 
     public async ValueTask<object> InvokeMethodAsync(
@@ -31,7 +28,7 @@ public class SignalRTraceContextFilter(TracingService tracingService) : IHubFilt
 
         // Extract BattleTag if user is authenticated
         string battleTag = null;
-        if (invocationContext.Context.User?.Identity?.IsAuthenticated == true && 
+        if (invocationContext.Context.User?.Identity?.IsAuthenticated == true &&
             !string.IsNullOrEmpty(invocationContext.Context.User.Identity.Name))
         {
             battleTag = invocationContext.Context.User.Identity.Name;
@@ -56,14 +53,14 @@ public class SignalRTraceContextFilter(TracingService tracingService) : IHubFilt
                             traceState = tracingContextPayload.TraceState;
                             if (!string.IsNullOrEmpty(tracingContextPayload.FaroSessionId))
                             {
-                                clientTags ??= []; // Use collection expression
+                                clientTags ??= [];
                                 clientTags[BaggageToTagProcessor.SessionIdKey] = tracingContextPayload.FaroSessionId;
                             }
                         }
                     }
                 }
                 catch (JsonException)
-                { 
+                {
                     // Argument was not the expected JSON structure, ignore and continue.
                 }
             }
@@ -89,4 +86,4 @@ public class SignalRTraceContextFilter(TracingService tracingService) : IHubFilt
             return await _tracingService.ExecuteAsNewServerSpanAsync(operationName, async () => await next(invocationContext), clientTags);
         }
     }
-} 
+}

@@ -2,12 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoFixture;
-using MongoDB.Bson;
 using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
-using W3C.Domain.MatchmakingService;
 using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Ladder;
 

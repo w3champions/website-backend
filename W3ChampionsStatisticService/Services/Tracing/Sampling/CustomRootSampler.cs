@@ -7,7 +7,6 @@ namespace W3ChampionsStatisticService.Services.Tracing.Sampling;
 public class CustomRootSampler : Sampler
 {
     private readonly TraceIdRatioBasedSampler _serverRatioSampler;
-    // No custom Description property needed here; base Sampler.Description can be used if necessary.
 
     public CustomRootSampler(double serverSamplingRatio)
     {
@@ -26,8 +25,8 @@ public class CustomRootSampler : Sampler
 
         return samplingParameters.Kind switch
         {
-            ActivityKind.Server => _serverRatioSampler.ShouldSample(samplingParameters),// Delegate to TraceIdRatioBasedSampler for SERVER spans when they are roots.
-            _ => new SamplingResult(SamplingDecision.RecordAndSample),// Always sample for other kinds (Internal, Client, Producer, Consumer) when they are roots.
+            ActivityKind.Server => _serverRatioSampler.ShouldSample(samplingParameters), // Delegate to TraceIdRatioBasedSampler for SERVER spans when they are roots.
+            _ => new SamplingResult(SamplingDecision.RecordAndSample), // Always sample for other kinds (Internal, Client, Producer, Consumer) when they are roots.
         };
     }
-} 
+}

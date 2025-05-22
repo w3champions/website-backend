@@ -3,7 +3,6 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using W3C.Contracts.Replay;
-using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace WC3ChampionsStatisticService.Tests.Replay;
 

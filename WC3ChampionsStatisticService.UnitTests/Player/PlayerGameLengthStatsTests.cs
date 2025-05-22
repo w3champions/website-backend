@@ -1,8 +1,6 @@
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3C.Contracts.GameObjects;
-using W3C.Domain.MatchmakingService;
-using W3ChampionsStatisticService.W3ChampionsStats;
 using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 using W3ChampionsStatisticService.PlayerProfiles;
 

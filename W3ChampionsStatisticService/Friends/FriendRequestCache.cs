@@ -19,7 +19,7 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
         return _requests;
     }
 
-    
+
     public async Task<List<FriendRequest>> LoadSentFriendRequests(string sender)
     {
         await UpdateCacheIfNeeded();

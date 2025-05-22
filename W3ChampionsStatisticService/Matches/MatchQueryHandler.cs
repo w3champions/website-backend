@@ -11,7 +11,8 @@ public class MatchQueryHandler(IPersonalSettingsRepository personalSettingsRepos
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
 
-    public virtual async Task PopulatePlayerInfos(List<OnGoingMatchup> matches)
+    //public virtual async Task PopulatePlayerInfos(List<OnGoingMatchup> matches)
+    public async Task PopulatePlayerInfos(List<OnGoingMatchup> matches)
     {
         var battleTags = matches.SelectMany(match => match.Teams).SelectMany(team => team.Players).Select(player => player.BattleTag);
         var personalSettings = await _personalSettingsRepository.LoadMany(battleTags.ToArray());

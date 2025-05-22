@@ -43,7 +43,7 @@ public class TracingInterceptor(ActivitySource activitySource) : IInterceptor
         string className = invocation.TargetType.Name;
         string methodName;
 
-        if (methodTraceAttribute != null) 
+        if (methodTraceAttribute != null)
         {
             // [Trace] is on the method, OperationName is correctly set by [CallerMemberName]
             methodName = methodTraceAttribute.OperationName;
@@ -95,4 +95,4 @@ public class TracingInterceptor(ActivitySource activitySource) : IInterceptor
             throw;
         }
     }
-} 
+}

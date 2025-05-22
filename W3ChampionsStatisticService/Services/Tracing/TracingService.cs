@@ -12,9 +12,8 @@ public class TracingService(ActivitySource activitySource, IHttpContextAccessor 
     private readonly ActivitySource _activitySource = activitySource;
     private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
 
-    // Optional: If you need to manually start an activity and manage its lifecycle elsewhere.
     public Activity StartActivity(
-        object classInstance, 
+        object classInstance,
         IEnumerable<KeyValuePair<string, object>> tags = null,
         [CallerMemberName] string methodName = "")
     {
@@ -220,4 +219,4 @@ public class TracingService(ActivitySource activitySource, IHttpContextAccessor 
             { "exception.stacktrace", ex.StackTrace }
         }));
     }
-} 
+}

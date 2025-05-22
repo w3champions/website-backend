@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using W3C.Contracts.Replay;
 using W3C.Domain.Tracing;
+
 namespace W3C.Domain.UpdateService;
 
 [Trace]
