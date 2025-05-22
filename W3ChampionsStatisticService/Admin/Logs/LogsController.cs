@@ -5,11 +5,13 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net.Http;
 using System.Net.Mime;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Admin.Logs;
 
 [ApiController]
 [Route("api/admin/logs")]
+[Trace]
 public class LogsController(
     ILogsRepository logsRepository) : ControllerBase
 {

@@ -5,11 +5,13 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
 [ApiController]
 [Route("api/personal-settings")]
+[Trace]
 public class PersonalSettingsController(
     IPersonalSettingsRepository personalSettingsRepository,
     PortraitCommandHandler commandHandler,

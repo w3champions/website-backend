@@ -9,11 +9,12 @@ using W3C.Contracts.Admin.CloudStorage;
 using W3ChampionsStatisticService.Admin.CloudStorage.S3;
 using W3ChampionsStatisticService.Admin.CloudStorage.Alibaba;
 using W3C.Contracts.Admin.Permission;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Admin.CloudStorage;
 
 [ApiController]
 [Route("api/admin/storage")]
+[Trace]
 public class CloudStorageController : ControllerBase
 {
     [HttpGet("alibaba")]
@@ -50,7 +51,7 @@ public class CloudStorageController : ControllerBase
 
     [HttpPost("alibaba/upload")]
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
-    public IActionResult UploadAlibabaFile([FromBody] UploadFileRequest req)
+    public IActionResult UploadAlibabaFile([FromBody][NoTrace] UploadFileRequest req)
     {
         AlibabaService alibabaService = new();
         try
@@ -75,7 +76,7 @@ public class CloudStorageController : ControllerBase
 
     [HttpPost("s3/upload")]
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
-    public async Task<IActionResult> UploadS3File([FromBody] UploadFileRequest req)
+    public async Task<IActionResult> UploadS3File([FromBody][NoTrace] UploadFileRequest req)
     {
         S3Service s3Service = new();
         try

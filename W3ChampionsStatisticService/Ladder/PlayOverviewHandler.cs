@@ -7,9 +7,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Ladder;
 
+[Trace]
 public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
@@ -88,6 +90,7 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadMode
         return winner;
     }
 
+    [NoTrace]
     private GameMode GetOverviewGameMode(GameMode gameMode, PlayerMMrChange player)
     {
         if (gameMode == GameMode.GM_2v2 && player.IsAt)

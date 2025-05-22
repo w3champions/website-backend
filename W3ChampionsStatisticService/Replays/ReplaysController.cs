@@ -4,11 +4,13 @@ using W3C.Contracts.Admin.Permission;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Maps;
 
 [ApiController]
 [Route("api/replays")]
+[Trace]
 public class ReplaysController(
     ReplayServiceClient replayServiceClient,
     IMatchRepository matchRepository) : ControllerBase

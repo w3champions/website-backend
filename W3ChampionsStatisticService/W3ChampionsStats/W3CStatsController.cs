@@ -9,11 +9,12 @@ using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using System.Linq;
 using W3C.Contracts.GameObjects;
 using System.Net.Http;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
 [ApiController]
 [Route("api/w3c-stats")]
+[Trace]
 public class W3CStatsController(
     IW3StatsRepo w3StatsRepo,
     HeroStatsQueryHandler heroStatsQueryHandler,

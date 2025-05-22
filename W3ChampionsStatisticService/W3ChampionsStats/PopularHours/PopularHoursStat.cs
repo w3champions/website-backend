@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 
+[Trace]
 public class PopularHoursStat : IIdentifiable
 {
     public string Id => GameMode.ToString();

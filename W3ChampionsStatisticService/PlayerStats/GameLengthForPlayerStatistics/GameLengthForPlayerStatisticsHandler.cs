@@ -4,8 +4,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
+
+[Trace]
 public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) : IReadModelHandler
 {
     private readonly IPlayerRepository _playerRepo = playerRepo;

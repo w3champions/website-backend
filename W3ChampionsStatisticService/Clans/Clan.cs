@@ -4,9 +4,11 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.Clans.ClanStates;
 using W3ChampionsStatisticService.Ladder;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Clans;
 
+[Trace]
 public class Clan
 {
     [JsonIgnore]

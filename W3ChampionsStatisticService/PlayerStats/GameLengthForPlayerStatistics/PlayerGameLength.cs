@@ -3,8 +3,11 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
+
+[Trace]
 public class PlayerGameLength : IIdentifiable
 {
     public string Id => CompoundId(BattleTag, Season);
@@ -42,6 +45,7 @@ public class PlayerGameLength : IIdentifiable
         PlayerGameLengthIntervalByOpponentRace[raceTotalString].Apply(seconds);
     }
 
+    [NoTrace]
     public static string CompoundId(string battleTag, int Season)
     {
         return battleTag + "_" + Season;

@@ -7,9 +7,11 @@ using System.Collections.Generic;
 using W3C.Contracts.Admin.CloudStorage;
 using Amazon.S3;
 using Amazon.S3.Model;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Admin.CloudStorage.S3;
 
+[Trace]
 public class S3Service : IS3Service
 {
     private readonly string S3BucketName = Environment.GetEnvironmentVariable("S3_BUCKET_NAME") ?? "";
@@ -34,12 +36,12 @@ public class S3Service : IS3Service
         return listObjectsResponse.S3Objects.Select(x => new CloudFile
         {
             Name = x.Key.Substring(x.Key.LastIndexOf('/') + 1), // Do not include the prefix
-            Size = x.Size / 1024, // Size in kilobytes
-            LastModified = x.LastModified
+            Size = x.Size / 1024 ?? -1, // Size in kilobytes
+            LastModified = x.LastModified ?? DateTime.MinValue
         }).ToList();
     }
 
-    public async Task UploadFile(UploadFileRequest file)
+    public async Task UploadFile([NoTrace] UploadFileRequest file)
     {
         AmazonS3Config config = new()
         {

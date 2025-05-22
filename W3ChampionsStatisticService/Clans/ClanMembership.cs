@@ -2,9 +2,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Clans;
 
+[Trace]
 public class ClanMembership : IIdentifiable, IVersionable
 {
     public string BattleTag { get; set; }

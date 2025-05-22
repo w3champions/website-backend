@@ -3,7 +3,6 @@ using NUnit.Framework;
 using System;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
-using W3ChampionsStatisticService.Matches;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
 

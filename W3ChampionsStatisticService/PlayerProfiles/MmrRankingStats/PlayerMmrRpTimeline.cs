@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
@@ -11,6 +12,7 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     public string Id { get; set; } = $"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}";
     public List<MmrRpAtDate> MmrRpAtDates { get; set; } = new List<MmrRpAtDate>();
 
+    [Trace]
     public void UpdateTimeline(MmrRpAtDate mmrRpAtDate)
     {
         // Empty?

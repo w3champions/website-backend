@@ -9,9 +9,10 @@ using System.Threading.Tasks;
 using System.Web;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Admin;
 
+[Trace]
 public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IAdminRepository
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";

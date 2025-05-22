@@ -10,7 +10,7 @@ using Microsoft.Net.Http.Headers;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3C.Contracts.Admin.Permission;
 using Serilog;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
 [AttributeUsage(AttributeTargets.Method)]
@@ -18,6 +18,7 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
 {
     public EPermission Permission { get; set; }
 
+    [Trace]
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         W3CAuthenticationService authService = new();

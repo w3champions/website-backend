@@ -5,11 +5,13 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net;
 using W3C.Contracts.Admin.Moderation;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Moderation;
 
 [ApiController]
 [Route("api/moderation")]
+[Trace]
 public class ModerationController(ChatServiceClient chatServiceRepository) : ControllerBase
 {
     private readonly ChatServiceClient _chatServiceRepository = chatServiceRepository;
@@ -17,7 +19,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     [HttpGet("loungeMute")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> GetLoungeMutes(string authToken)
+    public async Task<IActionResult> GetLoungeMutes([NoTrace] string authToken)
     {
         var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
         return Ok(loungeMutes);
@@ -26,7 +28,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     [HttpPost("loungeMute")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, string authToken)
+    public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, [NoTrace] string authToken)
     {
         if (loungeMute.battleTag == "")
         {
@@ -58,7 +60,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     [HttpDelete("loungeMute/{bTag}")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, string authToken)
+    public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, [NoTrace] string authToken)
     {
         var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authToken);
         if (result.StatusCode == HttpStatusCode.BadRequest)

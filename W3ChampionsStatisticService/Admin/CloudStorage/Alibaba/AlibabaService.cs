@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using W3C.Contracts.Admin.CloudStorage;
 using Aliyun.OSS;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Admin.CloudStorage.Alibaba;
 
+[Trace]
 public class AlibabaService : IAlibabaService
 {
     private readonly string alibabaBucketName = Environment.GetEnvironmentVariable("ALIBABA_BUCKET_NAME") ?? "";
@@ -36,7 +38,7 @@ public class AlibabaService : IAlibabaService
             }).ToList();
     }
 
-    public void UploadFile(UploadFileRequest file)
+    public void UploadFile([NoTrace] UploadFileRequest file)
     {
         var client = new OssClient(alibabaEndpoint, alibabaAccessKey, alibabaSecretKey);
         byte[] bytes = Convert.FromBase64String(file.Content);

@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Clans;
 
+[Trace]
 public class ClanCommandHandler(
     IClanRepository clanRepository,
     IRankRepository rankRepository,

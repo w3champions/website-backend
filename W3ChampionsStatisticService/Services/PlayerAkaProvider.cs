@@ -6,9 +6,11 @@ using System.Collections.Generic;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
+[Trace]
 public class PlayerAkaProvider(ICachedDataProvider<List<PlayerAka>> userAccountsCached)
 {
     private readonly ICachedDataProvider<List<PlayerAka>> _userAccountsCached = userAccountsCached;

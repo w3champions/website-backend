@@ -4,9 +4,11 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using W3C.Contracts.Replay;
+using W3C.Domain.Tracing;
 
 namespace W3C.Domain.UpdateService;
 
+[Trace]
 public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string ReplayServiceUrl = Environment.GetEnvironmentVariable("REPLAY_API") ?? "https://replay-service.test.w3champions.com";

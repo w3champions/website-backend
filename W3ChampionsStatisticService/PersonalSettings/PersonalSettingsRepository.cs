@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
+[Trace]
 public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPersonalSettingsRepository
 {
     public async Task<PersonalSetting> Load(string battletag)
@@ -113,6 +115,7 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
         return;
     }
 
+    [NoTrace]
     public bool SchemaOutdated(PersonalSetting setting)
     {
         if (!setting.ToBsonDocument().Contains("SpecialPictures"))

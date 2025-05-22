@@ -3,9 +3,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
+[Trace]
 public class PlayerOverallStatsHandler(
     IPlayerRepository playerRepository,
     IPersonalSettingsRepository personalSettingsRepository) : IReadModelHandler

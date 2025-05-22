@@ -7,14 +7,16 @@ using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
+[Trace]
 public class IdentityServiceClient()
 {
     private static readonly string IdentityApiUrl = Environment.GetEnvironmentVariable("IDENTIFICATION_SERVICE_URI") ?? "https://identification-service.test.w3champions.com";
 
-    public async Task<List<Permission>> GetPermissions(string authorization)
+    public async Task<List<Permission>> GetPermissions([NoTrace] string authorization)
     {
         var httpClient = new HttpClient();
         var response = await httpClient.GetAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}");
@@ -33,7 +35,7 @@ public class IdentityServiceClient()
         return permissionList;
     }
 
-    public async Task<HttpStatusCode> AddAdmin(Permission permission, string authorization)
+    public async Task<HttpStatusCode> AddAdmin(Permission permission, [NoTrace] string authorization)
     {
         var httpClient = new HttpClient();
         var serializedObject = JsonConvert.SerializeObject(permission);
@@ -49,7 +51,7 @@ public class IdentityServiceClient()
         return response.StatusCode;
     }
 
-    public async Task<HttpStatusCode> EditAdmin(Permission permission, string authorization)
+    public async Task<HttpStatusCode> EditAdmin(Permission permission, [NoTrace] string authorization)
     {
         var httpClient = new HttpClient();
         var serializedObject = JsonConvert.SerializeObject(permission);
@@ -65,7 +67,7 @@ public class IdentityServiceClient()
         return response.StatusCode;
     }
 
-    public async Task<HttpStatusCode> DeleteAdmin(string id, string authorization)
+    public async Task<HttpStatusCode> DeleteAdmin(string id, [NoTrace] string authorization)
     {
         var httpClient = new HttpClient();
         var encodedTag = HttpUtility.UrlEncode(id);

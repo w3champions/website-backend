@@ -3,9 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Cache;
 
+[Trace]
 public class InMemoryCachedDataProvider<T>(IOptions<CacheOptionsFor<T>> cacheDataOptions, IMemoryCache memoryCache) : ICachedDataProvider<T> where T : class
 {
     // NOTE: It is intentional to have different semaphores for different generic types

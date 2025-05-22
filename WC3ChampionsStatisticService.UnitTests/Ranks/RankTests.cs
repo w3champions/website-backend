@@ -12,7 +12,6 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
-using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
 namespace WC3ChampionsStatisticService.Tests.Ranks;
 

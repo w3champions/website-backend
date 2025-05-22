@@ -1,9 +1,11 @@
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Friends;
 
+[Trace]
 public class FriendCommandHandler(
     FriendRepository friendRepository,
     FriendRequestCache friendRequestCache,

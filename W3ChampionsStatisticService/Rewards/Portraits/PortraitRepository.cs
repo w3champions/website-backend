@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Rewards.Portraits;
 
+[Trace]
 public class PortraitRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPortraitRepository
 {
     public Task<List<PortraitDefinition>> LoadPortraitDefinitions()

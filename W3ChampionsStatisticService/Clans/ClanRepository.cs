@@ -5,9 +5,11 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Clans;
 
+[Trace]
 public class ClanRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IClanRepository
 {
     public async Task TryInsertClan(Clan clan)

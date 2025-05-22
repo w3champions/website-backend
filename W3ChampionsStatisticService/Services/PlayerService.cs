@@ -9,9 +9,11 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
+[Trace]
 public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvider<List<MmrRank>> mmrCachedDataProvider, PersonalSettingsProvider personalSettingsProvider)
 {
     private readonly ICachedDataProvider<List<MmrRank>> _mmrCachedDataProvider = mmrCachedDataProvider;
@@ -130,6 +132,7 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
         return result;
     }
 
+    [NoTrace]
     private string GetRankKey(List<PlayerId> playerIds, GameMode gameMode, Race? race)
     {
         if (gameMode != GameMode.GM_2v2_AT

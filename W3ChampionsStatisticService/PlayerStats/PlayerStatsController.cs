@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerStats;
 
 [ApiController]
 [Route("api/player-stats")]
+[Trace]
 public class PlayerStatsController(IPlayerStatsRepository playerRepository, PlayerStatisticsService playerStatisticsService) : ControllerBase
 {
     private readonly IPlayerStatsRepository _playerRepository = playerRepository;

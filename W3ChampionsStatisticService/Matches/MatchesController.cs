@@ -6,11 +6,13 @@ using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Services;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Matches;
 
 [ApiController]
 [Route("api/matches")]
+[Trace]
 public class MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler, MatchService matchService) : ControllerBase
 {
     private readonly IMatchRepository _matchRepository = matchRepository;

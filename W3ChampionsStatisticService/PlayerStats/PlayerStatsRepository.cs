@@ -4,9 +4,11 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerStats;
 
+[Trace]
 public class PlayerStatsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerStatsRepository
 {
     public Task<PlayerRaceOnMapVersusRaceRatio> LoadMapAndRaceStat(string battleTag, int season)

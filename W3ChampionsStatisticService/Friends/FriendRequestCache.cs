@@ -3,19 +3,22 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Friends;
 
+[Trace]
 public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient)
 {
     private List<FriendRequest> _requests = [];
     private readonly object _lock = new();
 
+    [NoTrace]
     public async Task<List<FriendRequest>> LoadAllFriendRequests()
     {
         await UpdateCacheIfNeeded();
         return _requests;
     }
+
 
     public async Task<List<FriendRequest>> LoadSentFriendRequests(string sender)
     {
@@ -57,6 +60,7 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
         }
     }
 
+    [NoTrace]
     private async Task UpdateCacheIfNeeded()
     {
         if (_requests.Count == 0)

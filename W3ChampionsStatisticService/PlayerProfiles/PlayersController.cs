@@ -9,11 +9,12 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
 using W3C.Contracts.GameObjects;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [ApiController]
 [Route("api/players")]
+[Trace]
 public class PlayersController(
     IPlayerRepository playerRepository,
     GameModeStatQueryHandler queryHandler,
@@ -92,6 +93,11 @@ public class PlayersController(
     [HttpGet]
     public async Task<IActionResult> SearchPlayer(string search)
     {
+        if (string.IsNullOrEmpty(search))
+        {
+            return BadRequest("Battle tag is required");
+        }
+
         var players = await _playerRepository.SearchForPlayer(search);
         return Ok(players);
     }

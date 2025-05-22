@@ -4,9 +4,11 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using Serilog;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Matches;
 
+[Trace]
 public class MatchReadModelHandler(IMatchRepository matchRepository) : IReadModelHandler
 {
     private readonly IMatchRepository _matchRepository = matchRepository;

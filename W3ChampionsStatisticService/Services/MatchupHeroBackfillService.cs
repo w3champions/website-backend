@@ -1,12 +1,14 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Tracing;
+
 
 namespace W3ChampionsStatisticService.Services;
 
+[Trace]
 public class MatchupHeroBackfillService(IMatchRepository matchRepository) : IAsyncUpdatable
 {
     private readonly IMatchRepository matchRepository = matchRepository;

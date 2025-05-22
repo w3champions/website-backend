@@ -4,7 +4,6 @@ using MongoDB.Driver.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using W3C.Contracts.GameObjects;
@@ -15,9 +14,11 @@ using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Matches;
 
+[Trace]
 public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : MongoDbRepositoryBase(mongoClient), IMatchRepository
 {
     private readonly IOngoingMatchesCache _cache = cache;

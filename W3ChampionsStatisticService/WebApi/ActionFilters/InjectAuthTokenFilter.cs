@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
 public class InjectAuthTokenFilter : IAsyncActionFilter
 {
+    [Trace]
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);

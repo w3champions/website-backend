@@ -5,11 +5,12 @@ using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
-
+using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Ladder;
 
 [ApiController]
 [Route("api/ladder")]
+[Trace]
 public class LadderController(
     IRankRepository rankRepository,
     IPlayerRepository playerRepository,

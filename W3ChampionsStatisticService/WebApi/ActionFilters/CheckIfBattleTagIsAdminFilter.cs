@@ -8,6 +8,7 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -15,6 +16,7 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
 {
     private readonly IW3CAuthenticationService _authService = authService;
 
+    [Trace]
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         try

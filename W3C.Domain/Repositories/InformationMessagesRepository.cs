@@ -6,9 +6,11 @@ using System.Net;
 using System.Threading.Tasks;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
+using W3C.Domain.Tracing;
 
 namespace W3C.Domain.Repositories;
 
+[Trace]
 public class InformationMessagesRepository(
     MongoClient mongoClient,
     MatchmakingServiceClient matchmakingServiceClient) : MongoDbRepositoryBase(mongoClient), IInformationMessagesRepository

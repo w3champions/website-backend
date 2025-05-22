@@ -5,9 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Matches;
 
+[Trace]
 public class OngoingMatchesCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IOngoingMatchesCache
 {
     private List<OnGoingMatchup> _values = [];
@@ -58,11 +60,13 @@ public class OngoingMatchesCache(MongoClient mongoClient) : MongoDbRepositoryBas
             .ToList();
     }
 
+    [NoTrace]
     public int GetMaxMmrInTeam(Team team)
     {
         return team.Players.Max(p => p.OldMmr);
     }
 
+    [NoTrace]
     public int GetMaxMmrInMatch(OnGoingMatchup match)
     {
         return match.Teams.Max(t => GetMaxMmrInTeam(t));
@@ -95,6 +99,7 @@ public class OngoingMatchesCache(MongoClient mongoClient) : MongoDbRepositoryBas
         }
     }
 
+    [NoTrace]
     private async Task UpdateCacheIfNeeded()
     {
         if (_values.Count == 0)

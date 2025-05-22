@@ -15,9 +15,11 @@ using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats;
 
+[Trace]
 public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IW3StatsRepo
 {
     public Task<List<OverallRaceAndWinStat>> LoadRaceVsRaceStats()

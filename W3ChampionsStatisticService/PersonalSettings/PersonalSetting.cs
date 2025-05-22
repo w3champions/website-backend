@@ -7,6 +7,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
@@ -43,6 +44,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
     public string ChatColor { get; set; }
     public AkaSettings AliasSettings { get; set; }
 
+    [Trace]
     public bool SetProfilePicture(SetPictureCommand cmd)
     {
         bool isValid = false;

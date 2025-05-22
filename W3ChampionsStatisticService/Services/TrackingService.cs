@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using Microsoft.Extensions.Logging;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
+[Trace]
 public class TrackingService(
     TelemetryClient telemetry,
     ILogger<TrackingService> logger)

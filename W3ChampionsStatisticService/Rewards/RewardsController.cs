@@ -4,11 +4,13 @@ using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Rewards;
 
 [Route("api/rewards")]
 [ApiController]
+[Trace]
 public class RewardsController(
     IPortraitRepository portraitRepository,
     PortraitCommandHandler portraitCommandHandler) : ControllerBase

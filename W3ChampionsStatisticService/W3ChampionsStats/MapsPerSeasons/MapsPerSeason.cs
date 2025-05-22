@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 
@@ -23,6 +24,7 @@ public class MapsPerSeason : IIdentifiable
 
     public int Season { get; set; }
 
+    [Trace]
     public void Count(string map, GameMode gameMode)
     {
         var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);

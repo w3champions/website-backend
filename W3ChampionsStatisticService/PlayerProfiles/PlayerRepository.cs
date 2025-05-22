@@ -12,9 +12,11 @@ using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
+[Trace]
 public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
     public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)

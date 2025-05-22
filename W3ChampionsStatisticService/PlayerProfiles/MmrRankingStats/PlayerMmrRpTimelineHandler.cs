@@ -3,9 +3,11 @@ using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
+[Trace]
 public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
