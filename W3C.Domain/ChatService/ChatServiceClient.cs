@@ -31,7 +31,7 @@ public class ChatServiceClient
     }
 
     [Trace]
-    public async Task<LoungeMuteResponse[]> GetLoungeMutes(string authorization)
+    public async Task<LoungeMuteResponse[]> GetLoungeMutes([NoTrace] string authorization)
     {
         var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -45,7 +45,7 @@ public class ChatServiceClient
     }
 
     [Trace]
-    public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute, string authorization)
+    public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute, [NoTrace] string authorization)
     {
         var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
@@ -58,7 +58,7 @@ public class ChatServiceClient
     }
 
     [Trace]
-    public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag, string authorization)
+    public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag, [NoTrace] string authorization)
     {
         var encodedTag = HttpUtility.UrlEncode(battleTag);
         var url = $"{ChatServiceApiUrl}/api/loungeMute/{encodedTag}?authorization={authorization}&secret={AdminSecret}";
