@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
@@ -11,6 +12,8 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Services;
+using static W3ChampionsStatisticService.Filters.SignalRTraceContextFilter;
+using Serilog;
 
 namespace W3ChampionsStatisticService.Hubs;
 
@@ -25,6 +28,22 @@ public class WebsiteBackendHub(
     TracingService tracingService
 ) : Hub
 {
+    static WebsiteBackendHub()
+    {
+        // Check if any of the public handlers have no arguments, as we need them to have at least one argument due to tracing requirements.
+        var methods = typeof(WebsiteBackendHub).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        foreach (var methodInfo in methods)
+        {
+            if (methodInfo.IsSpecialName) continue;
+
+            if (methodInfo.GetBaseDefinition() == methodInfo && methodInfo.GetParameters().Length == 0)
+            {
+                throw new InvalidOperationException($"Hub method '{methodInfo.Name}' in {nameof(WebsiteBackendHub)} must have at least one parameter due to tracing requirements. " +
+                                                    $"Please add a '{nameof(PreventZeroArgumentHandler)}' parameter or ensure it has other arguments.");
+            }
+        }
+    }
+
     private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
@@ -60,7 +79,7 @@ public class WebsiteBackendHub(
         await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString());
     }
 
-    public async Task LoadFriendListAndRequests()
+    public async Task LoadFriendListAndRequests(PreventZeroArgumentHandler _)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
@@ -73,7 +92,7 @@ public class WebsiteBackendHub(
         await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
     }
 
-    public async Task LoadFriendsWithPictures()
+    public async Task LoadFriendsWithPictures(PreventZeroArgumentHandler _)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
