@@ -115,42 +115,42 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         return deserializeObject.smurfs;
     }
 
-    public async Task<List<GlobalChatBan>> GetChatBans()
+    public async Task<List<GlobalChatBan>> GetChatBans(string query, string nextId)
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/flo/globalChatBans";
-        var result = await httpClient.GetAsync(url);
-        var content = await result.Content.ReadAsStringAsync();
+        string url = $"{MatchmakingApiUrl}/flo/globalChatBans";
+        if (query != null)
+        {
+            url += $"?query={query}";
+        }
+        if (nextId != null)
+        {
+            url += $"?nextId={nextId}";
+        }
+        HttpResponseMessage result = await httpClient.GetAsync(url);
+        string content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<PlayerChatBanWrapper>(content);
 
         var globalChatBans = new List<GlobalChatBan>();
 
-        List<PlayerChatBan> banList = deserializeObject.playerBansList;
-
-        if (!banList.Any())
+        if (deserializeObject.playerBansList.Count == 0)
         {
-            return globalChatBans;
+            return [];
         }
 
-        foreach (var item in deserializeObject.playerBansList)
+        foreach (PlayerChatBan item in deserializeObject.playerBansList)
         {
-            var chatBanData = new GlobalChatBan();
-
-            chatBanData.id = item.id;
-            chatBanData.battleTag = item.player.name;
-
-            if (item.banExpiresAt == null)
+            var globalChatBan = new GlobalChatBan
             {
-                chatBanData.expiresAt = null;
-            }
-            else
-            {
-                chatBanData.expiresAt = DateTimeOffset.FromUnixTimeSeconds(item.banExpiresAt.seconds).DateTime;
-            }
+                id = item.id,
+                battleTag = item.player.name,
+                createdAt = DateTimeOffset.FromUnixTimeSeconds(item.createdAt.seconds).DateTime,
+                expiresAt = item.banExpiresAt == null ? null : DateTimeOffset.FromUnixTimeSeconds(item.banExpiresAt.seconds).DateTime,
+            };
 
-            globalChatBans.Add(chatBanData);
+            globalChatBans.Add(globalChatBan);
         }
         return globalChatBans;
     }

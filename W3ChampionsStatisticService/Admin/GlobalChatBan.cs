@@ -9,6 +9,7 @@ public class GlobalChatBan
     public int id { get; set; }
     public string battleTag { get; set; }
     public DateTime? expiresAt { get; set; }
+    public DateTime createdAt { get;  set; }
 }
 
 public class PlayerChatBanWrapper
