@@ -122,7 +122,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         string url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         if (query != null)
         {
-            url += $"?query={query}";
+            url += $"?query={HttpUtility.UrlEncode(query)}";
         }
         if (nextId != null)
         {

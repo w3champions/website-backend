@@ -9,7 +9,8 @@ public class GlobalChatBan
     public int id { get; set; }
     public string battleTag { get; set; }
     public DateTime? expiresAt { get; set; }
-    public DateTime createdAt { get;  set; }
+    public DateTime createdAt { get; set; }
+    public string author { get; set; }
 }
 
 public class PlayerChatBanWrapper
@@ -29,6 +30,7 @@ public class PlayerChatBan
 
     [JsonProperty("created_at")]
     public PlayerChatBanTimestamp createdAt { get; set; }
+    public string author {get; set; }
 }
 
 public class PlayerChatBanPlayerData
@@ -54,4 +56,5 @@ public class ChatBanPutDto
 {
     public string battleTag { get; set; }
     public string expiresAt { get; set; }
+    public string author { get; set; }
 }
