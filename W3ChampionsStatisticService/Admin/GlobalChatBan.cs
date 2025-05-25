@@ -50,17 +50,6 @@ public class PlayerChatBanPlayerData
     public int realm { get; set; }
 }
 
-public class PlayerChatBanPlayerDataRealm
-{
-    public int value { get; set; }
-}
-
-public class PlayerChatBanTimestamp
-{
-    public uint seconds { get; set; }
-    public int nanos { get; set; }
-}
-
 public class ChatBanPutDto
 {
     public string battleTag { get; set; }
