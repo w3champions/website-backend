@@ -13,5 +13,4 @@ public interface IMatchEventRepository
     Task<List<RankingChangedEvent>> CheckoutForRead();
     Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
     Task DeleteStartedEvent(ObjectId nextEventId);
-    Task DeleteCanceledEvent(ObjectId nextEventId);
 }

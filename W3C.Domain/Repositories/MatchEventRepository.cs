@@ -80,9 +80,4 @@ public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBa
     {
         return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
     }
-
-    public Task DeleteCanceledEvent(ObjectId nextEventId)
-    {
-        return Delete<MatchCanceledEvent>(e => e.Id == nextEventId);
-    }
 }
