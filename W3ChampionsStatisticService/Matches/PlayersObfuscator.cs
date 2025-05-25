@@ -25,6 +25,12 @@ public static class PlayersObfuscator
                     player.Twitch = null;
                 }
             }
+
+            foreach (var serverInfo in ffaMatch.ServerInfo.PlayerServerInfos)
+            {
+                serverInfo.CurrentPing = 0;
+                serverInfo.AveragePing = 0;
+            }
         }
     }
 }
