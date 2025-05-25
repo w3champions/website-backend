@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Services;
 using W3C.Domain.Tracing;
+using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -109,7 +110,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
     {
         var onGoingMatch = await _matchRepository.TryLoadOnGoingMatchForPlayer(playerId);
 
-        if (onGoingMatch != null && onGoingMatch.GameMode == GameMode.FFA)
+        if (onGoingMatch != null && GameModesHelper.IsFfaGameMode(onGoingMatch.GameMode))
         {
             return Ok(null);
         }
