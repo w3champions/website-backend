@@ -115,7 +115,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         return deserializeObject.smurfs;
     }
 
-    public async Task<List<GlobalChatBan>> GetChatBans(string query, string nextId)
+    public async Task<GlobalChatBanResponse> GetChatBans(string query, string nextId)
     {
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
@@ -137,7 +137,11 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
         if (deserializeObject.playerBansList.Count == 0)
         {
-            return [];
+            return new GlobalChatBanResponse
+            {
+                globalChatBans = [],
+                next_id = 0,
+            };
         }
 
         foreach (PlayerChatBan item in deserializeObject.playerBansList)
@@ -146,13 +150,18 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
             {
                 id = item.id,
                 battleTag = item.player.name,
-                createdAt = DateTimeOffset.FromUnixTimeSeconds(item.createdAt.seconds).DateTime,
-                expiresAt = item.banExpiresAt == null ? null : DateTimeOffset.FromUnixTimeSeconds(item.banExpiresAt.seconds).DateTime,
+                createdAt = item.createdAt,
+                expiresAt = item.banExpiresAt,
+                author = item.author,
             };
 
             globalChatBans.Add(globalChatBan);
         }
-        return globalChatBans;
+        return new GlobalChatBanResponse
+        {
+            globalChatBans = globalChatBans,
+            next_id = deserializeObject.next_id,
+        };
     }
 
     public async Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan)
