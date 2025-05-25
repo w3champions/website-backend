@@ -124,7 +124,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         {
             url += $"?query={HttpUtility.UrlEncode(query)}";
         }
-        if (nextId != null)
+        else if (nextId != null)
         {
             url += $"?nextId={nextId}";
         }
