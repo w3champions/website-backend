@@ -204,33 +204,33 @@ string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
 if (startHandlers == "true")
 {
     // PlayerProfile
-    builder.Services.AddReadModelService<PlayerOverallStatsHandler>();
-    builder.Services.AddReadModelService<PlayOverviewHandler>();
-    builder.Services.AddReadModelService<PlayerWinrateHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerOverallStatsHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayOverviewHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerWinrateHandler>();
 
     // PlayerStats
-    builder.Services.AddReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
-    builder.Services.AddReadModelService<PlayerHeroStatsHandler>();
-    builder.Services.AddReadModelService<PlayerGameModeStatPerGatewayHandler>();
-    builder.Services.AddReadModelService<PlayerRaceStatPerGatewayHandler>();
-    builder.Services.AddReadModelService<PlayerMmrRpTimelineHandler>();
-    builder.Services.AddReadModelService<GameLengthForPlayerStatisticsHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerRaceOnMapVersusRaceRatioHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerHeroStatsHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerGameModeStatPerGatewayHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerRaceStatPerGatewayHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerMmrRpTimelineHandler>();
+    builder.Services.AddMatchFinishedReadModelService<GameLengthForPlayerStatisticsHandler>();
 
     // General Stats
-    builder.Services.AddReadModelService<GamesPerDayHandler>();
-    builder.Services.AddReadModelService<GameLengthStatHandler>();
-    builder.Services.AddReadModelService<MatchupLengthsHandler>();
-    builder.Services.AddReadModelService<DistinctPlayersPerDayHandler>();
-    builder.Services.AddReadModelService<PopularHoursStatHandler>();
-    builder.Services.AddReadModelService<HeroPlayedStatHandler>();
-    builder.Services.AddReadModelService<MapsPerSeasonHandler>();
+    builder.Services.AddMatchFinishedReadModelService<GamesPerDayHandler>();
+    builder.Services.AddMatchFinishedReadModelService<GameLengthStatHandler>();
+    builder.Services.AddMatchFinishedReadModelService<MatchupLengthsHandler>();
+    builder.Services.AddMatchFinishedReadModelService<DistinctPlayersPerDayHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PopularHoursStatHandler>();
+    builder.Services.AddMatchFinishedReadModelService<HeroPlayedStatHandler>();
+    builder.Services.AddMatchFinishedReadModelService<MapsPerSeasonHandler>();
 
     // Game Balance Stats
-    builder.Services.AddReadModelService<OverallRaceAndWinStatHandler>();
-    builder.Services.AddReadModelService<OverallHeroWinRatePerHeroModelHandler>();
+    builder.Services.AddMatchFinishedReadModelService<OverallRaceAndWinStatHandler>();
+    builder.Services.AddMatchFinishedReadModelService<OverallHeroWinRatePerHeroModelHandler>();
 
     // Ladder Syncs
-    builder.Services.AddReadModelService<MatchReadModelHandler>();
+    builder.Services.AddMatchFinishedReadModelService<MatchReadModelHandler>();
 
     // On going matches
     builder.Services.AddUnversionedReadModelService<OngoingMatchesHandler>();

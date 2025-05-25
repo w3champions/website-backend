@@ -12,7 +12,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
 [Trace]
-public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

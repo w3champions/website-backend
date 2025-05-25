@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 public class OverallRaceAndWinStatHandler(
     IW3StatsRepo w3Stats,
     IPatchRepository patchRepository
-        ) : IReadModelHandler
+        ) : IMatchFinishedReadModelHandler
 {
     private readonly IW3StatsRepo _w3Stats = w3Stats;
     private readonly IPatchRepository _patchRepository = patchRepository;

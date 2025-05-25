@@ -7,7 +7,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 
 [Trace]
-public class PlayerRaceStatPerGatewayHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerRaceStatPerGatewayHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

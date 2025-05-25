@@ -5,11 +5,11 @@ namespace W3ChampionsStatisticService.ReadModelBase;
 
 public static class ReadModelExtensions
 {
-    public static IServiceCollection AddReadModelService<T>(this IServiceCollection services) where T : class, IReadModelHandler
+    public static IServiceCollection AddMatchFinishedReadModelService<T>(this IServiceCollection services) where T : class, IMatchFinishedReadModelHandler
     {
         services.AddTransient<T>();
-        services.AddTransient<ReadModelHandler<T>>();
-        services.AddSingleton<IHostedService, AsyncServiceBase<ReadModelHandler<T>>>();
+        services.AddTransient<MatchFinishedReadModelHandler<T>>();
+        services.AddSingleton<IHostedService, AsyncServiceBase<MatchFinishedReadModelHandler<T>>>();
         return services;
     }
 

@@ -9,7 +9,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 
 [Trace]
-public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) : IReadModelHandler
+public class GameLengthForPlayerStatisticsHandler(IPlayerRepository playerRepo) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepo = playerRepo;
 

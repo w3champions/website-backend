@@ -9,7 +9,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PlayerStats.HeroStats;
 
 [Trace]
-public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : IReadModelHandler
+public class PlayerHeroStatsHandler(IPlayerStatsRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerStatsRepository _playerRepository = playerRepository;
 
