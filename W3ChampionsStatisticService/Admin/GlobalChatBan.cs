@@ -39,7 +39,7 @@ public class PlayerChatBan
 
     [JsonProperty("created_at")]
     public DateTime createdAt { get; set; }
-    public string author {get; set; }
+    public string author { get; set; }
 }
 
 public class PlayerChatBanPlayerData
