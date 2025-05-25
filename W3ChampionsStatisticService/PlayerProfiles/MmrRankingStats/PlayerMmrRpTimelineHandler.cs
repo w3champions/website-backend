@@ -8,7 +8,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
 [Trace]
-public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

@@ -14,7 +14,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 public class PlayerRaceOnMapVersusRaceRatioHandler(
     IPlayerStatsRepository playerRepository,
     IPatchRepository patchRepository
-        ) : IReadModelHandler
+        ) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerStatsRepository _playerRepository = playerRepository;
     private readonly IPatchRepository _patchRepository = patchRepository;

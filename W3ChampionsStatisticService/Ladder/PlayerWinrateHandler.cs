@@ -8,7 +8,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Ladder;
 
 [Trace]
-public class PlayerWinrateHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayerWinrateHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 

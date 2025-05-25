@@ -23,7 +23,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
         fakeEvent.match.state = 2;
         var mockEvents = new Mock<IMatchEventRepository>();
-        mockEvents.SetupSequence(m => m.Load(It.IsAny<string>(), It.IsAny<int>()))
+        mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
             .ReturnsAsync(new List<MatchFinishedEvent>());
 
@@ -31,7 +31,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var versionRepository = new VersionRepository(MongoClient);
 
-        var handler = new ReadModelHandler<MatchReadModelHandler>(
+        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
             new MatchReadModelHandler(mockMatchRepo.Object));
@@ -49,7 +49,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
         fakeEvent.match.state = 3;
         var mockEvents = new Mock<IMatchEventRepository>();
-        mockEvents.SetupSequence(m => m.Load(It.IsAny<string>(), It.IsAny<int>()))
+        mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
             .ReturnsAsync(new List<MatchFinishedEvent>());
 
@@ -57,7 +57,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var versionRepository = new VersionRepository(MongoClient);
 
-        var handler = new ReadModelHandler<MatchReadModelHandler>(
+        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
             new MatchReadModelHandler(mockMatchRepo.Object));
@@ -103,7 +103,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var versionRepository = new VersionRepository(MongoClient);
 
-        var handler = new ReadModelHandler<MatchReadModelHandler>(
+        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             new MatchEventRepository(MongoClient),
             versionRepository,
             new MatchReadModelHandler(matchRepository));

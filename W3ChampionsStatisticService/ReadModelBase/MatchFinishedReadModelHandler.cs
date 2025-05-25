@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
@@ -9,11 +10,11 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.ReadModelBase;
 
 [Trace]
-public class ReadModelHandler<T>(
+public class MatchFinishedReadModelHandler<T>(
     IMatchEventRepository eventRepository,
     IVersionRepository versionRepository,
     T innerHandler,
-    TrackingService trackingService = null) : IAsyncUpdatable where T : IReadModelHandler
+    TrackingService trackingService = null) : IAsyncUpdatable where T : IMatchFinishedReadModelHandler
 {
     private readonly IMatchEventRepository _eventRepository = eventRepository;
     private readonly IVersionRepository _versionRepository = versionRepository;
@@ -23,7 +24,7 @@ public class ReadModelHandler<T>(
     public async Task Update()
     {
         var lastVersion = await _versionRepository.GetLastVersion<T>();
-        var nextEvents = await _eventRepository.Load(lastVersion.Version, 1000);
+        var nextEvents = await _eventRepository.Load<MatchFinishedEvent>(lastVersion.Version, 1000);
 
         while (nextEvents.Any())
         {
@@ -54,7 +55,7 @@ public class ReadModelHandler<T>(
                 }
             }
 
-            nextEvents = await _eventRepository.Load(nextEvents.Last().Id.ToString());
+            nextEvents = await _eventRepository.Load<MatchFinishedEvent>(nextEvents.Last().Id.ToString());
         }
     }
 }

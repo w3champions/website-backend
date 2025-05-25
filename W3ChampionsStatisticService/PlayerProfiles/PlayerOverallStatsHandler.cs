@@ -10,7 +10,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles;
 [Trace]
 public class PlayerOverallStatsHandler(
     IPlayerRepository playerRepository,
-    IPersonalSettingsRepository personalSettingsRepository) : IReadModelHandler
+    IPersonalSettingsRepository personalSettingsRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;

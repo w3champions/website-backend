@@ -11,7 +11,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
 
 [Trace]
-public class OverallHeroWinRatePerHeroModelHandler(IW3StatsRepo w3Stats) : IReadModelHandler
+public class OverallHeroWinRatePerHeroModelHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadModelHandler
 {
     private readonly IW3StatsRepo _w3Stats = w3Stats;
 

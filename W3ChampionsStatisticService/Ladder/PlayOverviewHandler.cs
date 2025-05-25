@@ -12,7 +12,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Ladder;
 
 [Trace]
-public class PlayOverviewHandler(IPlayerRepository playerRepository) : IReadModelHandler
+public class PlayOverviewHandler(IPlayerRepository playerRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 
