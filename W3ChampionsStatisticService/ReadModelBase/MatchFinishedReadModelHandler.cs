@@ -32,7 +32,7 @@ public class MatchFinishedReadModelHandler<T>(
             foreach (var matchEvent in finishedEvents)
             {
                 if (lastVersion.IsStopped) return;
-                
+
                 try
                 {
                     lastVersion = await ProcessMatchFinishedEvent(matchEvent, lastVersion);
@@ -52,11 +52,11 @@ public class MatchFinishedReadModelHandler<T>(
     private async Task<HandlerVersion> ProcessMatchFinishedEvent(MatchFinishedEvent matchEvent, HandlerVersion lastVersion)
     {
         ValidateMatchState(matchEvent);
-        
+
         lastVersion = await UpdateSeasonIfNeeded(matchEvent, lastVersion);
-        
+
         await ProcessEventForCurrentSeason(matchEvent, lastVersion);
-        
+
         await _versionRepository.SaveLastVersion<T>(matchEvent.Id.ToString(), lastVersion.Season);
         return lastVersion;
     }
@@ -77,7 +77,7 @@ public class MatchFinishedReadModelHandler<T>(
             // Return the updated version from the database
             return await _versionRepository.GetLastVersion<T>();
         }
-        
+
         return lastVersion;
     }
 
@@ -89,7 +89,7 @@ public class MatchFinishedReadModelHandler<T>(
         }
         else
         {
-            Log.Warning("Old season event {EventSeason} detected during season {CurrentSeason}. Skipping event {EventId}...", 
+            Log.Warning("Old season event {EventSeason} detected during season {CurrentSeason}. Skipping event {EventId}...",
                 matchEvent.match.season, lastVersion.Season, matchEvent.Id);
         }
     }

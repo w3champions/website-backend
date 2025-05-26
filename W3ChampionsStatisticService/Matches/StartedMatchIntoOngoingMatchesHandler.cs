@@ -31,7 +31,7 @@ public class StartedMatchIntoOngoingMatchesHandler(
         {
             foreach (var matchEvent in startedEvents)
             {
-                try 
+                try
                 {
                     await ProcessMatchStartedEvent(matchEvent);
                     await _eventRepository.DeleteStartedEvent(matchEvent.Id);
@@ -74,7 +74,7 @@ public class StartedMatchIntoOngoingMatchesHandler(
         var existingMatch = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
         if (existingMatch != null)
         {
-            Log.Warning("Received Players {Player} MatchStartedEvent {EventId} for match {MatchId} although we still have an ongoing match {OngoingMatchId} - deleting old ongoing match...", 
+            Log.Warning("Received Players {Player} MatchStartedEvent {EventId} for match {MatchId} although we still have an ongoing match {OngoingMatchId} - deleting old ongoing match...",
                 player.BattleTag, matchEvent.Id, matchEvent.match.id, existingMatch.MatchId);
             await _matchRepository.DeleteOnGoingMatch(existingMatch);
         }
