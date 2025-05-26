@@ -9,6 +9,7 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Domain.Repositories;
 using W3C.Contracts.Matchmaking;
+using System;
 
 namespace WC3ChampionsStatisticService.Tests.ReadModel;
 
@@ -28,13 +29,15 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             .ReturnsAsync(new List<MatchFinishedEvent>());
 
         var mockMatchRepo = new Mock<IMatchRepository>();
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
 
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object));
+            new MatchReadModelHandler(mockMatchRepo.Object),
+            mockTrackingService.Object);
 
         await handler.Update();
 
@@ -54,16 +57,18 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             .ReturnsAsync(new List<MatchFinishedEvent>());
 
         var mockMatchRepo = new Mock<IMatchRepository>();
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
 
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object));
+            new MatchReadModelHandler(mockMatchRepo.Object),
+            mockTrackingService.Object);
 
         await handler.Update();
-
+        mockTrackingService.Verify(m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
         mockMatchRepo.Verify(m => m.Insert(It.IsAny<Matchup>()), Times.Never);
     }
 
@@ -100,13 +105,15 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
 
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             new MatchEventRepository(MongoClient),
             versionRepository,
-            new MatchReadModelHandler(matchRepository));
+            new MatchReadModelHandler(matchRepository),
+            mockTrackingService.Object);
 
         await handler.Update();
 
@@ -119,5 +126,6 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         Assert.AreEqual(2, matches.Count);
         Assert.AreEqual(fakeEvent3.match.id, matches[0].MatchId);
         Assert.AreEqual(fakeEvent3.Id, matches[0].Id);
+        mockTrackingService.Verify(m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
     }
 }

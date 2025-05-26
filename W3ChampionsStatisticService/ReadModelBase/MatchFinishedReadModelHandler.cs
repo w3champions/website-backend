@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.MatchmakingService;
@@ -14,12 +14,12 @@ public class MatchFinishedReadModelHandler<T>(
     IMatchEventRepository eventRepository,
     IVersionRepository versionRepository,
     T innerHandler,
-    TrackingService trackingService = null) : IAsyncUpdatable where T : IMatchFinishedReadModelHandler
+    ITrackingService trackingService) : IAsyncUpdatable where T : IMatchFinishedReadModelHandler
 {
     private readonly IMatchEventRepository _eventRepository = eventRepository;
     private readonly IVersionRepository _versionRepository = versionRepository;
     private readonly T _innerHandler = innerHandler;
-    private readonly TrackingService _trackingService = trackingService;
+    private readonly ITrackingService _trackingService = trackingService;
 
     public async Task Update()
     {
