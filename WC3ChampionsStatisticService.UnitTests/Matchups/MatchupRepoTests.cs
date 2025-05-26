@@ -480,7 +480,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
 
-        var result = await matchRepository.LoadDetails(matchFinishedEvent1.Id);
+        var result = await matchRepository.LoadFinishedMatchDetails(matchFinishedEvent1.Id);
 
         Assert.AreEqual("archmage", result.PlayerScores[0].Heroes[0].Icon);
     }

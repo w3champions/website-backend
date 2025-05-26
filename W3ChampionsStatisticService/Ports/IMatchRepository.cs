@@ -39,11 +39,12 @@ public interface IMatchRepository
         Race opponentRace = Race.Total,
         int season = 1);
 
-    Task<MatchupDetail> LoadDetails(ObjectId id);
-    Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id);
-    Task<MatchFinishedEvent> LoadDetailsByGameName(string gameName);
+    Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);
+    Task<MatchupDetail> LoadFinishedMatchDetailsByMatchId(string id);
+    Task<MatchFinishedEvent> LoadMatchFinishedEventByGameName(string gameName);
 
     Task InsertOnGoingMatch(OnGoingMatchup matchup);
+    Task<OnGoingMatchup> LoadOnGoingMatchByMatchId(string matchId);
     Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
     Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId);
     Task DeleteOnGoingMatch(Matchup matchup);

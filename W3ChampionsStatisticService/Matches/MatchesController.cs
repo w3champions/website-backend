@@ -43,14 +43,14 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMatchDetails(string id)
     {
-        var match = await _matchRepository.LoadDetails(new ObjectId(id));
+        var match = await _matchRepository.LoadFinishedMatchDetails(new ObjectId(id));
         return Ok(match);
     }
 
     [HttpGet("gameName/{gameName}")]
     public async Task<IActionResult> GetMatchIdFromGameName(string gameName)
     {
-        var match = await _matchRepository.LoadDetailsByGameName(gameName);
+        var match = await _matchRepository.LoadMatchFinishedEventByGameName(gameName);
         if (match == null) return NotFound();
         return Ok(match.Id.ToString());
     }
@@ -58,7 +58,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
     [HttpGet("by-ongoing-match-id/{id}")]
     public async Task<IActionResult> GetMatchDetailsByOngoingMatchId(string id)
     {
-        var match = await _matchRepository.LoadDetailsByOngoingMatchId(id);
+        var match = await _matchRepository.LoadFinishedMatchDetailsByMatchId(id);
         return Ok(match);
     }
 

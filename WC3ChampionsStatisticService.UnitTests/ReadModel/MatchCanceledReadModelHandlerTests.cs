@@ -26,7 +26,7 @@ public class MatchCanceledReadModelHandlerTests : IntegrationTestBase
             .ReturnsAsync(new List<MatchCanceledEvent>());
 
         var mockMatchRepo = new Mock<IMatchRepository>();
-        mockMatchRepo.Setup(m => m.LoadDetailsByOngoingMatchId(It.IsAny<string>())).ReturnsAsync(new MatchupDetail());
+        mockMatchRepo.Setup(m => m.LoadOnGoingMatchByMatchId(It.IsAny<string>())).ReturnsAsync(new OnGoingMatchup());
 
         var versionRepository = new VersionRepository(MongoClient);
         var trackingService = TestDtoHelper.CreateMockTrackingService();
@@ -52,7 +52,7 @@ public class MatchCanceledReadModelHandlerTests : IntegrationTestBase
             .ReturnsAsync(new List<MatchCanceledEvent>());
 
         var mockMatchRepo = new Mock<IMatchRepository>();
-        mockMatchRepo.Setup(m => m.LoadDetailsByOngoingMatchId(It.IsAny<string>())).ReturnsAsync((MatchupDetail)null);
+        mockMatchRepo.Setup(m => m.LoadOnGoingMatchByMatchId(It.IsAny<string>())).ReturnsAsync((OnGoingMatchup)null);
 
         var versionRepository = new VersionRepository(MongoClient);
         var trackingService = TestDtoHelper.CreateMockTrackingService();
