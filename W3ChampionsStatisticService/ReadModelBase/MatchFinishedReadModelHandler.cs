@@ -20,7 +20,7 @@ public class MatchFinishedReadModelHandler<T>(
 
     protected override void ValidateMatchState(MatchFinishedEvent matchEvent)
     {
-        if (matchEvent.match.state != EMatchState.FINISHED)
+        if (!matchEvent.WasFakeEvent && matchEvent.match.state != EMatchState.FINISHED)
         {
             throw new InvalidOperationException($"Received match with illegal state {matchEvent.match.state} within the MatchFinishedReadModelHandler");
         }
