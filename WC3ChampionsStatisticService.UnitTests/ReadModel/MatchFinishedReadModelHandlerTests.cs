@@ -33,10 +33,10 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var versionRepository = new VersionRepository(MongoClient);
 
-        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
+        var handler = new MatchFinishedReadModelHandler<OngoingRemovalMatchFinishedHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object),
+            new OngoingRemovalMatchFinishedHandler(mockMatchRepo.Object),
             mockTrackingService.Object);
 
         await handler.Update();
@@ -61,10 +61,10 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var versionRepository = new VersionRepository(MongoClient);
 
-        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
+        var handler = new MatchFinishedReadModelHandler<OngoingRemovalMatchFinishedHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object),
+            new OngoingRemovalMatchFinishedHandler(mockMatchRepo.Object),
             mockTrackingService.Object);
 
         Assert.ThrowsAsync<InvalidOperationException>(() => handler.Update());
@@ -114,15 +114,15 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var versionRepository = new VersionRepository(MongoClient);
 
-        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
+        var handler = new MatchFinishedReadModelHandler<OngoingRemovalMatchFinishedHandler>(
             new MatchEventRepository(MongoClient),
             versionRepository,
-            new MatchReadModelHandler(matchRepository),
+            new OngoingRemovalMatchFinishedHandler(matchRepository),
             mockTrackingService.Object);
 
         await handler.Update();
 
-        var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
+        var version = await versionRepository.GetLastVersion<OngoingRemovalMatchFinishedHandler>();
 
         var matches = await matchRepository.Load(1, GameMode.GM_1v1);
 

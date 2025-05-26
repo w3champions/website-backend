@@ -230,7 +230,7 @@ if (startHandlers == "true")
     builder.Services.AddMatchFinishedReadModelService<OverallHeroWinRatePerHeroModelHandler>();
 
     // Ladder Syncs
-    builder.Services.AddMatchFinishedReadModelService<MatchReadModelHandler>();
+    builder.Services.AddMatchFinishedReadModelService<OngoingRemovalMatchFinishedHandler>();
 
     // On going matches
     builder.Services.AddUnversionedReadModelService<OngoingMatchesHandler>();
