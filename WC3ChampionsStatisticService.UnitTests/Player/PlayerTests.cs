@@ -11,6 +11,7 @@ using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.Ladder;
 
 namespace WC3ChampionsStatisticService.Tests.Player;
 
@@ -441,5 +442,53 @@ public class PlayerTests : IntegrationTestBase
 
         Assert.IsTrue(wolfMmrRpTimeline.MmrRpAtDates[0].Mmr < wolfMmrRpTimeline.MmrRpAtDates[1].Mmr);
         Assert.IsTrue(wolfMmrRpTimeline.MmrRpAtDates[1].Mmr > wolfMmrRpTimeline.MmrRpAtDates[2].Mmr);
+    }
+
+    [Test]
+    [TestCase("player2#456", Race.OC, 0.666666f, Description = "Middle player - 66% quantile")]
+    [TestCase("top#123", Race.HU, 1.0f, Description = "Top player - 100% quantile")]
+    [TestCase("bottom#789", Race.NE, 0.333333f, Description = "Bottom player - 33% quantile")]
+    [TestCase("nonexistent#999", Race.OC, null, Description = "Non-existent player - returns null")]
+    public async Task GetQuantileForPlayer_CalculatesCorrectly(string battleTag, Race race, float? expectedQuantile)
+    {
+        // Arrange
+        var playerRepository = new PlayerRepository(MongoClient);
+        var playerService = new PlayerService(playerRepository, CreateTestCache<List<MmrRank>>(), personalSettingsProvider);
+
+        // Setup test data - 3 players with different MMRs
+        var testPlayers = new[]
+        {
+            ("top#123", 2000, Race.HU),
+            ("player2#456", 1500, Race.OC),
+            ("bottom#789", 1000, Race.NE)
+        };
+
+        foreach (var (tag, mmr, r) in testPlayers)
+        {
+            var overview = PlayerOverview.Create(
+                new List<PlayerId> { PlayerId.Create(tag) },
+                GateWay.Europe,
+                GameMode.GM_1v1,
+                1,
+                r
+            );
+            overview.MMR = mmr;
+            await playerRepository.UpsertPlayerOverview(overview);
+        }
+
+        // Act
+        var quantile = await playerService.GetQuantileForPlayer(
+            new List<PlayerId> { PlayerId.Create(battleTag) },
+            GateWay.Europe,
+            GameMode.GM_1v1,
+            race,
+            1
+        );
+
+        // Assert
+        if (expectedQuantile.HasValue)
+            Assert.That(quantile, Is.EqualTo(expectedQuantile.Value).Within(1e-6f));
+        else
+            Assert.IsNull(quantile);
     }
 }

@@ -24,18 +24,16 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
     {
         var seasonRanks =
             await _mmrCachedDataProvider.GetCachedOrRequestAsync(async () => await FetchMmrRanks(season), season.ToString());
-        var gatewayGameModeRanks = seasonRanks.First(x => x.Gateway == gateWay && x.GameMode == gameMode);
-
         var rankKey = GetRankKey(playerIds, gameMode, race);
-        if (gatewayGameModeRanks.Ranks.ContainsKey(rankKey))
-        {
-            var foundRank = gatewayGameModeRanks.Ranks[rankKey];
+        var gatewayGameModeRanks = seasonRanks.FirstOrDefault(x => x.Gateway == gateWay && x.GameMode == gameMode);
 
-            var numberOfPlayersAfter = gatewayGameModeRanks.Ranks.Count - foundRank.Rank;
-            return numberOfPlayersAfter / (float)gatewayGameModeRanks.Ranks.Count;
+        if (gatewayGameModeRanks == null || !gatewayGameModeRanks.Ranks.TryGetValue(rankKey, out PlayerMmrRank foundRank))
+        {
+            return null;
         }
 
-        return null;
+        var numberOfPlayersAfter = gatewayGameModeRanks.Ranks.Count - foundRank.Rank;
+        return numberOfPlayersAfter / (float)gatewayGameModeRanks.Ranks.Count;
     }
 
     private async Task<List<MmrRank>> FetchMmrRanks(int season)
