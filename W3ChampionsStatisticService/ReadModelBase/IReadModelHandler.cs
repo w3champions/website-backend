@@ -7,3 +7,8 @@ public interface IMatchFinishedReadModelHandler
 {
     Task Update(MatchFinishedEvent nextEvent);
 }
+
+public interface IMatchCanceledReadModelHandler
+{
+    Task Update(MatchCanceledEvent nextEvent);
+}

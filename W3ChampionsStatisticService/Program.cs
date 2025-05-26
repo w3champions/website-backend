@@ -234,6 +234,7 @@ if (startHandlers == "true")
 
     // On going matches
     builder.Services.AddUnversionedReadModelService<StartedMatchIntoOngoingMatchesHandler>();
+    builder.Services.AddMatchCanceledReadModelService<OngoingRemovalMatchCanceledHandler>();
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();

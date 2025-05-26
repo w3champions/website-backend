@@ -13,6 +13,14 @@ public static class ReadModelExtensions
         return services;
     }
 
+    public static IServiceCollection AddMatchCanceledReadModelService<T>(this IServiceCollection services) where T : class, IMatchCanceledReadModelHandler
+    {
+        services.AddTransient<T>();
+        services.AddTransient<MatchCanceledReadModelHandler<T>>();
+        services.AddSingleton<IHostedService, AsyncServiceBase<MatchCanceledReadModelHandler<T>>>();
+        return services;
+    }
+
     public static IServiceCollection AddUnversionedReadModelService<T>(this IServiceCollection services) where T : class, IAsyncUpdatable
     {
         services.AddTransient<T>();
