@@ -16,17 +16,19 @@ namespace WC3ChampionsStatisticService.Tests.ReadModel;
 [TestFixture]
 public class ReadModelHandlerBaseTests : IntegrationTestBase
 {
-    [Test]
-    public async Task InsertMatches()
+    [TestCase(true, EMatchState.INIT)]
+    [TestCase(false, EMatchState.FINISHED)]
+    public async Task InsertMatches(bool wasFakeEvent, EMatchState matchState)
     {
         var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
-        fakeEvent.match.state = EMatchState.FINISHED;
+        fakeEvent.match.state = matchState;
+        fakeEvent.WasFakeEvent = wasFakeEvent;
         var mockEvents = new Mock<IMatchEventRepository>();
         mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
-            .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
-            .ReturnsAsync(new List<MatchFinishedEvent>());
+            .ReturnsAsync([fakeEvent])
+            .ReturnsAsync([]);
 
         var mockMatchRepo = new Mock<IMatchRepository>();
         var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
@@ -41,7 +43,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         await handler.Update();
 
-        mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), Times.Once);
+        mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), wasFakeEvent ? Times.Never : Times.Once);
     }
 
     [Test]
