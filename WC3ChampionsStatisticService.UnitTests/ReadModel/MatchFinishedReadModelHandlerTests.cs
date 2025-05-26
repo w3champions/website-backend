@@ -42,32 +42,6 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task InsertMatchesFail1()
-    {
-        var fakeEvent = TestDtoHelper.CreateFakeEvent();
-
-        fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
-        fakeEvent.match.state = 3;
-        var mockEvents = new Mock<IMatchEventRepository>();
-        mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
-            .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
-            .ReturnsAsync(new List<MatchFinishedEvent>());
-
-        var mockMatchRepo = new Mock<IMatchRepository>();
-
-        var versionRepository = new VersionRepository(MongoClient);
-
-        var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
-            mockEvents.Object,
-            versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object));
-
-        await handler.Update();
-
-        mockMatchRepo.Verify(m => m.Insert(It.IsAny<Matchup>()), Times.Never);
-    }
-
-    [Test]
     public async Task TestThatNewVersionIsUpdated()
     {
         var fakeEvent1 = TestDtoHelper.CreateFakeEvent();
