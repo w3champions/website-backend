@@ -150,9 +150,9 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
             {
                 id = item.id,
                 battleTag = item.player.name,
-                createdAt = item.createdAt,
-                expiresAt = item.banExpiresAt,
-                author = item.author,
+                createdAt = DateTimeOffset.FromUnixTimeSeconds(item.createdAt.seconds).DateTime,
+                expiresAt = item.banExpiresAt == null ? null : DateTimeOffset.FromUnixTimeSeconds(item.banExpiresAt.seconds).DateTime,
+                author = item.author?.value,
             };
 
             globalChatBans.Add(globalChatBan);
@@ -160,7 +160,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         return new GlobalChatBanResponse
         {
             globalChatBans = globalChatBans,
-            next_id = deserializeObject.next_id,
+            next_id = deserializeObject.next_id?.value,
         };
     }
 
