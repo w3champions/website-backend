@@ -35,8 +35,11 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
     private static readonly Gauge OngoingMatchesPlayerCacheSize = Metrics
         .CreateGauge("w3champions_ongoing_matches_for_players_count", "Number of ongoing matches for players in the ongoing matches cache");
 
-    private static readonly Gauge OngoingMatchesCountCacheSize = Metrics
-        .CreateGauge("w3champions_ongoing_matches_count_cache_size", "Number of elements in the count ongoing matches cache");
+    private static readonly Gauge OngoingMatchesCountCacheCount = Metrics
+        .CreateGauge("w3champions_ongoing_matches_count_cache_count", "Number of keys in the count ongoing matches cache");
+
+    private static readonly Gauge OngoingMatchesFilteredCacheCount = Metrics
+        .CreateGauge("w3champions_ongoing_matches_filtered_cache_count", "Number of keys in the load ongoing matches cache");
 
     private static readonly Gauge OngoingMatchesFilteredCacheSize = Metrics
         .CreateGauge("w3champions_ongoing_matches_filtered_cache_size", "Number of elements in the load ongoing matches cache");
@@ -56,24 +59,15 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
 
     private readonly IMemoryCache _countOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions
     {
-        SizeLimit = 500,
+        SizeLimit = 500, // Number of counts (number of cache keys)
         TrackStatistics = true
     });
-    private readonly MemoryCacheEntryOptions _countOngoingMatchesCacheOptions = new MemoryCacheEntryOptions
-    {
-        AbsoluteExpirationRelativeToNow = CACHE_EXPIRATION,
-        Size = 1
-    };
+
     private readonly IMemoryCache _loadOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions
     {
-        SizeLimit = 500,
+        SizeLimit = 50000, // Number of total filtered matches (cache keys * matches per key)
         TrackStatistics = true
     });
-    private readonly MemoryCacheEntryOptions _loadOngoingMatchesCacheOptions = new MemoryCacheEntryOptions
-    {
-        AbsoluteExpirationRelativeToNow = CACHE_EXPIRATION,
-        Size = 1
-    };
 
     private DateTime _lastCacheSizeWarning = DateTime.MinValue;
 
@@ -144,7 +138,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             var countStats = countCache.GetCurrentStatistics();
             if (countStats != null)
             {
-                OngoingMatchesCountCacheSize.Set(countStats.CurrentEntryCount);
+                OngoingMatchesCountCacheCount.Set(countStats.CurrentEntryCount);
                 OngoingMatchesCountCacheHits.IncTo(countStats.TotalHits);
                 OngoingMatchesCountCacheMisses.IncTo(countStats.TotalMisses);
             }
@@ -155,9 +149,10 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             var loadStats = loadCache.GetCurrentStatistics();
             if (loadStats != null)
             {
-                OngoingMatchesFilteredCacheSize.Set(loadStats.CurrentEntryCount);
+                OngoingMatchesFilteredCacheCount.Set(loadStats.CurrentEntryCount);
                 OngoingMatchesFilteredCacheHits.IncTo(loadStats.TotalHits);
                 OngoingMatchesFilteredCacheMisses.IncTo(loadStats.TotalMisses);
+                if (loadStats.CurrentEstimatedSize.HasValue) OngoingMatchesFilteredCacheSize.Set(loadStats.CurrentEstimatedSize.Value);
             }
         }
     }
@@ -207,7 +202,12 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                         && (minMmr == 0 || !m.Value.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
                         && (maxMmr == 3000 || !m.Value.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
-            _countOngoingMatchesCache.Set(cacheKey, (long)count, _countOngoingMatchesCacheOptions);
+            _countOngoingMatchesCache.Set(cacheKey, (long)count, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CACHE_EXPIRATION,
+                Size = 1
+            }
+            );
 
             // Update metrics after cache operation
             UpdateCacheMetrics();
@@ -226,6 +226,9 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         int maxMmr,
         MatchSortMethod sort)
     {
+        // Note that it's possible to have inconsistent pagination if the cache expires in between queries.
+        // But I've decided to keep it simple rather than introducing a proper pagination state system.
+
         // Cache key for the complete query (filters + sort)
         var cacheKey = string.Join("|", gameMode, gateWay, map, minMmr, maxMmr, sort);
 
@@ -264,7 +267,12 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             var sortedList = matches.ToList();
 
             // Cache the filtered and sorted list
-            _loadOngoingMatchesCache.Set(cacheKey, sortedList, _loadOngoingMatchesCacheOptions);
+            _loadOngoingMatchesCache.Set(cacheKey, sortedList, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CACHE_EXPIRATION,
+                Size = sortedList.Count
+            }
+            );
 
             // Update metrics after cache operation
             UpdateCacheMetrics();
