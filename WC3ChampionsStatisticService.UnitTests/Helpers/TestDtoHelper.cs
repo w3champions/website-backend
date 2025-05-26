@@ -7,6 +7,8 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Contracts.Matchmaking;
 using W3C.Contracts.GameObjects;
+using Moq;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests;
 
@@ -311,5 +313,10 @@ public static class TestDtoHelper
     public static List<Hero> CreateHeroList(IList<W3ChampionsStatisticService.Heroes.HeroType> heroes)
     {
         return heroes.Select((hero, index) => new Hero { icon = $"{Enum.GetName(hero).ToLower()}.png", level = index + 1 }).ToList();
+    }
+
+    public static Mock<ITrackingService> CreateMockTrackingService()
+    {
+        return new Mock<ITrackingService>();
     }
 }

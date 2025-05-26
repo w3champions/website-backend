@@ -7,27 +7,33 @@ using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
+public interface ITrackingService
+{
+    void TrackUnauthorizedRequest(string authorization, ControllerBase controller);
+    void TrackException(Exception ex, string message);
+}
+
 [Trace]
 public class TrackingService(
     TelemetryClient telemetry,
-    ILogger<TrackingService> logger)
+    ILogger<TrackingService> logger) : ITrackingService
 {
-    private TelemetryClient _telemetry = telemetry;
+    private readonly TelemetryClient _telemetry = telemetry;
     private readonly ILogger<TrackingService> _logger = logger;
 
     public void TrackUnauthorizedRequest(string authorization, ControllerBase controller)
     {
         try
         {
-            var properties = new Dictionary<string, string>();
-
-            properties.Add("RemoteIp", controller.ControllerContext.HttpContext.Connection.RemoteIpAddress.ToString());
-            properties.Add("UsedAuth", authorization);
-
-            properties.Add("RequestPath", controller.Request.Path);
-            properties.Add("RequestMethod", controller.Request.Method);
-            properties.Add("RequestProtocol", controller.Request.Protocol);
-            properties.Add("RequestQueryString", controller.Request.QueryString.ToString());
+            var properties = new Dictionary<string, string>
+            {
+                { "RemoteIp", controller.ControllerContext.HttpContext.Connection.RemoteIpAddress.ToString() },
+                { "UsedAuth", authorization },
+                { "RequestPath", controller.Request.Path },
+                { "RequestMethod", controller.Request.Method },
+                { "RequestProtocol", controller.Request.Protocol },
+                { "RequestQueryString", controller.Request.QueryString.ToString() }
+            };
 
             _telemetry.TrackEvent("UnauthorizedRequest", properties);
         }

@@ -123,7 +123,7 @@ builder.Services.AddSpecialBsonRegistrations();
 builder.Services.AddBasicAuthForMetrics();
 
 // Add Application Insights
-builder.Services.AddInterceptedSingleton<TrackingService>();
+builder.Services.AddInterceptedSingleton<ITrackingService, TrackingService>();
 string disableTelemetry = Environment.GetEnvironmentVariable("DISABLE_TELEMETRY");
 if (disableTelemetry == "true")
 {

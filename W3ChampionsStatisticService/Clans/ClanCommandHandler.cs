@@ -14,10 +14,10 @@ namespace W3ChampionsStatisticService.Clans;
 public class ClanCommandHandler(
     IClanRepository clanRepository,
     IRankRepository rankRepository,
-    TrackingService trackingService)
+    ITrackingService trackingService)
 {
     private readonly IClanRepository _clanRepository = clanRepository;
-    private readonly TrackingService _trackingService = trackingService;
+    private readonly ITrackingService _trackingService = trackingService;
     private readonly IRankRepository _rankRepository = rankRepository;
 
     public async Task<Clan> CreateClan(string clanName, string clanAbbrevation, string battleTagOfFounder)
