@@ -80,6 +80,8 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning) // Filter out verbose HTTP client logs
+    .MinimumLevel.Override("System.Net.Http", LogEventLevel.Warning) // Filter out verbose System.Net.Http logs
     .WriteTo.Console(new JsonFormatter(), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
     .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -121,6 +123,9 @@ builder.Services.AddSpecialBsonRegistrations();
 
 // Add BasicAuth for metrics endpoint
 builder.Services.AddBasicAuthForMetrics();
+
+// Suppress default .NET metrics (system_ and microsoft_aspnetcore_ prefixed metrics)
+Metrics.SuppressDefaultMetrics(new SuppressDefaultMetricOptions { SuppressProcessMetrics = false, SuppressDebugMetrics = true, SuppressEventCounters = true, SuppressMeters = true });
 
 // Add Application Insights
 builder.Services.AddInterceptedSingleton<ITrackingService, TrackingService>();
