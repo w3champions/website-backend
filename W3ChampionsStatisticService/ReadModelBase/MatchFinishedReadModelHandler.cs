@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Serilog;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
@@ -26,13 +27,19 @@ public class MatchFinishedReadModelHandler<T>(
         var lastVersion = await _versionRepository.GetLastVersion<T>();
         var nextEvents = await _eventRepository.Load<MatchFinishedEvent>(lastVersion.Version, 1000);
 
-        while (nextEvents.Any())
+        while (nextEvents.Count != 0)
         {
             foreach (var nextEvent in nextEvents)
             {
+                if (lastVersion.IsStopped) return;
                 try
                 {
                     if (lastVersion.IsStopped) return;
+
+                    if (nextEvent.match.state != EMatchState.FINISHED)
+                    {
+                        throw new InvalidOperationException("Received match with illegal state " + nextEvent.match.state + " within the MatchFinishedReadModelHandler");
+                    }
 
                     if (nextEvent.match.season > lastVersion.Season)
                     {
@@ -40,10 +47,13 @@ public class MatchFinishedReadModelHandler<T>(
                         lastVersion = await _versionRepository.GetLastVersion<T>();
                     }
 
-                    // Skip the cancel events for now
-                    if (nextEvent.match.state != 3 && nextEvent.match.season == lastVersion.Season)
+                    if (nextEvent.match.season == lastVersion.Season)
                     {
                         await _innerHandler.Update(nextEvent);
+                    }
+                    else
+                    {
+                        Log.Error($"Old season event {nextEvent.match.season} detected during season {lastVersion.Season}. Skipping event...");
                     }
 
                     await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);

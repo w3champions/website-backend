@@ -82,13 +82,23 @@ public class PlayerBlizzard
     public ResourceScore resourceScore { get; set; }
 }
 
+// Sync with src\app\data\models\match.ts:EMatchState
+// https://github.com/w3champions/matchmaking-service/blob/2191b33b05dacc3e4deb7f6b01d411d158732eae/src/app/data/models/match.ts#L36
+public enum EMatchState : int
+{
+    INIT = 0,
+    STARTED = 1,
+    FINISHED = 2,
+    CANCELED = 3,
+}
+
 [BsonIgnoreExtraElements]
 [BsonNoId]
 public class Match : IMatchServerInfo
 {
     public string serverProvider { get; set; }
     public string type { get; set; }
-    public int state { get; set; }
+    public EMatchState state { get; set; }
     public long startTime { get; set; }
     public List<PlayerMMrChange> players { get; set; }
     public GameMode gameMode { get; set; }
@@ -126,7 +136,7 @@ public class Match : IMatchServerInfo
 public class UnfinishedMatch : IMatchServerInfo
 {
     public int season { get; set; }
-    public int state { get; set; }
+    public EMatchState state { get; set; }
     public long startTime { get; set; }
     public GameMode gameMode { get; set; }
     public GateWay gateway { get; set; }
