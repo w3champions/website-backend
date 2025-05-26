@@ -9,7 +9,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Matches;
 
 [Trace]
-public class OngoingRemovalMatchFinishedHandler(IMatchRepository matchRepository) : IMatchFinishedReadModelHandler
+public class MatchReadModelHandler(IMatchRepository matchRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
 
