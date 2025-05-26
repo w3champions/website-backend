@@ -56,7 +56,7 @@ public interface IMatchRepository
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000,
-        string sort = "startTimeDescending");
+        MatchSortMethod sort = MatchSortMethod.StartTimeDescending);
 
     Task<long> CountOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,

@@ -487,10 +487,8 @@ public class MatchupRepoTests : IntegrationTestBase
 
     [Test]
     public async Task Cache_AllOngoingMatches()
-    {
-
-
-        var storedEvent = TestDtoHelper.CreateFakeStartedEvent();
+    {  
+        var storedEvent = TestDtoHelper.CreateFakeStartedEvent(500000, 2500);
         await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
 
         await Task.Delay(100);
@@ -502,7 +500,7 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual(storedEvent.match.id, result[0].MatchId);
 
-        var notCachedEvent = TestDtoHelper.CreateFakeStartedEvent();
+        var notCachedEvent = TestDtoHelper.CreateFakeStartedEvent(490000, 3000);
         await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(notCachedEvent));
 
         await Task.Delay(100);
@@ -511,8 +509,30 @@ public class MatchupRepoTests : IntegrationTestBase
             notCachedEvent.match.gameMode,
             notCachedEvent.match.gateway);
 
-        Assert.AreEqual(2, result2.Count);
-        Assert.AreEqual(storedEvent.match.id, result[0].MatchId);
+
+        // Same parameters are cached
+        Assert.AreEqual(1, result2.Count);
+        Assert.AreEqual(storedEvent.match.id, result2[0].MatchId);
+
+        // Invoke with different parameters, causing cache miss
+        var result3 = await matchRepository.LoadOnGoingMatches(
+            notCachedEvent.match.gameMode,
+            notCachedEvent.match.gateway,
+            maxMmr: 5000);
+
+        Assert.AreEqual(2, result3.Count);
+        Assert.AreEqual(storedEvent.match.id, result3[0].MatchId);
+        Assert.AreEqual(notCachedEvent.match.id, result3[1].MatchId);
+
+        // Mmr sorting
+        var result4 = await matchRepository.LoadOnGoingMatches(
+            notCachedEvent.match.gameMode,
+            notCachedEvent.match.gateway,
+            sort: MatchSortMethod.MmrDescending);
+
+        Assert.AreEqual(2, result4.Count);
+        Assert.AreEqual(storedEvent.match.id, result4[1].MatchId);
+        Assert.AreEqual(notCachedEvent.match.id, result4[0].MatchId);
     }
 
     [Test]
