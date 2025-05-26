@@ -1,11 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc.TagHelpers.Cache;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
@@ -17,25 +20,26 @@ namespace W3ChampionsStatisticService.Matches;
 public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracingService) : MongoDbRepositoryBase(mongoClient), IOngoingMatchesCache
 {
     private readonly TracingService _tracingService = tracingService;
-    private readonly object _dictLock = new();
     private ConcurrentDictionary<string, OnGoingMatchup> _ongoingMatchesCache = new();
     private ConcurrentDictionary<string, OnGoingMatchup> _loadOnGoingMatchForPlayerCache = new();
+    private readonly SemaphoreSlim _initializationSemaphore = new(1, 1);
     // TODO: emit cache metrics
 
-    private MemoryCache _countOngoingMatchesCache = new(new MemoryCacheOptions { SizeLimit = 5000 });
+    private readonly IMemoryCache _countOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 5000 });
     private readonly MemoryCacheEntryOptions _countOngoingMatchesCacheOptions = new MemoryCacheEntryOptions
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1),
         Size = 1
     };
-    private MemoryCache _loadOngoingMatchesCache = new(new MemoryCacheOptions { SizeLimit = 5000 });
+    private readonly IMemoryCache _loadOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 5000 });
     private readonly MemoryCacheEntryOptions _loadOngoingMatchesCacheOptions = new MemoryCacheEntryOptions
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1),
         Size = 1
     };
 
-    private bool _cachesInitialized = false;
+    private DateTime _lastCacheSizeWarning = DateTime.MinValue;
+    private readonly TimeSpan _cacheSizeWarningInterval = TimeSpan.FromMinutes(1);
 
     public class CacheResult<T>
     {
@@ -48,37 +52,70 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
     [Trace]
     private async Task RepopulateCaches()
     {
-        var mongoCollection = CreateCollection<OnGoingMatchup>();
-
-        // We're creating new dictionaries to avoid locking during population
-        var tempOngoingMatches = new ConcurrentDictionary<string, OnGoingMatchup>();
-        var tempOngoingMatchesForPlayer = new ConcurrentDictionary<string, OnGoingMatchup>();
-
-        await mongoCollection.Find(r => true).ForEachAsync(matchup =>
+        try
         {
-            tempOngoingMatches.TryAdd(matchup.MatchId, matchup);
-            foreach (var playerBattleTag in matchup.Teams.SelectMany(t => t.Players.Select(p => p.BattleTag).Distinct()))
-            {
-                tempOngoingMatchesForPlayer.TryAdd(playerBattleTag, matchup);
-            }
-        });
+            var mongoCollection = CreateCollection<OnGoingMatchup>();
 
-        lock (_dictLock)
-        {
-            if (!_cachesInitialized)
+            // We're creating new dictionaries to avoid locking during population
+            var tempOngoingMatches = new ConcurrentDictionary<string, OnGoingMatchup>();
+            var tempOngoingMatchesForPlayer = new ConcurrentDictionary<string, OnGoingMatchup>();
+
+            await mongoCollection.Find(r => true).ForEachAsync(matchup =>
             {
-                _ongoingMatchesCache = tempOngoingMatches;
-                _loadOnGoingMatchForPlayerCache = tempOngoingMatchesForPlayer;
-                _cachesInitialized = true;
-            }
+                tempOngoingMatches.TryAdd(matchup.MatchId, matchup);
+                foreach (var playerBattleTag in matchup.Teams.SelectMany(t => t.Players.Select(p => p.BattleTag).Distinct()))
+                {
+                    tempOngoingMatchesForPlayer.TryAdd(playerBattleTag, matchup);
+                }
+            });
+
+            _ongoingMatchesCache = tempOngoingMatches;
+            _loadOnGoingMatchForPlayerCache = tempOngoingMatchesForPlayer;
+            Log.Information("Cache initialized with {MatchCount} matches and {PlayerCount} player mappings", 
+                tempOngoingMatches.Count, tempOngoingMatchesForPlayer.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to repopulate caches");
+            throw;
         }
     }
 
     private async Task EnsureCachesInitialized()
     {
-        if (!_cachesInitialized)
+        // Quick check without locking
+        if (!_ongoingMatchesCache.IsEmpty) return;
+        
+        await _initializationSemaphore.WaitAsync();
+        try
         {
-            await RepopulateCaches();
+            // Double-check inside the lock
+            if (_ongoingMatchesCache.IsEmpty)
+            {
+                await RepopulateCaches();
+            }
+        }
+        finally
+        {
+            _initializationSemaphore.Release();
+        }
+    }
+
+    private void CheckCacheSize()
+    {
+        var now = DateTime.UtcNow;
+
+        var matchCount = _ongoingMatchesCache.Count;
+        var playerCount = _loadOnGoingMatchForPlayerCache.Count;
+            
+        if (matchCount > 10000 || playerCount > 50000)
+        {
+            if (now - _lastCacheSizeWarning > _cacheSizeWarningInterval)
+            {
+                Log.Error("Cache sizes are large, are we having a leak? Matches: {MatchCount}, Players: {PlayerCount}", 
+                    matchCount, playerCount);
+                _lastCacheSizeWarning = now;
+            }
         }
     }
 
@@ -126,51 +163,57 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         int maxMmr,
         MatchSortMethod sort)
     {
+        // Cache key for the complete query (filters + sort)
         var cacheKey = string.Join("|", gameMode, gateWay, map, minMmr, maxMmr, sort);
-        IEnumerable<OnGoingMatchup> matches;
-        if (_loadOngoingMatchesCache.Get(cacheKey) is CacheResult<List<OnGoingMatchup>> cachedValue)
+        
+        // Check if we have cached results for this exact query
+        if (_loadOngoingMatchesCache.TryGetValue(cacheKey, out CacheResult<List<OnGoingMatchup>> cachedValue))
         {
             if (cachedValue.IsNegativeCache)
             {
                 return new List<OnGoingMatchup>();
             }
-
-            matches = cachedValue.Value;
+            
+            // Return paginated results from cached list
+            return cachedValue.Value
+                .Skip(offset)
+                .Take(pageSize)
+                .ToList();
         }
-        else
+        
+        return await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
-            return await _tracingService.ExecuteWithSpanAsync(this, async () =>
-            {
-                await EnsureCachesInitialized();
-                matches = _ongoingMatchesCache.Values
-                    .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
+            await EnsureCachesInitialized();
+            
+            // Filter from the main cache
+            var matches = _ongoingMatchesCache.Values
+                .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
+                            && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                             && (map == "Overall" || m.Map == map)
                             && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
                             && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
-                matches = sort switch
-                {
-                    MatchSortMethod.MmrAscending => matches.OrderBy(GetMaxMmrInMatch),
-                    MatchSortMethod.MmrDescending => matches.OrderByDescending(GetMaxMmrInMatch),
-                    MatchSortMethod.StartTimeAscending => matches.OrderBy(m => m.StartTime),
-                    MatchSortMethod.StartTimeDescending => matches.OrderByDescending(m => m.StartTime),
-                    _ => throw new ArgumentException($"Invalid sort option: {sort}"),
-                };
-                var matchesList = matches.ToList();
-                matches = matchesList;
-
-                _loadOngoingMatchesCache.Set(cacheKey, new CacheResult<List<OnGoingMatchup>> { Value = matchesList }, _loadOngoingMatchesCacheOptions);
-                return matchesList;
-            }, [new("cacheKey", cacheKey), new("gameMode", gameMode), new("gateWay", gateWay), new("map", map), new("minMmr", minMmr), new("maxMmr", maxMmr), new("sort", sort)]);
-        }
-
-        var result = matches
-            .Skip(offset)
-            .Take(pageSize)
-            .ToList();
-
-        return result;
+            // Apply sorting
+            matches = sort switch
+            {
+                MatchSortMethod.MmrAscending => matches.OrderBy(GetMaxMmrInMatch),
+                MatchSortMethod.MmrDescending => matches.OrderByDescending(GetMaxMmrInMatch),
+                MatchSortMethod.StartTimeAscending => matches.OrderBy(m => m.StartTime),
+                MatchSortMethod.StartTimeDescending => matches.OrderByDescending(m => m.StartTime),
+                _ => throw new ArgumentException($"Invalid sort option: {sort}"),
+            };
+            
+            var sortedList = matches.ToList();
+            
+            // Cache the filtered and sorted list
+            _loadOngoingMatchesCache.Set(cacheKey, new CacheResult<List<OnGoingMatchup>> { Value = sortedList }, _loadOngoingMatchesCacheOptions);
+            
+            // Return paginated results
+            return sortedList
+                .Skip(offset)
+                .Take(pageSize)
+                .ToList();
+        }, [new("cacheKey", cacheKey), new("gameMode", gameMode), new("gateWay", gateWay), new("map", map), new("minMmr", minMmr), new("maxMmr", maxMmr), new("sort", sort)]);
     }
 
     public int GetMaxMmrInTeam(Team team)
@@ -205,6 +248,8 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         {
             _loadOnGoingMatchForPlayerCache.AddOrUpdate(playerBattleTag, matchup, (key, oldValue) => matchup);
         }
+        
+        CheckCacheSize();
     }
 
     [Trace]
@@ -217,6 +262,8 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             _loadOnGoingMatchForPlayerCache.TryRemove(playerBattleTag, out _);
         }
         _ongoingMatchesCache.TryRemove(matchup.MatchId, out _);
+        
+        CheckCacheSize();
     }
 }
 
