@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Matches;
 
 [Trace]
-public class OngoingMatchesCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IOngoingMatchesCache
+public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracingService) : MongoDbRepositoryBase(mongoClient), IOngoingMatchesCache
 {
+    private readonly TracingService _tracingService = tracingService; // Unused for now, will be used in the future
     private List<OnGoingMatchup> _values = [];
     private readonly object _lock = new();
 

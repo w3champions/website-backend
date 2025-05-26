@@ -7,24 +7,27 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Ladder;
+using Moq;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
 
 [TestFixture]
 public class MatchupRepoTests : IntegrationTestBase
 {
+    private MatchRepository matchRepository;
+    private Mock<TracingService> tracingService;
     [SetUp]
     public async Task SetupSut()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        tracingService = TestDtoHelper.CreateMockedTracingService();
+        matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient, tracingService.Object));
         await matchRepository.EnsureIndices();
     }
 
     [Test]
     public async Task LoadAndSave()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
@@ -38,8 +41,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task LoadWithHeroFilter()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent.result.players.First().heroes = TestDtoHelper.CreateHeroList(
             new List<W3ChampionsStatisticService.Heroes.HeroType>
@@ -100,8 +101,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task LoadWithHeroFilterNoResults()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent.result.players.First().heroes = TestDtoHelper.CreateHeroList(
             new List<W3ChampionsStatisticService.Heroes.HeroType>
@@ -149,8 +148,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task LoadAndSearch()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent1.match.players[1].battleTag = "KOMISCHER#123";
@@ -173,8 +170,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task LoadAndSearch_InvalidString()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent1.match.season = 1;
@@ -191,8 +186,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task Upsert()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
@@ -209,8 +202,6 @@ public class MatchupRepoTests : IntegrationTestBase
         {
             Console.WriteLine($"https://www.test.w3champions.com:{i}/login");
         }
-
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
@@ -239,8 +230,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForPlayerAndOpponent()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
@@ -264,8 +253,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForPlayerAndOpponent_FilterByGateway()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
@@ -292,8 +279,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForPlayerAndOppoRace()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
@@ -320,8 +305,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [TestCase(0, "wolf#456")]
     public async Task SearchForPlayerAndOpponent_FilterBySeason(int season, string playerTwo)
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
@@ -347,8 +330,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [TestCase(0)]
     public async Task SearchForPlayerAndOpponent_FilterBySeason_NoResults(int season)
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
 
         matchFinishedEvent1.match.season = season ^ 1;
@@ -365,8 +346,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForPlayerAndOpponent_2v2_SameTeam()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2AtEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
@@ -391,8 +370,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForPlayerAndOpponent_2v2()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2AtEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent1.match.season = 1;
@@ -423,8 +400,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForPlayerAndOpponent_2v2And1V1()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFake2v2AtEvent();
         var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
 
@@ -456,7 +431,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForGameMode2v2_NotFound()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent1.match.gameMode = GameMode.GM_1v1;
 
@@ -469,7 +443,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForGameMode2v2_Found()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
@@ -482,7 +455,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task SearchForGameMode2v2_LoadDefault()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent1.match.gameMode = GameMode.GM_2v2_AT;
 
@@ -495,8 +467,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task ReforgedIconGetsReplaced()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
 
         matchFinishedEvent1.match.players[0].battleTag = "peter#123";
@@ -518,7 +488,7 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task Cache_AllOngoingMatches()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+
 
         var storedEvent = TestDtoHelper.CreateFakeStartedEvent();
         await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
@@ -548,8 +518,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task Cache_ByPlayerId()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var storedEvent = TestDtoHelper.CreateFakeStartedEvent();
         await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
 
@@ -575,8 +543,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task Cache_ByPlayerId_OneTeamEmpty()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         var storedEvent = TestDtoHelper.Create1v1StartedEvent();
 
         await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
@@ -603,7 +569,6 @@ public class MatchupRepoTests : IntegrationTestBase
     [Test]
     public async Task LoadLastSeason()
     {
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         await rankRepository.UpsertSeason(new Season(1));
         await rankRepository.UpsertSeason(new Season(2));

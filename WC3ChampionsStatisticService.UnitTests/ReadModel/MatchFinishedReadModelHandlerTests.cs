@@ -111,7 +111,8 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         await InsertMatchEvents(new List<MatchFinishedEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
 
         var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var mockTracingService = TestDtoHelper.CreateMockedTracingService();
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient, mockTracingService.Object));
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<OngoingRemovalMatchFinishedHandler>(
