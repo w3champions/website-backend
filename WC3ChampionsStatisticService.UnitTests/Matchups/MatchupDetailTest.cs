@@ -29,7 +29,7 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
-        var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
+        var result = await matchRepository.LoadFinishedMatchDetails(matchFinishedEvent.Id);
         Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
     }
 
@@ -46,7 +46,7 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
-        var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
+        var result = await matchRepository.LoadFinishedMatchDetails(matchFinishedEvent.Id);
 
         Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
         Assert.AreEqual("archmage", result.PlayerScores[0].Heroes[0].Icon);
@@ -68,7 +68,7 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
-        var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
+        var result = await matchRepository.LoadFinishedMatchDetails(matchFinishedEvent.Id);
 
         Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
         Assert.AreEqual(Race.RnD, result.Match.Teams[0].Players[0].Race);
@@ -92,7 +92,7 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
-        var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
+        var result = await matchRepository.LoadFinishedMatchDetails(matchFinishedEvent.Id);
 
         Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
         Assert.AreEqual(Race.HU, result.Match.Teams[0].Players[0].Race);
@@ -116,7 +116,7 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
-        var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
+        var result = await matchRepository.LoadFinishedMatchDetails(matchFinishedEvent.Id);
 
         Assert.AreEqual("nmhcCLaRc7", result.Match.MatchId);
         Assert.AreEqual(Race.RnD, result.Match.Teams[0].Players.Find(p => p.BattleTag == player.battleTag).Race);

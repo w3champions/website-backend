@@ -98,7 +98,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             && (m.Season == season));
     }
 
-    public async Task<MatchupDetail> LoadDetails(ObjectId id)
+    public async Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id)
     {
         var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.Id == id);
         var match = await LoadFirst<Matchup>(t => t.Id == id);
@@ -110,7 +110,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         };
     }
 
-    public async Task<MatchupDetail> LoadDetailsByOngoingMatchId(string id)
+    public async Task<MatchupDetail> LoadFinishedMatchDetailsByMatchId(string id)
     {
         var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.match.id == id);
         var match = await LoadFirst<Matchup>(t => t.MatchId == id);
@@ -122,8 +122,9 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         };
     }
 
-    public async Task<MatchFinishedEvent> LoadDetailsByGameName(string gameName)
+    public async Task<MatchFinishedEvent> LoadMatchFinishedEventByGameName(string gameName)
     {
+        // TODO: Check how frequently this is called as this is not covered by an index.
         return await LoadFirst<MatchFinishedEvent>(t => t.match.gamename == gameName);
     }
 
@@ -202,6 +203,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return Upsert(matchup, m => m.MatchId == matchup.MatchId);
     }
 
+    public Task<OnGoingMatchup> LoadOnGoingMatchByMatchId(string matchId)
+    {
+        var mongoCollection = CreateCollection<OnGoingMatchup>();
+        return mongoCollection.Find(m => m.MatchId == matchId).FirstOrDefaultAsync();
+    }
 
     public Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
     {

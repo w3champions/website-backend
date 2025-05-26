@@ -16,7 +16,7 @@ public class OngoingRemovalMatchCanceledHandler(IMatchRepository matchRepository
 
     public async Task Update(MatchCanceledEvent nextEvent)
     {
-        var ongoingMatch = await _matchRepository.LoadDetailsByOngoingMatchId(nextEvent.match.id);
+        var ongoingMatch = await _matchRepository.LoadOnGoingMatchByMatchId(nextEvent.match.id);
 
         if (ongoingMatch == null)
         {
@@ -27,15 +27,7 @@ public class OngoingRemovalMatchCanceledHandler(IMatchRepository matchRepository
             return;
         }
 
-        if (ongoingMatch.Match != null)
-        {
-            Log.Information($"Canceling ongoing match {ongoingMatch.Match.Id}");
-            await _matchRepository.DeleteOnGoingMatch(ongoingMatch.Match);
-        }
-        else
-        {
-            Log.Warning($"Canceled match detail had null Match property for {nextEvent.match.id}");
-            await _matchRepository.DeleteOnGoingMatch(new Matchup { MatchId = nextEvent.match.id });
-        }
+        Log.Information($"Canceling ongoing match {ongoingMatch.MatchId} ({ongoingMatch.Id})");
+        await _matchRepository.DeleteOnGoingMatch(ongoingMatch);
     }
 }
