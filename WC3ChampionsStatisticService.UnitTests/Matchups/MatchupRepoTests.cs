@@ -487,7 +487,7 @@ public class MatchupRepoTests : IntegrationTestBase
 
     [Test]
     public async Task Cache_AllOngoingMatches()
-    {  
+    {
         var storedEvent = TestDtoHelper.CreateFakeStartedEvent(500000, 2500);
         await matchRepository.InsertOnGoingMatch(OnGoingMatchup.Create(storedEvent));
 

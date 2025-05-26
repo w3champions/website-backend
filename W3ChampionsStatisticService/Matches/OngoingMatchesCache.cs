@@ -22,40 +22,40 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
 {
     private static readonly TimeSpan CACHE_EXPIRATION = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan CACHE_WARNING_INTERVAL = TimeSpan.FromSeconds(60);
-    
+
     private readonly TracingService _tracingService = tracingService;
     private ConcurrentDictionary<string, OnGoingMatchup> _ongoingMatchesCache = new();
     private ConcurrentDictionary<string, OnGoingMatchup> _loadOnGoingMatchForPlayerCache = new();
     private readonly SemaphoreSlim _initializationSemaphore = new(1, 1);
-    
+
     // Prometheus metrics for cache sizes
     private static readonly Gauge OngoingMatchesGlobalCacheSize = Metrics
         .CreateGauge("w3champions_ongoing_matches_count", "Number of ongoing matches in the ongoing matches cache");
-    
+
     private static readonly Gauge OngoingMatchesPlayerCacheSize = Metrics
         .CreateGauge("w3champions_ongoing_matches_for_players_count", "Number of ongoing matches for players in the ongoing matches cache");
-    
+
     private static readonly Gauge OngoingMatchesCountCacheSize = Metrics
         .CreateGauge("w3champions_ongoing_matches_count_cache_size", "Number of elements in the count ongoing matches cache");
-    
+
     private static readonly Gauge OngoingMatchesFilteredCacheSize = Metrics
         .CreateGauge("w3champions_ongoing_matches_filtered_cache_size", "Number of elements in the load ongoing matches cache");
 
     private static readonly Counter OngoingMatchesCountCacheHits = Metrics
         .CreateCounter("w3champions_ongoing_matches_count_cache_hits_total", "Total number of cache hits for count ongoing matches cache");
-    
+
     private static readonly Counter OngoingMatchesCountCacheMisses = Metrics
         .CreateCounter("w3champions_ongoing_matches_count_cache_misses_total", "Total number of cache misses for count ongoing matches cache");
-    
+
     private static readonly Counter OngoingMatchesFilteredCacheHits = Metrics
         .CreateCounter("w3champions_ongoing_matches_filtered_cache_hits_total", "Total number of cache hits for load ongoing matches cache");
-    
+
     private static readonly Counter OngoingMatchesFilteredCacheMisses = Metrics
         .CreateCounter("w3champions_ongoing_matches_filtered_cache_misses_total", "Total number of cache misses for load ongoing matches cache");
 
 
-    private readonly IMemoryCache _countOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions 
-    { 
+    private readonly IMemoryCache _countOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions
+    {
         SizeLimit = 500,
         TrackStatistics = true
     });
@@ -64,8 +64,8 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         AbsoluteExpirationRelativeToNow = CACHE_EXPIRATION,
         Size = 1
     };
-    private readonly IMemoryCache _loadOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions 
-    { 
+    private readonly IMemoryCache _loadOngoingMatchesCache = new MemoryCache(new MemoryCacheOptions
+    {
         SizeLimit = 500,
         TrackStatistics = true
     });
@@ -99,11 +99,11 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
 
             _ongoingMatchesCache = tempOngoingMatches;
             _loadOnGoingMatchForPlayerCache = tempOngoingMatchesForPlayer;
-            
+
             // Update metrics after repopulation
             UpdateCacheMetrics();
-            
-            Log.Information("Cache initialized with {MatchCount} matches and {PlayerCount} player mappings", 
+
+            Log.Information("Cache initialized with {MatchCount} matches and {PlayerCount} player mappings",
                 tempOngoingMatches.Count, tempOngoingMatchesForPlayer.Count);
         }
         catch (Exception ex)
@@ -117,7 +117,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
     {
         // Quick check without locking
         if (!_ongoingMatchesCache.IsEmpty) return;
-        
+
         await _initializationSemaphore.WaitAsync();
         try
         {
@@ -137,7 +137,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
     {
         OngoingMatchesGlobalCacheSize.Set(_ongoingMatchesCache.Count);
         OngoingMatchesPlayerCacheSize.Set(_loadOnGoingMatchForPlayerCache.Count);
-        
+
         // Use MemoryCacheStatistics to get the actual count of entries and hit/miss statistics
         if (_countOngoingMatchesCache is MemoryCache countCache)
         {
@@ -149,7 +149,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                 OngoingMatchesCountCacheMisses.IncTo(countStats.TotalMisses);
             }
         }
-        
+
         if (_loadOngoingMatchesCache is MemoryCache loadCache)
         {
             var loadStats = loadCache.GetCurrentStatistics();
@@ -168,17 +168,17 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
 
         var matchCount = _ongoingMatchesCache.Count;
         var playerCount = _loadOnGoingMatchForPlayerCache.Count;
-            
+
         if (matchCount > 10000 || playerCount > 50000)
         {
             if (now - _lastCacheSizeWarning > CACHE_WARNING_INTERVAL)
             {
-                Log.Error("Cache sizes are large, are we having a leak? Matches: {MatchCount}, Players: {PlayerCount}", 
+                Log.Error("Cache sizes are large, are we having a leak? Matches: {MatchCount}, Players: {PlayerCount}",
                     matchCount, playerCount);
                 _lastCacheSizeWarning = now;
             }
         }
-        
+
         // Update metrics whenever we check cache size
         UpdateCacheMetrics();
     }
@@ -208,10 +208,10 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                         && (maxMmr == 3000 || !m.Value.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
             _countOngoingMatchesCache.Set(cacheKey, (long)count, _countOngoingMatchesCacheOptions);
-            
+
             // Update metrics after cache operation
             UpdateCacheMetrics();
-            
+
             return count;
         }, [new("gameMode", gameMode), new("gateWay", gateWay), new("map", map), new("minMmr", minMmr), new("maxMmr", maxMmr)]);
     }
@@ -228,7 +228,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
     {
         // Cache key for the complete query (filters + sort)
         var cacheKey = string.Join("|", gameMode, gateWay, map, minMmr, maxMmr, sort);
-        
+
         // Check if we have cached results for this exact query
         if (_loadOngoingMatchesCache.TryGetValue(cacheKey, out List<OnGoingMatchup> cachedValue))
         {
@@ -238,11 +238,11 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                 .Take(pageSize)
                 .ToList();
         }
-        
+
         return await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
             await EnsureCachesInitialized();
-            
+
             // Filter from the main cache
             var matches = _ongoingMatchesCache.Values
                 .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
@@ -260,15 +260,15 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                 MatchSortMethod.StartTimeDescending => matches.OrderByDescending(m => m.StartTime),
                 _ => throw new ArgumentException($"Invalid sort option: {sort}"),
             };
-            
+
             var sortedList = matches.ToList();
-            
+
             // Cache the filtered and sorted list
             _loadOngoingMatchesCache.Set(cacheKey, sortedList, _loadOngoingMatchesCacheOptions);
-            
+
             // Update metrics after cache operation
             UpdateCacheMetrics();
-            
+
             // Return paginated results
             return sortedList
                 .Skip(offset)
@@ -309,7 +309,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         {
             _loadOnGoingMatchForPlayerCache.AddOrUpdate(playerBattleTag, matchup, (key, oldValue) => matchup);
         }
-        
+
         CheckCacheSize();
     }
 
@@ -323,7 +323,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             _loadOnGoingMatchForPlayerCache.TryRemove(playerBattleTag, out _);
         }
         _ongoingMatchesCache.TryRemove(matchup.MatchId, out _);
-        
+
         CheckCacheSize();
     }
 }
