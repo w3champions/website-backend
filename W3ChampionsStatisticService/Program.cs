@@ -233,7 +233,7 @@ if (startHandlers == "true")
     builder.Services.AddMatchFinishedReadModelService<OngoingRemovalMatchFinishedHandler>();
 
     // On going matches
-    builder.Services.AddUnversionedReadModelService<OngoingMatchesHandler>();
+    builder.Services.AddUnversionedReadModelService<StartedMatchIntoOngoingMatchesHandler>();
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
