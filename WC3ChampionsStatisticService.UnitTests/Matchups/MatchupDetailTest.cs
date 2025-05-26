@@ -3,19 +3,29 @@ using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
 using W3C.Contracts.GameObjects;
+using Moq;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
 
 [TestFixture]
 public class MatchupDetailTests : IntegrationTestBase
 {
+    private MatchRepository matchRepository;
+    private Mock<TracingService> tracingService;
+    [SetUp]
+    public void SetupSut()
+    {
+        tracingService = TestDtoHelper.CreateMockedTracingService();
+        matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient, tracingService.Object));
+    }
+
     [Test]
     public async Task LoadDetails_NotDetailsAvailable()
     {
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
         matchFinishedEvent.match.id = "nmhcCLaRc7";
         matchFinishedEvent.Id = ObjectId.GenerateNewId();
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -33,8 +43,6 @@ public class MatchupDetailTests : IntegrationTestBase
         matchFinishedEvent.result.players[1].heroes[0].icon = "warden";
 
         await InsertMatchEvent(matchFinishedEvent);
-
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -57,8 +65,6 @@ public class MatchupDetailTests : IntegrationTestBase
         matchFinishedEvent.match.players.Find(p => p.battleTag == matchFinishedEvent.result.players[0].battleTag).race = Race.RnD;
 
         await InsertMatchEvent(matchFinishedEvent);
-
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
@@ -84,8 +90,6 @@ public class MatchupDetailTests : IntegrationTestBase
 
         await InsertMatchEvent(matchFinishedEvent);
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
-
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 
         var result = await matchRepository.LoadDetails(matchFinishedEvent.Id);
@@ -109,8 +113,6 @@ public class MatchupDetailTests : IntegrationTestBase
         matchFinishedEvent.match.players[0].race = Race.RnD;
 
         await InsertMatchEvent(matchFinishedEvent);
-
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
 
         await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
 

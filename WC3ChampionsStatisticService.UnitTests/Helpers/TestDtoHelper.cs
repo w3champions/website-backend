@@ -9,6 +9,8 @@ using W3C.Contracts.Matchmaking;
 using W3C.Contracts.GameObjects;
 using Moq;
 using W3ChampionsStatisticService.Services;
+using Microsoft.AspNetCore.Http;
+using System.Diagnostics;
 
 namespace WC3ChampionsStatisticService.Tests;
 
@@ -318,6 +320,22 @@ public static class TestDtoHelper
     public static Mock<ITrackingService> CreateMockTrackingService()
     {
         return new Mock<ITrackingService>();
+    }
+
+    public static Mock<TracingService> CreateMockedTracingService()
+    {
+        // Create a real ActivitySource for testing
+        var activitySource = new ActivitySource("TestActivitySource");
+
+        // Mock the IHttpContextAccessor
+        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+
+        // Create a partial mock of TracingService - this allows you to verify calls and override specific methods
+        // while keeping the real implementation for methods you don't explicitly mock
+        return new Mock<TracingService>(activitySource, mockHttpContextAccessor.Object)
+        {
+            CallBase = true // This ensures unmocked methods use the real implementation
+        };
     }
 
     public static MatchCanceledEvent CreateFakeMatchCanceledEvent()

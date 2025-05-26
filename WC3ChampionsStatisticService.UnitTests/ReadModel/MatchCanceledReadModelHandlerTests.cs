@@ -130,7 +130,8 @@ public class MatchCanceledReadModelHandlerTests : IntegrationTestBase
 
         await InsertMatchCanceledEvents(new List<MatchCanceledEvent> { fakeEvent1, fakeEvent2, fakeEvent3, fakeEvent4, fakeEvent5 });
 
-        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient));
+        var mockTracingService = TestDtoHelper.CreateMockedTracingService();
+        var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient, mockTracingService.Object));
         var versionRepository = new VersionRepository(MongoClient);
         var trackingService = TestDtoHelper.CreateMockTrackingService();
 
