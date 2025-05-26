@@ -9,7 +9,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Matches;
 
 [Trace]
-public class MatchReadModelHandler(IMatchRepository matchRepository) : IMatchFinishedReadModelHandler
+public class OngoingRemovalMatchFinishedHandler(IMatchRepository matchRepository) : IMatchFinishedReadModelHandler
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
 
@@ -21,12 +21,12 @@ public class MatchReadModelHandler(IMatchRepository matchRepository) : IMatchFin
             var matchup = Matchup.Create(nextEvent);
 
             await _matchRepository.Insert(matchup);
-            await _matchRepository.DeleteOnGoingMatch(matchup.MatchId);
+            await _matchRepository.DeleteOnGoingMatch(matchup);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            Log.Error($"Error handling MatchFinishedEvent: {e.Message}");
+            Log.Error($"Error handling MatchFinishedEvent of Match {nextEvent.match.id} for MatchReadModel: {e.Message}");
+            throw; // Rethrow or we will lose this event!
         }
     }
 }

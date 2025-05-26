@@ -46,7 +46,7 @@ public interface IMatchRepository
     Task InsertOnGoingMatch(OnGoingMatchup matchup);
     Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
     Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId);
-    Task DeleteOnGoingMatch(string matchId);
+    Task DeleteOnGoingMatch(Matchup matchup);
 
     Task<List<OnGoingMatchup>> LoadOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,

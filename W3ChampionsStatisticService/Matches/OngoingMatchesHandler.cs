@@ -35,7 +35,7 @@ public class OngoingMatchesHandler(
                             var foundMatchForPlayer = await _matchRepository.LoadOnGoingMatchForPlayer(player.BattleTag);
                             if (foundMatchForPlayer != null)
                             {
-                                await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer.MatchId);
+                                await _matchRepository.DeleteOnGoingMatch(foundMatchForPlayer);
                             }
 
                             var personalSettings = await _personalSettingsRepository.LoadOrCreate(player.BattleTag);
