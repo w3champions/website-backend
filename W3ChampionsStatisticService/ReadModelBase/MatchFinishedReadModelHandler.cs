@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Serilog;
@@ -25,47 +25,72 @@ public class MatchFinishedReadModelHandler<T>(
     public async Task Update()
     {
         var lastVersion = await _versionRepository.GetLastVersion<T>();
-        var nextEvents = await _eventRepository.Load<MatchFinishedEvent>(lastVersion.Version, 1000);
+        var finishedEvents = await _eventRepository.Load<MatchFinishedEvent>(lastVersion.Version, 1000);
 
-        while (nextEvents.Count != 0)
+        while (finishedEvents.Count != 0)
         {
-            foreach (var nextEvent in nextEvents)
+            foreach (var matchEvent in finishedEvents)
             {
                 if (lastVersion.IsStopped) return;
+
                 try
                 {
-                    if (lastVersion.IsStopped) return;
-
-                    if (nextEvent.match.state != EMatchState.FINISHED)
-                    {
-                        throw new InvalidOperationException("Received match with illegal state " + nextEvent.match.state + " within the MatchFinishedReadModelHandler");
-                    }
-
-                    if (nextEvent.match.season > lastVersion.Season)
-                    {
-                        await _versionRepository.SaveLastVersion<T>(lastVersion.Version, nextEvent.match.season);
-                        lastVersion = await _versionRepository.GetLastVersion<T>();
-                    }
-
-                    if (nextEvent.match.season == lastVersion.Season)
-                    {
-                        await _innerHandler.Update(nextEvent);
-                    }
-                    else
-                    {
-                        Log.Error($"Old season event {nextEvent.match.season} detected during season {lastVersion.Season}. Skipping event...");
-                    }
-
-                    await _versionRepository.SaveLastVersion<T>(nextEvent.Id.ToString(), lastVersion.Season);
+                    lastVersion = await ProcessMatchFinishedEvent(matchEvent, lastVersion);
                 }
                 catch (Exception e)
                 {
-                    _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event{nextEvent.Id}");
-                    throw;
+                    Log.Error(e, "Error processing MatchFinishedEvent {EventId} within the MatchFinishedReadModelHandler", matchEvent.Id);
+                    _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(T).Name} died on event {matchEvent.Id}");
+                    throw; // rethrow the exception so the event is not lost
                 }
             }
 
-            nextEvents = await _eventRepository.Load<MatchFinishedEvent>(nextEvents.Last().Id.ToString());
+            finishedEvents = await _eventRepository.Load<MatchFinishedEvent>(finishedEvents.Last().Id.ToString());
+        }
+    }
+
+    private async Task<HandlerVersion> ProcessMatchFinishedEvent(MatchFinishedEvent matchEvent, HandlerVersion lastVersion)
+    {
+        ValidateMatchState(matchEvent);
+
+        lastVersion = await UpdateSeasonIfNeeded(matchEvent, lastVersion);
+
+        await ProcessEventForCurrentSeason(matchEvent, lastVersion);
+
+        await _versionRepository.SaveLastVersion<T>(matchEvent.Id.ToString(), lastVersion.Season);
+        return lastVersion;
+    }
+
+    private static void ValidateMatchState(MatchFinishedEvent matchEvent)
+    {
+        if (matchEvent.match.state != EMatchState.FINISHED)
+        {
+            throw new InvalidOperationException($"Received match with illegal state {matchEvent.match.state} within the MatchFinishedReadModelHandler");
+        }
+    }
+
+    private async Task<HandlerVersion> UpdateSeasonIfNeeded(MatchFinishedEvent matchEvent, HandlerVersion lastVersion)
+    {
+        if (matchEvent.match.season > lastVersion.Season)
+        {
+            await _versionRepository.SaveLastVersion<T>(lastVersion.Version, matchEvent.match.season);
+            // Return the updated version from the database
+            return await _versionRepository.GetLastVersion<T>();
+        }
+
+        return lastVersion;
+    }
+
+    private async Task ProcessEventForCurrentSeason(MatchFinishedEvent matchEvent, HandlerVersion lastVersion)
+    {
+        if (matchEvent.match.season == lastVersion.Season)
+        {
+            await _innerHandler.Update(matchEvent);
+        }
+        else
+        {
+            Log.Warning("Old season event {EventSeason} detected during season {CurrentSeason}. Skipping event {EventId}...",
+                matchEvent.match.season, lastVersion.Season, matchEvent.Id);
         }
     }
 }
