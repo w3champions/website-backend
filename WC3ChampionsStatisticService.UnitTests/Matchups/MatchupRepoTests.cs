@@ -596,4 +596,64 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.IsNotNull(result);
         Assert.AreEqual(2, result.Id);
     }
+
+    [TestCase(W3ChampionsStatisticService.Heroes.HeroType.Archmage, 1)]
+    [TestCase(W3ChampionsStatisticService.Heroes.HeroType.KeeperOfTheGrove, 0)]
+    public async Task LoadHeroSelectionTests(W3ChampionsStatisticService.Heroes.HeroType searchHero, int expectedMatchCount)
+    {
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent.result.players.First().heroes = TestDtoHelper.CreateHeroList(
+            [
+                W3ChampionsStatisticService.Heroes.HeroType.Archmage,
+                W3ChampionsStatisticService.Heroes.HeroType.BansheeRanger,
+            ]
+        );
+        matchFinishedEvent.result.players.Last().heroes = TestDtoHelper.CreateHeroList(
+            [
+                W3ChampionsStatisticService.Heroes.HeroType.Blademaster,
+                W3ChampionsStatisticService.Heroes.HeroType.Farseer,
+            ]
+        );
+
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent2.result.players.First().heroes = TestDtoHelper.CreateHeroList(
+            [
+                W3ChampionsStatisticService.Heroes.HeroType.PriestessOfTheMoon,
+                W3ChampionsStatisticService.Heroes.HeroType.BansheeRanger,
+            ]
+        );
+        matchFinishedEvent2.result.players.Last().heroes = TestDtoHelper.CreateHeroList(
+            [
+                W3ChampionsStatisticService.Heroes.HeroType.Blademaster,
+                W3ChampionsStatisticService.Heroes.HeroType.Farseer,
+                W3ChampionsStatisticService.Heroes.HeroType.DeathKnight,
+            ]
+        );
+
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+
+        var matches = await matchRepository.Load(
+            matchFinishedEvent.match.season,
+            matchFinishedEvent.match.gameMode,
+            hero: searchHero
+        );
+
+        Assert.AreEqual(expectedMatchCount, matches.Count);
+
+        if (matches.Count != 0)
+        {
+            var firstPlayerHeroes = matches.First().Teams.First().Players.First().Heroes;
+            var expectedHeroes = matchFinishedEvent.result.players.First().heroes.Select(h => new W3ChampionsStatisticService.Heroes.Hero(h)).ToList();
+            Assert.AreEqual(expectedHeroes.Count, firstPlayerHeroes.Count);
+            Assert.AreEqual(expectedHeroes.First().Id, firstPlayerHeroes.First().Id);
+            Assert.AreEqual(expectedHeroes.Last().Id, firstPlayerHeroes.Last().Id);
+
+            var secondPlayerHeroes = matches.First().Teams.Last().Players.First().Heroes;
+            var secondExpectedHeroes = matchFinishedEvent.result.players.Last().heroes.Select(h => new W3ChampionsStatisticService.Heroes.Hero(h)).ToList();
+            Assert.AreEqual(secondExpectedHeroes.Count, secondPlayerHeroes.Count);
+            Assert.AreEqual(secondExpectedHeroes.First().Id, secondPlayerHeroes.First().Id);
+            Assert.AreEqual(secondExpectedHeroes.Last().Id, secondPlayerHeroes.Last().Id);
+        }
+    }
 }
