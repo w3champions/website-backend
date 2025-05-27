@@ -245,9 +245,9 @@ public class AdminController(
 
     [HttpGet("globalChatBans")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> SearchChatbans()
+    public async Task<IActionResult> SearchChatbans([FromQuery] string query, [FromQuery] string nextId)
     {
-        var chatBans = await _adminRepository.GetChatBans();
+        var chatBans = await _adminRepository.GetChatBans(query, nextId);
         return Ok(chatBans);
     }
 

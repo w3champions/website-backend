@@ -11,7 +11,7 @@ public interface IAdminRepository
     Task<ProxyUpdate> UpdateProxies(ProxyUpdate proxyUpdateData, string battleTag);
     Task<FloProxies> GetProxiesFor(string battleTag);
     Task<List<string>> SearchSmurfsFor(string battleTag);
-    Task<List<GlobalChatBan>> GetChatBans();
+    Task<GlobalChatBanResponse> GetChatBans(string query, string nextId);
     Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan);
     Task<HttpStatusCode> DeleteChatBan(string id);
 }
