@@ -48,4 +48,6 @@ public enum GameMode
 
     GM_CF = 1301,
     GM_CF_AT = 1302,
+
+    GM_RISK_EUROPE = 1401,
 }
