@@ -8,6 +8,7 @@ namespace W3ChampionsStatisticService.WebApi.Authorization;
 public static class BasicAuthConfiguration
 {
     public const string ReadMetricsPolicy = "ReadMetrics";
+    public const string BasicAuthScheme = "BasicAuthentication";
 
     public static IServiceCollection AddBasicAuthForMetrics(this IServiceCollection services)
     {
@@ -15,8 +16,9 @@ public static class BasicAuthConfiguration
         string username = Environment.GetEnvironmentVariable("METRICS_ENDPOINT_AUTH_USERNAME") ?? "admin";
         string password = Environment.GetEnvironmentVariable("METRICS_ENDPOINT_AUTH_PASSWORD") ?? "admin";
 
-        services.AddAuthentication(BasicDefaults.AuthenticationScheme)
-            .AddBasic(options =>
+        // Add BasicAuth as a named scheme, not the default
+        services.AddAuthentication()
+            .AddBasic(BasicAuthScheme, options =>
             {
                 options.Realm = "W3Champions Metrics";
                 options.Events = new BasicEvents
@@ -39,12 +41,13 @@ public static class BasicAuthConfiguration
                 };
             });
 
-        // Add authorization policy for metrics
+        // Add authorization policy for metrics that requires the BasicAuth scheme
         services.AddAuthorization(options =>
         {
             options.AddPolicy(ReadMetricsPolicy, policy =>
             {
                 policy.RequireAuthenticatedUser();
+                policy.AddAuthenticationSchemes(BasicAuthScheme);
             });
         });
 
