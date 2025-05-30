@@ -8,6 +8,7 @@ using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3C.Domain.Tracing;
+using MongoDB.Bson;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
@@ -135,6 +136,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
         AliasSettings = dto.AliasSettings;
     }
 
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset LastUpdated { get; set; }
 
     [BsonIgnore]

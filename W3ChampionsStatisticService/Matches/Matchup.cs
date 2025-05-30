@@ -9,6 +9,7 @@ using W3C.Domain.MatchmakingService;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.GameModes;
 using W3C.Domain.Tracing;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -32,7 +33,11 @@ public class Matchup
     [JsonIgnore]
     public TimeSpan Duration { get; set; }
     public long DurationInSeconds => (long)Duration.TotalSeconds;
+
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset StartTime { get; set; }
+
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset EndTime { get; set; }
     public GameMode GameMode { get; set; }
     public IList<Team> Teams { get; set; } = new List<Team>();

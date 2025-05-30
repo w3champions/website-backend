@@ -1,5 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
@@ -16,6 +18,7 @@ public class RankProgression
     }
 
     [JsonIgnore]
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset Date { get; set; }
     public double RankingPoints { get; set; }
     public double MMR { get; set; }

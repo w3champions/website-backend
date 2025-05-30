@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
 
@@ -13,6 +15,8 @@ public class ClanMembership : IIdentifiable, IVersionable
     public string ClanId { get; set; }
     public string PendingInviteFromClan { get; set; }
     public string ClanName { get; set; }
+
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset LastUpdated { get; set; }
 
     [JsonIgnore]

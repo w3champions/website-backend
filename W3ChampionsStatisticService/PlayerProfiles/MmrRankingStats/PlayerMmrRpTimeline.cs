@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
@@ -96,6 +98,8 @@ public class MmrRpAtDate(int mmr, double? rp, DateTimeOffset date) : IComparable
 {
     public int Mmr { get; set; } = mmr;
     public double? Rp { get; set; } = rp;
+
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset Date { get; set; } = date;
 
     public Boolean HasSameYearMonthDayAs(MmrRpAtDate mRAT2)

@@ -10,6 +10,8 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.Tracing;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [ApiController]
@@ -178,6 +180,7 @@ public class PlayersController(
 
 public class ProfilePictureDto(DateTimeOffset lastUpdated, ProfilePicture profilePicture)
 {
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset LastUpdated { get; } = lastUpdated;
     public ProfilePicture ProfilePicture { get; } = profilePicture;
 }
@@ -186,6 +189,8 @@ public class ClanMemberhipDto(string battleTag, string clanId, in DateTimeOffset
 {
     public string BattleTag { get; } = battleTag;
     public string ClanId { get; } = clanId;
+
+    [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset LastUpdated { get; } = lastUpdated;
 }
 
