@@ -230,7 +230,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
     public async Task DeleteOnGoingMatch(Matchup matchup)
     {
         await Delete<OnGoingMatchup>(x => x.MatchId == matchup.MatchId);
-        _cache.Delete(matchup.MatchId);
+        await _cache.Delete(matchup);
     }
 
     public Task<List<OnGoingMatchup>> LoadOnGoingMatches(
@@ -241,7 +241,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000,
-        string sort = "startTimeDescending")
+        MatchSortMethod sort = MatchSortMethod.StartTimeDescending)
     {
         return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
     }
