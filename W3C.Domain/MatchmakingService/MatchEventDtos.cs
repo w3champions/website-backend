@@ -115,8 +115,21 @@ public class Match : IMatchServerInfo
     [BsonElement("_id")]
     public string id { get; set; }
     public int? floGameId { get; set; }
-    [BsonDefaultValue(0)]
-    public long endTime { get; set; }
+
+    [BsonElement("endTime")]
+    private long? _endTimeNullable { get; set; }
+
+    [BsonIgnore]
+    public long endTime
+    {
+        // Due to the fact that JavaScript serialized the number 0 to null, but C# does not serialize null to 0,
+        // we have to introduce this proxy in order to map the value correctly.
+        // This will ensure that both 0 and null in the database will be mapped to 0 in C#.
+        // Marking the property as actually nullable would incur actual logic changes - the variable is not nullable in JavaScript though.
+        get => _endTimeNullable ?? 0;
+        set => _endTimeNullable = value;
+    }
+
     public List<IMatchPlayerServerInfo> PlayersServerInfo
     {
         get
