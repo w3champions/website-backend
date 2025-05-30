@@ -115,6 +115,7 @@ public class Match : IMatchServerInfo
     [BsonElement("_id")]
     public string id { get; set; }
     public int? floGameId { get; set; }
+    [BsonDefaultValue(0)]
     public long endTime { get; set; }
     public List<IMatchPlayerServerInfo> PlayersServerInfo
     {
