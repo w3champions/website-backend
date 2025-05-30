@@ -13,8 +13,25 @@ using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests.Statistics;
+
+// Mock MatchmakingProvider for testing
+public class MockMatchmakingProvider : IMatchmakingProvider
+{
+    public Task<List<ActiveGameMode>> GetCurrentlyActiveGameModesAsync()
+    {
+        var activeModes = new List<ActiveGameMode>
+        {
+            new ActiveGameMode { id = GameMode.GM_1v1 },
+            new ActiveGameMode { id = GameMode.GM_2v2 },
+            new ActiveGameMode { id = GameMode.GM_4v4 },
+            new ActiveGameMode { id = GameMode.FFA }
+        };
+        return Task.FromResult(activeModes);
+    }
+}
 
 [TestFixture]
 public class W3Stats : IntegrationTestBase
@@ -29,7 +46,8 @@ public class W3Stats : IntegrationTestBase
         fakeEvent.match.endTime = 1585701559200;
 
         var w3StatsRepo = new W3StatsRepo(MongoClient);
-        var gamesPerDay = new GamesPerDayHandler(w3StatsRepo);
+        var mockMatchmakingProvider = new MockMatchmakingProvider();
+        var gamesPerDay = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
         await gamesPerDay.Update(fakeEvent);
         await gamesPerDay.Update(fakeEvent);
 
@@ -51,7 +69,8 @@ public class W3Stats : IntegrationTestBase
         fakeEvent2.match.gameMode = GameMode.GM_2v2;
 
         var w3StatsRepo = new W3StatsRepo(MongoClient);
-        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo);
+        var mockMatchmakingProvider = new MockMatchmakingProvider();
+        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
 
         await gamesPerDayHandler.Update(fakeEvent1);
         await gamesPerDayHandler.Update(fakeEvent1);
@@ -84,7 +103,8 @@ public class W3Stats : IntegrationTestBase
         fakeEvent2.match.gameMode = GameMode.GM_2v2;
 
         var w3StatsRepo = new W3StatsRepo(MongoClient);
-        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo);
+        var mockMatchmakingProvider = new MockMatchmakingProvider();
+        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
 
         await gamesPerDayHandler.Update(fakeEvent1);
         await gamesPerDayHandler.Update(fakeEvent1);

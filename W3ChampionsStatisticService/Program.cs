@@ -137,7 +137,7 @@ if (disableTelemetry == "true")
 
 builder.Services.AddInterceptedTransient<PlayerAkaProvider>();
 builder.Services.AddInterceptedTransient<PersonalSettingsProvider>();
-builder.Services.AddInterceptedTransient<MatchmakingProvider>();
+builder.Services.AddInterceptedTransient<IMatchmakingProvider, MatchmakingProvider>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));

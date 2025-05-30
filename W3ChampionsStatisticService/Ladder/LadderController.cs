@@ -16,13 +16,13 @@ public class LadderController(
     IPlayerRepository playerRepository,
     RankQueryHandler rankQueryHandler,
     PlayerAkaProvider playerAkaProvider,
-    MatchmakingProvider matchmakingProvider) : ControllerBase
+    IMatchmakingProvider matchmakingProvider) : ControllerBase
 {
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly RankQueryHandler _rankQueryHandler = rankQueryHandler;
     private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
-    private readonly MatchmakingProvider _matchmakingProvider = matchmakingProvider;
+    private readonly IMatchmakingProvider _matchmakingProvider = matchmakingProvider;
 
     [HttpGet("search")]
     public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
