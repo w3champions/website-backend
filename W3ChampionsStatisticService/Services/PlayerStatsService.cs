@@ -14,12 +14,12 @@ namespace W3ChampionsStatisticService.Services;
 [Trace]
 public class PlayerStatisticsService(
     IPlayerStatsRepository playerStatsRepository,
-    MatchmakingProvider matchmakingProvider,
+    IMatchmakingProvider matchmakingProvider,
     ICachedDataProvider<SeasonMapInformation> seasonMapCached,
     IW3StatsRepo w3StatsRepo)
 {
     private readonly IPlayerStatsRepository _playerStatsRepository = playerStatsRepository;
-    private readonly MatchmakingProvider _matchmakingProvider = matchmakingProvider;
+    private readonly IMatchmakingProvider _matchmakingProvider = matchmakingProvider;
     private readonly ICachedDataProvider<SeasonMapInformation> _seasonMapCached = seasonMapCached;
     private readonly IW3StatsRepo _w3StatsRepo = w3StatsRepo;
 

@@ -8,13 +8,18 @@ using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
+public interface IMatchmakingProvider
+{
+    Task<List<ActiveGameMode>> GetCurrentlyActiveGameModesAsync();
+}
+
 // TODO: It is a repository with a cache
 [Trace]
 public class MatchmakingProvider(
     MongoClient mongoClient,
     MatchmakingServiceClient matchmakingServiceClient,
     ICachedDataProvider<List<ActiveGameMode>> cachedDataProvider
-    ) : MongoDbRepositoryBase(mongoClient)
+    ) : MongoDbRepositoryBase(mongoClient), IMatchmakingProvider
 {
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly ICachedDataProvider<List<ActiveGameMode>> _cachedDataProvider = cachedDataProvider;

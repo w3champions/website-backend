@@ -13,8 +13,38 @@ using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests.Statistics;
+
+// Mock MatchmakingProvider for testing
+public class MockMatchmakingProvider : IMatchmakingProvider
+{
+    private readonly List<GameMode> _activeGameModes;
+
+    public MockMatchmakingProvider(List<GameMode> activeGameModes = null)
+    {
+        _activeGameModes = activeGameModes ?? new List<GameMode>
+        {
+            GameMode.GM_1v1,
+            GameMode.GM_2v2,
+            GameMode.GM_4v4,
+            GameMode.FFA
+        };
+    }
+
+    public Task<List<ActiveGameMode>> GetCurrentlyActiveGameModesAsync()
+    {
+        var activeModes = _activeGameModes.Select(gameMode => new ActiveGameMode
+        {
+            id = gameMode,
+            maps = new List<MapShortInfo>(), // Empty list for testing
+            name = gameMode.ToString(),
+            type = "test"
+        }).ToList();
+        return Task.FromResult(activeModes);
+    }
+}
 
 [TestFixture]
 public class W3Stats : IntegrationTestBase
@@ -29,7 +59,8 @@ public class W3Stats : IntegrationTestBase
         fakeEvent.match.endTime = 1585701559200;
 
         var w3StatsRepo = new W3StatsRepo(MongoClient);
-        var gamesPerDay = new GamesPerDayHandler(w3StatsRepo);
+        var mockMatchmakingProvider = new MockMatchmakingProvider();
+        var gamesPerDay = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
         await gamesPerDay.Update(fakeEvent);
         await gamesPerDay.Update(fakeEvent);
 
@@ -51,7 +82,8 @@ public class W3Stats : IntegrationTestBase
         fakeEvent2.match.gameMode = GameMode.GM_2v2;
 
         var w3StatsRepo = new W3StatsRepo(MongoClient);
-        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo);
+        var mockMatchmakingProvider = new MockMatchmakingProvider();
+        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
 
         await gamesPerDayHandler.Update(fakeEvent1);
         await gamesPerDayHandler.Update(fakeEvent1);
@@ -84,7 +116,8 @@ public class W3Stats : IntegrationTestBase
         fakeEvent2.match.gameMode = GameMode.GM_2v2;
 
         var w3StatsRepo = new W3StatsRepo(MongoClient);
-        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo);
+        var mockMatchmakingProvider = new MockMatchmakingProvider();
+        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
 
         await gamesPerDayHandler.Update(fakeEvent1);
         await gamesPerDayHandler.Update(fakeEvent1);
@@ -239,5 +272,52 @@ public class W3Stats : IntegrationTestBase
         var userByToken1 = w3CAuthenticationService.GetUserByToken(_jwt, false);
 
         Assert.AreEqual("modmoto#2809", userByToken1.BattleTag);
+    }
+
+    [Test]
+    public async Task LoadAndSave_InactiveGameModes_AreSkipped()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        fakeEvent.match.endTime = 1585701559200;
+        fakeEvent.match.gameMode = GameMode.GM_3v3; // Use a game mode that won't be in our limited active list
+
+        var w3StatsRepo = new W3StatsRepo(MongoClient);
+        // Create mock with limited active modes (only GM_1v1 and GM_2v2)
+        var mockMatchmakingProvider = new MockMatchmakingProvider(new List<GameMode> { GameMode.GM_1v1, GameMode.GM_2v2 });
+        var gamesPerDayHandler = new GamesPerDayHandler(w3StatsRepo, mockMatchmakingProvider);
+
+        await gamesPerDayHandler.Update(fakeEvent);
+
+        var date = new DateTime(2020, 4, 1);
+
+        // Check that stats were created for the active modes (GM_1v1, GM_2v2) - these get pre-created with 0 games
+        var gm1v1Stats = await w3StatsRepo.LoadGamesPerDay(date, GameMode.GM_1v1, GateWay.Europe);
+        var gm2v2Stats = await w3StatsRepo.LoadGamesPerDay(date, GameMode.GM_2v2, GateWay.Europe);
+
+        // Check that the inactive GM_3v3 mode did get stats because an actual match happened in that mode
+        var gm3v3Stats = await w3StatsRepo.LoadGamesPerDay(date, GameMode.GM_3v3, GateWay.Europe);
+
+        // Check that other inactive modes (GM_4v4, FFA) did NOT get stats because no matches happened in those modes
+        var gm4v4Stats = await w3StatsRepo.LoadGamesPerDay(date, GameMode.GM_4v4, GateWay.Europe);
+        var ffaStats = await w3StatsRepo.LoadGamesPerDay(date, GameMode.FFA, GateWay.Europe);
+
+        // Active modes should have stats created (even with 0 games)
+        Assert.IsNotNull(gm1v1Stats, "GM_1v1 should have stats created as it's active");
+        Assert.IsNotNull(gm2v2Stats, "GM_2v2 should have stats created as it's active");
+        Assert.AreEqual(0, gm1v1Stats.GamesPlayed, "GM_1v1 should have 0 games played (pre-created)");
+        Assert.AreEqual(0, gm2v2Stats.GamesPlayed, "GM_2v2 should have 0 games played (pre-created)");
+
+        // The actual match mode (GM_3v3) should have stats because a match happened, even though it's inactive
+        Assert.IsNotNull(gm3v3Stats, "GM_3v3 should have stats created because a match occurred");
+        Assert.AreEqual(1, gm3v3Stats.GamesPlayed, "GM_3v3 should have 1 game played from the actual match");
+
+        // Other inactive modes should not have stats created since no matches occurred
+        Assert.IsNull(gm4v4Stats, "GM_4v4 should not have stats created as it's inactive and no match occurred");
+        Assert.IsNull(ffaStats, "FFA should not have stats created as it's inactive and no match occurred");
+
+        // The overall stats should still be created regardless of game mode activity
+        var overallStats = await w3StatsRepo.LoadGamesPerDay(date, GameMode.Undefined, GateWay.Europe);
+        Assert.IsNotNull(overallStats, "Overall stats should be created regardless of game mode activity");
+        Assert.AreEqual(1, overallStats.GamesPlayed, "Overall stats should count the GM_3v3 game");
     }
 }
