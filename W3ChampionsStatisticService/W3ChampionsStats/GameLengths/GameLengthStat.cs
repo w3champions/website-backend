@@ -36,15 +36,43 @@ public class GameLengthStat : IIdentifiable
 
     private static List<GameLength> CreateLengths(GameMode gameMode)
     {
-        GameMode[] modesWithLongGames = { GameMode.FFA, GameMode.GM_SC_FFA_4 };
-        int interval = modesWithLongGames.Contains(gameMode) ? 60 : 30;
-        var iterations = modesWithLongGames.Contains(gameMode) ? 180 : 120;
+        var gameModeConfig = GetGameModeLengthConfiguration(gameMode);
         var lengths = new List<GameLength>();
-        for (var i = 0; i <= iterations; i++)
+
+        for (var i = 0; i <= gameModeConfig.Iterations; i++)
         {
-            lengths.Add(new GameLength { Seconds = i * interval });
+            lengths.Add(new GameLength { Seconds = i * gameModeConfig.Interval });
         }
 
         return lengths;
+    }
+
+    private static GameModeLengthConfiguration GetGameModeLengthConfiguration(GameMode gameMode)
+    {
+        // Default configuration
+        var defaultConfig = new GameModeLengthConfiguration(30, 120);
+
+        // Game mode specific configurations
+        var configurations = new Dictionary<GameMode, GameModeLengthConfiguration>
+        {
+            { GameMode.FFA, new GameModeLengthConfiguration(60, 180) },         // 180 min
+            { GameMode.GM_SC_FFA_4, new GameModeLengthConfiguration(60, 120) }, // 120min
+            { GameMode.GM_SC_OZ, new GameModeLengthConfiguration(60, 120) },    // 120min
+            { GameMode.GM_CF, new GameModeLengthConfiguration(45, 133) },       // 100min
+        };
+
+        // This will only take effect if you delete the GameLengthStat DB document for that game mode.
+        // This will result in the loss of historical data for that game mode as reprocessing matches
+        // is not an option at the moment.
+        // The only option to reduce the timeframe without data loss is to preserve the same 
+        // interval length and to only delete the length buckets at the top end from the document.
+
+        return configurations.TryGetValue(gameMode, out var config) ? config : defaultConfig;
+    }
+
+    private class GameModeLengthConfiguration(int Interval, int Iterations)
+    {
+        public int Interval { get; } = Interval;
+        public int Iterations { get; } = Iterations;
     }
 }
