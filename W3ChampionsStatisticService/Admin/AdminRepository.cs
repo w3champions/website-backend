@@ -112,7 +112,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<Aliases>(content);
 
-        return deserializeObject.smurfs;
+        return deserializeObject.connectedAccounts;
     }
 
     public async Task<GlobalChatBanResponse> GetChatBans(string query, string nextId)
@@ -189,6 +189,9 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public class Aliases
     {
         public string battleTag { get; set; }
-        public List<string> smurfs { get; set; }
+
+        // Includes the requested battleTag itself
+        public List<string> connectedAccounts { get; set; }
+        public int totalConnected { get; set; }
     }
 }
