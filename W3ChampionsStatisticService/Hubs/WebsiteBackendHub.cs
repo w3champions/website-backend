@@ -84,10 +84,10 @@ public class WebsiteBackendHub(
     // Required for backwards compatibility
     public async Task LoadFriendListAndRequests()
     {
-        await this.LoadFriendListAndRequests(new PreventZeroArgumentHandler());
+        await this.LoadFriendListAndRequestsTraced(new PreventZeroArgumentHandler());
     }
 
-    public async Task LoadFriendListAndRequests(PreventZeroArgumentHandler _)
+    public async Task LoadFriendListAndRequestsTraced(PreventZeroArgumentHandler _)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
@@ -103,10 +103,10 @@ public class WebsiteBackendHub(
     // Required for backwards compatibility
     public async Task LoadFriendsWithPictures()
     {
-        await this.LoadFriendsWithPictures(new PreventZeroArgumentHandler());
+        await this.LoadFriendsWithPicturesTraced(new PreventZeroArgumentHandler());
     }
 
-    public async Task LoadFriendsWithPictures(PreventZeroArgumentHandler _)
+    public async Task LoadFriendsWithPicturesTraced(PreventZeroArgumentHandler _)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
