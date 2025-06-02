@@ -32,12 +32,14 @@ public class WebsiteBackendHub(
     {
         // Check if any of the public handlers have no arguments, as we need them to have at least one argument due to tracing requirements.
         var methods = typeof(WebsiteBackendHub).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        var allowedZeroArgMethods = new HashSet<string> { "LoadFriendListAndRequests", "LoadFriendsWithPictures" };
         foreach (var methodInfo in methods)
         {
             if (methodInfo.IsSpecialName) continue;
 
             if (methodInfo.GetBaseDefinition() == methodInfo && methodInfo.GetParameters().Length == 0)
             {
+                if (allowedZeroArgMethods.Contains(methodInfo.Name)) continue;
                 throw new InvalidOperationException($"Hub method '{methodInfo.Name}' in {nameof(WebsiteBackendHub)} must have at least one parameter due to tracing requirements. " +
                                                     $"Please add a '{nameof(PreventZeroArgumentHandler)}' parameter or ensure it has other arguments.");
             }
@@ -79,6 +81,12 @@ public class WebsiteBackendHub(
         await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString());
     }
 
+    // Required for backwards compatibility
+    public async Task LoadFriendListAndRequests()
+    {
+        await this.LoadFriendListAndRequests(new PreventZeroArgumentHandler());
+    }
+
     public async Task LoadFriendListAndRequests(PreventZeroArgumentHandler _)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
@@ -90,6 +98,12 @@ public class WebsiteBackendHub(
         List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
         List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
         await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
+    }
+
+    // Required for backwards compatibility
+    public async Task LoadFriendsWithPictures()
+    {
+        await this.LoadFriendsWithPictures(new PreventZeroArgumentHandler());
     }
 
     public async Task LoadFriendsWithPictures(PreventZeroArgumentHandler _)
