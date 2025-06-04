@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
     <PackageReference Include="Aliyun.OSS.SDK.NetCore" />
-    <PackageReference Include="AspNetCore.Authentication.Basic" />
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Castle.Core" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
