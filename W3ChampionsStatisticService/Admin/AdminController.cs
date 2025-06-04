@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.MatchmakingService;
@@ -51,45 +51,24 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayers()
     {
-        try
-        {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
-            return Ok(bannedPlayers);
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
+        var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+        return Ok(bannedPlayers);
     }
 
     [HttpPost("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        try
-        {
-            await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-            return Ok();
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
+        await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
+        return Ok();
     }
 
     [HttpDelete("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        try
-        {
-            await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
-            return Ok();
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
+        await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
+        return Ok();
     }
 
     [HttpGet("news")]
@@ -193,16 +172,8 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Queue)]
     public async Task<IActionResult> GetQueueData()
     {
-        try
-        {
-            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
-            return Ok(queueData);
-        }
-        catch (HttpRequestException ex)
-        {
-            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
-            return StatusCode(statusCode, ex.Message);
-        }
+        var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+        return Ok(queueData);
     }
 
     [HttpGet("proxies")]
