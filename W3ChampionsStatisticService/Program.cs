@@ -73,6 +73,7 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 builder.Services.AddControllers(c =>
 {
     c.Filters.Add<ValidationExceptionFilter>();
+    c.Filters.Add<HttpRequestExceptionFilter>();
 });
 
 // Create logs with format website-backend_yyyyMMdd.log

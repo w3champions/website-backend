@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.MatchmakingService;
@@ -50,46 +50,25 @@ public class AdminController(
     [HttpGet("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayers()
-    {
-        try
         {
             var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
             return Ok(bannedPlayers);
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
     }
 
     [HttpPost("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-    {
-        try
         {
             await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
             return Ok();
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
     }
 
     [HttpDelete("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-    {
-        try
         {
             await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
             return Ok();
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
     }
 
     [HttpGet("news")]
@@ -192,17 +171,9 @@ public class AdminController(
     [HttpGet("queue-data")]
     [BearerHasPermissionFilter(Permission = EPermission.Queue)]
     public async Task<IActionResult> GetQueueData()
-    {
-        try
         {
             var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
             return Ok(queueData);
-        }
-        catch (HttpRequestException ex)
-        {
-            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
-            return StatusCode(statusCode, ex.Message);
-        }
     }
 
     [HttpGet("proxies")]
