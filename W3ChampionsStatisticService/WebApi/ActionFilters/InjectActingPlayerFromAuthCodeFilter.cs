@@ -13,6 +13,7 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
 public class InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService authService) : IAsyncActionFilter
 {
+    public const string ActingPlayerUserKey = "InjectActingPlayerFromAuthCodeFilter:ActingPlayerUser";
     private readonly IW3CAuthenticationService _authService = authService;
 
     [Trace]
@@ -24,12 +25,22 @@ public class InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService auth
             if (token != null)
             {
                 var res = _authService.GetUserByToken(token, false);
+                if (res == null)
+                {
+                    context.Result = new UnauthorizedObjectResult(new ErrorResult("Unable to retrieve user from token"));
+                    return;
+                }
+                // Inject into HttpContext.Items to avoid dependening on the function parameters.
+                context.HttpContext.Items[ActingPlayerUserKey] = res;
+
+                // TODO: We should retire this approach as it forces POST instead of GET.
                 var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
                 if (actingPlayerContent != null)
                 {
                     context.ActionArguments["actingPlayer"] = res.BattleTag;
-                    await next.Invoke();
                 }
+
+                await next.Invoke();
             }
         }
         catch (Exception ex)
