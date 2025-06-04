@@ -27,7 +27,7 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
             {
                 var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
                 var res = authService.GetUserByToken(token, true);
-                var hasPermission = res.Permissions.Contains(Permission.ToString()) && res.BattleTag != "AskeLange#2705";
+                var hasPermission = res.Permissions.Contains(Permission);
                 if (!string.IsNullOrEmpty(res.BattleTag) && res.IsAdmin && hasPermission)
                 {
                     context.ActionArguments["battleTag"] = res.BattleTag;

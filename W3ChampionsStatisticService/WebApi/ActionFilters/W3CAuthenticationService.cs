@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Collections.Generic;
 using System.Diagnostics;
 using W3ChampionsStatisticService.Services.Tracing;
+using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -51,8 +52,8 @@ public class W3CUserAuthenticationDto
         var name = claims.Claims.First(c => c.Type == "name").Value;
         var permissions = claims.Claims
             .Where(claim => claim.Type == "permissions")
-            .Select(x => x.Value)
-            .ToList();
+            .Select(x => Enum.Parse<EPermission>(x.Value))
+            .ToHashSet();
 
         if (!string.IsNullOrEmpty(btag))
         {
@@ -72,5 +73,5 @@ public class W3CUserAuthenticationDto
     public string BattleTag { get; set; }
     public string Name { get; set; }
     public bool IsAdmin { get; set; }
-    public List<string> Permissions { get; set; }
+    public HashSet<EPermission> Permissions { get; set; }
 }

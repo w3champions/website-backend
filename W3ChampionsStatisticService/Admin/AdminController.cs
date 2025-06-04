@@ -7,9 +7,10 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
-using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
+using Serilog;
+using Newtonsoft.Json;
 namespace W3ChampionsStatisticService.Admin;
 
 [ApiController]
@@ -51,45 +52,24 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayers()
     {
-        try
-        {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
-            return Ok(bannedPlayers);
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
+        var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+        return Ok(bannedPlayers);
     }
 
     [HttpPost("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        try
-        {
-            await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-            return Ok();
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
+        await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
+        return Ok();
     }
 
     [HttpDelete("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
-        try
-        {
-            await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
-            return Ok();
-        }
-        catch (HttpRequestException ex)
-        {
-            return StatusCode((int)ex.StatusCode, ex.Message);
-        }
+        await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
+        return Ok();
     }
 
     [HttpGet("news")]
@@ -193,16 +173,8 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Queue)]
     public async Task<IActionResult> GetQueueData()
     {
-        try
-        {
-            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
-            return Ok(queueData);
-        }
-        catch (HttpRequestException ex)
-        {
-            int statusCode = ex.StatusCode is null ? 500 : (int)ex.StatusCode;
-            return StatusCode(statusCode, ex.Message);
-        }
+        var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+        return Ok(queueData);
     }
 
     [HttpGet("proxies")]
@@ -275,5 +247,52 @@ public class AdminController(
     public IActionResult CheckJwtLifetime()
     {
         return Ok();
+    }
+
+    [HttpGet("smurf-detection/ignored-identifiers")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    public async Task<IActionResult> GetIgnoredIdentifiers([FromQuery] string type, [FromQuery] string continuationToken)
+    {
+        return Ok(await _adminRepository.GetIgnoredIdentifiers(type, continuationToken));
+    }
+
+    [HttpPost("smurf-detection/ignored-identifiers")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> AddIgnoredIdentifier([FromBody] SmurfDetection.AddIgnoredIdentifierDto addIgnoredIdentifierDto, string actingPlayer)
+    {
+        var persistedIgnoredIdentifier = await _adminRepository.AddIgnoredIdentifier(addIgnoredIdentifierDto.type, addIgnoredIdentifierDto.identifier, addIgnoredIdentifierDto.reason, actingPlayer);
+        return Ok(persistedIgnoredIdentifier);
+    }
+
+    [HttpDelete("smurf-detection/ignored-identifiers/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    public async Task<IActionResult> DeleteIgnoredIdentifier([FromRoute] string id)
+    {
+        await _adminRepository.DeleteIgnoredIdentifier(id);
+        return Ok();
+    }
+
+    [HttpGet("smurf-detection/possible-identifier-types")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    public async Task<IActionResult> GetPossibleIdentifierTypes()
+    {
+        return Ok(await _adminRepository.GetPossibleIdentifierTypes());
+    }
+
+    [HttpGet("smurf-detection/query-smurfs")]
+    [InjectActingPlayerAuthCode]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    public async Task<IActionResult> QuerySmurfs([FromQuery] string identifierType, [FromQuery] string identifier, [FromQuery] bool generateExplanation, [FromQuery] int iterationDepth)
+    {
+        var actingPlayerUser = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
+        if (generateExplanation && !actingPlayerUser.Permissions.Contains(EPermission.SmurfCheckerQueryExplanation))
+        {
+            Log.Error("User {BattleTag} tried to generate an explanation for smurf detection but doesn't have the permission.", actingPlayerUser.BattleTag);
+            return Unauthorized("You don't have permission to generate explanations for smurf detection.");
+        }
+        var smurfSearchResult = await _adminRepository.QuerySmurfsFor(identifierType, identifier, generateExplanation, iterationDepth);
+        Log.Information("QuerySmurfs result: {Result}", smurfSearchResult);
+        return Ok(smurfSearchResult);
     }
 }

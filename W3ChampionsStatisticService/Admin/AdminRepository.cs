@@ -10,6 +10,10 @@ using System.Web;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Admin;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using W3ChampionsStatisticService.Extensions;
+using Serilog;
 namespace W3ChampionsStatisticService.Admin;
 
 [Trace]
@@ -102,17 +106,11 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         public string address { get; set; }
     }
 
+    [Obsolete("Use QuerySmurfsFor instead")]
     public async Task<List<string>> SearchSmurfsFor(string tag)
     {
-        var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
-        var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(tag)}/alts";
-        var result = await httpClient.GetAsync(url);
-        var content = await result.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var deserializeObject = JsonConvert.DeserializeObject<Aliases>(content);
-
-        return deserializeObject.connectedAccounts;
+        var result = await QuerySmurfsFor("battleTag", tag, false, 1);
+        return [.. result.connectedBattleTags];
     }
 
     public async Task<GlobalChatBanResponse> GetChatBans(string query, string nextId)
@@ -186,12 +184,99 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         return result.StatusCode;
     }
 
-    public class Aliases
+    public async Task<SmurfDetection.IgnoredIdentifier> GetIgnoredIdentifier(string type, string identifier)
     {
-        public string battleTag { get; set; }
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifiers/{type}/{identifier}";
+        var result = await httpClient.GetAsync(url);
+        await result.ThrowIfError();
+        string content = await result.Content.ReadAsStringAsync();
+        if (string.IsNullOrEmpty(content)) return null;
+        var deserializeObject = JsonConvert.DeserializeObject<GetIgnoredIdentifierResponse>(content);
+        return deserializeObject.ignoredIdentifier;
+    }
 
-        // Includes the requested battleTag itself
-        public List<string> connectedAccounts { get; set; }
-        public int totalConnected { get; set; }
+    public async Task<List<SmurfDetection.IgnoredIdentifier>> GetIgnoredIdentifiers(string type, string continuationToken)
+    {
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifiers";
+        if (continuationToken != null)
+        {
+            url += $"?continuationToken={HttpUtility.UrlEncode(continuationToken)}";
+        }
+        else if (type != null)
+        {
+            url += $"?type={HttpUtility.UrlEncode(type)}";
+        }
+        else
+        {
+            throw new ArgumentException("Either type or continuationToken must be provided");
+        }
+        var result = await httpClient.GetAsync(url);
+        await result.ThrowIfError();
+        string content = await result.Content.ReadAsStringAsync();
+        if (string.IsNullOrEmpty(content)) return [];
+        Log.Information("Content: {Content}", content);
+        var deserializeObject = JsonConvert.DeserializeObject<GetIgnoredIdentifiersResponse>(content);
+        return deserializeObject.identifiers;
+    }
+
+    public async Task<SmurfDetection.IgnoredIdentifier> AddIgnoredIdentifier(string type, string identifier, string reason, string author)
+    {
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifiers";
+        var serializedObject = JsonConvert.SerializeObject(new { type, identifier, reason, author });
+        var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
+        var byteContent = new ByteArrayContent(buffer);
+        byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+        var result = await httpClient.PostAsync(url, byteContent);
+        await result.ThrowIfError();
+        string content = await result.Content.ReadAsStringAsync();
+        if (string.IsNullOrEmpty(content)) return null;
+        var savedIgnoredIdentifier = JsonConvert.DeserializeObject<SmurfDetection.IgnoredIdentifier>(content);
+        return savedIgnoredIdentifier;
+    }
+
+    public async Task<HttpStatusCode> DeleteIgnoredIdentifier(string id)
+    {
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifiers/{id}";
+        var result = await httpClient.DeleteAsync(url);
+        await result.ThrowIfError();
+        return result.StatusCode;
+    }
+
+    public async Task<List<string>> GetPossibleIdentifierTypes()
+    {
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/possible-identifier-types";
+        var result = await httpClient.GetAsync(url);
+        await result.ThrowIfError();
+        string content = await result.Content.ReadAsStringAsync();
+        if (string.IsNullOrEmpty(content)) return [];
+        Log.Information("Content: {Content}", content);
+        var deserializeObject = JsonConvert.DeserializeObject<PossibleIdentifierTypesResponse>(content);
+        return deserializeObject.possibleIdentifierTypes;
+    }
+    
+    public async Task<SmurfDetection.SmurfDetectionResult> QuerySmurfsFor(string identifierType, string identifier, bool includeExplanation = false, int iterationDepth = 1)
+    {
+        var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        var generateExplanation = includeExplanation ? "true" : "false";
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/query-smurfs?identifierType={identifierType}&identifier={HttpUtility.UrlEncode(identifier)}&generateExplanation={generateExplanation}&iterationDepth={iterationDepth}";
+        var result = await httpClient.GetAsync(url);
+        await result.ThrowIfError();
+        var content = await result.Content.ReadAsStringAsync();
+        Log.Information("QuerySmurfsFor: {Url} {Content}", url, content);
+        if (string.IsNullOrEmpty(content)) return null;
+        var deserializeObject = JsonConvert.DeserializeObject<SmurfDetection.SmurfDetectionResult>(content);
+
+        return deserializeObject;
     }
 }
