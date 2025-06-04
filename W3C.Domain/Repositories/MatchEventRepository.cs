@@ -10,6 +10,7 @@ namespace W3C.Domain.Repositories;
 [Trace]
 public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IMatchEventRepository
 {
+    [NoTrace]
     public async Task<List<T>> Load<T>(string lastObjectId, int pageSize = 100) where T : MatchmakingEvent
     {
         lastObjectId ??= ObjectId.Empty.ToString();

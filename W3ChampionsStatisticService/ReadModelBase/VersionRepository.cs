@@ -12,6 +12,7 @@ public class VersionRepository(MongoClient mongoClient) : MongoDbRepositoryBase(
 {
     private readonly string _collection = "HandlerVersions";
 
+    [NoTrace]
     public async Task<HandlerVersion> GetLastVersion<T>()
     {
         var database = CreateClient();
