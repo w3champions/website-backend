@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.MatchmakingService;
@@ -50,25 +50,25 @@ public class AdminController(
     [HttpGet("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayers()
-        {
-            var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
-            return Ok(bannedPlayers);
+    {
+        var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+        return Ok(bannedPlayers);
     }
 
     [HttpPost("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-        {
-            await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-            return Ok();
+    {
+        await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
+        return Ok();
     }
 
     [HttpDelete("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-        {
-            await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
-            return Ok();
+    {
+        await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
+        return Ok();
     }
 
     [HttpGet("news")]
@@ -171,9 +171,9 @@ public class AdminController(
     [HttpGet("queue-data")]
     [BearerHasPermissionFilter(Permission = EPermission.Queue)]
     public async Task<IActionResult> GetQueueData()
-        {
-            var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
-            return Ok(queueData);
+    {
+        var queueData = await _matchmakingServiceRepository.GetLiveQueueData();
+        return Ok(queueData);
     }
 
     [HttpGet("proxies")]
