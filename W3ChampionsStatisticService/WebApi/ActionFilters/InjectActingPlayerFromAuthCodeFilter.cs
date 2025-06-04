@@ -8,7 +8,6 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3C.Domain.Tracing;
-using Serilog;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
