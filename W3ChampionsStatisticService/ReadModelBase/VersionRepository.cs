@@ -7,7 +7,6 @@ using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.ReadModelBase;
 
-[Trace]
 public class VersionRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IVersionRepository
 {
     private readonly string _collection = "HandlerVersions";
@@ -25,6 +24,7 @@ public class VersionRepository(MongoClient mongoClient) : MongoDbRepositoryBase(
         return new HandlerVersion(lastVersion, version?.Season ?? 0, version?.Stopped ?? false);
     }
 
+    [NoTrace]
     public async Task SaveLastVersion<T>(string lastVersion, int season = 0)
     {
         var database = CreateClient();
