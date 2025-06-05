@@ -1,24 +1,63 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Services.Tracing;
 namespace W3ChampionsStatisticService.Services.Interceptors;
 
 public class TracingInterceptor(ActivitySource activitySource) : IInterceptor
 {
     private readonly ActivitySource _activitySource = activitySource;
+    private static readonly AsyncLocal<bool> _noTraceContext = new();
+
+    /// <summary>
+    /// Check if we're currently in a no-trace context
+    /// </summary>
+    private bool IsInNoTraceContext()
+    {
+        return _noTraceContext.Value;
+    }
+
+    /// <summary>
+    /// Set no-trace context for the current execution flow
+    /// </summary>
+    private void SetNoTraceContext(bool value)
+    {
+        _noTraceContext.Value = value;
+    }
 
     public void Intercept(IInvocation invocation)
     {
+        // Check if we're already in a no-trace context - if so, proceed without any tracing
+        if (IsInNoTraceContext())
+        {
+            invocation.Proceed();
+            return;
+        }
+
         // 1. Check for [NoTrace] on the method first
         var noTraceAttributeOnMethod = invocation.MethodInvocationTarget.GetCustomAttribute<NoTraceAttribute>()
                                      ?? invocation.Method.GetCustomAttribute<NoTraceAttribute>();
 
         if (noTraceAttributeOnMethod != null)
         {
-            invocation.Proceed(); // [NoTrace] found, proceed without tracing.
+            // Set no-trace context for downstream calls
+            var previousValue = _noTraceContext.Value;
+            SetNoTraceContext(true);
+
+            try
+            {
+                // Proceed without creating any activities or spans
+                invocation.Proceed();
+            }
+            finally
+            {
+                // Restore previous context
+                SetNoTraceContext(previousValue);
+            }
             return;
         }
 
