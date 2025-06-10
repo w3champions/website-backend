@@ -53,15 +53,8 @@ public class GamesPerDayHandler(IW3StatsRepo w3Stats, IMatchmakingProvider match
     private async Task MakeSureEveryDayHasAStat(DateTime endTime)
     {
         var currentlyActiveModes = (await matchmakingProvider.GetCurrentlyActiveGameModesAsync()).Select(x => x.id).ToHashSet();
-        foreach (GameMode mode in Enum.GetValues(typeof(GameMode)))
+        foreach (GameMode mode in currentlyActiveModes)
         {
-            // Only process game modes which website-backend knows (Hence iterating through GameMode enum)
-            // and which matchmaking considers active. This way, we  can pre-define all game modes without need for coordination between the two services.
-            if (!currentlyActiveModes.Contains(mode))
-            {
-                Log.Debug("Mode {Mode} is not active in matchmaking, skipping", mode);
-                continue;
-            }
             var gamesPerDays = new List<GamesPerDay>();
             foreach (GateWay gw in Enum.GetValues(typeof(GateWay)))
             {
