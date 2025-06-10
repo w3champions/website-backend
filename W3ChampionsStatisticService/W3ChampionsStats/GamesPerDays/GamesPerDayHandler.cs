@@ -8,7 +8,6 @@ using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Services;
 using System.Linq;
-using Serilog;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.GamesPerDays;
 
