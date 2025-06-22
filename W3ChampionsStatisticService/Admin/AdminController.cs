@@ -208,14 +208,6 @@ public class AdminController(
         return Ok(playerInstances);
     }
 
-    [HttpGet("alts/{tag}")]
-    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> SearchSmurfs([FromRoute] string tag)
-    {
-        var smurfs = await _adminRepository.SearchSmurfsFor(tag);
-        return Ok(smurfs);
-    }
-
     [HttpGet("globalChatBans")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> SearchChatbans([FromQuery] string query, [FromQuery] string nextId)
