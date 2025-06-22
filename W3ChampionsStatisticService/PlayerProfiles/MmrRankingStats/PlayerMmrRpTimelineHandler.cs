@@ -18,7 +18,7 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
 
         foreach (var player in match.players)
         {
-            if (player.updatedMmr == null || match.endTime == 0) { return; }
+            if (player.IsAt || player.updatedMmr == null || match.endTime == 0) { continue; }
             var mmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
                         ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
             mmrRpTimeline.UpdateTimeline(new MmrRpAtDate(
