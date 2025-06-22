@@ -396,6 +396,8 @@ public class PlayerTests : IntegrationTestBase
         matchFinishedEvent1.match.players[1].race = Race.NE;
         matchFinishedEvent1.match.players[0].updatedMmr.rating = 123;
         matchFinishedEvent1.match.players[1].updatedMmr.rating = 77;
+        matchFinishedEvent1.match.players.ForEach(x => x.atTeamId = null);
+
 
         // P1 Lose
         matchFinishedEvent2.match.endTime = 1585701559200;
@@ -405,6 +407,7 @@ public class PlayerTests : IntegrationTestBase
         matchFinishedEvent2.match.players[1].race = Race.NE;
         matchFinishedEvent2.match.players[0].updatedMmr.rating = 98;
         matchFinishedEvent2.match.players[1].updatedMmr.rating = 102;
+        matchFinishedEvent2.match.players.ForEach(x => x.atTeamId = null);
 
         // matchFinishedEvent2 and 3 on the same day, so only the one with later date should appear in MmrRpTimeline
 
@@ -416,6 +419,7 @@ public class PlayerTests : IntegrationTestBase
         matchFinishedEvent3.match.players[1].race = Race.NE;
         matchFinishedEvent3.match.players[0].updatedMmr.rating = 80;
         matchFinishedEvent3.match.players[1].updatedMmr.rating = 120;
+        matchFinishedEvent3.match.players.ForEach(x => x.atTeamId = null);
 
         // P1 Win
         matchFinishedEvent4.match.endTime = 1604612998269;
@@ -423,6 +427,7 @@ public class PlayerTests : IntegrationTestBase
         matchFinishedEvent4.match.players[1].race = Race.NE;
         matchFinishedEvent4.match.players[0].updatedMmr.rating = 102;
         matchFinishedEvent4.match.players[1].updatedMmr.rating = 98;
+        matchFinishedEvent4.match.players.ForEach(x => x.atTeamId = null);
 
         // Wrong order on purpose!
         await handler.Update(matchFinishedEvent4);
@@ -442,6 +447,93 @@ public class PlayerTests : IntegrationTestBase
 
         Assert.IsTrue(wolfMmrRpTimeline.MmrRpAtDates[0].Mmr < wolfMmrRpTimeline.MmrRpAtDates[1].Mmr);
         Assert.IsTrue(wolfMmrRpTimeline.MmrRpAtDates[1].Mmr > wolfMmrRpTimeline.MmrRpAtDates[2].Mmr);
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_4v4_WithArrangedTeams()
+    {
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+        var matchFinishedEvent = TestDtoHelper.CreateFake4v4Event();
+
+        // Setup 4v4 match with 2 AT players per team and 2 RT players per team
+        matchFinishedEvent.match.endTime = 1585692047363;
+        matchFinishedEvent.match.gameMode = GameMode.GM_4v4;
+        
+        // Team 0 (Winners) - 2 AT players, 2 RT players
+        matchFinishedEvent.match.players[0].battleTag = "at1#123";
+        matchFinishedEvent.match.players[0].atTeamId = "team1";
+        matchFinishedEvent.match.players[0].race = Race.HU;
+        matchFinishedEvent.match.players[0].updatedMmr.rating = 1500;
+        matchFinishedEvent.match.players[0].won = true;
+
+        matchFinishedEvent.match.players[1].battleTag = "at2#456";
+        matchFinishedEvent.match.players[1].atTeamId = "team1";
+        matchFinishedEvent.match.players[1].race = Race.OC;
+        matchFinishedEvent.match.players[1].updatedMmr.rating = 1450;
+        matchFinishedEvent.match.players[1].won = true;
+
+        matchFinishedEvent.match.players[2].battleTag = "rt1#789";
+        matchFinishedEvent.match.players[2].atTeamId = null;
+        matchFinishedEvent.match.players[2].race = Race.UD;
+        matchFinishedEvent.match.players[2].updatedMmr.rating = 1600;
+        matchFinishedEvent.match.players[2].won = true;
+
+        matchFinishedEvent.match.players[3].battleTag = "rt2#101";
+        matchFinishedEvent.match.players[3].atTeamId = null;
+        matchFinishedEvent.match.players[3].race = Race.NE;
+        matchFinishedEvent.match.players[3].updatedMmr.rating = 1550;
+        matchFinishedEvent.match.players[3].won = true;
+
+        // Team 1 (Losers) - 2 AT players, 2 RT players
+        matchFinishedEvent.match.players[4].battleTag = "at3#234";
+        matchFinishedEvent.match.players[4].atTeamId = "team2";
+        matchFinishedEvent.match.players[4].race = Race.HU;
+        matchFinishedEvent.match.players[4].updatedMmr.rating = 1400;
+        matchFinishedEvent.match.players[4].won = false;
+
+        matchFinishedEvent.match.players[5].battleTag = "at4#567";
+        matchFinishedEvent.match.players[5].atTeamId = "team2";
+        matchFinishedEvent.match.players[5].race = Race.OC;
+        matchFinishedEvent.match.players[5].updatedMmr.rating = 1350;
+        matchFinishedEvent.match.players[5].won = false;
+
+        matchFinishedEvent.match.players[6].battleTag = "rt3#890";
+        matchFinishedEvent.match.players[6].atTeamId = null;
+        matchFinishedEvent.match.players[6].race = Race.UD;
+        matchFinishedEvent.match.players[6].updatedMmr.rating = 1300;
+        matchFinishedEvent.match.players[6].won = false;
+
+        matchFinishedEvent.match.players[7].battleTag = "rt4#112";
+        matchFinishedEvent.match.players[7].atTeamId = null;
+        matchFinishedEvent.match.players[7].race = Race.NE;
+        matchFinishedEvent.match.players[7].updatedMmr.rating = 1250;
+        matchFinishedEvent.match.players[7].won = false;
+
+        // AT players should cause exceptions/skips, RT players should be processed
+        await handler.Update(matchFinishedEvent);
+
+        // Verify RT players have MMR timeline updates
+        var rt1Timeline = await playerRepository.LoadPlayerMmrRpTimeline("rt1#789", Race.UD, GateWay.Europe, 0, GameMode.GM_4v4);
+        var rt2Timeline = await playerRepository.LoadPlayerMmrRpTimeline("rt2#101", Race.NE, GateWay.Europe, 0, GameMode.GM_4v4);
+        var rt3Timeline = await playerRepository.LoadPlayerMmrRpTimeline("rt3#890", Race.UD, GateWay.Europe, 0, GameMode.GM_4v4);
+        var rt4Timeline = await playerRepository.LoadPlayerMmrRpTimeline("rt4#112", Race.NE, GateWay.Europe, 0, GameMode.GM_4v4);
+
+        Assert.IsNotNull(rt1Timeline);
+        Assert.IsNotNull(rt2Timeline);
+        Assert.IsNotNull(rt3Timeline);
+        Assert.IsNotNull(rt4Timeline);
+
+        // Verify AT players do NOT have MMR timeline updates
+        var at1Timeline = await playerRepository.LoadPlayerMmrRpTimeline("at1#123", Race.HU, GateWay.Europe, 0, GameMode.GM_4v4);
+        var at2Timeline = await playerRepository.LoadPlayerMmrRpTimeline("at2#456", Race.OC, GateWay.Europe, 0, GameMode.GM_4v4);
+        var at3Timeline = await playerRepository.LoadPlayerMmrRpTimeline("at3#234", Race.HU, GateWay.Europe, 0, GameMode.GM_4v4);
+        var at4Timeline = await playerRepository.LoadPlayerMmrRpTimeline("at4#567", Race.OC, GateWay.Europe, 0, GameMode.GM_4v4);
+
+        Assert.IsNull(at1Timeline);
+        Assert.IsNull(at2Timeline);
+        Assert.IsNull(at3Timeline);
+        Assert.IsNull(at4Timeline);
     }
 
     [Test]

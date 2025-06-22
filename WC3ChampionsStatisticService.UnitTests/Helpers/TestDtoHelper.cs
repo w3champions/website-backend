@@ -204,6 +204,32 @@ public static class TestDtoHelper
         return fakeEvent;
     }
 
+    public static MatchFinishedEvent CreateFake4v4Event()
+    {
+        var fixture = new Fixture { RepeatCount = 8 };
+        var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.WasFakeEvent = false;
+        fakeEvent.WasFromSync = false;
+
+        fakeEvent.match.map = "Maps/frozenthrone/community/(8)avalanche.w3x";
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.gameMode = GameMode.GM_4v4;
+        fakeEvent.match.season = 0;
+
+        // Initialize 8 players for 4v4
+        for (int i = 0; i < 8; i++)
+        {
+            fakeEvent.match.players[i].battleTag = $"player{i}#123";
+            fakeEvent.match.players[i].team = i < 4 ? 0 : 1;
+            fakeEvent.match.players[i].won = i < 4;
+            fakeEvent.match.players[i].race = Race.HU;
+            fakeEvent.match.players[i].atTeamId = null;
+        }
+
+        return fakeEvent;
+    }
+
     public static RankingChangedEvent CreateRankChangedEvent(string battleTag = "peTer#123")
     {
         return new RankingChangedEvent
