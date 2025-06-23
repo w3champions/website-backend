@@ -459,7 +459,7 @@ public class PlayerTests : IntegrationTestBase
         // Setup 4v4 match with 2 AT players per team and 2 RT players per team
         matchFinishedEvent.match.endTime = 1585692047363;
         matchFinishedEvent.match.gameMode = GameMode.GM_4v4;
-        
+
         // Team 0 (Winners) - 2 AT players, 2 RT players
         matchFinishedEvent.match.players[0].battleTag = "at1#123";
         matchFinishedEvent.match.players[0].atTeamId = "team1";

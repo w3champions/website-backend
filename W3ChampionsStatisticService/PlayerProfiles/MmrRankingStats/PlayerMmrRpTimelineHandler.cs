@@ -17,22 +17,24 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
     {
         var match = nextEvent.match;
 
-        
-        if (match.endTime == 0) {
+
+        if (match.endTime == 0)
+        {
             Log.Information("Finished match {FinishedMatchId} has no end time, skipping processing", match.id);
-            return; 
+            return;
         }
 
         foreach (var player in match.players)
         {
-            if (player.IsAt) 
+            if (player.IsAt)
             {
                 Log.Information("Player {Player} in finished match {FinishedMatchId} is in an arranged team {AtTeamId}, skipping processing", player.battleTag, match.id, player.atTeamId);
-                continue; 
+                continue;
             }
-            if (player.updatedMmr == null) {
+            if (player.updatedMmr == null)
+            {
                 Log.Information("Player {Player} in finished match {FinishedMatchId} has no updated MMR, skipping processing", player.battleTag);
-                continue; 
+                continue;
             }
             var mmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
                         ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
