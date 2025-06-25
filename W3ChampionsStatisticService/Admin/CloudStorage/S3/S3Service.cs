@@ -36,8 +36,8 @@ public class S3Service : IS3Service
         return listObjectsResponse.S3Objects.Select(x => new CloudFile
         {
             Name = x.Key.Substring(x.Key.LastIndexOf('/') + 1), // Do not include the prefix
-            Size = x.Size / 1024 ?? -1, // Size in kilobytes
-            LastModified = x.LastModified ?? DateTime.MinValue
+            Size = x.Size / 1024, // Size in kilobytes
+            LastModified = x.LastModified,
         }).ToList();
     }
 
@@ -53,7 +53,7 @@ public class S3Service : IS3Service
         {
             BucketName = S3BucketName,
             Key = $"{S3Prefix}{file.Name}",
-            CannedACL = S3CannedACL.PublicRead
+            CannedACL = S3CannedACL.PublicRead,
         };
         using var ms = new MemoryStream(bytes);
         putObjectRequest.InputStream = ms;
