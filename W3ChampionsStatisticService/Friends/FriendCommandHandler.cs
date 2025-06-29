@@ -5,18 +5,28 @@ using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Friends;
 
+public interface IFriendCommandHandler
+{
+    Task<Friendlist> LoadFriendList(string battleTag);
+    Task CreateFriendRequest(FriendRequest request);
+    Task DeleteFriendRequest(FriendRequest request);
+    Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag);
+    Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag);
+    Task UpsertFriendList(Friendlist friendList);
+}
+
 [Trace]
 public class FriendCommandHandler(
     FriendRepository friendRepository,
     FriendRequestCache friendRequestCache,
     FriendListCache friendListCache
-)
+) : IFriendCommandHandler
 {
     private readonly FriendRepository _friendRepository = friendRepository;
     private readonly FriendRequestCache _friendRequestCache = friendRequestCache;
     private readonly FriendListCache _friendListCache = friendListCache;
 
-    public async Task<Friendlist> LoadFriendList(string battleTag)
+    public virtual async Task<Friendlist> LoadFriendList(string battleTag)
     {
         var friendList = await _friendListCache.LoadFriendList(battleTag);
         if (friendList == null)
@@ -27,13 +37,13 @@ public class FriendCommandHandler(
         return friendList;
     }
 
-    public async Task CreateFriendRequest(FriendRequest request)
+    public virtual async Task CreateFriendRequest(FriendRequest request)
     {
         await _friendRepository.CreateFriendRequest(request);
         _friendRequestCache.Insert(request);
     }
 
-    public async Task DeleteFriendRequest(FriendRequest request)
+    public virtual async Task DeleteFriendRequest(FriendRequest request)
     {
         if (request != null)
         {
@@ -42,7 +52,7 @@ public class FriendCommandHandler(
         }
     }
 
-    public async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
+    public virtual async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
     {
         if (!friendlist.Friends.Contains(battleTag))
         {
@@ -52,7 +62,7 @@ public class FriendCommandHandler(
         return friendlist;
     }
 
-    public async Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag)
+    public virtual async Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag)
     {
         var friend = friendlist.Friends.SingleOrDefault(bTag => bTag == battleTag);
         if (friend != null)
@@ -63,7 +73,7 @@ public class FriendCommandHandler(
         return friendlist;
     }
 
-    public async Task UpsertFriendList(Friendlist friendList)
+    public virtual async Task UpsertFriendList(Friendlist friendList)
     {
         await _friendRepository.UpsertFriendlist(friendList);
         _friendListCache.Upsert(friendList);
