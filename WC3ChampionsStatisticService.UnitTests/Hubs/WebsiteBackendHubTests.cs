@@ -28,19 +28,15 @@ public class TestFriendListCache
 
 public class TestFriendRepository
 {
-    public Task UpsertFriendlist(Friendlist friendList) => Task.CompletedTask;
+    public Task UpsertFriendlist(Friendlist _) => Task.CompletedTask;
 }
 
 // Custom handler that implements IFriendCommandHandler
-public class TestFriendCommandHandler : IFriendCommandHandler
+public class TestFriendCommandHandler(TestFriendRepository repo, TestFriendListCache cache, FakeFriendRequestCache friendRequestCache) : IFriendCommandHandler
 {
-    private readonly TestFriendRepository _repo;
-    private readonly TestFriendListCache _cache;
-    public TestFriendCommandHandler(TestFriendRepository repo, TestFriendListCache cache)
-    {
-        _repo = repo;
-        _cache = cache;
-    }
+    private readonly TestFriendRepository _repo = repo;
+    private readonly TestFriendListCache _cache = cache;
+    private readonly FakeFriendRequestCache _friendRequestCache = friendRequestCache;
 
     public async Task<Friendlist> LoadFriendList(string battleTag)
     {
@@ -54,7 +50,11 @@ public class TestFriendCommandHandler : IFriendCommandHandler
     }
 
     public Task CreateFriendRequest(FriendRequest request) => Task.CompletedTask;
-    public Task DeleteFriendRequest(FriendRequest request) => Task.CompletedTask;
+    public Task DeleteFriendRequest(FriendRequest request)
+    {
+        _friendRequestCache.Delete(request);
+        return Task.CompletedTask;
+    }
 
     public async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
     {
@@ -96,23 +96,35 @@ public class FakeFriendRequestCache : IFriendRequestCache
 
 public class WebsiteBackendHubTests
 {
-    [Test]
-    public async Task BlockPlayer_AddsToBlockedBattleTags_WhenNoFriendRequestExists()
+    private Mock<IW3CAuthenticationService> authService;
+    private ConnectionMapping connections;
+    private Mock<IHttpContextAccessor> contextAccessor;
+    private FakeFriendRequestCache friendRequestCache;
+    private Mock<IPersonalSettingsRepository> personalSettingsRepo;
+    private TestFriendListCache friendListCache;
+    private TestFriendRepository friendRepository;
+    private TracingService tracingService;
+    private Mock<IHubCallerClients> mockClients;
+    private Mock<ISingleClientProxy> mockCaller;
+
+    [SetUp]
+    public void SetUp()
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
+        authService = new Mock<IW3CAuthenticationService>();
+        connections = new ConnectionMapping();
+        contextAccessor = new Mock<IHttpContextAccessor>();
+        friendRequestCache = new FakeFriendRequestCache();
+        personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
+        friendListCache = new TestFriendListCache();
+        friendRepository = new TestFriendRepository();
+        tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
+        mockClients = new Mock<IHubCallerClients>();
+        mockCaller = new Mock<ISingleClientProxy>();
+        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
+    }
 
-        var friendList = new Friendlist("User#1234");
-        var friendListCache = new TestFriendListCache();
-        friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
-
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
+    private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
+    {
         var hub = new WebsiteBackendHub(
             authService.Object,
             connections,
@@ -122,15 +134,28 @@ public class WebsiteBackendHubTests
             friendCommandHandler,
             tracingService
         );
+        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
+        return hub;
+    }
+
+    private void SetHubContext(Hub hub, string connectionId)
+    {
+        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock(connectionId));
+    }
+
+    [Test]
+    public async Task BlockPlayer_AddsToBlockedBattleTags_WhenNoFriendRequestExists()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
 
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
+        SetHubContext(hub, "conn1");
 
         await hub.BlockPlayer("Blocked#5678");
 
@@ -148,39 +173,17 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task UnblockFriendRequestsFromPlayer_RemovesFromBlockedBattleTags()
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
         var friendList = new Friendlist("User#1234");
         friendList.BlockedBattleTags.Add("Blocked#5678");
-        var friendListCache = new TestFriendListCache();
         friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
+        var hub = CreateHub(friendCommandHandler);
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
 
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
+        SetHubContext(hub, "conn1");
 
         await hub.UnblockFriendRequestsFromPlayer("Blocked#5678");
 
@@ -198,39 +201,17 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task RemoveFriend_RemovesFromFriendsList()
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
         var friendList = new Friendlist("User#1234");
         friendList.Friends.Add("Friend#5678");
-        var friendListCache = new TestFriendListCache();
         friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
+        var hub = CreateHub(friendCommandHandler);
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
 
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
+        SetHubContext(hub, "conn1");
 
         await hub.RemoveFriend("Friend#5678");
 
@@ -248,38 +229,16 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task LoadFriendListAndRequestsTraced_SendsFriendListAndRequests()
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
         var friendList = new Friendlist("User#1234");
-        var friendListCache = new TestFriendListCache();
         friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
+        var hub = CreateHub(friendCommandHandler);
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
 
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
+        SetHubContext(hub, "conn1");
 
         await hub.LoadFriendListAndRequestsTraced(new SignalRTraceContextFilter.PreventZeroArgumentHandler());
 
@@ -293,56 +252,21 @@ public class WebsiteBackendHubTests
         );
     }
 
-    // Helper mock for HubCallerContext
-    private class HubCallerContextMock : HubCallerContext
-    {
-        private readonly string _connectionId;
-        public HubCallerContextMock(string connectionId) => _connectionId = connectionId;
-        public override string ConnectionId => _connectionId;
-        public override string UserIdentifier => null;
-        public override ClaimsPrincipal User => null;
-        public override IDictionary<object, object> Items { get; } = new Dictionary<object, object>();
-        public override CancellationToken ConnectionAborted => CancellationToken.None;
-        public override IFeatureCollection Features { get; } = new FeatureCollection();
-        public override void Abort() { }
-    }
-
     [Test]
     public async Task MakeFriendRequest_SendsSuccessMessage()
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
         personalSettingsRepo.Setup(r => r.Find(It.IsAny<string>())).ReturnsAsync(new PersonalSetting("Receiver#1"));
 
         var friendList = new Friendlist("Sender#1");
-        var friendListCache = new TestFriendListCache();
         friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
+        var hub = CreateHub(friendCommandHandler);
 
         var testUser = new WebSocketUser { BattleTag = "Sender#1", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
 
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
+        SetHubContext(hub, "conn1");
 
         var req = new FriendRequest("Sender#1", "Receiver#1");
         await hub.MakeFriendRequest(req);
@@ -357,47 +281,33 @@ public class WebsiteBackendHubTests
         );
     }
 
-    [Test]
-    public async Task AcceptIncomingFriendRequest_SendsSuccessMessage()
+    [TestCase("AcceptIncomingFriendRequest", "Receiver#1")]
+    [TestCase("DenyIncomingFriendRequest", "Receiver#1")]
+    [TestCase("DeleteOutgoingFriendRequest", "Sender#1")]
+    [TestCase("BlockIncomingFriendRequest", "Receiver#1")]
+    public async Task FriendRequestFlow_SendsSuccessMessage(string methodName, string userBattleTag)
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
-        var friendList = new Friendlist("Receiver#1");
-        var friendListCache = new TestFriendListCache();
+        var friendList = new Friendlist(userBattleTag);
         friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        // Add the friend request to the cache so Accept will succeed
+        // Add the friend request to the cache so the flow will succeed
         var req = new FriendRequest("Sender#1", "Receiver#1");
         friendRequestCache.AddRequest(req);
 
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
+        // For Accept and Block, also add the reciprocal request to the cache
+        if (methodName == "AcceptIncomingFriendRequest" || methodName == "BlockIncomingFriendRequest")
+        {
+            friendRequestCache.AddRequest(new FriendRequest("Receiver#1", "Sender#1"));
+        }
 
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
-
-        var testUser = new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" };
+        var hub = CreateHub(friendCommandHandler);
+        var testUser = new WebSocketUser { BattleTag = userBattleTag, ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
+        SetHubContext(hub, "conn1");
 
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
-
-        await hub.AcceptIncomingFriendRequest(req);
+        var method = typeof(WebsiteBackendHub).GetMethod(methodName);
+        await (Task)method.Invoke(hub, new object[] { req });
 
         mockCaller.Verify(
             c => c.SendCoreAsync(
@@ -407,161 +317,46 @@ public class WebsiteBackendHubTests
             ),
             Times.AtLeastOnce
         );
+
+        // Additional assertions for each flow
+        switch (methodName)
+        {
+            case "AcceptIncomingFriendRequest":
+                // Both users should be friends with each other
+                var receiverList = await friendCommandHandler.LoadFriendList("Receiver#1");
+                var senderList = await friendCommandHandler.LoadFriendList("Sender#1");
+                Assert.That(receiverList.Friends, Does.Contain("Sender#1"));
+                Assert.That(senderList.Friends, Does.Contain("Receiver#1"));
+                // Only the original FriendRequest should be removed from cache
+                var reqInCache = await friendRequestCache.LoadFriendRequest(req);
+                Assert.That(reqInCache, Is.Null);
+                break;
+            case "DenyIncomingFriendRequest":
+            case "DeleteOutgoingFriendRequest":
+                // FriendRequest should be removed from cache
+                var reqInCache2 = await friendRequestCache.LoadFriendRequest(req);
+                Assert.That(reqInCache2, Is.Null);
+                break;
+            case "BlockIncomingFriendRequest":
+                // Sender should be in blocked list
+                var receiverListBlock = await friendCommandHandler.LoadFriendList("Receiver#1");
+                Assert.That(receiverListBlock.BlockedBattleTags, Does.Contain("Sender#1"));
+                // Only the original FriendRequest should be removed from cache
+                var reqInCache3 = await friendRequestCache.LoadFriendRequest(req);
+                Assert.That(reqInCache3, Is.Null);
+                break;
+        }
     }
 
-    [Test]
-    public async Task DenyIncomingFriendRequest_SendsSuccessMessage()
+    // Helper mock for HubCallerContext
+    private class HubCallerContextMock(string connectionId) : HubCallerContext
     {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
-        var friendList = new Friendlist("Receiver#1");
-        var friendListCache = new TestFriendListCache();
-        friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
-
-        // Add the friend request to the cache so Deny will succeed
-        var req = new FriendRequest("Sender#1", "Receiver#1");
-        friendRequestCache.AddRequest(req);
-
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
-
-        var testUser = new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" };
-        connections.Add("conn1", testUser);
-
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
-
-        await hub.DenyIncomingFriendRequest(req);
-
-        mockCaller.Verify(
-            c => c.SendCoreAsync(
-                It.Is<string>(s => s.Contains("FriendResponseData")),
-                It.IsAny<object[]>(),
-                default
-            ),
-            Times.Once
-        );
-    }
-
-    [Test]
-    public async Task DeleteOutgoingFriendRequest_SendsSuccessMessage()
-    {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
-        var friendList = new Friendlist("Sender#1");
-        var friendListCache = new TestFriendListCache();
-        friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
-
-        // Add the friend request to the cache so Delete will succeed
-        var req = new FriendRequest("Sender#1", "Receiver#1");
-        friendRequestCache.AddRequest(req);
-
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
-
-        var testUser = new WebSocketUser { BattleTag = "Sender#1", ConnectionId = "conn1" };
-        connections.Add("conn1", testUser);
-
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
-
-        await hub.DeleteOutgoingFriendRequest(req);
-
-        mockCaller.Verify(
-            c => c.SendCoreAsync(
-                It.Is<string>(s => s.Contains("FriendResponseData")),
-                It.IsAny<object[]>(),
-                default
-            ),
-            Times.Once
-        );
-    }
-
-    [Test]
-    public async Task BlockIncomingFriendRequest_SendsSuccessMessage()
-    {
-        var authService = new Mock<IW3CAuthenticationService>();
-        var connections = new ConnectionMapping();
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var friendRequestCache = new FakeFriendRequestCache();
-        var personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-
-        var friendList = new Friendlist("Receiver#1");
-        var friendListCache = new TestFriendListCache();
-        friendListCache.Upsert(friendList);
-        var friendRepository = new TestFriendRepository();
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache);
-
-        // Add the friend request to the cache so Block will succeed
-        var req = new FriendRequest("Sender#1", "Receiver#1");
-        friendRequestCache.AddRequest(req);
-
-        var tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
-
-        var hub = new WebsiteBackendHub(
-            authService.Object,
-            connections,
-            contextAccessor.Object,
-            friendRequestCache,
-            personalSettingsRepo.Object,
-            friendCommandHandler,
-            tracingService
-        );
-
-        var testUser = new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" };
-        connections.Add("conn1", testUser);
-
-        var mockClients = new Mock<IHubCallerClients>();
-        var mockCaller = new Mock<ISingleClientProxy>();
-        mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
-        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
-        typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock("conn1"));
-
-        await hub.BlockIncomingFriendRequest(req);
-
-        mockCaller.Verify(
-            c => c.SendCoreAsync(
-                It.Is<string>(s => s.Contains("FriendResponseData")),
-                It.IsAny<object[]>(),
-                default
-            ),
-            Times.Once
-        );
+        public override string ConnectionId { get; } = connectionId;
+        public override string UserIdentifier => null;
+        public override ClaimsPrincipal User => null;
+        public override IDictionary<object, object> Items { get; } = new Dictionary<object, object>();
+        public override CancellationToken ConnectionAborted => CancellationToken.None;
+        public override IFeatureCollection Features { get; } = new FeatureCollection();
+        public override void Abort() { }
     }
 }
