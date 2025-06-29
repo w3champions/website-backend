@@ -76,8 +76,8 @@ public class GameModeStatQueryHandler(
         }
         catch (Exception e)
         {
-            _trackingService.TrackException(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} Leage: {rank.League}");
-            Log.Error($"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League} {e.Message}");
+            _trackingService.TrackException(e, $"A League was not found for {rank.Id} - RankNumber: {rank.RankNumber} - League: {rank.League} - Message: {e.Message}");
+            Log.Error(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League} {e.Message}");
         }
     }
 
