@@ -2,7 +2,6 @@ using Microsoft.ApplicationInsights;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using Microsoft.Extensions.Logging;
 using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
@@ -14,12 +13,9 @@ public interface ITrackingService
 }
 
 [Trace]
-public class TrackingService(
-    TelemetryClient telemetry,
-    ILogger<TrackingService> logger) : ITrackingService
+public class TrackingService(TelemetryClient telemetry) : ITrackingService
 {
     private readonly TelemetryClient _telemetry = telemetry;
-    private readonly ILogger<TrackingService> _logger = logger;
 
     public void TrackUnauthorizedRequest(string authorization, ControllerBase controller)
     {
@@ -45,7 +41,10 @@ public class TrackingService(
 
     public void TrackException(Exception ex, string message)
     {
-        _logger.LogError(ex, message);
-        _telemetry.TrackException(ex);
+        var additionalFields = new Dictionary<string, string>()
+        {
+            { "W3C_Message", message },
+        };
+        _telemetry.TrackException(ex, additionalFields);
     }
 }

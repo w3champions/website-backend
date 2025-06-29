@@ -6,6 +6,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
+using Serilog;
 using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
@@ -76,6 +77,7 @@ public class GameModeStatQueryHandler(
         catch (Exception e)
         {
             _trackingService.TrackException(e, $"A League was not found for {rank.Id} - RankNumber: {rank.RankNumber} - League: {rank.League} - Message: {e.Message}");
+            Log.Error(e, $"A League was not found for {rank.Id} RankNumber: {rank.RankNumber} League: {rank.League} {e.Message}");
         }
     }
 
