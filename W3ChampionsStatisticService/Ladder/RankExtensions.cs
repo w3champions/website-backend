@@ -9,16 +9,7 @@ public static class RankExtensions
 {
     public static Rank CreateUnrankedResponse(this PlayerOverallStats stats)
     {
-        return new Rank(
-            new List<string> { stats.BattleTag },
-            0,
-            0,
-            0,
-            null,
-            GateWay.Undefined,
-            GameMode.Undefined,
-            0
-            )
+        return new Rank([stats.BattleTag], 0, 0, 0, null, GateWay.Undefined, GameMode.Undefined, 0)
         {
             Players = new List<PlayerOverview>
             {
