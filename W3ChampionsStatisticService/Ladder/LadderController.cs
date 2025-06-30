@@ -7,7 +7,6 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3C.Domain.Tracing;
 using System.Collections.Generic;
-using System;
 
 namespace W3ChampionsStatisticService.Ladder;
 
