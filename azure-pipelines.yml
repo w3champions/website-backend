@@ -14,27 +14,13 @@ steps:
     inputs:
       targetType: "inline"
       script: |
-        if(!("$(Build.Reason)".Equals("PullRequest"))){
-          Write-Host "##vso[task.setvariable variable=TAG]$(Build.BuildID)"
-          Write-Host "##vso[task.setvariable variable=IS_LATEST]latest"
-          Write-Host "Masterversion: $(Build.BuildID)"
-        } else {
+        if("$(Build.Reason)".Equals("PullRequest")){
           Write-Host "##vso[task.setvariable variable=TAG]dev-$(System.PullRequest.PullRequestNumber)"
-          Write-Host "##vso[task.setvariable variable=IS_LATEST]"
-          Write-Host "PR-Version: dev-$(System.PullRequest.PullRequestNumber)"
-          if("$(System.PullRequest.SourceBranch)".StartsWith("DEPLOY_")) {
-            $pr_name = "$(System.PullRequest.SourceBranch)".Split("_")[1]
-            Write-Host "##vso[task.setvariable variable=PR_NAME]$pr_name"
-
-            az pipelines build tag add --build-id $(Build.BuildID) --tags pr-deployment --organization https://dev.azure.com/w3champions/ --project w3champions
-          }
+          Write-Host "TAG set to dev-$(System.PullRequest.PullRequestNumber)"
+        } else {
+          Write-Host "##vso[task.setvariable variable=TAG]$(Build.BuildID)"
+          Write-Host "TAG set to $(Build.BuildID)"
         }
-
-  - task: qetza.replacetokens.replacetokens-task.replacetokens@3
-    displayName: 'Replace tokens'
-    inputs:
-      targetFiles: |
-        **/*.token.yml => *.yml
 
   # Use specific .NET version
   - task: UseDotNet@2
