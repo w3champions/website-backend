@@ -6,6 +6,8 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3C.Domain.Tracing;
+using System.Collections.Generic;
+
 namespace W3ChampionsStatisticService.Ladder;
 
 [ApiController]
@@ -25,12 +27,13 @@ public class LadderController(
     private readonly IMatchmakingProvider _matchmakingProvider = matchmakingProvider;
 
     [HttpGet("search")]
-    public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode
-    gameMode = GameMode.GM_1v1)
+    public async Task<IActionResult> SearchPlayer(string searchFor, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
     {
-        System.Collections.Generic.List<Rank> playerRanks;
-
-        playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
+        if (string.IsNullOrEmpty(searchFor) || searchFor.Length < 3)
+        {
+            return BadRequest("searchFor parameter must be at least 3 letters.");
+        }
+        List<Rank> playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
 
         var playerStats = await _playerRepository.SearchForPlayer(searchFor);
 
