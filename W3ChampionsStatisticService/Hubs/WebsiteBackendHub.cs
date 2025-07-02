@@ -22,9 +22,9 @@ public class WebsiteBackendHub(
     IW3CAuthenticationService authenticationService,
     ConnectionMapping connections,
     IHttpContextAccessor contextAccessor,
-    FriendRequestCache friendRequestCache,
+    IFriendRequestCache friendRequestCache,
     IPersonalSettingsRepository personalSettingsRepository,
-    FriendCommandHandler friendCommandHandler,
+    IFriendCommandHandler friendCommandHandler,
     TracingService tracingService
 ) : Hub
 {
@@ -49,9 +49,9 @@ public class WebsiteBackendHub(
     private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
-    private readonly FriendRequestCache _friendRequestCache = friendRequestCache;
+    private readonly IFriendRequestCache _friendRequestCache = friendRequestCache;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
-    private readonly FriendCommandHandler _friendCommandHandler = friendCommandHandler;
+    private readonly IFriendCommandHandler _friendCommandHandler = friendCommandHandler;
     private readonly TracingService _tracingService = tracingService;
 
 
@@ -269,6 +269,33 @@ public class WebsiteBackendHub(
 
             var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
             await PushFriendResponseDataToPlayer(req.Sender, null, sentRequests);
+        }
+        catch (Exception ex)
+        {
+            await Clients.Caller.SendAsync(FriendResponseType.FriendResponseMessage.ToString(), ex.Message);
+        }
+    }
+
+    public async Task BlockPlayer(string battleTag)
+    {
+        var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (currentUser == null)
+        {
+            return;
+        }
+        try
+        {
+            var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
+            CanBlock(friendList, battleTag);
+            friendList.BlockedBattleTags.Add(battleTag);
+            await _friendCommandHandler.UpsertFriendList(friendList);
+            await Clients.Caller.SendAsync(
+                FriendResponseType.FriendResponseData.ToString(),
+                friendList,
+                null,
+                null,
+                $"Player {battleTag} blocked!"
+            );
         }
         catch (Exception ex)
         {
