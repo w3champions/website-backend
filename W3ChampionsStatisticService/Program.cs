@@ -197,8 +197,8 @@ builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
 builder.Services.AddInterceptedTransient<IFriendRepository, FriendRepository>();
-builder.Services.AddInterceptedTransient<FriendCommandHandler>();
-builder.Services.AddInterceptedSingleton<FriendRequestCache>();
+builder.Services.AddInterceptedTransient<IFriendCommandHandler, FriendCommandHandler>();
+builder.Services.AddInterceptedSingleton<IFriendRequestCache, FriendRequestCache>();
 builder.Services.AddInterceptedSingleton<FriendListCache>();
 builder.Services.AddInterceptedTransient<FriendRepository>();
 
