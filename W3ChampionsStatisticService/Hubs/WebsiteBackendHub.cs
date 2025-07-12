@@ -376,23 +376,16 @@ public class WebsiteBackendHub(
         if (friendList.Friends.Count == 0)
             return [];
 
-        // TODO: Uncomment after the launcher has been updated to avoid querying the db excessively after a website-backend restart/deploy.
-        // List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(friendList.Friends.ToArray());
-        // List<FriendUser> friends = personalSettings.Select(x => new FriendUser
-        // {
-        //     BattleTag = x.Id,
-        //     ProfilePicture = x.ProfilePicture
-        // }).ToList();
+        List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(friendList.Friends.ToArray());
+        Dictionary<string, bool> friendStatus = _connections.GetUsersOnlineStatus(friendList.Friends);
 
-        var friendStatus = _connections.GetUsersOnlineStatus(friendList.Friends);
         List<FriendUser> friends = friendStatus
-            .Select(friend => new FriendUser
+            .Select(x => new FriendUser
             {
-                BattleTag = friend.Key,
-                ProfilePicture = ProfilePicture.Default(),
-                IsOnline = friend.Value,
-            })
-            .ToList();
+                BattleTag = x.Key,
+                ProfilePicture = personalSettings.FirstOrDefault(p => p.Id == x.Key)?.ProfilePicture,
+                IsOnline = x.Value,
+            }).ToList();
 
         return friends ?? [];
     }
