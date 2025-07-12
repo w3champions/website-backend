@@ -1,5 +1,4 @@
-﻿using MongoDB.Bson;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -96,32 +95,5 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
     public Task UnsetOne(string fieldName, string battleTag)
     {
         return UnsetOne<PersonalSetting>(fieldName, battleTag);
-    }
-
-    public async Task UpdateSchema(List<PersonalSetting> settings)
-    {
-        var updatedSettings = settings;
-        List<PersonalSetting> outOfDateDocuments = new();
-        foreach (var setting in settings)
-        {
-            if (!setting.ToBsonDocument().Contains("SpecialPictures"))
-            {
-                setting.SpecialPictures = Array.Empty<SpecialPicture>();
-                outOfDateDocuments.Add(setting);
-            }
-        }
-
-        await SaveMany(outOfDateDocuments);
-        return;
-    }
-
-    [NoTrace]
-    public bool SchemaOutdated(PersonalSetting setting)
-    {
-        if (!setting.ToBsonDocument().Contains("SpecialPictures"))
-        {
-            return true;
-        }
-        return false;
     }
 }
