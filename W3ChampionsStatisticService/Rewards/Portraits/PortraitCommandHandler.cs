@@ -30,9 +30,6 @@ public class PortraitCommandHandler(
     public async Task UpsertSpecialPortraits(PortraitsCommand command)
     {
         var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
-        await UpdateSchema(settings);
-        settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
-
         var validPortraits = await _portraitRepository.LoadPortraitDefinitions();
 
         foreach (var playerSettings in settings)
@@ -88,11 +85,6 @@ public class PortraitCommandHandler(
     public async Task UpdatePortraitDefinitions(PortraitsDefinitionCommand command)
     {
         await _portraitRepository.UpdatePortraitDefinition(command.Ids, command.Groups);
-    }
-
-    private async Task UpdateSchema(List<PersonalSetting> settings)
-    {
-        await _personalSettingsRepository.UpdateSchema(settings);
     }
 
     public async Task<List<PortraitGroup>> GetPortraitGroups()

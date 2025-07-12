@@ -15,5 +15,4 @@ public interface IPersonalSettingsRepository
     Task<List<PersonalSetting>> LoadAll();
     Task Save(PersonalSetting setting);
     Task SaveMany(List<PersonalSetting> settings);
-    Task UpdateSchema(List<PersonalSetting> settings);
 }
