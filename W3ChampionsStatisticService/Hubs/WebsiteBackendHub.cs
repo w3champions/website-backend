@@ -383,7 +383,7 @@ public class WebsiteBackendHub(
             .Select(x => new FriendUser
             {
                 BattleTag = x.Key,
-                ProfilePicture = personalSettings.FirstOrDefault(p => p.Id == x.Key)?.ProfilePicture,
+                ProfilePicture = personalSettings.FirstOrDefault(p => p.Id == x.Key)?.ProfilePicture ?? ProfilePicture.Default(),
                 IsOnline = x.Value,
             }).ToList();
 
