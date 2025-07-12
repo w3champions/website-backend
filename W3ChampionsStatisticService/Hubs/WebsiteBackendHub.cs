@@ -13,7 +13,6 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Services;
 using static W3ChampionsStatisticService.Filters.SignalRTraceContextFilter;
-using Serilog;
 
 namespace W3ChampionsStatisticService.Hubs;
 
@@ -376,7 +375,7 @@ public class WebsiteBackendHub(
         if (friendList.Friends.Count == 0)
             return [];
 
-        List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany(friendList.Friends.ToArray());
+        List<PersonalSetting> personalSettings = await _personalSettingsRepository.LoadMany([.. friendList.Friends]);
         Dictionary<string, bool> friendStatus = _connections.GetUsersOnlineStatus(friendList.Friends);
 
         List<FriendUser> friends = friendStatus

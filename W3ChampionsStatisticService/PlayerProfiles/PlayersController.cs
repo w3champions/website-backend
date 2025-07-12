@@ -75,7 +75,7 @@ public class PlayersController(
         var playersClan = await _clanRepository.LoadMemberShip(battleTag);
         var settings = await _personalSettingsRepository.Load(battleTag);
 
-        return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture));
+        return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture ?? ProfilePicture.Default()));
     }
 
     [HttpGet("clan-memberships")]
