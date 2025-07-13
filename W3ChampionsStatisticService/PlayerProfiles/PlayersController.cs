@@ -5,7 +5,6 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
-using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.Tracing;
@@ -24,7 +23,6 @@ public class PlayersController(
     GameModeStatQueryHandler queryHandler,
     IPersonalSettingsRepository personalSettingsRepository,
     IClanRepository clanRepository,
-    IW3CAuthenticationService authenticationService,
     PlayerAkaProvider playerAkaProvider,
     PlayerService playerService,
     IdentityServiceClient identityServiceClient) : ControllerBase
@@ -33,7 +31,6 @@ public class PlayersController(
     private readonly GameModeStatQueryHandler _queryHandler = queryHandler;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly IClanRepository _clanRepository = clanRepository;
-    private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
     private readonly PlayerService _playerService = playerService;
     private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
