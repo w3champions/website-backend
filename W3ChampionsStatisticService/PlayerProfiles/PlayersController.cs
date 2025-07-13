@@ -1,7 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
@@ -10,8 +9,11 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Services;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.Tracing;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
+using Serilog;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [ApiController]
@@ -75,7 +77,13 @@ public class PlayersController(
         var playersClan = await _clanRepository.LoadMemberShip(battleTag);
         var settings = await _personalSettingsRepository.Load(battleTag);
 
-        return Ok(new ChatDetailsDto(playersClan?.ClanId, settings?.ProfilePicture ?? ProfilePicture.Default()));
+        ProfilePicture profilePic = settings?.ProfilePicture;
+        if (profilePic == null)
+        {
+            Log.Information($"{battleTag} has no personal settings. Using a default.");
+            profilePic = ProfilePicture.Default();
+        }
+        return Ok(new ChatDetailsDto(playersClan?.ClanId, profilePic));
     }
 
     [HttpGet("clan-memberships")]
