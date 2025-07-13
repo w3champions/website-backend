@@ -20,77 +20,139 @@ using MongoDB.Driver;
 // Minimal in-memory implementations for testing (no inheritance)
 public class TestFriendListCache
 {
-    private readonly Dictionary<string, Friendlist> _lists = new();
-    public void Upsert(Friendlist friendList) => _lists[friendList.Id] = friendList;
-    public Task<Friendlist> LoadFriendList(string battleTag) =>
+    private readonly Dictionary<string, FriendlistCache> _lists = new();
+    public void Upsert(FriendlistCache friendList) => _lists[friendList.Id] = friendList;
+    public Task<FriendlistCache> LoadFriendList(string battleTag) =>
         Task.FromResult(_lists.TryGetValue(battleTag, out var fl) ? fl : null);
 }
 
-public class TestFriendRepository
-{
-    public Task UpsertFriendlist(Friendlist _) => Task.CompletedTask;
-}
-
 // Custom handler that implements IFriendCommandHandler
-public class TestFriendCommandHandler(TestFriendRepository repo, TestFriendListCache cache, FakeFriendRequestCache friendRequestCache) : IFriendCommandHandler
+public class TestFriendCommandHandler(FakeFriendService friendService) : IFriendCommandHandler
 {
-    private readonly TestFriendRepository _repo = repo;
-    private readonly TestFriendListCache _cache = cache;
-    private readonly FakeFriendRequestCache _friendRequestCache = friendRequestCache;
+    private readonly FakeFriendService _friendService = friendService;
 
-    public async Task<Friendlist> LoadFriendList(string battleTag)
+    public async Task<FriendlistCache> LoadFriendList(string battleTag)
     {
-        var friendList = await _cache.LoadFriendList(battleTag);
-        if (friendList == null)
-        {
-            friendList = new Friendlist(battleTag);
-            await UpsertFriendList(friendList);
-        }
-        return friendList;
+        return await _friendService.LoadFriendlist(battleTag);
     }
 
     public Task CreateFriendRequest(FriendRequest request) => Task.CompletedTask;
     public Task DeleteFriendRequest(FriendRequest request)
     {
-        _friendRequestCache.Delete(request);
+        _friendService.DeleteFriendRequest(request);
         return Task.CompletedTask;
     }
 
-    public async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
+    public async Task<FriendlistCache> AddFriend(FriendlistCache friendlist, string battleTag)
     {
-        if (!friendlist.Friends.Contains(battleTag))
-        {
-            friendlist.Friends.Add(battleTag);
-        }
+        friendlist.AddFriend(battleTag);
         await UpsertFriendList(friendlist);
         return friendlist;
     }
 
-    public async Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag)
+    public async Task<FriendlistCache> RemoveFriend(FriendlistCache friendlist, string battleTag)
     {
-        friendlist.Friends.Remove(battleTag);
+        friendlist.RemoveFriend(battleTag);
         await UpsertFriendList(friendlist);
         return friendlist;
     }
 
-    public async Task UpsertFriendList(Friendlist friendList)
+    public async Task UpsertFriendList(FriendlistCache friendList)
     {
-        await _repo.UpsertFriendlist(friendList);
-        _cache.Upsert(friendList);
+        await _friendService.UpsertFriendlist(friendList);
     }
 }
 
-// Fake FriendRequestCache for tests (implements IFriendRequestCache)
-public class FakeFriendRequestCache : IFriendRequestCache
+// Fake FriendService for tests (implements IFriendService)
+public class FakeFriendService : IFriendService
 {
     private readonly List<FriendRequest> _requests = new();
+    private readonly List<FriendlistCache> _friendlists = new();
+    
+    // FriendRequest operations
     public Task<List<FriendRequest>> LoadAllFriendRequests() => Task.FromResult(new List<FriendRequest>(_requests));
     public Task<List<FriendRequest>> LoadSentFriendRequests(string sender) => Task.FromResult(_requests.FindAll(r => r.Sender == sender));
     public Task<List<FriendRequest>> LoadReceivedFriendRequests(string receiver) => Task.FromResult(_requests.FindAll(r => r.Receiver == receiver));
     public Task<FriendRequest> LoadFriendRequest(FriendRequest req) => Task.FromResult(_requests.Find(r => r.Sender == req.Sender && r.Receiver == req.Receiver));
+    public Task<FriendRequest> LoadFriendRequest(string sender, string receiver) => Task.FromResult(_requests.Find(r => r.Sender == sender && r.Receiver == receiver));
     public Task<bool> FriendRequestExists(FriendRequest req) => Task.FromResult(_requests.Exists(r => r.Sender == req.Sender && r.Receiver == req.Receiver));
-    public void Insert(FriendRequest req) { _requests.Add(req); }
-    public void Delete(FriendRequest req) { _requests.RemoveAll(r => r.Sender == req.Sender && r.Receiver == req.Receiver); }
+    public Task<FriendRequest> CreateFriendRequest(FriendRequest request) { _requests.Add(request); return Task.FromResult(request); }
+    public Task DeleteFriendRequest(FriendRequest request) { _requests.RemoveAll(r => r.Sender == request.Sender && r.Receiver == request.Receiver); return Task.CompletedTask; }
+    public Task RefreshCache() => Task.CompletedTask;
+    
+    // Friendlist operations
+    public Task<FriendlistCache> LoadFriendlist(string battleTag)
+    {
+        var friendlist = _friendlists.Find(f => f.Id == battleTag);
+        if (friendlist == null)
+        {
+            friendlist = new FriendlistCache(battleTag);
+            _friendlists.Add(friendlist);
+        }
+        return Task.FromResult(friendlist);
+    }
+    
+    public Task UpsertFriendlist(FriendlistCache friendlist)
+    {
+        var existing = _friendlists.Find(f => f.Id == friendlist.Id);
+        if (existing != null)
+        {
+            _friendlists.Remove(existing);
+        }
+        _friendlists.Add(friendlist);
+        return Task.CompletedTask;
+    }
+    
+    
+    public async Task<bool> AddBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
+    {
+        var friendlist = await LoadFriendlist(ownerBattleTag);
+        return friendlist.AddBlocked(blockedBattleTag);
+    }
+    
+    public async Task<bool> RemoveBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
+    {
+        var friendlist = await LoadFriendlist(ownerBattleTag);
+        return friendlist.RemoveBlocked(blockedBattleTag);
+    }
+    
+    public async Task<bool> SetBlockAllRequests(string battleTag, bool blockAll)
+    {
+        var friendlist = await LoadFriendlist(battleTag);
+        friendlist.BlockAllRequests = blockAll;
+        return true;
+    }
+    
+    // Bidirectional friend operations
+    public async Task<bool> AddFriendship(string player1, string player2)
+    {
+        if (string.Equals(player1, player2, StringComparison.OrdinalIgnoreCase))
+            return false;
+            
+        var friendlist1 = await LoadFriendlist(player1);
+        var friendlist2 = await LoadFriendlist(player2);
+        
+        var result1 = friendlist1.AddFriend(player2);
+        var result2 = friendlist2.AddFriend(player1);
+        
+        return result1 || result2;
+    }
+    
+    public async Task<bool> RemoveFriendship(string player1, string player2)
+    {
+        if (string.Equals(player1, player2, StringComparison.OrdinalIgnoreCase))
+            return false;
+            
+        var friendlist1 = await LoadFriendlist(player1);
+        var friendlist2 = await LoadFriendlist(player2);
+        
+        var result1 = friendlist1.RemoveFriend(player2);
+        var result2 = friendlist2.RemoveFriend(player1);
+        
+        return result1 || result2;
+    }
+    
+    public void Dispose() { }
     public void AddRequest(FriendRequest req) => _requests.Add(req); // For test setup
 }
 
@@ -99,10 +161,8 @@ public class WebsiteBackendHubTests
     private Mock<IW3CAuthenticationService> authService;
     private ConnectionMapping connections;
     private Mock<IHttpContextAccessor> contextAccessor;
-    private FakeFriendRequestCache friendRequestCache;
+    private FakeFriendService friendService;
     private Mock<IPersonalSettingsRepository> personalSettingsRepo;
-    private TestFriendListCache friendListCache;
-    private TestFriendRepository friendRepository;
     private TracingService tracingService;
     private Mock<IHubCallerClients> mockClients;
     private Mock<ISingleClientProxy> mockCaller;
@@ -113,10 +173,8 @@ public class WebsiteBackendHubTests
         authService = new Mock<IW3CAuthenticationService>();
         connections = new ConnectionMapping();
         contextAccessor = new Mock<IHttpContextAccessor>();
-        friendRequestCache = new FakeFriendRequestCache();
+        friendService = new FakeFriendService();
         personalSettingsRepo = new Mock<IPersonalSettingsRepository>();
-        friendListCache = new TestFriendListCache();
-        friendRepository = new TestFriendRepository();
         tracingService = new TracingService(new System.Diagnostics.ActivitySource("test"), new Mock<IHttpContextAccessor>().Object);
         mockClients = new Mock<IHubCallerClients>();
         mockCaller = new Mock<ISingleClientProxy>();
@@ -129,7 +187,7 @@ public class WebsiteBackendHubTests
             authService.Object,
             connections,
             contextAccessor.Object,
-            friendRequestCache,
+            friendService,
             personalSettingsRepo.Object,
             friendCommandHandler,
             tracingService
@@ -146,9 +204,9 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task BlockPlayer_AddsToBlockedBattleTags_WhenNoFriendRequestExists()
     {
-        var friendList = new Friendlist("User#1234");
+        var friendList = new FriendlistCache("User#1234");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         var hub = CreateHub(friendCommandHandler);
 
@@ -173,10 +231,10 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task UnblockFriendRequestsFromPlayer_RemovesFromBlockedBattleTags()
     {
-        var friendList = new Friendlist("User#1234");
+        var friendList = new FriendlistCache("User#1234");
         friendList.BlockedBattleTags.Add("Blocked#5678");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         var hub = CreateHub(friendCommandHandler);
 
@@ -201,10 +259,10 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task RemoveFriend_RemovesFromFriendsList()
     {
-        var friendList = new Friendlist("User#1234");
+        var friendList = new FriendlistCache("User#1234");
         friendList.Friends.Add("Friend#5678");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         var hub = CreateHub(friendCommandHandler);
 
@@ -229,9 +287,9 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task LoadFriendListAndRequestsTraced_SendsFriendListAndRequests()
     {
-        var friendList = new Friendlist("User#1234");
+        var friendList = new FriendlistCache("User#1234");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         var hub = CreateHub(friendCommandHandler);
 
@@ -257,9 +315,9 @@ public class WebsiteBackendHubTests
     {
         personalSettingsRepo.Setup(r => r.Find(It.IsAny<string>())).ReturnsAsync(new PersonalSetting("Receiver#1"));
 
-        var friendList = new Friendlist("Sender#1");
+        var friendList = new FriendlistCache("Sender#1");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         var hub = CreateHub(friendCommandHandler);
 
@@ -287,18 +345,18 @@ public class WebsiteBackendHubTests
     [TestCase("BlockIncomingFriendRequest", "Receiver#1")]
     public async Task FriendRequestFlow_SendsSuccessMessage(string methodName, string userBattleTag)
     {
-        var friendList = new Friendlist(userBattleTag);
+        var friendList = new FriendlistCache(userBattleTag);
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         // Add the friend request to the cache so the flow will succeed
         var req = new FriendRequest("Sender#1", "Receiver#1");
-        friendRequestCache.AddRequest(req);
+        friendService.AddRequest(req);
 
         // For Accept and Block, also add the reciprocal request to the cache
         if (methodName == "AcceptIncomingFriendRequest" || methodName == "BlockIncomingFriendRequest")
         {
-            friendRequestCache.AddRequest(new FriendRequest("Receiver#1", "Sender#1"));
+            friendService.AddRequest(new FriendRequest("Receiver#1", "Sender#1"));
         }
 
         var hub = CreateHub(friendCommandHandler);
@@ -328,13 +386,13 @@ public class WebsiteBackendHubTests
                 Assert.That(receiverList.Friends, Does.Contain("Sender#1"));
                 Assert.That(senderList.Friends, Does.Contain("Receiver#1"));
                 // Only the original FriendRequest should be removed from cache
-                var reqInCache = await friendRequestCache.LoadFriendRequest(req);
+                var reqInCache = await friendService.LoadFriendRequest(req);
                 Assert.That(reqInCache, Is.Null);
                 break;
             case "DenyIncomingFriendRequest":
             case "DeleteOutgoingFriendRequest":
                 // FriendRequest should be removed from cache
-                var reqInCache2 = await friendRequestCache.LoadFriendRequest(req);
+                var reqInCache2 = await friendService.LoadFriendRequest(req);
                 Assert.That(reqInCache2, Is.Null);
                 break;
             case "BlockIncomingFriendRequest":
@@ -342,7 +400,7 @@ public class WebsiteBackendHubTests
                 var receiverListBlock = await friendCommandHandler.LoadFriendList("Receiver#1");
                 Assert.That(receiverListBlock.BlockedBattleTags, Does.Contain("Sender#1"));
                 // Only the original FriendRequest should be removed from cache
-                var reqInCache3 = await friendRequestCache.LoadFriendRequest(req);
+                var reqInCache3 = await friendService.LoadFriendRequest(req);
                 Assert.That(reqInCache3, Is.Null);
                 break;
         }

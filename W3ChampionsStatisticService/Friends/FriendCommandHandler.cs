@@ -2,80 +2,71 @@ using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Friends;
 
 public interface IFriendCommandHandler
 {
-    Task<Friendlist> LoadFriendList(string battleTag);
+    Task<FriendlistCache> LoadFriendList(string battleTag);
     Task CreateFriendRequest(FriendRequest request);
     Task DeleteFriendRequest(FriendRequest request);
-    Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag);
-    Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag);
-    Task UpsertFriendList(Friendlist friendList);
+    Task<FriendlistCache> AddFriend(FriendlistCache friendlist, string battleTag);
+    Task<FriendlistCache> RemoveFriend(FriendlistCache friendlist, string battleTag);
+    Task UpsertFriendList(FriendlistCache friendList);
 }
 
 [Trace]
 public class FriendCommandHandler(
-    FriendRepository friendRepository,
-    FriendRequestCache friendRequestCache,
-    FriendListCache friendListCache
+    IFriendService friendService
 ) : IFriendCommandHandler
 {
-    private readonly FriendRepository _friendRepository = friendRepository;
-    private readonly FriendRequestCache _friendRequestCache = friendRequestCache;
-    private readonly FriendListCache _friendListCache = friendListCache;
+    private readonly IFriendService _friendService = friendService;
 
-    public virtual async Task<Friendlist> LoadFriendList(string battleTag)
+    public virtual async Task<FriendlistCache> LoadFriendList(string battleTag)
     {
-        var friendList = await _friendListCache.LoadFriendList(battleTag);
-        if (friendList == null)
-        {
-            friendList = new Friendlist(battleTag);
-            await UpsertFriendList(friendList);
-        }
-        return friendList;
+        return await _friendService.LoadFriendlist(battleTag);
     }
 
     public virtual async Task CreateFriendRequest(FriendRequest request)
     {
-        await _friendRepository.CreateFriendRequest(request);
-        _friendRequestCache.Insert(request);
+        await _friendService.CreateFriendRequest(request);
     }
 
     public virtual async Task DeleteFriendRequest(FriendRequest request)
     {
         if (request != null)
         {
-            await _friendRepository.DeleteFriendRequest(request);
-            _friendRequestCache.Delete(request);
+            await _friendService.DeleteFriendRequest(request);
         }
     }
 
-    public virtual async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
+    public virtual async Task<FriendlistCache> AddFriend(FriendlistCache friendlist, string battleTag)
     {
-        if (!friendlist.Friends.Contains(battleTag))
-        {
-            friendlist.Friends.Add(battleTag);
-        }
-        await UpsertFriendList(friendlist);
-        return friendlist;
+        await _friendService.AddFriendship(friendlist.Id, battleTag);
+        // Return updated friendlist from cache for consistency
+        return await _friendService.LoadFriendlist(friendlist.Id);
     }
 
-    public virtual async Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag)
+    public virtual async Task<FriendlistCache> RemoveFriend(FriendlistCache friendlist, string battleTag)
     {
-        var friend = friendlist.Friends.SingleOrDefault(bTag => bTag == battleTag);
-        if (friend != null)
-        {
-            friendlist.Friends.Remove(friend);
-        }
-        await UpsertFriendList(friendlist);
-        return friendlist;
+        await _friendService.RemoveFriendship(friendlist.Id, battleTag);
+        // Return updated friendlist from cache for consistency
+        return await _friendService.LoadFriendlist(friendlist.Id);
     }
 
-    public virtual async Task UpsertFriendList(Friendlist friendList)
+    public virtual async Task<bool> AddBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
     {
-        await _friendRepository.UpsertFriendlist(friendList);
-        _friendListCache.Upsert(friendList);
+        return await _friendService.AddBlockedPlayer(ownerBattleTag, blockedBattleTag);
+    }
+
+    public virtual async Task<bool> RemoveBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
+    {
+        return await _friendService.RemoveBlockedPlayer(ownerBattleTag, blockedBattleTag);
+    }
+
+    public virtual async Task UpsertFriendList(FriendlistCache friendList)
+    {
+        await _friendService.UpsertFriendlist(friendList);
     }
 }

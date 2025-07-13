@@ -196,11 +196,8 @@ builder.Services.AddInterceptedTransient<IdentityServiceClient>();
 builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
-builder.Services.AddInterceptedTransient<IFriendRepository, FriendRepository>();
+builder.Services.AddInterceptedSingleton<IFriendService, FriendService>();
 builder.Services.AddInterceptedTransient<IFriendCommandHandler, FriendCommandHandler>();
-builder.Services.AddInterceptedSingleton<IFriendRequestCache, FriendRequestCache>();
-builder.Services.AddInterceptedSingleton<FriendListCache>();
-builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();

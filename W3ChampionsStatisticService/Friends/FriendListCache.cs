@@ -1,47 +1,68 @@
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using MongoDB.Driver;
+using System.Collections.Concurrent;
 using W3C.Domain.Repositories;
-using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Friends;
 
-[Trace]
-public class FriendListCache(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient)
+public class FriendlistCache(string battleTag) : IIdentifiable
 {
-    private List<Friendlist> _friendLists = [];
-    private readonly object _lock = new();
-
-    public async Task<Friendlist> LoadFriendList(string battleTag)
+    public string Id { get; set; } = battleTag;
+    
+    // Keep as List for MongoDB serialization but use HashSet for efficient operations
+    public List<string> Friends { get; set; } = new List<string>();
+    public List<string> BlockedBattleTags { get; set; } = new List<string>();
+    public bool BlockAllRequests { get; set; } = false;
+    
+    // In-memory cached HashSets for O(1) lookups - not persisted to DB
+    private HashSet<string> _friendsSet;
+    private HashSet<string> _blockedSet;
+    
+    // Lazy initialization for efficient lookups
+    public HashSet<string> FriendsSet => _friendsSet ??= new HashSet<string>(Friends);
+    public HashSet<string> BlockedSet => _blockedSet ??= new HashSet<string>(BlockedBattleTags);
+    
+    // Efficient O(1) operations
+    public bool IsFriend(string battleTag) => FriendsSet.Contains(battleTag);
+    public bool IsBlocked(string battleTag) => BlockedSet.Contains(battleTag);
+    
+    // Update methods that maintain sync between List and HashSet
+    public bool AddFriend(string battleTag)
     {
-        await UpdateCacheIfNeeded();
-        return _friendLists.FirstOrDefault(x => x.Id == battleTag);
-    }
-
-    public void Upsert(Friendlist friendList)
-    {
-        lock (_lock)
+        if (FriendsSet.Add(battleTag))
         {
-            _friendLists = [.. _friendLists.Where(x => x.Id != friendList.Id), friendList];
+            Friends.Add(battleTag);
+            return true;
         }
-
+        return false;
     }
-
-    public void Delete(Friendlist friendList)
+    
+    public bool RemoveFriend(string battleTag)
     {
-        lock (_lock)
+        if (FriendsSet.Remove(battleTag))
         {
-            _friendLists.Remove(friendList);
+            Friends.Remove(battleTag);
+            return true;
         }
+        return false;
     }
-
-    private async Task UpdateCacheIfNeeded()
+    
+    public bool AddBlocked(string battleTag)
     {
-        if (_friendLists.Count == 0)
+        if (BlockedSet.Add(battleTag))
         {
-            var mongoCollection = CreateCollection<Friendlist>();
-            _friendLists = await mongoCollection.Find(r => true).ToListAsync();
+            BlockedBattleTags.Add(battleTag);
+            return true;
         }
+        return false;
+    }
+    
+    public bool RemoveBlocked(string battleTag)
+    {
+        if (BlockedSet.Remove(battleTag))
+        {
+            BlockedBattleTags.Remove(battleTag);
+            return true;
+        }
+        return false;
     }
 }
