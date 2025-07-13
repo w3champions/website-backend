@@ -47,7 +47,7 @@ public class PersonalSettingsController(
     [HttpGet("{commaSeparatedBattleTags}/many")]
     public async Task<IActionResult> GetPersonalSettings(string commaSeparatedBattleTags)
     {
-        var splitBattleTags = commaSeparatedBattleTags.Split(new string[] { "," }, System.StringSplitOptions.RemoveEmptyEntries);
+        var splitBattleTags = commaSeparatedBattleTags.Split([","], System.StringSplitOptions.RemoveEmptyEntries);
 
         var settings = await _personalSettingsRepository.LoadMany(splitBattleTags);
 
