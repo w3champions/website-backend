@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -17,50 +18,13 @@ using Microsoft.AspNetCore.Http.Features;
 using NUnit.Framework;
 using MongoDB.Driver;
 
-// Minimal in-memory implementations for testing (no inheritance)
+// Test cache helper for storing friend lists in memory during tests
 public class TestFriendListCache
 {
     private readonly Dictionary<string, FriendlistCache> _lists = new();
     public void Upsert(FriendlistCache friendList) => _lists[friendList.Id] = friendList;
     public Task<FriendlistCache> LoadFriendList(string battleTag) =>
         Task.FromResult(_lists.TryGetValue(battleTag, out var fl) ? fl : null);
-}
-
-// Custom handler that implements IFriendCommandHandler
-public class TestFriendCommandHandler(FakeFriendService friendService) : IFriendCommandHandler
-{
-    private readonly FakeFriendService _friendService = friendService;
-
-    public async Task<FriendlistCache> LoadFriendList(string battleTag)
-    {
-        return await _friendService.LoadFriendlist(battleTag);
-    }
-
-    public Task CreateFriendRequest(FriendRequest request) => Task.CompletedTask;
-    public Task DeleteFriendRequest(FriendRequest request)
-    {
-        _friendService.DeleteFriendRequest(request);
-        return Task.CompletedTask;
-    }
-
-    public async Task<FriendlistCache> AddFriend(FriendlistCache friendlist, string battleTag)
-    {
-        friendlist.AddFriend(battleTag);
-        await UpsertFriendList(friendlist);
-        return friendlist;
-    }
-
-    public async Task<FriendlistCache> RemoveFriend(FriendlistCache friendlist, string battleTag)
-    {
-        friendlist.RemoveFriend(battleTag);
-        await UpsertFriendList(friendlist);
-        return friendlist;
-    }
-
-    public async Task UpsertFriendList(FriendlistCache friendList)
-    {
-        await _friendService.UpsertFriendlist(friendList);
-    }
 }
 
 // Fake FriendService for tests (implements IFriendService)
@@ -107,13 +71,18 @@ public class FakeFriendService : IFriendService
     public async Task<bool> AddBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
     {
         var friendlist = await LoadFriendlist(ownerBattleTag);
-        return friendlist.AddBlocked(blockedBattleTag);
+        if (!friendlist.BlockedBattleTags.Contains(blockedBattleTag))
+        {
+            friendlist.BlockedBattleTags.Add(blockedBattleTag);
+            return true;
+        }
+        return false;
     }
     
     public async Task<bool> RemoveBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
     {
         var friendlist = await LoadFriendlist(ownerBattleTag);
-        return friendlist.RemoveBlocked(blockedBattleTag);
+        return friendlist.BlockedBattleTags.Remove(blockedBattleTag);
     }
     
     public async Task<bool> SetBlockAllRequests(string battleTag, bool blockAll)
@@ -132,8 +101,20 @@ public class FakeFriendService : IFriendService
         var friendlist1 = await LoadFriendlist(player1);
         var friendlist2 = await LoadFriendlist(player2);
         
-        var result1 = friendlist1.AddFriend(player2);
-        var result2 = friendlist2.AddFriend(player1);
+        var result1 = false;
+        var result2 = false;
+        
+        if (!friendlist1.Friends.Contains(player2))
+        {
+            friendlist1.Friends.Add(player2);
+            result1 = true;
+        }
+        
+        if (!friendlist2.Friends.Contains(player1))
+        {
+            friendlist2.Friends.Add(player1);
+            result2 = true;
+        }
         
         return result1 || result2;
     }
@@ -146,8 +127,8 @@ public class FakeFriendService : IFriendService
         var friendlist1 = await LoadFriendlist(player1);
         var friendlist2 = await LoadFriendlist(player2);
         
-        var result1 = friendlist1.RemoveFriend(player2);
-        var result2 = friendlist2.RemoveFriend(player1);
+        var result1 = friendlist1.Friends.Remove(player2);
+        var result2 = friendlist2.Friends.Remove(player1);
         
         return result1 || result2;
     }
@@ -166,6 +147,7 @@ public class WebsiteBackendHubTests
     private TracingService tracingService;
     private Mock<IHubCallerClients> mockClients;
     private Mock<ISingleClientProxy> mockCaller;
+    private TestFriendListCache friendListCache;
 
     [SetUp]
     public void SetUp()
@@ -179,9 +161,10 @@ public class WebsiteBackendHubTests
         mockClients = new Mock<IHubCallerClients>();
         mockCaller = new Mock<ISingleClientProxy>();
         mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
+        friendListCache = new TestFriendListCache();
     }
 
-    private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
+    private WebsiteBackendHub CreateHub()
     {
         var hub = new WebsiteBackendHub(
             authService.Object,
@@ -189,7 +172,6 @@ public class WebsiteBackendHubTests
             contextAccessor.Object,
             friendService,
             personalSettingsRepo.Object,
-            friendCommandHandler,
             tracingService
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
@@ -206,9 +188,8 @@ public class WebsiteBackendHubTests
     {
         var friendList = new FriendlistCache("User#1234");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
-        var hub = CreateHub(friendCommandHandler);
+        var hub = CreateHub();
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
@@ -217,7 +198,9 @@ public class WebsiteBackendHubTests
 
         await hub.BlockPlayer("Blocked#5678");
 
-        Assert.That(friendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
+        // Check the actual state in the service after the operation
+        var updatedFriendList = await friendService.LoadFriendlist("User#1234");
+        Assert.That(updatedFriendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
         mockCaller.Verify(
             c => c.SendCoreAsync(
                 It.Is<string>(s => s.Contains("FriendResponseData")),
@@ -231,12 +214,9 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task UnblockFriendRequestsFromPlayer_RemovesFromBlockedBattleTags()
     {
-        var friendList = new FriendlistCache("User#1234");
-        friendList.BlockedBattleTags.Add("Blocked#5678");
-        friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
-
-        var hub = CreateHub(friendCommandHandler);
+        // Set up the blocked player in the friend service
+        await friendService.AddBlockedPlayer("User#1234", "Blocked#5678");
+        var hub = CreateHub();
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
@@ -245,7 +225,9 @@ public class WebsiteBackendHubTests
 
         await hub.UnblockFriendRequestsFromPlayer("Blocked#5678");
 
-        Assert.That(friendList.BlockedBattleTags, Does.Not.Contain("Blocked#5678"));
+        // Check the actual state in the service after the operation
+        var updatedFriendList = await friendService.LoadFriendlist("User#1234");
+        Assert.That(updatedFriendList.BlockedBattleTags, Does.Not.Contain("Blocked#5678"));
         mockCaller.Verify(
             c => c.SendCoreAsync(
                 It.Is<string>(s => s.Contains("FriendResponseData")),
@@ -259,12 +241,9 @@ public class WebsiteBackendHubTests
     [Test]
     public async Task RemoveFriend_RemovesFromFriendsList()
     {
-        var friendList = new FriendlistCache("User#1234");
-        friendList.Friends.Add("Friend#5678");
-        friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
-
-        var hub = CreateHub(friendCommandHandler);
+        // Set up the friendship in the friend service
+        await friendService.AddFriendship("User#1234", "Friend#5678");
+        var hub = CreateHub();
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
@@ -273,7 +252,9 @@ public class WebsiteBackendHubTests
 
         await hub.RemoveFriend("Friend#5678");
 
-        Assert.That(friendList.Friends, Does.Not.Contain("Friend#5678"));
+        // Check the actual state in the service after the operation
+        var updatedFriendList = await friendService.LoadFriendlist("User#1234");
+        Assert.That(updatedFriendList.Friends, Does.Not.Contain("Friend#5678"));
         mockCaller.Verify(
             c => c.SendCoreAsync(
                 It.Is<string>(s => s.Contains("FriendResponseData")),
@@ -289,9 +270,7 @@ public class WebsiteBackendHubTests
     {
         var friendList = new FriendlistCache("User#1234");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
-
-        var hub = CreateHub(friendCommandHandler);
+        var hub = CreateHub();
 
         var testUser = new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
@@ -317,9 +296,7 @@ public class WebsiteBackendHubTests
 
         var friendList = new FriendlistCache("Sender#1");
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
-
-        var hub = CreateHub(friendCommandHandler);
+        var hub = CreateHub();
 
         var testUser = new WebSocketUser { BattleTag = "Sender#1", ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
@@ -347,7 +324,6 @@ public class WebsiteBackendHubTests
     {
         var friendList = new FriendlistCache(userBattleTag);
         friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendService);
 
         // Add the friend request to the cache so the flow will succeed
         var req = new FriendRequest("Sender#1", "Receiver#1");
@@ -359,7 +335,7 @@ public class WebsiteBackendHubTests
             friendService.AddRequest(new FriendRequest("Receiver#1", "Sender#1"));
         }
 
-        var hub = CreateHub(friendCommandHandler);
+        var hub = CreateHub();
         var testUser = new WebSocketUser { BattleTag = userBattleTag, ConnectionId = "conn1" };
         connections.Add("conn1", testUser);
         SetHubContext(hub, "conn1");
@@ -381,8 +357,8 @@ public class WebsiteBackendHubTests
         {
             case "AcceptIncomingFriendRequest":
                 // Both users should be friends with each other
-                var receiverList = await friendCommandHandler.LoadFriendList("Receiver#1");
-                var senderList = await friendCommandHandler.LoadFriendList("Sender#1");
+                var receiverList = await friendService.LoadFriendlist("Receiver#1");
+                var senderList = await friendService.LoadFriendlist("Sender#1");
                 Assert.That(receiverList.Friends, Does.Contain("Sender#1"));
                 Assert.That(senderList.Friends, Does.Contain("Receiver#1"));
                 // Only the original FriendRequest should be removed from cache
@@ -397,7 +373,7 @@ public class WebsiteBackendHubTests
                 break;
             case "BlockIncomingFriendRequest":
                 // Sender should be in blocked list
-                var receiverListBlock = await friendCommandHandler.LoadFriendList("Receiver#1");
+                var receiverListBlock = await friendService.LoadFriendlist("Receiver#1");
                 Assert.That(receiverListBlock.BlockedBattleTags, Does.Contain("Sender#1"));
                 // Only the original FriendRequest should be removed from cache
                 var reqInCache3 = await friendService.LoadFriendRequest(req);

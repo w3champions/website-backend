@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -20,27 +21,68 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, FriendRequest>> _requestsByReceiver = new();
     private volatile bool _requestCacheInitialized = false;
     private readonly SemaphoreSlim _requestInitSemaphore = new(1, 1);
-    
+
     // FriendList caching infrastructure
     private readonly ConcurrentDictionary<string, FriendlistCache> _friendListsById = new();
     private volatile bool _friendListCacheInitialized = false;
     private readonly SemaphoreSlim _friendListInitSemaphore = new(1, 1);
-    
+
     private bool _disposed = false;
 
     private static string GetCompositeKey(string sender, string receiver) => $"{sender}|{receiver}";
     private static string GetCompositeKey(FriendRequest request) => GetCompositeKey(request.Sender, request.Receiver);
 
+    // Generic MongoDB update helpers to reduce duplication
+    private async Task<bool> AddToSetWithUpsert<TField>(string battleTag, Expression<Func<FriendlistCache, IEnumerable<TField>>> field, TField value)
+    {
+        var mongoCollection = CreateCollection<FriendlistCache>();
+        var filter = Builders<FriendlistCache>.Filter.Eq(f => f.Id, battleTag);
+        var update = Builders<FriendlistCache>.Update
+            .AddToSet(field, value)
+            .SetOnInsert(f => f.Id, battleTag)
+            .SetOnInsert(f => f.Friends, new List<string>())
+            .SetOnInsert(f => f.BlockedBattleTags, new List<string>())
+            .SetOnInsert(f => f.BlockAllRequests, false);
+
+        var result = await mongoCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
+
+        // Remove from cache to force reload on next access
+        if (result.ModifiedCount > 0 || result.UpsertedId != null)
+        {
+            _friendListsById.TryRemove(battleTag, out _);
+        }
+
+        return result.ModifiedCount > 0 || result.UpsertedId != null;
+    }
+
+    private async Task<bool> PullFromList<TField>(string battleTag, Expression<Func<FriendlistCache, IEnumerable<TField>>> field, TField value)
+    {
+        var mongoCollection = CreateCollection<FriendlistCache>();
+        var filter = Builders<FriendlistCache>.Filter.Eq(f => f.Id, battleTag);
+        var update = Builders<FriendlistCache>.Update.Pull(field, value);
+
+        var result = await mongoCollection.UpdateOneAsync(filter, update);
+
+        // Remove from cache to force reload on next access
+        if (result.ModifiedCount > 0)
+        {
+            _friendListsById.TryRemove(battleTag, out _);
+        }
+
+        return result.ModifiedCount > 0;
+    }
+
     // Friendlist operations with efficient caching
     public async Task<FriendlistCache> LoadFriendlist(string battleTag)
     {
         await EnsureFriendListCacheInitialized();
-        
+
         if (_friendListsById.TryGetValue(battleTag, out var friendlist))
         {
             return friendlist;
         }
 
+        // TODO: This is wrong
         // Create new friendlist if not found
         friendlist = new FriendlistCache(battleTag);
         await UpsertFriendlist(friendlist);
@@ -67,78 +109,22 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
     // Internal helper methods for single-direction operations
     private async Task<bool> AddFriend(string ownerBattleTag, string friendBattleTag)
     {
-        var mongoCollection = CreateCollection<FriendlistCache>();
-        var filter = Builders<FriendlistCache>.Filter.Eq(f => f.Id, ownerBattleTag);
-        var update = Builders<FriendlistCache>.Update
-            .AddToSet(f => f.Friends, friendBattleTag)
-            .SetOnInsert(f => f.Id, ownerBattleTag)
-            .SetOnInsert(f => f.BlockedBattleTags, new List<string>())
-            .SetOnInsert(f => f.BlockAllRequests, false);
-
-        var result = await mongoCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-        
-        // Update cache if exists
-        if (_friendListsById.TryGetValue(ownerBattleTag, out var cachedList))
-        {
-            cachedList.AddFriend(friendBattleTag);
-        }
-
-        return result.ModifiedCount > 0 || result.UpsertedId != null;
+        return await AddToSetWithUpsert(ownerBattleTag, f => f.Friends, friendBattleTag);
     }
 
     private async Task<bool> RemoveFriend(string ownerBattleTag, string friendBattleTag)
     {
-        var mongoCollection = CreateCollection<FriendlistCache>();
-        var filter = Builders<FriendlistCache>.Filter.Eq(f => f.Id, ownerBattleTag);
-        var update = Builders<FriendlistCache>.Update.Pull(f => f.Friends, friendBattleTag);
-
-        var result = await mongoCollection.UpdateOneAsync(filter, update);
-        
-        // Update cache if exists
-        if (_friendListsById.TryGetValue(ownerBattleTag, out var cachedList))
-        {
-            cachedList.RemoveFriend(friendBattleTag);
-        }
-
-        return result.ModifiedCount > 0;
+        return await PullFromList(ownerBattleTag, f => f.Friends, friendBattleTag);
     }
 
     public async Task<bool> AddBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
     {
-        var mongoCollection = CreateCollection<FriendlistCache>();
-        var filter = Builders<FriendlistCache>.Filter.Eq(f => f.Id, ownerBattleTag);
-        var update = Builders<FriendlistCache>.Update
-            .AddToSet(f => f.BlockedBattleTags, blockedBattleTag)
-            .SetOnInsert(f => f.Id, ownerBattleTag)
-            .SetOnInsert(f => f.Friends, new List<string>())
-            .SetOnInsert(f => f.BlockAllRequests, false);
-
-        var result = await mongoCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-        
-        // Update cache if exists
-        if (_friendListsById.TryGetValue(ownerBattleTag, out var cachedList))
-        {
-            cachedList.AddBlocked(blockedBattleTag);
-        }
-
-        return result.ModifiedCount > 0 || result.UpsertedId != null;
+        return await AddToSetWithUpsert(ownerBattleTag, f => f.BlockedBattleTags, blockedBattleTag);
     }
 
     public async Task<bool> RemoveBlockedPlayer(string ownerBattleTag, string blockedBattleTag)
     {
-        var mongoCollection = CreateCollection<FriendlistCache>();
-        var filter = Builders<FriendlistCache>.Filter.Eq(f => f.Id, ownerBattleTag);
-        var update = Builders<FriendlistCache>.Update.Pull(f => f.BlockedBattleTags, blockedBattleTag);
-
-        var result = await mongoCollection.UpdateOneAsync(filter, update);
-        
-        // Update cache if exists
-        if (_friendListsById.TryGetValue(ownerBattleTag, out var cachedList))
-        {
-            cachedList.RemoveBlocked(blockedBattleTag);
-        }
-
-        return result.ModifiedCount > 0;
+        return await PullFromList(ownerBattleTag, f => f.BlockedBattleTags, blockedBattleTag);
     }
 
     public async Task<bool> SetBlockAllRequests(string battleTag, bool blockAll)
@@ -152,11 +138,11 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
             .SetOnInsert(f => f.BlockedBattleTags, new List<string>());
 
         var result = await mongoCollection.UpdateOneAsync(filter, update, new UpdateOptions { IsUpsert = true });
-        
-        // Update cache if exists
-        if (_friendListsById.TryGetValue(battleTag, out var cachedList))
+
+        // Remove from cache to force reload on next access
+        if (result.ModifiedCount > 0 || result.UpsertedId != null)
         {
-            cachedList.BlockAllRequests = blockAll;
+            _friendListsById.TryRemove(battleTag, out _);
         }
 
         return result.ModifiedCount > 0 || result.UpsertedId != null;
@@ -171,9 +157,9 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
         // Execute both operations in parallel for efficiency
         var task1 = AddFriend(player1, player2);
         var task2 = AddFriend(player2, player1);
-        
+
         var results = await Task.WhenAll(task1, task2);
-        
+
         // Return true if either operation succeeded (handles cases where one direction already exists)
         return results[0] || results[1];
     }
@@ -186,9 +172,9 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
         // Execute both operations in parallel for efficiency
         var task1 = RemoveFriend(player1, player2);
         var task2 = RemoveFriend(player2, player1);
-        
+
         var results = await Task.WhenAll(task1, task2);
-        
+
         // Return true if either operation succeeded
         return results[0] || results[1];
     }
@@ -204,16 +190,16 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
     public virtual async Task<List<FriendRequest>> LoadSentFriendRequests(string sender)
     {
         await EnsureRequestCacheInitialized();
-        return _requestsBySender.TryGetValue(sender, out var requests) 
-            ? requests.Values.ToList() 
+        return _requestsBySender.TryGetValue(sender, out var requests)
+            ? requests.Values.ToList()
             : new List<FriendRequest>();
     }
 
     public virtual async Task<List<FriendRequest>> LoadReceivedFriendRequests(string receiver)
     {
         await EnsureRequestCacheInitialized();
-        return _requestsByReceiver.TryGetValue(receiver, out var requests) 
-            ? requests.Values.ToList() 
+        return _requestsByReceiver.TryGetValue(receiver, out var requests)
+            ? requests.Values.ToList()
             : new List<FriendRequest>();
     }
 
@@ -243,13 +229,13 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
         if (request == null) return null;
 
         var key = GetCompositeKey(request);
-        
+
         if (_requestsByCompositeKey.TryAdd(key, request))
         {
-            _requestsBySender.AddOrUpdate(request.Sender, 
+            _requestsBySender.AddOrUpdate(request.Sender,
                 new ConcurrentDictionary<string, FriendRequest> { [key] = request },
                 (_, existing) => { existing.TryAdd(key, request); return existing; });
-            
+
             _requestsByReceiver.AddOrUpdate(request.Receiver,
                 new ConcurrentDictionary<string, FriendRequest> { [key] = request },
                 (_, existing) => { existing.TryAdd(key, request); return existing; });
@@ -274,7 +260,7 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
         if (request == null) return;
 
         var key = GetCompositeKey(request);
-        
+
         if (_requestsByCompositeKey.TryRemove(key, out _))
         {
             RemoveFromIndexes(request);
@@ -295,7 +281,7 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
     private void RemoveFromIndexes(FriendRequest req)
     {
         var key = GetCompositeKey(req);
-        
+
         if (_requestsBySender.TryGetValue(req.Sender, out var senderDict))
         {
             senderDict.TryRemove(key, out _);
@@ -324,7 +310,7 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
             _requestsBySender.Clear();
             _requestsByReceiver.Clear();
             _requestCacheInitialized = false;
-            
+
             await LoadRequestCacheFromDatabase();
         }
         finally
@@ -337,7 +323,7 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
         {
             _friendListsById.Clear();
             _friendListCacheInitialized = false;
-            
+
             await LoadFriendListCacheFromDatabase();
         }
         finally
@@ -390,23 +376,23 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
     {
         var mongoCollection = CreateCollection<FriendRequest>();
         var requests = await mongoCollection.Find(r => true).ToListAsync();
-        
+
         foreach (var request in requests)
         {
             var key = GetCompositeKey(request);
-            
+
             if (_requestsByCompositeKey.TryAdd(key, request))
             {
                 _requestsBySender.AddOrUpdate(request.Sender,
                     new ConcurrentDictionary<string, FriendRequest> { [key] = request },
                     (_, existing) => { existing.TryAdd(key, request); return existing; });
-                    
+
                 _requestsByReceiver.AddOrUpdate(request.Receiver,
                     new ConcurrentDictionary<string, FriendRequest> { [key] = request },
                     (_, existing) => { existing.TryAdd(key, request); return existing; });
             }
         }
-        
+
         _requestCacheInitialized = true;
     }
 
@@ -414,12 +400,12 @@ public class FriendService(MongoClient mongoClient) : MongoDbRepositoryBase(mong
     {
         var mongoCollection = CreateCollection<FriendlistCache>();
         var friendLists = await mongoCollection.Find(r => true).ToListAsync();
-        
+
         foreach (var friendList in friendLists)
         {
             _friendListsById.TryAdd(friendList.Id, friendList);
         }
-        
+
         _friendListCacheInitialized = true;
     }
 

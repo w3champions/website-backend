@@ -197,7 +197,6 @@ builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
 builder.Services.AddInterceptedSingleton<IFriendService, FriendService>();
-builder.Services.AddInterceptedTransient<IFriendCommandHandler, FriendCommandHandler>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
