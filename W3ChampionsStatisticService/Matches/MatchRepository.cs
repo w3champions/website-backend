@@ -29,17 +29,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         try
         {
             await Upsert(matchup, m => m.MatchId == matchup.MatchId);
-            Log.Debug("Successfully upserted match {MatchId}", matchup.MatchId);
-        }
-        catch (MongoWriteException ex) when (ex.WriteError?.Code == 11000)
-        {
-            // Duplicate key error - match already exists, skip it
-            Log.Debug("Match {MatchId} already exists (duplicate key), skipping", matchup.MatchId);
         }
         catch (MongoCommandException ex) when (ex.Message.Contains("immutable") && ex.Message.Contains("_id"))
         {
             // _id immutable field error - match already exists with different _id, skip it
-            Log.Debug("Match {MatchId} already exists (_id conflict), skipping", matchup.MatchId);
+            Log.Warning("Match {MatchId} already exists (_id conflict), skipping", matchup.MatchId);
         }
     }
 
