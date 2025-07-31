@@ -25,29 +25,21 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public async Task Insert(Matchup matchup)
     {
+        // TODO: Remove try-catch once we have transactions in Matchmaking service
         try
         {
-            // Clear the Id to let MongoDB assign it for new documents, or it will be set by the upsert if document exists
-            matchup.Id = ObjectId.Empty;
             await Upsert(matchup, m => m.MatchId == matchup.MatchId);
+            Log.Debug("Successfully upserted match {MatchId}", matchup.MatchId);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Code == 11000)
+        {
+            // Duplicate key error - match already exists, skip it
+            Log.Debug("Match {MatchId} already exists (duplicate key), skipping", matchup.MatchId);
         }
         catch (MongoCommandException ex) when (ex.Message.Contains("immutable") && ex.Message.Contains("_id"))
         {
-            Log.Warning("MongoDB _id modification error for match {MatchId}. This should not happen with ObjectId.Empty. Investigating...", matchup.MatchId);
-
-            // This shouldn't happen if we set Id to Empty, but if it does, let's handle it
-            var existingMatch = await LoadFirst<Matchup>(m => m.MatchId == matchup.MatchId);
-            if (existingMatch != null)
-            {
-                Log.Information("Found existing match {MatchId} with different _id. Document already exists, operation should be idempotent.", matchup.MatchId);
-                // Match already exists, this is effectively a no-op which is what we want
-                return;
-            }
-            else
-            {
-                Log.Error("No existing match found for {MatchId} but got _id immutable error. This indicates a MongoDB driver issue.", matchup.MatchId);
-                throw;
-            }
+            // _id immutable field error - match already exists with different _id, skip it
+            Log.Debug("Match {MatchId} already exists (_id conflict), skipping", matchup.MatchId);
         }
     }
 
