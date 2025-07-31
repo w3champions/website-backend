@@ -23,9 +23,24 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 {
     private readonly IOngoingMatchesCache _cache = cache;
 
-    public Task Insert(Matchup matchup)
+    public async Task Insert(Matchup matchup)
     {
-        return Upsert(matchup, m => m.MatchId == matchup.MatchId);
+        // TODO: Remove try-catch once we have transactions in Matchmaking service
+        try
+        {
+            await Upsert(matchup, m => m.MatchId == matchup.MatchId);
+            Log.Debug("Successfully upserted match {MatchId}", matchup.MatchId);
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Code == 11000)
+        {
+            // Duplicate key error - match already exists, skip it
+            Log.Debug("Match {MatchId} already exists (duplicate key), skipping", matchup.MatchId);
+        }
+        catch (MongoCommandException ex) when (ex.Message.Contains("immutable") && ex.Message.Contains("_id"))
+        {
+            // _id immutable field error - match already exists with different _id, skip it
+            Log.Debug("Match {MatchId} already exists (_id conflict), skipping", matchup.MatchId);
+        }
     }
 
     public async Task<List<Matchup>> LoadFor(

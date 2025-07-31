@@ -14,7 +14,17 @@ public class GameLengthStat : IIdentifiable
 
     public void Record(TimeSpan duration)
     {
+        if (duration.TotalSeconds <= 0)
+        {
+            return;
+        }
+
         var gameLengths = Lengths.Where(m => m.Seconds < duration.TotalSeconds);
+        if (!gameLengths.Any())
+        {
+            return;
+        }
+
         var ordered = gameLengths.OrderBy(m => m.Seconds);
         var gameLength = ordered.Last();
         gameLength.AddGame();
