@@ -18,7 +18,7 @@ public class GameLengthStatHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadMod
     public async Task Update(MatchFinishedEvent nextEvent)
     {
         if (nextEvent.WasFakeEvent) return;
-        
+
         GameMode mode = nextEvent.match.gameMode;
         var stat = await _w3Stats.LoadGameLengths(mode) ?? GameLengthStat.Create(mode);
         var endTime = DateTimeOffset.FromUnixTimeMilliseconds(nextEvent.match.endTime);
@@ -27,7 +27,7 @@ public class GameLengthStatHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadMod
 
         if (duration.TotalSeconds <= 0)
         {
-            Log.Debug("Skipping game length recording for match {MatchId} with zero or negative duration: {Duration} seconds", 
+            Log.Debug("Skipping game length recording for match {MatchId} with zero or negative duration: {Duration} seconds",
                 nextEvent.match.id, duration.TotalSeconds);
             return;
         }

@@ -34,7 +34,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         catch (MongoCommandException ex) when (ex.Message.Contains("immutable") && ex.Message.Contains("_id"))
         {
             Log.Warning("MongoDB _id modification error for match {MatchId}. This should not happen with ObjectId.Empty. Investigating...", matchup.MatchId);
-            
+
             // This shouldn't happen if we set Id to Empty, but if it does, let's handle it
             var existingMatch = await LoadFirst<Matchup>(m => m.MatchId == matchup.MatchId);
             if (existingMatch != null)
