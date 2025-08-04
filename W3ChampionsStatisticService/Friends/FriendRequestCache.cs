@@ -46,13 +46,35 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     public virtual async Task<FriendRequest> LoadFriendRequest(FriendRequest req)
     {
         await UpdateCacheIfNeeded();
-        return _requests.SingleOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver);
+        var match = _requests.FirstOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver);
+        if (match != null)
+        {
+            // Remove any duplicates except the first found
+            lock (_lock)
+            {
+                _requests = _requests
+                    .Where(x => !(x.Sender == req.Sender && x.Receiver == req.Receiver) || ReferenceEquals(x, match))
+                    .ToList();
+            }
+        }
+        return match;
     }
 
     public virtual async Task<bool> FriendRequestExists(FriendRequest req)
     {
         await UpdateCacheIfNeeded();
-        return _requests.SingleOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver) != null;
+        var match = _requests.FirstOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver);
+        if (match != null)
+        {
+            // Remove any duplicates except the first found
+            lock (_lock)
+            {
+                _requests = _requests
+                    .Where(x => !(x.Sender == req.Sender && x.Receiver == req.Receiver) || ReferenceEquals(x, match))
+                    .ToList();
+            }
+        }
+        return match != null;
     }
 
     public virtual void Insert(FriendRequest req)
