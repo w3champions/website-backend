@@ -32,7 +32,6 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Grafana.Loki" Version="8.3.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.10.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Swagger" Version="8.1.1" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="8.1.1" />
