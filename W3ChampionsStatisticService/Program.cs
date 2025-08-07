@@ -11,6 +11,8 @@ using Prometheus;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Net;
+using IPNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 using W3C.Domain.ChatService;
 using W3C.Domain.CommonValueObjects;
@@ -257,8 +259,11 @@ if (runBackfill == "true")
 
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto });
-
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    KnownNetworks = { new IPNetwork(IPAddress.Parse("172.18.0.0"), 16) } // Docker network
+});
 app.Use(
     (context, next) =>
     {
