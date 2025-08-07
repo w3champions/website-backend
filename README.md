@@ -100,3 +100,4 @@ To run integration tests against the local database, edit this line:
 https://github.com/w3champions/website-backend/blob/0f54e9216764aaf8617baacd54f3875036cc7b68/WC3ChampionsStatisticService.UnitTests/IntegrationTestBase.cs#L14
 
 Warning: this WILL drop your local database, so be warned!
+
