@@ -19,6 +19,7 @@ public static class TestDtoHelper
     public static MatchFinishedEvent CreateFakeEvent()
     {
         var fixture = new Fixture { RepeatCount = 2 };
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
         var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         var name1 = "peter#123";
@@ -47,6 +48,7 @@ public static class TestDtoHelper
     public static MatchFinishedEvent CreateFake2v2AtEvent()
     {
         var fixture = new Fixture { RepeatCount = 4 };
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
         var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         fakeEvent.WasFakeEvent = false;
@@ -90,6 +92,7 @@ public static class TestDtoHelper
     public static MatchFinishedEvent CreateFakeFFAEvent()
     {
         var fixture = new Fixture { RepeatCount = 4 };
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
         var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         fakeEvent.WasFakeEvent = false;
@@ -128,6 +131,7 @@ public static class TestDtoHelper
     public static MatchFinishedEvent CreateFakeFootmenFrenzyEvent()
     {
         var fixture = new Fixture();
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
         var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         fakeEvent.WasFakeEvent = false;
@@ -149,13 +153,24 @@ public static class TestDtoHelper
 
     private static void CreateMatchTeam(MatchFinishedEvent fakeEvent, bool won, int team, int playersPerTeam)
     {
+        CreateMatchTeamWithRanking(fakeEvent, won, team, playersPerTeam);
+    }
+
+    private static void CreateMatchTeamWithRanking(MatchFinishedEvent fakeEvent, bool won, int team, int playersPerTeam, int? matchRanking = null, string teamName = null)
+    {
+        var finalTeamName = teamName ?? $"Team{team}";
         for (int i = 0; i < playersPerTeam; i++)
         {
             var player = new PlayerMMrChange()
             {
-                battleTag = $"{team}#{i}",
+                battleTag = $"{finalTeamName}Player{i + 1}#{team}{i}",
                 team = team,
-                won = won
+                won = won,
+                matchRanking = matchRanking,
+                mmr = new Mmr { rating = 1500.0 },
+                updatedMmr = new Mmr { rating = won ? 1520.0 : 1480.0 },
+                race = Race.HU,
+                rndRace = Race.RnD
             };
 
             fakeEvent.match.players.Add(player);
@@ -165,6 +180,7 @@ public static class TestDtoHelper
     public static MatchFinishedEvent CreateFake2v2RTEvent()
     {
         var fixture = new Fixture { RepeatCount = 4 };
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
         var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         fakeEvent.WasFakeEvent = false;
@@ -207,6 +223,7 @@ public static class TestDtoHelper
     public static MatchFinishedEvent CreateFake4v4Event()
     {
         var fixture = new Fixture { RepeatCount = 8 };
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
         var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
 
         fakeEvent.WasFakeEvent = false;
@@ -376,6 +393,139 @@ public static class TestDtoHelper
         fakeEvent.match.season = 0;
         fakeEvent.match.id = fakeEvent.Id.ToString();
         fakeEvent.match.state = EMatchState.CANCELED;
+
+        return fakeEvent;
+    }
+
+    public static MatchFinishedEvent CreateFakeSurvivalChaosEvent(bool enableMatchRanking = true)
+    {
+        var fixture = new Fixture { RepeatCount = 4 };
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
+        var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.WasFakeEvent = false;
+        fakeEvent.WasFromSync = false;
+
+        var winner = "FirstPlace#123";
+        var second = "SecondPlace#456";
+        var third = "ThirdPlace#789";
+        var fourth = "FourthPlace#000";
+
+        fakeEvent.match.map = "Maps/frozenthrone/community/(4)survivorchaos.w3x";
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.gameMode = GameMode.FFA;
+        fakeEvent.match.season = 0;
+
+        // Each player is on their own team in survival chaos
+        fakeEvent.match.players[0].battleTag = fourth;
+        fakeEvent.match.players[0].team = 0;
+        fakeEvent.match.players[0].won = false; // 4th place
+        fakeEvent.match.players[0].race = Race.HU;
+        fakeEvent.match.players[0].matchRanking = enableMatchRanking ? 3 : null; // 4th place (0-based: 3)
+        fakeEvent.match.players[0].mmr = new Mmr { rating = 1500.0 };
+        fakeEvent.match.players[0].updatedMmr = new Mmr { rating = 1480.0 };
+
+        fakeEvent.match.players[1].battleTag = winner;
+        fakeEvent.match.players[1].team = 1;
+        fakeEvent.match.players[1].won = true; // 1st place (winner)
+        fakeEvent.match.players[1].race = Race.OC;
+        fakeEvent.match.players[1].matchRanking = enableMatchRanking ? 0 : null; // 1st place (0-based: 0)
+        fakeEvent.match.players[1].mmr = new Mmr { rating = 1500.0 };
+        fakeEvent.match.players[1].updatedMmr = new Mmr { rating = 1520.0 };
+
+        fakeEvent.match.players[2].battleTag = third;
+        fakeEvent.match.players[2].team = 2;
+        fakeEvent.match.players[2].won = false; // 3rd place
+        fakeEvent.match.players[2].race = Race.UD;
+        fakeEvent.match.players[2].matchRanking = enableMatchRanking ? 2 : null; // 3rd place (0-based: 2)
+        fakeEvent.match.players[2].mmr = new Mmr { rating = 1500.0 };
+        fakeEvent.match.players[2].updatedMmr = new Mmr { rating = 1490.0 };
+
+        fakeEvent.match.players[3].battleTag = second;
+        fakeEvent.match.players[3].team = 3;
+        fakeEvent.match.players[3].won = false; // 2nd place
+        fakeEvent.match.players[3].race = Race.NE;
+        fakeEvent.match.players[3].matchRanking = enableMatchRanking ? 1 : null; // 2nd place (0-based: 1)
+        fakeEvent.match.players[3].mmr = new Mmr { rating = 1500.0 };
+        fakeEvent.match.players[3].updatedMmr = new Mmr { rating = 1500.0 };
+
+        return fakeEvent;
+    }
+
+    public static MatchFinishedEvent CreateFakeFootmenFrenzyWithTeamRanking()
+    {
+        var fixture = new Fixture();
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
+        var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.WasFakeEvent = false;
+        fakeEvent.WasFromSync = false;
+
+        fakeEvent.match.players = new List<PlayerMMrChange>();
+
+        // Team 0: 1st place (won) - ranking 0
+        CreateMatchTeamWithRanking(fakeEvent, won: true, team: 0, playersPerTeam: 3, matchRanking: 0, "FirstPlace");
+        // Team 1: 4th place (lost) - ranking 3
+        CreateMatchTeamWithRanking(fakeEvent, won: false, team: 1, playersPerTeam: 3, matchRanking: 3, "FourthPlace");
+        // Team 2: 2nd place (lost) - ranking 1
+        CreateMatchTeamWithRanking(fakeEvent, won: false, team: 2, playersPerTeam: 3, matchRanking: 1, "SecondPlace");
+        // Team 3: 3rd place (lost) - ranking 2
+        CreateMatchTeamWithRanking(fakeEvent, won: false, team: 3, playersPerTeam: 3, matchRanking: 2, "ThirdPlace");
+
+        fakeEvent.match.season = 0;
+        fakeEvent.match.gameMode = GameMode.GM_FOOTMEN_FRENZY;
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.map = "W3Champions/Custom/Footmen_Frenzy_v5.8.0_W3C.w3x";
+
+        return fakeEvent;
+    }
+
+    public static MatchFinishedEvent CreateFakeLineTowerWarsWithIndividualRanking()
+    {
+        var fixture = new Fixture();
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
+        var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.WasFakeEvent = false;
+        fakeEvent.WasFromSync = false;
+
+        fakeEvent.match.players = new List<PlayerMMrChange>();
+        fakeEvent.match.map = "W3Champions/Custom/LineTowerWars_v1.0.w3x";
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.gameMode = GameMode.GM_LTW_FFA;
+        fakeEvent.match.season = 0;
+
+        var positions = new[] { "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth" };
+
+        // Create 8 individual players (1 player per "team") with individual rankings
+        // Only the player with ranking 0 won, all others lost
+        for (int i = 0; i < 8; i++)
+        {
+            CreateMatchTeamWithRanking(fakeEvent, won: i == 0, team: i, playersPerTeam: 1, matchRanking: i, positions[i] + "Place");
+        }
+
+        return fakeEvent;
+    }
+
+    public static MatchFinishedEvent CreateFake4v4MeleeWithoutRanking()
+    {
+        var fixture = new Fixture();
+        fixture.Customize<PlayerMMrChange>(c => c.Without(p => p.matchRanking));
+        var fakeEvent = fixture.Build<MatchFinishedEvent>().With(e => e.Id, ObjectId.GenerateNewId()).Create();
+
+        fakeEvent.WasFakeEvent = false;
+        fakeEvent.WasFromSync = false;
+
+        fakeEvent.match.players = new List<PlayerMMrChange>();
+        fakeEvent.match.map = "Maps/frozenthrone/community/(8)avalanche.w3x";
+        fakeEvent.match.gateway = GateWay.Europe;
+        fakeEvent.match.gameMode = GameMode.GM_4v4;
+        fakeEvent.match.season = 0;
+
+        // Team 0: winners (4 players) - no match ranking
+        CreateMatchTeamWithRanking(fakeEvent, won: true, team: 0, playersPerTeam: 4, matchRanking: null, "Winners");
+        // Team 1: losers (4 players) - no match ranking  
+        CreateMatchTeamWithRanking(fakeEvent, won: false, team: 1, playersPerTeam: 4, matchRanking: null, "Losers");
 
         return fakeEvent;
     }

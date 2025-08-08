@@ -23,6 +23,7 @@ public class Mmr
 public class PlayerMMrChange : UnfinishedMatchPlayer
 {
     public bool won { get; set; }
+    public int? matchRanking { get; set; }
     public Mmr updatedMmr { get; set; }
     public Ranking updatedRanking { get; set; }
     public string atTeamId { get; set; }
