@@ -83,15 +83,26 @@ public class Matchup
             StartTime = startTime,
             EndTime = endTime,
             Duration = endTime - startTime,
-            Season = match.season
+            Season = match.season,
         };
 
         result.SetServerInfo(match);
 
-        var players = match.players
-            .OrderByDescending(x => x.won)
-            .ThenBy(x => x.team)
-            .ToList();
+        List<PlayerMMrChange> players;
+        if (match.players.All(p => p.matchRanking.HasValue))
+        {
+            players = match.players
+                .OrderBy(x => x.matchRanking.Value)
+                .ToList();
+        }
+        else
+        {
+            players = match.players
+                .OrderByDescending(x => x.won)
+                .ThenBy(x => x.team)
+                .ToList();
+        }
+
 
         foreach (var player in players)
         {
@@ -119,9 +130,19 @@ public class Matchup
         foreach (var team in teamGroups)
         {
             result.Teams.Add(CreateTeam(team.Value));
-            result.Teams = result.Teams
-                .OrderByDescending(x => x.Players.Any(y => y.Won))
-                .ToList();
+
+            if (result.Teams.All(t => t.MatchRanking.HasValue))
+            {
+                result.Teams = result.Teams
+                    .OrderBy(x => x.MatchRanking)
+                    .ToList();
+            }
+            else
+            {
+                result.Teams = result.Teams
+                    .OrderByDescending(x => x.Players.Any(y => y.Won))
+                    .ToList();
+            }
         }
 
         SetTeamPlayers(result);
@@ -261,6 +282,14 @@ public class Matchup
     {
         var team = new Team();
         team.Players.AddRange(CreatePlayerArray(players));
+
+        var matchRankings = players.Where(x => x.matchRanking.HasValue).Select(x => x.matchRanking).Distinct().ToList();
+        // Don't assume everyone in the team will have the same match ranking, in case we expand to more diverse match rankings in the future.
+        if (matchRankings.Count == 1)
+        {
+            team.MatchRanking = matchRankings[0];
+        }
+
         return team;
     }
 
@@ -275,7 +304,8 @@ public class Matchup
             OldMmr = (int)w.mmr.rating,
             Won = w.won,
             Race = w.race,
-            RndRace = w.rndRace
+            RndRace = w.rndRace,
+            MatchRanking = w.matchRanking,
         });
     }
 }

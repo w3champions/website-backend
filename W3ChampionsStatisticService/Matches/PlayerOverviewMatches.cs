@@ -15,6 +15,7 @@ public class PlayerOverviewMatches
     public string Name { get; set; }
     public int MmrGain => CurrentMmr - OldMmr;
     public bool Won { get; set; }
+    public int? MatchRanking { get; set; }
     public string Location { get; set; }
     public string CountryCode { get; set; }
     public string Country { get; set; }
