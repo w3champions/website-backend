@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
@@ -57,15 +58,15 @@ public class RewardService : IRewardService
 
         try
         {
-            // Check for duplicate processing (idempotency)
+            // Check for duplicate processing (idempotency) using EventId
             var existing = await _assignmentRepo.GetByProviderReference(
                 rewardEvent.ProviderId, 
                 rewardEvent.ProviderReference);
             
             if (existing.Any())
             {
-                _logger.LogInformation("Event already processed: {ProviderId}/{Reference}", 
-                    rewardEvent.ProviderId, rewardEvent.ProviderReference);
+                _logger.LogInformation("Event already processed: {EventId}, ProviderId: {ProviderId}, Reference: {Reference}", 
+                    rewardEvent.EventId, rewardEvent.ProviderId, rewardEvent.ProviderReference);
                 return existing.First();
             }
 
@@ -143,7 +144,8 @@ public class RewardService : IRewardService
             rewardEvent.UserId, 
             mapping.RewardId, 
             rewardEvent.ProviderId, 
-            rewardEvent.ProviderReference);
+            rewardEvent.ProviderReference,
+            rewardEvent.EventId);
 
         // Send announcement if amount is provided and public
         if (rewardEvent.AnnouncementAmount.HasValue)
@@ -167,7 +169,8 @@ public class RewardService : IRewardService
             rewardEvent.UserId,
             mapping.RewardId,
             rewardEvent.ProviderId,
-            rewardEvent.ProviderReference);
+            rewardEvent.ProviderReference,
+            rewardEvent.EventId);
 
         // Send new subscriber announcement
         await SendSubscriberAnnouncement(rewardEvent, "new");
@@ -221,6 +224,11 @@ public class RewardService : IRewardService
 
     public async Task<RewardAssignment> AssignReward(string userId, string rewardId, string providerId, string providerReference)
     {
+        return await AssignReward(userId, rewardId, providerId, providerReference, null);
+    }
+    
+    private async Task<RewardAssignment> AssignReward(string userId, string rewardId, string providerId, string providerReference, string eventId)
+    {
         var reward = await _rewardRepo.GetById(rewardId);
         if (reward == null)
         {
@@ -234,19 +242,31 @@ public class RewardService : IRewardService
             RewardId = rewardId,
             ProviderId = providerId,
             ProviderReference = providerReference,
+            EventId = eventId, // For webhook idempotency
             Status = RewardStatus.Active,
             AssignedAt = DateTime.UtcNow,
             ExpiresAt = reward.CalculateExpirationDate(DateTime.UtcNow)
         };
 
-        await _assignmentRepo.Create(assignment);
-        
-        // Apply the reward through its module
-        await ApplyRewardModule(assignment, reward);
-        
-        _logger.LogInformation("Assigned reward {RewardId} to user {UserId}", rewardId, userId);
-        
-        return assignment;
+        try
+        {
+            await _assignmentRepo.Create(assignment);
+            
+            // Apply the reward through its module
+            await ApplyRewardModule(assignment, reward);
+            
+            _logger.LogInformation("Assigned reward {RewardId} to user {UserId} with EventId {EventId}", rewardId, userId, eventId);
+            
+            return assignment;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError.Code == 11000) // Duplicate key error
+        {
+            _logger.LogInformation("Duplicate EventId detected: {EventId}. Event already processed, returning existing assignment", eventId);
+            
+            // Find and return the existing assignment
+            var existing = await _assignmentRepo.GetByProviderReference(providerId, providerReference);
+            return existing.FirstOrDefault() ?? throw new InvalidOperationException("Duplicate key error but no existing assignment found");
+        }
     }
 
     private async Task ApplyRewardModule(RewardAssignment assignment, Reward reward)

@@ -77,9 +77,10 @@ public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvid
                 throw new InvalidOperationException($"Failed to resolve user ID for email: {webhookData.Data.Attributes.Email}");
             
             // Create a single RewardEvent with all entitled tiers
+            // Use Patreon's webhook event ID for idempotency instead of generating new GUID
             var rewardEvent = new RewardEvent
             {
-                EventId = Guid.NewGuid().ToString(),
+                EventId = $"patreon_{webhookData.Data.Id}",
                 EventType = eventType,
                 ProviderId = ProviderId,
                 UserId = userId,

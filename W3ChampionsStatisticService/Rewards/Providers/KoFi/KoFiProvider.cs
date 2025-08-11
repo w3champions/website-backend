@@ -58,6 +58,9 @@ public class KoFiProvider(IConfiguration configuration, ILogger<KoFiProvider> lo
             if (string.IsNullOrEmpty(webhookData.KofiTransactionId))
                 throw new InvalidOperationException("Ko-Fi transaction ID is missing - cannot track event");
                 
+            if (string.IsNullOrEmpty(webhookData.MessageId))
+                throw new InvalidOperationException("Ko-Fi message ID is missing - cannot ensure idempotency");
+                
             if (string.IsNullOrEmpty(webhookData.Type))
                 throw new InvalidOperationException("Ko-Fi event type is missing");
 
@@ -76,9 +79,10 @@ public class KoFiProvider(IConfiguration configuration, ILogger<KoFiProvider> lo
                     throw new InvalidOperationException($"Invalid donation amount: {webhookData.Amount}");
             }
             
+            // Use Ko-Fi's message_id for idempotency (stays same across retries)
             var rewardEvent = new RewardEvent
             {
-                EventId = Guid.NewGuid().ToString(),
+                EventId = $"kofi_{webhookData.MessageId}",
                 EventType = eventType,
                 ProviderId = ProviderId,
                 UserId = userId,
@@ -92,7 +96,8 @@ public class KoFiProvider(IConfiguration configuration, ILogger<KoFiProvider> lo
                 Metadata = new Dictionary<string, object>
                 {
                     ["message"] = webhookData.Message ?? "",
-                    ["is_public"] = webhookData.IsPublic
+                    ["is_public"] = webhookData.IsPublic,
+                    ["transaction_id"] = webhookData.KofiTransactionId
                 }
             };
             

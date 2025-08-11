@@ -14,6 +14,7 @@ public class RewardAssignment : IIdentifiable
     public string RewardId { get; set; }
     public string ProviderId { get; set; }
     public string ProviderReference { get; set; }
+    public string EventId { get; set; } // For idempotency - prevents duplicate processing
     public RewardStatus Status { get; set; }
     public DateTime AssignedAt { get; set; }
     public DateTime? ExpiresAt { get; set; }

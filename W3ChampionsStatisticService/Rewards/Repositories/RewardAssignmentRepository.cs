@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using Serilog;
 using W3C.Domain.Repositories;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
@@ -11,8 +12,43 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Rewards.Repositories;
 
 [Trace]
-public class RewardAssignmentRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IRewardAssignmentRepository
+public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignmentRepository
 {
+    public RewardAssignmentRepository(MongoClient mongoClient) : base(mongoClient)
+    {
+        EnsureIndexes();
+    }
+    
+    private void EnsureIndexes()
+    {
+        try
+        {
+            var collection = CreateCollection<RewardAssignment>();
+            
+            // Create unique index on EventId for webhook idempotency
+            var eventIdIndex = new CreateIndexModel<RewardAssignment>(
+                Builders<RewardAssignment>.IndexKeys.Ascending(x => x.EventId),
+                new CreateIndexOptions 
+                { 
+                    Unique = true,
+                    Sparse = true, // Allow null EventId but enforce uniqueness when present
+                    Name = "IX_EventId_Unique",
+                    Background = true
+                });
+            
+            collection.Indexes.CreateOne(eventIdIndex);
+            Log.Information("Created unique index on EventId for RewardAssignment collection");
+        }
+        catch (MongoCommandException ex) when (ex.Code == 85) // IndexOptionsConflict
+        {
+            Log.Information("EventId unique index already exists on RewardAssignment collection");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Failed to create required EventId unique index on RewardAssignment collection");
+            throw;
+        }
+    }
     public Task<RewardAssignment> GetById(string assignmentId)
     {
         return LoadFirst<RewardAssignment>(assignmentId);
