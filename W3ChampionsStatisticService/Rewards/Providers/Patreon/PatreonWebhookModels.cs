@@ -29,9 +29,6 @@ public class PatreonAttributes
     [JsonPropertyName("patron_status")]
     public string PatronStatus { get; set; }
     
-    [JsonPropertyName("tier_id")]
-    public string TierId { get; set; }
-    
     [JsonPropertyName("email")]
     public string Email { get; set; }
 }
@@ -40,6 +37,9 @@ public class PatreonRelationships
 {
     [JsonPropertyName("user")]
     public PatreonRelationship User { get; set; }
+    
+    [JsonPropertyName("currently_entitled_tiers")]
+    public PatreonTiersRelationship CurrentlyEntitledTiers { get; set; }
 }
 
 public class PatreonRelationship
@@ -52,4 +52,13 @@ public class PatreonRelationshipData
 {
     [JsonPropertyName("id")]
     public string Id { get; set; }
+    
+    [JsonPropertyName("type")]
+    public string Type { get; set; }
+}
+
+public class PatreonTiersRelationship
+{
+    [JsonPropertyName("data")]
+    public PatreonRelationshipData[] Data { get; set; }
 }

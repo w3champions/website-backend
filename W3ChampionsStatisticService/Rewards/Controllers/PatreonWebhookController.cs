@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,21 +13,14 @@ namespace W3ChampionsStatisticService.Rewards.Controllers;
 
 [ApiController]
 [Route("api/rewards/webhooks/patreon")]
-public class PatreonWebhookController : ControllerBase
+public class PatreonWebhookController(
+    PatreonProvider patreonProvider,
+    IRewardService rewardService,
+    ILogger<PatreonWebhookController> logger) : ControllerBase
 {
-    private readonly PatreonProvider _patreonProvider;
-    private readonly IRewardService _rewardService;
-    private readonly ILogger<PatreonWebhookController> _logger;
-
-    public PatreonWebhookController(
-        PatreonProvider patreonProvider,
-        IRewardService rewardService,
-        ILogger<PatreonWebhookController> logger)
-    {
-        _patreonProvider = patreonProvider;
-        _rewardService = rewardService;
-        _logger = logger;
-    }
+    private readonly PatreonProvider _patreonProvider = patreonProvider;
+    private readonly IRewardService _rewardService = rewardService;
+    private readonly ILogger<PatreonWebhookController> _logger = logger;
 
     [HttpPost]
     public async Task<IActionResult> HandlePatreonWebhook()
@@ -53,14 +47,17 @@ public class PatreonWebhookController : ControllerBase
                 return Unauthorized("Invalid signature");
             }
 
+            // Extract headers for event type determination
+            var headers = Request.Headers.ToDictionary(h => h.Key, h => h.Value.FirstOrDefault());
+            
             // Parse and process event
-            var rewardEvent = await _patreonProvider.ParseWebhookEvent(payload);
+            var rewardEvent = await _patreonProvider.ParseWebhookEvent(payload, headers);
             var assignment = await _rewardService.ProcessRewardEvent(rewardEvent);
             
-            _logger.LogInformation("Successfully processed Patreon webhook for user {UserId}", 
-                rewardEvent.UserId);
+            _logger.LogInformation("Successfully processed Patreon webhook for user {UserId} with {TierCount} entitled tiers", 
+                rewardEvent.UserId, rewardEvent.EntitledTierIds.Count);
             
-            return Ok(new { success = true, assignmentId = assignment?.Id });
+            return Ok(new { success = true, assignmentId = assignment?.Id, entitledTiers = rewardEvent.EntitledTierIds });
         }
         catch (Exception ex)
         {

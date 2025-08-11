@@ -10,7 +10,7 @@ public interface IRewardProvider
     string ProviderName { get; }
     
     Task<bool> ValidateWebhookSignature(string payload, string signature, Dictionary<string, string> headers);
-    Task<RewardEvent> ParseWebhookEvent(string payload);
+    Task<RewardEvent> ParseWebhookEvent(string payload, Dictionary<string, string> headers = null);
     Task<ProviderProduct> GetProduct(string productId);
     Task<string> ResolveUserId(string providerUserId);
 }

@@ -1,0 +1,147 @@
+{
+    "data": {
+        "attributes": {
+            "campaign_lifetime_support_cents": 1337,
+            "currently_entitled_amount_cents": 1337,
+            "email": "jw@example.com",
+            "full_name": "Jules Winnfield",
+            "is_follower": false,
+            "is_free_trial": false,
+            "is_gifted": false,
+            "last_charge_date": null,
+            "last_charge_status": null,
+            "lifetime_support_cents": 1337,
+            "next_charge_date": "2025-04-01T07:00:00.000+00:00",
+            "note": "",
+            "patron_status": "active_patron",
+            "pledge_cadence": 1,
+            "pledge_relationship_start": "2025-03-02T13:37:00.000+00:00",
+            "will_pay_amount_cents": 1337
+        },
+        "id": "d29e61b6-f73b-4662-955e-dade715cef83",
+        "relationships": {
+            "address": {
+                "data": null
+            },
+            "campaign": {
+                "data": {
+                    "id": "11410294",
+                    "type": "campaign"
+                },
+                "links": {
+                    "related": "https://www.patreon.com/api/oauth2/v2/campaigns/11410294"
+                }
+            },
+            "currently_entitled_tiers": {
+                "data": [
+                    {
+                        "id": "196241737",
+                        "type": "tier"
+                    }
+                ]
+            },
+            "user": {
+                "data": {
+                    "id": "108692085",
+                    "type": "user"
+                },
+                "links": {
+                    "related": "https://www.patreon.com/api/oauth2/v2/user/108692085"
+                }
+            }
+        },
+        "type": "member"
+    },
+    "included": [
+        {
+            "attributes": {
+                "created_at": "2025-03-02T13:37:00.000+00:00",
+                "creation_name": "",
+                "discord_server_id": null,
+                "google_analytics_id": null,
+                "has_rss": false,
+                "has_sent_rss_notify": false,
+                "image_small_url": "https://c10.patreonusercontent.com/4/patreon-media/p/campaign/69073700/0267c2da7994410084f34411b9ce619c/eyJ3IjoxOTIwLCJ3ZSI6MX0%3D/1?token-time=1743724800&token-hash=gaXo-j34utqldsEeggT1K66nQXiJvMgttWq1PfZt3kE%3D",
+                "image_url": "https://c10.patreonusercontent.com/4/patreon-media/p/campaign/69073700/0267c2da7994410084f34411b9ce619c/eyJ3IjoxOTIwLCJ3ZSI6MX0%3D/1?token-time=1743724800&token-hash=gaXo-j34utqldsEeggT1K66nQXiJvMgttWq1PfZt3kE%3D",
+                "is_charged_immediately": false,
+                "is_monthly": true,
+                "is_nsfw": false,
+                "main_video_embed": null,
+                "main_video_url": null,
+                "one_liner": "",
+                "patron_count": 0,
+                "pay_per_name": "month",
+                "pledge_url": "/checkout/thebriefcase",
+                "published_at": "2025-03-02T13:37:00.000+00:00",
+                "rss_artwork_url": null,
+                "rss_feed_title": null,
+                "summary": null,
+                "thanks_embed": "",
+                "thanks_msg": "",
+                "thanks_video_url": "",
+                "url": "https://www.patreon.com/thebriefcase",
+                "vanity": "thebriefcase"
+            },
+            "id": "11410294",
+            "type": "campaign"
+        },
+        {
+            "attributes": {
+                "about": "About!",
+                "created": "2025-03-02T13:37:00.000+00:00",
+                "first_name": "Jules",
+                "full_name": "Jules Winnfield",
+                "hide_pledges": false,
+                "image_url": "https://c8.patreon.com/3/200/108692085",
+                "is_creator": false,
+                "last_name": "Winnfield",
+                "like_count": 0,
+                "social_connections": {
+                    "discord": null,
+                    "facebook": null,
+                    "google": null,
+                    "instagram": null,
+                    "reddit": null,
+                    "spotify": null,
+                    "spotify_open_access": null,
+                    "tiktok": null,
+                    "twitch": null,
+                    "twitter": null,
+                    "twitter2": null,
+                    "vimeo": null,
+                    "youtube": null
+                },
+                "thumb_url": "https://c8.patreon.com/3/200/108692085",
+                "url": "https://www.patreon.com/saywhat",
+                "vanity": "saywhat"
+            },
+            "id": "108692085",
+            "type": "user"
+        },
+        {
+            "attributes": {
+                "amount_cents": 1337,
+                "created_at": "2025-03-02T13:37:00.000+00:00",
+                "description": "Tier for Top Patrons",
+                "discord_role_ids": null,
+                "edited_at": "2025-03-02T13:37:00.000+00:00",
+                "image_url": null,
+                "patron_count": 0,
+                "post_count": 0,
+                "published": true,
+                "published_at": "2025-03-02T13:37:00.000+00:00",
+                "remaining": null,
+                "requires_shipping": false,
+                "title": "Elite Tier",
+                "unpublished_at": null,
+                "url": "/checkout/thebriefcase?rid=196241737",
+                "user_limit": null
+            },
+            "id": "196241737",
+            "type": "tier"
+        }
+    ],
+    "links": {
+        "self": "https://www.patreon.com/api/oauth2/v2/members/d29e61b6-f73b-4662-955e-dade715cef83"
+    }
+}
