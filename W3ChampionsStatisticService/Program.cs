@@ -42,6 +42,7 @@ using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Rewards.Portraits;
+using W3ChampionsStatisticService.Rewards.Extensions;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -205,6 +206,9 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
+
+// Rewards services
+builder.Services.AddRewardServices();
 
 builder.Services.AddDirectoryBrowser();
 

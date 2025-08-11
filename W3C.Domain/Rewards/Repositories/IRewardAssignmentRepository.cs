@@ -13,6 +13,7 @@ public interface IRewardAssignmentRepository
     Task<List<RewardAssignment>> GetByUserIdAndStatus(string userId, RewardStatus status);
     Task<List<RewardAssignment>> GetByProviderReference(string providerId, string providerReference);
     Task<List<RewardAssignment>> GetExpiredAssignments(DateTime asOf);
+    Task<List<RewardAssignment>> GetActiveAssignmentsByProvider(string providerId);
     Task<RewardAssignment> Create(RewardAssignment assignment);
     Task<RewardAssignment> Update(RewardAssignment assignment);
     Task Delete(string assignmentId);

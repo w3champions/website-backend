@@ -79,6 +79,13 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
             a.ExpiresAt <= asOf);
     }
 
+    public Task<List<RewardAssignment>> GetActiveAssignmentsByProvider(string providerId)
+    {
+        return LoadAll<RewardAssignment>(a => 
+            a.ProviderId == providerId && 
+            a.Status == RewardStatus.Active);
+    }
+
     public async Task<RewardAssignment> Create(RewardAssignment assignment)
     {
         await Insert(assignment);
