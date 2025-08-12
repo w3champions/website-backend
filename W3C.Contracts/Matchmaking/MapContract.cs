@@ -11,4 +11,5 @@ public class MapContract
     public MapForce[] MappedForces { get; set; } = new MapForce[0];
     public GameMap GameMap { get; set; }
     public int teamSize { get; set; }
+    public bool Disabled { get; set; }
 }
