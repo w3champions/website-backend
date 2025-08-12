@@ -48,8 +48,15 @@ public class MapsController(
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> UpdateMap(int id, [FromBody] MapContract request)
     {
-        var map = await _matchmakingServiceClient.UpdateMap(id, request);
-        return Ok(map);
+        try
+        {
+            var map = await _matchmakingServiceClient.UpdateMap(id, request);
+            return Ok(map);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode((int)ex.StatusCode, ex.Message);
+        }
     }
 
     [HttpGet("{id}/files")]
