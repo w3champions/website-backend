@@ -4,25 +4,19 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Rewards.Portraits;
 
 namespace W3ChampionsStatisticService.Rewards.Modules;
 
-public class PortraitRewardModule : IRewardModule
+public class PortraitRewardModule(
+    IPersonalSettingsRepository personalSettingsRepo,
+    IPortraitRepository portraitRepo,
+    ILogger<PortraitRewardModule> logger) : IRewardModule
 {
-    private readonly IPersonalSettingsRepository _personalSettingsRepo;
-    private readonly IPortraitRepository _portraitRepo;
-    private readonly ILogger<PortraitRewardModule> _logger;
-
-    public PortraitRewardModule(
-        IPersonalSettingsRepository personalSettingsRepo,
-        IPortraitRepository portraitRepo,
-        ILogger<PortraitRewardModule> logger)
-    {
-        _personalSettingsRepo = personalSettingsRepo;
-        _portraitRepo = portraitRepo;
-        _logger = logger;
-    }
+    private readonly IPersonalSettingsRepository _personalSettingsRepo = personalSettingsRepo;
+    private readonly IPortraitRepository _portraitRepo = portraitRepo;
+    private readonly ILogger<PortraitRewardModule> _logger = logger;
 
     public string ModuleId => "portrait_reward";
     public string ModuleName => "Portrait Reward";
@@ -43,10 +37,10 @@ public class PortraitRewardModule : IRewardModule
 
         var settings = await _personalSettingsRepo.Load(context.UserId) ?? new PersonalSetting(context.UserId);
         var existingPortraitIds = settings.SpecialPictures?.Select(p => p.PictureId).ToHashSet() ?? new HashSet<int>();
-        
+
         var newPortraits = portraitIds
             .Where(id => !existingPortraitIds.Contains(id))
-            .Select(id => new SpecialPicture { PictureId = id })
+            .Select(id => new SpecialPicture(id, ""))
             .ToList();
 
         if (newPortraits.Any())
@@ -54,10 +48,10 @@ public class PortraitRewardModule : IRewardModule
             var specialPictures = (settings.SpecialPictures ?? new SpecialPicture[0])
                 .Concat(newPortraits)
                 .ToArray();
-            
+
             settings.UpdateSpecialPictures(specialPictures);
             await _personalSettingsRepo.Save(settings);
-            
+
             _logger.LogInformation("Added {Count} portraits to user {UserId}", newPortraits.Count, context.UserId);
         }
 
@@ -92,10 +86,10 @@ public class PortraitRewardModule : IRewardModule
             var remainingPictures = settings.SpecialPictures
                 .Where(p => !portraitIdSet.Contains(p.PictureId))
                 .ToArray();
-            
+
             settings.UpdateSpecialPictures(remainingPictures);
             await _personalSettingsRepo.Save(settings);
-            
+
             _logger.LogInformation("Revoked {Count} portraits from user {UserId}", portraitIds.Count, context.UserId);
         }
 
@@ -109,7 +103,7 @@ public class PortraitRewardModule : IRewardModule
     public Task<ValidationResult> ValidateParameters(Dictionary<string, object> parameters)
     {
         var result = new ValidationResult { IsValid = true };
-        
+
         if (!parameters.ContainsKey("portraitIds"))
         {
             result.IsValid = false;
@@ -124,7 +118,7 @@ public class PortraitRewardModule : IRewardModule
                 result.Errors.Add("At least one portrait ID must be specified");
             }
         }
-        
+
         return Task.FromResult(result);
     }
 

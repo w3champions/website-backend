@@ -4,34 +4,29 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Rewards.Services;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Rewards.Controllers;
 
 [ApiController]
 [Route("api/rewards/drift-detection")]
-public class RewardDriftDetectionController : ControllerBase
+public class RewardDriftDetectionController(
+    PatreonDriftDetectionService patreonDriftService,
+    ILogger<RewardDriftDetectionController> logger) : ControllerBase
 {
-    private readonly PatreonDriftDetectionService _patreonDriftService;
-    private readonly ILogger<RewardDriftDetectionController> _logger;
-
-    public RewardDriftDetectionController(
-        PatreonDriftDetectionService patreonDriftService,
-        ILogger<RewardDriftDetectionController> logger)
-    {
-        _patreonDriftService = patreonDriftService;
-        _logger = logger;
-    }
+    private readonly PatreonDriftDetectionService _patreonDriftService = patreonDriftService;
+    private readonly ILogger<RewardDriftDetectionController> _logger = logger;
 
     [HttpPost("patreon/detect")]
-    [CheckIfBattleTagIsAdminFilter]
+    [CheckIfBattleTagIsAdmin]
     public async Task<IActionResult> DetectPatreonDrift()
     {
         try
         {
             _logger.LogInformation("Manual Patreon drift detection triggered");
-            
+
             var result = await _patreonDriftService.DetectDrift();
-            
+
             return Ok(new
             {
                 success = true,
@@ -63,7 +58,7 @@ public class RewardDriftDetectionController : ControllerBase
     }
 
     [HttpGet("status")]
-    [CheckIfBattleTagIsAdminFilter]
+    [CheckIfBattleTagIsAdmin]
     public IActionResult GetDriftDetectionStatus()
     {
         // This could be enhanced to return last run time, next scheduled run, etc.

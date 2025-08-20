@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Serilog;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
-using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
 namespace W3ChampionsStatisticService.Rewards.Services;

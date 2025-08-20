@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,18 +17,17 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
 
     public RewardDriftDetectionBackgroundService(
         IServiceProvider serviceProvider,
-        IConfiguration configuration,
         ILogger<RewardDriftDetectionBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
-        
+
         // Configure from environment variables
         var intervalStr = Environment.GetEnvironmentVariable("REWARDS_DRIFT_DETECTION_INTERVAL_MINUTES");
-        _intervalMinutes = !string.IsNullOrEmpty(intervalStr) && int.TryParse(intervalStr, out var interval) 
-            ? interval 
+        _intervalMinutes = !string.IsNullOrEmpty(intervalStr) && int.TryParse(intervalStr, out var interval)
+            ? interval
             : 60; // Default 1 hour
-            
+
         var enabledStr = Environment.GetEnvironmentVariable("REWARDS_DRIFT_DETECTION_ENABLED");
         _enabled = enabledStr?.ToLower() == "true"; // Default disabled
     }
@@ -45,7 +43,7 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
         _logger.LogInformation("Reward drift detection background service started. Will run every {Minutes} minutes.", _intervalMinutes);
 
         // Initial delay to let the application fully start
-        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -68,7 +66,7 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
         _logger.LogInformation("Starting scheduled drift detection run");
 
         using var scope = _serviceProvider.CreateScope();
-        
+
         try
         {
             // Run Patreon drift detection
@@ -77,12 +75,12 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
             {
                 _logger.LogInformation("Running Patreon drift detection");
                 var patreonResult = await patreonDriftService.DetectDrift();
-                
+
                 if (patreonResult.HasDrift)
                 {
                     _logger.LogWarning("Patreon drift detected during scheduled run. Missing: {Missing}, Extra: {Extra}, Mismatched: {Mismatched}",
-                        patreonResult.MissingMembers.Count, 
-                        patreonResult.ExtraAssignments.Count, 
+                        patreonResult.MissingMembers.Count,
+                        patreonResult.ExtraAssignments.Count,
                         patreonResult.MismatchedTiers.Count);
                 }
             }
