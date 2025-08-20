@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
@@ -21,7 +22,7 @@ public class RewardService : IRewardService
     private readonly IProviderConfigurationRepository _configRepo;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RewardService> _logger;
-    private readonly WebsiteBackendHub _hub;
+    private readonly IHubContext<WebsiteBackendHub> _hubContext;
 
     public RewardService(
         IRewardRepository rewardRepo,
@@ -29,14 +30,14 @@ public class RewardService : IRewardService
         IProviderConfigurationRepository configRepo,
         IServiceProvider serviceProvider,
         ILogger<RewardService> logger,
-        WebsiteBackendHub hub)
+        IHubContext<WebsiteBackendHub> hubContext)
     {
         _rewardRepo = rewardRepo;
         _assignmentRepo = assignmentRepo;
         _configRepo = configRepo;
         _serviceProvider = serviceProvider;
         _logger = logger;
-        _hub = hub;
+        _hubContext = hubContext;
     }
 
     public async Task<RewardAssignment> ProcessRewardEvent(RewardEvent rewardEvent)
@@ -317,7 +318,6 @@ public class RewardService : IRewardService
 
     private async Task SendDonationAnnouncement(RewardEvent rewardEvent)
     {
-        // Send announcement through SignalR hub
         var announcement = new
         {
             type = "donation",
@@ -328,7 +328,12 @@ public class RewardService : IRewardService
             timestamp = rewardEvent.Timestamp
         };
         
-        // This would broadcast to all connected clients
+        // Broadcast to all connected clients
+        if (_hubContext != null)
+        {
+            await _hubContext.Clients.All.SendAsync("DonationAnnouncement", announcement);
+        }
+        
         _logger.LogInformation("Donation announcement: {UserId} donated {Amount} {Currency}", 
             rewardEvent.UserId, rewardEvent.AnnouncementAmount, rewardEvent.Currency);
     }
@@ -343,6 +348,12 @@ public class RewardService : IRewardService
             provider = rewardEvent.ProviderId,
             timestamp = rewardEvent.Timestamp
         };
+        
+        // Broadcast to all connected clients
+        if (_hubContext != null)
+        {
+            await _hubContext.Clients.All.SendAsync("SubscriberAnnouncement", announcement);
+        }
         
         _logger.LogInformation("New subscriber announcement: {UserId} via {Provider}", 
             rewardEvent.UserId, rewardEvent.ProviderId);

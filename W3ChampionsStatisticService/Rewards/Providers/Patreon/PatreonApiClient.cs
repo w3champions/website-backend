@@ -33,13 +33,13 @@ public class PatreonApiClient
     {
         if (string.IsNullOrEmpty(_accessToken))
         {
-            Log.Warning("Patreon access token not configured, cannot fetch members");
+            Log.Error("Patreon access token not configured, cannot fetch members");
             return new List<PatreonMember>();
         }
 
         if (string.IsNullOrEmpty(_campaignId))
         {
-            Log.Warning("Patreon campaign ID not configured, cannot fetch members");
+            Log.Error("Patreon campaign ID not configured, cannot fetch members");
             return new List<PatreonMember>();
         }
 

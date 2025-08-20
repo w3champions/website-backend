@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Serilog;
+using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
+using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
@@ -11,10 +13,12 @@ namespace W3ChampionsStatisticService.Rewards.Services;
 
 public class PatreonDriftDetectionService(
     PatreonApiClient patreonApiClient,
-    IRewardAssignmentRepository assignmentRepository)
+    IRewardAssignmentRepository assignmentRepository,
+    IRewardService rewardService)
 {
     private readonly PatreonApiClient _patreonApiClient = patreonApiClient;
     private readonly IRewardAssignmentRepository _assignmentRepository = assignmentRepository;
+    private readonly IRewardService _rewardService = rewardService;
     private const string ProviderId = "patreon";
 
     public async Task<DriftDetectionResult> DetectDrift()
@@ -247,6 +251,196 @@ public class PatreonDriftDetectionService(
         Log.Information("Patreon drift detection summary: PatreonTotal={PatreonTotal}, PatreonActive={PatreonActive}, InternalAssignments={InternalTotal}, InternalUsers={InternalUsers}",
             result.TotalPatreonMembers, result.ActivePatreonMembers, result.TotalInternalAssignments, result.UniqueInternalUsers);
     }
+
+    public async Task<SyncResult> SyncDrift(DriftDetectionResult driftResult, bool dryRun = false)
+    {
+        var syncResult = new SyncResult
+        {
+            SyncTimestamp = DateTime.UtcNow,
+            WasDryRun = dryRun
+        };
+
+        try
+        {
+            Log.Information("[DRIFT-SYNC] Starting Patreon drift synchronization. DryRun: {DryRun}, Missing: {Missing}, Extra: {Extra}, Mismatched: {Mismatched}",
+                dryRun, driftResult.MissingMembers.Count, driftResult.ExtraAssignments.Count, driftResult.MismatchedTiers.Count);
+
+            if (!driftResult.HasDrift)
+            {
+                Log.Information("[DRIFT-SYNC] No drift detected, sync not needed");
+                syncResult.Success = true;
+                return syncResult;
+            }
+
+            // Process missing members (need to add rewards)
+            foreach (var missingMember in driftResult.MissingMembers)
+            {
+                try
+                {
+                    var syncEvent = CreateMissingMemberSyncEvent(missingMember);
+                    syncResult.GeneratedEvents.Add(syncEvent);
+
+                    if (!dryRun)
+                    {
+                        await _rewardService.ProcessRewardEvent(syncEvent);
+                    }
+
+                    syncResult.MembersAdded++;
+                    Log.Information("[DRIFT-SYNC] {Action} reward for missing member: {Email} (PatreonId: {Id})",
+                        dryRun ? "Would add" : "Added", missingMember.Email, missingMember.PatreonMemberId);
+                }
+                catch (Exception ex)
+                {
+                    var error = $"Failed to sync missing member {missingMember.Email}: {ex.Message}";
+                    syncResult.Errors.Add(error);
+                    Log.Error(ex, "[DRIFT-SYNC] {Error}", error);
+                }
+            }
+
+            // Process extra assignments (need to revoke rewards)
+            foreach (var extraAssignment in driftResult.ExtraAssignments)
+            {
+                try
+                {
+                    var syncEvent = CreateExtraAssignmentSyncEvent(extraAssignment);
+                    syncResult.GeneratedEvents.Add(syncEvent);
+
+                    if (!dryRun)
+                    {
+                        await _rewardService.ProcessRewardEvent(syncEvent);
+                    }
+
+                    syncResult.AssignmentsRevoked++;
+                    Log.Information("[DRIFT-SYNC] {Action} reward for extra assignment: {UserId} (AssignmentId: {Id})",
+                        dryRun ? "Would revoke" : "Revoked", extraAssignment.UserId, extraAssignment.AssignmentId);
+                }
+                catch (Exception ex)
+                {
+                    var error = $"Failed to sync extra assignment {extraAssignment.AssignmentId}: {ex.Message}";
+                    syncResult.Errors.Add(error);
+                    Log.Error(ex, "[DRIFT-SYNC] {Error}", error);
+                }
+            }
+
+            // Process tier mismatches (need to update tiers)
+            foreach (var tierMismatch in driftResult.MismatchedTiers)
+            {
+                try
+                {
+                    var syncEvent = CreateTierMismatchSyncEvent(tierMismatch);
+                    syncResult.GeneratedEvents.Add(syncEvent);
+
+                    if (!dryRun)
+                    {
+                        await _rewardService.ProcessRewardEvent(syncEvent);
+                    }
+
+                    syncResult.TiersUpdated++;
+                    Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} (Patreon: [{PatreonTiers}], Internal: [{InternalTiers}])",
+                        dryRun ? "Would update" : "Updated", tierMismatch.UserId,
+                        string.Join(",", tierMismatch.PatreonTiers ?? new List<string>()),
+                        string.Join(",", tierMismatch.InternalTiers ?? new List<string>()));
+                }
+                catch (Exception ex)
+                {
+                    var error = $"Failed to sync tier mismatch for user {tierMismatch.UserId}: {ex.Message}";
+                    syncResult.Errors.Add(error);
+                    Log.Error(ex, "[DRIFT-SYNC] {Error}", error);
+                }
+            }
+
+            syncResult.Success = syncResult.Errors.Count == 0;
+
+            Log.Information("[DRIFT-SYNC] Patreon drift synchronization completed. Success: {Success}, DryRun: {DryRun}, Added: {Added}, Revoked: {Revoked}, Updated: {Updated}, Errors: {ErrorCount}",
+                syncResult.Success, dryRun, syncResult.MembersAdded, syncResult.AssignmentsRevoked, syncResult.TiersUpdated, syncResult.Errors.Count);
+
+            return syncResult;
+        }
+        catch (Exception ex)
+        {
+            syncResult.Success = false;
+            syncResult.Errors.Add($"Sync failed with exception: {ex.Message}");
+            Log.Error(ex, "[DRIFT-SYNC] Error during Patreon drift synchronization");
+            return syncResult;
+        }
+    }
+
+    private RewardEvent CreateMissingMemberSyncEvent(MissingMember missingMember)
+    {
+        var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:missing:{missingMember.PatreonMemberId}";
+        
+        return new RewardEvent
+        {
+            EventId = eventId,
+            EventType = RewardEventType.SubscriptionCreated,
+            ProviderId = ProviderId,
+            UserId = missingMember.Email.ToLowerInvariant(),
+            ProviderReference = $"sync:member:{missingMember.PatreonMemberId}",
+            EntitledTierIds = missingMember.EntitledTierIds ?? new List<string>(),
+            Timestamp = DateTime.UtcNow,
+            Metadata = new Dictionary<string, object>
+            {
+                ["event_source"] = "drift_sync",
+                ["sync_reason"] = "missing_member",
+                ["sync_timestamp"] = DateTime.UtcNow,
+                ["patreon_status"] = missingMember.PatronStatus,
+                ["original_member_id"] = missingMember.PatreonMemberId,
+                ["sync_reason_detail"] = missingMember.Reason
+            }
+        };
+    }
+
+    private RewardEvent CreateExtraAssignmentSyncEvent(ExtraAssignment extraAssignment)
+    {
+        var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:extra:{extraAssignment.AssignmentId}";
+        
+        return new RewardEvent
+        {
+            EventId = eventId,
+            EventType = RewardEventType.SubscriptionCancelled,
+            ProviderId = ProviderId,
+            UserId = extraAssignment.UserId,
+            ProviderReference = $"sync:revoke:{extraAssignment.AssignmentId}",
+            EntitledTierIds = new List<string>(), // No longer entitled to any tiers
+            Timestamp = DateTime.UtcNow,
+            Metadata = new Dictionary<string, object>
+            {
+                ["event_source"] = "drift_sync",
+                ["sync_reason"] = "extra_assignment",
+                ["sync_timestamp"] = DateTime.UtcNow,
+                ["original_assignment_id"] = extraAssignment.AssignmentId,
+                ["revocation_reason"] = extraAssignment.Reason,
+                ["assignment_created_at"] = extraAssignment.AssignedAt,
+                ["patreon_status"] = extraAssignment.PatreonStatus ?? "unknown"
+            }
+        };
+    }
+
+    private RewardEvent CreateTierMismatchSyncEvent(TierMismatch tierMismatch)
+    {
+        var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:mismatch:{tierMismatch.UserId}:{Guid.NewGuid().ToString("N")[..8]}";
+        
+        return new RewardEvent
+        {
+            EventId = eventId,
+            EventType = RewardEventType.SubscriptionCreated,
+            ProviderId = ProviderId,
+            UserId = tierMismatch.UserId,
+            ProviderReference = $"sync:tier-update:{tierMismatch.PatreonMemberId}",
+            EntitledTierIds = tierMismatch.PatreonTiers ?? new List<string>(), // Use Patreon as source of truth
+            Timestamp = DateTime.UtcNow,
+            Metadata = new Dictionary<string, object>
+            {
+                ["event_source"] = "drift_sync",
+                ["sync_reason"] = "tier_mismatch",
+                ["sync_timestamp"] = DateTime.UtcNow,
+                ["previous_tiers"] = string.Join(",", tierMismatch.InternalTiers ?? new List<string>()),
+                ["new_tiers"] = string.Join(",", tierMismatch.PatreonTiers ?? new List<string>()),
+                ["patreon_member_id"] = tierMismatch.PatreonMemberId,
+                ["mismatch_reason"] = tierMismatch.Reason
+            }
+        };
+    }
 }
 
 public class DriftDetectionResult
@@ -292,4 +486,16 @@ public class TierMismatch
     public List<string> PatreonTiers { get; set; }
     public List<string> InternalTiers { get; set; }
     public string Reason { get; set; }
+}
+
+public class SyncResult
+{
+    public DateTime SyncTimestamp { get; set; }
+    public bool Success { get; set; }
+    public int MembersAdded { get; set; }
+    public int AssignmentsRevoked { get; set; }
+    public int TiersUpdated { get; set; }
+    public List<string> Errors { get; set; } = new();
+    public bool WasDryRun { get; set; }
+    public List<RewardEvent> GeneratedEvents { get; set; } = new();
 }
