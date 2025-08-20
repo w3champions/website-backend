@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Events;
@@ -13,12 +12,11 @@ using W3C.Domain.Rewards.Repositories;
 
 namespace W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
-public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvider> logger, IPatreonAccountLinkRepository patreonLinkRepository) : IRewardProvider
+public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLinkRepository patreonLinkRepository) : IRewardProvider
 {
-    private readonly IConfiguration _configuration = configuration;
     private readonly ILogger<PatreonProvider> _logger = logger;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepository = patreonLinkRepository;
-    private readonly string _webhookSecret = configuration["Rewards:Providers:Patreon:WebhookSecret"];
+    private readonly string _webhookSecret = Environment.GetEnvironmentVariable("PATREON_WEBHOOK_SECRET");
 
     public string ProviderId => "patreon";
     public string ProviderName => "Patreon";

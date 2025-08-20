@@ -10,9 +10,6 @@ public class ProviderConfiguration : IIdentifiable
     [BsonId]
     public string Id { get; set; }
     public string ProviderId { get; set; }
-    public string ProviderName { get; set; }
-    public bool IsActive { get; set; } = true;
-    public Dictionary<string, string> Settings { get; set; } = new();
     public List<ProductMapping> ProductMappings { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

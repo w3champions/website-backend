@@ -8,6 +8,7 @@ using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Services;
+using W3ChampionsStatisticService.Rewards;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Rewards.Controllers;
@@ -58,7 +59,7 @@ public class RewardManagementController(
             Description = request.Description,
             Type = request.Type,
             ModuleId = request.ModuleId,
-            Parameters = request.Parameters ?? new Dictionary<string, object>(),
+            Parameters = ConvertParametersToObjects(request.Parameters),
             Duration = request.Duration,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -80,7 +81,8 @@ public class RewardManagementController(
 
         reward.Name = request.Name ?? reward.Name;
         reward.Description = request.Description ?? reward.Description;
-        reward.Parameters = request.Parameters ?? reward.Parameters;
+        reward.Type = request.Type ?? reward.Type;
+        reward.Parameters = request.Parameters != null ? ConvertParametersToObjects(request.Parameters) : reward.Parameters;
         reward.Duration = request.Duration ?? reward.Duration;
         reward.IsActive = request.IsActive ?? reward.IsActive;
         reward.UpdatedAt = DateTime.UtcNow;
@@ -112,14 +114,37 @@ public class RewardManagementController(
     [CheckIfBattleTagIsAdmin]
     public async Task<IActionResult> GetProviderConfigurations()
     {
-        var configs = await _configRepo.GetAll();
-        return Ok(configs);
+        var dbConfigs = await _configRepo.GetAll();
+        var dbConfigsByProvider = dbConfigs.ToDictionary(c => c.ProviderId, c => c);
+
+        var result = ProviderDefinitions.GetAllProviders().Select(provider => new
+        {
+            Id = provider.Id,
+            ProviderId = provider.Id,
+            ProviderName = provider.Name,
+            IsActive = provider.IsEnabled,
+            Description = provider.Description,
+            ProductMappings = dbConfigsByProvider.TryGetValue(provider.Id, out var config) ? 
+                            config.ProductMappings : new List<ProductMapping>(),
+            CreatedAt = dbConfigsByProvider.TryGetValue(provider.Id, out var config2) ? 
+                       config2.CreatedAt : DateTime.UtcNow,
+            UpdatedAt = dbConfigsByProvider.TryGetValue(provider.Id, out var config3) ? 
+                       config3.UpdatedAt : null
+        }).ToList();
+
+        return Ok(result);
     }
 
     [HttpPost("providers/{providerId}/mappings")]
     [CheckIfBattleTagIsAdmin]
     public async Task<IActionResult> AddProductMapping(string providerId, [FromBody] ProductMapping mapping)
     {
+        // Validate that the provider is supported
+        if (!ProviderDefinitions.IsProviderSupported(providerId))
+        {
+            return BadRequest(new { error = $"Provider '{providerId}' is not supported" });
+        }
+
         var config = await _configRepo.GetByProviderId(providerId);
         if (config == null)
         {
@@ -127,8 +152,6 @@ public class RewardManagementController(
             {
                 Id = Guid.NewGuid().ToString(),
                 ProviderId = providerId,
-                ProviderName = providerId,
-                IsActive = true,
                 ProductMappings = new List<ProductMapping> { mapping },
                 CreatedAt = DateTime.UtcNow
             };
@@ -144,7 +167,21 @@ public class RewardManagementController(
         _logger.LogInformation("Added product mapping for {ProviderId}: {ProductId} -> {RewardId}",
             providerId, mapping.ProviderProductId, mapping.RewardId);
 
-        return Ok(config);
+        // Return the combined provider info with mappings
+        var provider = ProviderDefinitions.GetProvider(providerId);
+        var result = new
+        {
+            Id = provider.Id,
+            ProviderId = provider.Id,
+            ProviderName = provider.Name,
+            IsActive = provider.IsEnabled,
+            Description = provider.Description,
+            ProductMappings = config.ProductMappings,
+            CreatedAt = config.CreatedAt,
+            UpdatedAt = config.UpdatedAt
+        };
+
+        return Ok(result);
     }
 
     [HttpDelete("providers/{providerId}/mappings/{productId}")]
@@ -301,25 +338,43 @@ public class RewardManagementController(
         }
     }
 
-    /// <summary>
-    /// Get all available rewards (public endpoint)
-    /// </summary>
-    [HttpGet]
-    public async Task<IActionResult> GetAvailableRewards()
+    private static Dictionary<string, object> ConvertParametersToObjects(Dictionary<string, object> parameters)
     {
-        try
+        if (parameters == null)
+            return new Dictionary<string, object>();
+
+        var result = new Dictionary<string, object>();
+        
+        foreach (var kvp in parameters)
         {
-            var rewards = await _rewardRepo.GetAll();
-            var activeRewards = rewards.Where(r => r.IsActive).ToList();
-            
-            return Ok(activeRewards);
+            if (kvp.Value is System.Text.Json.JsonElement jsonElement)
+            {
+                result[kvp.Key] = ConvertJsonElementToObject(jsonElement);
+            }
+            else
+            {
+                result[kvp.Key] = kvp.Value;
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting available rewards");
-            return StatusCode(500, new { error = "Failed to get available rewards" });
-        }
+
+        return result;
     }
+
+    private static object ConvertJsonElementToObject(System.Text.Json.JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.String => element.GetString(),
+            System.Text.Json.JsonValueKind.Number => element.TryGetInt32(out var intValue) ? intValue : element.GetDouble(),
+            System.Text.Json.JsonValueKind.True => true,
+            System.Text.Json.JsonValueKind.False => false,
+            System.Text.Json.JsonValueKind.Null => null,
+            System.Text.Json.JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElementToObject).ToArray(),
+            System.Text.Json.JsonValueKind.Object => element.EnumerateObject().ToDictionary(p => p.Name, p => ConvertJsonElementToObject(p.Value)),
+            _ => element.ToString()
+        };
+    }
+
 }
 
 public class CreateRewardRequest
@@ -336,6 +391,7 @@ public class UpdateRewardRequest
 {
     public string Name { get; set; }
     public string Description { get; set; }
+    public RewardType? Type { get; set; }
     public Dictionary<string, object> Parameters { get; set; }
     public RewardDuration Duration { get; set; }
     public bool? IsActive { get; set; }

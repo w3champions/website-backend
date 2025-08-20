@@ -3,18 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Events;
 
 namespace W3ChampionsStatisticService.Rewards.Providers.KoFi;
 
-public class KoFiProvider(IConfiguration configuration, ILogger<KoFiProvider> logger) : IRewardProvider
+public class KoFiProvider(ILogger<KoFiProvider> logger) : IRewardProvider
 {
-    private readonly IConfiguration _configuration = configuration;
     private readonly ILogger<KoFiProvider> _logger = logger;
-    private readonly string _verificationToken = configuration["Rewards:Providers:KoFi:VerificationToken"];
+    private readonly string _verificationToken = Environment.GetEnvironmentVariable("KOFI_VERIFICATION_TOKEN");
 
     public string ProviderId => "kofi";
     public string ProviderName => "Ko-Fi";

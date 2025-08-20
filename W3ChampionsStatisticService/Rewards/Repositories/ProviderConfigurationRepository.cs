@@ -22,10 +22,6 @@ public class ProviderConfigurationRepository(MongoClient mongoClient) : MongoDbR
         return LoadAll<ProviderConfiguration>();
     }
 
-    public Task<List<ProviderConfiguration>> GetActive()
-    {
-        return LoadAll<ProviderConfiguration>(c => c.IsActive == true);
-    }
 
     public async Task<ProviderConfiguration> Create(ProviderConfiguration configuration)
     {

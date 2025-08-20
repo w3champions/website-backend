@@ -12,6 +12,7 @@ using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Hubs;
+using W3ChampionsStatisticService.Rewards;
 
 namespace W3ChampionsStatisticService.Rewards.Services;
 
@@ -71,17 +72,19 @@ public class RewardService : IRewardService
                 return existing.First();
             }
 
-            // Get provider configuration and product mapping
-            var config = await _configRepo.GetByProviderId(rewardEvent.ProviderId);
-            if (config == null)
+            // Validate provider is supported and enabled
+            if (!ProviderDefinitions.IsProviderSupported(rewardEvent.ProviderId))
             {
-                throw new InvalidOperationException($"Provider configuration not found for {rewardEvent.ProviderId}");
+                throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not supported");
             }
             
-            if (!config.IsActive)
+            if (!ProviderDefinitions.IsProviderEnabled(rewardEvent.ProviderId))
             {
-                throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not active");
+                throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not enabled");
             }
+
+            // Get provider configuration and product mapping
+            var config = await _configRepo.GetByProviderId(rewardEvent.ProviderId);
 
             // Get previous entitled tiers from the database for diffing
             var previousTiers = await GetPreviousEntitledTiers(rewardEvent.UserId, rewardEvent.ProviderId);
