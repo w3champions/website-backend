@@ -19,9 +19,11 @@ public static class RewardServiceExtensions
         services.AddInterceptedTransient<IRewardRepository, RewardRepository>();
         services.AddInterceptedTransient<IRewardAssignmentRepository, RewardAssignmentRepository>();
         services.AddInterceptedTransient<IProviderConfigurationRepository, ProviderConfigurationRepository>();
+        services.AddInterceptedTransient<IPatreonAccountLinkRepository, PatreonAccountLinkRepository>();
 
         // Core services
         services.AddInterceptedTransient<IRewardService, RewardService>();
+        services.AddInterceptedTransient<PatreonOAuthService>();
 
         // Reward providers
         services.AddInterceptedTransient<PatreonProvider>();

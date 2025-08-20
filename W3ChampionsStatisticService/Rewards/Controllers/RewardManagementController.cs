@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
+using W3ChampionsStatisticService.Rewards.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Rewards.Controllers;
@@ -16,11 +18,15 @@ public class RewardManagementController(
     IRewardRepository rewardRepo,
     IRewardAssignmentRepository assignmentRepo,
     IProviderConfigurationRepository configRepo,
+    PatreonOAuthService patreonOAuthService,
+    IW3CAuthenticationService authService,
     ILogger<RewardManagementController> logger) : ControllerBase
 {
     private readonly IRewardRepository _rewardRepo = rewardRepo;
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
     private readonly IProviderConfigurationRepository _configRepo = configRepo;
+    private readonly PatreonOAuthService _patreonOAuthService = patreonOAuthService;
+    private readonly IW3CAuthenticationService _authService = authService;
     private readonly ILogger<RewardManagementController> _logger = logger;
 
     [HttpGet]
@@ -157,6 +163,163 @@ public class RewardManagementController(
 
         return NoContent();
     }
+
+    // Patreon OAuth endpoints
+    
+    /// <summary>
+    /// Get Patreon link status for authenticated user
+    /// </summary>
+    [HttpGet("patreon/status")]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> GetPatreonStatus()
+    {
+        try
+        {
+            var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
+            var status = await _patreonOAuthService.GetLinkStatus(user.BattleTag);
+            
+            return Ok(new PatreonStatusResponse
+            {
+                IsLinked = status.IsLinked,
+                PatreonUserId = status.PatreonUserId,
+                LinkedAt = status.LinkedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting Patreon status");
+            return StatusCode(500, new { error = "Failed to get Patreon status" });
+        }
+    }
+
+    /// <summary>
+    /// Complete Patreon OAuth flow
+    /// </summary>
+    [HttpPost("patreon/oauth/callback")]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> CompletePatreonOAuth([FromBody] CompleteOAuthRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.Code))
+                return BadRequest(new { error = "Authorization code is required" });
+
+            if (string.IsNullOrEmpty(request.State))
+                return BadRequest(new { error = "State parameter is required" });
+
+            var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
+            if (string.IsNullOrWhiteSpace(request.RedirectUri))
+                return BadRequest(new { error = "RedirectUri is required and must exactly match the URI used in the Patreon authorize step" });
+
+            var redirectUri = request.RedirectUri;
+            // Normalize if client passed a URL-encoded redirect URI (to avoid double-encoding when posting the token request)
+            if (redirectUri.Contains("%"))
+            {
+                try
+                {
+                    var decoded = System.Uri.UnescapeDataString(redirectUri);
+                    if (System.Uri.TryCreate(decoded, System.UriKind.Absolute, out _))
+                    {
+                        redirectUri = decoded;
+                    }
+                }
+                catch { /* ignore decoding issues and use the original value */ }
+            }
+            
+            var result = await _patreonOAuthService.CompleteOAuthFlow(
+                request.Code, 
+                request.State, 
+                redirectUri, 
+                user.BattleTag);
+
+            if (!result.Success)
+            {
+                return BadRequest(new { error = result.ErrorMessage });
+            }
+
+            return Ok(new CompleteOAuthResponse
+            {
+                Success = true,
+                IsLinked = true,
+                PatreonUserId = result.PatreonUserId,
+                LinkedAt = result.LinkedAt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing Patreon OAuth");
+            return StatusCode(500, new { error = "Failed to complete OAuth process" });
+        }
+    }
+
+    /// <summary>
+    /// Unlink Patreon account
+    /// </summary>
+    [HttpDelete("patreon/unlink")]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> UnlinkPatreonAccount()
+    {
+        try
+        {
+            var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
+            var result = await _patreonOAuthService.UnlinkAccount(user.BattleTag);
+
+            if (!result)
+            {
+                return NotFound(new { error = "No Patreon link found to remove" });
+            }
+
+            return Ok(new { success = true, message = "Patreon account unlinked successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error unlinking Patreon account");
+            return StatusCode(500, new { error = "Failed to unlink Patreon account" });
+        }
+    }
+
+    // User-facing rewards endpoints
+    
+    /// <summary>
+    /// Get current user's reward assignments
+    /// </summary>
+    [HttpGet("assignments")]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> GetUserAssignments()
+    {
+        try
+        {
+            var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
+            var assignments = await _assignmentRepo.GetByUserId(user.BattleTag);
+            
+            return Ok(assignments);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user assignments");
+            return StatusCode(500, new { error = "Failed to get user assignments" });
+        }
+    }
+
+    /// <summary>
+    /// Get all available rewards (public endpoint)
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetAvailableRewards()
+    {
+        try
+        {
+            var rewards = await _rewardRepo.GetAll();
+            var activeRewards = rewards.Where(r => r.IsActive).ToList();
+            
+            return Ok(activeRewards);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting available rewards");
+            return StatusCode(500, new { error = "Failed to get available rewards" });
+        }
+    }
 }
 
 public class CreateRewardRequest
@@ -176,4 +339,27 @@ public class UpdateRewardRequest
     public Dictionary<string, object> Parameters { get; set; }
     public RewardDuration Duration { get; set; }
     public bool? IsActive { get; set; }
+}
+
+public class CompleteOAuthRequest
+{
+    public string Code { get; set; }
+    public string State { get; set; }
+    public string RedirectUri { get; set; }
+}
+
+public class CompleteOAuthResponse
+{
+    public bool Success { get; set; }
+    public bool IsLinked { get; set; }
+    public string PatreonUserId { get; set; }
+    public DateTime? LinkedAt { get; set; }
+    public string ErrorMessage { get; set; }
+}
+
+public class PatreonStatusResponse
+{
+    public bool IsLinked { get; set; }
+    public string PatreonUserId { get; set; }
+    public DateTime? LinkedAt { get; set; }
 }

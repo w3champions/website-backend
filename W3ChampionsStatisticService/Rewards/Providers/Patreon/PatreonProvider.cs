@@ -9,13 +9,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Events;
+using W3C.Domain.Rewards.Repositories;
 
 namespace W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
-public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvider> logger) : IRewardProvider
+public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvider> logger, IPatreonAccountLinkRepository patreonLinkRepository) : IRewardProvider
 {
     private readonly IConfiguration _configuration = configuration;
     private readonly ILogger<PatreonProvider> _logger = logger;
+    private readonly IPatreonAccountLinkRepository _patreonLinkRepository = patreonLinkRepository;
     private readonly string _webhookSecret = configuration["Rewards:Providers:Patreon:WebhookSecret"];
 
     public string ProviderId => "patreon";
@@ -65,16 +67,16 @@ public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvid
                 
             if (string.IsNullOrEmpty(webhookData.Data.Id))
                 throw new InvalidOperationException("Webhook data.id is missing - cannot track event");
-                
-            if (string.IsNullOrEmpty(webhookData.Data.Attributes.Email))
-                throw new InvalidOperationException("User email is missing from webhook - cannot resolve user");
 
             var eventType = MapPatreonEventType(headers, webhookData.Data.Attributes.PatronStatus);
-            var userId = await ResolveUserId(webhookData.Data.Attributes.Email);
+            var userId = await ResolveUserId(webhookData.Data.Id);
             var tierIds = ExtractAllTierIdsFromRelationships(webhookData);
             
             if (string.IsNullOrEmpty(userId))
-                throw new InvalidOperationException($"Failed to resolve user ID for email: {webhookData.Data.Attributes.Email}");
+            {
+                _logger.LogInformation("No BattleTag linked for PatreonUserId {PatreonUserId}. Skipping webhook.", webhookData.Data.Id);
+                return null; // Skip this webhook - no linked account
+            }
             
             // Create a single RewardEvent with all entitled tiers
             // Use Patreon's webhook event ID for idempotency instead of generating new GUID
@@ -90,7 +92,8 @@ public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvid
                 Metadata = new Dictionary<string, object>
                 {
                     ["patron_status"] = webhookData.Data.Attributes.PatronStatus ?? "unknown",
-                    ["total_entitled_tiers"] = tierIds.Count
+                    ["total_entitled_tiers"] = tierIds.Count,
+                    ["patreon_user_id"] = webhookData.Data.Id
                 }
             };
             
@@ -122,11 +125,25 @@ public class PatreonProvider(IConfiguration configuration, ILogger<PatreonProvid
         });
     }
 
-    public Task<string> ResolveUserId(string providerUserEmail)
+    public async Task<string> ResolveUserId(string patreonUserId)
     {
-        // This would typically look up the user mapping in a database
-        // For now, return the email as user identifier
-        return Task.FromResult(providerUserEmail);
+        try
+        {
+            var accountLink = await _patreonLinkRepository.GetByPatreonUserId(patreonUserId);
+            if (accountLink != null)
+            {
+                _logger.LogDebug("Resolved PatreonUserId {PatreonUserId} to BattleTag {BattleTag}", patreonUserId, accountLink.BattleTag);
+                return accountLink.BattleTag;
+            }
+            
+            _logger.LogDebug("No BattleTag found for PatreonUserId {PatreonUserId}", patreonUserId);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving PatreonUserId {PatreonUserId} to BattleTag", patreonUserId);
+            return null;
+        }
     }
 
     private string ComputeHmacSignature(string payload)
