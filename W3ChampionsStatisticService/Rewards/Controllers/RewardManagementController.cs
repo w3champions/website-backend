@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
+using W3C.Domain.Rewards.Abstractions;
 using W3ChampionsStatisticService.Rewards.Services;
 using W3ChampionsStatisticService.Rewards;
 using W3ChampionsStatisticService.Rewards.DTOs;
@@ -24,6 +25,7 @@ public class RewardManagementController(
     IPatreonAccountLinkRepository patreonLinkRepo,
     PatreonOAuthService patreonOAuthService,
     IW3CAuthenticationService authService,
+    IEnumerable<IRewardModule> rewardModules,
     ILogger<RewardManagementController> logger) : ControllerBase
 {
     private readonly IRewardRepository _rewardRepo = rewardRepo;
@@ -33,6 +35,7 @@ public class RewardManagementController(
     private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
     private readonly PatreonOAuthService _patreonOAuthService = patreonOAuthService;
     private readonly IW3CAuthenticationService _authService = authService;
+    private readonly IEnumerable<IRewardModule> _rewardModules = rewardModules;
     private readonly ILogger<RewardManagementController> _logger = logger;
 
     [HttpGet]
@@ -41,6 +44,22 @@ public class RewardManagementController(
     {
         var rewards = await _rewardRepo.GetAll();
         return Ok(rewards);
+    }
+
+    [HttpGet("modules")]
+    [CheckIfBattleTagIsAdmin]
+    public IActionResult GetAvailableModules()
+    {
+        var modules = _rewardModules.Select(module => new ModuleDefinitionDto
+        {
+            ModuleId = module.ModuleId,
+            ModuleName = module.ModuleName,
+            Description = module.Description,
+            SupportsParameters = module.SupportsParameters,
+            ParameterDefinitions = module.GetParameterDefinitions()
+        }).ToList();
+
+        return Ok(modules);
     }
 
     [HttpGet("{rewardId}")]
@@ -62,7 +81,6 @@ public class RewardManagementController(
             Id = Guid.NewGuid().ToString(),
             Name = request.Name,
             Description = request.Description,
-            Type = request.Type,
             ModuleId = request.ModuleId,
             Parameters = ConvertParametersToObjects(request.Parameters),
             Duration = request.Duration,
@@ -86,7 +104,6 @@ public class RewardManagementController(
 
         reward.Name = request.Name ?? reward.Name;
         reward.Description = request.Description ?? reward.Description;
-        reward.Type = request.Type ?? reward.Type;
         reward.Parameters = request.Parameters != null ? ConvertParametersToObjects(request.Parameters) : reward.Parameters;
         reward.Duration = request.Duration ?? reward.Duration;
         reward.IsActive = request.IsActive ?? reward.IsActive;
@@ -371,12 +388,14 @@ public class RewardManagementController(
                 var reward = await _rewardRepo.GetById(assignment.RewardId);
                 if (reward != null && reward.IsActive)
                 {
+                    var module = _rewardModules.FirstOrDefault(m => m.ModuleId == reward.ModuleId);
                     userRewards.Add(new UserRewardDto
                     {
                         Id = reward.Id,
                         Name = reward.Name,
                         Description = reward.Description,
-                        Type = reward.Type.ToString(),
+                        ModuleId = reward.ModuleId,
+                        ModuleName = module?.ModuleName ?? reward.ModuleId,
                         AssignedAt = assignment.AssignedAt,
                         ExpiresAt = assignment.ExpiresAt
                     });
@@ -541,7 +560,6 @@ public class CreateRewardRequest
 {
     public string Name { get; set; }
     public string Description { get; set; }
-    public RewardType Type { get; set; }
     public string ModuleId { get; set; }
     public Dictionary<string, object> Parameters { get; set; }
     public RewardDuration Duration { get; set; }
@@ -551,7 +569,6 @@ public class UpdateRewardRequest
 {
     public string Name { get; set; }
     public string Description { get; set; }
-    public RewardType? Type { get; set; }
     public Dictionary<string, object> Parameters { get; set; }
     public RewardDuration Duration { get; set; }
     public bool? IsActive { get; set; }
@@ -578,4 +595,13 @@ public class PatreonStatusResponse
     public bool IsLinked { get; set; }
     public string PatreonUserId { get; set; }
     public DateTime? LinkedAt { get; set; }
+}
+
+public class ModuleDefinitionDto
+{
+    public string ModuleId { get; set; }
+    public string ModuleName { get; set; }
+    public string Description { get; set; }
+    public bool SupportsParameters { get; set; }
+    public Dictionary<string, ParameterDefinition> ParameterDefinitions { get; set; }
 }
