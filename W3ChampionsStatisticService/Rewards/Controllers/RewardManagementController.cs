@@ -396,7 +396,7 @@ public class RewardManagementController(
     // User-facing rewards endpoints
     
     /// <summary>
-    /// Get current user's reward assignments
+    /// Get current user's active rewards
     /// </summary>
     [HttpGet("assignments")]
     [InjectActingPlayerAuthCode]
@@ -407,7 +407,29 @@ public class RewardManagementController(
             var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
             var assignments = await _assignmentRepo.GetByUserId(user.BattleTag);
             
-            return Ok(assignments);
+            // Backend filtering: Only process active assignments
+            var activeAssignments = assignments.Where(a => a.IsActive()).ToList();
+            
+            // Fetch reward details and transform to DTOs
+            var userRewards = new List<UserRewardDto>();
+            foreach (var assignment in activeAssignments)
+            {
+                var reward = await _rewardRepo.GetById(assignment.RewardId);
+                if (reward != null && reward.IsActive)
+                {
+                    userRewards.Add(new UserRewardDto
+                    {
+                        Id = reward.Id,
+                        Name = reward.Name,
+                        Description = reward.Description,
+                        Type = reward.Type.ToString(),
+                        AssignedAt = assignment.AssignedAt,
+                        ExpiresAt = assignment.ExpiresAt
+                    });
+                }
+            }
+            
+            return Ok(userRewards);
         }
         catch (Exception ex)
         {
