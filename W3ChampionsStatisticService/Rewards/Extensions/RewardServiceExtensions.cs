@@ -20,6 +20,7 @@ public static class RewardServiceExtensions
         services.AddInterceptedScoped<IRewardAssignmentRepository, RewardAssignmentRepository>();
         services.AddInterceptedScoped<IProviderConfigurationRepository, ProviderConfigurationRepository>();
         services.AddInterceptedScoped<IProductMappingRepository, ProductMappingRepository>();
+        services.AddInterceptedScoped<IProductMappingUserAssociationRepository, ProductMappingUserAssociationRepository>();
         services.AddInterceptedScoped<IPatreonAccountLinkRepository, PatreonAccountLinkRepository>();
 
         // Core services

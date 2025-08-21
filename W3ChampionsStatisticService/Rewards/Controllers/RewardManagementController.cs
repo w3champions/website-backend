@@ -22,6 +22,7 @@ public class RewardManagementController(
     IRewardAssignmentRepository assignmentRepo,
     IProviderConfigurationRepository configRepo,
     IProductMappingRepository productMappingRepo,
+    IProductMappingUserAssociationRepository associationRepo,
     IPatreonAccountLinkRepository patreonLinkRepo,
     PatreonOAuthService patreonOAuthService,
     IW3CAuthenticationService authService,
@@ -32,6 +33,7 @@ public class RewardManagementController(
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
     private readonly IProviderConfigurationRepository _configRepo = configRepo;
     private readonly IProductMappingRepository _productMappingRepo = productMappingRepo;
+    private readonly IProductMappingUserAssociationRepository _associationRepo = associationRepo;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
     private readonly PatreonOAuthService _patreonOAuthService = patreonOAuthService;
     private readonly IW3CAuthenticationService _authService = authService;
@@ -154,6 +156,57 @@ public class RewardManagementController(
     {
         var mappings = await _productMappingRepo.GetAll();
         return Ok(mappings);
+    }
+
+    [HttpGet("product-mappings/{id}/users")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> GetProductMappingUsers(string id)
+    {
+        try
+        {
+            // Verify the product mapping exists
+            var productMapping = await _productMappingRepo.GetById(id);
+            if (productMapping == null)
+            {
+                return NotFound(new { error = "Product mapping not found" });
+            }
+
+            // Get all user associations for this product mapping
+            var associations = await _associationRepo.GetUsersByProductMappingId(id);
+            
+            // Transform to DTOs with user-friendly information
+            var userInfos = associations.Select(association => new ProductMappingUserDto
+            {
+                UserId = association.UserId,
+                ProviderId = association.ProviderId,
+                ProviderProductId = association.ProviderProductId,
+                Status = association.Status.ToString(),
+                AssignedAt = association.AssignedAt,
+                LastUpdatedAt = association.LastUpdatedAt,
+                ExpiresAt = association.ExpiresAt,
+                IsActive = association.IsActive(),
+                ProviderReference = association.Metadata.TryGetValue("provider_reference", out var providerRef) 
+                    ? providerRef?.ToString() : null,
+                EventType = association.Metadata.TryGetValue("event_type", out var eventType) 
+                    ? eventType?.ToString() : null
+            }).OrderByDescending(u => u.AssignedAt).ToList();
+
+            var result = new
+            {
+                productMappingId = id,
+                productName = productMapping.ProductName,
+                totalUsers = userInfos.Count,
+                activeUsers = userInfos.Count(u => u.IsActive),
+                users = userInfos
+            };
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting users for product mapping {ProductMappingId}", id);
+            return StatusCode(500, new { error = "Failed to get product mapping users" });
+        }
     }
 
     [HttpPost("product-mappings")]
@@ -604,4 +657,18 @@ public class ModuleDefinitionDto
     public string Description { get; set; }
     public bool SupportsParameters { get; set; }
     public Dictionary<string, ParameterDefinition> ParameterDefinitions { get; set; }
+}
+
+public class ProductMappingUserDto
+{
+    public string UserId { get; set; }
+    public string ProviderId { get; set; }
+    public string ProviderProductId { get; set; }
+    public string Status { get; set; }
+    public DateTime AssignedAt { get; set; }
+    public DateTime? LastUpdatedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public bool IsActive { get; set; }
+    public string ProviderReference { get; set; }
+    public string EventType { get; set; }
 }

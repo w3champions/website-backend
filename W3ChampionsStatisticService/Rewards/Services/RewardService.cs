@@ -21,6 +21,7 @@ public class RewardService : IRewardService
     private readonly IRewardRepository _rewardRepo;
     private readonly IRewardAssignmentRepository _assignmentRepo;
     private readonly IProductMappingRepository _productMappingRepo;
+    private readonly IProductMappingUserAssociationRepository _associationRepo;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RewardService> _logger;
     private readonly IHubContext<WebsiteBackendHub> _hubContext;
@@ -29,6 +30,7 @@ public class RewardService : IRewardService
         IRewardRepository rewardRepo,
         IRewardAssignmentRepository assignmentRepo,
         IProductMappingRepository productMappingRepo,
+        IProductMappingUserAssociationRepository associationRepo,
         IServiceProvider serviceProvider,
         ILogger<RewardService> logger,
         IHubContext<WebsiteBackendHub> hubContext)
@@ -36,6 +38,7 @@ public class RewardService : IRewardService
         _rewardRepo = rewardRepo;
         _assignmentRepo = assignmentRepo;
         _productMappingRepo = productMappingRepo;
+        _associationRepo = associationRepo;
         _serviceProvider = serviceProvider;
         _logger = logger;
         _hubContext = hubContext;
@@ -518,7 +521,12 @@ public class RewardService : IRewardService
         try
         {
             // Cancel/revoke existing assignment for this tier
-            return await ProcessSubscriptionCancelled(rewardEvent, productMapping, tierId);
+            var result = await ProcessSubscriptionCancelled(rewardEvent, productMapping, tierId);
+            
+            // Remove user association for this product mapping and provider product
+            await RemoveUserAssociation(rewardEvent.UserId, productMapping.Id, rewardEvent.ProviderId, tierId);
+            
+            return result;
         }
         catch (Exception ex)
         {
@@ -541,13 +549,18 @@ public class RewardService : IRewardService
         try
         {
             // Create new assignment based on event type
-            return rewardEvent.EventType switch
+            var result = rewardEvent.EventType switch
             {
                 RewardEventType.Purchase => await ProcessPurchase(rewardEvent, productMapping, tierId),
                 RewardEventType.SubscriptionCreated => await ProcessSubscriptionCreated(rewardEvent, productMapping, tierId),
                 RewardEventType.SubscriptionRenewed => await ProcessSubscriptionRenewed(rewardEvent, productMapping, tierId),
                 _ => await ProcessSubscriptionCreated(rewardEvent, productMapping, tierId) // Default to creation
             };
+            
+            // Add/update user association for this product mapping and provider product
+            await EnsureUserAssociation(rewardEvent, productMapping, tierId);
+            
+            return result;
         }
         catch (Exception ex)
         {
@@ -555,5 +568,105 @@ public class RewardService : IRewardService
                 tierId, rewardEvent.UserId);
             throw new InvalidOperationException($"Failed to process tier addition for {tierId}", ex);
         }
+    }
+
+    /// <summary>
+    /// Ensures a user association exists for the given product mapping and provider product
+    /// </summary>
+    private async Task EnsureUserAssociation(RewardEvent rewardEvent, ProductMapping productMapping, string tierId)
+    {
+        try
+        {
+            // Check if association already exists
+            var existingAssociations = await _associationRepo.GetByUserAndProviderProduct(
+                rewardEvent.UserId, rewardEvent.ProviderId, tierId);
+
+            var activeAssociation = existingAssociations.FirstOrDefault(a => 
+                a.ProductMappingId == productMapping.Id && a.IsActive());
+
+            if (activeAssociation != null)
+            {
+                // Refresh existing association
+                var newExpirationDate = CalculateAssociationExpirationDate(rewardEvent);
+                activeAssociation.Refresh(newExpirationDate);
+                await _associationRepo.Update(activeAssociation);
+                
+                _logger.LogInformation("Refreshed user association for user {UserId} and product mapping {ProductMappingId}", 
+                    rewardEvent.UserId, productMapping.Id);
+            }
+            else
+            {
+                // Create new association
+                var association = new ProductMappingUserAssociation
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ProductMappingId = productMapping.Id,
+                    UserId = rewardEvent.UserId,
+                    ProviderId = rewardEvent.ProviderId,
+                    ProviderProductId = tierId,
+                    AssignedAt = DateTime.UtcNow,
+                    Status = AssociationStatus.Active,
+                    ExpiresAt = CalculateAssociationExpirationDate(rewardEvent),
+                    Metadata = new Dictionary<string, object>
+                    {
+                        ["provider_reference"] = rewardEvent.ProviderReference,
+                        ["event_id"] = rewardEvent.EventId ?? string.Empty,
+                        ["event_type"] = rewardEvent.EventType.ToString()
+                    }
+                };
+
+                await _associationRepo.Create(association);
+                
+                _logger.LogInformation("Created user association for user {UserId} and product mapping {ProductMappingId}", 
+                    rewardEvent.UserId, productMapping.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to ensure user association for user {UserId} and product mapping {ProductMappingId}", 
+                rewardEvent.UserId, productMapping.Id);
+            // Don't rethrow - association maintenance is supplementary to main reward processing
+        }
+    }
+
+    /// <summary>
+    /// Removes user association for the given product mapping and provider product
+    /// </summary>
+    private async Task RemoveUserAssociation(string userId, string productMappingId, string providerId, string providerProductId)
+    {
+        try
+        {
+            var associations = await _associationRepo.GetByUserAndProviderProduct(userId, providerId, providerProductId);
+            var targetAssociations = associations.Where(a => a.ProductMappingId == productMappingId && a.IsActive()).ToList();
+
+            foreach (var association in targetAssociations)
+            {
+                association.Revoke($"Provider product {providerProductId} access revoked");
+                await _associationRepo.Update(association);
+                
+                _logger.LogInformation("Revoked user association for user {UserId} and product mapping {ProductMappingId}", 
+                    userId, productMappingId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove user association for user {UserId} and product mapping {ProductMappingId}", 
+                userId, productMappingId);
+            // Don't rethrow - association maintenance is supplementary to main reward processing
+        }
+    }
+
+    /// <summary>
+    /// Calculates the expiration date for a user association based on the reward event
+    /// </summary>
+    private DateTime? CalculateAssociationExpirationDate(RewardEvent rewardEvent)
+    {
+        return rewardEvent.EventType switch
+        {
+            RewardEventType.Purchase => null, // One-time purchases don't expire
+            RewardEventType.SubscriptionCreated => DateTime.UtcNow.AddMonths(1), // Default to monthly
+            RewardEventType.SubscriptionRenewed => DateTime.UtcNow.AddMonths(1), // Default to monthly
+            _ => DateTime.UtcNow.AddMonths(1) // Default fallback
+        };
     }
 }
