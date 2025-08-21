@@ -16,22 +16,22 @@ public class PatreonOAuthService
     private readonly HttpClient _httpClient;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepository;
     private readonly ILogger<PatreonOAuthService> _logger;
-    
+
     private const string PatreonTokenUrl = "https://www.patreon.com/api/oauth2/token";
     private const string PatreonUserUrl = "https://www.patreon.com/api/oauth2/v2/identity";
-    
+
     private readonly string _clientId;
     private readonly string _clientSecret;
 
     public PatreonOAuthService(
-        HttpClient httpClient, 
+        HttpClient httpClient,
         IPatreonAccountLinkRepository patreonLinkRepository,
         ILogger<PatreonOAuthService> logger)
     {
         _httpClient = httpClient;
         _patreonLinkRepository = patreonLinkRepository;
         _logger = logger;
-        
+
         _clientId = Environment.GetEnvironmentVariable("PATREON_CLIENT_ID");
         _clientSecret = Environment.GetEnvironmentVariable("PATREON_CLIENT_SECRET");
 
@@ -56,10 +56,10 @@ public class PatreonOAuthService
     {
         if (string.IsNullOrEmpty(code))
             throw new ArgumentException("Authorization code is required", nameof(code));
-        
+
         if (string.IsNullOrEmpty(state))
             throw new ArgumentException("State parameter is required", nameof(state));
-        
+
         if (string.IsNullOrEmpty(battleTag))
             throw new ArgumentException("BattleTag is required", nameof(battleTag));
 
@@ -67,7 +67,7 @@ public class PatreonOAuthService
         {
             // Step 1: Exchange authorization code for access token
             var tokenResponse = await ExchangeCodeForToken(code, redirectUri);
-            
+
             if (tokenResponse == null)
             {
                 return new PatreonOAuthResult
@@ -89,7 +89,7 @@ public class PatreonOAuthService
 
             // Step 2: Get Patreon user profile
             var userProfile = await GetPatreonUserProfile(tokenResponse.AccessToken);
-            
+
             if (userProfile == null)
             {
                 return new PatreonOAuthResult
@@ -99,10 +99,10 @@ public class PatreonOAuthService
                 };
             }
 
-            // Step 3: Create or update account link
-            var accountLink = await _patreonLinkRepository.UpsertLink(battleTag, userProfile.PatreonUserId);
-            
-            _logger.LogInformation("Successfully linked BattleTag {BattleTag} to Patreon user {PatreonUserId}", 
+            // Step 3: Create or update account link, passing access token for immediate sync
+            var accountLink = await _patreonLinkRepository.UpsertLink(battleTag, userProfile.PatreonUserId, tokenResponse.AccessToken);
+
+            _logger.LogInformation("Successfully linked BattleTag {BattleTag} to Patreon user {PatreonUserId}",
                 battleTag, userProfile.PatreonUserId);
 
             return new PatreonOAuthResult
@@ -141,19 +141,19 @@ public class PatreonOAuthService
             ["redirect_uri"] = redirectUri,
             ["client_id"] = _clientId,
             ["client_secret"] = _clientSecret,
-            ["scope"] = "identity"
+            ["scope"] = "identity.memberships"
         };
 
         using var content = new FormUrlEncodedContent(parameters);
-        
+
         try
         {
             var response = await _httpClient.PostAsync(PatreonTokenUrl, content);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Patreon token exchange failed. Status: {StatusCode}, Error: {Error}, RedirectUri: {RedirectUri}", 
+                _logger.LogError("Patreon token exchange failed. Status: {StatusCode}, Error: {Error}, RedirectUri: {RedirectUri}",
                     response.StatusCode, errorContent, redirectUri);
                 return null;
             }
@@ -184,11 +184,11 @@ public class PatreonOAuthService
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
             var response = await _httpClient.SendAsync(request);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Patreon user profile request failed. Status: {StatusCode}, Error: {Error}", 
+                _logger.LogError("Patreon user profile request failed. Status: {StatusCode}, Error: {Error}",
                     response.StatusCode, errorContent);
                 return null;
             }
@@ -226,7 +226,7 @@ public class PatreonOAuthService
         {
             return false;
         }
-        
+
         return receivedState.Equals(expectedState, StringComparison.Ordinal);
     }
 
@@ -238,7 +238,7 @@ public class PatreonOAuthService
         try
         {
             var link = await _patreonLinkRepository.GetByBattleTag(battleTag);
-            
+
             return new PatreonLinkStatus
             {
                 IsLinked = link != null,
@@ -261,7 +261,7 @@ public class PatreonOAuthService
         try
         {
             var result = await _patreonLinkRepository.RemoveByBattleTag(battleTag);
-            
+
             if (result)
             {
                 _logger.LogInformation("Successfully unlinked Patreon account for BattleTag {BattleTag}", battleTag);
@@ -270,7 +270,7 @@ public class PatreonOAuthService
             {
                 _logger.LogWarning("No Patreon link found to remove for BattleTag {BattleTag}", battleTag);
             }
-            
+
             return result;
         }
         catch (Exception ex)

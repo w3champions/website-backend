@@ -36,8 +36,8 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
                     Background = true
                 });
             
-            collection.Indexes.CreateOne(eventIdIndex);
-            Log.Information("Created unique index on EventId for RewardAssignment collection");
+            var indexName = collection.Indexes.CreateOne(eventIdIndex);
+            Log.Information("Ensured unique index on EventId for RewardAssignment collection: {IndexName}", indexName);
         }
         catch (MongoCommandException ex) when (ex.Code == 85) // IndexOptionsConflict
         {

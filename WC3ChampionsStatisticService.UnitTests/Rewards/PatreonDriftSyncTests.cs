@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Moq;
 using NUnit.Framework;
 using W3C.Domain.Rewards.Abstractions;
+using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Hubs;
@@ -27,11 +28,17 @@ public class PatreonDriftSyncTests
         _mockPatreonApiClient = new Mock<PatreonApiClient>(Mock.Of<System.Net.Http.HttpClient>());
         _mockAssignmentRepository = new Mock<IRewardAssignmentRepository>();
         _mockRewardService = new Mock<IRewardService>();
+        var mockPatreonLinkRepository = new Mock<IPatreonAccountLinkRepository>();
+        
+        // Setup mock to return a linked account for the test PatreonUserId
+        mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+            .ReturnsAsync(new PatreonAccountLink("TestBattleTag#1234", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
         
         _service = new PatreonDriftDetectionService(
             _mockPatreonApiClient.Object,
             _mockAssignmentRepository.Object,
-            _mockRewardService.Object);
+            _mockRewardService.Object,
+            mockPatreonLinkRepository.Object);
     }
 
     [Test]
@@ -47,7 +54,7 @@ public class PatreonDriftSyncTests
                 new MissingMember
                 {
                     PatreonMemberId = "member123",
-                    Email = "test@example.com",
+                    PatreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     PatronStatus = "active_patron",
                     EntitledTierIds = new List<string> { "tier1" },
                     Reason = "Test missing member"
@@ -58,7 +65,7 @@ public class PatreonDriftSyncTests
                 new ExtraAssignment
                 {
                     AssignmentId = "assignment456",
-                    UserId = "user@example.com",
+                    UserId = "TestUser#456",
                     RewardId = "reward1",
                     AssignedAt = DateTime.UtcNow.AddDays(-1),
                     Reason = "Test extra assignment"
@@ -68,7 +75,7 @@ public class PatreonDriftSyncTests
             {
                 new TierMismatch
                 {
-                    UserId = "mismatch@example.com",
+                    UserId = "TestUser#789",
                     PatreonMemberId = "member789",
                     PatreonTiers = new List<string> { "tier2" },
                     InternalTiers = new List<string> { "tier1" },
@@ -91,16 +98,17 @@ public class PatreonDriftSyncTests
         // Verify missing member event identification
         var missingMemberEvent = syncResult.GeneratedEvents[0];
         Assert.IsTrue(missingMemberEvent.EventId.StartsWith("drift-sync:patreon:"));
-        Assert.IsTrue(missingMemberEvent.EventId.Contains("missing:member123"));
+        Assert.IsTrue(missingMemberEvent.EventId.Contains("TestBattleTag#1234"));
         Assert.AreEqual("sync:member:member123", missingMemberEvent.ProviderReference);
         Assert.AreEqual("drift_sync", missingMemberEvent.Metadata["event_source"]);
         Assert.AreEqual("missing_member", missingMemberEvent.Metadata["sync_reason"]);
-        Assert.AreEqual("member123", missingMemberEvent.Metadata["original_member_id"]);
+        Assert.AreEqual("member123", missingMemberEvent.Metadata["patreon_member_id"]);
+        Assert.AreEqual("Test missing member", missingMemberEvent.Metadata["sync_reason_detail"]);
 
         // Verify extra assignment event identification
         var extraAssignmentEvent = syncResult.GeneratedEvents[1];
         Assert.IsTrue(extraAssignmentEvent.EventId.StartsWith("drift-sync:patreon:"));
-        Assert.IsTrue(extraAssignmentEvent.EventId.Contains("extra:assignment456"));
+        Assert.IsTrue(extraAssignmentEvent.EventId.Contains("TestUser#456"));
         Assert.AreEqual("sync:revoke:assignment456", extraAssignmentEvent.ProviderReference);
         Assert.AreEqual("drift_sync", extraAssignmentEvent.Metadata["event_source"]);
         Assert.AreEqual("extra_assignment", extraAssignmentEvent.Metadata["sync_reason"]);
@@ -109,7 +117,7 @@ public class PatreonDriftSyncTests
         // Verify tier mismatch event identification
         var tierMismatchEvent = syncResult.GeneratedEvents[2];
         Assert.IsTrue(tierMismatchEvent.EventId.StartsWith("drift-sync:patreon:"));
-        Assert.IsTrue(tierMismatchEvent.EventId.Contains("mismatch:mismatch@example.com"));
+        Assert.IsTrue(tierMismatchEvent.EventId.Contains("TestUser#789"));
         Assert.IsTrue(tierMismatchEvent.ProviderReference.StartsWith("sync:tier-update:"));
         Assert.AreEqual("drift_sync", tierMismatchEvent.Metadata["event_source"]);
         Assert.AreEqual("tier_mismatch", tierMismatchEvent.Metadata["sync_reason"]);
@@ -163,7 +171,7 @@ public class PatreonDriftSyncTests
                 new MissingMember
                 {
                     PatreonMemberId = "member123",
-                    Email = "test@example.com",
+                    PatreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     PatronStatus = "active_patron",
                     EntitledTierIds = new List<string> { "tier1" },
                     Reason = "Test missing member"

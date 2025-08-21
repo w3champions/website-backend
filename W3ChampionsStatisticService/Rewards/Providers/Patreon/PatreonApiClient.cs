@@ -102,6 +102,86 @@ public class PatreonApiClient
         }
     }
 
+    /// <summary>
+    /// Get user's current Patreon membership data using their OAuth access token
+    /// This is efficient as it only fetches data for the specific user
+    /// </summary>
+    public async Task<PatreonMember> GetUserMemberships(string accessToken)
+    {
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            Log.Error("Access token is required to fetch user memberships");
+            return null;
+        }
+
+        try
+        {
+            var url = $"{BaseUrl}/identity" +
+                "?include=memberships.currently_entitled_tiers" +
+                "&fields[member]=patron_status,last_charge_date,last_charge_status,currently_entitled_amount_cents" +
+                "&fields[tier]=title,amount_cents";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Log.Error("Failed to fetch user memberships. Status: {Status}, Error: {Error}",
+                    response.StatusCode, errorContent);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var apiResponse = JsonSerializer.Deserialize<PatreonIdentityResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (apiResponse?.Data == null)
+            {
+                Log.Warning("No user data returned from Patreon identity endpoint");
+                return null;
+            }
+
+            var userData = apiResponse.Data;
+            var patreonUserId = userData.Id;
+
+            // Find membership data in included resources
+            var membershipData = apiResponse.Included?.FirstOrDefault(i => i.Type == "member");
+            if (membershipData == null)
+            {
+                Log.Information("User {PatreonUserId} has no active memberships", patreonUserId);
+                Log.Information("Data: {Data}", JsonSerializer.Serialize(apiResponse));
+                return new PatreonMember
+                {
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "never_patron",
+                    LastChargeStatus = null,
+                    EntitledTierIds = new List<string>()
+                };
+            }
+
+            // Parse membership data into PatreonMember
+            var member = ParseMemberData(membershipData, apiResponse.Included);
+            if (member != null)
+            {
+                member.PatreonUserId = patreonUserId;
+                Log.Information("Successfully fetched membership data for user {PatreonUserId}, Status: {Status}, Tiers: {Tiers}",
+                    patreonUserId, member.PatronStatus, string.Join(",", member.EntitledTierIds));
+            }
+
+            return member;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error fetching user memberships with access token");
+            return null;
+        }
+    }
+
     private PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included)
     {
         try
@@ -167,6 +247,13 @@ public class PatreonMember
 public class PatreonApiResponse
 {
     public List<PatreonApiData> Data { get; set; }
+    public List<PatreonApiData> Included { get; set; }
+    public PatreonApiLinks Links { get; set; }
+}
+
+public class PatreonIdentityResponse
+{
+    public PatreonApiData Data { get; set; }
     public List<PatreonApiData> Included { get; set; }
     public PatreonApiLinks Links { get; set; }
 }

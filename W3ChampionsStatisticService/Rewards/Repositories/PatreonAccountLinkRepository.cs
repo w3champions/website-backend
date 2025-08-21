@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
@@ -10,6 +11,7 @@ using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Rewards.Services;
 
 namespace W3ChampionsStatisticService.Rewards.Repositories;
 
@@ -17,12 +19,15 @@ namespace W3ChampionsStatisticService.Rewards.Repositories;
 public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccountLinkRepository
 {
     private readonly IRewardAssignmentRepository _assignmentRepo;
+    private readonly IServiceProvider _serviceProvider;
 
     public PatreonAccountLinkRepository(
         MongoClient mongoClient, 
-        IRewardAssignmentRepository assignmentRepo) : base(mongoClient)
+        IRewardAssignmentRepository assignmentRepo,
+        IServiceProvider serviceProvider) : base(mongoClient)
     {
         _assignmentRepo = assignmentRepo;
+        _serviceProvider = serviceProvider;
         EnsureIndexes();
     }
     
@@ -64,7 +69,7 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
         return await collection.Find(filter).FirstOrDefaultAsync();
     }
 
-    public async Task<PatreonAccountLink> UpsertLink(string battleTag, string patreonUserId)
+    public async Task<PatreonAccountLink> UpsertLink(string battleTag, string patreonUserId, string accessToken = null)
     {
         var collection = CreateCollection<PatreonAccountLink>();
         
@@ -80,13 +85,24 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
         var existingByBattleTag = await GetByBattleTag(battleTag);
         if (existingByBattleTag != null)
         {
-            // Update existing link
-            existingByBattleTag.PatreonUserId = patreonUserId;
-            existingByBattleTag.UpdateLastSync();
-            
-            var filter = Builders<PatreonAccountLink>.Filter.Eq(x => x.Id, existingByBattleTag.Id);
-            await collection.ReplaceOneAsync(filter, existingByBattleTag);
-            return existingByBattleTag;
+            // If linking to the same PatreonUserId, just update the existing link
+            if (existingByBattleTag.PatreonUserId == patreonUserId)
+            {
+                existingByBattleTag.UpdateLastSync();
+                
+                var filter = Builders<PatreonAccountLink>.Filter.Eq(x => x.Id, existingByBattleTag.Id);
+                await collection.ReplaceOneAsync(filter, existingByBattleTag);
+                
+                // Trigger sync if access token is available
+                await HandleLinkCreation(battleTag, patreonUserId, accessToken);
+                
+                return existingByBattleTag;
+            }
+            else
+            {
+                // Different PatreonUserId - remove the old link to trigger cleanup
+                await RemoveByBattleTag(existingByBattleTag.BattleTag);
+            }
         }
         
         // Create new link
@@ -94,7 +110,7 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
         await collection.InsertOneAsync(newLink);
         
         // Handle any existing Patreon rewards that should now be associated with this BattleTag
-        await HandleLinkCreation(battleTag, patreonUserId);
+        await HandleLinkCreation(battleTag, patreonUserId, accessToken);
         
         return newLink;
     }
@@ -124,25 +140,44 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
 
     /// <summary>
     /// Handle the creation of a new Patreon account link
-    /// This method logs the link creation for future reward processing
+    /// Triggers immediate reward sync if access token is available
     /// </summary>
-    private async Task HandleLinkCreation(string battleTag, string patreonUserId)
+    private async Task HandleLinkCreation(string battleTag, string patreonUserId, string accessToken = null)
     {
         try
         {
             Log.Information("Patreon account link created: BattleTag {BattleTag} linked to PatreonUserId {PatreonUserId}", 
                 battleTag, patreonUserId);
             
-            // Future enhancement: Check if there are any pending Patreon rewards for this PatreonUserId
-            // that should now be processed for the linked BattleTag
-            // This would involve querying the Patreon API or checking stored webhook events
-            
-            await Task.CompletedTask; // Placeholder for future implementation
+            // Attempt immediate sync if access token is available
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                Log.Information("Access token available - triggering immediate reward sync for BattleTag {BattleTag}", battleTag);
+                
+                var driftDetectionService = _serviceProvider.GetRequiredService<PatreonDriftDetectionService>();
+                var syncResult = await driftDetectionService.SyncSingleUser(battleTag, patreonUserId, accessToken);
+                
+                if (syncResult.Success)
+                {
+                    Log.Information("Successfully synced rewards for newly linked BattleTag {BattleTag}. Action: {SyncAction}, Message: {Message}",
+                        battleTag, syncResult.SyncAction, syncResult.Message);
+                }
+                else
+                {
+                    Log.Warning("Failed to sync rewards for newly linked BattleTag {BattleTag}. Error: {Error}",
+                        battleTag, syncResult.ErrorMessage);
+                }
+            }
+            else
+            {
+                Log.Information("No access token available - user rewards will be synced during next drift detection cycle");
+            }
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Error handling Patreon account link creation for BattleTag {BattleTag} and PatreonUserId {PatreonUserId}", 
                 battleTag, patreonUserId);
+            // Don't throw - link creation should succeed even if sync fails
         }
     }
 

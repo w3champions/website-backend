@@ -15,11 +15,11 @@ public static class RewardServiceExtensions
 {
     public static IServiceCollection AddRewardServices(this IServiceCollection services)
     {
-        // Core repositories
-        services.AddInterceptedTransient<IRewardRepository, RewardRepository>();
-        services.AddInterceptedTransient<IRewardAssignmentRepository, RewardAssignmentRepository>();
-        services.AddInterceptedTransient<IProviderConfigurationRepository, ProviderConfigurationRepository>();
-        services.AddInterceptedTransient<IPatreonAccountLinkRepository, PatreonAccountLinkRepository>();
+        // Core repositories - using Scoped to avoid multiple instantiations
+        services.AddInterceptedScoped<IRewardRepository, RewardRepository>();
+        services.AddInterceptedScoped<IRewardAssignmentRepository, RewardAssignmentRepository>();
+        services.AddInterceptedScoped<IProviderConfigurationRepository, ProviderConfigurationRepository>();
+        services.AddInterceptedScoped<IPatreonAccountLinkRepository, PatreonAccountLinkRepository>();
 
         // Core services
         services.AddInterceptedTransient<IRewardService, RewardService>();

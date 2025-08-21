@@ -7,6 +7,7 @@ using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
+using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
 namespace W3ChampionsStatisticService.Rewards.Services;
@@ -69,12 +70,17 @@ public class PatreonDriftDetectionService(
         };
 
         // Create lookup dictionaries for efficient comparison
-        // First, resolve Patreon user IDs to BattleTags for all members
+        // First, get all account links in one batch to avoid repeated repository calls
+        var allAccountLinks = await _patreonLinkRepository.GetAll();
+        var patreonUserIdToAccountLink = allAccountLinks
+            .Where(link => !string.IsNullOrEmpty(link.PatreonUserId))
+            .ToDictionary(link => link.PatreonUserId, link => link);
+
+        // Now resolve Patreon user IDs to BattleTags using the lookup dictionary
         var patreonByBattleTag = new Dictionary<string, PatreonMember>();
         foreach (var member in patreonMembers.Where(m => !string.IsNullOrEmpty(m.PatreonUserId)))
         {
-            var accountLink = await _patreonLinkRepository.GetByPatreonUserId(member.PatreonUserId);
-            if (accountLink != null)
+            if (patreonUserIdToAccountLink.TryGetValue(member.PatreonUserId, out var accountLink))
             {
                 patreonByBattleTag[accountLink.BattleTag.ToLowerInvariant()] = member;
             }
@@ -285,7 +291,7 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = await CreateMissingMemberSyncEvent(missingMember);
+                    var syncEvent = await CreateMissingMemberEvent(missingMember);
                     if (syncEvent == null)
                     {
                         // Member has no linked BattleTag, skip
@@ -300,7 +306,7 @@ public class PatreonDriftDetectionService(
                     }
 
                     syncResult.MembersAdded++;
-                    Log.Information("[DRIFT-SYNC] {Action} reward for missing member: {Email} (PatreonId: {Id})",
+                    Log.Information("[DRIFT-SYNC] {Action} reward for missing member: {PatreonUserId} (PatreonId: {Id})",
                         dryRun ? "Would add" : "Added", missingMember.PatreonUserId, missingMember.PatreonMemberId);
                 }
                 catch (Exception ex)
@@ -316,7 +322,7 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = CreateExtraAssignmentSyncEvent(extraAssignment);
+                    var syncEvent = CreateExtraAssignmentEvent(extraAssignment);
                     syncResult.GeneratedEvents.Add(syncEvent);
 
                     if (!dryRun)
@@ -341,7 +347,7 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = CreateTierMismatchSyncEvent(tierMismatch);
+                    var syncEvent = CreateTierMismatchEvent(tierMismatch);
                     syncResult.GeneratedEvents.Add(syncEvent);
 
                     if (!dryRun)
@@ -379,10 +385,272 @@ public class PatreonDriftDetectionService(
         }
     }
 
-    private async Task<RewardEvent> CreateMissingMemberSyncEvent(MissingMember missingMember)
+    /// <summary>
+    /// Sync a single user's rewards using their OAuth access token for fresh data
+    /// This is efficient and provides immediate sync when a user links their account
+    /// </summary>
+    public async Task<UserSyncResult> SyncSingleUser(string battleTag, string patreonUserId, string accessToken = null)
     {
-        var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:missing:{missingMember.PatreonMemberId}";
+        var result = new UserSyncResult
+        {
+            BattleTag = battleTag,
+            PatreonUserId = patreonUserId,
+            SyncTimestamp = DateTime.UtcNow,
+            AccessTokenUsed = !string.IsNullOrEmpty(accessToken)
+        };
+
+        try
+        {
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                result.Success = false;
+                result.ErrorMessage = "Access token required for single user sync";
+                Log.Warning("Skipping single user sync for {BattleTag} - no access token available", battleTag);
+                return result;
+            }
+
+            Log.Information("[USER-SYNC] Starting single user sync for BattleTag {BattleTag}", battleTag);
+
+            // Fetch fresh Patreon data using access token
+            var patreonData = await _patreonApiClient.GetUserMemberships(accessToken);
+            if (patreonData == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = "Failed to fetch user membership data from Patreon";
+                Log.Error("[USER-SYNC] Failed to fetch Patreon data for BattleTag {BattleTag}", battleTag);
+                return result;
+            }
+
+            // Ensure the Patreon user ID matches what we expect
+            if (patreonData.PatreonUserId != patreonUserId)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Patreon user ID mismatch: expected {patreonUserId}, got {patreonData.PatreonUserId}";
+                Log.Error("[USER-SYNC] Patreon user ID mismatch for BattleTag {BattleTag}: expected {Expected}, got {Actual}",
+                    battleTag, patreonUserId, patreonData.PatreonUserId);
+                return result;
+            }
+
+            // Get current reward assignments for this user
+            var currentAssignments = await _assignmentRepository.GetByUserIdAndStatus(battleTag, RewardStatus.Active);
+            var patreonAssignments = currentAssignments.Where(a => a.ProviderId == ProviderId).ToList();
+
+            // Determine what sync action is needed
+            var syncAction = DetermineRequiredSyncAction(patreonData, patreonAssignments);
+            result.SyncAction = syncAction;
+
+            if (syncAction == UserSyncAction.None)
+            {
+                result.Success = true;
+                result.Message = "User rewards are already in sync";
+                Log.Information("[USER-SYNC] No sync needed for BattleTag {BattleTag} - already in sync", battleTag);
+                return result;
+            }
+
+            // Create and process sync event
+            var syncEvent = CreateSyncEventForUserData(battleTag, patreonData, patreonAssignments, syncAction);
+            if (syncEvent != null)
+            {
+                result.GeneratedEvent = syncEvent;
+                await _rewardService.ProcessRewardEvent(syncEvent);
+                result.Success = true;
+                result.Message = $"Successfully processed {syncAction} for user";
+
+                Log.Information("[USER-SYNC] Successfully processed {SyncAction} for BattleTag {BattleTag} (PatreonUserId: {PatreonUserId})",
+                    syncAction, battleTag, patreonUserId);
+            }
+            else
+            {
+                result.Success = false;
+                result.ErrorMessage = "Failed to create sync event";
+                Log.Error("[USER-SYNC] Failed to create sync event for BattleTag {BattleTag}", battleTag);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = $"Exception during user sync: {ex.Message}";
+            Log.Error(ex, "[USER-SYNC] Error during single user sync for BattleTag {BattleTag}", battleTag);
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Determines what sync action is needed for a user based on their Patreon data vs internal state
+    /// </summary>
+    private UserSyncAction DetermineRequiredSyncAction(PatreonMember patreonData, List<RewardAssignment> currentAssignments)
+    {
+        var internalTierIds = ExtractTierIdsFromAssignments(currentAssignments);
+        var patreonTierIds = patreonData.EntitledTierIds ?? new List<string>();
+
+        // If user is not an active patron, they should have no rewards
+        if (!patreonData.IsActivePatron)
+        {
+            if (currentAssignments.Any())
+            {
+                return UserSyncAction.RevokeAll;
+            }
+            return UserSyncAction.None;
+        }
+
+        // User is active patron
+        if (!currentAssignments.Any())
+        {
+            // No internal assignments but should have rewards
+            return patreonTierIds.Any() ? UserSyncAction.CreateNew : UserSyncAction.None;
+        }
+
+        // Compare tier entitlements
+        if (!AreTierSetsEqual(patreonTierIds, internalTierIds))
+        {
+            return UserSyncAction.UpdateTiers;
+        }
+
+        return UserSyncAction.None;
+    }
+
+    /// <summary>
+    /// Creates appropriate RewardEvent for a user based on their sync action needed
+    /// </summary>
+    private RewardEvent CreateSyncEventForUserData(string battleTag, PatreonMember patreonData, List<RewardAssignment> currentAssignments, UserSyncAction syncAction)
+    {
+        switch (syncAction)
+        {
+            case UserSyncAction.CreateNew:
+                return CreateRewardEvent(
+                    eventSource: "user-sync",
+                    syncReason: "new_patron",
+                    eventType: RewardEventType.SubscriptionCreated,
+                    userId: battleTag,
+                    providerReference: $"user-sync:create:{patreonData.Id}",
+                    entitledTierIds: patreonData.EntitledTierIds,
+                    additionalMetadata: BuildBaseMetadata(
+                        "user_sync", 
+                        "new_patron", 
+                        patreonData.PatreonUserId, 
+                        patreonData.PatronStatus, 
+                        patreonData.Id)
+                );
+
+            case UserSyncAction.UpdateTiers:
+                var updateMetadata = BuildBaseMetadata(
+                    "user_sync", 
+                    "tier_update", 
+                    patreonData.PatreonUserId, 
+                    patreonData.PatronStatus, 
+                    patreonData.Id);
+                updateMetadata["previous_tiers"] = string.Join(",", ExtractTierIdsFromAssignments(currentAssignments));
+                updateMetadata["new_tiers"] = string.Join(",", patreonData.EntitledTierIds ?? new List<string>());
+                
+                return CreateRewardEvent(
+                    eventSource: "user-sync",
+                    syncReason: "tier_update",
+                    eventType: RewardEventType.SubscriptionCreated,
+                    userId: battleTag,
+                    providerReference: $"user-sync:update:{patreonData.Id}",
+                    entitledTierIds: patreonData.EntitledTierIds,
+                    additionalMetadata: updateMetadata
+                );
+
+            case UserSyncAction.RevokeAll:
+                var revokeMetadata = BuildBaseMetadata(
+                    "user_sync", 
+                    "patron_inactive", 
+                    patreonData.PatreonUserId, 
+                    patreonData.PatronStatus, 
+                    patreonData.Id);
+                revokeMetadata["last_charge_status"] = patreonData.LastChargeStatus;
+                
+                return CreateRewardEvent(
+                    eventSource: "user-sync",
+                    syncReason: "patron_inactive",
+                    eventType: RewardEventType.SubscriptionCancelled,
+                    userId: battleTag,
+                    providerReference: $"user-sync:revoke:{patreonData.Id}",
+                    entitledTierIds: new List<string>(),
+                    additionalMetadata: revokeMetadata
+                );
+
+            case UserSyncAction.None:
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Creates a RewardEvent with standardized structure and metadata
+    /// </summary>
+    private RewardEvent CreateRewardEvent(
+        string eventSource,
+        string syncReason,
+        RewardEventType eventType,
+        string userId,
+        string providerReference,
+        List<string> entitledTierIds,
+        Dictionary<string, object> additionalMetadata = null)
+    {
+        var eventId = $"{eventSource}:patreon:{DateTime.UtcNow:yyyy-MM-dd}:{userId}:{Guid.NewGuid().ToString("N")[..8]}";
         
+        var metadata = BuildBaseMetadata(eventSource, syncReason);
+        
+        // Add any additional metadata
+        if (additionalMetadata != null)
+        {
+            foreach (var kvp in additionalMetadata)
+            {
+                metadata[kvp.Key] = kvp.Value;
+            }
+        }
+
+        return new RewardEvent
+        {
+            EventId = eventId,
+            EventType = eventType,
+            ProviderId = ProviderId,
+            UserId = userId,
+            ProviderReference = providerReference,
+            EntitledTierIds = entitledTierIds ?? new List<string>(),
+            Timestamp = DateTime.UtcNow,
+            Metadata = metadata
+        };
+    }
+
+    /// <summary>
+    /// Creates base metadata dictionary with common fields
+    /// </summary>
+    private Dictionary<string, object> BuildBaseMetadata(
+        string eventSource,
+        string syncReason,
+        string patreonUserId = null,
+        string patreonStatus = null,
+        string patreonMemberId = null)
+    {
+        var metadata = new Dictionary<string, object>
+        {
+            ["event_source"] = eventSource,
+            ["sync_reason"] = syncReason,
+            ["sync_timestamp"] = DateTime.UtcNow
+        };
+
+        if (!string.IsNullOrEmpty(patreonUserId))
+            metadata["patreon_user_id"] = patreonUserId;
+        
+        if (!string.IsNullOrEmpty(patreonStatus))
+            metadata["patreon_status"] = patreonStatus;
+            
+        if (!string.IsNullOrEmpty(patreonMemberId))
+            metadata["patreon_member_id"] = patreonMemberId;
+
+        return metadata;
+    }
+
+    /// <summary>
+    /// Creates RewardEvent for missing member using unified event creation
+    /// </summary>
+    private async Task<RewardEvent> CreateMissingMemberEvent(MissingMember missingMember)
+    {
         // Resolve Patreon user ID to BattleTag
         string battleTag = null;
         if (!string.IsNullOrEmpty(missingMember.PatreonUserId))
@@ -393,84 +661,76 @@ public class PatreonDriftDetectionService(
         
         if (string.IsNullOrEmpty(battleTag))
         {
-            Log.Information("Skipping missing member sync for PatreonUserId {PatreonUserId} (MemberId: {MemberId}, Email: {Email}) - no linked BattleTag found", 
+            Log.Information("Skipping missing member sync for PatreonUserId {PatreonUserId} (MemberId: {MemberId}) - no linked BattleTag found", 
                 missingMember.PatreonUserId, missingMember.PatreonMemberId);
             return null;
         }
-        
-        return new RewardEvent
-        {
-            EventId = eventId,
-            EventType = RewardEventType.SubscriptionCreated,
-            ProviderId = ProviderId,
-            UserId = battleTag,
-            ProviderReference = $"sync:member:{missingMember.PatreonMemberId}",
-            EntitledTierIds = missingMember.EntitledTierIds ?? new List<string>(),
-            Timestamp = DateTime.UtcNow,
-            Metadata = new Dictionary<string, object>
-            {
-                ["event_source"] = "drift_sync",
-                ["sync_reason"] = "missing_member",
-                ["sync_timestamp"] = DateTime.UtcNow,
-                ["patreon_status"] = missingMember.PatronStatus,
-                ["patreon_user_id"] = missingMember.PatreonUserId,
-                ["patreon_user_id"] = missingMember.PatreonUserId,
-                ["original_member_id"] = missingMember.PatreonMemberId,
-                ["sync_reason_detail"] = missingMember.Reason
-            }
-        };
+
+        var additionalMetadata = BuildBaseMetadata(
+            "drift_sync", 
+            "missing_member", 
+            missingMember.PatreonUserId, 
+            missingMember.PatronStatus, 
+            missingMember.PatreonMemberId);
+        additionalMetadata["sync_reason_detail"] = missingMember.Reason;
+
+        return CreateRewardEvent(
+            eventSource: "drift-sync",
+            syncReason: "missing_member",
+            eventType: RewardEventType.SubscriptionCreated,
+            userId: battleTag,
+            providerReference: $"sync:member:{missingMember.PatreonMemberId}",
+            entitledTierIds: missingMember.EntitledTierIds,
+            additionalMetadata: additionalMetadata
+        );
     }
 
-    private RewardEvent CreateExtraAssignmentSyncEvent(ExtraAssignment extraAssignment)
+    /// <summary>
+    /// Creates RewardEvent for extra assignment using unified event creation
+    /// </summary>
+    private RewardEvent CreateExtraAssignmentEvent(ExtraAssignment extraAssignment)
     {
-        var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:extra:{extraAssignment.AssignmentId}";
-        
-        return new RewardEvent
-        {
-            EventId = eventId,
-            EventType = RewardEventType.SubscriptionCancelled,
-            ProviderId = ProviderId,
-            UserId = extraAssignment.UserId,
-            ProviderReference = $"sync:revoke:{extraAssignment.AssignmentId}",
-            EntitledTierIds = new List<string>(), // No longer entitled to any tiers
-            Timestamp = DateTime.UtcNow,
-            Metadata = new Dictionary<string, object>
-            {
-                ["event_source"] = "drift_sync",
-                ["sync_reason"] = "extra_assignment",
-                ["sync_timestamp"] = DateTime.UtcNow,
-                ["original_assignment_id"] = extraAssignment.AssignmentId,
-                ["revocation_reason"] = extraAssignment.Reason,
-                ["assignment_created_at"] = extraAssignment.AssignedAt,
-                ["patreon_status"] = extraAssignment.PatreonStatus ?? "unknown"
-            }
-        };
+        var additionalMetadata = BuildBaseMetadata(
+            "drift_sync", 
+            "extra_assignment", 
+            patreonStatus: extraAssignment.PatreonStatus ?? "unknown");
+        additionalMetadata["original_assignment_id"] = extraAssignment.AssignmentId;
+        additionalMetadata["revocation_reason"] = extraAssignment.Reason;
+        additionalMetadata["assignment_created_at"] = extraAssignment.AssignedAt;
+
+        return CreateRewardEvent(
+            eventSource: "drift-sync",
+            syncReason: "extra_assignment",
+            eventType: RewardEventType.SubscriptionCancelled,
+            userId: extraAssignment.UserId,
+            providerReference: $"sync:revoke:{extraAssignment.AssignmentId}",
+            entitledTierIds: new List<string>(),
+            additionalMetadata: additionalMetadata
+        );
     }
 
-    private RewardEvent CreateTierMismatchSyncEvent(TierMismatch tierMismatch)
+    /// <summary>
+    /// Creates RewardEvent for tier mismatch using unified event creation
+    /// </summary>
+    private RewardEvent CreateTierMismatchEvent(TierMismatch tierMismatch)
     {
-        var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:mismatch:{tierMismatch.UserId}:{Guid.NewGuid().ToString("N")[..8]}";
-        
-        return new RewardEvent
-        {
-            EventId = eventId,
-            EventType = RewardEventType.SubscriptionCreated,
-            ProviderId = ProviderId,
-            UserId = tierMismatch.UserId,
-            ProviderReference = $"sync:tier-update:{tierMismatch.PatreonMemberId}",
-            EntitledTierIds = tierMismatch.PatreonTiers ?? new List<string>(), // Use Patreon as source of truth
-            Timestamp = DateTime.UtcNow,
-            Metadata = new Dictionary<string, object>
-            {
-                ["event_source"] = "drift_sync",
-                ["sync_reason"] = "tier_mismatch",
-                ["sync_timestamp"] = DateTime.UtcNow,
-                ["previous_tiers"] = string.Join(",", tierMismatch.InternalTiers ?? new List<string>()),
-                ["new_tiers"] = string.Join(",", tierMismatch.PatreonTiers ?? new List<string>()),
-                ["patreon_member_id"] = tierMismatch.PatreonMemberId,
-                ["mismatch_reason"] = tierMismatch.Reason
-            }
-        };
+        var additionalMetadata = BuildBaseMetadata(
+            "drift_sync", 
+            "tier_mismatch", 
+            patreonMemberId: tierMismatch.PatreonMemberId);
+        additionalMetadata["previous_tiers"] = string.Join(",", tierMismatch.InternalTiers ?? new List<string>());
+        additionalMetadata["new_tiers"] = string.Join(",", tierMismatch.PatreonTiers ?? new List<string>());
+        additionalMetadata["mismatch_reason"] = tierMismatch.Reason;
+
+        return CreateRewardEvent(
+            eventSource: "drift-sync",
+            syncReason: "tier_mismatch",
+            eventType: RewardEventType.SubscriptionCreated,
+            userId: tierMismatch.UserId,
+            providerReference: $"sync:tier-update:{tierMismatch.PatreonMemberId}",
+            entitledTierIds: tierMismatch.PatreonTiers,
+            additionalMetadata: additionalMetadata
+        );
     }
 }
 
@@ -529,4 +789,25 @@ public class SyncResult
     public List<string> Errors { get; set; } = new();
     public bool WasDryRun { get; set; }
     public List<RewardEvent> GeneratedEvents { get; set; } = new();
+}
+
+public class UserSyncResult
+{
+    public DateTime SyncTimestamp { get; set; }
+    public bool Success { get; set; }
+    public string BattleTag { get; set; }
+    public string PatreonUserId { get; set; }
+    public bool AccessTokenUsed { get; set; }
+    public UserSyncAction SyncAction { get; set; }
+    public string Message { get; set; }
+    public string ErrorMessage { get; set; }
+    public RewardEvent GeneratedEvent { get; set; }
+}
+
+public enum UserSyncAction
+{
+    None,
+    CreateNew,
+    UpdateTiers,
+    RevokeAll
 }

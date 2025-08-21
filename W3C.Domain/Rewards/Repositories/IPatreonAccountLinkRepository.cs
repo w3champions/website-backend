@@ -19,7 +19,7 @@ public interface IPatreonAccountLinkRepository
     /// <summary>
     /// Create or update account link
     /// </summary>
-    Task<PatreonAccountLink> UpsertLink(string battleTag, string patreonUserId);
+    Task<PatreonAccountLink> UpsertLink(string battleTag, string patreonUserId, string accessToken = null);
     
     /// <summary>
     /// Remove account link by Battle.net BattleTag
