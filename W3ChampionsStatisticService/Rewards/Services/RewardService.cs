@@ -294,6 +294,11 @@ public class RewardService : IRewardService
             throw new InvalidOperationException($"Reward {rewardId} not found");
         }
 
+        // Generate unique EventId per assignment to avoid duplicate key errors while maintaining webhook idempotency
+        // Format: {originalEventId}_{rewardId} - this ensures each reward assignment has unique EventId
+        // while still allowing idempotency checks per webhook+reward combination
+        var uniqueEventId = !string.IsNullOrEmpty(eventId) ? $"{eventId}_{rewardId}" : null;
+
         var assignment = new RewardAssignment
         {
             Id = Guid.NewGuid().ToString(),
@@ -301,7 +306,7 @@ public class RewardService : IRewardService
             RewardId = rewardId,
             ProviderId = providerId,
             ProviderReference = providerReference,
-            EventId = eventId, // For webhook idempotency
+            EventId = uniqueEventId, // Unique per reward assignment for proper idempotency
             Status = RewardStatus.Active,
             AssignedAt = DateTime.UtcNow,
             ExpiresAt = reward.CalculateExpirationDate(DateTime.UtcNow),
@@ -312,6 +317,12 @@ public class RewardService : IRewardService
         if (!string.IsNullOrEmpty(tierId))
         {
             assignment.Metadata["tier_id"] = tierId;
+        }
+        
+        // Store original webhook EventId in metadata for audit/tracking purposes
+        if (!string.IsNullOrEmpty(eventId))
+        {
+            assignment.Metadata["original_event_id"] = eventId;
         }
 
         try
