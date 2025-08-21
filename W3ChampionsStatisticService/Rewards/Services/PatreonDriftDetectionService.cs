@@ -14,11 +14,13 @@ namespace W3ChampionsStatisticService.Rewards.Services;
 public class PatreonDriftDetectionService(
     PatreonApiClient patreonApiClient,
     IRewardAssignmentRepository assignmentRepository,
-    IRewardService rewardService)
+    IRewardService rewardService,
+    IPatreonAccountLinkRepository patreonLinkRepository)
 {
     private readonly PatreonApiClient _patreonApiClient = patreonApiClient;
     private readonly IRewardAssignmentRepository _assignmentRepository = assignmentRepository;
     private readonly IRewardService _rewardService = rewardService;
+    private readonly IPatreonAccountLinkRepository _patreonLinkRepository = patreonLinkRepository;
     private const string ProviderId = "patreon";
 
     public async Task<DriftDetectionResult> DetectDrift()
@@ -34,7 +36,7 @@ public class PatreonDriftDetectionService(
             var internalAssignments = await GetActivePatreonAssignments();
 
             // Analyze the drift
-            var result = AnalyzeDrift(patreonMembers, internalAssignments);
+            var result = await AnalyzeDrift(patreonMembers, internalAssignments);
 
             // Log the results
             LogDriftResults(result);
@@ -58,7 +60,7 @@ public class PatreonDriftDetectionService(
         return assignments;
     }
 
-    private DriftDetectionResult AnalyzeDrift(List<PatreonMember> patreonMembers, List<RewardAssignment> internalAssignments)
+    private async Task<DriftDetectionResult> AnalyzeDrift(List<PatreonMember> patreonMembers, List<RewardAssignment> internalAssignments)
     {
         var result = new DriftDetectionResult
         {
@@ -67,32 +69,38 @@ public class PatreonDriftDetectionService(
         };
 
         // Create lookup dictionaries for efficient comparison
-        var patreonByEmail = patreonMembers
-            .Where(m => !string.IsNullOrEmpty(m.Email))
-            .GroupBy(m => m.Email.ToLowerInvariant())
-            .ToDictionary(g => g.Key, g => g.First());
+        // First, resolve Patreon user IDs to BattleTags for all members
+        var patreonByBattleTag = new Dictionary<string, PatreonMember>();
+        foreach (var member in patreonMembers.Where(m => !string.IsNullOrEmpty(m.PatreonUserId)))
+        {
+            var accountLink = await _patreonLinkRepository.GetByPatreonUserId(member.PatreonUserId);
+            if (accountLink != null)
+            {
+                patreonByBattleTag[accountLink.BattleTag.ToLowerInvariant()] = member;
+            }
+        }
 
         var internalByUserId = internalAssignments
             .GroupBy(a => a.UserId.ToLowerInvariant())
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // Find missing members (in Patreon but not in our system)
-        foreach (var patreonMember in patreonMembers.Where(m => m.IsActivePatron))
+        foreach (var kvp in patreonByBattleTag)
         {
-            if (string.IsNullOrEmpty(patreonMember.Email))
+            var battleTag = kvp.Key;
+            var patreonMember = kvp.Value;
+
+            if (!patreonMember.IsActivePatron)
             {
-                Log.Warning("Patreon member {Id} has no email, skipping drift detection", patreonMember.Id);
-                continue;
+                continue; // Skip non-active patrons
             }
 
-            var userIdKey = patreonMember.Email.ToLowerInvariant();
-
-            if (!internalByUserId.ContainsKey(userIdKey))
+            if (!internalByUserId.ContainsKey(battleTag))
             {
                 result.MissingMembers.Add(new MissingMember
                 {
                     PatreonMemberId = patreonMember.Id,
-                    Email = patreonMember.Email,
+                    PatreonUserId = patreonMember.PatreonUserId,
                     PatronStatus = patreonMember.PatronStatus,
                     EntitledTierIds = patreonMember.EntitledTierIds,
                     Reason = "Active patron found in Patreon but no active rewards in our system"
@@ -101,14 +109,14 @@ public class PatreonDriftDetectionService(
             else
             {
                 // Check if tiers match
-                var assignments = internalByUserId[userIdKey];
+                var assignments = internalByUserId[battleTag];
                 var internalTierIds = ExtractTierIdsFromAssignments(assignments);
 
                 if (!AreTierSetsEqual(patreonMember.EntitledTierIds, internalTierIds))
                 {
                     result.MismatchedTiers.Add(new TierMismatch
                     {
-                        UserId = userIdKey,
+                        UserId = battleTag,
                         PatreonMemberId = patreonMember.Id,
                         PatreonTiers = patreonMember.EntitledTierIds,
                         InternalTiers = internalTierIds,
@@ -121,10 +129,10 @@ public class PatreonDriftDetectionService(
         // Find extra assignments (in our system but not active in Patreon)
         foreach (var kvp in internalByUserId)
         {
-            var userId = kvp.Key;
+            var battleTag = kvp.Key;
             var assignments = kvp.Value;
 
-            if (!patreonByEmail.ContainsKey(userId))
+            if (!patreonByBattleTag.ContainsKey(battleTag))
             {
                 // No matching Patreon member found
                 result.ExtraAssignments.AddRange(assignments.Select(a => new ExtraAssignment
@@ -138,7 +146,7 @@ public class PatreonDriftDetectionService(
             }
             else
             {
-                var patreonMember = patreonByEmail[userId];
+                var patreonMember = patreonByBattleTag[battleTag];
                 if (!patreonMember.IsActivePatron)
                 {
                     // Patreon member exists but is not active
@@ -160,6 +168,12 @@ public class PatreonDriftDetectionService(
         result.ActivePatreonMembers = patreonMembers.Count(m => m.IsActivePatron);
         result.TotalInternalAssignments = internalAssignments.Count;
         result.UniqueInternalUsers = internalByUserId.Count;
+        
+        // Log how many Patreon members have linked accounts
+        var linkedActiveMembers = patreonByBattleTag.Count(kvp => kvp.Value.IsActivePatron);
+        var totalActiveMembers = patreonMembers.Count(m => m.IsActivePatron);
+        Log.Information("Patreon drift analysis: {LinkedActive}/{TotalActive} active patrons have linked BattleTags", 
+            linkedActiveMembers, totalActiveMembers);
 
         return result;
     }
@@ -170,24 +184,18 @@ public class PatreonDriftDetectionService(
 
         foreach (var assignment in assignments)
         {
-            // Extract tier IDs from metadata if available
+            // Extract tier IDs from metadata - this is the ONLY authoritative source
             if (assignment.Metadata != null && assignment.Metadata.TryGetValue("tier_id", out var tierIdObj))
             {
-                if (tierIdObj is string tierId)
+                if (tierIdObj is string tierId && !string.IsNullOrEmpty(tierId))
                 {
                     tierIds.Add(tierId);
                 }
             }
-
-            // Also check provider reference which might contain tier information
-            if (!string.IsNullOrEmpty(assignment.ProviderReference))
+            else
             {
-                // Provider reference might be in format "member_id:tier_id"
-                var parts = assignment.ProviderReference.Split(':');
-                if (parts.Length > 1)
-                {
-                    tierIds.Add(parts[1]);
-                }
+                // FAIL HARD: Assignment without tier metadata indicates system inconsistency
+                throw new InvalidOperationException($"Assignment {assignment.Id} for user {assignment.UserId} has no tier_id metadata. All Patreon assignments must have tier tracking.");
             }
         }
 
@@ -216,7 +224,7 @@ public class PatreonDriftDetectionService(
             foreach (var missing in result.MissingMembers.Take(10)) // Log first 10 to avoid spam
             {
                 Log.Warning("Missing member: Email={Email}, PatreonId={Id}, Status={Status}, Tiers={Tiers}",
-                    missing.Email, missing.PatreonMemberId, missing.PatronStatus,
+                    missing.PatreonUserId, missing.PatreonMemberId, missing.PatronStatus,
                     string.Join(",", missing.EntitledTierIds ?? new List<string>()));
             }
 
@@ -277,7 +285,13 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = CreateMissingMemberSyncEvent(missingMember);
+                    var syncEvent = await CreateMissingMemberSyncEvent(missingMember);
+                    if (syncEvent == null)
+                    {
+                        // Member has no linked BattleTag, skip
+                        continue;
+                    }
+                    
                     syncResult.GeneratedEvents.Add(syncEvent);
 
                     if (!dryRun)
@@ -287,11 +301,11 @@ public class PatreonDriftDetectionService(
 
                     syncResult.MembersAdded++;
                     Log.Information("[DRIFT-SYNC] {Action} reward for missing member: {Email} (PatreonId: {Id})",
-                        dryRun ? "Would add" : "Added", missingMember.Email, missingMember.PatreonMemberId);
+                        dryRun ? "Would add" : "Added", missingMember.PatreonUserId, missingMember.PatreonMemberId);
                 }
                 catch (Exception ex)
                 {
-                    var error = $"Failed to sync missing member {missingMember.Email}: {ex.Message}";
+                    var error = $"Failed to sync missing member {missingMember.PatreonUserId}: {ex.Message}";
                     syncResult.Errors.Add(error);
                     Log.Error(ex, "[DRIFT-SYNC] {Error}", error);
                 }
@@ -365,16 +379,31 @@ public class PatreonDriftDetectionService(
         }
     }
 
-    private RewardEvent CreateMissingMemberSyncEvent(MissingMember missingMember)
+    private async Task<RewardEvent> CreateMissingMemberSyncEvent(MissingMember missingMember)
     {
         var eventId = $"drift-sync:patreon:{DateTime.UtcNow:yyyy-MM-dd}:missing:{missingMember.PatreonMemberId}";
+        
+        // Resolve Patreon user ID to BattleTag
+        string battleTag = null;
+        if (!string.IsNullOrEmpty(missingMember.PatreonUserId))
+        {
+            var accountLink = await _patreonLinkRepository.GetByPatreonUserId(missingMember.PatreonUserId);
+            battleTag = accountLink?.BattleTag;
+        }
+        
+        if (string.IsNullOrEmpty(battleTag))
+        {
+            Log.Information("Skipping missing member sync for PatreonUserId {PatreonUserId} (MemberId: {MemberId}, Email: {Email}) - no linked BattleTag found", 
+                missingMember.PatreonUserId, missingMember.PatreonMemberId);
+            return null;
+        }
         
         return new RewardEvent
         {
             EventId = eventId,
             EventType = RewardEventType.SubscriptionCreated,
             ProviderId = ProviderId,
-            UserId = missingMember.Email.ToLowerInvariant(),
+            UserId = battleTag,
             ProviderReference = $"sync:member:{missingMember.PatreonMemberId}",
             EntitledTierIds = missingMember.EntitledTierIds ?? new List<string>(),
             Timestamp = DateTime.UtcNow,
@@ -384,6 +413,8 @@ public class PatreonDriftDetectionService(
                 ["sync_reason"] = "missing_member",
                 ["sync_timestamp"] = DateTime.UtcNow,
                 ["patreon_status"] = missingMember.PatronStatus,
+                ["patreon_user_id"] = missingMember.PatreonUserId,
+                ["patreon_user_id"] = missingMember.PatreonUserId,
                 ["original_member_id"] = missingMember.PatreonMemberId,
                 ["sync_reason_detail"] = missingMember.Reason
             }
@@ -463,7 +494,7 @@ public class DriftDetectionResult
 public class MissingMember
 {
     public string PatreonMemberId { get; set; }
-    public string Email { get; set; }
+    public string PatreonUserId { get; set; }
     public string PatronStatus { get; set; }
     public List<string> EntitledTierIds { get; set; }
     public string Reason { get; set; }

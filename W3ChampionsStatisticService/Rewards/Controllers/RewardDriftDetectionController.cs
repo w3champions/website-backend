@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -46,7 +47,14 @@ public class RewardDriftDetectionController(
                 {
                     missingMembers = result.MissingMembers,
                     extraAssignments = result.ExtraAssignments,
-                    mismatchedTiers = result.MismatchedTiers
+                    mismatchedTiers = result.MismatchedTiers.Select(m => new
+                    {
+                        userId = m.UserId,
+                        patreonMemberId = m.PatreonMemberId,
+                        expectedTiers = m.PatreonTiers,
+                        actualTiers = m.InternalTiers,
+                        issue = m.Reason
+                    })
                 }
             });
         }

@@ -140,7 +140,8 @@ public class PatreonOAuthService
             ["code"] = code,
             ["redirect_uri"] = redirectUri,
             ["client_id"] = _clientId,
-            ["client_secret"] = _clientSecret
+            ["client_secret"] = _clientSecret,
+            ["scope"] = "identity"
         };
 
         using var content = new FormUrlEncodedContent(parameters);

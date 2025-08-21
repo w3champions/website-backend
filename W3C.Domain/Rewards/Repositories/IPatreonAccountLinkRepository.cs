@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Rewards.Entities;
 
@@ -24,4 +25,9 @@ public interface IPatreonAccountLinkRepository
     /// Remove account link by Battle.net BattleTag
     /// </summary>
     Task<bool> RemoveByBattleTag(string battleTag);
+    
+    /// <summary>
+    /// Get all Patreon account links
+    /// </summary>
+    Task<List<PatreonAccountLink>> GetAll();
 }

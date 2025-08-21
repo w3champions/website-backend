@@ -9,6 +9,7 @@ using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Services;
 using W3ChampionsStatisticService.Rewards;
+using W3ChampionsStatisticService.Rewards.DTOs;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Rewards.Controllers;
@@ -19,6 +20,7 @@ public class RewardManagementController(
     IRewardRepository rewardRepo,
     IRewardAssignmentRepository assignmentRepo,
     IProviderConfigurationRepository configRepo,
+    IPatreonAccountLinkRepository patreonLinkRepo,
     PatreonOAuthService patreonOAuthService,
     IW3CAuthenticationService authService,
     ILogger<RewardManagementController> logger) : ControllerBase
@@ -26,6 +28,7 @@ public class RewardManagementController(
     private readonly IRewardRepository _rewardRepo = rewardRepo;
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
     private readonly IProviderConfigurationRepository _configRepo = configRepo;
+    private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
     private readonly PatreonOAuthService _patreonOAuthService = patreonOAuthService;
     private readonly IW3CAuthenticationService _authService = authService;
     private readonly ILogger<RewardManagementController> _logger = logger;
@@ -145,6 +148,18 @@ public class RewardManagementController(
             return BadRequest(new { error = $"Provider '{providerId}' is not supported" });
         }
 
+        // Ensure the mapping has at least one reward ID
+        if (mapping.RewardIds?.Any() != true)
+        {
+            return BadRequest(new { error = "Product mapping must have at least one reward ID" });
+        }
+
+        // Ensure the mapping has at least one provider product ID
+        if (mapping.ProviderProductIds?.Any() != true)
+        {
+            return BadRequest(new { error = "Product mapping must have at least one provider product ID" });
+        }
+
         var config = await _configRepo.GetByProviderId(providerId);
         if (config == null)
         {
@@ -164,8 +179,8 @@ public class RewardManagementController(
             await _configRepo.Update(config);
         }
 
-        _logger.LogInformation("Added product mapping for {ProviderId}: {ProductId} -> {RewardId}",
-            providerId, mapping.ProviderProductId, mapping.RewardId);
+        _logger.LogInformation("Added product mapping for {ProviderId}: {ProductIds} -> {RewardIds}",
+            providerId, string.Join(",", mapping.ProviderProductIds ?? new List<string>()), string.Join(", ", mapping.RewardIds ?? new List<string>()));
 
         // Return the combined provider info with mappings
         var provider = ProviderDefinitions.GetProvider(providerId);
@@ -184,21 +199,84 @@ public class RewardManagementController(
         return Ok(result);
     }
 
-    [HttpDelete("providers/{providerId}/mappings/{productId}")]
+    [HttpDelete("providers/{providerId}/mappings/{mappingId}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> RemoveProductMapping(string providerId, string productId)
+    public async Task<IActionResult> RemoveProductMapping(string providerId, string mappingId)
     {
         var config = await _configRepo.GetByProviderId(providerId);
         if (config == null)
             return NotFound();
 
-        config.ProductMappings.RemoveAll(m => m.ProviderProductId == productId);
+        var mappingToRemove = config.ProductMappings.FirstOrDefault(m => m.Id == mappingId);
+        if (mappingToRemove == null)
+            return NotFound("Mapping not found");
+
+        config.ProductMappings.Remove(mappingToRemove);
         config.UpdatedAt = DateTime.UtcNow;
         await _configRepo.Update(config);
 
-        _logger.LogInformation("Removed product mapping for {ProviderId}: {ProductId}", providerId, productId);
+        _logger.LogInformation("Removed product mapping for {ProviderId}: {MappingId} ({ProductIds})", 
+            providerId, mappingId, string.Join(",", mappingToRemove.ProviderProductIds));
 
         return NoContent();
+    }
+
+    [HttpPut("providers/{providerId}/mappings/{mappingId}")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> UpdateProductMapping(string providerId, string mappingId, [FromBody] ProductMapping updatedMapping)
+    {
+        // Validate that the provider is supported
+        if (!ProviderDefinitions.IsProviderSupported(providerId))
+        {
+            return BadRequest(new { error = $"Provider '{providerId}' is not supported" });
+        }
+
+        // Ensure the mapping has at least one reward ID
+        if (updatedMapping.RewardIds?.Any() != true)
+        {
+            return BadRequest(new { error = "Product mapping must have at least one reward ID" });
+        }
+
+        // Ensure the mapping has at least one provider product ID
+        if (updatedMapping.ProviderProductIds?.Any() != true)
+        {
+            return BadRequest(new { error = "Product mapping must have at least one provider product ID" });
+        }
+
+        var config = await _configRepo.GetByProviderId(providerId);
+        if (config == null)
+            return NotFound("Provider configuration not found");
+
+        var existingMappingIndex = config.ProductMappings.FindIndex(m => m.Id == mappingId);
+        if (existingMappingIndex == -1)
+            return NotFound("Product mapping not found");
+
+        // Preserve the existing ID
+        updatedMapping.Id = mappingId;
+
+        // Update the mapping
+        config.ProductMappings[existingMappingIndex] = updatedMapping;
+        config.UpdatedAt = DateTime.UtcNow;
+        await _configRepo.Update(config);
+
+        _logger.LogInformation("Updated product mapping for {ProviderId}: {MappingId} ({ProductIds}) -> {RewardIds}",
+            providerId, mappingId, string.Join(",", updatedMapping.ProviderProductIds), string.Join(", ", updatedMapping.RewardIds ?? new List<string>()));
+
+        // Return the updated provider info with mappings
+        var provider = ProviderDefinitions.GetProvider(providerId);
+        var result = new
+        {
+            Id = provider.Id,
+            ProviderId = provider.Id,
+            ProviderName = provider.Name,
+            IsActive = provider.IsEnabled,
+            Description = provider.Description,
+            ProductMappings = config.ProductMappings,
+            CreatedAt = config.CreatedAt,
+            UpdatedAt = config.UpdatedAt
+        };
+
+        return Ok(result);
     }
 
     // Patreon OAuth endpoints
@@ -335,6 +413,112 @@ public class RewardManagementController(
         {
             _logger.LogError(ex, "Error getting user assignments");
             return StatusCode(500, new { error = "Failed to get user assignments" });
+        }
+    }
+
+    // Admin endpoints for reward assignments management
+
+    /// <summary>
+    /// Get all reward assignments with pagination (admin only)
+    /// </summary>
+    [HttpGet("assignments/all")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> GetAllAssignments([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        try
+        {
+            // Use proper database-level pagination for better performance
+            var (assignments, totalCount) = await _assignmentRepo.GetAllPaginated(page, pageSize);
+            
+            var result = new
+            {
+                assignments = assignments,
+                totalCount = totalCount,
+                page = page,
+                pageSize = pageSize,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all assignments");
+            return StatusCode(500, new { error = "Failed to get all assignments" });
+        }
+    }
+
+    /// <summary>
+    /// Get all assignments for a specific reward (admin only)
+    /// </summary>
+    [HttpGet("{rewardId}/assignments")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> GetAssignmentsByReward(string rewardId)
+    {
+        try
+        {
+            var assignments = await _assignmentRepo.GetByRewardId(rewardId);
+            return Ok(assignments);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting assignments for reward {RewardId}", rewardId);
+            return StatusCode(500, new { error = "Failed to get assignments for reward" });
+        }
+    }
+
+    // Admin endpoints for Patreon account links management
+
+    /// <summary>
+    /// Get all Patreon account links (admin only)
+    /// </summary>
+    [HttpGet("patreon/links")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> GetAllPatreonLinks()
+    {
+        try
+        {
+            var links = await _patreonLinkRepo.GetAll();
+            var dtos = links.Select(link => new PatreonAccountLinkDto
+            {
+                Id = link.Id.ToString(),
+                BattleTag = link.BattleTag,
+                PatreonUserId = link.PatreonUserId,
+                LinkedAt = link.LinkedAt,
+                LastSyncAt = link.LastSyncAt
+            }).ToList();
+            return Ok(dtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all Patreon links");
+            return StatusCode(500, new { error = "Failed to get Patreon links" });
+        }
+    }
+
+    /// <summary>
+    /// Delete a Patreon account link (admin only)
+    /// </summary>
+    [HttpDelete("patreon/links/{battleTag}")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> DeletePatreonLink(string battleTag)
+    {
+        try
+        {
+            var removed = await _patreonLinkRepo.RemoveByBattleTag(battleTag);
+            
+            if (!removed)
+            {
+                return NotFound(new { error = "Patreon link not found for the specified BattleTag" });
+            }
+
+            _logger.LogInformation("Admin deleted Patreon link for BattleTag {BattleTag}", battleTag);
+            return Ok(new { success = true, message = "Patreon link deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting Patreon link for BattleTag {BattleTag}", battleTag);
+            return StatusCode(500, new { error = "Failed to delete Patreon link" });
         }
     }
 

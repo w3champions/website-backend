@@ -18,4 +18,7 @@ public interface IRewardAssignmentRepository
     Task<RewardAssignment> Update(RewardAssignment assignment);
     Task Delete(string assignmentId);
     Task<bool> ExistsForProviderReference(string providerId, string providerReference);
+    Task<List<RewardAssignment>> GetAll();
+    Task<List<RewardAssignment>> GetByRewardId(string rewardId);
+    Task<(List<RewardAssignment> assignments, int totalCount)> GetAllPaginated(int page, int pageSize);
 }

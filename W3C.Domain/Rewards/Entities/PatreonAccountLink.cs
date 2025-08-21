@@ -1,4 +1,5 @@
 using System;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
 
@@ -7,7 +8,10 @@ namespace W3C.Domain.Rewards.Entities;
 public class PatreonAccountLink : IIdentifiable
 {
     [BsonId]
-    public string Id { get; set; }
+    public ObjectId Id { get; set; }
+    
+    // IIdentifiable requires string Id, so we provide it
+    string IIdentifiable.Id => Id.ToString();
     
     /// <summary>
     /// Battle.net BattleTag (from JWT token)

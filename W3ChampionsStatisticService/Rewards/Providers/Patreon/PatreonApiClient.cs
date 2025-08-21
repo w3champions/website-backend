@@ -46,9 +46,8 @@ public class PatreonApiClient
         var allMembers = new List<PatreonMember>();
         string nextPageUrl = $"{BaseUrl}/campaigns/{_campaignId}/members" +
             "?include=currently_entitled_tiers,user" +
-            "&fields[member]=patron_status,email,full_name,is_follower,last_charge_date,last_charge_status,lifetime_support_cents,currently_entitled_amount_cents,pledge_relationship_start" +
+            "&fields[member]=patron_status,is_follower,last_charge_date,last_charge_status,lifetime_support_cents,currently_entitled_amount_cents,pledge_relationship_start" +
             "&fields[tier]=title,amount_cents" +
-            "&fields[user]=email,full_name" +
             "&page[count]=500";
 
         try
@@ -111,23 +110,18 @@ public class PatreonApiClient
             {
                 Id = memberData.Id,
                 PatronStatus = memberData.Attributes?.GetValueOrDefault("patron_status")?.ToString(),
-                Email = memberData.Attributes?.GetValueOrDefault("email")?.ToString(),
                 LastChargeStatus = memberData.Attributes?.GetValueOrDefault("last_charge_status")?.ToString(),
                 EntitledTierIds = new List<string>()
             };
 
-            // Get user email from included data if not in member attributes
-            if (string.IsNullOrEmpty(member.Email) && memberData.Relationships?.ContainsKey("user") == true)
+            // Extract Patreon user ID from relationships
+            if (memberData.Relationships?.ContainsKey("user") == true)
             {
                 var userRelation = memberData.Relationships["user"];
                 if (userRelation?.Data is JsonElement userData)
                 {
                     var userId = userData.GetProperty("id").GetString();
-                    var user = included?.FirstOrDefault(i => i.Type == "user" && i.Id == userId);
-                    if (user?.Attributes?.ContainsKey("email") == true)
-                    {
-                        member.Email = user.Attributes["email"]?.ToString();
-                    }
+                    member.PatreonUserId = userId;
                 }
             }
 
@@ -160,7 +154,7 @@ public class PatreonApiClient
 public class PatreonMember
 {
     public string Id { get; set; }
-    public string Email { get; set; }
+    public string PatreonUserId { get; set; }
     public string PatronStatus { get; set; }
     public string LastChargeStatus { get; set; }
     public List<string> EntitledTierIds { get; set; } = new();

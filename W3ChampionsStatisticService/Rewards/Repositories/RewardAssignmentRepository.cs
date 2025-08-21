@@ -110,4 +110,33 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
             a.ProviderReference == providerReference);
         return existing != null;
     }
+
+    public Task<List<RewardAssignment>> GetAll()
+    {
+        return LoadAll<RewardAssignment>();
+    }
+
+    public Task<List<RewardAssignment>> GetByRewardId(string rewardId)
+    {
+        return LoadAll<RewardAssignment>(a => a.RewardId == rewardId);
+    }
+
+    public async Task<(List<RewardAssignment> assignments, int totalCount)> GetAllPaginated(int page, int pageSize)
+    {
+        var collection = CreateCollection<RewardAssignment>();
+        
+        // Get total count
+        var totalCount = (int)await collection.CountDocumentsAsync(FilterDefinition<RewardAssignment>.Empty);
+        
+        // Get paginated results
+        var skip = (page - 1) * pageSize;
+        var assignments = await collection
+            .Find(FilterDefinition<RewardAssignment>.Empty)
+            .Sort(Builders<RewardAssignment>.Sort.Descending(a => a.AssignedAt))
+            .Skip(skip)
+            .Limit(pageSize)
+            .ToListAsync();
+            
+        return (assignments, totalCount);
+    }
 }

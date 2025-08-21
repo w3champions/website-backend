@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
 
@@ -17,9 +18,10 @@ public class ProviderConfiguration : IIdentifiable
 
 public class ProductMapping
 {
-    public string ProviderProductId { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public List<string> ProviderProductIds { get; set; } = new();
     public string ProviderProductName { get; set; }
-    public string RewardId { get; set; }
+    public List<string> RewardIds { get; set; } = new();
     public ProductMappingType Type { get; set; }
     public Dictionary<string, object> AdditionalParameters { get; set; } = new();
 }

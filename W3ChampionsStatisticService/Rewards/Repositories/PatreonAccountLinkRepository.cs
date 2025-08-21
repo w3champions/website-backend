@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
 using W3C.Domain.Repositories;
@@ -176,5 +178,10 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
             Log.Error(ex, "Error handling Patreon account link removal for BattleTag {BattleTag} and PatreonUserId {PatreonUserId}", 
                 battleTag, patreonUserId);
         }
+    }
+
+    public Task<List<PatreonAccountLink>> GetAll()
+    {
+        return LoadAll<PatreonAccountLink>();
     }
 }

@@ -43,6 +43,12 @@ public class ProviderConfigurationRepository(MongoClient mongoClient) : MongoDbR
     public async Task<ProductMapping> GetProductMapping(string providerId, string providerProductId)
     {
         var config = await GetByProviderId(providerId);
-        return config?.ProductMappings?.FirstOrDefault(m => m.ProviderProductId == providerProductId);
+        return config?.ProductMappings?.FirstOrDefault(m => m.ProviderProductIds.Contains(providerProductId));
+    }
+
+    public async Task<ProductMapping> GetProductMappingById(string providerId, string mappingId)
+    {
+        var config = await GetByProviderId(providerId);
+        return config?.ProductMappings?.FirstOrDefault(m => m.Id == mappingId);
     }
 }
