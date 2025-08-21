@@ -11,6 +11,4 @@ public interface IProviderConfigurationRepository
     Task<ProviderConfiguration> Create(ProviderConfiguration configuration);
     Task<ProviderConfiguration> Update(ProviderConfiguration configuration);
     Task Delete(string providerId);
-    Task<ProductMapping> GetProductMapping(string providerId, string providerProductId);
-    Task<ProductMapping> GetProductMappingById(string providerId, string mappingId);
 }

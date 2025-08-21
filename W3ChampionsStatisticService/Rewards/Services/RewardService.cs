@@ -20,7 +20,7 @@ public class RewardService : IRewardService
 {
     private readonly IRewardRepository _rewardRepo;
     private readonly IRewardAssignmentRepository _assignmentRepo;
-    private readonly IProviderConfigurationRepository _configRepo;
+    private readonly IProductMappingRepository _productMappingRepo;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RewardService> _logger;
     private readonly IHubContext<WebsiteBackendHub> _hubContext;
@@ -28,14 +28,14 @@ public class RewardService : IRewardService
     public RewardService(
         IRewardRepository rewardRepo,
         IRewardAssignmentRepository assignmentRepo,
-        IProviderConfigurationRepository configRepo,
+        IProductMappingRepository productMappingRepo,
         IServiceProvider serviceProvider,
         ILogger<RewardService> logger,
         IHubContext<WebsiteBackendHub> hubContext)
     {
         _rewardRepo = rewardRepo;
         _assignmentRepo = assignmentRepo;
-        _configRepo = configRepo;
+        _productMappingRepo = productMappingRepo;
         _serviceProvider = serviceProvider;
         _logger = logger;
         _hubContext = hubContext;
@@ -75,9 +75,6 @@ public class RewardService : IRewardService
                 throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not enabled");
             }
 
-            // Get provider configuration and product mapping
-            var config = await _configRepo.GetByProviderId(rewardEvent.ProviderId);
-
             // Get previous entitled tiers from the database for diffing
             var previousTiers = await GetPreviousEntitledTiers(rewardEvent.UserId, rewardEvent.ProviderId);
             var currentTiers = rewardEvent.EntitledTierIds ?? new List<string>();
@@ -94,25 +91,33 @@ public class RewardService : IRewardService
             // Process removed tiers (cancellations/expirations)
             foreach (var tierId in removedTiers)
             {
-                var productMapping = config.ProductMappings.FirstOrDefault(m => m.ProviderProductIds.Contains(tierId));
-                if (productMapping == null)
+                var productMappings = await _productMappingRepo.GetByProviderAndProductId(rewardEvent.ProviderId, tierId);
+                if (!productMappings.Any())
                 {
                     throw new InvalidOperationException($"No product mapping found for removed tier {tierId} from provider {rewardEvent.ProviderId}");
                 }
                 
-                lastAssignment = await ProcessTierRemoval(rewardEvent, productMapping, tierId);
+                // Process all mappings that match this provider/product combination
+                foreach (var productMapping in productMappings)
+                {
+                    lastAssignment = await ProcessTierRemoval(rewardEvent, productMapping, tierId);
+                }
             }
 
             // Process added tiers (new subscriptions/purchases)
             foreach (var tierId in addedTiers)
             {
-                var productMapping = config.ProductMappings.FirstOrDefault(m => m.ProviderProductIds.Contains(tierId));
-                if (productMapping == null)
+                var productMappings = await _productMappingRepo.GetByProviderAndProductId(rewardEvent.ProviderId, tierId);
+                if (!productMappings.Any())
                 {
                     throw new InvalidOperationException($"No product mapping found for added tier {tierId} from provider {rewardEvent.ProviderId}");
                 }
                 
-                lastAssignment = await ProcessTierAddition(rewardEvent, productMapping, tierId);
+                // Process all mappings that match this provider/product combination
+                foreach (var productMapping in productMappings)
+                {
+                    lastAssignment = await ProcessTierAddition(rewardEvent, productMapping, tierId);
+                }
             }
 
             // Note: No need to store entitled tiers separately - they are derived from active assignments
@@ -508,7 +513,7 @@ public class RewardService : IRewardService
             throw new ArgumentNullException(nameof(productMapping));
             
         _logger.LogInformation("Processing tier removal: {TierId} for user {UserId}", 
-            string.Join(",", productMapping.ProviderProductIds), rewardEvent.UserId);
+            tierId, rewardEvent.UserId);
         
         try
         {
@@ -518,8 +523,8 @@ public class RewardService : IRewardService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process tier removal for {TierId}, user {UserId}", 
-                string.Join(",", productMapping.ProviderProductIds), rewardEvent.UserId);
-            throw new InvalidOperationException($"Failed to process tier removal for {string.Join(",", productMapping.ProviderProductIds)}", ex);
+                tierId, rewardEvent.UserId);
+            throw new InvalidOperationException($"Failed to process tier removal for {tierId}", ex);
         }
     }
 
@@ -531,7 +536,7 @@ public class RewardService : IRewardService
             throw new ArgumentNullException(nameof(productMapping));
             
         _logger.LogInformation("Processing tier addition: {TierId} for user {UserId}", 
-            string.Join(",", productMapping.ProviderProductIds), rewardEvent.UserId);
+            tierId, rewardEvent.UserId);
         
         try
         {
@@ -547,8 +552,8 @@ public class RewardService : IRewardService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process tier addition for {TierId}, user {UserId}", 
-                string.Join(",", productMapping.ProviderProductIds), rewardEvent.UserId);
-            throw new InvalidOperationException($"Failed to process tier addition for {string.Join(",", productMapping.ProviderProductIds)}", ex);
+                tierId, rewardEvent.UserId);
+            throw new InvalidOperationException($"Failed to process tier addition for {tierId}", ex);
         }
     }
 }

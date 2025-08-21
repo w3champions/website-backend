@@ -20,6 +20,7 @@ public class RewardManagementController(
     IRewardRepository rewardRepo,
     IRewardAssignmentRepository assignmentRepo,
     IProviderConfigurationRepository configRepo,
+    IProductMappingRepository productMappingRepo,
     IPatreonAccountLinkRepository patreonLinkRepo,
     PatreonOAuthService patreonOAuthService,
     IW3CAuthenticationService authService,
@@ -28,6 +29,7 @@ public class RewardManagementController(
     private readonly IRewardRepository _rewardRepo = rewardRepo;
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
     private readonly IProviderConfigurationRepository _configRepo = configRepo;
+    private readonly IProductMappingRepository _productMappingRepo = productMappingRepo;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
     private readonly PatreonOAuthService _patreonOAuthService = patreonOAuthService;
     private readonly IW3CAuthenticationService _authService = authService;
@@ -117,166 +119,118 @@ public class RewardManagementController(
     [CheckIfBattleTagIsAdmin]
     public async Task<IActionResult> GetProviderConfigurations()
     {
-        var dbConfigs = await _configRepo.GetAll();
-        var dbConfigsByProvider = dbConfigs.ToDictionary(c => c.ProviderId, c => c);
-
         var result = ProviderDefinitions.GetAllProviders().Select(provider => new
         {
             Id = provider.Id,
             ProviderId = provider.Id,
             ProviderName = provider.Name,
             IsActive = provider.IsEnabled,
-            Description = provider.Description,
-            ProductMappings = dbConfigsByProvider.TryGetValue(provider.Id, out var config) ? 
-                            config.ProductMappings : new List<ProductMapping>(),
-            CreatedAt = dbConfigsByProvider.TryGetValue(provider.Id, out var config2) ? 
-                       config2.CreatedAt : DateTime.UtcNow,
-            UpdatedAt = dbConfigsByProvider.TryGetValue(provider.Id, out var config3) ? 
-                       config3.UpdatedAt : null
+            Description = provider.Description
         }).ToList();
 
         return Ok(result);
     }
 
-    [HttpPost("providers/{providerId}/mappings")]
+    [HttpGet("product-mappings")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> AddProductMapping(string providerId, [FromBody] ProductMapping mapping)
+    public async Task<IActionResult> GetProductMappings()
     {
-        // Validate that the provider is supported
-        if (!ProviderDefinitions.IsProviderSupported(providerId))
-        {
-            return BadRequest(new { error = $"Provider '{providerId}' is not supported" });
-        }
+        var mappings = await _productMappingRepo.GetAll();
+        return Ok(mappings);
+    }
 
+    [HttpPost("product-mappings")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> CreateProductMapping([FromBody] ProductMapping mapping)
+    {
         // Ensure the mapping has at least one reward ID
         if (mapping.RewardIds?.Any() != true)
         {
             return BadRequest(new { error = "Product mapping must have at least one reward ID" });
         }
 
-        // Ensure the mapping has at least one provider product ID
-        if (mapping.ProviderProductIds?.Any() != true)
+        // Ensure the mapping has at least one product provider pair
+        if (mapping.ProductProviders?.Any() != true)
         {
-            return BadRequest(new { error = "Product mapping must have at least one provider product ID" });
+            return BadRequest(new { error = "Product mapping must have at least one product provider pair" });
         }
 
-        var config = await _configRepo.GetByProviderId(providerId);
-        if (config == null)
+        // Validate that all providers are supported
+        foreach (var productProvider in mapping.ProductProviders)
         {
-            config = new ProviderConfiguration
+            if (!ProviderDefinitions.IsProviderSupported(productProvider.ProviderId))
             {
-                Id = Guid.NewGuid().ToString(),
-                ProviderId = providerId,
-                ProductMappings = new List<ProductMapping> { mapping },
-                CreatedAt = DateTime.UtcNow
-            };
-            await _configRepo.Create(config);
-        }
-        else
-        {
-            config.ProductMappings.Add(mapping);
-            config.UpdatedAt = DateTime.UtcNow;
-            await _configRepo.Update(config);
+                return BadRequest(new { error = $"Provider '{productProvider.ProviderId}' is not supported" });
+            }
         }
 
-        _logger.LogInformation("Added product mapping for {ProviderId}: {ProductIds} -> {RewardIds}",
-            providerId, string.Join(",", mapping.ProviderProductIds ?? new List<string>()), string.Join(", ", mapping.RewardIds ?? new List<string>()));
+        mapping.Id = Guid.NewGuid().ToString();
+        mapping.CreatedAt = DateTime.UtcNow;
+        
+        var result = await _productMappingRepo.Create(mapping);
 
-        // Return the combined provider info with mappings
-        var provider = ProviderDefinitions.GetProvider(providerId);
-        var result = new
-        {
-            Id = provider.Id,
-            ProviderId = provider.Id,
-            ProviderName = provider.Name,
-            IsActive = provider.IsEnabled,
-            Description = provider.Description,
-            ProductMappings = config.ProductMappings,
-            CreatedAt = config.CreatedAt,
-            UpdatedAt = config.UpdatedAt
-        };
+        _logger.LogInformation("Created product mapping {MappingId}: {ProductName} with {ProviderCount} providers -> {RewardIds}",
+            mapping.Id, mapping.ProductName, mapping.ProductProviders.Count, string.Join(", ", mapping.RewardIds));
 
         return Ok(result);
     }
 
-    [HttpDelete("providers/{providerId}/mappings/{mappingId}")]
+    [HttpPut("product-mappings/{id}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> RemoveProductMapping(string providerId, string mappingId)
+    public async Task<IActionResult> UpdateProductMapping(string id, [FromBody] ProductMapping updatedMapping)
     {
-        var config = await _configRepo.GetByProviderId(providerId);
-        if (config == null)
-            return NotFound();
-
-        var mappingToRemove = config.ProductMappings.FirstOrDefault(m => m.Id == mappingId);
-        if (mappingToRemove == null)
-            return NotFound("Mapping not found");
-
-        config.ProductMappings.Remove(mappingToRemove);
-        config.UpdatedAt = DateTime.UtcNow;
-        await _configRepo.Update(config);
-
-        _logger.LogInformation("Removed product mapping for {ProviderId}: {MappingId} ({ProductIds})", 
-            providerId, mappingId, string.Join(",", mappingToRemove.ProviderProductIds));
-
-        return NoContent();
-    }
-
-    [HttpPut("providers/{providerId}/mappings/{mappingId}")]
-    [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> UpdateProductMapping(string providerId, string mappingId, [FromBody] ProductMapping updatedMapping)
-    {
-        // Validate that the provider is supported
-        if (!ProviderDefinitions.IsProviderSupported(providerId))
-        {
-            return BadRequest(new { error = $"Provider '{providerId}' is not supported" });
-        }
-
         // Ensure the mapping has at least one reward ID
         if (updatedMapping.RewardIds?.Any() != true)
         {
             return BadRequest(new { error = "Product mapping must have at least one reward ID" });
         }
 
-        // Ensure the mapping has at least one provider product ID
-        if (updatedMapping.ProviderProductIds?.Any() != true)
+        // Ensure the mapping has at least one product provider pair
+        if (updatedMapping.ProductProviders?.Any() != true)
         {
-            return BadRequest(new { error = "Product mapping must have at least one provider product ID" });
+            return BadRequest(new { error = "Product mapping must have at least one product provider pair" });
         }
 
-        var config = await _configRepo.GetByProviderId(providerId);
-        if (config == null)
-            return NotFound("Provider configuration not found");
+        // Validate that all providers are supported
+        foreach (var productProvider in updatedMapping.ProductProviders)
+        {
+            if (!ProviderDefinitions.IsProviderSupported(productProvider.ProviderId))
+            {
+                return BadRequest(new { error = $"Provider '{productProvider.ProviderId}' is not supported" });
+            }
+        }
 
-        var existingMappingIndex = config.ProductMappings.FindIndex(m => m.Id == mappingId);
-        if (existingMappingIndex == -1)
+        var existingMapping = await _productMappingRepo.GetById(id);
+        if (existingMapping == null)
             return NotFound("Product mapping not found");
 
-        // Preserve the existing ID
-        updatedMapping.Id = mappingId;
+        // Preserve the existing ID and creation timestamp
+        updatedMapping.Id = id;
+        updatedMapping.CreatedAt = existingMapping.CreatedAt;
+        updatedMapping.UpdatedAt = DateTime.UtcNow;
 
-        // Update the mapping
-        config.ProductMappings[existingMappingIndex] = updatedMapping;
-        config.UpdatedAt = DateTime.UtcNow;
-        await _configRepo.Update(config);
+        var result = await _productMappingRepo.Update(updatedMapping);
 
-        _logger.LogInformation("Updated product mapping for {ProviderId}: {MappingId} ({ProductIds}) -> {RewardIds}",
-            providerId, mappingId, string.Join(",", updatedMapping.ProviderProductIds), string.Join(", ", updatedMapping.RewardIds ?? new List<string>()));
-
-        // Return the updated provider info with mappings
-        var provider = ProviderDefinitions.GetProvider(providerId);
-        var result = new
-        {
-            Id = provider.Id,
-            ProviderId = provider.Id,
-            ProviderName = provider.Name,
-            IsActive = provider.IsEnabled,
-            Description = provider.Description,
-            ProductMappings = config.ProductMappings,
-            CreatedAt = config.CreatedAt,
-            UpdatedAt = config.UpdatedAt
-        };
+        _logger.LogInformation("Updated product mapping {MappingId}: {ProductName} with {ProviderCount} providers -> {RewardIds}",
+            id, updatedMapping.ProductName, updatedMapping.ProductProviders.Count, string.Join(", ", updatedMapping.RewardIds));
 
         return Ok(result);
+    }
+
+    [HttpDelete("product-mappings/{id}")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> DeleteProductMapping(string id)
+    {
+        var existingMapping = await _productMappingRepo.GetById(id);
+        if (existingMapping == null)
+            return NotFound("Product mapping not found");
+
+        await _productMappingRepo.Delete(id);
+
+        _logger.LogInformation("Deleted product mapping {MappingId}: {ProductName}", 
+            id, existingMapping.ProductName);
+
+        return NoContent();
     }
 
     // Patreon OAuth endpoints

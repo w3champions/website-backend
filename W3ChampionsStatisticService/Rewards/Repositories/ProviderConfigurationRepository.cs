@@ -40,15 +40,4 @@ public class ProviderConfigurationRepository(MongoClient mongoClient) : MongoDbR
         return Delete<ProviderConfiguration>(c => c.ProviderId == providerId);
     }
 
-    public async Task<ProductMapping> GetProductMapping(string providerId, string providerProductId)
-    {
-        var config = await GetByProviderId(providerId);
-        return config?.ProductMappings?.FirstOrDefault(m => m.ProviderProductIds.Contains(providerProductId));
-    }
-
-    public async Task<ProductMapping> GetProductMappingById(string providerId, string mappingId)
-    {
-        var config = await GetByProviderId(providerId);
-        return config?.ProductMappings?.FirstOrDefault(m => m.Id == mappingId);
-    }
 }
