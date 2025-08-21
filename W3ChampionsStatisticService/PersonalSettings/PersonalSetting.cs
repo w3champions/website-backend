@@ -9,6 +9,7 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3C.Domain.Tracing;
 using MongoDB.Bson;
+using Serilog;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
@@ -87,6 +88,21 @@ public class PersonalSetting : IVersionable, IIdentifiable
     public void UpdateSpecialPictures(SpecialPicture[] specialPictures)
     {
         SpecialPictures = specialPictures;
+
+        // If the currently selected profile picture is a Special portrait that is no longer available,
+        // reset it to a Starter portrait via SetProfilePicture.
+        if (ProfilePicture != null
+            && ProfilePicture.Race == AvatarCategory.Special
+            && (SpecialPictures == null || !SpecialPictures.Any(x => x.PictureId == ProfilePicture.PictureId)))
+        {
+            Log.Information("Resetting profile picture to Starter portrait for user {UserId}", Id);
+            SetProfilePicture(new SetPictureCommand
+            {
+                avatarCategory = AvatarCategory.Starter,
+                pictureId = 1,
+                isClassic = false
+            });
+        }
     }
 
     public List<AvatarCategoryToMaxPictureId> PickablePictures =>
