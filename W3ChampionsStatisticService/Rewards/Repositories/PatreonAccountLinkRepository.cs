@@ -7,6 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Serilog;
 using W3C.Domain.Repositories;
+using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
@@ -196,10 +197,11 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
             var patreonAssignments = await _assignmentRepo.GetByUserIdAndStatus(battleTag, RewardStatus.Active);
             var patreonRewards = patreonAssignments.Where(a => a.ProviderId == "patreon").ToList();
             
+            var rewardService = _serviceProvider.GetRequiredService<IRewardService>();
+            
             foreach (var assignment in patreonRewards)
             {
-                assignment.Revoke("Patreon account unlinked");
-                await _assignmentRepo.Update(assignment);
+                await rewardService.RevokeReward(assignment.Id, "Patreon account unlinked");
                 
                 Log.Information("Revoked Patreon reward {RewardId} for BattleTag {BattleTag}", 
                     assignment.RewardId, battleTag);

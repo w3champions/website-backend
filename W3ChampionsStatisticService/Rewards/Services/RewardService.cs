@@ -450,10 +450,15 @@ public class RewardService : IRewardService
 
     public async Task RevokeReward(string assignmentId)
     {
+        await RevokeReward(assignmentId, "Manual revocation");
+    }
+
+    public async Task RevokeReward(string assignmentId, string reason)
+    {
         var assignment = await _assignmentRepo.GetById(assignmentId);
         if (assignment != null)
         {
-            assignment.Revoke("Manual revocation");
+            assignment.Revoke(reason);
             await _assignmentRepo.Update(assignment);
             await RevokeRewardModule(assignment);
         }

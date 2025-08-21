@@ -11,6 +11,7 @@ public interface IRewardService
     Task<List<RewardAssignment>> GetUserRewards(string userId);
     Task<RewardAssignment> AssignReward(string userId, string rewardId, string providerId, string providerReference);
     Task RevokeReward(string assignmentId);
+    Task RevokeReward(string assignmentId, string reason);
     Task ExpireReward(string assignmentId);
     Task<List<RewardAssignment>> GetExpiredRewards();
     Task ProcessExpiredRewards();
