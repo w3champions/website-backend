@@ -771,7 +771,7 @@ public class RewardManagementController(
 public class CreateRewardRequest
 {
     public string Name { get; set; }
-    public string Description { get; set; }
+    public string? Description { get; set; }
     public string ModuleId { get; set; }
     public Dictionary<string, object> Parameters { get; set; }
     public RewardDuration Duration { get; set; }
@@ -780,7 +780,7 @@ public class CreateRewardRequest
 public class UpdateRewardRequest
 {
     public string Name { get; set; }
-    public string Description { get; set; }
+    public string? Description { get; set; }
     public Dictionary<string, object> Parameters { get; set; }
     public RewardDuration Duration { get; set; }
     public bool? IsActive { get; set; }
@@ -813,7 +813,7 @@ public class ModuleDefinitionDto
 {
     public string ModuleId { get; set; }
     public string ModuleName { get; set; }
-    public string Description { get; set; }
+    public string? Description { get; set; }
     public bool SupportsParameters { get; set; }
     public Dictionary<string, ParameterDefinition> ParameterDefinitions { get; set; }
 }
