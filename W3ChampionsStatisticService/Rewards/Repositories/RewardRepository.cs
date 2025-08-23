@@ -48,9 +48,9 @@ public class RewardRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
     public async Task<Reward> GetByModuleAndParameters(string moduleId, Dictionary<string, object> parameters)
     {
         var rewards = await LoadAll<Reward>(r => r.ModuleId == moduleId && r.IsActive == true);
-        
+
         // Find matching parameters (simplified comparison)
-        return rewards.FirstOrDefault(r => 
+        return rewards.FirstOrDefault(r =>
             r.Parameters.Count == parameters.Count &&
             r.Parameters.All(p => parameters.ContainsKey(p.Key)));
     }

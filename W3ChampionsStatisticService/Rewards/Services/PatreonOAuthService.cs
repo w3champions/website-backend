@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Repositories;
+using W3C.Domain.Rewards.ValueObjects;
 using System.Net.Http.Headers;
 
 namespace W3ChampionsStatisticService.Rewards.Services;
@@ -15,6 +18,8 @@ public class PatreonOAuthService
 {
     private readonly HttpClient _httpClient;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepository;
+    private readonly IProductMappingUserAssociationRepository _associationRepository;
+    private readonly IProductMappingReconciliationService _reconciliationService;
     private readonly ILogger<PatreonOAuthService> _logger;
 
     private const string PatreonTokenUrl = "https://www.patreon.com/api/oauth2/token";
@@ -26,10 +31,14 @@ public class PatreonOAuthService
     public PatreonOAuthService(
         HttpClient httpClient,
         IPatreonAccountLinkRepository patreonLinkRepository,
+        IProductMappingUserAssociationRepository associationRepository,
+        IProductMappingReconciliationService reconciliationService,
         ILogger<PatreonOAuthService> logger)
     {
         _httpClient = httpClient;
         _patreonLinkRepository = patreonLinkRepository;
+        _associationRepository = associationRepository;
+        _reconciliationService = reconciliationService;
         _logger = logger;
 
         _clientId = Environment.GetEnvironmentVariable("PATREON_CLIENT_ID");
@@ -254,24 +263,55 @@ public class PatreonOAuthService
     }
 
     /// <summary>
-    /// Remove Patreon account link
+    /// Remove Patreon account link and clean up associated rewards
     /// </summary>
     public async Task<bool> UnlinkAccount(string battleTag)
     {
         try
         {
+            _logger.LogInformation("Starting Patreon account unlink process for BattleTag {BattleTag}", battleTag);
+
+            // Step 1: Revoke all active Patreon associations for this user
+            var userAssociations = await _associationRepository.GetProductMappingsByUserId(battleTag);
+            var patreonAssociations = userAssociations.Where(a => a.ProviderId == "patreon" && a.IsActive()).ToList();
+
+            if (patreonAssociations.Any())
+            {
+                _logger.LogInformation("Found {Count} active Patreon associations to revoke for BattleTag {BattleTag}",
+                    patreonAssociations.Count, battleTag);
+
+                foreach (var association in patreonAssociations)
+                {
+                    association.Revoke("Account unlinked by user");
+                    await _associationRepository.Update(association);
+                }
+
+                // Step 2: Trigger immediate reconciliation to remove reward assignments
+                var eventIdPrefix = $"account_unlink_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
+                var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
+                _logger.LogInformation("Reconciled rewards after account unlink for BattleTag {BattleTag}: Added={Added}, Revoked={Revoked}",
+                    battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+            }
+            else
+            {
+                _logger.LogInformation("No active Patreon associations found for BattleTag {BattleTag}", battleTag);
+            }
+
+            // Step 3: Remove the account link
             var result = await _patreonLinkRepository.RemoveByBattleTag(battleTag);
 
             if (result)
             {
-                _logger.LogInformation("Successfully unlinked Patreon account for BattleTag {BattleTag}", battleTag);
+                _logger.LogInformation("Successfully unlinked Patreon account for BattleTag {BattleTag}. Revoked {Count} associations.",
+                    battleTag, patreonAssociations.Count);
             }
             else
             {
-                _logger.LogWarning("No Patreon link found to remove for BattleTag {BattleTag}", battleTag);
+                _logger.LogWarning("No Patreon link found to remove for BattleTag {BattleTag}, but cleaned up {Count} associations.",
+                    battleTag, patreonAssociations.Count);
             }
 
-            return result;
+            return result || patreonAssociations.Any(); // Success if we removed the link OR cleaned up associations
         }
         catch (Exception ex)
         {

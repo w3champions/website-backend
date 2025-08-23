@@ -33,12 +33,12 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
         {
             var computedSignature = ComputeHmacSignature(payload);
             var isValid = signature == computedSignature;
-            
+
             if (!isValid)
             {
                 _logger.LogWarning("Invalid Patreon webhook signature");
             }
-            
+
             return Task.FromResult(isValid);
         }
         catch (Exception ex)
@@ -56,26 +56,26 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
         try
         {
             var webhookData = JsonSerializer.Deserialize<PatreonWebhookData>(payload);
-            
+
             if (webhookData?.Data == null)
                 throw new InvalidOperationException("Webhook data or data.data is null - malformed webhook");
-                
+
             if (webhookData.Data.Attributes == null)
                 throw new InvalidOperationException("Webhook data.attributes is null - malformed webhook");
-                
+
             if (string.IsNullOrEmpty(webhookData.Data.Id))
                 throw new InvalidOperationException("Webhook data.id is missing - cannot track event");
 
             var eventType = MapPatreonEventType(headers, webhookData.Data.Attributes.PatronStatus);
             var userId = await ResolveUserId(webhookData.Data.Id);
             var tierIds = ExtractAllTierIdsFromRelationships(webhookData);
-            
+
             if (string.IsNullOrEmpty(userId))
             {
                 _logger.LogInformation("No BattleTag linked for PatreonUserId {PatreonUserId}. Skipping webhook.", webhookData.Data.Id);
                 return null; // Skip this webhook - no linked account
             }
-            
+
             // Create a single RewardEvent with all entitled tiers
             // Use Patreon's webhook event ID for idempotency instead of generating new GUID
             var rewardEvent = new RewardEvent
@@ -94,10 +94,10 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
                     ["patreon_user_id"] = webhookData.Data.Id
                 }
             };
-            
+
             // Validate the event before returning
             rewardEvent.Validate();
-            
+
             return rewardEvent;
         }
         catch (JsonException ex)
@@ -133,7 +133,7 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
                 _logger.LogDebug("Resolved PatreonUserId {PatreonUserId} to BattleTag {BattleTag}", patreonUserId, accountLink.BattleTag);
                 return accountLink.BattleTag;
             }
-            
+
             _logger.LogDebug("No BattleTag found for PatreonUserId {PatreonUserId}", patreonUserId);
             return null;
         }

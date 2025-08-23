@@ -9,21 +9,14 @@ namespace W3ChampionsStatisticService.Rewards.Controllers;
 
 [ApiController]
 [Route("api/rewards/webhooks/kofi")]
-public class KoFiWebhookController : ControllerBase
+public class KoFiWebhookController(
+    KoFiProvider kofiProvider,
+    IRewardService rewardService,
+    ILogger<KoFiWebhookController> logger) : ControllerBase
 {
-    private readonly KoFiProvider _kofiProvider;
-    private readonly IRewardService _rewardService;
-    private readonly ILogger<KoFiWebhookController> _logger;
-
-    public KoFiWebhookController(
-        KoFiProvider kofiProvider,
-        IRewardService rewardService,
-        ILogger<KoFiWebhookController> logger)
-    {
-        _kofiProvider = kofiProvider;
-        _rewardService = rewardService;
-        _logger = logger;
-    }
+    private readonly KoFiProvider _kofiProvider = kofiProvider;
+    private readonly IRewardService _rewardService = rewardService;
+    private readonly ILogger<KoFiWebhookController> _logger = logger;
 
     [HttpPost]
     public async Task<IActionResult> HandleKoFiWebhook([FromForm] string data)
@@ -47,10 +40,10 @@ public class KoFiWebhookController : ControllerBase
             // Parse and process event
             var rewardEvent = await _kofiProvider.ParseWebhookEvent(data);
             var assignment = await _rewardService.ProcessRewardEvent(rewardEvent);
-            
-            _logger.LogInformation("Successfully processed Ko-Fi webhook for user {UserId}", 
+
+            _logger.LogInformation("Successfully processed Ko-Fi webhook for user {UserId}",
                 rewardEvent.UserId);
-            
+
             return Ok(new { success = true, assignmentId = assignment?.Id });
         }
         catch (Exception ex)

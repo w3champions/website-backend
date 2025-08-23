@@ -14,14 +14,16 @@ namespace W3ChampionsStatisticService.Rewards.Services;
 
 public class PatreonDriftDetectionService(
     PatreonApiClient patreonApiClient,
-    IRewardAssignmentRepository assignmentRepository,
-    IRewardService rewardService,
-    IPatreonAccountLinkRepository patreonLinkRepository)
+    IProductMappingUserAssociationRepository associationRepository,
+    IProductMappingRepository productMappingRepository,
+    IPatreonAccountLinkRepository patreonLinkRepository,
+    IProductMappingReconciliationService reconciliationService)
 {
     private readonly PatreonApiClient _patreonApiClient = patreonApiClient;
-    private readonly IRewardAssignmentRepository _assignmentRepository = assignmentRepository;
-    private readonly IRewardService _rewardService = rewardService;
+    private readonly IProductMappingUserAssociationRepository _associationRepository = associationRepository;
+    private readonly IProductMappingRepository _productMappingRepository = productMappingRepository;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepository = patreonLinkRepository;
+    private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
     private const string ProviderId = "patreon";
 
     public async Task<DriftDetectionResult> DetectDrift()
@@ -33,16 +35,16 @@ public class PatreonDriftDetectionService(
             // Fetch current state from Patreon API
             var patreonMembers = await _patreonApiClient.GetAllCampaignMembers();
 
-            // Fetch our internal state
-            var internalAssignments = await GetActivePatreonAssignments();
+            // Fetch our internal state - now get associations instead of assignments
+            var internalAssociations = await GetActivePatreonAssociations();
 
             // Analyze the drift
-            var result = await AnalyzeDrift(patreonMembers, internalAssignments);
+            var result = await AnalyzeDrift(patreonMembers, internalAssociations);
 
             // Log the results
             LogDriftResults(result);
 
-            Log.Information("Patreon drift detection completed. Found {MissingCount} missing members, {ExtraCount} extra assignments, {MismatchedCount} mismatched tiers",
+            Log.Information("Patreon drift detection completed. Found {MissingCount} missing members, {ExtraCount} extra associations, {MismatchedCount} mismatched tiers",
                 result.MissingMembers.Count, result.ExtraAssignments.Count, result.MismatchedTiers.Count);
 
             return result;
@@ -54,14 +56,15 @@ public class PatreonDriftDetectionService(
         }
     }
 
-    private async Task<List<RewardAssignment>> GetActivePatreonAssignments()
+    private async Task<List<ProductMappingUserAssociation>> GetActivePatreonAssociations()
     {
-        // Get all active assignments for Patreon provider
-        var assignments = await _assignmentRepository.GetActiveAssignmentsByProvider(ProviderId);
-        return assignments;
+        // Get all associations and filter by provider
+        var allAssociations = await _associationRepository.GetAll(AssociationStatus.Active);
+        var patreonAssociations = allAssociations.Where(a => a.ProviderId == ProviderId);
+        return patreonAssociations.ToList();
     }
 
-    private async Task<DriftDetectionResult> AnalyzeDrift(List<PatreonMember> patreonMembers, List<RewardAssignment> internalAssignments)
+    private async Task<DriftDetectionResult> AnalyzeDrift(List<PatreonMember> patreonMembers, List<ProductMappingUserAssociation> internalAssociations)
     {
         var result = new DriftDetectionResult
         {
@@ -86,7 +89,7 @@ public class PatreonDriftDetectionService(
             }
         }
 
-        var internalByUserId = internalAssignments
+        var internalByUserId = internalAssociations
             .GroupBy(a => a.UserId.ToLowerInvariant())
             .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -115,8 +118,8 @@ public class PatreonDriftDetectionService(
             else
             {
                 // Check if tiers match
-                var assignments = internalByUserId[battleTag];
-                var internalTierIds = ExtractTierIdsFromAssignments(assignments);
+                var associations = internalByUserId[battleTag];
+                var internalTierIds = ExtractTierIdsFromAssociations(associations);
 
                 if (!AreTierSetsEqual(patreonMember.EntitledTierIds, internalTierIds))
                 {
@@ -132,22 +135,22 @@ public class PatreonDriftDetectionService(
             }
         }
 
-        // Find extra assignments (in our system but not active in Patreon)
+        // Find extra associations (in our system but not active in Patreon)
         foreach (var kvp in internalByUserId)
         {
             var battleTag = kvp.Key;
-            var assignments = kvp.Value;
+            var associations = kvp.Value;
 
             if (!patreonByBattleTag.ContainsKey(battleTag))
             {
-                // No matching Patreon member found
-                result.ExtraAssignments.AddRange(assignments.Select(a => new ExtraAssignment
+                // No matching Patreon member found - mark associations as extra
+                result.ExtraAssignments.AddRange(associations.Select(a => new ExtraAssignment
                 {
-                    AssignmentId = a.Id,
+                    AssignmentId = a.Id, // Using association ID
                     UserId = a.UserId,
-                    RewardId = a.RewardId,
+                    RewardId = null, // Associations don't have specific reward IDs
                     AssignedAt = a.AssignedAt,
-                    Reason = "Active reward assignment but no corresponding active Patreon member"
+                    Reason = "Active product mapping association but no corresponding active Patreon member"
                 }));
             }
             else
@@ -156,11 +159,11 @@ public class PatreonDriftDetectionService(
                 if (!patreonMember.IsActivePatron)
                 {
                     // Patreon member exists but is not active
-                    result.ExtraAssignments.AddRange(assignments.Select(a => new ExtraAssignment
+                    result.ExtraAssignments.AddRange(associations.Select(a => new ExtraAssignment
                     {
-                        AssignmentId = a.Id,
+                        AssignmentId = a.Id, // Using association ID
                         UserId = a.UserId,
-                        RewardId = a.RewardId,
+                        RewardId = null, // Associations don't have specific reward IDs
                         AssignedAt = a.AssignedAt,
                         PatreonStatus = patreonMember.PatronStatus,
                         Reason = $"Patreon member is not active (status: {patreonMember.PatronStatus}, charge: {patreonMember.LastChargeStatus})"
@@ -172,36 +175,27 @@ public class PatreonDriftDetectionService(
         // Calculate summary statistics
         result.TotalPatreonMembers = patreonMembers.Count;
         result.ActivePatreonMembers = patreonMembers.Count(m => m.IsActivePatron);
-        result.TotalInternalAssignments = internalAssignments.Count;
+        result.TotalInternalAssignments = internalAssociations.Count; // Using associations now
         result.UniqueInternalUsers = internalByUserId.Count;
-        
+
         // Log how many Patreon members have linked accounts
         var linkedActiveMembers = patreonByBattleTag.Count(kvp => kvp.Value.IsActivePatron);
         var totalActiveMembers = patreonMembers.Count(m => m.IsActivePatron);
-        Log.Information("Patreon drift analysis: {LinkedActive}/{TotalActive} active patrons have linked BattleTags", 
+        Log.Information("Patreon drift analysis: {LinkedActive}/{TotalActive} active patrons have linked BattleTags",
             linkedActiveMembers, totalActiveMembers);
 
         return result;
     }
 
-    private List<string> ExtractTierIdsFromAssignments(List<RewardAssignment> assignments)
+    private List<string> ExtractTierIdsFromAssociations(List<ProductMappingUserAssociation> associations)
     {
         var tierIds = new HashSet<string>();
 
-        foreach (var assignment in assignments)
+        foreach (var association in associations)
         {
-            // Extract tier IDs from metadata - this is the ONLY authoritative source
-            if (assignment.Metadata != null && assignment.Metadata.TryGetValue("tier_id", out var tierIdObj))
+            if (!string.IsNullOrEmpty(association.ProviderProductId))
             {
-                if (tierIdObj is string tierId && !string.IsNullOrEmpty(tierId))
-                {
-                    tierIds.Add(tierId);
-                }
-            }
-            else
-            {
-                // FAIL HARD: Assignment without tier metadata indicates system inconsistency
-                throw new InvalidOperationException($"Assignment {assignment.Id} for user {assignment.UserId} has no tier_id metadata. All Patreon assignments must have tier tracking.");
+                tierIds.Add(association.ProviderProductId);
             }
         }
 
@@ -291,18 +285,17 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = await CreateMissingMemberEvent(missingMember);
-                    if (syncEvent == null)
+                    // We no longer create events - we work directly with associations
+                    // Check if member has linked BattleTag before processing
+                    if (string.IsNullOrEmpty(missingMember.PatreonUserId))
                     {
                         // Member has no linked BattleTag, skip
                         continue;
                     }
-                    
-                    syncResult.GeneratedEvents.Add(syncEvent);
 
                     if (!dryRun)
                     {
-                        await _rewardService.ProcessRewardEvent(syncEvent);
+                        await CreateOrUpdateUserAssociation(missingMember, dryRun);
                     }
 
                     syncResult.MembersAdded++;
@@ -322,12 +315,13 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = CreateExtraAssignmentEvent(extraAssignment);
-                    syncResult.GeneratedEvents.Add(syncEvent);
+                    // We no longer create events - we work directly with associations
+                    // var syncEvent = CreateExtraAssignmentEvent(extraAssignment);
+                    // syncResult.GeneratedEvents.Add(syncEvent);
 
                     if (!dryRun)
                     {
-                        await _rewardService.ProcessRewardEvent(syncEvent);
+                        await DeactivateUserAssociation(extraAssignment, dryRun);
                     }
 
                     syncResult.AssignmentsRevoked++;
@@ -347,12 +341,13 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    var syncEvent = CreateTierMismatchEvent(tierMismatch);
-                    syncResult.GeneratedEvents.Add(syncEvent);
+                    // We no longer create events - we work directly with associations
+                    // var syncEvent = CreateTierMismatchEvent(tierMismatch);
+                    // syncResult.GeneratedEvents.Add(syncEvent);
 
                     if (!dryRun)
                     {
-                        await _rewardService.ProcessRewardEvent(syncEvent);
+                        await UpdateUserAssociationTiers(tierMismatch, dryRun);
                     }
 
                     syncResult.TiersUpdated++;
@@ -431,12 +426,12 @@ public class PatreonDriftDetectionService(
                 return result;
             }
 
-            // Get current reward assignments for this user
-            var currentAssignments = await _assignmentRepository.GetByUserIdAndStatus(battleTag, RewardStatus.Active);
-            var patreonAssignments = currentAssignments.Where(a => a.ProviderId == ProviderId).ToList();
+            // Get current associations for this user
+            var currentAssociations = await _associationRepository.GetProductMappingsByUserId(battleTag);
+            var activePatreonAssociations = currentAssociations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
             // Determine what sync action is needed
-            var syncAction = DetermineRequiredSyncAction(patreonData, patreonAssignments);
+            var syncAction = DetermineRequiredSyncAction(patreonData, activePatreonAssociations);
             result.SyncAction = syncAction;
 
             if (syncAction == UserSyncAction.None)
@@ -447,23 +442,15 @@ public class PatreonDriftDetectionService(
                 return result;
             }
 
-            // Create and process sync event
-            var syncEvent = CreateSyncEventForUserData(battleTag, patreonData, patreonAssignments, syncAction);
-            if (syncEvent != null)
+            // Process sync action
+            if (syncAction != UserSyncAction.None)
             {
-                result.GeneratedEvent = syncEvent;
-                await _rewardService.ProcessRewardEvent(syncEvent);
+                await ProcessUserSyncAction(battleTag, patreonData, activePatreonAssociations, syncAction);
                 result.Success = true;
                 result.Message = $"Successfully processed {syncAction} for user";
 
                 Log.Information("[USER-SYNC] Successfully processed {SyncAction} for BattleTag {BattleTag} (PatreonUserId: {PatreonUserId})",
                     syncAction, battleTag, patreonUserId);
-            }
-            else
-            {
-                result.Success = false;
-                result.ErrorMessage = "Failed to create sync event";
-                Log.Error("[USER-SYNC] Failed to create sync event for BattleTag {BattleTag}", battleTag);
             }
 
             return result;
@@ -480,15 +467,15 @@ public class PatreonDriftDetectionService(
     /// <summary>
     /// Determines what sync action is needed for a user based on their Patreon data vs internal state
     /// </summary>
-    private UserSyncAction DetermineRequiredSyncAction(PatreonMember patreonData, List<RewardAssignment> currentAssignments)
+    private UserSyncAction DetermineRequiredSyncAction(PatreonMember patreonData, List<ProductMappingUserAssociation> currentAssociations)
     {
-        var internalTierIds = ExtractTierIdsFromAssignments(currentAssignments);
+        var internalTierIds = ExtractTierIdsFromAssociations(currentAssociations);
         var patreonTierIds = patreonData.EntitledTierIds ?? new List<string>();
 
-        // If user is not an active patron, they should have no rewards
+        // If user is not an active patron, they should have no associations
         if (!patreonData.IsActivePatron)
         {
-            if (currentAssignments.Any())
+            if (currentAssociations.Any())
             {
                 return UserSyncAction.RevokeAll;
             }
@@ -496,9 +483,9 @@ public class PatreonDriftDetectionService(
         }
 
         // User is active patron
-        if (!currentAssignments.Any())
+        if (!currentAssociations.Any())
         {
-            // No internal assignments but should have rewards
+            // No internal associations but should have associations
             return patreonTierIds.Any() ? UserSyncAction.CreateNew : UserSyncAction.None;
         }
 
@@ -512,144 +499,30 @@ public class PatreonDriftDetectionService(
     }
 
     /// <summary>
-    /// Creates appropriate RewardEvent for a user based on their sync action needed
+    /// Process sync action for a user by creating/updating/deactivating associations
     /// </summary>
-    private RewardEvent CreateSyncEventForUserData(string battleTag, PatreonMember patreonData, List<RewardAssignment> currentAssignments, UserSyncAction syncAction)
+    private async Task ProcessUserSyncAction(string battleTag, PatreonMember patreonData, List<ProductMappingUserAssociation> currentAssociations, UserSyncAction syncAction)
     {
         switch (syncAction)
         {
             case UserSyncAction.CreateNew:
-                return CreateRewardEvent(
-                    eventSource: "user-sync",
-                    syncReason: "new_patron",
-                    eventType: RewardEventType.SubscriptionCreated,
-                    userId: battleTag,
-                    providerReference: $"user-sync:create:{patreonData.Id}",
-                    entitledTierIds: patreonData.EntitledTierIds,
-                    additionalMetadata: BuildBaseMetadata(
-                        "user_sync", 
-                        "new_patron", 
-                        patreonData.PatreonUserId, 
-                        patreonData.PatronStatus, 
-                        patreonData.Id)
-                );
+                await CreateAssociationsForNewPatron(battleTag, patreonData);
+                break;
 
             case UserSyncAction.UpdateTiers:
-                var updateMetadata = BuildBaseMetadata(
-                    "user_sync", 
-                    "tier_update", 
-                    patreonData.PatreonUserId, 
-                    patreonData.PatronStatus, 
-                    patreonData.Id);
-                updateMetadata["previous_tiers"] = string.Join(",", ExtractTierIdsFromAssignments(currentAssignments));
-                updateMetadata["new_tiers"] = string.Join(",", patreonData.EntitledTierIds ?? new List<string>());
-                
-                return CreateRewardEvent(
-                    eventSource: "user-sync",
-                    syncReason: "tier_update",
-                    eventType: RewardEventType.SubscriptionCreated,
-                    userId: battleTag,
-                    providerReference: $"user-sync:update:{patreonData.Id}",
-                    entitledTierIds: patreonData.EntitledTierIds,
-                    additionalMetadata: updateMetadata
-                );
+                await UpdateAssociationsForTierChange(battleTag, patreonData, currentAssociations);
+                break;
 
             case UserSyncAction.RevokeAll:
-                var revokeMetadata = BuildBaseMetadata(
-                    "user_sync", 
-                    "patron_inactive", 
-                    patreonData.PatreonUserId, 
-                    patreonData.PatronStatus, 
-                    patreonData.Id);
-                revokeMetadata["last_charge_status"] = patreonData.LastChargeStatus;
-                
-                return CreateRewardEvent(
-                    eventSource: "user-sync",
-                    syncReason: "patron_inactive",
-                    eventType: RewardEventType.SubscriptionCancelled,
-                    userId: battleTag,
-                    providerReference: $"user-sync:revoke:{patreonData.Id}",
-                    entitledTierIds: new List<string>(),
-                    additionalMetadata: revokeMetadata
-                );
-
-            case UserSyncAction.None:
-            default:
-                return null;
+                await DeactivateAllUserAssociations(battleTag, currentAssociations);
+                break;
         }
     }
 
     /// <summary>
-    /// Creates a RewardEvent with standardized structure and metadata
+    /// Creates or updates associations for missing member
     /// </summary>
-    private RewardEvent CreateRewardEvent(
-        string eventSource,
-        string syncReason,
-        RewardEventType eventType,
-        string userId,
-        string providerReference,
-        List<string> entitledTierIds,
-        Dictionary<string, object> additionalMetadata = null)
-    {
-        var eventId = $"{eventSource}:patreon:{DateTime.UtcNow:yyyy-MM-dd}:{userId}:{Guid.NewGuid().ToString("N")[..8]}";
-        
-        var metadata = BuildBaseMetadata(eventSource, syncReason);
-        
-        // Add any additional metadata
-        if (additionalMetadata != null)
-        {
-            foreach (var kvp in additionalMetadata)
-            {
-                metadata[kvp.Key] = kvp.Value;
-            }
-        }
-
-        return new RewardEvent
-        {
-            EventId = eventId,
-            EventType = eventType,
-            ProviderId = ProviderId,
-            UserId = userId,
-            ProviderReference = providerReference,
-            EntitledTierIds = entitledTierIds ?? new List<string>(),
-            Timestamp = DateTime.UtcNow,
-            Metadata = metadata
-        };
-    }
-
-    /// <summary>
-    /// Creates base metadata dictionary with common fields
-    /// </summary>
-    private Dictionary<string, object> BuildBaseMetadata(
-        string eventSource,
-        string syncReason,
-        string patreonUserId = null,
-        string patreonStatus = null,
-        string patreonMemberId = null)
-    {
-        var metadata = new Dictionary<string, object>
-        {
-            ["event_source"] = eventSource,
-            ["sync_reason"] = syncReason,
-            ["sync_timestamp"] = DateTime.UtcNow
-        };
-
-        if (!string.IsNullOrEmpty(patreonUserId))
-            metadata["patreon_user_id"] = patreonUserId;
-        
-        if (!string.IsNullOrEmpty(patreonStatus))
-            metadata["patreon_status"] = patreonStatus;
-            
-        if (!string.IsNullOrEmpty(patreonMemberId))
-            metadata["patreon_member_id"] = patreonMemberId;
-
-        return metadata;
-    }
-
-    /// <summary>
-    /// Creates RewardEvent for missing member using unified event creation
-    /// </summary>
-    private async Task<RewardEvent> CreateMissingMemberEvent(MissingMember missingMember)
+    private async Task CreateOrUpdateUserAssociation(MissingMember missingMember, bool dryRun = false)
     {
         // Resolve Patreon user ID to BattleTag
         string battleTag = null;
@@ -658,79 +531,200 @@ public class PatreonDriftDetectionService(
             var accountLink = await _patreonLinkRepository.GetByPatreonUserId(missingMember.PatreonUserId);
             battleTag = accountLink?.BattleTag;
         }
-        
+
         if (string.IsNullOrEmpty(battleTag))
         {
-            Log.Information("Skipping missing member sync for PatreonUserId {PatreonUserId} (MemberId: {MemberId}) - no linked BattleTag found", 
+            Log.Information("Skipping missing member sync for PatreonUserId {PatreonUserId} (MemberId: {MemberId}) - no linked BattleTag found",
                 missingMember.PatreonUserId, missingMember.PatreonMemberId);
-            return null;
+            return;
         }
 
-        var additionalMetadata = BuildBaseMetadata(
-            "drift_sync", 
-            "missing_member", 
-            missingMember.PatreonUserId, 
-            missingMember.PatronStatus, 
-            missingMember.PatreonMemberId);
-        additionalMetadata["sync_reason_detail"] = missingMember.Reason;
+        // Create associations for each entitled tier
+        foreach (var tierId in missingMember.EntitledTierIds ?? new List<string>())
+        {
+            await CreateOrUpdateAssociation(battleTag, tierId, "drift_sync_missing", skipReconciliation: dryRun);
+        }
 
-        return CreateRewardEvent(
-            eventSource: "drift-sync",
-            syncReason: "missing_member",
-            eventType: RewardEventType.SubscriptionCreated,
-            userId: battleTag,
-            providerReference: $"sync:member:{missingMember.PatreonMemberId}",
-            entitledTierIds: missingMember.EntitledTierIds,
-            additionalMetadata: additionalMetadata
-        );
+        // Immediately reconcile rewards for this user (unless dry run)
+        if (!dryRun)
+        {
+            var eventIdPrefix = $"drift_sync_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
+            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
+            Log.Information("Reconciled rewards for missing member {PatreonUserId} -> {UserId}: Added={Added}, Revoked={Revoked}",
+                missingMember.PatreonUserId, battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+        }
     }
 
     /// <summary>
-    /// Creates RewardEvent for extra assignment using unified event creation
+    /// Deactivates association for extra assignment
     /// </summary>
-    private RewardEvent CreateExtraAssignmentEvent(ExtraAssignment extraAssignment)
+    private async Task DeactivateUserAssociation(ExtraAssignment extraAssignment, bool dryRun = false)
     {
-        var additionalMetadata = BuildBaseMetadata(
-            "drift_sync", 
-            "extra_assignment", 
-            patreonStatus: extraAssignment.PatreonStatus ?? "unknown");
-        additionalMetadata["original_assignment_id"] = extraAssignment.AssignmentId;
-        additionalMetadata["revocation_reason"] = extraAssignment.Reason;
-        additionalMetadata["assignment_created_at"] = extraAssignment.AssignedAt;
+        // Find and deactivate the association
+        var associations = await _associationRepository.GetProductMappingsByUserId(extraAssignment.UserId);
+        var activePatreonAssociations = associations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
-        return CreateRewardEvent(
-            eventSource: "drift-sync",
-            syncReason: "extra_assignment",
-            eventType: RewardEventType.SubscriptionCancelled,
-            userId: extraAssignment.UserId,
-            providerReference: $"sync:revoke:{extraAssignment.AssignmentId}",
-            entitledTierIds: new List<string>(),
-            additionalMetadata: additionalMetadata
-        );
+        foreach (var association in activePatreonAssociations)
+        {
+            association.Revoke($"Drift sync: {extraAssignment.Reason}");
+            await _associationRepository.Update(association);
+        }
+
+        // Immediately reconcile rewards for this user to revoke assignments (unless dry run)
+        if (!dryRun)
+        {
+            var eventIdPrefix = $"extra_assignment_removal_{DateTime.UtcNow:yyyyMMddHHmmss}_{extraAssignment.UserId}";
+            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(extraAssignment.UserId, eventIdPrefix, dryRun: false);
+            Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
+                extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+        }
     }
 
     /// <summary>
-    /// Creates RewardEvent for tier mismatch using unified event creation
+    /// Updates associations for tier mismatch
     /// </summary>
-    private RewardEvent CreateTierMismatchEvent(TierMismatch tierMismatch)
+    private async Task UpdateUserAssociationTiers(TierMismatch tierMismatch, bool dryRun = false)
     {
-        var additionalMetadata = BuildBaseMetadata(
-            "drift_sync", 
-            "tier_mismatch", 
-            patreonMemberId: tierMismatch.PatreonMemberId);
-        additionalMetadata["previous_tiers"] = string.Join(",", tierMismatch.InternalTiers ?? new List<string>());
-        additionalMetadata["new_tiers"] = string.Join(",", tierMismatch.PatreonTiers ?? new List<string>());
-        additionalMetadata["mismatch_reason"] = tierMismatch.Reason;
+        // Deactivate current associations
+        var currentAssociations = await _associationRepository.GetProductMappingsByUserId(tierMismatch.UserId);
+        var activePatreonAssociations = currentAssociations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
-        return CreateRewardEvent(
-            eventSource: "drift-sync",
-            syncReason: "tier_mismatch",
-            eventType: RewardEventType.SubscriptionCreated,
-            userId: tierMismatch.UserId,
-            providerReference: $"sync:tier-update:{tierMismatch.PatreonMemberId}",
-            entitledTierIds: tierMismatch.PatreonTiers,
-            additionalMetadata: additionalMetadata
-        );
+        foreach (var association in activePatreonAssociations)
+        {
+            association.Revoke("Tier mismatch - updating to match Patreon");
+            await _associationRepository.Update(association);
+        }
+
+        // Create new associations for current tiers
+        foreach (var tierId in tierMismatch.PatreonTiers ?? new List<string>())
+        {
+            await CreateOrUpdateAssociation(tierMismatch.UserId, tierId, "drift_sync_tier_update", skipReconciliation: dryRun);
+        }
+
+        // Immediately reconcile rewards for this user (unless dry run)
+        if (!dryRun)
+        {
+            var eventIdPrefix = $"tier_mismatch_fix_{DateTime.UtcNow:yyyyMMddHHmmss}_{tierMismatch.UserId}";
+            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(tierMismatch.UserId, eventIdPrefix, dryRun: false);
+            Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
+                tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+        }
+    }
+
+    /// <summary>
+    /// Creates associations for new patrons
+    /// </summary>
+    private async Task CreateAssociationsForNewPatron(string battleTag, PatreonMember patreonData)
+    {
+        foreach (var tierId in patreonData.EntitledTierIds ?? new List<string>())
+        {
+            // Skip reconciliation per association to avoid duplicate reward assignments
+            // We'll do a single reconciliation at the end instead
+            await CreateOrUpdateAssociation(battleTag, tierId, "user_sync_new_patron", skipReconciliation: true);
+        }
+
+        // Immediately reconcile rewards for this new patron (single reconciliation for all associations)
+        var eventIdPrefix = $"account_link_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for new patron {UserId}: Added={Added}, Revoked={Revoked}",
+            battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+    }
+
+    /// <summary>
+    /// Updates associations for tier changes
+    /// </summary>
+    private async Task UpdateAssociationsForTierChange(string battleTag, PatreonMember patreonData, List<ProductMappingUserAssociation> currentAssociations)
+    {
+        // Deactivate current associations
+        foreach (var association in currentAssociations)
+        {
+            association.Revoke("Tier change - updating to match Patreon");
+            await _associationRepository.Update(association);
+        }
+
+        // Create new associations
+        foreach (var tierId in patreonData.EntitledTierIds ?? new List<string>())
+        {
+            await CreateOrUpdateAssociation(battleTag, tierId, "user_sync_tier_update");
+        }
+
+        // Immediately reconcile rewards for this user
+        var eventIdPrefix = $"tier_update_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for tier update user {UserId}: Added={Added}, Revoked={Revoked}",
+            battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+    }
+
+    /// <summary>
+    /// Deactivates all associations for a user
+    /// </summary>
+    private async Task DeactivateAllUserAssociations(string battleTag, List<ProductMappingUserAssociation> currentAssociations)
+    {
+        foreach (var association in currentAssociations)
+        {
+            association.Revoke("Patron no longer active");
+            await _associationRepository.Update(association);
+        }
+
+        // Immediately reconcile rewards to revoke all assignments
+        var eventIdPrefix = $"deactivate_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for deactivated patron {UserId}: Added={Added}, Revoked={Revoked}",
+            battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+    }
+
+    /// <summary>
+    /// Creates or updates a single association
+    /// </summary>
+    private async Task CreateOrUpdateAssociation(string battleTag, string tierId, string source, bool skipReconciliation = false)
+    {
+        // Look for corresponding product mapping
+        var productMappings = await _productMappingRepository.GetByProviderAndProductId(ProviderId, tierId);
+        var productMapping = productMappings.FirstOrDefault();
+
+        if (productMapping == null)
+        {
+            Log.Warning("No product mapping found for provider {ProviderId} and tier {TierId}", ProviderId, tierId);
+            return;
+        }
+
+        // Check if association already exists
+        var existingAssociations = await _associationRepository.GetByUserAndProductMapping(battleTag, productMapping.Id);
+        var activeAssociation = existingAssociations.FirstOrDefault(a => a.IsActive());
+
+        if (activeAssociation != null)
+        {
+            Log.Information("Association already exists for user {UserId} and product mapping {MappingId}", battleTag, productMapping.Id);
+            return;
+        }
+
+        // Create new association
+        var association = new ProductMappingUserAssociation
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserId = battleTag,
+            ProductMappingId = productMapping.Id,
+            ProviderId = ProviderId,
+            ProviderProductId = tierId,
+            AssignedAt = DateTime.UtcNow,
+            Status = AssociationStatus.Active
+        };
+
+        // Add source information to metadata
+        association.Metadata["source"] = source;
+
+        await _associationRepository.Create(association);
+        Log.Information("Created association for user {UserId} with product mapping {MappingId} (tier: {TierId})",
+            battleTag, productMapping.Id, tierId);
+
+        // Immediately reconcile rewards for this user (unless explicitly skipped)
+        if (!skipReconciliation)
+        {
+            var eventIdPrefix = $"association_create_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
+            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
+            Log.Information("Reconciled rewards for user {UserId}: Added={Added}, Revoked={Revoked}",
+                battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+        }
     }
 }
 
@@ -788,7 +782,7 @@ public class SyncResult
     public int TiersUpdated { get; set; }
     public List<string> Errors { get; set; } = new();
     public bool WasDryRun { get; set; }
-    public List<RewardEvent> GeneratedEvents { get; set; } = new();
+    public List<string> ProcessedAssociations { get; set; } = new();
 }
 
 public class UserSyncResult
@@ -801,7 +795,7 @@ public class UserSyncResult
     public UserSyncAction SyncAction { get; set; }
     public string Message { get; set; }
     public string ErrorMessage { get; set; }
-    public RewardEvent GeneratedEvent { get; set; }
+    public List<string> ModifiedAssociations { get; set; } = new();
 }
 
 public enum UserSyncAction

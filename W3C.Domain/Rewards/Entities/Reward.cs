@@ -18,14 +18,14 @@ public class Reward : IIdentifiable
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
+
     public bool IsPermanent() => Duration?.Type == DurationType.Permanent;
-    
+
     public DateTime? CalculateExpirationDate(DateTime fromDate)
     {
         if (Duration == null || Duration.Type == DurationType.Permanent)
             return null;
-            
+
         return Duration.Type switch
         {
             DurationType.Days => fromDate.AddDays(Duration.Value),

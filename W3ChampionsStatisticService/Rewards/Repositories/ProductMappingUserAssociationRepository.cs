@@ -30,21 +30,21 @@ public class ProductMappingUserAssociationRepository(MongoClient mongoClient) : 
 
     public Task<List<ProductMappingUserAssociation>> GetByUserAndProductMapping(string userId, string productMappingId)
     {
-        return LoadAll<ProductMappingUserAssociation>(a => 
+        return LoadAll<ProductMappingUserAssociation>(a =>
             a.UserId == userId && a.ProductMappingId == productMappingId);
     }
 
     public Task<List<ProductMappingUserAssociation>> GetByProviderProduct(string providerId, string providerProductId)
     {
-        return LoadAll<ProductMappingUserAssociation>(a => 
+        return LoadAll<ProductMappingUserAssociation>(a =>
             a.ProviderId == providerId && a.ProviderProductId == providerProductId);
     }
 
     public Task<List<ProductMappingUserAssociation>> GetByUserAndProviderProduct(string userId, string providerId, string providerProductId)
     {
-        return LoadAll<ProductMappingUserAssociation>(a => 
-            a.UserId == userId && 
-            a.ProviderId == providerId && 
+        return LoadAll<ProductMappingUserAssociation>(a =>
+            a.UserId == userId &&
+            a.ProviderId == providerId &&
             a.ProviderProductId == providerProductId);
     }
 
@@ -76,9 +76,9 @@ public class ProductMappingUserAssociationRepository(MongoClient mongoClient) : 
 
     public Task<List<ProductMappingUserAssociation>> GetExpiredAssociations(DateTime asOf)
     {
-        return LoadAll<ProductMappingUserAssociation>(a => 
-            a.Status == AssociationStatus.Active && 
-            a.ExpiresAt != null && 
+        return LoadAll<ProductMappingUserAssociation>(a =>
+            a.Status == AssociationStatus.Active &&
+            a.ExpiresAt != null &&
             a.ExpiresAt <= asOf);
     }
 }

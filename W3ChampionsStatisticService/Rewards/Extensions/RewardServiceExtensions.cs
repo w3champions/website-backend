@@ -25,6 +25,7 @@ public static class RewardServiceExtensions
 
         // Core services
         services.AddInterceptedTransient<IRewardService, RewardService>();
+        services.AddInterceptedTransient<IProductMappingService, ProductMappingService>();
         services.AddInterceptedTransient<PatreonOAuthService>();
 
         // Reward providers
@@ -39,6 +40,10 @@ public static class RewardServiceExtensions
         // Drift detection services
         services.AddHttpClient<PatreonApiClient>();
         services.AddInterceptedTransient<PatreonDriftDetectionService>();
+
+        // Product mapping reconciliation service
+        services.AddInterceptedTransient<IProductMappingReconciliationService, ProductMappingReconciliationService>();
+        services.AddInterceptedTransient<ProductMappingReconciliationService>();
 
         // Background services
         services.AddHostedService<RewardDriftDetectionBackgroundService>();

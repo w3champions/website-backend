@@ -38,7 +38,7 @@ public class PortraitRewardModule(
         // Validate that portrait IDs exist in the database
         var allPortraitDefinitions = await _portraitRepo.LoadPortraitDefinitions();
         var validPortraitIds = allPortraitDefinitions.Select(p => int.Parse(p.Id)).ToHashSet();
-        
+
         var invalidPortraitIds = portraitIds.Where(id => !validPortraitIds.Contains(id)).ToList();
         if (invalidPortraitIds.Any())
         {
@@ -50,7 +50,7 @@ public class PortraitRewardModule(
                 Message = $"Invalid portrait IDs found in database: [{string.Join(", ", invalidPortraitIds)}]. All portrait IDs must be valid."
             };
         }
-        
+
         var validPortraitsToGrant = portraitIds;
 
         var settings = await _personalSettingsRepo.Load(context.UserId) ?? new PersonalSetting(context.UserId);
@@ -70,7 +70,7 @@ public class PortraitRewardModule(
             settings.UpdateSpecialPictures(specialPictures);
             await _personalSettingsRepo.Save(settings);
 
-            Log.Information("Added {Count} new portraits to user {UserId}: {PortraitIds}", 
+            Log.Information("Added {Count} new portraits to user {UserId}: {PortraitIds}",
                 newPortraits.Count, context.UserId, newPortraits.Select(p => p.PictureId).ToList());
         }
         else
@@ -184,7 +184,7 @@ public class PortraitRewardModule(
         foreach (var obj in objectArray)
         {
             if (obj == null) continue;
-            
+
             try
             {
                 var intValue = Convert.ToInt32(obj);
@@ -192,7 +192,7 @@ public class PortraitRewardModule(
             }
             catch (Exception ex)
             {
-                Log.Warning("Failed to convert portrait ID {Value} (type: {Type}) to int: {Error}", 
+                Log.Warning("Failed to convert portrait ID {Value} (type: {Type}) to int: {Error}",
                     obj, obj.GetType().FullName, ex.Message);
             }
         }

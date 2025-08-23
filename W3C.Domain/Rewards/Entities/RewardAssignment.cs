@@ -21,22 +21,22 @@ public class RewardAssignment : IIdentifiable
     public DateTime? RevokedAt { get; set; }
     public string RevokedReason { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();
-    
+
     public bool IsActive() => Status == RewardStatus.Active && !IsExpired();
     public bool IsExpired() => ExpiresAt.HasValue && ExpiresAt.Value <= DateTime.UtcNow;
-    
+
     public void Expire()
     {
         Status = RewardStatus.Expired;
     }
-    
+
     public void Revoke(string reason = null)
     {
         Status = RewardStatus.Revoked;
         RevokedAt = DateTime.UtcNow;
         RevokedReason = reason;
     }
-    
+
     public void Refresh(DateTime newExpirationDate)
     {
         if (Status == RewardStatus.Expired)

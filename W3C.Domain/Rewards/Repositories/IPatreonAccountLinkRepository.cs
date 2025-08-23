@@ -10,22 +10,22 @@ public interface IPatreonAccountLinkRepository
     /// Get account link by Battle.net BattleTag
     /// </summary>
     Task<PatreonAccountLink> GetByBattleTag(string battleTag);
-    
+
     /// <summary>
     /// Get account link by Patreon user ID
     /// </summary>
     Task<PatreonAccountLink> GetByPatreonUserId(string patreonUserId);
-    
+
     /// <summary>
     /// Create or update account link
     /// </summary>
     Task<PatreonAccountLink> UpsertLink(string battleTag, string patreonUserId, string accessToken = null);
-    
+
     /// <summary>
     /// Remove account link by Battle.net BattleTag
     /// </summary>
     Task<bool> RemoveByBattleTag(string battleTag);
-    
+
     /// <summary>
     /// Get all Patreon account links
     /// </summary>

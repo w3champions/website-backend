@@ -16,48 +16,37 @@ using W3ChampionsStatisticService.Rewards;
 
 namespace W3ChampionsStatisticService.Rewards.Services;
 
-public class RewardService : IRewardService
+public class RewardService(
+    IRewardRepository rewardRepo,
+    IRewardAssignmentRepository assignmentRepo,
+    IProductMappingRepository productMappingRepo,
+    IProductMappingUserAssociationRepository associationRepo,
+    IServiceProvider serviceProvider,
+    ILogger<RewardService> logger,
+    IHubContext<WebsiteBackendHub> hubContext) : IRewardService
 {
-    private readonly IRewardRepository _rewardRepo;
-    private readonly IRewardAssignmentRepository _assignmentRepo;
-    private readonly IProductMappingRepository _productMappingRepo;
-    private readonly IProductMappingUserAssociationRepository _associationRepo;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<RewardService> _logger;
-    private readonly IHubContext<WebsiteBackendHub> _hubContext;
-
-    public RewardService(
-        IRewardRepository rewardRepo,
-        IRewardAssignmentRepository assignmentRepo,
-        IProductMappingRepository productMappingRepo,
-        IProductMappingUserAssociationRepository associationRepo,
-        IServiceProvider serviceProvider,
-        ILogger<RewardService> logger,
-        IHubContext<WebsiteBackendHub> hubContext)
-    {
-        _rewardRepo = rewardRepo;
-        _assignmentRepo = assignmentRepo;
-        _productMappingRepo = productMappingRepo;
-        _associationRepo = associationRepo;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-        _hubContext = hubContext;
-    }
+    private readonly IRewardRepository _rewardRepo = rewardRepo;
+    private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
+    private readonly IProductMappingRepository _productMappingRepo = productMappingRepo;
+    private readonly IProductMappingUserAssociationRepository _associationRepo = associationRepo;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<RewardService> _logger = logger;
+    private readonly IHubContext<WebsiteBackendHub> _hubContext = hubContext;
 
     public async Task<RewardAssignment> ProcessRewardEvent(RewardEvent rewardEvent)
     {
         if (rewardEvent == null)
             throw new ArgumentNullException(nameof(rewardEvent));
-            
+
         if (string.IsNullOrEmpty(rewardEvent.ProviderId))
             throw new ArgumentException("ProviderId cannot be null or empty", nameof(rewardEvent));
-            
+
         if (string.IsNullOrEmpty(rewardEvent.UserId))
             throw new ArgumentException("UserId cannot be null or empty", nameof(rewardEvent));
-            
+
         if (string.IsNullOrEmpty(rewardEvent.ProviderReference))
             throw new ArgumentException("ProviderReference cannot be null or empty", nameof(rewardEvent));
-            
+
         if (rewardEvent.EntitledTierIds == null)
             throw new ArgumentException("EntitledTierIds cannot be null", nameof(rewardEvent));
 
@@ -72,7 +61,7 @@ public class RewardService : IRewardService
             {
                 throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not supported");
             }
-            
+
             if (!ProviderDefinitions.IsProviderEnabled(rewardEvent.ProviderId))
             {
                 throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not enabled");
@@ -81,12 +70,12 @@ public class RewardService : IRewardService
             // Get previous entitled tiers from the database for diffing
             var previousTiers = await GetPreviousEntitledTiers(rewardEvent.UserId, rewardEvent.ProviderId);
             var currentTiers = rewardEvent.EntitledTierIds ?? new List<string>();
-            
+
             // Calculate tier changes
             var addedTiers = currentTiers.Except(previousTiers).ToList();
             var removedTiers = previousTiers.Except(currentTiers).ToList();
-            
-            _logger.LogInformation("Tier changes for user {UserId}: Added {AddedCount} tiers, Removed {RemovedCount} tiers", 
+
+            _logger.LogInformation("Tier changes for user {UserId}: Added {AddedCount} tiers, Removed {RemovedCount} tiers",
                 rewardEvent.UserId, addedTiers.Count, removedTiers.Count);
 
             RewardAssignment lastAssignment = null;
@@ -99,7 +88,7 @@ public class RewardService : IRewardService
                 {
                     throw new InvalidOperationException($"No product mapping found for removed tier {tierId} from provider {rewardEvent.ProviderId}");
                 }
-                
+
                 // Process all mappings that match this provider/product combination
                 foreach (var productMapping in productMappings)
                 {
@@ -115,7 +104,7 @@ public class RewardService : IRewardService
                 {
                     throw new InvalidOperationException($"No product mapping found for added tier {tierId} from provider {rewardEvent.ProviderId}");
                 }
-                
+
                 // Process all mappings that match this provider/product combination
                 foreach (var productMapping in productMappings)
                 {
@@ -139,21 +128,30 @@ public class RewardService : IRewardService
         var rewardIds = mapping.RewardIds ?? new List<string>();
         RewardAssignment lastAssignment = null;
 
-        // Check if user already has assignments for this tier (to avoid duplicates)
+        // Get existing assignments for this tier to determine which rewards are missing
         var existingAssignments = await _assignmentRepo.GetByUserIdAndStatus(rewardEvent.UserId, RewardStatus.Active);
-        var existingTierAssignments = existingAssignments.Where(a => 
-            a.ProviderId == rewardEvent.ProviderId && 
-            a.Metadata.ContainsKey("tier_id") && 
+        var existingTierAssignments = existingAssignments.Where(a =>
+            a.ProviderId == rewardEvent.ProviderId &&
+            a.Metadata.ContainsKey("tier_id") &&
             a.Metadata["tier_id"].ToString() == tierId).ToList();
 
-        if (existingTierAssignments.Any())
+        // Extract existing reward IDs for this tier
+        var existingRewardIds = existingTierAssignments.Select(a => a.RewardId).ToHashSet();
+
+        // Only process rewards that the user doesn't already have
+        var missingRewardIds = rewardIds.Where(id => !string.IsNullOrEmpty(id) && !existingRewardIds.Contains(id)).ToList();
+
+        if (!missingRewardIds.Any())
         {
-            _logger.LogInformation("User {UserId} already has active assignments for tier {TierId}, skipping purchase processing", 
+            _logger.LogInformation("User {UserId} already has all rewards for tier {TierId}, no new rewards to assign",
                 rewardEvent.UserId, tierId);
-            return existingTierAssignments.First();
+            return existingTierAssignments.FirstOrDefault();
         }
 
-        foreach (var rewardId in rewardIds.Where(id => !string.IsNullOrEmpty(id)))
+        _logger.LogInformation("User {UserId} is missing {MissingCount} out of {TotalCount} rewards for tier {TierId}",
+            rewardEvent.UserId, missingRewardIds.Count, rewardIds.Count, tierId);
+
+        foreach (var rewardId in missingRewardIds)
         {
             var reward = await _rewardRepo.GetById(rewardId);
             if (reward == null || !reward.IsActive)
@@ -163,9 +161,9 @@ public class RewardService : IRewardService
             }
 
             lastAssignment = await AssignReward(
-                rewardEvent.UserId, 
-                rewardId, 
-                rewardEvent.ProviderId, 
+                rewardEvent.UserId,
+                rewardId,
+                rewardEvent.ProviderId,
                 rewardEvent.ProviderReference,
                 rewardEvent.EventId,
                 tierId);
@@ -185,21 +183,30 @@ public class RewardService : IRewardService
         var rewardIds = mapping.RewardIds ?? new List<string>();
         RewardAssignment lastAssignment = null;
 
-        // Check if user already has active assignments for this tier
+        // Get existing assignments for this tier to determine which rewards are missing
         var existingAssignments = await _assignmentRepo.GetByUserIdAndStatus(rewardEvent.UserId, RewardStatus.Active);
-        var existingTierAssignments = existingAssignments.Where(a => 
-            a.ProviderId == rewardEvent.ProviderId && 
-            a.Metadata.ContainsKey("tier_id") && 
+        var existingTierAssignments = existingAssignments.Where(a =>
+            a.ProviderId == rewardEvent.ProviderId &&
+            a.Metadata.ContainsKey("tier_id") &&
             a.Metadata["tier_id"].ToString() == tierId).ToList();
 
-        if (existingTierAssignments.Any())
+        // Extract existing reward IDs for this tier
+        var existingRewardIds = existingTierAssignments.Select(a => a.RewardId).ToHashSet();
+
+        // Only process rewards that the user doesn't already have
+        var missingRewardIds = rewardIds.Where(id => !string.IsNullOrEmpty(id) && !existingRewardIds.Contains(id)).ToList();
+
+        if (!missingRewardIds.Any())
         {
-            _logger.LogInformation("User {UserId} already has active assignments for tier {TierId}, skipping creation", 
+            _logger.LogInformation("User {UserId} already has all rewards for tier {TierId}, no new rewards to assign",
                 rewardEvent.UserId, tierId);
-            return existingTierAssignments.First();
+            return existingTierAssignments.FirstOrDefault();
         }
 
-        foreach (var rewardId in rewardIds.Where(id => !string.IsNullOrEmpty(id)))
+        _logger.LogInformation("User {UserId} is missing {MissingCount} out of {TotalCount} rewards for tier {TierId}",
+            rewardEvent.UserId, missingRewardIds.Count, rewardIds.Count, tierId);
+
+        foreach (var rewardId in missingRewardIds)
         {
             var reward = await _rewardRepo.GetById(rewardId);
             if (reward == null || !reward.IsActive)
@@ -230,14 +237,14 @@ public class RewardService : IRewardService
 
         // Find existing assignments for this specific tier to refresh
         var existingAssignments = await _assignmentRepo.GetByUserIdAndStatus(
-            rewardEvent.UserId, 
+            rewardEvent.UserId,
             RewardStatus.Active);
-        
-        var tierAssignments = existingAssignments.Where(a => 
-            a.ProviderId == rewardEvent.ProviderId && 
-            a.Metadata.ContainsKey("tier_id") && 
+
+        var tierAssignments = existingAssignments.Where(a =>
+            a.ProviderId == rewardEvent.ProviderId &&
+            a.Metadata.ContainsKey("tier_id") &&
             a.Metadata["tier_id"].ToString() == tierId).ToList();
-        
+
         foreach (var assignment in tierAssignments)
         {
             var reward = await _rewardRepo.GetById(assignment.RewardId);
@@ -246,13 +253,13 @@ public class RewardService : IRewardService
                 var newExpiration = reward.CalculateExpirationDate(DateTime.UtcNow);
                 assignment.Refresh(newExpiration ?? DateTime.UtcNow.AddMonths(1));
                 await _assignmentRepo.Update(assignment);
-                
-                _logger.LogInformation("Refreshed tier {TierId} subscription for user {UserId}, reward {RewardId}", 
+
+                _logger.LogInformation("Refreshed tier {TierId} subscription for user {UserId}, reward {RewardId}",
                     tierId, rewardEvent.UserId, assignment.RewardId);
                 lastAssignment = assignment;
             }
         }
-        
+
         return lastAssignment;
     }
 
@@ -263,24 +270,24 @@ public class RewardService : IRewardService
 
         // Find assignments specifically for this tier
         var assignments = await _assignmentRepo.GetByUserIdAndStatus(
-            rewardEvent.UserId, 
+            rewardEvent.UserId,
             RewardStatus.Active);
-        
-        var tierAssignments = assignments.Where(a => 
-            a.ProviderId == rewardEvent.ProviderId && 
-            a.Metadata.ContainsKey("tier_id") && 
+
+        var tierAssignments = assignments.Where(a =>
+            a.ProviderId == rewardEvent.ProviderId &&
+            a.Metadata.ContainsKey("tier_id") &&
             a.Metadata["tier_id"].ToString() == tierId).ToList();
-        
+
         foreach (var assignment in tierAssignments)
         {
             assignment.Revoke($"Tier {tierId} subscription cancelled");
             await _assignmentRepo.Update(assignment);
             await RevokeRewardModule(assignment);
-            
+
             _logger.LogInformation("Revoked tier {TierId} reward {RewardId} for user {UserId}", tierId, assignment.RewardId, rewardEvent.UserId);
             lastAssignment = assignment;
         }
-        
+
         return lastAssignment;
     }
 
@@ -288,12 +295,20 @@ public class RewardService : IRewardService
     {
         return await AssignReward(userId, rewardId, providerId, providerReference, null, null);
     }
-    
+
+    public async Task<RewardAssignment> AssignRewardWithEventId(string userId, string rewardId, string providerId, string providerReference, string eventId)
+    {
+        if (string.IsNullOrEmpty(eventId))
+            throw new ArgumentException("EventId cannot be null or empty", nameof(eventId));
+
+        return await AssignReward(userId, rewardId, providerId, providerReference, eventId, null);
+    }
+
     private async Task<RewardAssignment> AssignReward(string userId, string rewardId, string providerId, string providerReference, string eventId)
     {
         return await AssignReward(userId, rewardId, providerId, providerReference, eventId, null);
     }
-    
+
     private async Task<RewardAssignment> AssignReward(string userId, string rewardId, string providerId, string providerReference, string eventId, string tierId)
     {
         var reward = await _rewardRepo.GetById(rewardId);
@@ -305,7 +320,19 @@ public class RewardService : IRewardService
         // Generate unique EventId per assignment to avoid duplicate key errors while maintaining webhook idempotency
         // Format: {originalEventId}_{rewardId} - this ensures each reward assignment has unique EventId
         // while still allowing idempotency checks per webhook+reward combination
-        var uniqueEventId = !string.IsNullOrEmpty(eventId) ? $"{eventId}_{rewardId}" : null;
+        string uniqueEventId;
+        if (!string.IsNullOrEmpty(eventId))
+        {
+            uniqueEventId = $"{eventId}_{rewardId}";
+        }
+        else
+        {
+            // Generate fallback EventId for legacy calls that don't provide eventId
+            // This should be rare and ideally all calls should provide eventId
+            uniqueEventId = $"legacy_{DateTime.UtcNow:yyyyMMddHHmmssfff}_{Guid.NewGuid().ToString("N")[..8]}_{rewardId}";
+            _logger.LogWarning("AssignReward called without eventId for user {UserId} and reward {RewardId}. Generated fallback EventId: {EventId}",
+                userId, rewardId, uniqueEventId);
+        }
 
         var assignment = new RewardAssignment
         {
@@ -326,7 +353,7 @@ public class RewardService : IRewardService
         {
             assignment.Metadata["tier_id"] = tierId;
         }
-        
+
         // Store original webhook EventId in metadata for audit/tracking purposes
         if (!string.IsNullOrEmpty(eventId))
         {
@@ -336,18 +363,18 @@ public class RewardService : IRewardService
         try
         {
             await _assignmentRepo.Create(assignment);
-            
+
             // Apply the reward through its module
             await ApplyRewardModule(assignment, reward);
-            
+
             _logger.LogInformation("Assigned reward {RewardId} to user {UserId} with EventId {EventId}", rewardId, userId, eventId);
-            
+
             return assignment;
         }
         catch (MongoWriteException ex) when (ex.WriteError.Code == 11000) // Duplicate key error
         {
             _logger.LogInformation("Duplicate EventId detected: {EventId}. Event already processed, returning existing assignment", eventId);
-            
+
             // Find and return the existing assignment
             var existing = await _assignmentRepo.GetByProviderReference(providerId, providerReference);
             return existing.FirstOrDefault() ?? throw new InvalidOperationException("Duplicate key error but no existing assignment found");
@@ -358,7 +385,7 @@ public class RewardService : IRewardService
     {
         var modules = _serviceProvider.GetServices<IRewardModule>();
         var module = modules.FirstOrDefault(m => m.ModuleId == reward.ModuleId);
-        
+
         if (module != null)
         {
             var context = new RewardContext
@@ -368,11 +395,11 @@ public class RewardService : IRewardService
                 Parameters = reward.Parameters,
                 Assignment = assignment
             };
-            
+
             var result = await module.Apply(context);
             if (!result.Success)
             {
-                _logger.LogWarning("Failed to apply reward module {ModuleId}: {Message}", 
+                _logger.LogWarning("Failed to apply reward module {ModuleId}: {Message}",
                     reward.ModuleId, result.Message);
             }
         }
@@ -382,10 +409,10 @@ public class RewardService : IRewardService
     {
         var reward = await _rewardRepo.GetById(assignment.RewardId);
         if (reward == null) return;
-        
+
         var modules = _serviceProvider.GetServices<IRewardModule>();
         var module = modules.FirstOrDefault(m => m.ModuleId == reward.ModuleId);
-        
+
         if (module != null)
         {
             var context = new RewardContext
@@ -395,7 +422,7 @@ public class RewardService : IRewardService
                 Parameters = reward.Parameters,
                 Assignment = assignment
             };
-            
+
             await module.Revoke(context);
         }
     }
@@ -411,14 +438,14 @@ public class RewardService : IRewardService
             provider = rewardEvent.ProviderId,
             timestamp = rewardEvent.Timestamp
         };
-        
+
         // Broadcast to all connected clients
         if (_hubContext != null)
         {
             await _hubContext.Clients.All.SendAsync("DonationAnnouncement", announcement);
         }
-        
-        _logger.LogInformation("Donation announcement: {UserId} donated {Amount} {Currency}", 
+
+        _logger.LogInformation("Donation announcement: {UserId} donated {Amount} {Currency}",
             rewardEvent.UserId, rewardEvent.AnnouncementAmount, rewardEvent.Currency);
     }
 
@@ -432,14 +459,14 @@ public class RewardService : IRewardService
             provider = rewardEvent.ProviderId,
             timestamp = rewardEvent.Timestamp
         };
-        
+
         // Broadcast to all connected clients
         if (_hubContext != null)
         {
             await _hubContext.Clients.All.SendAsync("SubscriberAnnouncement", announcement);
         }
-        
-        _logger.LogInformation("New subscriber announcement: {UserId} via {Provider}", 
+
+        _logger.LogInformation("New subscriber announcement: {UserId} via {Provider}",
             rewardEvent.UserId, rewardEvent.ProviderId);
     }
 
@@ -494,9 +521,9 @@ public class RewardService : IRewardService
         // Query existing active assignments for this user and provider
         var activeAssignments = await _assignmentRepo.GetByUserIdAndStatus(userId, RewardStatus.Active);
         var providerAssignments = activeAssignments.Where(a => a.ProviderId == providerId).ToList();
-        
+
         var tierIds = new HashSet<string>();
-        
+
         foreach (var assignment in providerAssignments)
         {
             // Extract tier ID from metadata - this is the authoritative source
@@ -508,7 +535,7 @@ public class RewardService : IRewardService
                 }
             }
         }
-        
+
         return tierIds.ToList();
     }
 
@@ -519,23 +546,23 @@ public class RewardService : IRewardService
             throw new ArgumentNullException(nameof(rewardEvent));
         if (productMapping == null)
             throw new ArgumentNullException(nameof(productMapping));
-            
-        _logger.LogInformation("Processing tier removal: {TierId} for user {UserId}", 
+
+        _logger.LogInformation("Processing tier removal: {TierId} for user {UserId}",
             tierId, rewardEvent.UserId);
-        
+
         try
         {
             // Cancel/revoke existing assignment for this tier
             var result = await ProcessSubscriptionCancelled(rewardEvent, productMapping, tierId);
-            
+
             // Remove user association for this product mapping and provider product
             await RemoveUserAssociation(rewardEvent.UserId, productMapping.Id, rewardEvent.ProviderId, tierId);
-            
+
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process tier removal for {TierId}, user {UserId}", 
+            _logger.LogError(ex, "Failed to process tier removal for {TierId}, user {UserId}",
                 tierId, rewardEvent.UserId);
             throw new InvalidOperationException($"Failed to process tier removal for {tierId}", ex);
         }
@@ -547,10 +574,10 @@ public class RewardService : IRewardService
             throw new ArgumentNullException(nameof(rewardEvent));
         if (productMapping == null)
             throw new ArgumentNullException(nameof(productMapping));
-            
-        _logger.LogInformation("Processing tier addition: {TierId} for user {UserId}", 
+
+        _logger.LogInformation("Processing tier addition: {TierId} for user {UserId}",
             tierId, rewardEvent.UserId);
-        
+
         try
         {
             // Create new assignment based on event type
@@ -561,15 +588,15 @@ public class RewardService : IRewardService
                 RewardEventType.SubscriptionRenewed => await ProcessSubscriptionRenewed(rewardEvent, productMapping, tierId),
                 _ => await ProcessSubscriptionCreated(rewardEvent, productMapping, tierId) // Default to creation
             };
-            
+
             // Add/update user association for this product mapping and provider product
             await EnsureUserAssociation(rewardEvent, productMapping, tierId);
-            
+
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process tier addition for {TierId}, user {UserId}", 
+            _logger.LogError(ex, "Failed to process tier addition for {TierId}, user {UserId}",
                 tierId, rewardEvent.UserId);
             throw new InvalidOperationException($"Failed to process tier addition for {tierId}", ex);
         }
@@ -586,7 +613,7 @@ public class RewardService : IRewardService
             var existingAssociations = await _associationRepo.GetByUserAndProviderProduct(
                 rewardEvent.UserId, rewardEvent.ProviderId, tierId);
 
-            var activeAssociation = existingAssociations.FirstOrDefault(a => 
+            var activeAssociation = existingAssociations.FirstOrDefault(a =>
                 a.ProductMappingId == productMapping.Id && a.IsActive());
 
             if (activeAssociation != null)
@@ -595,8 +622,8 @@ public class RewardService : IRewardService
                 var newExpirationDate = CalculateAssociationExpirationDate(rewardEvent);
                 activeAssociation.Refresh(newExpirationDate);
                 await _associationRepo.Update(activeAssociation);
-                
-                _logger.LogInformation("Refreshed user association for user {UserId} and product mapping {ProductMappingId}", 
+
+                _logger.LogInformation("Refreshed user association for user {UserId} and product mapping {ProductMappingId}",
                     rewardEvent.UserId, productMapping.Id);
             }
             else
@@ -621,14 +648,14 @@ public class RewardService : IRewardService
                 };
 
                 await _associationRepo.Create(association);
-                
-                _logger.LogInformation("Created user association for user {UserId} and product mapping {ProductMappingId}", 
+
+                _logger.LogInformation("Created user association for user {UserId} and product mapping {ProductMappingId}",
                     rewardEvent.UserId, productMapping.Id);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to ensure user association for user {UserId} and product mapping {ProductMappingId}", 
+            _logger.LogError(ex, "Failed to ensure user association for user {UserId} and product mapping {ProductMappingId}",
                 rewardEvent.UserId, productMapping.Id);
             // Don't rethrow - association maintenance is supplementary to main reward processing
         }
@@ -648,14 +675,14 @@ public class RewardService : IRewardService
             {
                 association.Revoke($"Provider product {providerProductId} access revoked");
                 await _associationRepo.Update(association);
-                
-                _logger.LogInformation("Revoked user association for user {UserId} and product mapping {ProductMappingId}", 
+
+                _logger.LogInformation("Revoked user association for user {UserId} and product mapping {ProductMappingId}",
                     userId, productMappingId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to remove user association for user {UserId} and product mapping {ProductMappingId}", 
+            _logger.LogError(ex, "Failed to remove user association for user {UserId} and product mapping {ProductMappingId}",
                 userId, productMappingId);
             // Don't rethrow - association maintenance is supplementary to main reward processing
         }

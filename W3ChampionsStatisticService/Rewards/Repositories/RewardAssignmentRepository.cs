@@ -18,24 +18,24 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
     {
         EnsureIndexes();
     }
-    
+
     private void EnsureIndexes()
     {
         try
         {
             var collection = CreateCollection<RewardAssignment>();
-            
+
             // Create unique index on EventId for webhook idempotency
             var eventIdIndex = new CreateIndexModel<RewardAssignment>(
                 Builders<RewardAssignment>.IndexKeys.Ascending(x => x.EventId),
-                new CreateIndexOptions 
-                { 
+                new CreateIndexOptions
+                {
                     Unique = true,
                     Sparse = true, // Allow null EventId but enforce uniqueness when present
                     Name = "IX_EventId_Unique",
                     Background = true
                 });
-            
+
             var indexName = collection.Indexes.CreateOne(eventIdIndex);
             Log.Information("Ensured unique index on EventId for RewardAssignment collection: {IndexName}", indexName);
         }
@@ -66,23 +66,23 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
 
     public Task<List<RewardAssignment>> GetByProviderReference(string providerId, string providerReference)
     {
-        return LoadAll<RewardAssignment>(a => 
-            a.ProviderId == providerId && 
+        return LoadAll<RewardAssignment>(a =>
+            a.ProviderId == providerId &&
             a.ProviderReference == providerReference);
     }
 
     public Task<List<RewardAssignment>> GetExpiredAssignments(DateTime asOf)
     {
-        return LoadAll<RewardAssignment>(a => 
-            a.Status == RewardStatus.Active && 
-            a.ExpiresAt != null && 
+        return LoadAll<RewardAssignment>(a =>
+            a.Status == RewardStatus.Active &&
+            a.ExpiresAt != null &&
             a.ExpiresAt <= asOf);
     }
 
     public Task<List<RewardAssignment>> GetActiveAssignmentsByProvider(string providerId)
     {
-        return LoadAll<RewardAssignment>(a => 
-            a.ProviderId == providerId && 
+        return LoadAll<RewardAssignment>(a =>
+            a.ProviderId == providerId &&
             a.Status == RewardStatus.Active);
     }
 
@@ -105,8 +105,8 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
 
     public async Task<bool> ExistsForProviderReference(string providerId, string providerReference)
     {
-        var existing = await LoadFirst<RewardAssignment>(a => 
-            a.ProviderId == providerId && 
+        var existing = await LoadFirst<RewardAssignment>(a =>
+            a.ProviderId == providerId &&
             a.ProviderReference == providerReference);
         return existing != null;
     }
@@ -124,10 +124,10 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
     public async Task<(List<RewardAssignment> assignments, int totalCount)> GetAllPaginated(int page, int pageSize)
     {
         var collection = CreateCollection<RewardAssignment>();
-        
+
         // Get total count
         var totalCount = (int)await collection.CountDocumentsAsync(FilterDefinition<RewardAssignment>.Empty);
-        
+
         // Get paginated results
         var skip = (page - 1) * pageSize;
         var assignments = await collection
@@ -136,7 +136,7 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
             .Skip(skip)
             .Limit(pageSize)
             .ToListAsync();
-            
+
         return (assignments, totalCount);
     }
 }

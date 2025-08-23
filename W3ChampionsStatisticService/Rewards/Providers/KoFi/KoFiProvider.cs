@@ -23,12 +23,12 @@ public class KoFiProvider(ILogger<KoFiProvider> logger) : IRewardProvider
         {
             var data = JsonSerializer.Deserialize<KoFiWebhookData>(payload);
             var isValid = data?.VerificationToken == _verificationToken;
-            
+
             if (!isValid)
             {
                 _logger.LogWarning("Invalid Ko-Fi verification token");
             }
-            
+
             return Task.FromResult(isValid);
         }
         catch (Exception ex)
@@ -46,37 +46,37 @@ public class KoFiProvider(ILogger<KoFiProvider> logger) : IRewardProvider
         try
         {
             var webhookData = JsonSerializer.Deserialize<KoFiWebhookData>(payload);
-            
+
             if (webhookData == null)
                 throw new InvalidOperationException("Webhook data is null - malformed webhook");
-                
+
             if (string.IsNullOrEmpty(webhookData.Email))
                 throw new InvalidOperationException("User email is missing from Ko-Fi webhook - cannot resolve user");
-                
+
             if (string.IsNullOrEmpty(webhookData.KofiTransactionId))
                 throw new InvalidOperationException("Ko-Fi transaction ID is missing - cannot track event");
-                
+
             if (string.IsNullOrEmpty(webhookData.MessageId))
                 throw new InvalidOperationException("Ko-Fi message ID is missing - cannot ensure idempotency");
-                
+
             if (string.IsNullOrEmpty(webhookData.Type))
                 throw new InvalidOperationException("Ko-Fi event type is missing");
 
             var eventType = MapKoFiEventType(webhookData.Type, webhookData.IsSubscription);
             var userId = await ResolveUserId(webhookData.Email);
-            
+
             if (string.IsNullOrEmpty(userId))
                 throw new InvalidOperationException($"Failed to resolve user ID for email: {webhookData.Email}");
-            
+
             var tierId = webhookData.ShopItemId ?? webhookData.TierId ?? "donation";
-            
+
             // Validate amount for public donations
             if (webhookData.IsPublic && !string.IsNullOrEmpty(webhookData.Amount))
             {
                 if (!decimal.TryParse(webhookData.Amount, out var amount) || amount < 0)
                     throw new InvalidOperationException($"Invalid donation amount: {webhookData.Amount}");
             }
-            
+
             // Use Ko-Fi's message_id for idempotency (stays same across retries)
             var rewardEvent = new RewardEvent
             {
@@ -85,8 +85,8 @@ public class KoFiProvider(ILogger<KoFiProvider> logger) : IRewardProvider
                 ProviderId = ProviderId,
                 UserId = userId,
                 ProviderReference = webhookData.KofiTransactionId,
-                AnnouncementAmount = webhookData.IsPublic && !string.IsNullOrEmpty(webhookData.Amount) 
-                    ? decimal.Parse(webhookData.Amount) 
+                AnnouncementAmount = webhookData.IsPublic && !string.IsNullOrEmpty(webhookData.Amount)
+                    ? decimal.Parse(webhookData.Amount)
                     : null,
                 Currency = webhookData.Currency ?? "USD",
                 Timestamp = DateTime.UtcNow,
@@ -98,10 +98,10 @@ public class KoFiProvider(ILogger<KoFiProvider> logger) : IRewardProvider
                     ["transaction_id"] = webhookData.KofiTransactionId
                 }
             };
-            
+
             // Validate the event before returning
             rewardEvent.Validate();
-            
+
             return rewardEvent;
         }
         catch (JsonException ex)

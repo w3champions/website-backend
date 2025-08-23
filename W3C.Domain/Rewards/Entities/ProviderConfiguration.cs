@@ -32,9 +32,9 @@ public class ProductProviderPair
 {
     public string ProviderId { get; set; }
     public string ProductId { get; set; }
-    
+
     public ProductProviderPair() { }
-    
+
     public ProductProviderPair(string providerId, string productId)
     {
         ProviderId = providerId;

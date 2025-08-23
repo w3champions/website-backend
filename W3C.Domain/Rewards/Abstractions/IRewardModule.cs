@@ -10,7 +10,7 @@ public interface IRewardModule
     string ModuleName { get; }
     string Description { get; }
     bool SupportsParameters { get; }
-    
+
     Task<RewardApplicationResult> Apply(RewardContext context);
     Task<RewardRevocationResult> Revoke(RewardContext context);
     Task<ValidationResult> ValidateParameters(Dictionary<string, object> parameters);

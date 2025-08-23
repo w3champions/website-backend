@@ -48,7 +48,7 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
             return;
         }
 
-        _logger.LogInformation("Reward drift detection background service started. Will run every {Minutes} minutes. Auto-sync: {AutoSync}, Dry-run: {DryRun}", 
+        _logger.LogInformation("Reward drift detection background service started. Will run every {Minutes} minutes. Auto-sync: {AutoSync}, Dry-run: {DryRun}",
             _intervalMinutes, _autoSyncEnabled, _syncDryRun);
 
         // Initial delay to let the application fully start

@@ -25,6 +25,7 @@ public class RewardManagementController(
     IProductMappingUserAssociationRepository associationRepo,
     IPatreonAccountLinkRepository patreonLinkRepo,
     PatreonOAuthService patreonOAuthService,
+    ProductMappingReconciliationService reconciliationService,
     IW3CAuthenticationService authService,
     IEnumerable<IRewardModule> rewardModules,
     ILogger<RewardManagementController> logger) : ControllerBase
@@ -36,6 +37,7 @@ public class RewardManagementController(
     private readonly IProductMappingUserAssociationRepository _associationRepo = associationRepo;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
     private readonly PatreonOAuthService _patreonOAuthService = patreonOAuthService;
+    private readonly ProductMappingReconciliationService _reconciliationService = reconciliationService;
     private readonly IW3CAuthenticationService _authService = authService;
     private readonly IEnumerable<IRewardModule> _rewardModules = rewardModules;
     private readonly ILogger<RewardManagementController> _logger = logger;
@@ -113,19 +115,21 @@ public class RewardManagementController(
             {
                 var mappingNames = productMappings.Select(m => m.ProductName).ToList();
                 var errorMessage = $"Cannot change parameters: This reward is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before modifying parameters.";
-                
-                return BadRequest(new { 
+
+                return BadRequest(new
+                {
                     error = errorMessage
                 });
             }
-            
+
             // If trying to change duration while reward is used in product mappings, reject the change
             if (request.Duration != null && !Equals(reward.Duration, request.Duration))
             {
                 var mappingNames = productMappings.Select(m => m.ProductName).ToList();
                 var errorMessage = $"Cannot change duration: This reward is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before modifying duration.";
-                
-                return BadRequest(new { 
+
+                return BadRequest(new
+                {
                     error = errorMessage
                 });
             }
@@ -154,8 +158,9 @@ public class RewardManagementController(
         {
             var mappingNames = productMappings.Select(m => m.ProductName).ToList();
             var errorMessage = $"Cannot delete reward: It is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before deleting.";
-            
-            return BadRequest(new { 
+
+            return BadRequest(new
+            {
                 error = errorMessage
             });
         }
@@ -212,7 +217,7 @@ public class RewardManagementController(
 
             // Get all user associations for this product mapping
             var associations = await _associationRepo.GetUsersByProductMappingId(id);
-            
+
             // Transform to DTOs with user-friendly information
             var userInfos = associations.Select(association => new ProductMappingUserDto
             {
@@ -224,9 +229,9 @@ public class RewardManagementController(
                 LastUpdatedAt = association.LastUpdatedAt,
                 ExpiresAt = association.ExpiresAt,
                 IsActive = association.IsActive(),
-                ProviderReference = association.Metadata.TryGetValue("provider_reference", out var providerRef) 
+                ProviderReference = association.Metadata.TryGetValue("provider_reference", out var providerRef)
                     ? providerRef?.ToString() : null,
-                EventType = association.Metadata.TryGetValue("event_type", out var eventType) 
+                EventType = association.Metadata.TryGetValue("event_type", out var eventType)
                     ? eventType?.ToString() : null
             }).OrderByDescending(u => u.AssignedAt).ToList();
 
@@ -275,7 +280,7 @@ public class RewardManagementController(
 
         mapping.Id = Guid.NewGuid().ToString();
         mapping.CreatedAt = DateTime.UtcNow;
-        
+
         var result = await _productMappingRepo.Create(mapping);
 
         _logger.LogInformation("Created product mapping {MappingId}: {ProductName} with {ProviderCount} providers -> {RewardIds}",
@@ -323,7 +328,16 @@ public class RewardManagementController(
         _logger.LogInformation("Updated product mapping {MappingId}: {ProductName} with {ProviderCount} providers -> {RewardIds}",
             id, updatedMapping.ProductName, updatedMapping.ProductProviders.Count, string.Join(", ", updatedMapping.RewardIds));
 
-        return Ok(result);
+        // Trigger reconciliation if rewards changed
+        ProductMappingReconciliationResult reconciliationResult = null;
+        if (!AreRewardListsEqual(existingMapping.RewardIds, updatedMapping.RewardIds))
+        {
+            _logger.LogInformation("Reward changes detected for mapping {MappingId}, triggering reconciliation", id);
+            reconciliationResult = await _reconciliationService.ReconcileProductMapping(
+                id, existingMapping, updatedMapping, dryRun: false);
+        }
+
+        return Ok(new { mapping = result, reconciliation = reconciliationResult });
     }
 
     [HttpDelete("product-mappings/{id}")]
@@ -336,14 +350,14 @@ public class RewardManagementController(
 
         await _productMappingRepo.Delete(id);
 
-        _logger.LogInformation("Deleted product mapping {MappingId}: {ProductName}", 
+        _logger.LogInformation("Deleted product mapping {MappingId}: {ProductName}",
             id, existingMapping.ProductName);
 
         return NoContent();
     }
 
     // Patreon OAuth endpoints
-    
+
     /// <summary>
     /// Get Patreon link status for authenticated user
     /// </summary>
@@ -355,7 +369,7 @@ public class RewardManagementController(
         {
             var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
             var status = await _patreonOAuthService.GetLinkStatus(user.BattleTag);
-            
+
             return Ok(new PatreonStatusResponse
             {
                 IsLinked = status.IsLinked,
@@ -403,11 +417,11 @@ public class RewardManagementController(
                 }
                 catch { /* ignore decoding issues and use the original value */ }
             }
-            
+
             var result = await _patreonOAuthService.CompleteOAuthFlow(
-                request.Code, 
-                request.State, 
-                redirectUri, 
+                request.Code,
+                request.State,
+                redirectUri,
                 user.BattleTag);
 
             if (!result.Success)
@@ -457,7 +471,7 @@ public class RewardManagementController(
     }
 
     // User-facing rewards endpoints
-    
+
     /// <summary>
     /// Get current user's active rewards
     /// </summary>
@@ -469,10 +483,10 @@ public class RewardManagementController(
         {
             var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
             var assignments = await _assignmentRepo.GetByUserId(user.BattleTag);
-            
+
             // Backend filtering: Only process active assignments
             var activeAssignments = assignments.Where(a => a.IsActive()).ToList();
-            
+
             // Fetch reward details and transform to DTOs
             var userRewards = new List<UserRewardDto>();
             foreach (var assignment in activeAssignments)
@@ -493,7 +507,7 @@ public class RewardManagementController(
                     });
                 }
             }
-            
+
             return Ok(userRewards);
         }
         catch (Exception ex)
@@ -516,7 +530,7 @@ public class RewardManagementController(
         {
             // Use proper database-level pagination for better performance
             var (assignments, totalCount) = await _assignmentRepo.GetAllPaginated(page, pageSize);
-            
+
             var result = new
             {
                 assignments = assignments,
@@ -593,7 +607,7 @@ public class RewardManagementController(
         try
         {
             var removed = await _patreonLinkRepo.RemoveByBattleTag(battleTag);
-            
+
             if (!removed)
             {
                 return NotFound(new { error = "Patreon link not found for the specified BattleTag" });
@@ -615,7 +629,7 @@ public class RewardManagementController(
             return new Dictionary<string, object>();
 
         var result = new Dictionary<string, object>();
-        
+
         foreach (var kvp in parameters)
         {
             if (kvp.Value is System.Text.Json.JsonElement jsonElement)
@@ -644,6 +658,112 @@ public class RewardManagementController(
             System.Text.Json.JsonValueKind.Object => element.EnumerateObject().ToDictionary(p => p.Name, p => ConvertJsonElementToObject(p.Value)),
             _ => element.ToString()
         };
+    }
+
+    // Product Mapping Reconciliation endpoints
+
+    /// <summary>
+    /// Preview reconciliation changes for a specific product mapping
+    /// </summary>
+    [HttpGet("admin/product-mappings/{id}/reconcile/preview")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> PreviewProductMappingReconciliation(string id)
+    {
+        try
+        {
+            var result = await _reconciliationService.PreviewReconciliation(id);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error previewing reconciliation for product mapping {MappingId}", id);
+            return StatusCode(500, new { error = "Failed to preview reconciliation" });
+        }
+    }
+
+    /// <summary>
+    /// Manually trigger reconciliation for a specific product mapping
+    /// </summary>
+    [HttpPost("admin/product-mappings/{id}/reconcile")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> ReconcileProductMapping(string id, [FromQuery] bool dryRun = false)
+    {
+        try
+        {
+            var mapping = await _productMappingRepo.GetById(id);
+            if (mapping == null)
+                return NotFound(new { error = "Product mapping not found" });
+
+            var result = await _reconciliationService.ReconcileProductMapping(id, mapping, mapping, dryRun);
+
+            _logger.LogInformation("Manual reconciliation triggered for mapping {MappingId} by admin (DryRun: {DryRun})",
+                id, dryRun);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during manual reconciliation for product mapping {MappingId}", id);
+            return StatusCode(500, new { error = "Failed to reconcile product mapping" });
+        }
+    }
+
+    /// <summary>
+    /// Reconcile all product mappings
+    /// </summary>
+    [HttpPost("admin/product-mappings/reconcile-all")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> ReconcileAllProductMappings([FromQuery] bool dryRun = false)
+    {
+        try
+        {
+            var result = await _reconciliationService.ReconcileAllMappings(dryRun);
+
+            _logger.LogInformation("Bulk reconciliation triggered by admin (DryRun: {DryRun})", dryRun);
+
+            // Map to frontend DTO format
+            var dto = new
+            {
+                success = result.Success,
+                totalUsersAffected = result.TotalUsersAffected,
+                rewardsAdded = result.RewardsAdded,
+                rewardsRevoked = result.RewardsRevoked,
+                errors = result.Errors,
+                wasDryRun = result.WasDryRun,
+                userReconciliations = result.UserReconciliations?.Select(ur => new
+                {
+                    userId = ur.UserId,
+                    productMappingId = ur.ProductMappingId,
+                    productMappingName = ur.ProductMappingName,
+                    actions = ur.Actions.Select(a => new
+                    {
+                        rewardId = a.RewardId,
+                        type = a.Type.ToString(),
+                        success = a.Success,
+                        assignmentId = a.AssignmentId,
+                        errorMessage = a.ErrorMessage
+                    }).ToList(),
+                    success = ur.Success,
+                    errorMessage = ur.ErrorMessage
+                }).ToList()
+            };
+
+            return Ok(dto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during bulk reconciliation");
+            return StatusCode(500, new { error = "Failed to reconcile all product mappings" });
+        }
+    }
+
+    private static bool AreRewardListsEqual(List<string> list1, List<string> list2)
+    {
+        return (list1 ?? []).OrderBy(x => x).SequenceEqual((list2 ?? []).OrderBy(x => x));
     }
 
 }
