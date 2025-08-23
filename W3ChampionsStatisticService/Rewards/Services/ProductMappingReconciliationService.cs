@@ -371,13 +371,24 @@ public class ProductMappingReconciliationService(
         var association = await GetUserAssociation(userId, mappingId);
 
         // Filter to assignments that came from this product mapping via either:
-        // 1. Direct assignment with product_mapping_id metadata (reconciliation system)
+        // 1. Direct assignment with product_mapping_id metadata (reconciliation system - legacy)
         // 2. Tier-based assignment with matching provider and tier_id (webhook system)
-        return activeAssignments.Where(a =>
+        // 3. ProviderReference matching "reconciliation:{mappingId}" pattern (current reconciliation system)
+        var matchingAssignments = activeAssignments.Where(a =>
         {
-            if (a.Metadata == null) return false;
+            // Check for reconciliation ProviderReference pattern (current reconciliation system)
+            if (!string.IsNullOrEmpty(a.ProviderReference) && 
+                a.ProviderReference == $"reconciliation:{mappingId}")
+            {
+                return true;
+            }
 
-            // Check for direct product mapping assignment (reconciliation system)
+            if (a.Metadata == null) 
+            {
+                return false;
+            }
+
+            // Check for direct product mapping assignment (reconciliation system - legacy)
             if (a.Metadata.ContainsKey("product_mapping_id") &&
                 a.Metadata["product_mapping_id"].ToString() == mappingId)
             {
@@ -396,6 +407,8 @@ public class ProductMappingReconciliationService(
 
             return false;
         }).ToList();
+
+        return matchingAssignments;
     }
 
     private async Task AddRewardToUser(ProductMappingUserAssociation association, ProductMapping mapping, string rewardId, string eventIdPrefix)
