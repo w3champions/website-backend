@@ -104,6 +104,33 @@ public class RewardManagementController(
         if (reward == null)
             return NotFound();
 
+        // Check if reward is referenced by any product mappings
+        var productMappings = await _productMappingRepo.GetByRewardId(rewardId);
+        if (productMappings.Any())
+        {
+            // If trying to change parameters while reward is used in product mappings, reject the change
+            if (request.Parameters != null && !reward.Parameters.SequenceEqual(ConvertParametersToObjects(request.Parameters)))
+            {
+                var mappingNames = productMappings.Select(m => m.ProductName).ToList();
+                var errorMessage = $"Cannot change parameters: This reward is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before modifying parameters.";
+                
+                return BadRequest(new { 
+                    error = errorMessage
+                });
+            }
+            
+            // If trying to change duration while reward is used in product mappings, reject the change
+            if (request.Duration != null && !Equals(reward.Duration, request.Duration))
+            {
+                var mappingNames = productMappings.Select(m => m.ProductName).ToList();
+                var errorMessage = $"Cannot change duration: This reward is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before modifying duration.";
+                
+                return BadRequest(new { 
+                    error = errorMessage
+                });
+            }
+        }
+
         reward.Name = request.Name ?? reward.Name;
         reward.Description = request.Description ?? reward.Description;
         reward.Parameters = request.Parameters != null ? ConvertParametersToObjects(request.Parameters) : reward.Parameters;
@@ -121,6 +148,18 @@ public class RewardManagementController(
     [CheckIfBattleTagIsAdmin]
     public async Task<IActionResult> DeleteReward(string rewardId)
     {
+        // Check if reward is referenced by any product mappings
+        var productMappings = await _productMappingRepo.GetByRewardId(rewardId);
+        if (productMappings.Any())
+        {
+            var mappingNames = productMappings.Select(m => m.ProductName).ToList();
+            var errorMessage = $"Cannot delete reward: It is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before deleting.";
+            
+            return BadRequest(new { 
+                error = errorMessage
+            });
+        }
+
         await _rewardRepo.Delete(rewardId);
         _logger.LogInformation("Deleted reward {RewardId}", rewardId);
         return NoContent();
