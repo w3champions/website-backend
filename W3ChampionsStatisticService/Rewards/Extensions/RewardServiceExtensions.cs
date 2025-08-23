@@ -36,6 +36,8 @@ public static class RewardServiceExtensions
 
         // Reward modules
         services.AddInterceptedTransient<IRewardModule, PortraitRewardModule>();
+        services.AddInterceptedTransient<IRewardModule, ChatColorRewardModule>();
+        services.AddInterceptedTransient<IRewardModule, ChatIconRewardModule>();
 
         // Drift detection services
         services.AddHttpClient<PatreonApiClient>();

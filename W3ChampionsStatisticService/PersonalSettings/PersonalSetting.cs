@@ -43,7 +43,10 @@ public class PersonalSetting : IVersionable, IIdentifiable
     [BsonIgnoreIfNull]
     public SpecialPicture[] SpecialPictures { get; set; } = [];
     public string ChatAlias { get; set; }
-    public string ChatColor { get; set; }
+    public List<string> ChatColor { get; set; } = new List<string>();
+    public List<string> ChatIcons { get; set; } = new List<string>();
+    public string SelectedChatColor { get; set; }
+    public List<string> SelectedChatIcons { get; set; } = new List<string>();
     public AkaSettings AliasSettings { get; set; }
 
     [Trace]
@@ -149,6 +152,20 @@ public class PersonalSetting : IVersionable, IIdentifiable
         HomePage = dto.HomePage;
         Country = dto.Country;
         CountryCode = dto.CountryCode;
+        ChatColor = dto.ChatColor ?? new List<string>();
+        ChatIcons = dto.ChatIcons ?? new List<string>();
+        SelectedChatColor = dto.SelectedChatColor;
+        
+        // Validate and set selected chat icons (maximum 3)
+        if (dto.SelectedChatIcons != null)
+        {
+            SelectedChatIcons = dto.SelectedChatIcons.Take(3).ToList();
+        }
+        else
+        {
+            SelectedChatIcons = new List<string>();
+        }
+        
         AliasSettings = dto.AliasSettings;
     }
 
