@@ -10,8 +10,7 @@ public class Reward : IIdentifiable
 {
     [BsonId]
     public string Id { get; set; }
-    public string Name { get; set; }
-    public string? Description { get; set; }
+    public string DisplayId { get; set; }
     public string ModuleId { get; set; }
     public Dictionary<string, object> Parameters { get; set; } = new();
     public RewardDuration Duration { get; set; }

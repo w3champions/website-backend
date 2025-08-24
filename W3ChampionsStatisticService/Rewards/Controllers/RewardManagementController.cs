@@ -78,13 +78,12 @@ public class RewardManagementController(
 
     [HttpPost]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> CreateReward([FromBody] CreateRewardRequest request)
+    public async Task<IActionResult> CreateReward([FromBody] W3ChampionsStatisticService.Rewards.DTOs.CreateRewardRequest request)
     {
         var reward = new Reward
         {
             Id = Guid.NewGuid().ToString(),
-            Name = request.Name,
-            Description = request.Description,
+            DisplayId = request.DisplayId,
             ModuleId = request.ModuleId,
             Parameters = ConvertParametersToObjects(request.Parameters),
             Duration = request.Duration,
@@ -93,14 +92,14 @@ public class RewardManagementController(
         };
 
         await _rewardRepo.Create(reward);
-        _logger.LogInformation("Created reward {RewardId}: {Name}", reward.Id, reward.Name);
+        _logger.LogInformation("Created reward {RewardId}: {DisplayId}", reward.Id, reward.DisplayId);
 
         return Ok(reward);
     }
 
     [HttpPut("{rewardId}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> UpdateReward(string rewardId, [FromBody] UpdateRewardRequest request)
+    public async Task<IActionResult> UpdateReward(string rewardId, [FromBody] W3ChampionsStatisticService.Rewards.DTOs.UpdateRewardRequest request)
     {
         var reward = await _rewardRepo.GetById(rewardId);
         if (reward == null)
@@ -111,7 +110,7 @@ public class RewardManagementController(
         if (productMappings.Any())
         {
             // If trying to change parameters while reward is used in product mappings, reject the change
-            if (request.Parameters != null && !reward.Parameters.SequenceEqual(ConvertParametersToObjects(request.Parameters)))
+            if (request.Parameters != null && !AreParametersEqual(reward.Parameters, ConvertParametersToObjects(request.Parameters)))
             {
                 var mappingNames = productMappings.Select(m => m.ProductName).ToList();
                 var errorMessage = $"Cannot change parameters: This reward is used in {productMappings.Count} product mapping(s):\n• {string.Join("\n• ", mappingNames)}\n\nRemove it from all product mappings before modifying parameters.";
@@ -133,10 +132,12 @@ public class RewardManagementController(
                     error = errorMessage
                 });
             }
+
+            // Note: DisplayId changes are allowed even when reward is used in product mappings
+            // This allows admins to update translation keys without breaking existing mappings
         }
 
-        reward.Name = request.Name ?? reward.Name;
-        reward.Description = request.Description ?? reward.Description;
+        reward.DisplayId = request.DisplayId ?? reward.DisplayId;
         reward.Parameters = request.Parameters != null ? ConvertParametersToObjects(request.Parameters) : reward.Parameters;
         reward.Duration = request.Duration ?? reward.Duration;
         reward.IsActive = request.IsActive ?? reward.IsActive;
@@ -498,8 +499,7 @@ public class RewardManagementController(
                     userRewards.Add(new UserRewardDto
                     {
                         Id = reward.Id,
-                        Name = reward.Name,
-                        Description = reward.Description,
+                        DisplayId = reward.DisplayId,
                         ModuleId = reward.ModuleId,
                         ModuleName = module?.ModuleName ?? reward.ModuleId,
                         AssignedAt = assignment.AssignedAt,
@@ -764,6 +764,99 @@ public class RewardManagementController(
     private static bool AreRewardListsEqual(List<string> list1, List<string> list2)
     {
         return (list1 ?? []).OrderBy(x => x).SequenceEqual((list2 ?? []).OrderBy(x => x));
+    }
+
+    /// <summary>
+    /// Deep comparison of parameter dictionaries, handling BSON metadata and different object types
+    /// </summary>
+    private static bool AreParametersEqual(Dictionary<string, object> dict1, Dictionary<string, object> dict2)
+    {
+        if (dict1 == null && dict2 == null) return true;
+        if (dict1 == null || dict2 == null) return false;
+        
+        // Compare keys first
+        if (dict1.Keys.Count != dict2.Keys.Count) return false;
+        if (!dict1.Keys.OrderBy(k => k).SequenceEqual(dict2.Keys.OrderBy(k => k))) return false;
+        
+        // Compare values for each key
+        foreach (var key in dict1.Keys)
+        {
+            if (!AreValuesEqual(dict1[key], dict2[key]))
+                return false;
+        }
+        
+        return true;
+    }
+
+    /// <summary>
+    /// Deep comparison of parameter values, handling arrays, nested objects, and BSON metadata
+    /// </summary>
+    private static bool AreValuesEqual(object value1, object value2)
+    {
+        if (ReferenceEquals(value1, value2)) return true;
+        if (value1 == null || value2 == null) return false;
+        
+        // Handle BSON array format with "_t" and "_v" metadata
+        if (IsBsonArray(value1) && IsBsonArray(value2))
+        {
+            return AreBsonArraysEqual(value1 as Dictionary<string, object>, value2 as Dictionary<string, object>);
+        }
+        
+        // Handle regular arrays
+        if (value1 is Array arr1 && value2 is Array arr2)
+        {
+            return AreArraysEqual(arr1, arr2);
+        }
+        
+        // Handle dictionaries (nested objects)
+        if (value1 is Dictionary<string, object> dict1 && value2 is Dictionary<string, object> dict2)
+        {
+            return AreParametersEqual(dict1, dict2);
+        }
+        
+        // Handle primitive types
+        return Equals(value1, value2);
+    }
+
+    /// <summary>
+    /// Check if an object is a BSON array with "_t" and "_v" metadata
+    /// </summary>
+    private static bool IsBsonArray(object obj)
+    {
+        if (obj is not Dictionary<string, object> dict) return false;
+        return dict.ContainsKey("_t") && dict.ContainsKey("_v") && dict["_t"]?.ToString() == "System.Object[]";
+    }
+
+    /// <summary>
+    /// Compare BSON arrays by extracting the "_v" (value) part
+    /// </summary>
+    private static bool AreBsonArraysEqual(Dictionary<string, object> bson1, Dictionary<string, object> bson2)
+    {
+        var value1 = bson1["_v"];
+        var value2 = bson2["_v"];
+        
+        if (value1 is Array arr1 && value2 is Array arr2)
+        {
+            return AreArraysEqual(arr1, arr2);
+        }
+        
+        return Equals(value1, value2);
+    }
+
+    /// <summary>
+    /// Compare arrays element by element
+    /// </summary>
+    private static bool AreArraysEqual(Array arr1, Array arr2)
+    {
+        if (arr1.Length != arr2.Length) return false;
+        
+        for (int i = 0; i < arr1.Length; i++)
+        {
+            if (!AreValuesEqual(arr1.GetValue(i), arr2.GetValue(i)))
+                return false;
+        }
+        
+        return true;
     }
 
 }

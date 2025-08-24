@@ -112,8 +112,8 @@ public class RewardServiceTests
         };
 
         // Mock reward definitions
-        var rewardA = new Reward { Id = "reward-a", Name = "Reward A", IsActive = true };
-        var rewardB = new Reward { Id = "reward-b", Name = "Reward B", IsActive = true };
+        var rewardA = new Reward { Id = "reward-a", DisplayId = "reward_a", IsActive = true };
+        var rewardB = new Reward { Id = "reward-b", DisplayId = "reward_b", IsActive = true };
 
         // Setup mocks
         _mockProductMappingRepo.Setup(x => x.GetByProviderAndProductId(providerId, tierId))
@@ -257,8 +257,8 @@ public class RewardServiceTests
             RewardIds = new List<string> { "reward-a", "reward-b" }
         };
 
-        var rewardA = new Reward { Id = "reward-a", Name = "Reward A", IsActive = true };
-        var rewardB = new Reward { Id = "reward-b", Name = "Reward B", IsActive = true };
+        var rewardA = new Reward { Id = "reward-a", DisplayId = "reward_a", IsActive = true };
+        var rewardB = new Reward { Id = "reward-b", DisplayId = "reward_b", IsActive = true };
 
         _mockProductMappingRepo.Setup(x => x.GetByProviderAndProductId(providerId, tierId))
             .ReturnsAsync(new List<ProductMapping> { productMapping });
@@ -350,7 +350,7 @@ public class RewardServiceTests
             }
         };
 
-        var rewardPremium2 = new Reward { Id = "reward-premium-2", Name = "Premium Reward 2", IsActive = true };
+        var rewardPremium2 = new Reward { Id = "reward-premium-2", DisplayId = "premium_reward_2", IsActive = true };
 
         _mockProductMappingRepo.Setup(x => x.GetByProviderAndProductId(providerId, tier1Id))
             .ReturnsAsync(new List<ProductMapping> { productMapping1 });

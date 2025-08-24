@@ -48,7 +48,7 @@ public class ProductMappingReconciliationTests
             .ReturnsAsync((string id) => new Reward
             {
                 Id = id,
-                Name = $"Test Reward {id}",
+                DisplayId = $"test_reward_{id}",
                 IsActive = true,
                 Duration = RewardDuration.Permanent()
             });
