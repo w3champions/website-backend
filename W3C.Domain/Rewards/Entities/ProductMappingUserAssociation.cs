@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
 using W3C.Domain.Common.Services;
-using W3C.Domain.Rewards.ValueObjects;
+using MongoDB.Bson;
 
 namespace W3C.Domain.Rewards.Entities;
 
@@ -14,6 +14,7 @@ namespace W3C.Domain.Rewards.Entities;
 public class ProductMappingUserAssociation : IIdentifiable, IVersioned
 {
     [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; } = string.Empty;
 
     /// <summary>

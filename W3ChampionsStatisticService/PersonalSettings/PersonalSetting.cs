@@ -43,7 +43,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
     [BsonIgnoreIfNull]
     public SpecialPicture[] SpecialPictures { get; set; } = [];
     public string ChatAlias { get; set; }
-    public List<string> ChatColor { get; set; } = new List<string>();
+    public List<string> ChatColors { get; set; } = new List<string>();
     public List<string> ChatIcons { get; set; } = new List<string>();
     public string SelectedChatColor { get; set; }
     public List<string> SelectedChatIcons { get; set; } = new List<string>();
@@ -152,7 +152,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
         HomePage = dto.HomePage;
         Country = dto.Country;
         CountryCode = dto.CountryCode;
-        ChatColor = dto.ChatColor ?? new List<string>();
+        ChatColors = dto.ChatColors ?? new List<string>();
         ChatIcons = dto.ChatIcons ?? new List<string>();
         SelectedChatColor = dto.SelectedChatColor;
 

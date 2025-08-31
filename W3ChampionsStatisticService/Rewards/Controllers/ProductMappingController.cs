@@ -77,7 +77,6 @@ public class ProductMappingController(
             // Convert DTO to entity
             var mapping = new ProductMapping
             {
-                Id = Guid.NewGuid().ToString(),
                 ProductName = request.ProductName,
                 ProductProviders = request.ProductProviders.Select(pp => new ProductProviderPair(pp.ProviderId, pp.ProductId)).ToList(),
                 RewardIds = request.RewardIds,

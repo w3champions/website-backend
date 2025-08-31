@@ -17,7 +17,6 @@ public static class EventTypes
     public const string KoFiDonation = "donation";
     public const string KoFiSubscription = "subscription";
     public const string KoFiShopOrder = "shop_order";
-    public const string KoFiCommission = "commission";
 
     // Internal event types
     public const string ManualAssignment = "manual_assignment";

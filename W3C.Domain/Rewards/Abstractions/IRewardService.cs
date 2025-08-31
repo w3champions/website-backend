@@ -17,12 +17,3 @@ public interface IRewardService
     Task<List<RewardAssignment>> GetExpiredRewards();
     Task ProcessExpiredRewards();
 }
-
-public interface IRewardAssignmentService
-{
-    Task<RewardAssignment> CreateAssignment(RewardAssignmentRequest request);
-    Task<bool> RefreshAssignment(string assignmentId);
-    Task<bool> IsEligibleForReward(string userId, string rewardId);
-    Task<List<RewardAssignment>> GetActiveAssignments(string userId);
-    Task<List<RewardAssignment>> GetAssignmentsByProvider(string userId, string providerId);
-}

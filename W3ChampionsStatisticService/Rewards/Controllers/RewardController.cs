@@ -73,7 +73,6 @@ public class RewardController(
     {
         var reward = new Reward
         {
-            Id = Guid.NewGuid().ToString(),
             DisplayId = request.DisplayId,
             ModuleId = request.ModuleId,
             Parameters = ConvertParametersToObjects(request.Parameters),

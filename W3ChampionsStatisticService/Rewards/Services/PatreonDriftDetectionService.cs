@@ -602,12 +602,12 @@ public class PatreonDriftDetectionService(
             return;
         }
 
-        // Create associations for each entitled tier using batch-optimized method
-        await CreateAssociationsForTiers(battleTag, missingMember.EntitledTierIds ?? new List<string>(), "drift_sync_missing", dryRun);
-
         // Immediately reconcile rewards for this user (unless dry run)
         if (!dryRun)
         {
+            // Create associations for each entitled tier using batch-optimized method
+            await CreateAssociationsForTiers(battleTag, missingMember.EntitledTierIds ?? new List<string>(), "drift_sync_missing");
+
             var eventIdPrefix = $"drift_sync_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
             Log.Information("Reconciled rewards for missing member {PatreonUserId} -> {UserId}: Added={Added}, Revoked={Revoked}",
@@ -736,7 +736,7 @@ public class PatreonDriftDetectionService(
     /// <summary>
     /// Creates associations for multiple tiers in batch to avoid repeated DB calls
     /// </summary>
-    private async Task CreateAssociationsForTiers(string battleTag, List<string> tierIds, string source, bool skipReconciliation = false)
+    private async Task CreateAssociationsForTiers(string battleTag, List<string> tierIds, string source)
     {
         if (!tierIds.Any()) return;
 
@@ -766,7 +766,6 @@ public class PatreonDriftDetectionService(
                 {
                     var association = new ProductMappingUserAssociation
                     {
-                        Id = Guid.NewGuid().ToString(),
                         UserId = battleTag,
                         ProductMappingId = productMapping.Id,
                         ProviderId = ProviderId,
@@ -822,7 +821,6 @@ public class PatreonDriftDetectionService(
         // Create new association
         var association = new ProductMappingUserAssociation
         {
-            Id = Guid.NewGuid().ToString(),
             UserId = battleTag,
             ProductMappingId = productMapping.Id,
             ProviderId = ProviderId,

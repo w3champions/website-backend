@@ -10,7 +10,8 @@ namespace W3C.Domain.Rewards.Entities;
 public class ProductMapping : IIdentifiable, IVersioned
 {
     [BsonId]
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = string.Empty;
     public string ProductName { get; set; }
     public List<ProductProviderPair> ProductProviders { get; set; } = new();
     public List<string> RewardIds { get; set; } = new();

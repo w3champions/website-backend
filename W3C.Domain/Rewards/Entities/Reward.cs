@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
@@ -9,7 +10,8 @@ namespace W3C.Domain.Rewards.Entities;
 public class Reward : IIdentifiable
 {
     [BsonId]
-    public string Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = string.Empty;
     public string DisplayId { get; set; }
     public string ModuleId { get; set; }
     public Dictionary<string, object> Parameters { get; set; } = new();

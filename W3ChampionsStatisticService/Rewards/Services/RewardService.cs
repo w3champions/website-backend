@@ -338,7 +338,6 @@ public class RewardService(
 
         var assignment = new RewardAssignment
         {
-            Id = Guid.NewGuid().ToString(),
             UserId = userId,
             RewardId = rewardId,
             ProviderId = providerId,
@@ -633,7 +632,6 @@ public class RewardService(
                 // Create new association
                 var association = new ProductMappingUserAssociation
                 {
-                    Id = Guid.NewGuid().ToString(),
                     ProductMappingId = productMapping.Id,
                     UserId = rewardEvent.UserId,
                     ProviderId = rewardEvent.ProviderId,

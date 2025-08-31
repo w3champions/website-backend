@@ -36,14 +36,14 @@ public class ChatColorRewardModule(
 
         var settings = await _personalSettingsRepo.Load(context.UserId) ?? new PersonalSetting(context.UserId);
 
-        if (settings.ChatColor == null)
+        if (settings.ChatColors == null)
         {
-            settings.ChatColor = new List<string>();
+            settings.ChatColors = new List<string>();
         }
 
-        if (!settings.ChatColor.Contains(colorId))
+        if (!settings.ChatColors.Contains(colorId))
         {
-            settings.ChatColor.Add(colorId);
+            settings.ChatColors.Add(colorId);
 
             // Auto-select the color if no color is currently selected
             var autoSelected = string.IsNullOrWhiteSpace(settings.SelectedChatColor);
@@ -94,9 +94,9 @@ public class ChatColorRewardModule(
         }
 
         var settings = await _personalSettingsRepo.Load(context.UserId);
-        if (settings?.ChatColor != null && settings.ChatColor.Contains(colorId))
+        if (settings?.ChatColors != null && settings.ChatColors.Contains(colorId))
         {
-            settings.ChatColor.Remove(colorId);
+            settings.ChatColors.Remove(colorId);
 
             // Remove from selected color if it was selected
             if (settings.SelectedChatColor == colorId)

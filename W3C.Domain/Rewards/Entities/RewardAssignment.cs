@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
 using W3C.Domain.Common.Services;
@@ -10,7 +11,8 @@ namespace W3C.Domain.Rewards.Entities;
 public class RewardAssignment : IIdentifiable, IVersioned
 {
     [BsonId]
-    public string Id { get; set; }
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; } = string.Empty;
     public string UserId { get; set; }
     public string RewardId { get; set; }
     public string ProviderId { get; set; }

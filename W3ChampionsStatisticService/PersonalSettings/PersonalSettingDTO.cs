@@ -17,7 +17,7 @@ public class PersonalSettingsDTO
     public string HomePage { get; set; }
     public string Country { get; set; }
     public string CountryCode { get; set; }
-    public List<string> ChatColor { get; set; }
+    public List<string> ChatColors { get; set; }
     public List<string> ChatIcons { get; set; }
     public string SelectedChatColor { get; set; }
     public List<string> SelectedChatIcons { get; set; }

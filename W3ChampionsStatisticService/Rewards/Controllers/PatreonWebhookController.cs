@@ -164,7 +164,6 @@ public class PatreonWebhookController(
             // Create new association
             var association = new ProductMappingUserAssociation
             {
-                Id = Guid.NewGuid().ToString(),
                 UserId = rewardEvent.UserId,
                 ProductMappingId = productMapping.Id,
                 ProviderId = rewardEvent.ProviderId,
