@@ -60,7 +60,7 @@ public class ProductMappingUserAssociation : IIdentifiable, IVersioned
     /// Additional metadata about this association (e.g., original event ID, provider reference)
     /// </summary>
     public Dictionary<string, object> Metadata { get; set; } = new();
-    
+
     /// <summary>
     /// Version field for optimistic concurrency control
     /// </summary>

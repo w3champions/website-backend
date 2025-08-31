@@ -19,7 +19,7 @@ public class UserRewardDto
     public string RevocationReason { get; set; }
     public string EventId { get; set; }
     public Dictionary<string, object> Metadata { get; set; }
-    
+
     // Reward details
     public string Id { get; set; }
     public string DisplayId { get; set; }

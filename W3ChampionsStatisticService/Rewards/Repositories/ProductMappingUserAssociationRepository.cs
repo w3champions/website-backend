@@ -50,9 +50,9 @@ public class ProductMappingUserAssociationRepository : MongoDbRepositoryBase, IP
             Builders<ProductMappingUserAssociation>.IndexKeys.Ascending(x => x.Status),
             new CreateIndexOptions { Name = "IX_Status", Background = true });
 
-        collection.Indexes.CreateMany(new[] { 
+        collection.Indexes.CreateMany(new[] {
             userProductMappingStatusIndex,
-            userIdIndex, 
+            userIdIndex,
             productMappingIdIndex,
             providerProductIndex,
             statusIndex

@@ -155,7 +155,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
         ChatColor = dto.ChatColor ?? new List<string>();
         ChatIcons = dto.ChatIcons ?? new List<string>();
         SelectedChatColor = dto.SelectedChatColor;
-        
+
         // Validate and set selected chat icons (maximum 3)
         if (dto.SelectedChatIcons != null)
         {
@@ -165,7 +165,7 @@ public class PersonalSetting : IVersionable, IIdentifiable
         {
             SelectedChatIcons = new List<string>();
         }
-        
+
         AliasSettings = dto.AliasSettings;
     }
 

@@ -46,7 +46,7 @@ public class ProductMappingController(
     public async Task<IActionResult> GetProductMappingUsers(string id)
     {
         var associations = await _associationRepo.GetUsersByProductMappingId(id);
-        
+
         var users = associations.Select(a => new
         {
             userId = a.UserId,
@@ -88,11 +88,11 @@ public class ProductMappingController(
             };
 
             await _productMappingRepo.Create(mapping);
-            _logger.LogInformation("Created product mapping {MappingId}: {ProductName} -> {RewardIds}", 
+            _logger.LogInformation("Created product mapping {MappingId}: {ProductName} -> {RewardIds}",
                 mapping.Id, mapping.ProductName, string.Join(", ", mapping.RewardIds));
 
             // Log audit event
-            await _auditLogService.LogAdminAction(battleTag, "CREATE", "ProductMapping", mapping.Id, 
+            await _auditLogService.LogAdminAction(battleTag, "CREATE", "ProductMapping", mapping.Id,
                 oldValue: null, newValue: mapping);
 
             return Ok(mapping);
@@ -150,36 +150,36 @@ public class ProductMappingController(
             // Update all properties
             if (request.ProductName != null)
                 existingMapping.ProductName = request.ProductName;
-            
+
             if (request.IsActive.HasValue)
                 existingMapping.IsActive = request.IsActive.Value;
-            
+
             if (request.AdditionalParameters != null)
                 existingMapping.AdditionalParameters = request.AdditionalParameters;
-            
+
             if (request.RewardIds != null)
                 existingMapping.RewardIds = request.RewardIds;
-            
+
             if (request.ProductProviders != null)
                 existingMapping.ProductProviders = request.ProductProviders.Select(pp => new ProductProviderPair(pp.ProviderId, pp.ProductId)).ToList();
-            
+
             if (request.Type.HasValue)
                 existingMapping.Type = request.Type.Value;
-            
+
             existingMapping.UpdatedAt = DateTime.UtcNow;
 
             await _productMappingRepo.Update(existingMapping);
             _logger.LogInformation("Updated product mapping {MappingId}", id);
 
             // Log audit event
-            await _auditLogService.LogAdminAction(battleTag, "UPDATE", "ProductMapping", id, 
+            await _auditLogService.LogAdminAction(battleTag, "UPDATE", "ProductMapping", id,
                 oldValue: originalMapping, newValue: existingMapping);
 
             // Trigger automatic reconciliation if rewards changed
             if (rewardsChanged)
             {
                 _logger.LogInformation("Rewards changed for product mapping {MappingId}, triggering automatic reconciliation", id);
-                
+
                 // Run reconciliation asynchronously to avoid blocking the response
                 _ = Task.Run(async () =>
                 {
@@ -187,14 +187,14 @@ public class ProductMappingController(
                     {
                         var eventIdPrefix = $"auto_update_{id}_{DateTime.UtcNow:yyyyMMddHHmmss}";
                         var reconciliationResult = await _reconciliationService.ReconcileProductMapping(
-                            id, 
-                            originalMapping, 
-                            existingMapping, 
+                            id,
+                            originalMapping,
+                            existingMapping,
                             dryRun: false);
-                        
+
                         _logger.LogInformation("Automatic reconciliation completed for mapping {MappingId}: Added={Added}, Revoked={Revoked}, Success={Success}",
                             id, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked, reconciliationResult.Success);
-                        
+
                         // Log audit event for the automatic reconciliation
                         await _auditLogService.LogAdminAction(battleTag, "AUTO_RECONCILE", "ProductMapping", id,
                             metadata: new Dictionary<string, object>
@@ -262,7 +262,7 @@ public class ProductMappingController(
             _logger.LogInformation("Deleted product mapping {MappingId}: {ProductName}", id, mapping.ProductName);
 
             // Log audit event
-            await _auditLogService.LogAdminAction(battleTag, "DELETE", "ProductMapping", id, 
+            await _auditLogService.LogAdminAction(battleTag, "DELETE", "ProductMapping", id,
                 oldValue: mapping, newValue: null);
 
             return NoContent();

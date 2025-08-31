@@ -12,13 +12,13 @@ public static class EventTypes
     public const string PatreonMemberCreate = "members:create";
     public const string PatreonMemberUpdate = "members:update";
     public const string PatreonMemberDelete = "members:delete";
-    
+
     // Ko-Fi event types
     public const string KoFiDonation = "donation";
     public const string KoFiSubscription = "subscription";
     public const string KoFiShopOrder = "shop_order";
     public const string KoFiCommission = "commission";
-    
+
     // Internal event types
     public const string ManualAssignment = "manual_assignment";
     public const string ManualRevocation = "manual_revocation";

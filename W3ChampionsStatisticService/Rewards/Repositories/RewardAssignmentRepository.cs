@@ -17,7 +17,7 @@ namespace W3ChampionsStatisticService.Rewards.Repositories;
 public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignmentRepository
 {
     private readonly IOptimisticConcurrencyService _concurrencyService;
-    
+
     public RewardAssignmentRepository(MongoClient mongoClient, IOptimisticConcurrencyService concurrencyService) : base(mongoClient)
     {
         _concurrencyService = concurrencyService;
@@ -28,52 +28,52 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
     {
         // try
         // {
-            var collection = CreateCollection<RewardAssignment>();
+        var collection = CreateCollection<RewardAssignment>();
 
-            // Create unique index on EventId for webhook idempotency
-            var eventIdIndex = new CreateIndexModel<RewardAssignment>(
-                Builders<RewardAssignment>.IndexKeys.Ascending(x => x.EventId),
-                new CreateIndexOptions
-                {
-                    Unique = true,
-                    Sparse = true, // Allow null EventId but enforce uniqueness when present
-                    Name = "IX_EventId_Unique",
-                    Background = true
-                });
+        // Create unique index on EventId for webhook idempotency
+        var eventIdIndex = new CreateIndexModel<RewardAssignment>(
+            Builders<RewardAssignment>.IndexKeys.Ascending(x => x.EventId),
+            new CreateIndexOptions
+            {
+                Unique = true,
+                Sparse = true, // Allow null EventId but enforce uniqueness when present
+                Name = "IX_EventId_Unique",
+                Background = true
+            });
 
-            // Performance indexes as recommended in code review
-            var userStatusProviderIndex = new CreateIndexModel<RewardAssignment>(
-                Builders<RewardAssignment>.IndexKeys
-                    .Ascending(x => x.UserId)
-                    .Ascending(x => x.Status)
-                    .Ascending(x => x.ProviderId),
-                new CreateIndexOptions { Name = "IX_UserId_Status_ProviderId_Compound", Background = true });
+        // Performance indexes as recommended in code review
+        var userStatusProviderIndex = new CreateIndexModel<RewardAssignment>(
+            Builders<RewardAssignment>.IndexKeys
+                .Ascending(x => x.UserId)
+                .Ascending(x => x.Status)
+                .Ascending(x => x.ProviderId),
+            new CreateIndexOptions { Name = "IX_UserId_Status_ProviderId_Compound", Background = true });
 
-            var userIdIndex = new CreateIndexModel<RewardAssignment>(
-                Builders<RewardAssignment>.IndexKeys.Ascending(x => x.UserId),
-                new CreateIndexOptions { Name = "IX_UserId", Background = true });
+        var userIdIndex = new CreateIndexModel<RewardAssignment>(
+            Builders<RewardAssignment>.IndexKeys.Ascending(x => x.UserId),
+            new CreateIndexOptions { Name = "IX_UserId", Background = true });
 
-            var rewardIdIndex = new CreateIndexModel<RewardAssignment>(
-                Builders<RewardAssignment>.IndexKeys.Ascending(x => x.RewardId),
-                new CreateIndexOptions { Name = "IX_RewardId", Background = true });
+        var rewardIdIndex = new CreateIndexModel<RewardAssignment>(
+            Builders<RewardAssignment>.IndexKeys.Ascending(x => x.RewardId),
+            new CreateIndexOptions { Name = "IX_RewardId", Background = true });
 
-            var providerIdIndex = new CreateIndexModel<RewardAssignment>(
-                Builders<RewardAssignment>.IndexKeys.Ascending(x => x.ProviderId),
-                new CreateIndexOptions { Name = "IX_ProviderId", Background = true });
+        var providerIdIndex = new CreateIndexModel<RewardAssignment>(
+            Builders<RewardAssignment>.IndexKeys.Ascending(x => x.ProviderId),
+            new CreateIndexOptions { Name = "IX_ProviderId", Background = true });
 
-            var assignedAtIndex = new CreateIndexModel<RewardAssignment>(
-                Builders<RewardAssignment>.IndexKeys.Descending(x => x.AssignedAt),
-                new CreateIndexOptions { Name = "IX_AssignedAt_Desc", Background = true });
+        var assignedAtIndex = new CreateIndexModel<RewardAssignment>(
+            Builders<RewardAssignment>.IndexKeys.Descending(x => x.AssignedAt),
+            new CreateIndexOptions { Name = "IX_AssignedAt_Desc", Background = true });
 
-            collection.Indexes.CreateMany(new[] { 
-                eventIdIndex, 
-                userStatusProviderIndex, 
-                userIdIndex, 
+        collection.Indexes.CreateMany(new[] {
+                eventIdIndex,
+                userStatusProviderIndex,
+                userIdIndex,
                 rewardIdIndex,
                 providerIdIndex,
-                assignedAtIndex 
+                assignedAtIndex
             });
-            Log.Information("Ensured performance indexes on RewardAssignment collection");
+        Log.Information("Ensured performance indexes on RewardAssignment collection");
         // }
         // catch (MongoCommandException ex) when (ex.Code == 85) // IndexOptionsConflict
         // {
@@ -132,7 +132,7 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
     {
         var collection = CreateCollection<RewardAssignment>();
         var filter = Builders<RewardAssignment>.Filter.Eq(x => x.Id, assignment.Id);
-        
+
         await _concurrencyService.UpdateWithVersionAsync(collection, assignment, filter, "RewardAssignment", assignment.Id);
         return assignment;
     }

@@ -50,7 +50,7 @@ public class ProductMappingRepository(MongoClient mongoClient, IOptimisticConcur
     {
         var collection = CreateCollection<ProductMapping>();
         var filter = Builders<ProductMapping>.Filter.Eq(x => x.Id, mapping.Id);
-        
+
         await _concurrencyService.UpdateWithVersionAsync(collection, mapping, filter, "ProductMapping", mapping.Id);
         return mapping;
     }

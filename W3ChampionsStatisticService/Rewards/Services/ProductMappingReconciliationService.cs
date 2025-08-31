@@ -378,13 +378,13 @@ public class ProductMappingReconciliationService(
         var matchingAssignments = activeAssignments.Where(a =>
         {
             // Check for reconciliation ProviderReference pattern (current reconciliation system)
-            if (!string.IsNullOrEmpty(a.ProviderReference) && 
+            if (!string.IsNullOrEmpty(a.ProviderReference) &&
                 a.ProviderReference == $"reconciliation:{mappingId}")
             {
                 return true;
             }
 
-            if (a.Metadata == null) 
+            if (a.Metadata == null)
             {
                 return false;
             }

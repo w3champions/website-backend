@@ -22,9 +22,9 @@ public class ChatColorRewardModule(
     public async Task<RewardApplicationResult> Apply(RewardContext context)
     {
         Log.Information("Applying chat color reward to user {UserId}: {Parameters}", context.UserId, context.Parameters);
-        
+
         var colorId = GetColorId(context.Parameters);
-        
+
         if (string.IsNullOrWhiteSpace(colorId))
         {
             return new RewardApplicationResult
@@ -35,7 +35,7 @@ public class ChatColorRewardModule(
         }
 
         var settings = await _personalSettingsRepo.Load(context.UserId) ?? new PersonalSetting(context.UserId);
-        
+
         if (settings.ChatColor == null)
         {
             settings.ChatColor = new List<string>();
@@ -44,7 +44,7 @@ public class ChatColorRewardModule(
         if (!settings.ChatColor.Contains(colorId))
         {
             settings.ChatColor.Add(colorId);
-            
+
             // Auto-select the color if no color is currently selected
             var autoSelected = string.IsNullOrWhiteSpace(settings.SelectedChatColor);
             if (autoSelected)
@@ -52,7 +52,7 @@ public class ChatColorRewardModule(
                 settings.SelectedChatColor = colorId;
                 Log.Information("Auto-selected chat color {ColorId} for user {UserId} (no color previously selected)", colorId, context.UserId);
             }
-            
+
             await _personalSettingsRepo.Save(settings);
 
             Log.Information("Added chat color {ColorId} to user {UserId}", colorId, context.UserId);
@@ -82,7 +82,7 @@ public class ChatColorRewardModule(
     public async Task<RewardRevocationResult> Revoke(RewardContext context)
     {
         Log.Information("Revoking chat color reward from user {UserId}: {Parameters}", context.UserId, context.Parameters);
-        
+
         var colorId = GetColorId(context.Parameters);
         if (string.IsNullOrWhiteSpace(colorId))
         {
@@ -97,14 +97,14 @@ public class ChatColorRewardModule(
         if (settings?.ChatColor != null && settings.ChatColor.Contains(colorId))
         {
             settings.ChatColor.Remove(colorId);
-            
+
             // Remove from selected color if it was selected
             if (settings.SelectedChatColor == colorId)
             {
                 settings.SelectedChatColor = null;
                 Log.Information("Removed {ColorId} from selected chat color for user {UserId}", colorId, context.UserId);
             }
-            
+
             await _personalSettingsRepo.Save(settings);
 
             Log.Information("Revoked chat color {ColorId} from user {UserId}", colorId, context.UserId);

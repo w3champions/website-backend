@@ -121,7 +121,7 @@ public class RewardsExceptionHandlingMiddleware(RequestDelegate next, ILogger<Re
         }
         else if (exception is RewardsDomainException)
         {
-            _logger.LogWarning(exception, "Domain exception occurred: {ErrorCode} - {Message}", 
+            _logger.LogWarning(exception, "Domain exception occurred: {ErrorCode} - {Message}",
                 ((RewardsDomainException)exception).ErrorCode, exception.Message);
         }
         else

@@ -757,7 +757,7 @@ public class PatreonDriftDetectionService(
 
         // Create associations for tiers that don't already exist
         var associationsToCreate = new List<ProductMappingUserAssociation>();
-        
+
         foreach (var tierId in tierIds)
         {
             if (tierMappings.TryGetValue(tierId, out var productMapping))
@@ -774,7 +774,7 @@ public class PatreonDriftDetectionService(
                         AssignedAt = DateTime.UtcNow,
                         Status = AssociationStatus.Active
                     };
-                    
+
                     association.Metadata[MetadataKeys.Source] = source;
                     associationsToCreate.Add(association);
                 }

@@ -86,7 +86,7 @@ public class RewardController(
         _logger.LogInformation("Created reward {RewardId}: {DisplayId}", reward.Id, reward.DisplayId);
 
         // Log audit event
-        await _auditLogService.LogAdminAction(battleTag, "CREATE", "Reward", reward.Id, 
+        await _auditLogService.LogAdminAction(battleTag, "CREATE", "Reward", reward.Id,
             oldValue: null, newValue: reward);
 
         return Ok(reward);
@@ -155,7 +155,7 @@ public class RewardController(
         _logger.LogInformation("Updated reward {RewardId}", rewardId);
 
         // Log audit event
-        await _auditLogService.LogAdminAction(battleTag, "UPDATE", "Reward", reward.Id, 
+        await _auditLogService.LogAdminAction(battleTag, "UPDATE", "Reward", reward.Id,
             oldValue: originalReward, newValue: reward);
 
         return Ok(reward);
@@ -187,7 +187,7 @@ public class RewardController(
         _logger.LogInformation("Deleted reward {RewardId}", rewardId);
 
         // Log audit event
-        await _auditLogService.LogAdminAction(battleTag, "DELETE", "Reward", rewardId, 
+        await _auditLogService.LogAdminAction(battleTag, "DELETE", "Reward", rewardId,
             oldValue: reward, newValue: null);
 
         return NoContent();

@@ -22,7 +22,7 @@ public class RewardAssignment : IIdentifiable, IVersioned
     public DateTime? RevokedAt { get; set; }
     public string RevokedReason { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();
-    
+
     /// <summary>
     /// Version field for optimistic concurrency control
     /// </summary>

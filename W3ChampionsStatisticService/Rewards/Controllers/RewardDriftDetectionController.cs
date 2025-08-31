@@ -92,7 +92,7 @@ public class RewardDriftDetectionController(
             var result = await _patreonDriftService.SyncDrift(request.DriftResult, dryRun);
 
             // Log audit event
-            await _auditLogService.LogSystemAction(battleTag, "DRIFT_SYNC", dryRun ? "PREVIEW" : "EXECUTE", "patreon", 
+            await _auditLogService.LogSystemAction(battleTag, "DRIFT_SYNC", dryRun ? "PREVIEW" : "EXECUTE", "patreon",
                 result.MembersAdded + result.TiersUpdated,
                 new Dictionary<string, object>
                 {

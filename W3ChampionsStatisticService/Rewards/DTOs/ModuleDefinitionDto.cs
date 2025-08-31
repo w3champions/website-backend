@@ -9,7 +9,7 @@ public class ModuleDefinitionDto
     public string Description { get; set; }
     public string Type { get; set; }
     public bool IsActive { get; set; }
-    
+
     // Additional properties expected by RewardController
     public string ModuleId { get; set; }
     public string ModuleName { get; set; }

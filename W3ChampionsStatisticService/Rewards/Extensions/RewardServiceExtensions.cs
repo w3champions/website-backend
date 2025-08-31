@@ -25,7 +25,7 @@ public static class RewardServiceExtensions
         services.AddInterceptedScoped<IProductMappingRepository, ProductMappingRepository>();
         services.AddInterceptedScoped<IProductMappingUserAssociationRepository, ProductMappingUserAssociationRepository>();
         services.AddInterceptedScoped<IPatreonAccountLinkRepository, PatreonAccountLinkRepository>();
-        
+
         // Core services
         services.AddInterceptedTransient<IRewardService, RewardService>();
         services.AddInterceptedTransient<IProductMappingService, ProductMappingService>();

@@ -19,7 +19,7 @@ public class ProductMapping : IIdentifiable, IVersioned
     public Dictionary<string, object> AdditionalParameters { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
+
     /// <summary>
     /// Version field for optimistic concurrency control
     /// </summary>

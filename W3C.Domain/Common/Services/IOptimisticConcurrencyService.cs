@@ -17,9 +17,9 @@ public interface IOptimisticConcurrencyService
     /// <param name="entity">Entity to update</param>
     /// <param name="filter">Additional filter conditions</param>
     /// <returns>True if update succeeded, false if concurrency conflict occurred</returns>
-    Task<bool> TryUpdateWithVersionAsync<T>(IMongoCollection<T> collection, T entity, FilterDefinition<T> filter = null) 
+    Task<bool> TryUpdateWithVersionAsync<T>(IMongoCollection<T> collection, T entity, FilterDefinition<T> filter = null)
         where T : class, IVersioned;
-    
+
     /// <summary>
     /// Updates an entity with optimistic concurrency control and throws exception on conflict
     /// </summary>
@@ -29,9 +29,9 @@ public interface IOptimisticConcurrencyService
     /// <param name="filter">Additional filter conditions</param>
     /// <param name="entityTypeName">Entity type name for exception</param>
     /// <param name="entityId">Entity ID for exception</param>
-    Task UpdateWithVersionAsync<T>(IMongoCollection<T> collection, T entity, FilterDefinition<T> filter = null, 
+    Task UpdateWithVersionAsync<T>(IMongoCollection<T> collection, T entity, FilterDefinition<T> filter = null,
         string entityTypeName = null, string entityId = null) where T : class, IVersioned;
-    
+
     /// <summary>
     /// Increments the version field for an entity
     /// </summary>

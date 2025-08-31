@@ -22,9 +22,9 @@ public class ChatIconRewardModule(
     public async Task<RewardApplicationResult> Apply(RewardContext context)
     {
         Log.Information("Applying chat icon reward to user {UserId}: {Parameters}", context.UserId, context.Parameters);
-        
+
         var iconId = GetIconId(context.Parameters);
-        
+
         if (string.IsNullOrWhiteSpace(iconId))
         {
             return new RewardApplicationResult
@@ -35,7 +35,7 @@ public class ChatIconRewardModule(
         }
 
         var settings = await _personalSettingsRepo.Load(context.UserId) ?? new PersonalSetting(context.UserId);
-        
+
         if (settings.ChatIcons == null)
         {
             settings.ChatIcons = new List<string>();
@@ -44,22 +44,22 @@ public class ChatIconRewardModule(
         if (!settings.ChatIcons.Contains(iconId))
         {
             settings.ChatIcons.Add(iconId);
-            
+
             // Auto-select the icon if less than 3 icons are currently selected
             if (settings.SelectedChatIcons == null)
             {
                 settings.SelectedChatIcons = new List<string>();
             }
-            
+
             var autoSelected = false;
             if (settings.SelectedChatIcons.Count < 3 && !settings.SelectedChatIcons.Contains(iconId))
             {
                 settings.SelectedChatIcons.Add(iconId);
                 autoSelected = true;
-                Log.Information("Auto-selected chat icon {IconId} for user {UserId} (has {SelectedCount} icons selected)", 
+                Log.Information("Auto-selected chat icon {IconId} for user {UserId} (has {SelectedCount} icons selected)",
                     iconId, context.UserId, settings.SelectedChatIcons.Count - 1);
             }
-            
+
             await _personalSettingsRepo.Save(settings);
 
             Log.Information("Added chat icon {IconId} to user {UserId}", iconId, context.UserId);
@@ -89,7 +89,7 @@ public class ChatIconRewardModule(
     public async Task<RewardRevocationResult> Revoke(RewardContext context)
     {
         Log.Information("Revoking chat icon reward from user {UserId}: {Parameters}", context.UserId, context.Parameters);
-        
+
         var iconId = GetIconId(context.Parameters);
         if (string.IsNullOrWhiteSpace(iconId))
         {
@@ -104,14 +104,14 @@ public class ChatIconRewardModule(
         if (settings?.ChatIcons != null && settings.ChatIcons.Contains(iconId))
         {
             settings.ChatIcons.Remove(iconId);
-            
+
             // Remove from selected icons if it was selected
             if (settings.SelectedChatIcons != null && settings.SelectedChatIcons.Contains(iconId))
             {
                 settings.SelectedChatIcons.Remove(iconId);
                 Log.Information("Removed {IconId} from selected chat icons for user {UserId}", iconId, context.UserId);
             }
-            
+
             await _personalSettingsRepo.Save(settings);
 
             Log.Information("Revoked chat icon {IconId} from user {UserId}", iconId, context.UserId);

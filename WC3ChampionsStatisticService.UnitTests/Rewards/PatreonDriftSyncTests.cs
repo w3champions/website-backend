@@ -540,7 +540,7 @@ public class PatreonDriftSyncTests
         var silverMapping = new ProductMapping
         {
             Id = "silver-mapping-id",
-            ProductName = "Silver Tier", 
+            ProductName = "Silver Tier",
             RewardIds = new List<string> { "reward-silver", "reward-common", "reward-premium" },
             ProductProviders = new List<ProductProviderPair>
             {
@@ -620,7 +620,7 @@ public class PatreonDriftSyncTests
 
         // Assert
         Assert.IsTrue(syncResult.Success, $"{scenarioName} should succeed");
-        
+
         if (scenarioName == "DualTierAddition")
         {
             // For missing member scenario, check MembersAdded instead of TiersUpdated
@@ -638,7 +638,7 @@ public class PatreonDriftSyncTests
             $"{scenarioName}: Should trigger reconciliation to handle rewards properly");
 
         // Verify association creation behavior matches expectations
-        _mockAssociationRepository.Verify(x => x.Create(It.Is<ProductMappingUserAssociation>(a => 
+        _mockAssociationRepository.Verify(x => x.Create(It.Is<ProductMappingUserAssociation>(a =>
             a.UserId == battleTag && a.ProviderId == "patreon")), expectedCreateCalls,
             $"{scenarioName}: {expectedBehaviorDescription}");
 
@@ -647,9 +647,9 @@ public class PatreonDriftSyncTests
     }
 
     private async Task VerifyScenarioSpecificRewardBehavior(
-        string scenarioName, 
-        string battleTag, 
-        List<string> currentInternalTiers, 
+        string scenarioName,
+        string battleTag,
+        List<string> currentInternalTiers,
         List<string> newPatreonTiers)
     {
         // Bronze rewards: ["reward-bronze", "reward-common"]
@@ -661,12 +661,12 @@ public class PatreonDriftSyncTests
                 // Fresh patron gains both bronze and silver -> should get all rewards for both tiers
                 await VerifyDualTierAdditionRewards(battleTag);
                 break;
-                
-            case "TierDowngrade": 
+
+            case "TierDowngrade":
                 // User had bronze+silver, loses silver -> should lose silver-specific rewards but keep bronze+common
                 await VerifyTierDowngradeRewards(battleTag);
                 break;
-                
+
             case "TierUpgrade":
                 // User had bronze, gains silver -> should get silver-specific rewards without duplicating common
                 await VerifyTierUpgradeRewards(battleTag);
@@ -679,15 +679,15 @@ public class PatreonDriftSyncTests
         // Fresh patron gets both tiers simultaneously - should create all associations from scratch
         // Key behavior: All rewards should be added properly without any conflicts
         // Expected rewards: reward-bronze, reward-silver, reward-common (once), reward-premium
-        
+
         var reconciliationCalls = _mockReconciliationService.Invocations
-            .Where(i => i.Method.Name == "ReconcileUserAssociations" && 
+            .Where(i => i.Method.Name == "ReconcileUserAssociations" &&
                        (string)i.Arguments[0] == battleTag)
             .ToList();
 
-        Assert.IsTrue(reconciliationCalls.Any(), 
+        Assert.IsTrue(reconciliationCalls.Any(),
             "DualTierAddition: Should have reconciliation calls to assign all rewards for fresh dual-tier patron");
-        
+
         return Task.CompletedTask;
     }
 
@@ -696,32 +696,32 @@ public class PatreonDriftSyncTests
         // User loses silver tier but keeps bronze
         // Should preserve: reward-bronze, reward-common
         // Should remove: reward-silver, reward-premium
-        
+
         var reconciliationCalls = _mockReconciliationService.Invocations
-            .Where(i => i.Method.Name == "ReconcileUserAssociations" && 
+            .Where(i => i.Method.Name == "ReconcileUserAssociations" &&
                        (string)i.Arguments[0] == battleTag)
             .ToList();
 
-        Assert.IsTrue(reconciliationCalls.Any(), 
+        Assert.IsTrue(reconciliationCalls.Any(),
             "TierDowngrade: Should have reconciliation calls to remove silver-specific rewards while preserving bronze");
-        
+
         return Task.CompletedTask;
     }
 
-    private Task VerifyTierUpgradeRewards(string battleTag) 
+    private Task VerifyTierUpgradeRewards(string battleTag)
     {
         // User gains silver tier while keeping bronze
         // Should add: reward-silver, reward-premium
         // Should not duplicate: reward-common (already has from bronze)
-        
+
         var reconciliationCalls = _mockReconciliationService.Invocations
-            .Where(i => i.Method.Name == "ReconcileUserAssociations" && 
+            .Where(i => i.Method.Name == "ReconcileUserAssociations" &&
                        (string)i.Arguments[0] == battleTag)
             .ToList();
 
-        Assert.IsTrue(reconciliationCalls.Any(), 
+        Assert.IsTrue(reconciliationCalls.Any(),
             "TierUpgrade: Should have reconciliation calls to add silver rewards without duplicating shared ones");
-        
+
         return Task.CompletedTask;
     }
 }

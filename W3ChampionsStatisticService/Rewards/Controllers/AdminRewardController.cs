@@ -43,7 +43,7 @@ public class AdminRewardController(
         try
         {
             var allAssignments = await _assignmentRepo.GetAll();
-            
+
             var summary = new
             {
                 totalRewards = 0, // Would need IRewardRepository to get actual count
@@ -59,7 +59,7 @@ public class AdminRewardController(
                 recentAssignments = allAssignments.OrderByDescending(a => a.AssignedAt).Take(10).ToList(),
                 problematicAssignments = allAssignments.Where(a => a.Status == RewardStatus.Failed || !string.IsNullOrEmpty(a.RevokedReason)).Take(10).ToList()
             };
-            
+
             return Ok(summary);
         }
         catch (Exception ex)
@@ -246,7 +246,7 @@ public class AdminRewardController(
         try
         {
             var result = await _reconciliationService.PreviewReconciliation(id);
-            
+
             return Ok(new
             {
                 productMappingId = id,
