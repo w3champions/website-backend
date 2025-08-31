@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
+using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 
 namespace W3ChampionsStatisticService.Rewards.Services;

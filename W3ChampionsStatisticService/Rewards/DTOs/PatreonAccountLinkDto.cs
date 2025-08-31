@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace W3ChampionsStatisticService.Rewards.DTOs;
 
@@ -9,4 +10,5 @@ public class PatreonAccountLinkDto
     public string PatreonUserId { get; set; }
     public DateTime LinkedAt { get; set; }
     public DateTime? LastSyncAt { get; set; }
+    public Dictionary<string, object> Metadata { get; set; }
 }

@@ -30,4 +30,14 @@ public interface IPatreonAccountLinkRepository
     /// Get all Patreon account links
     /// </summary>
     Task<List<PatreonAccountLink>> GetAll();
+
+    /// <summary>
+    /// Delete account link by ID
+    /// </summary>
+    Task Delete(string id);
+
+    /// <summary>
+    /// Delete account link by ObjectId
+    /// </summary>
+    Task Delete(MongoDB.Bson.ObjectId id);
 }

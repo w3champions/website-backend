@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Serilog;
 using W3C.Domain.Rewards.Abstractions;
+using W3C.Domain.Rewards.Constants;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
+using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
@@ -260,6 +262,65 @@ public class PatreonDriftDetectionService(
             result.TotalPatreonMembers, result.ActivePatreonMembers, result.TotalInternalAssignments, result.UniqueInternalUsers);
     }
 
+    /// <summary>
+    /// Pre-loads lookup data to avoid N+1 queries during drift sync
+    /// </summary>
+    private async Task<BatchLookupData> PreLoadBatchLookupData(DriftDetectionResult driftResult)
+    {
+        // Get all Patreon user IDs from missing members
+        var patreonUserIds = driftResult.MissingMembers
+            .Where(m => !string.IsNullOrEmpty(m.PatreonUserId))
+            .Select(m => m.PatreonUserId)
+            .Distinct()
+            .ToList();
+
+        // Get all affected user IDs from extra assignments
+        var userIds = driftResult.ExtraAssignments
+            .Select(e => e.UserId)
+            .Distinct()
+            .ToList();
+
+        // Batch load account links
+        var allAccountLinks = await _patreonLinkRepository.GetAll() ?? new List<PatreonAccountLink>();
+        var patreonUserIdToBattleTag = allAccountLinks
+            .Where(link => !string.IsNullOrEmpty(link.PatreonUserId) && !string.IsNullOrEmpty(link.BattleTag))
+            .ToDictionary(link => link.PatreonUserId, link => link.BattleTag);
+
+        // Batch load all active Patreon associations to avoid individual user lookups
+        var allActiveAssociations = await _associationRepository.GetAll(AssociationStatus.Active) ?? new List<ProductMappingUserAssociation>();
+        var patreonAssociations = allActiveAssociations.Where(a => a.ProviderId == ProviderId).ToList();
+        var userAssociationsLookup = patreonAssociations
+            .Where(a => userIds.Contains(a.UserId))
+            .GroupBy(a => a.UserId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Batch load all product mappings for Patreon
+        var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId) ?? new List<ProductMapping>();
+        // Create dictionary mapping ProductId (tier ID) to ProductMapping for Patreon provider
+        var tierIdToProductMapping = allProductMappings
+            .SelectMany(pm => pm.ProductProviders
+                .Where(pp => pp.ProviderId == ProviderId)
+                .Select(pp => new { TierId = pp.ProductId, Mapping = pm }))
+            .ToDictionary(x => x.TierId, x => x.Mapping);
+
+        return new BatchLookupData
+        {
+            PatreonUserIdToBattleTag = patreonUserIdToBattleTag,
+            UserAssociationsLookup = userAssociationsLookup,
+            TierIdToProductMapping = tierIdToProductMapping
+        };
+    }
+
+    /// <summary>
+    /// Container for pre-loaded lookup data to avoid N+1 queries
+    /// </summary>
+    private class BatchLookupData
+    {
+        public Dictionary<string, string> PatreonUserIdToBattleTag { get; set; } = new();
+        public Dictionary<string, List<ProductMappingUserAssociation>> UserAssociationsLookup { get; set; } = new();
+        public Dictionary<string, ProductMapping> TierIdToProductMapping { get; set; } = new();
+    }
+
     public async Task<SyncResult> SyncDrift(DriftDetectionResult driftResult, bool dryRun = false)
     {
         var syncResult = new SyncResult
@@ -267,6 +328,9 @@ public class PatreonDriftDetectionService(
             SyncTimestamp = DateTime.UtcNow,
             WasDryRun = dryRun
         };
+
+        // Pre-load data for batch operations to avoid N+1 queries
+        var batchLookups = await PreLoadBatchLookupData(driftResult);
 
         try
         {
@@ -295,7 +359,7 @@ public class PatreonDriftDetectionService(
 
                     if (!dryRun)
                     {
-                        await CreateOrUpdateUserAssociation(missingMember, dryRun);
+                        await CreateOrUpdateUserAssociation(missingMember, batchLookups.PatreonUserIdToBattleTag, dryRun);
                     }
 
                     syncResult.MembersAdded++;
@@ -321,7 +385,7 @@ public class PatreonDriftDetectionService(
 
                     if (!dryRun)
                     {
-                        await DeactivateUserAssociation(extraAssignment, dryRun);
+                        await DeactivateUserAssociation(extraAssignment, batchLookups.UserAssociationsLookup, dryRun);
                     }
 
                     syncResult.AssignmentsRevoked++;
@@ -520,16 +584,15 @@ public class PatreonDriftDetectionService(
     }
 
     /// <summary>
-    /// Creates or updates associations for missing member
+    /// Creates or updates associations for missing member with batch-optimized lookups
     /// </summary>
-    private async Task CreateOrUpdateUserAssociation(MissingMember missingMember, bool dryRun = false)
+    private async Task CreateOrUpdateUserAssociation(MissingMember missingMember, Dictionary<string, string> patreonUserIdToBattleTag, bool dryRun = false)
     {
-        // Resolve Patreon user ID to BattleTag
+        // Resolve Patreon user ID to BattleTag using pre-loaded dictionary
         string battleTag = null;
         if (!string.IsNullOrEmpty(missingMember.PatreonUserId))
         {
-            var accountLink = await _patreonLinkRepository.GetByPatreonUserId(missingMember.PatreonUserId);
-            battleTag = accountLink?.BattleTag;
+            patreonUserIdToBattleTag.TryGetValue(missingMember.PatreonUserId, out battleTag);
         }
 
         if (string.IsNullOrEmpty(battleTag))
@@ -539,11 +602,8 @@ public class PatreonDriftDetectionService(
             return;
         }
 
-        // Create associations for each entitled tier
-        foreach (var tierId in missingMember.EntitledTierIds ?? new List<string>())
-        {
-            await CreateOrUpdateAssociation(battleTag, tierId, "drift_sync_missing", skipReconciliation: dryRun);
-        }
+        // Create associations for each entitled tier using batch-optimized method
+        await CreateAssociationsForTiers(battleTag, missingMember.EntitledTierIds ?? new List<string>(), "drift_sync_missing", dryRun);
 
         // Immediately reconcile rewards for this user (unless dry run)
         if (!dryRun)
@@ -556,12 +616,12 @@ public class PatreonDriftDetectionService(
     }
 
     /// <summary>
-    /// Deactivates association for extra assignment
+    /// Deactivates association for extra assignment using batch-optimized lookups
     /// </summary>
-    private async Task DeactivateUserAssociation(ExtraAssignment extraAssignment, bool dryRun = false)
+    private async Task DeactivateUserAssociation(ExtraAssignment extraAssignment, Dictionary<string, List<ProductMappingUserAssociation>> userAssociationsLookup, bool dryRun = false)
     {
-        // Find and deactivate the association
-        var associations = await _associationRepository.GetProductMappingsByUserId(extraAssignment.UserId);
+        // Find and deactivate the association using pre-loaded data
+        var associations = userAssociationsLookup.GetValueOrDefault(extraAssignment.UserId) ?? new List<ProductMappingUserAssociation>();
         var activePatreonAssociations = associations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
         foreach (var association in activePatreonAssociations)
@@ -674,7 +734,68 @@ public class PatreonDriftDetectionService(
     }
 
     /// <summary>
-    /// Creates or updates a single association
+    /// Creates associations for multiple tiers in batch to avoid repeated DB calls
+    /// </summary>
+    private async Task CreateAssociationsForTiers(string battleTag, List<string> tierIds, string source, bool skipReconciliation = false)
+    {
+        if (!tierIds.Any()) return;
+
+        // Get all product mappings for these tiers in one call
+        var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
+        // Filter for mappings that match the tier IDs for Patreon provider
+        var tierMappings = allProductMappings
+            .SelectMany(pm => pm.ProductProviders
+                .Where(pp => pp.ProviderId == ProviderId && tierIds.Contains(pp.ProductId))
+                .Select(pp => new { TierId = pp.ProductId, Mapping = pm }))
+            .ToDictionary(x => x.TierId, x => x.Mapping);
+
+        // Get existing associations for this user
+        var existingAssociations = await _associationRepository.GetProductMappingsByUserId(battleTag);
+        var existingMappingIds = new HashSet<string>(existingAssociations
+            .Where(a => a.IsActive())
+            .Select(a => a.ProductMappingId));
+
+        // Create associations for tiers that don't already exist
+        var associationsToCreate = new List<ProductMappingUserAssociation>();
+        
+        foreach (var tierId in tierIds)
+        {
+            if (tierMappings.TryGetValue(tierId, out var productMapping))
+            {
+                if (!existingMappingIds.Contains(productMapping.Id))
+                {
+                    var association = new ProductMappingUserAssociation
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        UserId = battleTag,
+                        ProductMappingId = productMapping.Id,
+                        ProviderId = ProviderId,
+                        ProviderProductId = tierId,
+                        AssignedAt = DateTime.UtcNow,
+                        Status = AssociationStatus.Active
+                    };
+                    
+                    association.Metadata[MetadataKeys.Source] = source;
+                    associationsToCreate.Add(association);
+                }
+            }
+            else
+            {
+                Log.Warning("No product mapping found for provider {ProviderId} and tier {TierId}", ProviderId, tierId);
+            }
+        }
+
+        // Batch create all new associations
+        foreach (var association in associationsToCreate)
+        {
+            await _associationRepository.Create(association);
+            Log.Information("Created association {AssociationId} for user {UserId} with tier {TierId}",
+                association.Id, battleTag, association.ProviderProductId);
+        }
+    }
+
+    /// <summary>
+    /// Creates or updates a single association (kept for backward compatibility)
     /// </summary>
     private async Task CreateOrUpdateAssociation(string battleTag, string tierId, string source, bool skipReconciliation = false)
     {

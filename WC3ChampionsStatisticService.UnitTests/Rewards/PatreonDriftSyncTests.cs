@@ -10,6 +10,7 @@ using NUnit.Framework;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
+using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Hubs;
@@ -211,6 +212,29 @@ public class PatreonDriftSyncTests
             }
         };
 
+        // Setup product mappings for batch operations
+        var tier1Mapping = new ProductMapping
+        {
+            Id = "tier1-mapping-id",
+            ProductName = "Tier 1",
+            RewardIds = new List<string> { "reward-tier1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tier1" }
+            }
+        };
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { tier1Mapping });
+
+        // Setup account link 
+        _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId("a1b2c3d4-e5f6-7890-abcd-ef1234567890"))
+            .ReturnsAsync(new PatreonAccountLink("TestUser#1234", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
+
+        // Setup empty existing associations for this user
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId("TestUser#1234"))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
         // Act
         var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
 
@@ -219,8 +243,8 @@ public class PatreonDriftSyncTests
         Assert.IsFalse(syncResult.WasDryRun);
         Assert.AreEqual(1, syncResult.MembersAdded);
 
-        // Verify actual association processing happened
-        _mockPatreonLinkRepository.Verify(x => x.GetByPatreonUserId("a1b2c3d4-e5f6-7890-abcd-ef1234567890"), Times.Once);
+        // Verify actual association processing happened (now uses batch GetAll instead of individual calls)
+        _mockPatreonLinkRepository.Verify(x => x.GetAll(), Times.AtLeastOnce);
 
         // The exact verification depends on the association creation logic
         // This test may need more setup for product mappings
@@ -492,9 +516,14 @@ public class PatreonDriftSyncTests
         var patreonUserId = $"{scenarioName.ToLower()}-user-id";
         var patreonMemberId = $"{scenarioName.ToLower()}-member-id";
 
-        // Setup account link
+        // Setup account link for individual query (backward compatibility)
         _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId(patreonUserId))
             .ReturnsAsync(new PatreonAccountLink(battleTag, patreonUserId));
+
+        // Setup account link for batch operations
+        var accountLink = new PatreonAccountLink(battleTag, patreonUserId);
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { accountLink });
 
         // Setup product mappings for both tiers
         var bronzeMapping = new ProductMapping
@@ -524,6 +553,10 @@ public class PatreonDriftSyncTests
 
         _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "silver-tier"))
             .ReturnsAsync(new List<ProductMapping> { silverMapping });
+
+        // Setup batch GetByProviderId for CreateAssociationsForTiers optimization
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { bronzeMapping, silverMapping });
 
         // Setup existing associations
         _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(battleTag))

@@ -7,6 +7,7 @@ using Moq;
 using NUnit.Framework;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
+using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Services;

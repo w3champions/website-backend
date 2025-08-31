@@ -9,6 +9,8 @@ using MongoDB.Driver;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
+using W3C.Domain.Rewards.Exceptions;
+using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Hubs;
@@ -36,19 +38,19 @@ public class RewardService(
     public async Task<RewardAssignment> ProcessRewardEvent(RewardEvent rewardEvent)
     {
         if (rewardEvent == null)
-            throw new ArgumentNullException(nameof(rewardEvent));
+            throw new RewardsValidationException("Reward event cannot be null", nameof(rewardEvent));
 
         if (string.IsNullOrEmpty(rewardEvent.ProviderId))
-            throw new ArgumentException("ProviderId cannot be null or empty", nameof(rewardEvent));
+            throw new RewardsValidationException("ProviderId cannot be null or empty", nameof(rewardEvent.ProviderId));
 
         if (string.IsNullOrEmpty(rewardEvent.UserId))
-            throw new ArgumentException("UserId cannot be null or empty", nameof(rewardEvent));
+            throw new RewardsValidationException("UserId cannot be null or empty", nameof(rewardEvent.UserId));
 
         if (string.IsNullOrEmpty(rewardEvent.ProviderReference))
-            throw new ArgumentException("ProviderReference cannot be null or empty", nameof(rewardEvent));
+            throw new RewardsValidationException("ProviderReference cannot be null or empty", nameof(rewardEvent.ProviderReference));
 
         if (rewardEvent.EntitledTierIds == null)
-            throw new ArgumentException("EntitledTierIds cannot be null", nameof(rewardEvent));
+            throw new RewardsValidationException("EntitledTierIds cannot be null", nameof(rewardEvent.EntitledTierIds));
 
         try
         {
@@ -59,12 +61,12 @@ public class RewardService(
             // Validate provider is supported and enabled
             if (!ProviderDefinitions.IsProviderSupported(rewardEvent.ProviderId))
             {
-                throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not supported");
+                throw new ProviderIntegrationException($"Provider {rewardEvent.ProviderId} is not supported", rewardEvent.ProviderId);
             }
 
             if (!ProviderDefinitions.IsProviderEnabled(rewardEvent.ProviderId))
             {
-                throw new InvalidOperationException($"Provider {rewardEvent.ProviderId} is not enabled");
+                throw new ProviderIntegrationException($"Provider {rewardEvent.ProviderId} is not enabled", rewardEvent.ProviderId);
             }
 
             // Get previous entitled tiers from the database for diffing
@@ -86,7 +88,7 @@ public class RewardService(
                 var productMappings = await _productMappingRepo.GetByProviderAndProductId(rewardEvent.ProviderId, tierId);
                 if (!productMappings.Any())
                 {
-                    throw new InvalidOperationException($"No product mapping found for removed tier {tierId} from provider {rewardEvent.ProviderId}");
+                    throw new ProductMappingException($"No product mapping found for removed tier {tierId} from provider {rewardEvent.ProviderId}");
                 }
 
                 // Process all mappings that match this provider/product combination
@@ -102,7 +104,7 @@ public class RewardService(
                 var productMappings = await _productMappingRepo.GetByProviderAndProductId(rewardEvent.ProviderId, tierId);
                 if (!productMappings.Any())
                 {
-                    throw new InvalidOperationException($"No product mapping found for added tier {tierId} from provider {rewardEvent.ProviderId}");
+                    throw new ProductMappingException($"No product mapping found for added tier {tierId} from provider {rewardEvent.ProviderId}");
                 }
 
                 // Process all mappings that match this provider/product combination
@@ -314,7 +316,7 @@ public class RewardService(
         var reward = await _rewardRepo.GetById(rewardId);
         if (reward == null)
         {
-            throw new InvalidOperationException($"Reward {rewardId} not found");
+            throw new RewardsNotFoundException("Reward", rewardId);
         }
 
         // Generate unique EventId per assignment to avoid duplicate key errors while maintaining webhook idempotency
@@ -377,7 +379,7 @@ public class RewardService(
 
             // Find and return the existing assignment
             var existing = await _assignmentRepo.GetByProviderReference(providerId, providerReference);
-            return existing.FirstOrDefault() ?? throw new InvalidOperationException("Duplicate key error but no existing assignment found");
+            return existing.FirstOrDefault() ?? throw new RewardsConcurrencyException("RewardAssignment", $"UserId: {assignment.UserId}, RewardId: {assignment.RewardId}");
         }
     }
 
@@ -564,7 +566,7 @@ public class RewardService(
         {
             _logger.LogError(ex, "Failed to process tier removal for {TierId}, user {UserId}",
                 tierId, rewardEvent.UserId);
-            throw new InvalidOperationException($"Failed to process tier removal for {tierId}", ex);
+            throw new RewardRevocationException($"Failed to process tier removal for {tierId}", ex);
         }
     }
 
@@ -598,7 +600,7 @@ public class RewardService(
         {
             _logger.LogError(ex, "Failed to process tier addition for {TierId}, user {UserId}",
                 tierId, rewardEvent.UserId);
-            throw new InvalidOperationException($"Failed to process tier addition for {tierId}", ex);
+            throw new RewardAssignmentException($"Failed to process tier addition for {tierId}", ex);
         }
     }
 

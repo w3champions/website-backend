@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
+using W3C.Domain.Common.Services;
 using W3C.Domain.Rewards.ValueObjects;
 
 namespace W3C.Domain.Rewards.Entities;
 
-public class RewardAssignment : IIdentifiable
+public class RewardAssignment : IIdentifiable, IVersioned
 {
     [BsonId]
     public string Id { get; set; }
@@ -21,6 +22,12 @@ public class RewardAssignment : IIdentifiable
     public DateTime? RevokedAt { get; set; }
     public string RevokedReason { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();
+    
+    /// <summary>
+    /// Version field for optimistic concurrency control
+    /// </summary>
+    [BsonElement("_version")]
+    public long Version { get; set; } = 0;
 
     public bool IsActive() => Status == RewardStatus.Active && !IsExpired();
     public bool IsExpired() => ExpiresAt.HasValue && ExpiresAt.Value <= DateTime.UtcNow;

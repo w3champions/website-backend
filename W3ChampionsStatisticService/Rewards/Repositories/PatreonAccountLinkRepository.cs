@@ -9,9 +9,11 @@ using Serilog;
 using W3C.Domain.Repositories;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
+using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Common.Services;
 using W3ChampionsStatisticService.Rewards.Services;
 
 namespace W3ChampionsStatisticService.Rewards.Repositories;
@@ -220,5 +222,16 @@ public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccou
     public Task<List<PatreonAccountLink>> GetAll()
     {
         return LoadAll<PatreonAccountLink>();
+    }
+
+    public Task Delete(string id)
+    {
+        var objectId = ObjectId.Parse(id);
+        return Delete<PatreonAccountLink>(link => link.Id == objectId);
+    }
+
+    public Task Delete(ObjectId id)
+    {
+        return Delete<PatreonAccountLink>(link => link.Id == id);
     }
 }

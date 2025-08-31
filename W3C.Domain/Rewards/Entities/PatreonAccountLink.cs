@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
@@ -32,6 +33,11 @@ public class PatreonAccountLink : IIdentifiable
     /// Last time this link was used for reward sync
     /// </summary>
     public DateTime? LastSyncAt { get; set; }
+
+    /// <summary>
+    /// Additional metadata for the account link
+    /// </summary>
+    public Dictionary<string, object> Metadata { get; set; } = new();
 
     public PatreonAccountLink()
     {
