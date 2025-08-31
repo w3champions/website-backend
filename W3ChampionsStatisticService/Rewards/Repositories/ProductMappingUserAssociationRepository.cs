@@ -13,14 +13,11 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Rewards.Repositories;
 
 [Trace]
-public class ProductMappingUserAssociationRepository : MongoDbRepositoryBase, IProductMappingUserAssociationRepository
+public class ProductMappingUserAssociationRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IProductMappingUserAssociationRepository, IRequiresIndexes
 {
-    public ProductMappingUserAssociationRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-        EnsureIndexes();
-    }
+    public string CollectionName => "ProductMappingUserAssociation";
 
-    private void EnsureIndexes()
+    public async Task EnsureIndexesAsync()
     {
         var collection = CreateCollection<ProductMappingUserAssociation>();
 
@@ -50,14 +47,13 @@ public class ProductMappingUserAssociationRepository : MongoDbRepositoryBase, IP
             Builders<ProductMappingUserAssociation>.IndexKeys.Ascending(x => x.Status),
             new CreateIndexOptions { Name = "IX_Status", Background = true });
 
-        collection.Indexes.CreateMany(new[] {
+        await collection.Indexes.CreateManyAsync([
             userProductMappingStatusIndex,
             userIdIndex,
             productMappingIdIndex,
             providerProductIndex,
             statusIndex
-        });
-        Log.Information("Ensured performance indexes on ProductMappingUserAssociation collection");
+        ]);
     }
     public Task<List<ProductMappingUserAssociation>> GetUsersByProductMappingId(string productMappingId)
     {

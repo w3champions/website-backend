@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Common.Repositories;
 using W3C.Domain.Common.Services;
+using W3C.Domain.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Rewards.BackgroundServices;
@@ -25,6 +26,11 @@ public static class RewardServiceExtensions
         services.AddInterceptedScoped<IProductMappingRepository, ProductMappingRepository>();
         services.AddInterceptedScoped<IProductMappingUserAssociationRepository, ProductMappingUserAssociationRepository>();
         services.AddInterceptedScoped<IPatreonAccountLinkRepository, PatreonAccountLinkRepository>();
+        
+        // Register repositories that require indexes for startup initialization
+        services.AddInterceptedScoped<IRequiresIndexes, RewardAssignmentRepository>();
+        services.AddInterceptedScoped<IRequiresIndexes, ProductMappingUserAssociationRepository>();
+        services.AddInterceptedScoped<IRequiresIndexes, PatreonAccountLinkRepository>();
 
         // Core services
         services.AddInterceptedTransient<IRewardService, RewardService>();

@@ -14,20 +14,14 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Rewards.Repositories;
 
 [Trace]
-public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignmentRepository
+public class RewardAssignmentRepository(MongoClient mongoClient, IOptimisticConcurrencyService concurrencyService) : MongoDbRepositoryBase(mongoClient), IRewardAssignmentRepository, IRequiresIndexes
 {
-    private readonly IOptimisticConcurrencyService _concurrencyService;
+    private readonly IOptimisticConcurrencyService _concurrencyService = concurrencyService;
 
-    public RewardAssignmentRepository(MongoClient mongoClient, IOptimisticConcurrencyService concurrencyService) : base(mongoClient)
-    {
-        _concurrencyService = concurrencyService;
-        EnsureIndexes();
-    }
+    public string CollectionName => "RewardAssignment";
 
-    private void EnsureIndexes()
+    public async Task EnsureIndexesAsync()
     {
-        // try
-        // {
         var collection = CreateCollection<RewardAssignment>();
 
         // Create unique index on EventId for webhook idempotency
@@ -65,7 +59,7 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
             Builders<RewardAssignment>.IndexKeys.Descending(x => x.AssignedAt),
             new CreateIndexOptions { Name = "IX_AssignedAt_Desc", Background = true });
 
-        collection.Indexes.CreateMany(new[] {
+        await collection.Indexes.CreateManyAsync(new[] {
                 eventIdIndex,
                 userStatusProviderIndex,
                 userIdIndex,
@@ -73,17 +67,6 @@ public class RewardAssignmentRepository : MongoDbRepositoryBase, IRewardAssignme
                 providerIdIndex,
                 assignedAtIndex
             });
-        Log.Information("Ensured performance indexes on RewardAssignment collection");
-        // }
-        // catch (MongoCommandException ex) when (ex.Code == 85) // IndexOptionsConflict
-        // {
-        //     Log.Information("EventId unique index already exists on RewardAssignment collection");
-        // }
-        // catch (Exception ex)
-        // {
-        //     Log.Fatal(ex, "Failed to create required EventId unique index on RewardAssignment collection");
-        //     throw;
-        // }
     }
     public Task<RewardAssignment> GetById(string assignmentId)
     {

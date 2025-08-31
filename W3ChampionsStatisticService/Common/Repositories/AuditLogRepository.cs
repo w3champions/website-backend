@@ -11,14 +11,11 @@ namespace W3ChampionsStatisticService.Common.Repositories;
 /// <summary>
 /// MongoDB implementation of audit log repository
 /// </summary>
-public class AuditLogRepository : MongoDbRepositoryBase, IAuditLogRepository
+public class AuditLogRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IAuditLogRepository, IRequiresIndexes
 {
-    public AuditLogRepository(MongoClient mongoClient) : base(mongoClient)
-    {
-        EnsureIndexes();
-    }
+    public string CollectionName => "AuditLogEntry";
 
-    private void EnsureIndexes()
+    public async Task EnsureIndexesAsync()
     {
         var collection = CreateCollection<AuditLogEntry>();
 
@@ -46,7 +43,7 @@ public class AuditLogRepository : MongoDbRepositoryBase, IAuditLogRepository
                 .Ascending(x => x.EntityType)
                 .Ascending(x => x.EntityId));
 
-        collection.Indexes.CreateMany(new[]
+        await collection.Indexes.CreateManyAsync(new[]
         {
                 adminIndex,
                 userIndex,

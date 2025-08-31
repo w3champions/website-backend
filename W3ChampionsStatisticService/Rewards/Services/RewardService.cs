@@ -443,7 +443,8 @@ public class RewardService(
         // Broadcast to all connected clients
         if (_hubContext != null)
         {
-            await _hubContext.Clients.All.SendAsync("DonationAnnouncement", announcement);
+            // Temporarily disabled for launch
+            //await _hubContext.Clients.All.SendAsync("DonationAnnouncement", announcement);
         }
 
         _logger.LogInformation("Donation announcement: {UserId} donated {Amount} {Currency}",
@@ -464,7 +465,8 @@ public class RewardService(
         // Broadcast to all connected clients
         if (_hubContext != null)
         {
-            await _hubContext.Clients.All.SendAsync("SubscriberAnnouncement", announcement);
+            // Temporarily disabled for launch
+            //await _hubContext.Clients.All.SendAsync("SubscriberAnnouncement", announcement);
         }
 
         _logger.LogInformation("New subscriber announcement: {UserId} via {Provider}",

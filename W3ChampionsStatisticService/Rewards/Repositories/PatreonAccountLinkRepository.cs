@@ -19,43 +19,31 @@ using W3ChampionsStatisticService.Rewards.Services;
 namespace W3ChampionsStatisticService.Rewards.Repositories;
 
 [Trace]
-public class PatreonAccountLinkRepository : MongoDbRepositoryBase, IPatreonAccountLinkRepository
+public class PatreonAccountLinkRepository(
+    MongoClient mongoClient,
+    IRewardAssignmentRepository assignmentRepo,
+    IServiceProvider serviceProvider) : MongoDbRepositoryBase(mongoClient), IPatreonAccountLinkRepository, IRequiresIndexes
 {
-    private readonly IRewardAssignmentRepository _assignmentRepo;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-    public PatreonAccountLinkRepository(
-        MongoClient mongoClient,
-        IRewardAssignmentRepository assignmentRepo,
-        IServiceProvider serviceProvider) : base(mongoClient)
+    public string CollectionName => "PatreonAccountLink";
+
+    public async Task EnsureIndexesAsync()
     {
-        _assignmentRepo = assignmentRepo;
-        _serviceProvider = serviceProvider;
-        EnsureIndexes();
-    }
+        var collection = CreateCollection<PatreonAccountLink>();
 
-    private void EnsureIndexes()
-    {
-        try
-        {
-            var collection = CreateCollection<PatreonAccountLink>();
+        // Create unique index on BattleTag
+        var battleTagIndex = new CreateIndexModel<PatreonAccountLink>(
+            Builders<PatreonAccountLink>.IndexKeys.Ascending(x => x.BattleTag),
+            new CreateIndexOptions { Unique = true });
 
-            // Create unique index on BattleTag
-            var battleTagIndex = new CreateIndexModel<PatreonAccountLink>(
-                Builders<PatreonAccountLink>.IndexKeys.Ascending(x => x.BattleTag),
-                new CreateIndexOptions { Unique = true });
+        // Create unique index on PatreonUserId
+        var patreonUserIdIndex = new CreateIndexModel<PatreonAccountLink>(
+            Builders<PatreonAccountLink>.IndexKeys.Ascending(x => x.PatreonUserId),
+            new CreateIndexOptions { Unique = true });
 
-            // Create unique index on PatreonUserId
-            var patreonUserIdIndex = new CreateIndexModel<PatreonAccountLink>(
-                Builders<PatreonAccountLink>.IndexKeys.Ascending(x => x.PatreonUserId),
-                new CreateIndexOptions { Unique = true });
-
-            collection.Indexes.CreateMany(new[] { battleTagIndex, patreonUserIdIndex });
-        }
-        catch
-        {
-            // Indexes may already exist, ignore errors
-        }
+        await collection.Indexes.CreateManyAsync(new[] { battleTagIndex, patreonUserIdIndex });
     }
 
     public async Task<PatreonAccountLink> GetByBattleTag(string battleTag)

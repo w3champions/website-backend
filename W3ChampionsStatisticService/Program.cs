@@ -215,6 +215,9 @@ builder.Services.AddCommonServices();
 // Rewards services
 builder.Services.AddRewardServices();
 
+// MongoDB index initialization service - runs once at startup
+builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();
+
 builder.Services.AddDirectoryBrowser();
 
 string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
