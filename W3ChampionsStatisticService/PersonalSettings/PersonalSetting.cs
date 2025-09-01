@@ -9,6 +9,7 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3C.Domain.Tracing;
 using MongoDB.Bson;
+using Serilog;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
@@ -42,7 +43,10 @@ public class PersonalSetting : IVersionable, IIdentifiable
     [BsonIgnoreIfNull]
     public SpecialPicture[] SpecialPictures { get; set; } = [];
     public string ChatAlias { get; set; }
-    public string ChatColor { get; set; }
+    public List<string> ChatColors { get; set; } = new List<string>();
+    public List<string> ChatIcons { get; set; } = new List<string>();
+    public string SelectedChatColor { get; set; }
+    public List<string> SelectedChatIcons { get; set; } = new List<string>();
     public AkaSettings AliasSettings { get; set; }
 
     [Trace]
@@ -87,6 +91,21 @@ public class PersonalSetting : IVersionable, IIdentifiable
     public void UpdateSpecialPictures(SpecialPicture[] specialPictures)
     {
         SpecialPictures = specialPictures;
+
+        // If the currently selected profile picture is a Special portrait that is no longer available,
+        // reset it to a Starter portrait via SetProfilePicture.
+        if (ProfilePicture != null
+            && ProfilePicture.Race == AvatarCategory.Special
+            && (SpecialPictures == null || !SpecialPictures.Any(x => x.PictureId == ProfilePicture.PictureId)))
+        {
+            Log.Information("Resetting profile picture to Starter portrait for user {UserId}", Id);
+            SetProfilePicture(new SetPictureCommand
+            {
+                avatarCategory = AvatarCategory.Starter,
+                pictureId = 1,
+                isClassic = false
+            });
+        }
     }
 
     public List<AvatarCategoryToMaxPictureId> PickablePictures =>
@@ -133,6 +152,20 @@ public class PersonalSetting : IVersionable, IIdentifiable
         HomePage = dto.HomePage;
         Country = dto.Country;
         CountryCode = dto.CountryCode;
+        ChatColors = dto.ChatColors ?? new List<string>();
+        ChatIcons = dto.ChatIcons ?? new List<string>();
+        SelectedChatColor = dto.SelectedChatColor;
+
+        // Validate and set selected chat icons (maximum 3)
+        if (dto.SelectedChatIcons != null)
+        {
+            SelectedChatIcons = dto.SelectedChatIcons.Take(3).ToList();
+        }
+        else
+        {
+            SelectedChatIcons = new List<string>();
+        }
+
         AliasSettings = dto.AliasSettings;
     }
 

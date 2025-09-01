@@ -42,6 +42,8 @@ using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3ChampionsStatisticService.Rewards.Portraits;
+using W3ChampionsStatisticService.Common.Extensions;
+using W3ChampionsStatisticService.Rewards.Extensions;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -62,6 +64,7 @@ using Serilog.Formatting.Json;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Services.Tracing;
+using W3ChampionsStatisticService.Rewards.Middleware;
 
 const string WEBSITE_BACKEND_HUB_PATH = "/websiteBackendHub";
 
@@ -206,6 +209,15 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
 
+// Common services (audit logging, optimistic concurrency)
+builder.Services.AddCommonServices();
+
+// Rewards services
+builder.Services.AddRewardServices();
+
+// MongoDB index initialization service - runs once at startup
+builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();
+
 builder.Services.AddDirectoryBrowser();
 
 string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
@@ -274,6 +286,9 @@ app.Use(
 );
 
 app.UseRouting();
+
+// Add Rewards exception handling middleware
+app.UseMiddleware<RewardsExceptionHandlingMiddleware>();
 
 // Add authentication and authorization middleware
 app.UseAuthentication();
