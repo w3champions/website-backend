@@ -70,7 +70,8 @@ public class ProductMappingController(
 
     [HttpPost]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> CreateProductMapping([FromBody] CreateProductMappingRequest request, string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> CreateProductMapping([FromBody] CreateProductMappingRequest request, string actingPlayer)
     {
         try
         {
@@ -91,7 +92,7 @@ public class ProductMappingController(
                 mapping.Id, mapping.ProductName, string.Join(", ", mapping.RewardIds));
 
             // Log audit event
-            await _auditLogService.LogAdminAction(battleTag, "CREATE", "ProductMapping", mapping.Id,
+            await _auditLogService.LogAdminAction(actingPlayer, "CREATE", "ProductMapping", mapping.Id,
                 oldValue: null, newValue: mapping);
 
             return Ok(mapping);
@@ -115,7 +116,8 @@ public class ProductMappingController(
 
     [HttpPut("{id}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> UpdateProductMapping(string id, [FromBody] UpdateProductMappingRequest request, string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> UpdateProductMapping(string id, [FromBody] UpdateProductMappingRequest request, string actingPlayer)
     {
         try
         {
@@ -171,7 +173,7 @@ public class ProductMappingController(
             _logger.LogInformation("Updated product mapping {MappingId}", id);
 
             // Log audit event
-            await _auditLogService.LogAdminAction(battleTag, "UPDATE", "ProductMapping", id,
+            await _auditLogService.LogAdminAction(actingPlayer, "UPDATE", "ProductMapping", id,
                 oldValue: originalMapping, newValue: existingMapping);
 
             // Trigger automatic reconciliation if rewards changed
@@ -195,7 +197,7 @@ public class ProductMappingController(
                             id, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked, reconciliationResult.Success);
 
                         // Log audit event for the automatic reconciliation
-                        await _auditLogService.LogAdminAction(battleTag, "AUTO_RECONCILE", "ProductMapping", id,
+                        await _auditLogService.LogAdminAction(actingPlayer, "AUTO_RECONCILE", "ProductMapping", id,
                             metadata: new Dictionary<string, object>
                             {
                                 ["triggered_by"] = "product_mapping_update",
@@ -233,7 +235,8 @@ public class ProductMappingController(
 
     [HttpDelete("{id}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> DeleteProductMapping(string id, string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> DeleteProductMapping(string id, string actingPlayer)
     {
         try
         {
@@ -261,7 +264,7 @@ public class ProductMappingController(
             _logger.LogInformation("Deleted product mapping {MappingId}: {ProductName}", id, mapping.ProductName);
 
             // Log audit event
-            await _auditLogService.LogAdminAction(battleTag, "DELETE", "ProductMapping", id,
+            await _auditLogService.LogAdminAction(actingPlayer, "DELETE", "ProductMapping", id,
                 oldValue: mapping, newValue: null);
 
             return NoContent();

@@ -25,17 +25,18 @@ public class RewardDriftDetectionController(
 
     [HttpPost("patreon/detect")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> DetectPatreonDrift(string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> DetectPatreonDrift(string actingPlayer)
     {
         try
         {
-            _logger.LogInformation("Manual Patreon drift detection triggered by {BattleTag}", battleTag);
+            _logger.LogInformation("Manual Patreon drift detection triggered by {BattleTag}", actingPlayer);
 
             var result = await _patreonDriftService.DetectDrift();
 
             // Log audit event
             var totalAffected = result.MissingMembers.Count + result.ExtraAssignments.Count + result.MismatchedTiers.Count;
-            await _auditLogService.LogSystemAction(battleTag, "DRIFT_DETECTION", "DETECT", "patreon", totalAffected,
+            await _auditLogService.LogSystemAction(actingPlayer, "DRIFT_DETECTION", "DETECT", "patreon", totalAffected,
                 new Dictionary<string, object>
                 {
                     ["has_drift"] = result.HasDrift,
@@ -83,16 +84,17 @@ public class RewardDriftDetectionController(
 
     [HttpPost("patreon/sync")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> SyncPatreonDrift([FromBody] DriftDetectionSyncRequest request, [FromQuery] bool dryRun = true, string battleTag = "")
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> SyncPatreonDrift([FromBody] DriftDetectionSyncRequest request, string actingPlayer, [FromQuery] bool dryRun = true)
     {
         try
         {
-            _logger.LogInformation("Patreon drift sync triggered by {BattleTag}, DryRun: {DryRun}", battleTag, dryRun);
+            _logger.LogInformation("Patreon drift sync triggered by {BattleTag}, DryRun: {DryRun}", actingPlayer, dryRun);
 
             var result = await _patreonDriftService.SyncDrift(request.DriftResult, dryRun);
 
             // Log audit event
-            await _auditLogService.LogSystemAction(battleTag, "DRIFT_SYNC", dryRun ? "PREVIEW" : "EXECUTE", "patreon",
+            await _auditLogService.LogSystemAction(actingPlayer, "DRIFT_SYNC", dryRun ? "PREVIEW" : "EXECUTE", "patreon",
                 result.MembersAdded + result.TiersUpdated,
                 new Dictionary<string, object>
                 {
