@@ -76,7 +76,7 @@ public class PatreonApiClient
                 {
                     foreach (var memberData in apiResponse.Data)
                     {
-                        var member = ParseMemberData(memberData, apiResponse.Included);
+                        var member = ParseMemberData(memberData);
                         if (member != null)
                         {
                             allMembers.Add(member);
@@ -165,7 +165,7 @@ public class PatreonApiClient
             }
 
             // Parse membership data into PatreonMember
-            var member = ParseMemberData(membershipData, apiResponse.Included);
+            var member = ParseMemberData(membershipData);
             if (member != null)
             {
                 member.PatreonUserId = patreonUserId;
@@ -182,7 +182,7 @@ public class PatreonApiClient
         }
     }
 
-    private PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included)
+    private PatreonMember ParseMemberData(PatreonApiData memberData)
     {
         try
         {

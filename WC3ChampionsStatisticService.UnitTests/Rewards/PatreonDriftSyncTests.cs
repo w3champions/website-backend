@@ -642,14 +642,12 @@ public class PatreonDriftSyncTests
             $"{scenarioName}: {expectedBehaviorDescription}");
 
         // Perform scenario-specific reward verification
-        await VerifyScenarioSpecificRewardBehavior(scenarioName, battleTag, currentInternalTiers, newPatreonTiers);
+        await VerifyScenarioSpecificRewardBehavior(scenarioName, battleTag);
     }
 
     private async Task VerifyScenarioSpecificRewardBehavior(
         string scenarioName,
-        string battleTag,
-        List<string> currentInternalTiers,
-        List<string> newPatreonTiers)
+        string battleTag)
     {
         // Bronze rewards: ["reward-bronze", "reward-common"]
         // Silver rewards: ["reward-silver", "reward-common", "reward-premium"]

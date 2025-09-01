@@ -58,7 +58,7 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
         {
             try
             {
-                await RunDriftDetection(stoppingToken);
+                await RunDriftDetection();
             }
             catch (Exception ex)
             {
@@ -70,7 +70,7 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
         }
     }
 
-    private async Task RunDriftDetection(CancellationToken cancellationToken)
+    private async Task RunDriftDetection()
     {
         _logger.LogInformation("Starting scheduled drift detection run");
 
