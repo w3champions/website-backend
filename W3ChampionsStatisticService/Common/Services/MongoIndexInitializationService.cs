@@ -32,7 +32,7 @@ public class MongoIndexInitializationService(
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            
+
             // Get all repositories that require indexes
             var repositoriesWithIndexes = scope.ServiceProvider
                 .GetServices<IRequiresIndexes>()
@@ -44,11 +44,11 @@ public class MongoIndexInitializationService(
                 return;
             }
 
-            _logger.LogInformation("Found {Count} repositories requiring index initialization", 
+            _logger.LogInformation("Found {Count} repositories requiring index initialization",
                 repositoriesWithIndexes.Count);
 
             var tasks = new List<Task>();
-            
+
             foreach (var repository in repositoriesWithIndexes)
             {
                 // Create indexes in parallel for better performance
@@ -58,15 +58,15 @@ public class MongoIndexInitializationService(
             await Task.WhenAll(tasks);
 
             stopwatch.Stop();
-            _logger.LogInformation("MongoDB index initialization completed in {ElapsedMs}ms", 
+            _logger.LogInformation("MongoDB index initialization completed in {ElapsedMs}ms",
                 stopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during MongoDB index initialization after {ElapsedMs}ms", 
+            _logger.LogError(ex, "Error during MongoDB index initialization after {ElapsedMs}ms",
                 stopwatch.ElapsedMilliseconds);
-            
+
             // Don't throw - we don't want to prevent the application from starting
             // if index creation fails. The indexes can be created manually if needed.
         }
@@ -83,18 +83,18 @@ public class MongoIndexInitializationService(
             }
 
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogInformation("Creating indexes for collection: {CollectionName}", 
+            _logger.LogInformation("Creating indexes for collection: {CollectionName}",
                 repository.CollectionName);
-            
+
             await repository.EnsureIndexesAsync();
-            
+
             stopwatch.Stop();
-            _logger.LogInformation("Successfully created indexes for collection: {CollectionName} in {ElapsedMs}ms", 
+            _logger.LogInformation("Successfully created indexes for collection: {CollectionName} in {ElapsedMs}ms",
                 repository.CollectionName, stopwatch.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create indexes for collection: {CollectionName}", 
+            _logger.LogError(ex, "Failed to create indexes for collection: {CollectionName}",
                 repository.CollectionName);
             // Don't throw - continue with other repositories
         }

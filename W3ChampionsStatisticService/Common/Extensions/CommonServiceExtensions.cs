@@ -14,7 +14,7 @@ public static class CommonServiceExtensions
     {
         // Common repositories
         services.AddInterceptedScoped<IAuditLogRepository, AuditLogRepository>();
-        
+
         // Register repositories that require indexes for startup initialization
         services.AddInterceptedScoped<IRequiresIndexes, AuditLogRepository>();
 

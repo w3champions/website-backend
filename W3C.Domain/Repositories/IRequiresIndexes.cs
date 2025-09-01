@@ -14,7 +14,7 @@ public interface IRequiresIndexes
     /// This method should be idempotent - safe to call multiple times.
     /// </summary>
     Task EnsureIndexesAsync();
-    
+
     /// <summary>
     /// The name of the MongoDB collection this repository manages.
     /// Used for logging and diagnostics during index creation.
