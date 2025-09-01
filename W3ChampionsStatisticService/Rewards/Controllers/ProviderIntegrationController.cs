@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -31,7 +33,7 @@ public class ProviderIntegrationController(
 
     [HttpGet]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> GetProviderConfigurations()
+    public IActionResult GetProviderConfigurations()
     {
         var result = ProviderDefinitions.GetAllProviders().Select(provider => new
         {

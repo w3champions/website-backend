@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using W3C.Domain.Common.Exceptions;
 

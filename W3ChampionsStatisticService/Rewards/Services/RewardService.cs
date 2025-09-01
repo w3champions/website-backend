@@ -174,7 +174,7 @@ public class RewardService(
         // Send announcement if amount is provided and public
         if (rewardEvent.AnnouncementAmount.HasValue)
         {
-            await SendDonationAnnouncement(rewardEvent);
+            SendDonationAnnouncement(rewardEvent);
         }
 
         return lastAssignment;
@@ -227,7 +227,7 @@ public class RewardService(
         }
 
         // Send new subscriber announcement
-        await SendSubscriberAnnouncement(rewardEvent, "new");
+        SendSubscriberAnnouncement(rewardEvent, "new");
 
         return lastAssignment;
     }
@@ -428,7 +428,7 @@ public class RewardService(
         }
     }
 
-    private async Task SendDonationAnnouncement(RewardEvent rewardEvent)
+    private void SendDonationAnnouncement(RewardEvent rewardEvent)
     {
         var announcement = new
         {
@@ -451,7 +451,7 @@ public class RewardService(
             rewardEvent.UserId, rewardEvent.AnnouncementAmount, rewardEvent.Currency);
     }
 
-    private async Task SendSubscriberAnnouncement(RewardEvent rewardEvent, string type)
+    private void SendSubscriberAnnouncement(RewardEvent rewardEvent, string type)
     {
         var announcement = new
         {

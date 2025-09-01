@@ -255,7 +255,6 @@ public class PatreonDriftSyncTests
     {
         // Arrange
         const string battleTag = "TestUser#1234";
-        const string patreonUserId = "patreon-user-123";
 
         var activeAssociations = new List<ProductMappingUserAssociation>
         {
