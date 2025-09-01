@@ -23,7 +23,7 @@ public class RewardService(
     IRewardAssignmentRepository assignmentRepo,
     IProductMappingRepository productMappingRepo,
     IProductMappingUserAssociationRepository associationRepo,
-    IServiceProvider serviceProvider,
+    IServiceScopeFactory serviceScopeFactory,
     ILogger<RewardService> logger,
     IHubContext<WebsiteBackendHub> hubContext) : IRewardService
 {
@@ -31,7 +31,7 @@ public class RewardService(
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
     private readonly IProductMappingRepository _productMappingRepo = productMappingRepo;
     private readonly IProductMappingUserAssociationRepository _associationRepo = associationRepo;
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory;
     private readonly ILogger<RewardService> _logger = logger;
     private readonly IHubContext<WebsiteBackendHub> _hubContext = hubContext;
 
@@ -384,7 +384,8 @@ public class RewardService(
 
     private async Task ApplyRewardModule(RewardAssignment assignment, Reward reward)
     {
-        var modules = _serviceProvider.GetServices<IRewardModule>();
+        using var scope = _serviceScopeFactory.CreateScope();
+        var modules = scope.ServiceProvider.GetServices<IRewardModule>();
         var module = modules.FirstOrDefault(m => m.ModuleId == reward.ModuleId);
 
         if (module != null)
@@ -411,7 +412,8 @@ public class RewardService(
         var reward = await _rewardRepo.GetById(assignment.RewardId);
         if (reward == null) return;
 
-        var modules = _serviceProvider.GetServices<IRewardModule>();
+        using var scope = _serviceScopeFactory.CreateScope();
+        var modules = scope.ServiceProvider.GetServices<IRewardModule>();
         var module = modules.FirstOrDefault(m => m.ModuleId == reward.ModuleId);
 
         if (module != null)
