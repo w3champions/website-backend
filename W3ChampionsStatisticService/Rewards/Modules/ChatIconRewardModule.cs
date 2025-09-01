@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.Rewards.Abstractions;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using Serilog;
 
@@ -38,23 +39,24 @@ public class ChatIconRewardModule(
 
         if (settings.ChatIcons == null)
         {
-            settings.ChatIcons = new List<string>();
+            settings.ChatIcons = new List<ChatIcon>();
         }
 
-        if (!settings.ChatIcons.Contains(iconId))
+        var chatIcon = new ChatIcon(iconId);
+        if (!settings.ChatIcons.Any(i => i.IconId == iconId))
         {
-            settings.ChatIcons.Add(iconId);
+            settings.ChatIcons.Add(chatIcon);
 
             // Auto-select the icon if less than 3 icons are currently selected
             if (settings.SelectedChatIcons == null)
             {
-                settings.SelectedChatIcons = new List<string>();
+                settings.SelectedChatIcons = new List<ChatIcon>();
             }
 
             var autoSelected = false;
-            if (settings.SelectedChatIcons.Count < 3 && !settings.SelectedChatIcons.Contains(iconId))
+            if (settings.SelectedChatIcons.Count < 3 && !settings.SelectedChatIcons.Any(i => i.IconId == iconId))
             {
-                settings.SelectedChatIcons.Add(iconId);
+                settings.SelectedChatIcons.Add(chatIcon);
                 autoSelected = true;
                 Log.Information("Auto-selected chat icon {IconId} for user {UserId} (has {SelectedCount} icons selected)",
                     iconId, context.UserId, settings.SelectedChatIcons.Count - 1);
@@ -101,14 +103,14 @@ public class ChatIconRewardModule(
         }
 
         var settings = await _personalSettingsRepo.Load(context.UserId);
-        if (settings?.ChatIcons != null && settings.ChatIcons.Contains(iconId))
+        if (settings?.ChatIcons != null && settings.ChatIcons.Any(i => i.IconId == iconId))
         {
-            settings.ChatIcons.Remove(iconId);
+            settings.ChatIcons.RemoveAll(i => i.IconId == iconId);
 
             // Remove from selected icons if it was selected
-            if (settings.SelectedChatIcons != null && settings.SelectedChatIcons.Contains(iconId))
+            if (settings.SelectedChatIcons != null && settings.SelectedChatIcons.Any(i => i.IconId == iconId))
             {
-                settings.SelectedChatIcons.Remove(iconId);
+                settings.SelectedChatIcons.RemoveAll(i => i.IconId == iconId);
                 Log.Information("Removed {IconId} from selected chat icons for user {UserId}", iconId, context.UserId);
             }
 

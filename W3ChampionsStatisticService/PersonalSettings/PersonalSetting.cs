@@ -44,10 +44,10 @@ public class PersonalSetting : IVersionable, IIdentifiable
     [BsonIgnoreIfNull]
     public SpecialPicture[] SpecialPictures { get; set; } = [];
     public string ChatAlias { get; set; }
-    public List<string> ChatColors { get; set; } = new List<string>();
-    public List<string> ChatIcons { get; set; } = new List<string>();
-    public string SelectedChatColor { get; set; }
-    public List<string> SelectedChatIcons { get; set; } = new List<string>();
+    public List<ChatColor> ChatColors { get; set; } = [];
+    public List<ChatIcon> ChatIcons { get; set; } = [];
+    public ChatColor SelectedChatColor { get; set; }
+    public List<ChatIcon> SelectedChatIcons { get; set; } = [];
     public AkaSettings AliasSettings { get; set; }
 
     [Trace]
@@ -142,6 +142,32 @@ public class PersonalSetting : IVersionable, IIdentifiable
             .Max(r => r.PictureId);
     }
 
+    private void UpdateSelectedChatColor(ChatColor selectedChatColor)
+    {
+        if (!ChatColors.Contains(selectedChatColor))
+        {
+            throw new InvalidOperationException("User does not own the selected chat color.");
+        }
+
+        SelectedChatColor = selectedChatColor;
+    }
+
+    private void UpdateSelectedChatIcons(List<ChatIcon> selectedChatIcons)
+    {
+        if (selectedChatIcons == null)
+        {
+            SelectedChatIcons = [];
+            return;
+        }
+
+        if (ChatIcons.Intersect(selectedChatIcons).Count() != selectedChatIcons.Count)
+        {
+            throw new InvalidOperationException("User does not own the selected chat icons.");
+        }
+
+        SelectedChatIcons = [.. selectedChatIcons.Take(3)];
+    }
+
     public void Update(PersonalSettingsDTO dto)
     {
         ProfileMessage = dto.ProfileMessage;
@@ -153,19 +179,9 @@ public class PersonalSetting : IVersionable, IIdentifiable
         HomePage = dto.HomePage;
         Country = dto.Country;
         CountryCode = dto.CountryCode;
-        ChatColors = dto.ChatColors ?? new List<string>();
-        ChatIcons = dto.ChatIcons ?? new List<string>();
-        SelectedChatColor = dto.SelectedChatColor;
 
-        // Validate and set selected chat icons (maximum 3)
-        if (dto.SelectedChatIcons != null)
-        {
-            SelectedChatIcons = dto.SelectedChatIcons.Take(3).ToList();
-        }
-        else
-        {
-            SelectedChatIcons = new List<string>();
-        }
+        UpdateSelectedChatColor(dto.SelectedChatColor);
+        UpdateSelectedChatIcons(dto.SelectedChatIcons);
 
         AliasSettings = dto.AliasSettings;
     }
