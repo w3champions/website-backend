@@ -202,7 +202,8 @@ public class AdminRewardController(
 
     [HttpDelete("patreon/links/{battleTag}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> DeletePatreonLink(string battleTag, string adminBattleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> DeletePatreonLink(string battleTag, string actingPlayer)
     {
         try
         {
@@ -218,10 +219,10 @@ public class AdminRewardController(
             await _patreonLinkRepo.Delete(accountLink.Id);
 
             _logger.LogInformation("Admin {AdminBattleTag} deleted Patreon link for user {BattleTag} (was PatreonUserId: {PatreonUserId})",
-                adminBattleTag, battleTag, patreonUserId);
+                actingPlayer, battleTag, patreonUserId);
 
             // Log audit event
-            await _auditLogService.LogAdminAction(adminBattleTag, "DELETE", "PatreonAccountLink", accountLink.Id.ToString(),
+            await _auditLogService.LogAdminAction(actingPlayer, "DELETE", "PatreonAccountLink", accountLink.Id.ToString(),
                 oldValue: accountLink, newValue: null);
 
             return Ok(new
@@ -298,7 +299,8 @@ public class AdminRewardController(
 
     [HttpPost("product-mappings/{id}/reconcile")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> ReconcileProductMapping(string id, [FromQuery] bool dryRun = false, string battleTag = "")
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> ReconcileProductMapping(string id, string actingPlayer, [FromQuery] bool dryRun = false)
     {
         try
         {
@@ -315,7 +317,7 @@ public class AdminRewardController(
             if (!dryRun)
             {
                 // Log audit event for actual reconciliation
-                await _auditLogService.LogAdminAction(battleTag, "RECONCILE", "ProductMapping", id,
+                await _auditLogService.LogAdminAction(actingPlayer, "RECONCILE", "ProductMapping", id,
                     metadata: new Dictionary<string, object>
                     {
                         ["rewards_added"] = result.RewardsAdded,
@@ -344,7 +346,8 @@ public class AdminRewardController(
 
     [HttpPost("product-mappings/reconcile-all")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> ReconcileAllProductMappings([FromQuery] bool dryRun = false, string battleTag = "")
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> ReconcileAllProductMappings(string actingPlayer, [FromQuery] bool dryRun = false)
     {
         try
         {
@@ -355,7 +358,7 @@ public class AdminRewardController(
             if (!dryRun)
             {
                 // Log audit event for bulk reconciliation
-                await _auditLogService.LogAdminAction(battleTag, "BULK_RECONCILE", "ProductMapping", "all",
+                await _auditLogService.LogAdminAction(actingPlayer, "BULK_RECONCILE", "ProductMapping", "all",
                     metadata: new Dictionary<string, object>
                     {
                         ["total_rewards_added"] = result.RewardsAdded,

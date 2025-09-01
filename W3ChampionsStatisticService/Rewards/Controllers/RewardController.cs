@@ -71,7 +71,8 @@ public class RewardController(
 
     [HttpPost]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> CreateReward([FromBody] CreateRewardRequest request, string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> CreateReward([FromBody] CreateRewardRequest request, string? actingPlayer)
     {
         var reward = new Reward
         {
@@ -84,10 +85,10 @@ public class RewardController(
         };
 
         await _rewardRepo.Create(reward);
-        _logger.LogInformation("Created reward {RewardId}: {DisplayId}", reward.Id, reward.DisplayId);
+        _logger.LogInformation("Created reward {RewardId}: {DisplayId} by {BattleTag}", reward.Id, reward.DisplayId, actingPlayer);
 
         // Log audit event
-        await _auditLogService.LogAdminAction(battleTag, "CREATE", "Reward", reward.Id,
+        await _auditLogService.LogAdminAction(actingPlayer!, "CREATE", "Reward", reward.Id,
             oldValue: null, newValue: reward);
 
         return Ok(reward);
@@ -95,7 +96,8 @@ public class RewardController(
 
     [HttpPut("{rewardId}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> UpdateReward(string rewardId, [FromBody] UpdateRewardRequest request, string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> UpdateReward(string rewardId, [FromBody] UpdateRewardRequest request, string? actingPlayer)
     {
         var reward = await _rewardRepo.GetById(rewardId);
         if (reward == null)
@@ -156,7 +158,7 @@ public class RewardController(
         _logger.LogInformation("Updated reward {RewardId}", rewardId);
 
         // Log audit event
-        await _auditLogService.LogAdminAction(battleTag, "UPDATE", "Reward", reward.Id,
+        await _auditLogService.LogAdminAction(actingPlayer!, "UPDATE", "Reward", reward.Id,
             oldValue: originalReward, newValue: reward);
 
         return Ok(reward);
@@ -164,7 +166,8 @@ public class RewardController(
 
     [HttpDelete("{rewardId}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> DeleteReward(string rewardId, string battleTag)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> DeleteReward(string rewardId, string? actingPlayer)
     {
         // Get reward before deletion for audit logging
         var reward = await _rewardRepo.GetById(rewardId);
@@ -188,7 +191,7 @@ public class RewardController(
         _logger.LogInformation("Deleted reward {RewardId}", rewardId);
 
         // Log audit event
-        await _auditLogService.LogAdminAction(battleTag, "DELETE", "Reward", rewardId,
+        await _auditLogService.LogAdminAction(actingPlayer!, "DELETE", "Reward", rewardId,
             oldValue: reward, newValue: null);
 
         return NoContent();
