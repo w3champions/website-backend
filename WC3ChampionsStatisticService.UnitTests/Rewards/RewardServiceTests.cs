@@ -26,6 +26,7 @@ public class RewardServiceTests
     private Mock<IRewardAssignmentRepository> _mockAssignmentRepo;
     private Mock<IProductMappingRepository> _mockProductMappingRepo;
     private Mock<IProductMappingUserAssociationRepository> _mockAssociationRepo;
+    private Mock<IServiceScopeFactory> _mockServiceScopeFactory;
     private Mock<IServiceProvider> _mockServiceProvider;
     private Mock<ILogger<RewardService>> _mockLogger;
     private Mock<IHubContext<WebsiteBackendHub>> _mockHubContext;
@@ -40,7 +41,13 @@ public class RewardServiceTests
         _mockAssignmentRepo = new Mock<IRewardAssignmentRepository>();
         _mockProductMappingRepo = new Mock<IProductMappingRepository>();
         _mockAssociationRepo = new Mock<IProductMappingUserAssociationRepository>();
+        _mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         _mockServiceProvider = new Mock<IServiceProvider>();
+
+        // Setup service scope factory to return a scope with the service provider
+        var mockServiceScope = new Mock<IServiceScope>();
+        mockServiceScope.Setup(x => x.ServiceProvider).Returns(_mockServiceProvider.Object);
+        _mockServiceScopeFactory.Setup(x => x.CreateScope()).Returns(mockServiceScope.Object);
         _mockLogger = new Mock<ILogger<RewardService>>();
         _mockHubContext = new Mock<IHubContext<WebsiteBackendHub>>();
 
@@ -63,7 +70,7 @@ public class RewardServiceTests
             _mockAssignmentRepo.Object,
             _mockProductMappingRepo.Object,
             _mockAssociationRepo.Object,
-            _mockServiceProvider.Object,
+            _mockServiceScopeFactory.Object,
             _mockLogger.Object,
             _mockHubContext.Object);
     }
