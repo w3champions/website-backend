@@ -12,6 +12,7 @@ using Serilog;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
@@ -80,7 +81,7 @@ public class PlayersController(
             Log.Information($"{battleTag} has no personal settings. Using a default.");
             profilePic = ProfilePicture.Default();
         }
-        return Ok(new ChatDetailsDto(playersClan?.ClanId, profilePic));
+        return Ok(new ChatDetailsDto(playersClan?.ClanId, profilePic, settings?.SelectedChatColor, settings?.SelectedChatIcons));
     }
 
     [HttpGet("clan-memberships")]
@@ -199,10 +200,13 @@ public class ClanMemberhipDto(string battleTag, string clanId, in DateTimeOffset
     public DateTimeOffset LastUpdated { get; } = lastUpdated;
 }
 
-public class ChatDetailsDto(string clanId, ProfilePicture profilePicture)
+public class ChatDetailsDto(string clanId, ProfilePicture profilePicture, ChatColor chatColor, List<ChatIcon> chatIcons)
 {
     public string ClanId { get; } = clanId;
     public ProfilePicture ProfilePicture { get; } = profilePicture;
+
+    public ChatColor ChatColor { get; } = chatColor;
+    public List<ChatIcon> ChatIcons { get; } = chatIcons;
 }
 
 public class UserBrief(string battleTag, ProfilePicture profilePicture)
@@ -210,4 +214,51 @@ public class UserBrief(string battleTag, ProfilePicture profilePicture)
     public string BattleTag { get; } = battleTag;
     public string Name { get; } = battleTag.Split("#")[0];
     public ProfilePicture ProfilePicture { get; } = profilePicture;
+}
+
+public class ChatColor(string colorId) : IEquatable<ChatColor>
+{
+    public static readonly ChatColor AdminColor = new("chat_color_admin");
+    // We use an ID instead of a hex code because we want to allow users to configure the selected one themselves.
+    // The ID allows us to show localized names and descriptions. The value is resolved on the frontend.
+    public string ColorId { get; } = colorId;
+
+    public bool Equals(ChatColor other)
+    {
+        return ColorId == other.ColorId;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return Equals(obj as ChatColor);
+    }
+
+    public override int GetHashCode()
+    {
+        return ColorId.GetHashCode();
+    }
+}
+
+public class ChatIcon(string iconId) : IEquatable<ChatIcon>
+{
+    public static readonly ChatIcon AdminIcon = new("chat_icon_admin");
+
+    // We use an ID instead of a hex code because we want to allow users to configure the selected one themselves.
+    // The ID allows us to show localized names and descriptions. The value is resolved on the frontend.
+    public string IconId { get; } = iconId;
+
+    public bool Equals(ChatIcon other)
+    {
+        return IconId == other.IconId;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return Equals(obj as ChatIcon);
+    }
+
+    public override int GetHashCode()
+    {
+        return IconId.GetHashCode();
+    }
 }

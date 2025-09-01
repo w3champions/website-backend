@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.Rewards.Abstractions;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ports;
 using Serilog;
 
@@ -38,18 +39,19 @@ public class ChatColorRewardModule(
 
         if (settings.ChatColors == null)
         {
-            settings.ChatColors = new List<string>();
+            settings.ChatColors = new List<ChatColor>();
         }
 
-        if (!settings.ChatColors.Contains(colorId))
+        var chatColor = new ChatColor(colorId);
+        if (!settings.ChatColors.Any(c => c.ColorId == colorId))
         {
-            settings.ChatColors.Add(colorId);
+            settings.ChatColors.Add(chatColor);
 
             // Auto-select the color if no color is currently selected
-            var autoSelected = string.IsNullOrWhiteSpace(settings.SelectedChatColor);
+            var autoSelected = settings.SelectedChatColor == null || string.IsNullOrWhiteSpace(settings.SelectedChatColor?.ColorId);
             if (autoSelected)
             {
-                settings.SelectedChatColor = colorId;
+                settings.SelectedChatColor = chatColor;
                 Log.Information("Auto-selected chat color {ColorId} for user {UserId} (no color previously selected)", colorId, context.UserId);
             }
 
@@ -94,12 +96,12 @@ public class ChatColorRewardModule(
         }
 
         var settings = await _personalSettingsRepo.Load(context.UserId);
-        if (settings?.ChatColors != null && settings.ChatColors.Contains(colorId))
+        if (settings?.ChatColors != null && settings.ChatColors.Any(c => c.ColorId == colorId))
         {
-            settings.ChatColors.Remove(colorId);
+            settings.ChatColors.RemoveAll(c => c.ColorId == colorId);
 
             // Remove from selected color if it was selected
-            if (settings.SelectedChatColor == colorId)
+            if (settings.SelectedChatColor != null && settings.SelectedChatColor.ColorId == colorId)
             {
                 settings.SelectedChatColor = null;
                 Log.Information("Removed {ColorId} from selected chat color for user {UserId}", colorId, context.UserId);
