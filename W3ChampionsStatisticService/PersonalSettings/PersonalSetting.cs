@@ -13,6 +13,7 @@ using Serilog;
 
 namespace W3ChampionsStatisticService.PersonalSettings;
 
+[BsonIgnoreExtraElements]
 public class PersonalSetting : IVersionable, IIdentifiable
 {
     public PersonalSetting(string battleTag)
