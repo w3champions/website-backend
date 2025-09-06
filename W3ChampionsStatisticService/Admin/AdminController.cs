@@ -51,9 +51,9 @@ public class AdminController(
 
     [HttpGet("bannedPlayers")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> GetBannedPlayers()
+    public async Task<IActionResult> GetBannedPlayers([FromQuery] BannedPlayersGetRequest req)
     {
-        var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers();
+        var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers(req);
         return Ok(bannedPlayers);
     }
 
