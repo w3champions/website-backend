@@ -42,9 +42,20 @@ public class MatchmakingServiceClient
         };
     }
 
-    public async Task<BannedPlayerResponse> GetBannedPlayers()
+    public async Task<BannedPlayerResponse> GetBannedPlayers(BannedPlayersGetRequest req)
     {
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
+        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers?page={req.Page}&itemsPerPage={req.ItemsPerPage}";
+
+        if (!string.IsNullOrEmpty(req.SortBy))
+        {
+            url += $"&sortBy={req.SortBy}&sortDirection={req.SortDirection}";
+        }
+
+        if (!string.IsNullOrEmpty(req.Search))
+        {
+            url += $"&search={HttpUtility.UrlEncode(req.Search)}";
+        }
+
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
@@ -522,6 +533,15 @@ public class MappedPlayerData
     public bool isFloConnected { get; set; }
     public string location { get; set; }
     public string serverOption { get; set; }
+}
+
+public class BannedPlayersGetRequest
+{
+    public int Page { get; set; }
+    public int ItemsPerPage { get; set; }
+    public string SortBy { get; set; }
+    public string SortDirection { get; set; }
+    public string Search { get; set; }
 }
 
 public class BannedPlayerResponse
