@@ -30,14 +30,16 @@ public interface IMatchRepository
         Race opponentRace = Race.Total,
         int pageSize = 100,
         int offset = 0,
-        int season = 1);
+        int season = 1,
+        HeroType hero = HeroType.AllFilter);
     Task<long> CountFor(string playerId,
         string opponentId = null,
         GateWay gateWay = GateWay.Undefined,
         GameMode gameMode = GameMode.Undefined,
         Race playerRace = Race.Total,
         Race opponentRace = Race.Total,
-        int season = 1);
+        int season = 1,
+        HeroType hero = HeroType.AllFilter);
 
     Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);
     Task<MatchupDetail> LoadFinishedMatchDetailsByMatchId(string id);

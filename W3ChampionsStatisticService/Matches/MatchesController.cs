@@ -72,12 +72,13 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         Race playerRace = Race.Total,
         Race opponentRace = Race.Total,
         int offset = 0,
-        int pageSize = 100)
+        int pageSize = 100,
+        HeroType hero = HeroType.AllFilter)
     {
         if (pageSize > 100) pageSize = 100;
 
-        var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize);
-        var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace);
+        var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero);
+        var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero);
         return Ok(new { matches, count });
     }
 

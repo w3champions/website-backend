@@ -9,6 +9,7 @@ using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Ladder;
 using Moq;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.Heroes;
 
 namespace WC3ChampionsStatisticService.Tests.Matchups;
 
@@ -225,6 +226,87 @@ public class MatchupRepoTests : IntegrationTestBase
         var count = await matchRepository.CountFor(matchup.Teams[0].Players[0].BattleTag);
 
         Assert.AreEqual(2, count);
+    }
+
+    [Test]
+    public async Task LoadFor_WithHeroFilter()
+    {
+        var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+
+        // Target player participates in both matches
+        matchFinishedEvent1.match.players[0].battleTag = "heroTester#111";
+        matchFinishedEvent1.result.players[0].battleTag = "heroTester#111"; // ensure hero data maps
+        matchFinishedEvent2.match.players[0].battleTag = "heroTester#111";
+        matchFinishedEvent2.result.players[0].battleTag = "heroTester#111";
+        // Ensure season matches repository default (1)
+        matchFinishedEvent1.match.season = 1;
+        matchFinishedEvent2.match.season = 1;
+
+        // Assign heroes (first hero in list determines filter match)
+        matchFinishedEvent1.result.players[0].heroes = TestDtoHelper.CreateHeroList(new List<HeroType>
+        {
+            HeroType.Archmage,
+            HeroType.BansheeRanger
+        });
+        matchFinishedEvent2.result.players[0].heroes = TestDtoHelper.CreateHeroList(new List<HeroType>
+        {
+            HeroType.Blademaster,
+            HeroType.Farseer
+        });
+
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+
+        var matchesArchmage = await matchRepository.LoadFor("heroTester#111", hero: HeroType.Archmage);
+        Assert.AreEqual(1, matchesArchmage.Count, "Should return only matches where first hero matches filter");
+        Assert.AreEqual(HeroType.Archmage, matchesArchmage[0].Teams.First().Players.First(p => p.BattleTag == "heroTester#111").Heroes.First().Id);
+
+        var matchesBlade = await matchRepository.LoadFor("heroTester#111", hero: HeroType.Blademaster);
+        Assert.AreEqual(1, matchesBlade.Count);
+        Assert.AreEqual(HeroType.Blademaster, matchesBlade[0].Teams.First().Players.First(p => p.BattleTag == "heroTester#111").Heroes.First().Id);
+
+        var matchesKeeper = await matchRepository.LoadFor("heroTester#111", hero: HeroType.KeeperOfTheGrove);
+        Assert.AreEqual(0, matchesKeeper.Count, "No match should have Keeper as first hero for player");
+    }
+
+    [Test]
+    public async Task CountFor_WithHeroFilter()
+    {
+        var matchFinishedEvent1 = TestDtoHelper.CreateFakeEvent();
+        var matchFinishedEvent2 = TestDtoHelper.CreateFakeEvent();
+        var matchFinishedEvent3 = TestDtoHelper.CreateFakeEvent();
+
+        matchFinishedEvent1.match.players[0].battleTag = "heroCounter#222";
+        matchFinishedEvent1.result.players[0].battleTag = "heroCounter#222";
+        matchFinishedEvent2.match.players[0].battleTag = "heroCounter#222";
+        matchFinishedEvent2.result.players[0].battleTag = "heroCounter#222";
+        matchFinishedEvent3.match.players[0].battleTag = "heroCounter#222";
+        matchFinishedEvent3.result.players[0].battleTag = "heroCounter#222";
+        matchFinishedEvent1.match.season = 1;
+        matchFinishedEvent2.match.season = 1;
+        matchFinishedEvent3.match.season = 1;
+
+        matchFinishedEvent1.result.players[0].heroes = TestDtoHelper.CreateHeroList(new List<HeroType> { HeroType.Archmage, HeroType.BansheeRanger });
+        matchFinishedEvent2.result.players[0].heroes = TestDtoHelper.CreateHeroList(new List<HeroType> { HeroType.Archmage, HeroType.Farseer });
+        matchFinishedEvent3.result.players[0].heroes = TestDtoHelper.CreateHeroList(new List<HeroType> { HeroType.Blademaster, HeroType.Farseer });
+
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent1));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent2));
+        await matchRepository.Insert(Matchup.Create(matchFinishedEvent3));
+
+        var countArchmage = await matchRepository.CountFor("heroCounter#222", hero: HeroType.Archmage);
+        Assert.AreEqual(2, countArchmage, "Two matches should have Archmage as first hero");
+
+        var countBlade = await matchRepository.CountFor("heroCounter#222", hero: HeroType.Blademaster);
+        Assert.AreEqual(1, countBlade);
+
+        var countKeeper = await matchRepository.CountFor("heroCounter#222", hero: HeroType.KeeperOfTheGrove);
+        Assert.AreEqual(0, countKeeper);
+
+        // AllFilter should return all three
+        var countAll = await matchRepository.CountFor("heroCounter#222", hero: HeroType.AllFilter);
+        Assert.AreEqual(3, countAll);
     }
 
     [Test]

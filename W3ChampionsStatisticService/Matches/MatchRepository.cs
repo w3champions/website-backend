@@ -46,32 +46,13 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race opponentRace = Race.Total,
         int pageSize = 100,
         int offset = 0,
-        int season = 1)
+        int season = 1,
+        HeroType hero = HeroType.AllFilter)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        if (string.IsNullOrEmpty(opponentId))
-        {
-            return await mongoCollection
-                .Find(
-                    m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-                    && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                    && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                    && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
-                    && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
-                    && (m.Season == season))
-                .SortByDescending(s => s.Id)
-                .Skip(offset)
-                .Limit(pageSize)
-                .ToListAsync();
-        }
-
+        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero);
         return await mongoCollection
-            .Find(m =>
-                m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-                && m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId))
-                && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                && (m.Season == season))
+            .Find(filter)
             .SortByDescending(s => s.Id)
             .Skip(offset)
             .Limit(pageSize)
@@ -85,26 +66,42 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         GameMode gameMode = GameMode.Undefined,
         Race playerRace = Race.Total,
         Race opponentRace = Race.Total,
-        int season = 1)
+        int season = 1,
+        HeroType hero = HeroType.AllFilter)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        if (string.IsNullOrEmpty(opponentId))
-        {
-            return mongoCollection.CountDocumentsAsync(m =>
-                m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-                && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-                && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-                && (playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag))
-                && (opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag))
-                && (m.Season == season));
-        }
+        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero);
+        return mongoCollection.CountDocumentsAsync(filter);
+    }
 
-        return mongoCollection.CountDocumentsAsync(m =>
-            m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId))
-            && m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId))
-            && (gameMode == GameMode.Undefined || m.GameMode == gameMode)
-            && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
-            && (m.Season == season));
+    private FilterDefinition<Matchup> BuildPlayerMatchupFilter(
+        string playerId,
+        string opponentId,
+        GateWay gateWay,
+        GameMode gameMode,
+        Race playerRace,
+        Race opponentRace,
+        int season,
+        HeroType hero)
+    {
+        var builder = Builders<Matchup>.Filter;
+        FilterDefinition<Matchup> filter = builder.Empty;
+
+        filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId)));
+        if (!string.IsNullOrEmpty(opponentId))
+        {
+            filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == opponentId)));
+        }
+        filter &= builder.Where(m => gameMode == GameMode.Undefined || m.GameMode == gameMode);
+        filter &= builder.Where(m => gateWay == GateWay.Undefined || m.GateWay == gateWay);
+        filter &= builder.Where(m => playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag));
+        filter &= builder.Where(m => opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag));
+        filter &= builder.Where(m => m.Season == season);
+        if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
+        {
+            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Count > 0 && p.Heroes[0].Id == hero)));
+        }
+        return filter;
     }
 
     public async Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id)
