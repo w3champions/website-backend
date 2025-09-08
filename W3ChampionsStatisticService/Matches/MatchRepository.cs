@@ -99,7 +99,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         filter &= builder.Where(m => m.Season == season);
         if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
         {
-            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Count > 0 && p.Heroes[0].Id == hero)));
+            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Count > 0 && p.Heroes.Any( h => h.Id == hero))));
         }
         return filter;
     }
