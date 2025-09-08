@@ -19,9 +19,31 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Matches;
 
 [Trace]
-public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : MongoDbRepositoryBase(mongoClient), IMatchRepository
+public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache) : MongoDbRepositoryBase(mongoClient), IMatchRepository, IRequiresIndexes
 {
     private readonly IOngoingMatchesCache _cache = cache;
+
+    public string CollectionName => "Matchup";
+
+    public async Task EnsureIndexesAsync()
+    {
+        var collection = CreateCollection<Matchup>();
+
+        // Create unique index on PatreonUserId
+        var seasonIndex = new CreateIndexModel<Matchup>(
+            Builders<Matchup>.IndexKeys.Descending(x => x.Season),
+            new CreateIndexOptions { Unique = false });
+
+        var gateWayIndex = new CreateIndexModel<Matchup>(
+            Builders<Matchup>.IndexKeys.Ascending(x => x.GateWay),
+            new CreateIndexOptions { Unique = false });
+
+        var gameModeIndex = new CreateIndexModel<Matchup>(
+            Builders<Matchup>.IndexKeys.Ascending(x => x.GameMode),
+            new CreateIndexOptions { Unique = false });
+
+        await collection.Indexes.CreateManyAsync(new[] { seasonIndex, gateWayIndex, gameModeIndex });
+    }
 
     public async Task Insert(Matchup matchup)
     {
