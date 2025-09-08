@@ -29,7 +29,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
     {
         var collection = CreateCollection<Matchup>();
 
-        // Create unique index on PatreonUserId
+        // Create unique index for Season, GateWay, GameMode combination to speed up queries
         var seasonIndex = new CreateIndexModel<Matchup>(
             Builders<Matchup>.IndexKeys.Descending(x => x.Season),
             new CreateIndexOptions { Unique = false });
