@@ -65,14 +65,6 @@ public class AdminController(
         return Ok();
     }
 
-    [HttpDelete("bannedPlayers")]
-    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> DeleteBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-    {
-        await _matchmakingServiceRepository.DeleteBannedPlayer(bannedPlayerReadmodel);
-        return Ok();
-    }
-
     [HttpGet("news")]
     public async Task<IActionResult> GetNews(int? limit)
     {

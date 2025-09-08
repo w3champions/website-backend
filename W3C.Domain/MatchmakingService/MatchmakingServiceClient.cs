@@ -87,23 +87,6 @@ public class MatchmakingServiceClient
         return null;
     }
 
-    public async Task<HttpResponseMessage> DeleteBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
-    {
-        var encodedTag = HttpUtility.UrlEncode(bannedPlayerReadmodel.battleTag);
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers/{encodedTag}";
-        var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return response;
-        }
-
-        await HandleMMError(response);
-        return null;
-    }
-
     public async Task<List<MappedQueue>> GetLiveQueueData()
     {
         var url = $"{MatchmakingApiUrl}/queue/snapshots";
