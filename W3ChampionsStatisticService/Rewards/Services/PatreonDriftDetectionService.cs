@@ -450,6 +450,69 @@ public class PatreonDriftDetectionService(
         }
     }
 
+
+    /// <summary>
+    /// Get detailed Patreon member information for a specific user
+    /// </summary>
+    public async Task<PatreonMemberDetails> GetPatreonMemberDetails(string battleTag, string patreonUserId)
+    {
+        try
+        {
+            Log.Information("Fetching Patreon member details for BattleTag {BattleTag} (PatreonUserId: {PatreonUserId})",
+                battleTag, patreonUserId);
+
+            // Fetch ALL campaign members from Patreon API
+            var allPatreonMembers = await _patreonApiClient.GetAllCampaignMembers();
+
+            // Find the specific member
+            var patreonMember = allPatreonMembers.FirstOrDefault(m => m.PatreonUserId == patreonUserId);
+
+            if (patreonMember == null)
+            {
+                Log.Warning("Patreon user {PatreonUserId} not found in campaign members", patreonUserId);
+                return new PatreonMemberDetails
+                {
+                    BattleTag = battleTag,
+                    PatreonUserId = patreonUserId,
+                    Found = false,
+                    ErrorMessage = $"User with Patreon ID {patreonUserId} not found in campaign members"
+                };
+            }
+
+            // Get current associations and rewards
+            var currentAssociations = await _associationRepository.GetProductMappingsByUserId(battleTag);
+            var activePatreonAssociations = currentAssociations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
+
+            return new PatreonMemberDetails
+            {
+                BattleTag = battleTag,
+                PatreonUserId = patreonUserId,
+                Found = true,
+                PatreonMemberId = patreonMember.Id,
+                Email = patreonMember.Email,
+                PatronStatus = patreonMember.PatronStatus,
+                IsActivePatron = patreonMember.IsActivePatron,
+                EntitledTierIds = patreonMember.EntitledTierIds ?? new List<string>(),
+                LastChargeDate = patreonMember.LastChargeDate,
+                LastChargeStatus = patreonMember.LastChargeStatus,
+                PledgeRelationshipStart = patreonMember.PledgeRelationshipStart,
+                ActiveAssociationCount = activePatreonAssociations.Count,
+                ActiveAssociationTiers = activePatreonAssociations.Select(a => a.ProviderProductId).ToList()
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error fetching Patreon member details for BattleTag {BattleTag}", battleTag);
+            return new PatreonMemberDetails
+            {
+                BattleTag = battleTag,
+                PatreonUserId = patreonUserId,
+                Found = false,
+                ErrorMessage = $"Error fetching member details: {ex.Message}"
+            };
+        }
+    }
+
     /// <summary>
     /// Sync a single user's rewards using their OAuth access token for fresh data
     /// This is efficient and provides immediate sync when a user links their account
@@ -1003,4 +1066,26 @@ public enum UserSyncAction
     CreateNew,
     UpdateTiers,
     RevokeAll
+}
+
+public class PatreonMemberDetails
+{
+    public string BattleTag { get; set; }
+    public string PatreonUserId { get; set; }
+    public bool Found { get; set; }
+    public string ErrorMessage { get; set; }
+
+    // Patreon data
+    public string PatreonMemberId { get; set; }
+    public string Email { get; set; }
+    public string PatronStatus { get; set; }
+    public bool IsActivePatron { get; set; }
+    public List<string> EntitledTierIds { get; set; } = new();
+    public DateTime? LastChargeDate { get; set; }
+    public string LastChargeStatus { get; set; }
+    public DateTime? PledgeRelationshipStart { get; set; }
+
+    // Internal association data
+    public int ActiveAssociationCount { get; set; }
+    public List<string> ActiveAssociationTiers { get; set; } = new();
 }

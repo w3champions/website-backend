@@ -46,8 +46,9 @@ public class PatreonApiClient
         var allMembers = new List<PatreonMember>();
         string nextPageUrl = $"{BaseUrl}/campaigns/{_campaignId}/members" +
             "?include=currently_entitled_tiers,user" +
-            "&fields[member]=patron_status,is_follower,last_charge_date,last_charge_status,lifetime_support_cents,currently_entitled_amount_cents,pledge_relationship_start" +
+            "&fields[member]=email,patron_status,is_follower,last_charge_date,last_charge_status,pledge_relationship_start" +
             "&fields[tier]=title,amount_cents" +
+            "&fields[user]=email" +
             "&page[count]=500";
 
         try
@@ -194,6 +195,32 @@ public class PatreonApiClient
                 EntitledTierIds = new List<string>()
             };
 
+            // Extract email
+            if (memberData.Attributes?.ContainsKey("email") == true)
+            {
+                member.Email = memberData.Attributes["email"]?.ToString();
+            }
+
+            // Extract last charge date
+            if (memberData.Attributes?.ContainsKey("last_charge_date") == true)
+            {
+                var dateStr = memberData.Attributes["last_charge_date"]?.ToString();
+                if (!string.IsNullOrEmpty(dateStr) && DateTime.TryParse(dateStr, out var lastChargeDate))
+                {
+                    member.LastChargeDate = lastChargeDate;
+                }
+            }
+
+            // Extract pledge relationship start
+            if (memberData.Attributes?.ContainsKey("pledge_relationship_start") == true)
+            {
+                var dateStr = memberData.Attributes["pledge_relationship_start"]?.ToString();
+                if (!string.IsNullOrEmpty(dateStr) && DateTime.TryParse(dateStr, out var pledgeStart))
+                {
+                    member.PledgeRelationshipStart = pledgeStart;
+                }
+            }
+
             // Extract Patreon user ID from relationships
             if (memberData.Relationships?.ContainsKey("user") == true)
             {
@@ -235,8 +262,11 @@ public class PatreonMember
 {
     public string Id { get; set; }
     public string PatreonUserId { get; set; }
+    public string Email { get; set; }
     public string PatronStatus { get; set; }
     public string LastChargeStatus { get; set; }
+    public DateTime? LastChargeDate { get; set; }
+    public DateTime? PledgeRelationshipStart { get; set; }
     public List<string> EntitledTierIds { get; set; } = new();
 
     public bool IsActivePatron =>
