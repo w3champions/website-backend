@@ -961,4 +961,177 @@ public class PatreonDriftSyncTests
         Assert.IsTrue(createdAssociations.Any(a => a.ProviderProductId == "recurring-perk"),
             "Should process Recurring tier");
     }
+
+    private static IEnumerable<TestCaseData> DriftDetectionTieredTestCases()
+    {
+        // Case 1: No drift - User has multiple TIERED tiers from Patreon, internal has first tier only
+        yield return new TestCaseData(
+            "eliphanti#2142",
+            new List<string> { "6482057", "6482051" },  // Patreon entitled tiers
+            new List<string> { "6482057" },              // Internal stored tiers (first only)
+            ProductMappingType.Tiered,                   // All tiers are TIERED type
+            false,                                        // Should NOT detect drift
+            0,                                            // Expected mismatch count
+            "Multiple TIERED rewards - internal correctly has only first tier"
+        ).SetName("DetectDrift_MultipleTiered_InternalHasFirst_NoDrift");
+
+        // Case 2: Has drift - User has multiple TIERED tiers, internal has wrong tier (second instead of first)
+        yield return new TestCaseData(
+            "wrongtier#1234",
+            new List<string> { "6482057", "6482051" },  // Patreon entitled tiers
+            new List<string> { "6482051" },              // Internal has second tier (wrong!)
+            ProductMappingType.Tiered,                   // All tiers are TIERED type
+            true,                                         // SHOULD detect drift
+            1,                                            // Expected mismatch count
+            "Multiple TIERED rewards - internal has wrong tier (second instead of first)"
+        ).SetName("DetectDrift_MultipleTiered_InternalHasSecond_HasDrift");
+
+        // Case 3: No drift - Single TIERED tier matches
+        yield return new TestCaseData(
+            "singletier#1234",
+            new List<string> { "6482057" },              // Patreon entitled tiers
+            new List<string> { "6482057" },              // Internal stored tiers
+            ProductMappingType.Tiered,                   // TIERED type
+            false,                                        // Should NOT detect drift
+            0,                                            // Expected mismatch count
+            "Single TIERED reward - exact match"
+        ).SetName("DetectDrift_SingleTiered_ExactMatch_NoDrift");
+
+        // Case 4: Has drift - User lost a tier
+        yield return new TestCaseData(
+            "losttier#1234",
+            new List<string> { },                        // Patreon entitled tiers (none)
+            new List<string> { "6482057" },              // Internal still has tier
+            ProductMappingType.Tiered,                   // TIERED type
+            true,                                         // SHOULD detect drift
+            0,                                            // Expected mismatch count (reported as extra assignment)
+            "User lost TIERED reward - internal still has it"
+        ).SetName("DetectDrift_LostTiered_InternalStillHas_HasDrift");
+
+        // Case 5: No drift - Multiple non-TIERED rewards all match
+        yield return new TestCaseData(
+            "notiered#1234",
+            new List<string> { "onetime-1", "onetime-2" }, // Patreon entitled tiers
+            new List<string> { "onetime-1", "onetime-2" }, // Internal has both
+            ProductMappingType.OneTime,                     // NOT TIERED
+            false,                                           // Should NOT detect drift
+            0,                                               // Expected mismatch count
+            "Multiple non-TIERED rewards - all present"
+        ).SetName("DetectDrift_MultipleNonTiered_AllMatch_NoDrift");
+    }
+
+    [TestCaseSource(nameof(DriftDetectionTieredTestCases))]
+    public async Task DetectDrift_TieredRewardScenarios(
+        string battleTag,
+        List<string> patreonEntitledTiers,
+        List<string> internalStoredTiers,
+        ProductMappingType mappingType,
+        bool shouldDetectDrift,
+        int expectedMismatchCount,
+        string description)
+    {
+        // Arrange
+        var patreonUserId = $"{battleTag.Replace("#", "-")}-patreon-id";
+
+        // Setup account link
+        var accountLink = new PatreonAccountLink(battleTag, patreonUserId);
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { accountLink });
+
+        // Setup product mappings based on all unique tier IDs
+        var allTierIds = patreonEntitledTiers.Union(internalStoredTiers).Distinct().ToList();
+        var productMappings = new List<ProductMapping>();
+
+        foreach (var tierId in allTierIds)
+        {
+            productMappings.Add(new ProductMapping
+            {
+                Id = $"{tierId}-mapping-id",
+                ProductName = $"Tier {tierId}",
+                Type = mappingType,
+                RewardIds = new List<string> { $"reward-{tierId}" },
+                ProductProviders = new List<ProductProviderPair>
+                {
+                    new ProductProviderPair { ProviderId = "patreon", ProductId = tierId }
+                }
+            });
+        }
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(productMappings);
+
+        // Create Patreon members list
+        var patreonMembers = new List<PatreonMember>();
+        if (patreonEntitledTiers.Any())
+        {
+            patreonMembers.Add(new PatreonMember
+            {
+                Id = $"member-{battleTag.Replace("#", "-")}",
+                PatreonUserId = patreonUserId,
+                PatronStatus = "active_patron",
+                LastChargeStatus = "Paid",  // This makes IsActivePatron = true
+                EntitledTierIds = patreonEntitledTiers
+            });
+        }
+
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(patreonMembers);
+
+        // Create internal associations
+        var internalAssociations = new List<ProductMappingUserAssociation>();
+        foreach (var tierId in internalStoredTiers)
+        {
+            internalAssociations.Add(new ProductMappingUserAssociation
+            {
+                Id = $"assoc-{tierId}",
+                UserId = battleTag,
+                ProductMappingId = $"{tierId}-mapping-id",
+                ProviderId = "patreon",
+                ProviderProductId = tierId,
+                Status = AssociationStatus.Active,
+                AssignedAt = DateTime.UtcNow.AddDays(-10)
+            });
+        }
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(internalAssociations);
+
+        // Act
+        var driftResult = await _service.DetectDrift();
+
+        // Assert
+        Assert.IsNotNull(driftResult, "Drift result should not be null");
+
+        if (shouldDetectDrift)
+        {
+            Assert.IsTrue(driftResult.HasDrift,
+                $"Should detect drift for scenario: {description}");
+        }
+        else
+        {
+            Assert.IsFalse(driftResult.HasDrift,
+                $"Should NOT detect drift for scenario: {description}");
+        }
+
+        Assert.AreEqual(expectedMismatchCount, driftResult.MismatchedTiers.Count,
+            $"Mismatch count incorrect for scenario: {description}");
+
+        // Additional validation for mismatch details when applicable
+        if (expectedMismatchCount > 0 && driftResult.MismatchedTiers.Any())
+        {
+            var mismatch = driftResult.MismatchedTiers[0];
+            Assert.AreEqual(battleTag, mismatch.UserId, "Mismatched user ID incorrect");
+            Assert.That(mismatch.PatreonTiers, Is.EquivalentTo(patreonEntitledTiers),
+                "Patreon tiers in mismatch record incorrect");
+            Assert.That(mismatch.InternalTiers, Is.EquivalentTo(internalStoredTiers),
+                "Internal tiers in mismatch record incorrect");
+        }
+
+        // Check for extra assignments when user lost tiers
+        if (!patreonEntitledTiers.Any() && internalStoredTiers.Any())
+        {
+            Assert.IsTrue(driftResult.ExtraAssignments.Count > 0,
+                "Should have extra assignments when user lost all tiers");
+        }
+    }
 }

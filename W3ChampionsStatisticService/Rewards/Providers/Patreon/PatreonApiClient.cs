@@ -29,7 +29,7 @@ public class PatreonApiClient
         }
     }
 
-    public async Task<List<PatreonMember>> GetAllCampaignMembers()
+    public virtual async Task<List<PatreonMember>> GetAllCampaignMembers()
     {
         if (string.IsNullOrEmpty(_accessToken))
         {
