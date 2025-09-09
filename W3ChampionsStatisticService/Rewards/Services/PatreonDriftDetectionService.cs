@@ -122,21 +122,24 @@ public class PatreonDriftDetectionService(
             }
             else
             {
-                // Check if tiers match - apply TIERED filtering to Patreon tiers before comparison
+                // Check if tiers match - apply TIERED filtering to both sides before comparison
                 var associations = internalByUserId[battleTag];
                 var internalTierIds = ExtractTierIdsFromAssociations(associations);
 
-                // Apply the same TIERED filtering logic that would be applied during sync
+                // Apply the same TIERED filtering logic that would be applied during sync to BOTH sides
                 var filteredPatreonTiers = FilterTierIdsForProcessing(patreonMember.EntitledTierIds, allProductMappings);
+                var filteredInternalTiers = FilterTierIdsForProcessing(internalTierIds, allProductMappings);
 
-                if (!AreTierSetsEqual(filteredPatreonTiers, internalTierIds))
+                if (!AreTierSetsEqual(filteredPatreonTiers, filteredInternalTiers))
                 {
                     result.MismatchedTiers.Add(new TierMismatch
                     {
                         UserId = battleTag,
                         PatreonMemberId = patreonMember.Id,
-                        PatreonTiers = patreonMember.EntitledTierIds,  // Store original tiers for logging
-                        InternalTiers = internalTierIds,
+                        PatreonTiers = patreonMember.EntitledTierIds,  // Original unfiltered tiers
+                        PatreonTiersFiltered = filteredPatreonTiers,   // What was actually compared
+                        InternalTiers = internalTierIds,               // Original internal tiers
+                        InternalTiersFiltered = filteredInternalTiers, // What was actually compared
                         Reason = "Tier entitlements don't match between Patreon and internal state (after TIERED filtering)"
                     });
                 }
@@ -246,10 +249,14 @@ public class PatreonDriftDetectionService(
             // Log tier mismatches
             foreach (var mismatch in result.MismatchedTiers.Take(10))
             {
-                Log.Warning("Tier mismatch for user {UserId}: Patreon={PatreonTiers}, Internal={InternalTiers}",
+                Log.Warning("Tier mismatch for user {UserId}: " +
+                    "Patreon Original=[{PatreonOriginal}], Patreon Filtered=[{PatreonFiltered}], " +
+                    "Internal Original=[{InternalOriginal}], Internal Filtered=[{InternalFiltered}]",
                     mismatch.UserId,
                     string.Join(",", mismatch.PatreonTiers ?? new List<string>()),
-                    string.Join(",", mismatch.InternalTiers ?? new List<string>()));
+                    string.Join(",", mismatch.PatreonTiersFiltered ?? new List<string>()),
+                    string.Join(",", mismatch.InternalTiers ?? new List<string>()),
+                    string.Join(",", mismatch.InternalTiersFiltered ?? new List<string>()));
             }
 
             if (result.MissingMembers.Count > 10 || result.ExtraAssignments.Count > 10 || result.MismatchedTiers.Count > 10)
@@ -334,6 +341,13 @@ public class PatreonDriftDetectionService(
             SyncTimestamp = DateTime.UtcNow,
             WasDryRun = dryRun
         };
+
+        // If no drift result provided or it's empty, re-detect drift
+        if (driftResult == null || (!driftResult.HasDrift && driftResult.Timestamp == default))
+        {
+            Log.Information("[DRIFT-SYNC] No drift result provided, running detection first");
+            driftResult = await DetectDrift();
+        }
 
         // Pre-load data for batch operations to avoid N+1 queries
         var batchLookups = await PreLoadBatchLookupData(driftResult);
@@ -421,10 +435,11 @@ public class PatreonDriftDetectionService(
                     }
 
                     syncResult.TiersUpdated++;
-                    Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} (Patreon: [{PatreonTiers}], Internal: [{InternalTiers}])",
+                    Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} " +
+                        "(Patreon Filtered: [{PatreonFiltered}], Internal Filtered: [{InternalFiltered}])",
                         dryRun ? "Would update" : "Updated", tierMismatch.UserId,
-                        string.Join(",", tierMismatch.PatreonTiers ?? new List<string>()),
-                        string.Join(",", tierMismatch.InternalTiers ?? new List<string>()));
+                        string.Join(",", tierMismatch.PatreonTiersFiltered ?? tierMismatch.PatreonTiers ?? new List<string>()),
+                        string.Join(",", tierMismatch.InternalTiersFiltered ?? tierMismatch.InternalTiers ?? new List<string>()));
                 }
                 catch (Exception ex)
                 {
@@ -724,11 +739,8 @@ public class PatreonDriftDetectionService(
             await _associationRepository.Update(association);
         }
 
-        // Get all product mappings once to avoid multiple DB calls
-        var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
-
-        // Filter tier IDs - for TIERED rewards, only process the first one
-        var filteredTierIds = FilterTierIdsForProcessing(tierMismatch.PatreonTiers ?? new List<string>(), allProductMappings);
+        // Use the pre-filtered tiers from the TierMismatch that were already processed during detection
+        var filteredTierIds = tierMismatch.PatreonTiersFiltered ?? new List<string>();
 
         // Create new associations for current tiers
         foreach (var tierId in filteredTierIds)
@@ -1030,8 +1042,10 @@ public class TierMismatch
 {
     public string UserId { get; set; }
     public string PatreonMemberId { get; set; }
-    public List<string> PatreonTiers { get; set; }
-    public List<string> InternalTiers { get; set; }
+    public List<string> PatreonTiers { get; set; }  // Original unfiltered Patreon tiers
+    public List<string> PatreonTiersFiltered { get; set; }  // Filtered Patreon tiers (what was compared)
+    public List<string> InternalTiers { get; set; }  // Original internal tiers
+    public List<string> InternalTiersFiltered { get; set; }  // Filtered internal tiers (what was compared)
     public string Reason { get; set; }
 }
 
