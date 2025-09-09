@@ -144,6 +144,17 @@ public class PersonalSetting : IVersionable, IIdentifiable
 
     private void UpdateSelectedChatColor(ChatColor selectedChatColor)
     {
+        if (selectedChatColor == null)
+        {
+            SelectedChatColor = null;
+            return;
+        }
+
+        if (ChatColors == null)
+        {
+            ChatColors = [];
+        }
+
         if (!ChatColors.Contains(selectedChatColor))
         {
             throw new InvalidOperationException("User does not own the selected chat color.");
