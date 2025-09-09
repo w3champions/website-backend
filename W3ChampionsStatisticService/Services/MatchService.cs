@@ -7,6 +7,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Heroes;
 
 namespace W3ChampionsStatisticService.Services;
 
@@ -36,11 +37,12 @@ public class MatchService(
         Race playerRace,
         Race opponentRace,
         int offset,
-        int pageSize)
+        int pageSize,
+        HeroType hero = HeroType.AllFilter)
     {
         // Generate a unique cache key based on the request parameters
         string cacheKeyMatches =
-            $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}";
+            $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}_{hero}";
 
         var matches = await _cachedMatchesProvider.GetCachedOrRequestAsync(
             async () => await _matchRepository.LoadFor(
@@ -52,7 +54,8 @@ public class MatchService(
                 opponentRace,
                 pageSize,
                 offset,
-                season), cacheKeyMatches, TimeSpan.FromSeconds(5));
+                season,
+                hero), cacheKeyMatches, TimeSpan.FromSeconds(5));
         return matches;
     }
 
@@ -63,17 +66,18 @@ public class MatchService(
         GameMode gameMode,
         GateWay gateWay,
         Race playerRace,
-        Race opponentRace)
+        Race opponentRace,
+        HeroType hero = HeroType.AllFilter)
     {
         // Generate a unique cache key based on the request parameters
         string cacheKeyCount =
-            $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}";
+            $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{hero}";
 
         var count = await _cachedMatchCountProvider.GetCachedOrRequestAsync(
             async () => new CachedLong
             {
                 Value = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace,
-                    opponentRace, season)
+                    opponentRace, season, hero)
             }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
     }
