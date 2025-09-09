@@ -608,7 +608,9 @@ public class PatreonDriftSyncTests
                     UserId = battleTag,
                     PatreonMemberId = patreonMemberId,
                     PatreonTiers = newPatreonTiers,
+                    PatreonTiersFiltered = newPatreonTiers, // For test, assume no filtering needed
                     InternalTiers = currentInternalTiers,
+                    InternalTiersFiltered = currentInternalTiers, // For test, assume no filtering needed
                     Reason = $"{scenarioName}: Tier entitlements don't match between Patreon and internal state"
                 }
             };
