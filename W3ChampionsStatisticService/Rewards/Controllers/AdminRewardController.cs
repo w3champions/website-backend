@@ -26,6 +26,7 @@ public class AdminRewardController(
     IPatreonAccountLinkRepository patreonLinkRepo,
     IProductMappingRepository productMappingRepo,
     IProductMappingReconciliationService reconciliationService,
+    PatreonDriftDetectionService patreonDriftService,
     IAuditLogService auditLogService,
     ILogger<AdminRewardController> logger) : ControllerBase
 {
@@ -33,6 +34,7 @@ public class AdminRewardController(
     private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
     private readonly IProductMappingRepository _productMappingRepo = productMappingRepo;
     private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
+    private readonly PatreonDriftDetectionService _patreonDriftService = patreonDriftService;
     private readonly IAuditLogService _auditLogService = auditLogService;
     private readonly ILogger<AdminRewardController> _logger = logger;
 
@@ -237,6 +239,58 @@ public class AdminRewardController(
         {
             _logger.LogError(ex, "Error deleting Patreon link for BattleTag {BattleTag}", battleTag);
             return StatusCode(500, new { error = "Failed to delete Patreon link", details = ex.Message });
+        }
+    }
+
+    [HttpGet("patreon/members/{battleTag}")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> GetPatreonMemberDetails(string battleTag)
+    {
+        try
+        {
+            // Check if Patreon link exists
+            var accountLink = await _patreonLinkRepo.GetByBattleTag(battleTag);
+            if (accountLink == null)
+            {
+                return NotFound(new { error = $"No Patreon link found for BattleTag: {battleTag}" });
+            }
+
+            // Fetch member details from Patreon API
+            var memberDetails = await _patreonDriftService.GetPatreonMemberDetails(battleTag, accountLink.PatreonUserId);
+
+            if (!memberDetails.Found)
+            {
+                return Ok(new
+                {
+                    found = false,
+                    battleTag = battleTag,
+                    patreonUserId = accountLink.PatreonUserId,
+                    error = memberDetails.ErrorMessage,
+                    message = "User has a Patreon link but was not found in current campaign members"
+                });
+            }
+
+            return Ok(new
+            {
+                found = true,
+                battleTag = memberDetails.BattleTag,
+                patreonUserId = memberDetails.PatreonUserId,
+                patreonMemberId = memberDetails.PatreonMemberId,
+                email = memberDetails.Email,
+                patronStatus = memberDetails.PatronStatus,
+                isActivePatron = memberDetails.IsActivePatron,
+                entitledTierIds = memberDetails.EntitledTierIds,
+                lastChargeDate = memberDetails.LastChargeDate?.ToString("O"),
+                lastChargeStatus = memberDetails.LastChargeStatus,
+                pledgeRelationshipStart = memberDetails.PledgeRelationshipStart?.ToString("O"),
+                activeAssociationCount = memberDetails.ActiveAssociationCount,
+                activeAssociationTiers = memberDetails.ActiveAssociationTiers
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching Patreon member details for {BattleTag}", battleTag);
+            return StatusCode(500, new { error = "Failed to fetch member details", details = ex.Message });
         }
     }
 
