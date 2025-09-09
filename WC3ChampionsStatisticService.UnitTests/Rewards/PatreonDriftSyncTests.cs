@@ -721,4 +721,417 @@ public class PatreonDriftSyncTests
 
         return Task.CompletedTask;
     }
+
+    [Test]
+    public async Task SyncDrift_MultipleTieredRewards_ProcessesOnlyFirstTier()
+    {
+        // Arrange
+        var battleTag = "TieredUser#1234";
+        var patreonUserId = "tiered-user-id";
+        var patreonMemberId = "tiered-member-id";
+
+        // Setup account link
+        var accountLink = new PatreonAccountLink(battleTag, patreonUserId);
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { accountLink });
+        _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId(patreonUserId))
+            .ReturnsAsync(accountLink);
+
+        // Setup product mappings - both are TIERED type
+        var tier1Mapping = new ProductMapping
+        {
+            Id = "tier1-mapping-id",
+            ProductName = "Tier 1",
+            Type = ProductMappingType.Tiered,  // TIERED type
+            RewardIds = new List<string> { "reward-tier1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" }
+            }
+        };
+
+        var tier2Mapping = new ProductMapping
+        {
+            Id = "tier2-mapping-id",
+            ProductName = "Tier 2",
+            Type = ProductMappingType.Tiered,  // TIERED type
+            RewardIds = new List<string> { "reward-tier2" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "6482051" }
+            }
+        };
+
+        // Setup GetByProviderId to return both mappings
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { tier1Mapping, tier2Mapping });
+
+        // Setup GetByProviderAndProductId for individual lookups
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "6482057"))
+            .ReturnsAsync(new List<ProductMapping> { tier1Mapping });
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "6482051"))
+            .ReturnsAsync(new List<ProductMapping> { tier2Mapping });
+
+        // Setup no existing associations
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(battleTag))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockAssociationRepository.Setup(x => x.GetByUserAndProductMapping(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        // Track created associations
+        var createdAssociations = new List<ProductMappingUserAssociation>();
+        _mockAssociationRepository.Setup(x => x.Create(It.IsAny<ProductMappingUserAssociation>()))
+            .Callback<ProductMappingUserAssociation>(a => createdAssociations.Add(a))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        // Create drift result with multiple entitled tier IDs
+        var driftResult = new DriftDetectionResult
+        {
+            Timestamp = DateTime.UtcNow,
+            ProviderId = "patreon",
+            MissingMembers = new List<MissingMember>
+            {
+                new MissingMember
+                {
+                    PatreonMemberId = patreonMemberId,
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "active_patron",
+                    EntitledTierIds = new List<string> { "6482057", "6482051" }, // Multiple TIERED rewards
+                    Reason = "Active patron with multiple tiers"
+                }
+            }
+        };
+
+        // Act
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert
+        Assert.IsTrue(syncResult.Success, "Sync should succeed");
+        Assert.AreEqual(1, syncResult.MembersAdded, "Should add 1 member");
+
+        // Verify only ONE association was created (for the first tier)
+        Assert.AreEqual(1, createdAssociations.Count,
+            "Should create only 1 association for TIERED rewards even with multiple entitled tiers");
+
+        // Verify it's for the first tier
+        Assert.AreEqual("6482057", createdAssociations[0].ProviderProductId,
+            "Should process only the first tier ID for TIERED rewards");
+        Assert.AreEqual("tier1-mapping-id", createdAssociations[0].ProductMappingId,
+            "Should use the first tier's mapping");
+
+        // Verify the second tier was NOT processed
+        Assert.IsFalse(createdAssociations.Any(a => a.ProviderProductId == "6482051"),
+            "Should NOT process the second tier for TIERED rewards");
+    }
+
+    [Test]
+    public async Task SyncDrift_MixedTieredAndNonTiered_ProcessesCorrectly()
+    {
+        // Arrange
+        var battleTag = "MixedUser#1234";
+        var patreonUserId = "mixed-user-id";
+        var patreonMemberId = "mixed-member-id";
+
+        // Setup account link
+        var accountLink = new PatreonAccountLink(battleTag, patreonUserId);
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { accountLink });
+        _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId(patreonUserId))
+            .ReturnsAsync(accountLink);
+
+        // Setup product mappings - mix of TIERED and non-TIERED
+        var tiered1Mapping = new ProductMapping
+        {
+            Id = "tiered1-mapping-id",
+            ProductName = "Tiered 1",
+            Type = ProductMappingType.Tiered,  // TIERED
+            RewardIds = new List<string> { "reward-tiered1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tiered-1" }
+            }
+        };
+
+        var tiered2Mapping = new ProductMapping
+        {
+            Id = "tiered2-mapping-id",
+            ProductName = "Tiered 2",
+            Type = ProductMappingType.Tiered,  // TIERED
+            RewardIds = new List<string> { "reward-tiered2" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tiered-2" }
+            }
+        };
+
+        var oneTimeMapping = new ProductMapping
+        {
+            Id = "onetime-mapping-id",
+            ProductName = "One Time Bonus",
+            Type = ProductMappingType.OneTime,  // NOT TIERED
+            RewardIds = new List<string> { "reward-onetime" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "onetime-bonus" }
+            }
+        };
+
+        var recurringMapping = new ProductMapping
+        {
+            Id = "recurring-mapping-id",
+            ProductName = "Recurring Perk",
+            Type = ProductMappingType.Recurring,  // NOT TIERED
+            RewardIds = new List<string> { "reward-recurring" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "recurring-perk" }
+            }
+        };
+
+        // Setup GetByProviderId to return all mappings
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { tiered1Mapping, tiered2Mapping, oneTimeMapping, recurringMapping });
+
+        // Setup individual lookups
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "tiered-1"))
+            .ReturnsAsync(new List<ProductMapping> { tiered1Mapping });
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "tiered-2"))
+            .ReturnsAsync(new List<ProductMapping> { tiered2Mapping });
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "onetime-bonus"))
+            .ReturnsAsync(new List<ProductMapping> { oneTimeMapping });
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "recurring-perk"))
+            .ReturnsAsync(new List<ProductMapping> { recurringMapping });
+
+        // Setup no existing associations
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(battleTag))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockAssociationRepository.Setup(x => x.GetByUserAndProductMapping(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        // Track created associations
+        var createdAssociations = new List<ProductMappingUserAssociation>();
+        _mockAssociationRepository.Setup(x => x.Create(It.IsAny<ProductMappingUserAssociation>()))
+            .Callback<ProductMappingUserAssociation>(a => createdAssociations.Add(a))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        // Create drift result with mix of tier types
+        var driftResult = new DriftDetectionResult
+        {
+            Timestamp = DateTime.UtcNow,
+            ProviderId = "patreon",
+            MissingMembers = new List<MissingMember>
+            {
+                new MissingMember
+                {
+                    PatreonMemberId = patreonMemberId,
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "active_patron",
+                    // Mix of TIERED and non-TIERED tiers
+                    EntitledTierIds = new List<string> { "tiered-1", "tiered-2", "onetime-bonus", "recurring-perk" },
+                    Reason = "Active patron with mixed tier types"
+                }
+            }
+        };
+
+        // Act
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert
+        Assert.IsTrue(syncResult.Success, "Sync should succeed");
+        Assert.AreEqual(1, syncResult.MembersAdded, "Should add 1 member");
+
+        // Should create 3 associations total:
+        // - 1 for the first TIERED (tiered-1)
+        // - 1 for OneTime (onetime-bonus)
+        // - 1 for Recurring (recurring-perk)
+        Assert.AreEqual(3, createdAssociations.Count,
+            "Should create 3 associations: 1 TIERED + 2 non-TIERED");
+
+        // Verify first TIERED tier was processed
+        Assert.IsTrue(createdAssociations.Any(a => a.ProviderProductId == "tiered-1"),
+            "Should process the first TIERED tier");
+
+        // Verify second TIERED tier was NOT processed
+        Assert.IsFalse(createdAssociations.Any(a => a.ProviderProductId == "tiered-2"),
+            "Should NOT process the second TIERED tier");
+
+        // Verify all non-TIERED were processed
+        Assert.IsTrue(createdAssociations.Any(a => a.ProviderProductId == "onetime-bonus"),
+            "Should process OneTime tier");
+        Assert.IsTrue(createdAssociations.Any(a => a.ProviderProductId == "recurring-perk"),
+            "Should process Recurring tier");
+    }
+
+    private static IEnumerable<TestCaseData> DriftDetectionTieredTestCases()
+    {
+        // Case 1: No drift - User has multiple TIERED tiers from Patreon, internal has first tier only
+        yield return new TestCaseData(
+            "eliphanti#2142",
+            new List<string> { "6482057", "6482051" },  // Patreon entitled tiers
+            new List<string> { "6482057" },              // Internal stored tiers (first only)
+            ProductMappingType.Tiered,                   // All tiers are TIERED type
+            false,                                        // Should NOT detect drift
+            0,                                            // Expected mismatch count
+            "Multiple TIERED rewards - internal correctly has only first tier"
+        ).SetName("DetectDrift_MultipleTiered_InternalHasFirst_NoDrift");
+
+        // Case 2: Has drift - User has multiple TIERED tiers, internal has wrong tier (second instead of first)
+        yield return new TestCaseData(
+            "wrongtier#1234",
+            new List<string> { "6482057", "6482051" },  // Patreon entitled tiers
+            new List<string> { "6482051" },              // Internal has second tier (wrong!)
+            ProductMappingType.Tiered,                   // All tiers are TIERED type
+            true,                                         // SHOULD detect drift
+            1,                                            // Expected mismatch count
+            "Multiple TIERED rewards - internal has wrong tier (second instead of first)"
+        ).SetName("DetectDrift_MultipleTiered_InternalHasSecond_HasDrift");
+
+        // Case 3: No drift - Single TIERED tier matches
+        yield return new TestCaseData(
+            "singletier#1234",
+            new List<string> { "6482057" },              // Patreon entitled tiers
+            new List<string> { "6482057" },              // Internal stored tiers
+            ProductMappingType.Tiered,                   // TIERED type
+            false,                                        // Should NOT detect drift
+            0,                                            // Expected mismatch count
+            "Single TIERED reward - exact match"
+        ).SetName("DetectDrift_SingleTiered_ExactMatch_NoDrift");
+
+        // Case 4: Has drift - User lost a tier
+        yield return new TestCaseData(
+            "losttier#1234",
+            new List<string> { },                        // Patreon entitled tiers (none)
+            new List<string> { "6482057" },              // Internal still has tier
+            ProductMappingType.Tiered,                   // TIERED type
+            true,                                         // SHOULD detect drift
+            0,                                            // Expected mismatch count (reported as extra assignment)
+            "User lost TIERED reward - internal still has it"
+        ).SetName("DetectDrift_LostTiered_InternalStillHas_HasDrift");
+
+        // Case 5: No drift - Multiple non-TIERED rewards all match
+        yield return new TestCaseData(
+            "notiered#1234",
+            new List<string> { "onetime-1", "onetime-2" }, // Patreon entitled tiers
+            new List<string> { "onetime-1", "onetime-2" }, // Internal has both
+            ProductMappingType.OneTime,                     // NOT TIERED
+            false,                                           // Should NOT detect drift
+            0,                                               // Expected mismatch count
+            "Multiple non-TIERED rewards - all present"
+        ).SetName("DetectDrift_MultipleNonTiered_AllMatch_NoDrift");
+    }
+
+    [TestCaseSource(nameof(DriftDetectionTieredTestCases))]
+    public async Task DetectDrift_TieredRewardScenarios(
+        string battleTag,
+        List<string> patreonEntitledTiers,
+        List<string> internalStoredTiers,
+        ProductMappingType mappingType,
+        bool shouldDetectDrift,
+        int expectedMismatchCount,
+        string description)
+    {
+        // Arrange
+        var patreonUserId = $"{battleTag.Replace("#", "-")}-patreon-id";
+
+        // Setup account link
+        var accountLink = new PatreonAccountLink(battleTag, patreonUserId);
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { accountLink });
+
+        // Setup product mappings based on all unique tier IDs
+        var allTierIds = patreonEntitledTiers.Union(internalStoredTiers).Distinct().ToList();
+        var productMappings = new List<ProductMapping>();
+
+        foreach (var tierId in allTierIds)
+        {
+            productMappings.Add(new ProductMapping
+            {
+                Id = $"{tierId}-mapping-id",
+                ProductName = $"Tier {tierId}",
+                Type = mappingType,
+                RewardIds = new List<string> { $"reward-{tierId}" },
+                ProductProviders = new List<ProductProviderPair>
+                {
+                    new ProductProviderPair { ProviderId = "patreon", ProductId = tierId }
+                }
+            });
+        }
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(productMappings);
+
+        // Create Patreon members list
+        var patreonMembers = new List<PatreonMember>();
+        if (patreonEntitledTiers.Any())
+        {
+            patreonMembers.Add(new PatreonMember
+            {
+                Id = $"member-{battleTag.Replace("#", "-")}",
+                PatreonUserId = patreonUserId,
+                PatronStatus = "active_patron",
+                LastChargeStatus = "Paid",  // This makes IsActivePatron = true
+                EntitledTierIds = patreonEntitledTiers
+            });
+        }
+
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(patreonMembers);
+
+        // Create internal associations
+        var internalAssociations = new List<ProductMappingUserAssociation>();
+        foreach (var tierId in internalStoredTiers)
+        {
+            internalAssociations.Add(new ProductMappingUserAssociation
+            {
+                Id = $"assoc-{tierId}",
+                UserId = battleTag,
+                ProductMappingId = $"{tierId}-mapping-id",
+                ProviderId = "patreon",
+                ProviderProductId = tierId,
+                Status = AssociationStatus.Active,
+                AssignedAt = DateTime.UtcNow.AddDays(-10)
+            });
+        }
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(internalAssociations);
+
+        // Act
+        var driftResult = await _service.DetectDrift();
+
+        // Assert
+        Assert.IsNotNull(driftResult, "Drift result should not be null");
+
+        if (shouldDetectDrift)
+        {
+            Assert.IsTrue(driftResult.HasDrift,
+                $"Should detect drift for scenario: {description}");
+        }
+        else
+        {
+            Assert.IsFalse(driftResult.HasDrift,
+                $"Should NOT detect drift for scenario: {description}");
+        }
+
+        Assert.AreEqual(expectedMismatchCount, driftResult.MismatchedTiers.Count,
+            $"Mismatch count incorrect for scenario: {description}");
+
+        // Additional validation for mismatch details when applicable
+        if (expectedMismatchCount > 0 && driftResult.MismatchedTiers.Any())
+        {
+            var mismatch = driftResult.MismatchedTiers[0];
+            Assert.AreEqual(battleTag, mismatch.UserId, "Mismatched user ID incorrect");
+            Assert.That(mismatch.PatreonTiers, Is.EquivalentTo(patreonEntitledTiers),
+                "Patreon tiers in mismatch record incorrect");
+            Assert.That(mismatch.InternalTiers, Is.EquivalentTo(internalStoredTiers),
+                "Internal tiers in mismatch record incorrect");
+        }
+
+        // Check for extra assignments when user lost tiers
+        if (!patreonEntitledTiers.Any() && internalStoredTiers.Any())
+        {
+            Assert.IsTrue(driftResult.ExtraAssignments.Count > 0,
+                "Should have extra assignments when user lost all tiers");
+        }
+    }
 }
