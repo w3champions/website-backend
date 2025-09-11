@@ -187,6 +187,11 @@ builder.Services.AddInterceptedTransient<CheckIfBattleTagIsAdminFilter>();
 builder.Services.AddInterceptedTransient<InjectActingPlayerFromAuthCodeFilter>();
 builder.Services.AddInterceptedTransient<BearerHasPermissionFilter>();
 builder.Services.AddInterceptedTransient<InjectAuthTokenFilter>();
+builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
+
+// Turnstile service for captcha verification
+builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
