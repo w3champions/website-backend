@@ -19,6 +19,7 @@ public class ReplaysController(
     private readonly IMatchRepository _matchRepository = matchRepository;
 
     [HttpGet("{gameId}")]
+    [TurnstileVerification]
     public async Task<IActionResult> GetReplay(string gameId)
     {
         var floMatchId = await _matchRepository.GetFloIdFromId(gameId);
@@ -44,6 +45,7 @@ public class ReplaysController(
     }
 
     [HttpGet("by-flo-id/{floMatchId}")]
+    [TurnstileVerification]
     public async Task<IActionResult> GetReplay(int floMatchId)
     {
         if (floMatchId == 0)
