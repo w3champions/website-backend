@@ -52,4 +52,5 @@ public enum GameMode
     GM_RISK_EUROPE = 1401,
 
     GM_MINIDOTA_3ON3 = 1501,
+    GM_MINIDOTA_3ON3_AT = 1502,
 }

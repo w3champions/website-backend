@@ -148,6 +148,11 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
             return GameMode.GM_CF_AT;
         }
 
+        if (gameMode == GameMode.GM_MINIDOTA_3ON3 && player.IsAt)
+        {
+            return GameMode.GM_MINIDOTA_3ON3_AT;
+        }
+
         return gameMode;
     }
 }
