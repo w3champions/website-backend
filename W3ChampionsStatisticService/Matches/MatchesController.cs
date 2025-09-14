@@ -26,7 +26,9 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
         int season = -1,
-        HeroType hero = HeroType.AllFilter
+        HeroType hero = HeroType.AllFilter,
+        int minMmr = 0,
+        int maxMmr = 3000
     )
     {
         if (season < 0)
@@ -35,8 +37,8 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero);
-        var count = await _matchRepository.Count(season, gameMode, hero);
+    var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr);
+    var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr);
         return Ok(new { matches, count });
     }
 

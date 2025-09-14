@@ -188,13 +188,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter)
+    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = 3000)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = GetLoadFilter(season, gameMode, hero);
-
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
         var results = mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
-
         return results;
     }
 
@@ -205,13 +203,13 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = 3000)
     {
-        var filter = GetLoadFilter(season, gameMode, hero);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
         return CreateCollection<Matchup>().CountDocumentsAsync(filter);
     }
 
-    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = 3000)
     {
         var builder = Builders<Matchup>.Filter;
         var filter = builder.Eq(m => m.GameMode, gameMode) & builder.Eq(m => m.Season, season);
@@ -220,6 +218,12 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         {
             var heroFilter = builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Count > 0 && p.Heroes[0].Id == hero)));
             filter &= heroFilter;
+        }
+
+        // Filter by minMmr and maxMmr for any player in any team
+        if (minMmr > 0 || maxMmr < 3000)
+        {
+            filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.CurrentMmr >= minMmr && player.CurrentMmr <= maxMmr)));
         }
 
         return filter;
