@@ -8,6 +8,7 @@ using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Services;
 using W3C.Domain.Tracing;
 using W3C.Domain.GameModes;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -28,7 +29,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         int season = -1,
         HeroType hero = HeroType.AllFilter,
         int minMmr = 0,
-        int maxMmr = 3000
+        int maxMmr = MmrConstants.MaxMmr
     )
     {
         if (season < 0)
@@ -93,7 +94,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000,
+        int maxMmr = MmrConstants.MaxMmr,
         string sort = "startTimeDescending"
         )
     {

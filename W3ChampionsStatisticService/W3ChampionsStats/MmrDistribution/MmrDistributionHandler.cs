@@ -5,6 +5,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using System;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using Microsoft.Extensions.Caching.Memory;
@@ -30,7 +31,7 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan
             var stats = new MmrStats(new List<MmrCount>(), orderedMMrs);
             return stats;
         }
-        var max = orderedMMrs.FirstOrDefault(3000);
+        var max = orderedMMrs.FirstOrDefault(MmrConstants.MaxMmr);
         var min = orderedMMrs.LastOrDefault();
         var ranges = Ranges(max, min, 25).ToList();
         var highest = ranges.Count > 0 ? ranges.First() : max;

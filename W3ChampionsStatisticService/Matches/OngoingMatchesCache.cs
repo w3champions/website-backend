@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using W3ChampionsStatisticService.Common.Constants;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                     && (map == "Overall" || m.Map == map)
                                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
+                                    && (maxMmr == MmrConstants.MaxMmr || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
     }
 
     public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
@@ -49,7 +50,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                         && (map == "Overall" || m.Map == map)
                         && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                        && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
+                        && (maxMmr == MmrConstants.MaxMmr || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
         if (sort == "mmrDescending")
         {

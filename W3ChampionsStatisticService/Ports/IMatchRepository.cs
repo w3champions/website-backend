@@ -8,6 +8,7 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.Ports;
 
@@ -68,7 +69,7 @@ public interface IMatchRepository
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000);
+        int maxMmr = MmrConstants.MaxMmr);
 
     Task EnsureIndices();
 

@@ -15,6 +15,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -188,7 +189,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = 3000)
+    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = MmrConstants.MaxMmr)
     {
         var mongoCollection = CreateCollection<Matchup>();
         var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
@@ -203,13 +204,13 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = 3000)
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = MmrConstants.MaxMmr)
     {
         var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
         return CreateCollection<Matchup>().CountDocumentsAsync(filter);
     }
 
-    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = 3000)
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int maxMmr = MmrConstants.MaxMmr)
     {
         var builder = Builders<Matchup>.Filter;
         var filter = builder.Eq(m => m.GameMode, gameMode) & builder.Eq(m => m.Season, season);
@@ -221,7 +222,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         }
 
         // Filter by minMmr and maxMmr for any player in any team
-        if (minMmr > 0 || maxMmr < 3000)
+    if (minMmr > 0 || maxMmr < MmrConstants.MaxMmr)
         {
             filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.CurrentMmr >= minMmr && player.CurrentMmr <= maxMmr)));
         }
@@ -272,7 +273,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int pageSize = 100,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000,
+        int maxMmr = MmrConstants.MaxMmr,
         string sort = "startTimeDescending")
     {
         return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
@@ -283,7 +284,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000)
+        int maxMmr = MmrConstants.MaxMmr)
     {
         return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
     }

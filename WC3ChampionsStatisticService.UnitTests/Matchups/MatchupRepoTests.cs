@@ -1,3 +1,4 @@
+using W3ChampionsStatisticService.Common.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,12 +67,12 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.IsTrue(matches.All(m => m.Teams.SelectMany(t => t.Players).Any(p => p.CurrentMmr >= 1200 && p.CurrentMmr <= 2000)));
 
         // Only high MMR match should be returned
-        var matchesHigh = await matchRepository.Load(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 2000, maxMmr: 3000);
+        var matchesHigh = await matchRepository.Load(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 2000, maxMmr: MmrConstants.MaxMmr);
         Assert.AreEqual(1, matchesHigh.Count);
-        Assert.IsTrue(matchesHigh.All(m => m.Teams.SelectMany(t => t.Players).Any(p => p.CurrentMmr >= 2000 && p.CurrentMmr <= 3000)));
+        Assert.IsTrue(matchesHigh.All(m => m.Teams.SelectMany(t => t.Players).Any(p => p.CurrentMmr >= 2000 && p.CurrentMmr <= MmrConstants.MaxMmr)));
 
         // All matches should be returned for wide range
-        var matchesAll = await matchRepository.Load(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 0, maxMmr: 3000);
+        var matchesAll = await matchRepository.Load(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 0, maxMmr: MmrConstants.MaxMmr);
         Assert.AreEqual(3, matchesAll.Count);
     }
 
@@ -110,10 +111,10 @@ public class MatchupRepoTests : IntegrationTestBase
         var countMid = await matchRepository.Count(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 1200, maxMmr: 2000);
         Assert.AreEqual(1, countMid);
 
-        var countHigh = await matchRepository.Count(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 2000, maxMmr: 3000);
+        var countHigh = await matchRepository.Count(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 2000, maxMmr: MmrConstants.MaxMmr);
         Assert.AreEqual(1, countHigh);
 
-        var countAll = await matchRepository.Count(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 0, maxMmr: 3000);
+        var countAll = await matchRepository.Count(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 0, maxMmr: MmrConstants.MaxMmr);
         Assert.AreEqual(3, countAll);
     }
 
