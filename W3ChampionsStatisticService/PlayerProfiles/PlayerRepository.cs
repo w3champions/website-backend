@@ -13,12 +13,29 @@ using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 using W3C.Domain.Tracing;
+using System;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [Trace]
 public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
+    private int? _cachedMaxMmr;
+    private DateTime _maxMmrCacheTime;
+
+    public int LoadMaxMMR()
+    {
+        if (_cachedMaxMmr.HasValue && DateTime.UtcNow - _maxMmrCacheTime < TimeSpan.FromHours(12))
+        {
+            return _cachedMaxMmr.Value;
+        }
+        var mongoCollection = CreateCollection<PlayerOverview>();
+        var maxMmr = mongoCollection.AsQueryable().Max(p => p.MMR);
+        _cachedMaxMmr = maxMmr;
+        _maxMmrCacheTime = DateTime.UtcNow;
+        return maxMmr;
+    }
+
     public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
     {
         await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
