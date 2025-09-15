@@ -20,6 +20,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles;
 [Trace]
 public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
+    private readonly Dictionary<string, (DateTime cacheTime, List<int> mmrs)> _mmrsCache = new();
     private int? _cachedMaxMmr;
     private DateTime _maxMmrCacheTime;
 
@@ -73,6 +74,14 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode)
     {
+        string cacheKey = $"{season}_{gateWay}_{gameMode}";
+        if (_mmrsCache.TryGetValue(cacheKey, out var cacheEntry))
+        {
+            if (DateTime.UtcNow - cacheEntry.cacheTime < TimeSpan.FromHours(1))
+            {
+                return cacheEntry.mmrs;
+            }
+        }
         var mongoCollection = CreateCollection<PlayerOverview>();
         var mmrs = await mongoCollection
             .Find(p => p.Season == season &&
@@ -80,6 +89,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
                         p.GameMode == gameMode)
             .Project(p => p.MMR)
             .ToListAsync();
+        _mmrsCache[cacheKey] = (DateTime.UtcNow, mmrs);
         return mmrs;
     }
 

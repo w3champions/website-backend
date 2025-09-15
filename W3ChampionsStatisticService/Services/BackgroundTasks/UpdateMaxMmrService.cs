@@ -19,7 +19,7 @@ public class UpdateMaxMmrService(ILogger<UpdateMaxMmrService> logger, PlayerRepo
             try
             {
                 int maxMmr = _playerRepository.LoadMaxMMR();
-                MmrConstants.MaxMmr = maxMmr;
+                MmrConstants.CurrentMaxMmr = maxMmr;
                 _logger.LogInformation($"MaxMmr updated to {maxMmr} at {DateTime.UtcNow}");
             }
             catch (Exception ex)

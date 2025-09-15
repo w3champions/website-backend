@@ -10,5 +10,4 @@ public interface IPlayerStatsRepository
     Task<PlayerHeroStats> LoadHeroStat(string battleTag, int season);
     Task UpsertMapAndRaceStat(PlayerRaceOnMapVersusRaceRatio playerRaceOnMapVersusRaceRatio);
     Task UpsertPlayerHeroStats(PlayerHeroStats playerHeroStats);
-    int LoadMaxMMR();
 }

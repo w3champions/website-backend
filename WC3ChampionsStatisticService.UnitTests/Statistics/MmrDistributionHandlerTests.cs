@@ -76,4 +76,31 @@ public class MmrDistributionHandlerTests
 
         Assert.AreNotSame(stats1, stats2);
     }
+
+    [Test]
+    public async Task GetPercentileMmr_ReturnsHighestForTop2Percentile()
+    {
+        var mmrs = new List<int> { 3000, 2500, 2000, 1500, 1000, 500 };
+        _playerRepoMock.Setup(r => r.LoadMmrs(It.IsAny<int>(), It.IsAny<GateWay>(), It.IsAny<GameMode>()))
+            .ReturnsAsync(mmrs);
+
+        var result1 = await _handler.GetPercentileMmr(1, GateWay.Europe, GameMode.GM_1v1, 0, 2);
+        Assert.AreEqual(3000, result1.maxMmr);
+        Assert.AreEqual(3000, result1.minMmr); // Only one value in top 2% for 6 items
+
+        var result2 = await _handler.GetPercentileMmr(1, GateWay.Europe, GameMode.GM_1v1, 50, 100);
+        Assert.AreEqual(500, result2.minMmr);
+        Assert.AreEqual(1500, result2.maxMmr);
+    }
+
+    [Test]
+    public async Task GetPercentileMmr_ReturnsMaxMmrForEmptyList()
+    {
+        _playerRepoMock.Setup(r => r.LoadMmrs(It.IsAny<int>(), It.IsAny<GateWay>(), It.IsAny<GameMode>()))
+            .ReturnsAsync(new List<int>());
+
+        var (minMmr, maxMmr) = await _handler.GetPercentileMmr(1, GateWay.Europe, GameMode.GM_1v1, 0, 2);
+        Assert.AreEqual(0, minMmr);
+        Assert.AreEqual(W3ChampionsStatisticService.Common.Constants.MmrConstants.CurrentMaxMmr, maxMmr);
+    }
 }

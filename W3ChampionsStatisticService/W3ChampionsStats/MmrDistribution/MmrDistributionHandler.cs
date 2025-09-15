@@ -31,7 +31,7 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan
             var stats = new MmrStats(new List<MmrCount>(), orderedMMrs);
             return stats;
         }
-        var max = orderedMMrs.FirstOrDefault(MmrConstants.MaxMmr);
+        var max = orderedMMrs.FirstOrDefault(MmrConstants.CurrentMaxMmr);
         var min = orderedMMrs.LastOrDefault();
         var ranges = Ranges(max, min, 25).ToList();
         var highest = ranges.Count > 0 ? ranges.First() : max;
@@ -42,6 +42,29 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan
         var statsFinal = new MmrStats(grouped, orderedMMrs);
         _cache.Set(cacheKey, statsFinal, _cacheTtl);
         return statsFinal;
+    }
+
+    public async Task<(int minMmr, int maxMmr)> GetPercentileMmr(int season, GateWay gateWay, GameMode gameMode, int minPercentile, int maxPercentile)
+    {
+        var mmrs = await _playerRepository.LoadMmrs(season, gateWay, gameMode);
+        if (mmrs.Count == 0)
+        {
+            return (0, MmrConstants.CurrentMaxMmr);
+        }
+        mmrs.Sort();
+        mmrs.Reverse();
+
+        int topIndex = (int)Math.Floor(mmrs.Count * (minPercentile / 100.0));
+        int bottomIndex = (int)Math.Floor(mmrs.Count * (maxPercentile / 100.0)) - 1;
+
+        if (topIndex < 0) topIndex = 0;
+        if (bottomIndex < 0) bottomIndex = 0;
+        if (topIndex >= mmrs.Count) topIndex = mmrs.Count - 1;
+        if (bottomIndex >= mmrs.Count) bottomIndex = mmrs.Count - 1;
+
+        int maxMmr = mmrs[topIndex]; // highest percentile
+        int minMmr = mmrs[bottomIndex]; // lowest percentile in range
+        return (minMmr, maxMmr);
     }
 
     [NoTrace]

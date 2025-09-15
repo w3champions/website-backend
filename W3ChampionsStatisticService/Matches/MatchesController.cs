@@ -9,37 +9,58 @@ using W3ChampionsStatisticService.Services;
 using W3C.Domain.Tracing;
 using W3C.Domain.GameModes;
 using W3ChampionsStatisticService.Common.Constants;
+using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 
 namespace W3ChampionsStatisticService.Matches;
 
 [ApiController]
 [Route("api/matches")]
 [Trace]
-public class MatchesController(IMatchRepository matchRepository, MatchQueryHandler matchQueryHandler, MatchService matchService) : ControllerBase
+public class MatchesController(
+    IMatchRepository matchRepository,
+    MatchQueryHandler matchQueryHandler,
+    MatchService matchService,
+    IPlayerRepository playerRepository,
+    MmrDistributionHandler mmrDistributionHandler
+) : ControllerBase
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
+    private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly MatchQueryHandler _matchQueryHandler = matchQueryHandler;
     private readonly MatchService _matchService = matchService;
+    private readonly MmrDistributionHandler _mmrDistributionHandler = mmrDistributionHandler;
+
 
     [HttpGet("")]
     public async Task<IActionResult> GetMatches(
         int offset = 0,
         int pageSize = 100,
         GameMode gameMode = GameMode.Undefined,
+        GateWay gateWay = GateWay.Undefined,
         int season = -1,
         HeroType hero = HeroType.AllFilter,
         int minMmr = 0,
-        int maxMmr = MmrConstants.MaxMmr
+        int maxMmr = -1,
+        int minPercentile = 0,
+        int maxPercentile = 0
     )
     {
+        if (maxMmr < 0) maxMmr = MmrConstants.CurrentMaxMmr;
+        if (minPercentile > 0 || maxPercentile > 0)
+        {
+            if (minPercentile < 0 || minPercentile > 100) return BadRequest("minPercentile must be between 0 and 100");
+            if (maxPercentile < 0 || maxPercentile > 100) return BadRequest("maxPercentile must be between 0 and 100");
+            if (minPercentile >= maxPercentile) return BadRequest("minPercentile must be less than maxPercentile");
+            (minMmr, maxMmr) = await _mmrDistributionHandler.GetPercentileMmr(season, gateWay, gameMode, minPercentile, maxPercentile);
+        }
         if (season < 0)
         {
             var lastSeason = await _matchRepository.LoadLastSeason();
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-    var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr);
-    var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr);
+        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr);
         return Ok(new { matches, count });
     }
 
@@ -94,10 +115,11 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = MmrConstants.MaxMmr,
+        int maxMmr = -1,
         string sort = "startTimeDescending"
         )
     {
+        if (maxMmr < 0) maxMmr = MmrConstants.CurrentMaxMmr;
         if (pageSize > 200) pageSize = 200;
         var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
         var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
