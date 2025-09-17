@@ -14,6 +14,12 @@ public class TurnstileVerificationFilter(ITurnstileService turnstileService, ILo
     private readonly ITurnstileService _turnstileService = turnstileService;
     private readonly ILogger<TurnstileVerificationFilter> _logger = logger;
     private const string TURNSTILE_HEADER = "X-Turnstile-Token";
+    
+    /// <summary>
+    /// Optional: Maximum age of the token in seconds. Set by the attribute.
+    /// Value of 0 or negative means no age check.
+    /// </summary>
+    public int MaxAgeSeconds { get; set; }
 
     [Trace]
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -48,17 +54,26 @@ public class TurnstileVerificationFilter(ITurnstileService turnstileService, ILo
 
         try
         {
-            var isValid = await _turnstileService.VerifyTokenAsync(token, remoteIp);
-
-            if (!isValid)
+            var result = await _turnstileService.VerifyTokenAsync(token, remoteIp, MaxAgeSeconds > 0 ? MaxAgeSeconds : null);
+            
+            if (!result.IsValid)
             {
-                _logger.LogInformation("Invalid Turnstile token. Endpoint: {Method} {Endpoint}, IP: {RemoteIp}, User-Agent: {UserAgent}",
-                    method, endpoint, remoteIp, userAgent);
+                if (result.IsExpiredByAge)
+                {
+                    _logger.LogInformation("Turnstile token expired by age. Endpoint: {Method} {Endpoint}, IP: {RemoteIp}, User-Agent: {UserAgent}, MaxAge: {MaxAge}s",
+                        method, endpoint, remoteIp, userAgent, MaxAgeSeconds);
+                }
+                else
+                {
+                    _logger.LogInformation("Invalid Turnstile token. Endpoint: {Method} {Endpoint}, IP: {RemoteIp}, User-Agent: {UserAgent}",
+                        method, endpoint, remoteIp, userAgent);
+                }
+                
                 context.Result = new UnauthorizedObjectResult(new
                 {
                     StatusCode = HttpStatusCode.Unauthorized,
-                    Error = "TURNSTILE_VERIFICATION_FAILED",
-                    Message = "Turnstile verification failed. Please refresh and try again."
+                    Error = result.IsExpiredByAge ? "TURNSTILE_TOKEN_EXPIRED" : "TURNSTILE_VERIFICATION_FAILED",
+                    Message = result.ErrorMessage ?? "Turnstile verification failed. Please refresh and try again."
                 });
                 return;
             }
