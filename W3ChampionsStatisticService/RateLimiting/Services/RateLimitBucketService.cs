@@ -14,16 +14,10 @@ public interface IRateLimitBucketService
     Task<RateLimitLease> TryAcquireAsync(string partitionKey, int hourlyLimit, int dailyLimit);
 }
 
-public class RateLimitBucketService : IRateLimitBucketService
+public class RateLimitBucketService(IMemoryCache cache, ILogger<RateLimitBucketService> logger) : IRateLimitBucketService
 {
-    private readonly IMemoryCache _cache;
-    private readonly ILogger<RateLimitBucketService> _logger;
-
-    public RateLimitBucketService(IMemoryCache cache, ILogger<RateLimitBucketService> logger)
-    {
-        _cache = cache;
-        _logger = logger;
-    }
+    private readonly IMemoryCache _cache = cache;
+    private readonly ILogger<RateLimitBucketService> _logger = logger;
 
     public async Task<RateLimitLease> TryAcquireAsync(string partitionKey, int hourlyLimit, int dailyLimit)
     {
@@ -83,20 +77,14 @@ public class RateLimitBucketService : IRateLimitBucketService
     }
 }
 
-internal class CombinedRateLimitLease : RateLimitLease
+internal class CombinedRateLimitLease(RateLimitLease hourlyLease, RateLimitLease dailyLease) : RateLimitLease
 {
-    private readonly RateLimitLease _hourlyLease;
-    private readonly RateLimitLease _dailyLease;
-
-    public CombinedRateLimitLease(RateLimitLease hourlyLease, RateLimitLease dailyLease)
-    {
-        _hourlyLease = hourlyLease;
-        _dailyLease = dailyLease;
-    }
+    private readonly RateLimitLease _hourlyLease = hourlyLease;
+    private readonly RateLimitLease _dailyLease = dailyLease;
 
     public override bool IsAcquired => true; // Both leases are acquired if we get here
 
-    public override IEnumerable<string> MetadataNames 
+    public override IEnumerable<string> MetadataNames
     {
         get
         {
@@ -113,7 +101,7 @@ internal class CombinedRateLimitLease : RateLimitLease
     {
         if (_hourlyLease.TryGetMetadata(metadataName, out metadata))
             return true;
-        
+
         return _dailyLease.TryGetMetadata(metadataName, out metadata);
     }
 

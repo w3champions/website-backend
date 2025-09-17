@@ -21,7 +21,7 @@ public class ApiTokenController(
 {
     private readonly IApiTokenRepository _apiTokenRepository = apiTokenRepository;
     private readonly IAuditLogService _auditLogService = auditLogService;
-    
+
     [HttpGet]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     public async Task<ActionResult<List<ApiToken>>> GetAllTokens()
@@ -30,7 +30,7 @@ public class ApiTokenController(
         // Token values are now visible to admins
         return Ok(tokens);
     }
-    
+
     [HttpGet("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     public async Task<ActionResult<ApiToken>> GetToken(string id)
@@ -42,7 +42,7 @@ public class ApiTokenController(
         }
         return Ok(token);
     }
-    
+
     [HttpPost]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     [InjectActingPlayerAuthCodeAttribute]
@@ -50,7 +50,7 @@ public class ApiTokenController(
     {
         var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
         var battleTag = user?.BattleTag ?? "Unknown";
-        
+
         var token = new ApiToken
         {
             Name = request.Name,
@@ -60,9 +60,9 @@ public class ApiTokenController(
             ExpiresAt = request.ExpiresAt,
             Scopes = request.Scopes ?? new Dictionary<string, ApiTokenScope>()
         };
-        
+
         await _apiTokenRepository.Create(token);
-        
+
         // Log the creation
         await _auditLogService.LogAdminAction(
             battleTag,
@@ -76,10 +76,10 @@ public class ApiTokenController(
                 ["token_name"] = token.Name,
                 ["scopes"] = token.Scopes?.Keys?.ToList() ?? new List<string>()
             });
-        
+
         return Created($"/api/admin/api-tokens/{token.Id}", token);
     }
-    
+
     [HttpPut("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     [InjectActingPlayerAuthCodeAttribute]
@@ -87,13 +87,13 @@ public class ApiTokenController(
     {
         var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
         var battleTag = user?.BattleTag ?? "Unknown";
-        
+
         var token = await _apiTokenRepository.GetById(id);
         if (token == null)
         {
             return NotFound();
         }
-        
+
         // Capture old values for audit
         var oldValue = new
         {
@@ -105,7 +105,7 @@ public class ApiTokenController(
             token.ExpiresAt,
             Scopes = token.Scopes?.Keys
         };
-        
+
         // Update only the allowed fields
         token.Name = request.Name;
         token.Description = request.Description;
@@ -114,9 +114,9 @@ public class ApiTokenController(
         token.IsActive = request.IsActive;
         token.ExpiresAt = request.ExpiresAt;
         token.Scopes = request.Scopes ?? new Dictionary<string, ApiTokenScope>();
-        
+
         await _apiTokenRepository.Update(token);
-        
+
         // Log the update
         await _auditLogService.LogAdminAction(
             battleTag,
@@ -138,10 +138,10 @@ public class ApiTokenController(
             {
                 ["token_name"] = token.Name
             });
-        
+
         return NoContent();
     }
-    
+
     [HttpDelete("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     [InjectActingPlayerAuthCodeAttribute]
@@ -149,15 +149,15 @@ public class ApiTokenController(
     {
         var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
         var battleTag = user?.BattleTag ?? "Unknown";
-        
+
         var token = await _apiTokenRepository.GetById(id);
         if (token == null)
         {
             return NotFound();
         }
-        
+
         await _apiTokenRepository.Delete(id);
-        
+
         // Log the deletion
         await _auditLogService.LogAdminAction(
             battleTag,
@@ -171,10 +171,10 @@ public class ApiTokenController(
                 ["token_name"] = token.Name,
                 ["scopes"] = token.Scopes?.Keys?.ToList() ?? new List<string>()
             });
-        
+
         return NoContent();
     }
-    
+
     [HttpPost("{id}/regenerate")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     [InjectActingPlayerAuthCodeAttribute]
@@ -182,21 +182,21 @@ public class ApiTokenController(
     {
         var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
         var battleTag = user?.BattleTag ?? "Unknown";
-        
+
         var token = await _apiTokenRepository.GetById(id);
         if (token == null)
         {
             return NotFound();
         }
-        
+
         var oldTokenValue = token.Token;
-        
+
         // Generate new UUID for the token
         token.Token = Guid.NewGuid().ToString();
         token.CreatedAt = DateTimeOffset.UtcNow;
-        
+
         await _apiTokenRepository.Update(token);
-        
+
         // Log the regeneration (don't log actual token values for security)
         await _auditLogService.LogAdminAction(
             battleTag,
@@ -210,10 +210,10 @@ public class ApiTokenController(
             {
                 ["token_name"] = token.Name
             });
-        
+
         return Ok(token);
     }
-    
+
     [HttpPost("{id}/deactivate")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     [InjectActingPlayerAuthCodeAttribute]
@@ -221,16 +221,16 @@ public class ApiTokenController(
     {
         var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
         var battleTag = user?.BattleTag ?? "Unknown";
-        
+
         var token = await _apiTokenRepository.GetById(id);
         if (token == null)
         {
             return NotFound();
         }
-        
+
         token.IsActive = false;
         await _apiTokenRepository.Update(token);
-        
+
         // Log the deactivation
         await _auditLogService.LogAdminAction(
             battleTag,
@@ -243,10 +243,10 @@ public class ApiTokenController(
             {
                 ["token_name"] = token.Name
             });
-        
+
         return NoContent();
     }
-    
+
     [HttpPost("{id}/activate")]
     [BearerHasPermissionFilter(Permission = EPermission.Permissions)]
     [InjectActingPlayerAuthCodeAttribute]
@@ -254,16 +254,16 @@ public class ApiTokenController(
     {
         var user = InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
         var battleTag = user?.BattleTag ?? "Unknown";
-        
+
         var token = await _apiTokenRepository.GetById(id);
         if (token == null)
         {
             return NotFound();
         }
-        
+
         token.IsActive = true;
         await _apiTokenRepository.Update(token);
-        
+
         // Log the activation
         await _auditLogService.LogAdminAction(
             battleTag,
@@ -276,7 +276,7 @@ public class ApiTokenController(
             {
                 ["token_name"] = token.Name
             });
-        
+
         return NoContent();
     }
 }

@@ -26,38 +26,38 @@ public class ApiTokenRepository(MongoClient mongoClient) : MongoDbRepositoryBase
     {
         return await LoadFirst<ApiToken>(t => t.Token == token && t.IsActive);
     }
-    
+
     [Trace]
     public async Task<ApiToken> GetById(string id)
     {
         return await LoadFirst<ApiToken>(t => t.Id == id);
     }
-    
+
     [Trace]
     public async Task<List<ApiToken>> GetAll()
     {
         return await LoadAll<ApiToken>();
     }
-    
+
     [Trace]
     public async Task Create(ApiToken apiToken)
     {
         await Insert(apiToken);
     }
-    
+
     [Trace]
     public async Task Update(ApiToken apiToken)
     {
         await Upsert(apiToken);
     }
-    
+
     [Trace]
     public async Task Delete(string id)
     {
         var collection = CreateCollection<ApiToken>();
         await collection.DeleteOneAsync(t => t.Id == id);
     }
-    
+
     public async Task UpdateLastUsed(string token)
     {
         var collection = CreateCollection<ApiToken>();

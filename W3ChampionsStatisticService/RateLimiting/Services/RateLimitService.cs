@@ -29,19 +29,19 @@ public class RateLimitService(
 {
     private readonly IApiTokenService _apiTokenService = apiTokenService;
     private readonly ILogger<RateLimitService> _logger = logger;
-    
+
     private const string API_TOKEN_HEADER = "X-API-Token";
-    
+
     [Trace]
     public async Task<RateLimitContext> DetermineRateLimitContext(
         HttpContext context,
         string scope,
-        string policyName, 
-        int hourlyLimit, 
+        string policyName,
+        int hourlyLimit,
         int dailyLimit)
     {
         var ipAddress = GetIpAddress(context);
-        
+
         // Check for API token first - if present, it overrides everything
         if (context.Request.Headers.TryGetValue(API_TOKEN_HEADER, out var apiTokenValue))
         {
@@ -52,7 +52,7 @@ public class RateLimitService(
                 var tokenScope = apiToken.GetScope(scope);
                 if (tokenScope != null && tokenScope.IsEnabled)
                 {
-                    _logger.LogDebug("Valid API token found with scope: {TokenId}, Scope: {Scope}, IP: {IP}", 
+                    _logger.LogDebug("Valid API token found with scope: {TokenId}, Scope: {Scope}, IP: {IP}",
                         apiToken.Id, scope, ipAddress);
                     return new RateLimitContext
                     {
@@ -70,14 +70,14 @@ public class RateLimitService(
                     _logger.LogWarning("API token lacks required scope: {TokenId}, Scope: {Scope}", apiToken.Id, scope);
                 }
             }
-            
+
             _logger.LogWarning("Invalid API token provided from IP: {IP} for scope: {Scope}", ipAddress, scope);
         }
-        
+
         // Standard IP-based rate limiting with scope
-        _logger.LogDebug("Using policy {PolicyName} with limits {HourlyLimit}/hr, {DailyLimit}/day for IP: {IP}, Scope: {Scope}", 
+        _logger.LogDebug("Using policy {PolicyName} with limits {HourlyLimit}/hr, {DailyLimit}/day for IP: {IP}, Scope: {Scope}",
             policyName, hourlyLimit, dailyLimit, ipAddress, scope);
-            
+
         return new RateLimitContext
         {
             PolicyName = policyName,
@@ -87,7 +87,7 @@ public class RateLimitService(
             PartitionKey = $"ip:{ipAddress}:{scope}"
         };
     }
-    
+
     public string GetIpAddress(HttpContext context)
     {
         // Check for Cloudflare's CF-Connecting-IP header first
@@ -95,7 +95,7 @@ public class RateLimitService(
         {
             return cfIp.ToString();
         }
-        
+
         // Then check X-Forwarded-For
         if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
         {
@@ -106,7 +106,7 @@ public class RateLimitService(
                 return ips[0].Trim();
             }
         }
-        
+
         // Fall back to remote IP address
         return context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
     }
