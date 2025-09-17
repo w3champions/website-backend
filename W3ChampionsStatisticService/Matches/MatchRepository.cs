@@ -27,22 +27,58 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public async Task EnsureIndexesAsync()
     {
-        var collection = CreateCollection<Matchup>();
+        // Matchup collection indexes
+        var matchupCollection = CreateCollection<Matchup>();
 
-        // Create unique index for Season, GateWay, GameMode combination to speed up queries
-        var seasonIndex = new CreateIndexModel<Matchup>(
-            Builders<Matchup>.IndexKeys.Descending(x => x.Season),
-            new CreateIndexOptions { Unique = false });
+        var matchupIndexes = new List<CreateIndexModel<Matchup>>
+        {
+            // Compound index commonly used for listing matches by gateway, season and game mode
+            new CreateIndexModel<Matchup>(
+                Builders<Matchup>.IndexKeys
+                    .Ascending(x => x.GateWay)
+                    .Descending(x => x.Season)
+                    .Ascending(x => x.GameMode)
+            ),
 
-        var gateWayIndex = new CreateIndexModel<Matchup>(
-            Builders<Matchup>.IndexKeys.Ascending(x => x.GateWay),
-            new CreateIndexOptions { Unique = false });
+            // Lookups by original ongoing match id and flo id (descending)
+            new CreateIndexModel<Matchup>(
+                Builders<Matchup>.IndexKeys.Descending(x => x.MatchId),
+                new CreateIndexOptions { Unique = false }
+            ),
+            new CreateIndexModel<Matchup>(
+                Builders<Matchup>.IndexKeys.Descending(x => x.FloMatchId),
+                new CreateIndexOptions { Unique = false }
+            ),
 
-        var gameModeIndex = new CreateIndexModel<Matchup>(
-            Builders<Matchup>.IndexKeys.Ascending(x => x.GameMode),
-            new CreateIndexOptions { Unique = false });
+            // Text index for player search across teams
+            new CreateIndexModel<Matchup>(
+                Builders<Matchup>.IndexKeys
+                    .Text(x => x.Team1Players)
+                    .Text(x => x.Team2Players)
+                    .Text(x => x.Team3Players)
+                    .Text(x => x.Team4Players)
+            )
+        };
 
-        await collection.Indexes.CreateManyAsync(new[] { seasonIndex, gateWayIndex, gameModeIndex });
+        await matchupCollection.Indexes.CreateManyAsync(matchupIndexes);
+
+        // MatchFinishedEvent collection indexes for lookups used by this repository
+        var finishedEventCollection = CreateCollection<MatchFinishedEvent>();
+
+        var finishedEventIndexes = new List<CreateIndexModel<MatchFinishedEvent>>
+        {
+            new CreateIndexModel<MatchFinishedEvent>(
+                Builders<MatchFinishedEvent>.IndexKeys.Ascending(x => x.match.id)
+            ),
+            new CreateIndexModel<MatchFinishedEvent>(
+                Builders<MatchFinishedEvent>.IndexKeys.Ascending(x => x.match.floGameId)
+            ),
+            new CreateIndexModel<MatchFinishedEvent>(
+                Builders<MatchFinishedEvent>.IndexKeys.Ascending(x => x.match.gamename)
+            )
+        };
+
+        await finishedEventCollection.Indexes.CreateManyAsync(finishedEventIndexes);
     }
 
     public async Task Insert(Matchup matchup)
@@ -170,18 +206,8 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     public Task EnsureIndices()
     {
-        var collection = CreateCollection<Matchup>();
-
-        var matchUpLogBuilder = Builders<Matchup>.IndexKeys;
-
-        var textIndex = new CreateIndexModel<Matchup>(
-            matchUpLogBuilder
-            .Text(x => x.Team1Players)
-            .Text(x => x.Team2Players)
-            .Text(x => x.Team3Players)
-            .Text(x => x.Team4Players)
-        );
-        return collection.Indexes.CreateOneAsync(textIndex);
+        // Legacy method used in some tests. Delegate to the consolidated index creation.
+        return EnsureIndexesAsync();
     }
 
     private static PlayerScore CreateDetail(PlayerBlizzard playerBlizzard)
