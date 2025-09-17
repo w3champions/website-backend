@@ -14,7 +14,7 @@ public class TurnstileVerificationFilter(ITurnstileService turnstileService, ILo
     private readonly ITurnstileService _turnstileService = turnstileService;
     private readonly ILogger<TurnstileVerificationFilter> _logger = logger;
     private const string TURNSTILE_HEADER = "X-Turnstile-Token";
-    
+
     /// <summary>
     /// Optional: Maximum age of the token in seconds. Set by the attribute.
     /// Value of 0 or negative means no age check.
@@ -55,7 +55,7 @@ public class TurnstileVerificationFilter(ITurnstileService turnstileService, ILo
         try
         {
             var result = await _turnstileService.VerifyTokenAsync(token, remoteIp, MaxAgeSeconds > 0 ? MaxAgeSeconds : null);
-            
+
             if (!result.IsValid)
             {
                 if (result.IsExpiredByAge)
@@ -68,7 +68,7 @@ public class TurnstileVerificationFilter(ITurnstileService turnstileService, ILo
                     _logger.LogInformation("Invalid Turnstile token. Endpoint: {Method} {Endpoint}, IP: {RemoteIp}, User-Agent: {UserAgent}",
                         method, endpoint, remoteIp, userAgent);
                 }
-                
+
                 context.Result = new UnauthorizedObjectResult(new
                 {
                     StatusCode = HttpStatusCode.Unauthorized,

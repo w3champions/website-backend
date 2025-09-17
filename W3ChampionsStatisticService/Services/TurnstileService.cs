@@ -23,7 +23,7 @@ public class TurnstileVerificationResult
     public DateTime? ChallengeTimestamp { get; set; }
     public bool IsExpiredByAge { get; set; }
     public string ErrorMessage { get; set; }
-    
+
     /// <summary>
     /// Creates a successful verification result
     /// </summary>
@@ -37,7 +37,7 @@ public class TurnstileVerificationResult
             ErrorMessage = null
         };
     }
-    
+
     /// <summary>
     /// Creates a failed verification result
     /// </summary>
@@ -51,7 +51,7 @@ public class TurnstileVerificationResult
             ErrorMessage = errorMessage
         };
     }
-    
+
     /// <summary>
     /// Creates a result for token that is too old
     /// </summary>
@@ -104,7 +104,7 @@ public class TurnstileService : ITurnstileService
         var result = await VerifyTokenAsync(token, remoteIp, null);
         return result.IsValid;
     }
-    
+
     [Trace]
     public async Task<TurnstileVerificationResult> VerifyTokenAsync(string token, string remoteIp = null, int? maxAgeSeconds = null)
     {
@@ -126,7 +126,7 @@ public class TurnstileService : ITurnstileService
         if (_cache.TryGetValue<TurnstileVerificationResult>(cacheKey, out var cachedResult))
         {
             _logger.LogDebug("Turnstile token found in cache");
-            
+
             // Check age if max age is specified and we have a cached timestamp
             if (maxAgeSeconds.HasValue && cachedResult.ChallengeTimestamp.HasValue)
             {
@@ -137,7 +137,7 @@ public class TurnstileService : ITurnstileService
                     return TurnstileVerificationResult.ExpiredByAge(cachedResult.ChallengeTimestamp.Value);
                 }
             }
-            
+
             return cachedResult;
         }
 
@@ -174,7 +174,7 @@ public class TurnstileService : ITurnstileService
             if (result.Success)
             {
                 var verificationResult = TurnstileVerificationResult.Success(result.ChallengeTs);
-                
+
                 // Check age if max age is specified
                 if (maxAgeSeconds.HasValue && result.ChallengeTs.HasValue)
                 {
@@ -185,7 +185,7 @@ public class TurnstileService : ITurnstileService
                         return TurnstileVerificationResult.ExpiredByAge(result.ChallengeTs.Value);
                     }
                 }
-                
+
                 // Cache successful verification
                 _cache.Set(cacheKey, verificationResult, TimeSpan.FromMinutes(CACHE_DURATION_MINUTES));
                 _logger.LogDebug($"Turnstile token verified successfully. IP: {remoteIp}");

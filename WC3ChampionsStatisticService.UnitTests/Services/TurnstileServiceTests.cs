@@ -28,12 +28,12 @@ public class TurnstileServiceTests
     public void SetUp()
     {
         Environment.SetEnvironmentVariable("TURNSTILE_SECRET_KEY", TestSecretKey);
-        
+
         _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpMessageHandlerMock.Object);
         _memoryCache = new MemoryCache(new MemoryCacheOptions());
         _loggerMock = new Mock<ILogger<TurnstileService>>();
-        
+
         _turnstileService = new TurnstileService(_httpClient, _memoryCache, _loggerMock.Object);
     }
 
@@ -95,7 +95,7 @@ public class TurnstileServiceTests
         // Arrange
         var challengeTimestamp = DateTime.UtcNow.AddMinutes(-10); // 10 minutes old
         var maxAgeSeconds = 300; // 5 minutes max
-        
+
         var responseJson = $@"{{
             ""success"": true,
             ""challenge_ts"": ""{challengeTimestamp:yyyy-MM-dd'T'HH:mm:ss.fff'Z'}"",
@@ -112,7 +112,7 @@ public class TurnstileServiceTests
         Assert.IsTrue(result.IsExpiredByAge);
         Assert.IsNotNull(result.ChallengeTimestamp);
         Assert.AreEqual("Token has expired. Please refresh and try again.", result.ErrorMessage);
-        
+
         // Verify logging
         _loggerMock.Verify(
             x => x.Log(
@@ -130,7 +130,7 @@ public class TurnstileServiceTests
         // Arrange
         var challengeTimestamp = DateTime.UtcNow.AddMinutes(-2); // 2 minutes old
         var maxAgeSeconds = 300; // 5 minutes max
-        
+
         var responseJson = $@"{{
             ""success"": true,
             ""challenge_ts"": ""{challengeTimestamp:yyyy-MM-dd'T'HH:mm:ss.fff'Z'}"",
@@ -168,14 +168,14 @@ public class TurnstileServiceTests
 
         // Simulate time passing (we can't actually change the cached timestamp, 
         // but we can verify the cache is used)
-        
+
         // Act 2 - Second verification should use cache
         var result2 = await _turnstileService.VerifyTokenAsync(TestToken, TestRemoteIp, maxAgeSeconds: 300);
-        
+
         // Assert
         Assert.IsTrue(result2.IsValid);
         Assert.AreEqual(result1.ChallengeTimestamp, result2.ChallengeTimestamp);
-        
+
         // Verify HTTP was called only once (cache was used)
         _httpMessageHandlerMock.Protected().Verify(
             "SendAsync",
@@ -194,7 +194,7 @@ public class TurnstileServiceTests
         // Assert
         Assert.IsFalse(result.IsValid);
         Assert.AreEqual("Token is missing", result.ErrorMessage);
-        
+
         // Verify no HTTP call was made
         _httpMessageHandlerMock.Protected().Verify(
             "SendAsync",
@@ -218,7 +218,7 @@ public class TurnstileServiceTests
         Assert.IsTrue(result.IsValid);
         Assert.IsNull(result.ChallengeTimestamp);
         Assert.IsFalse(service.IsEnabled);
-        
+
         // Verify no HTTP call was made
         _httpMessageHandlerMock.Protected().Verify(
             "SendAsync",
@@ -257,7 +257,7 @@ public class TurnstileServiceTests
         var ex = Assert.ThrowsAsync<TurnstileVerificationException>(
             async () => await _turnstileService.VerifyTokenAsync(TestToken, TestRemoteIp, maxAgeSeconds: null)
         );
-        
+
         Assert.That(ex.Message, Does.Contain("Turnstile API returned status code ServiceUnavailable"));
     }
 

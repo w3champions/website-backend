@@ -13,7 +13,7 @@ public class TurnstileVerificationAttribute : Attribute, IFilterFactory
     /// Set to 0 or negative to disable age check.
     /// </summary>
     public int MaxAgeSeconds { get; set; }
-    
+
     public bool IsReusable => false;
 
     public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
