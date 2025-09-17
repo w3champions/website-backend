@@ -162,6 +162,8 @@ builder.Services.Configure<CacheOptionsFor<List<PlayerAka>>>(x =>
 builder.Services.AddInterceptedTransient<IMatchEventRepository, MatchEventRepository>();
 builder.Services.AddInterceptedTransient<IVersionRepository, VersionRepository>();
 builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
+// Ensure MatchRepository indexes are created at startup
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
