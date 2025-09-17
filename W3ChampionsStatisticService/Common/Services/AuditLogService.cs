@@ -25,10 +25,10 @@ public class AuditLogService(
     private readonly ILogger<AuditLogService> _logger = logger;
 
     public async Task LogAdminAction(string battleTag, string action, string entityType, string entityId,
-        object? oldValue = null, object? newValue = null, Dictionary<string, object>? metadata = null)
+        object? oldValue = null, object? newValue = null, string? reason = null, Dictionary<string, object>? metadata = null)
     {
         await LogAction(battleTag, "ADMIN", action, entityType, entityId,
-            affectedUserId: null, reason: null, oldValue: oldValue, newValue: newValue, metadata: metadata);
+            affectedUserId: null, reason: reason, oldValue: oldValue, newValue: newValue, metadata: metadata);
     }
 
     public async Task LogAction(string battleTag, string category, string action, string entityType, string entityId,

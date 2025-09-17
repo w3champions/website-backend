@@ -14,7 +14,7 @@ public interface IAuditLogService
     /// <summary>
     /// Log an admin action for audit purposes
     /// </summary>
-    Task LogAdminAction(string battleTag, string action, string entityType, string entityId, object? oldValue = null, object? newValue = null, Dictionary<string, object>? metadata = null);
+    Task LogAdminAction(string battleTag, string action, string entityType, string entityId, object? oldValue = null, object? newValue = null, string? reason = null, Dictionary<string, object>? metadata = null);
 
     /// <summary>
     /// Log an action with category for better organization
