@@ -1,5 +1,6 @@
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.StaticFiles;
@@ -192,6 +193,14 @@ builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
 // Turnstile service for captcha verification
 builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
 builder.Services.AddMemoryCache();
+
+// Rate limiting services
+builder.Services.AddInterceptedScoped<W3ChampionsStatisticService.RateLimiting.Repositories.IApiTokenRepository, W3ChampionsStatisticService.RateLimiting.Repositories.ApiTokenRepository>();
+builder.Services.AddInterceptedScoped<W3ChampionsStatisticService.RateLimiting.Services.IApiTokenService, W3ChampionsStatisticService.RateLimiting.Services.ApiTokenService>();
+builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Services.IRateLimitService, W3ChampionsStatisticService.RateLimiting.Services.RateLimitService>();
+builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Services.IRateLimitBucketService, W3ChampionsStatisticService.RateLimiting.Services.RateLimitBucketService>();
+
+// Rate limiting is handled by our custom attributes
 
 builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();

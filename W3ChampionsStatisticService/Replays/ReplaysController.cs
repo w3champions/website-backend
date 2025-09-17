@@ -19,7 +19,12 @@ public class ReplaysController(
     private readonly IMatchRepository _matchRepository = matchRepository;
 
     [HttpGet("{gameId}")]
-    [TurnstileVerification(MaxAgeSeconds = 10)] // Token must be less than 10 seconds old, combating captcha solvers
+    [ReplayRateLimit(
+        StrictHourlyLimit = 10,
+        StrictDailyLimit = 50,
+        RelaxedHourlyLimit = 30,
+        RelaxedDailyLimit = 100,
+        MatchAgeThresholdDays = 7)]
     public async Task<IActionResult> GetReplay(string gameId)
     {
         var floMatchId = await _matchRepository.GetFloIdFromId(gameId);
@@ -45,7 +50,12 @@ public class ReplaysController(
     }
 
     [HttpGet("by-flo-id/{floMatchId}")]
-    [TurnstileVerification(MaxAgeSeconds = 10)] // Token must be less than 10 seconds old, combating captcha solvers
+    [ReplayRateLimit(
+        StrictHourlyLimit = 10,
+        StrictDailyLimit = 50,
+        RelaxedHourlyLimit = 30,
+        RelaxedDailyLimit = 100,
+        MatchAgeThresholdDays = 7)]
     public async Task<IActionResult> GetReplay(int floMatchId)
     {
         if (floMatchId == 0)

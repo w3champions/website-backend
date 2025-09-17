@@ -71,6 +71,7 @@ public interface IMatchRepository
     Task EnsureIndices();
 
     Task<int> GetFloIdFromId(string gameId);
+    Task<MatchupDetail> LoadFinishedMatchDetailsByFloId(int floMatchId);
     Task<Season> LoadLastSeason();
 
     Task<DateTimeOffset?> AddPlayerHeroes(DateTimeOffset startTime, int pageSize);

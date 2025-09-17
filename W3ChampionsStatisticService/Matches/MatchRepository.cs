@@ -150,6 +150,18 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         };
     }
 
+    public async Task<MatchupDetail> LoadFinishedMatchDetailsByFloId(int floMatchId)
+    {
+        var originalMatch = await LoadFirst<MatchFinishedEvent>(t => t.match.floGameId == floMatchId);
+        var match = await LoadFirst<Matchup>(t => t.FloMatchId == floMatchId);
+
+        return new MatchupDetail
+        {
+            Match = match,
+            PlayerScores = originalMatch?.result?.players.Select(p => CreateDetail(p)).ToList()
+        };
+    }
+
     public async Task<MatchFinishedEvent> LoadMatchFinishedEventByGameName(string gameName)
     {
         // TODO: Check how frequently this is called as this is not covered by an index.
