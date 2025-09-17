@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using W3ChampionsStatisticService.Common.Constants;
+using System.Linq;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Services.BackgroundTasks;
@@ -18,13 +19,18 @@ public class UpdateMaxMmrService(ILogger<UpdateMaxMmrService> logger, PlayerRepo
         {
             try
             {
-                int maxMmr = _playerRepository.LoadMaxMMR();
-                MmrConstants.CurrentMaxMmr = maxMmr;
-                _logger.LogInformation($"MaxMmr updated to {maxMmr} at {DateTime.UtcNow}");
+                foreach (var gameMode in System.Enum.GetValues(typeof(W3C.Contracts.Matchmaking.GameMode)).Cast<W3C.Contracts.Matchmaking.GameMode>())
+                {
+                    int maxMmr = _playerRepository.LoadMaxMMR(gameMode);
+                    MmrConstants.MaxMmrPerGameMode[gameMode] = maxMmr;
+                    _logger.LogInformation($"MaxMmr for {gameMode} updated to {maxMmr} at {DateTime.UtcNow}");
+                }
+                // Optionally, update CurrentMaxMmr to the highest value across all game modes
+                MmrConstants.CurrentMaxMmr = MmrConstants.MaxMmrPerGameMode.Values.Max();
             }
             catch (Exception ex)
             {
-              _logger.LogError(ex, "Error updating MaxMmr");
+                _logger.LogError(ex, "Error updating MaxMmr");
             }
             await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
         }

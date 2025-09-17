@@ -31,7 +31,7 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan
             var stats = new MmrStats(new List<MmrCount>(), orderedMMrs);
             return stats;
         }
-        var max = orderedMMrs.FirstOrDefault(MmrConstants.CurrentMaxMmr);
+        var max = orderedMMrs.FirstOrDefault(MmrConstants.MaxMmrPerGameMode[gameMode]);
         var min = orderedMMrs.LastOrDefault();
         var ranges = Ranges(max, min, 25).ToList();
         var highest = ranges.Count > 0 ? ranges.First() : max;
@@ -49,7 +49,7 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan
         var mmrs = await _playerRepository.LoadMmrs(season, gateWay, gameMode);
         if (mmrs.Count == 0)
         {
-            return (0, MmrConstants.CurrentMaxMmr);
+            return (0, MmrConstants.MaxMmrPerGameMode[gameMode]);
         }
         mmrs.Sort();
         mmrs.Reverse();

@@ -21,19 +21,28 @@ namespace W3ChampionsStatisticService.PlayerProfiles;
 public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
     private readonly Dictionary<string, (DateTime cacheTime, List<int> mmrs)> _mmrsCache = new();
-    private int? _cachedMaxMmr;
-    private DateTime _maxMmrCacheTime;
+    private readonly Dictionary<GameMode, (int? maxMmr, DateTime cacheTime)> _maxMmrCache = new();
 
-    public int LoadMaxMMR()
+    public int LoadMaxMMR(GameMode gameMode)
     {
-        if (_cachedMaxMmr.HasValue && DateTime.UtcNow - _maxMmrCacheTime < TimeSpan.FromHours(12))
+        if (_maxMmrCache.TryGetValue(gameMode, out var cacheEntry))
         {
-            return _cachedMaxMmr.Value;
+            if (cacheEntry.maxMmr.HasValue && DateTime.UtcNow - cacheEntry.cacheTime < TimeSpan.FromHours(12))
+            {
+                return cacheEntry.maxMmr.Value;
+            }
         }
         var mongoCollection = CreateCollection<PlayerOverview>();
-        var maxMmr = mongoCollection.AsQueryable().Max(p => p.MMR);
-        _cachedMaxMmr = maxMmr;
-        _maxMmrCacheTime = DateTime.UtcNow;
+        int maxMmr;
+        if (gameMode == GameMode.Undefined)
+        {
+            maxMmr = mongoCollection.AsQueryable().Max(p => p.MMR);
+        }
+        else
+        {
+            maxMmr = mongoCollection.AsQueryable().Where(p => p.GameMode == gameMode).Max(p => p.MMR);
+        }
+        _maxMmrCache[gameMode] = (maxMmr, DateTime.UtcNow);
         return maxMmr;
     }
 

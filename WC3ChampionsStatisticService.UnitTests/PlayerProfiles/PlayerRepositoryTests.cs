@@ -6,6 +6,8 @@ using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ladder;
 using W3C.Contracts.Matchmaking;
 using System.Threading.Tasks;
+using Moq;
+using System.Threading;
 
 namespace WC3ChampionsStatisticService.UnitTests.PlayerProfiles;
 
@@ -37,13 +39,13 @@ public class PlayerRepositoryTests
   var collection = _mongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<PlayerOverview>("PlayerOverview");
   collection.InsertMany(new List<PlayerOverview>
     {
-      new PlayerOverview { MMR = 1500, Id = "1" },
-      new PlayerOverview { MMR = 2000, Id = "2" },
-      new PlayerOverview { MMR = 3001, Id = "3" }
+      new PlayerOverview { MMR = 1500, Id = "1", GameMode = GameMode.GM_1v1 },
+      new PlayerOverview { MMR = 2000, Id = "2", GameMode = GameMode.GM_1v1  },
+      new PlayerOverview { MMR = 3001, Id = "3", GameMode = GameMode.GM_1v1  }
     });
 
     // Act
-    var maxMmr = _repository.LoadMaxMMR();
+    var maxMmr = _repository.LoadMaxMMR(GameMode.GM_1v1);
 
     // Assert
     Assert.AreEqual(3001, maxMmr);
@@ -80,4 +82,44 @@ public class PlayerRepositoryTests
       var mmrs2 = await _repository.LoadMmrs(1, GateWay.Europe, GameMode.GM_1v1);
       CollectionAssert.AreEquivalent(mmrs1, mmrs2);
   }
+
+  [Test]
+  public void LoadMaxMMR_ReturnsMaxForSpecificGameMode()
+  {
+    // Arrange
+    var collection = _mongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<PlayerOverview>("PlayerOverview");
+    collection.InsertMany(new List<PlayerOverview>
+        {
+            new PlayerOverview { Id = "1", MMR = 1000, GameMode = GameMode.GM_1v1 },
+            new PlayerOverview { Id = "2", MMR = 2000, GameMode = GameMode.GM_1v1 },
+            new PlayerOverview { Id = "3", MMR = 1500, GameMode = GameMode.GM_2v2 }
+        });
+
+    // Act
+    int maxMmr = _repository.LoadMaxMMR(GameMode.GM_1v1);
+    int maxMmr2v2 = _repository.LoadMaxMMR(GameMode.GM_2v2);
+
+    // Assert
+    Assert.AreEqual(2000, maxMmr);
+    Assert.AreEqual(1500, maxMmr2v2);
+    }
+
+    [Test]
+    public void LoadMaxMMR_ReturnsMaxAcrossAllGameModes_WhenGameModeIsUndefined()
+    {
+        // Arrange
+        var collection = _mongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<PlayerOverview>("PlayerOverview");
+        collection.InsertMany(new List<PlayerOverview>
+        {
+            new PlayerOverview { Id = "1", MMR = 1000, GameMode = GameMode.GM_1v1 },
+            new PlayerOverview { Id = "2", MMR = 2000, GameMode = GameMode.GM_1v1 },
+            new PlayerOverview { Id = "3", MMR = 1500, GameMode = GameMode.GM_2v2 }
+        });
+
+        // Act
+        int maxMmr = _repository.LoadMaxMMR(GameMode.Undefined);
+
+        // Assert
+        Assert.AreEqual(2000, maxMmr);
+    }
 }

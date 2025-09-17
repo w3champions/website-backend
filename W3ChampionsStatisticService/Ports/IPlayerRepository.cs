@@ -35,4 +35,5 @@ public interface IPlayerRepository
     Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season);
     Task<PlayerGameLength> LoadOrCreateGameLengthForPlayerStats(string battleTag, int season);
     Task Save(PlayerGameLength gameLengthStats);
+    int LoadMaxMMR(GameMode gameMode);
 }
