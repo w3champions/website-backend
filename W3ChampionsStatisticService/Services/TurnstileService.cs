@@ -13,7 +13,58 @@ namespace W3ChampionsStatisticService.Services;
 public interface ITurnstileService
 {
     Task<bool> VerifyTokenAsync(string token, string remoteIp = null);
+    Task<TurnstileVerificationResult> VerifyTokenAsync(string token, string remoteIp = null, int? maxAgeSeconds = null);
     bool IsEnabled { get; }
+}
+
+public class TurnstileVerificationResult
+{
+    public bool IsValid { get; set; }
+    public DateTime? ChallengeTimestamp { get; set; }
+    public bool IsExpiredByAge { get; set; }
+    public string ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Creates a successful verification result
+    /// </summary>
+    public static TurnstileVerificationResult Success(DateTime? challengeTimestamp)
+    {
+        return new TurnstileVerificationResult
+        {
+            IsValid = true,
+            ChallengeTimestamp = challengeTimestamp,
+            IsExpiredByAge = false,
+            ErrorMessage = null
+        };
+    }
+
+    /// <summary>
+    /// Creates a failed verification result
+    /// </summary>
+    public static TurnstileVerificationResult Failed(string errorMessage)
+    {
+        return new TurnstileVerificationResult
+        {
+            IsValid = false,
+            ChallengeTimestamp = null,
+            IsExpiredByAge = false,
+            ErrorMessage = errorMessage
+        };
+    }
+
+    /// <summary>
+    /// Creates a result for token that is too old
+    /// </summary>
+    public static TurnstileVerificationResult ExpiredByAge(DateTime challengeTimestamp)
+    {
+        return new TurnstileVerificationResult
+        {
+            IsValid = false,
+            ChallengeTimestamp = challengeTimestamp,
+            IsExpiredByAge = true,
+            ErrorMessage = "Token has expired. Please refresh and try again."
+        };
+    }
 }
 
 public class TurnstileVerificationException : Exception
@@ -50,24 +101,43 @@ public class TurnstileService : ITurnstileService
     [Trace]
     public async Task<bool> VerifyTokenAsync(string token, string remoteIp = null)
     {
+        var result = await VerifyTokenAsync(token, remoteIp, null);
+        return result.IsValid;
+    }
+
+    [Trace]
+    public async Task<TurnstileVerificationResult> VerifyTokenAsync(string token, string remoteIp = null, int? maxAgeSeconds = null)
+    {
         // Skip verification if not enabled
         if (!IsEnabled)
         {
             _logger.LogDebug("Turnstile verification is disabled (no secret key configured)");
-            return true;
+            return TurnstileVerificationResult.Success(null);
         }
 
         if (string.IsNullOrWhiteSpace(token))
         {
             _logger.LogDebug("Turnstile token is empty or null");
-            return false;  // This is a validation failure, not an error
+            return TurnstileVerificationResult.Failed("Token is missing");
         }
 
         // Check cache first
         var cacheKey = $"turnstile_token_{token}";
-        if (_cache.TryGetValue<bool>(cacheKey, out var cachedResult))
+        if (_cache.TryGetValue<TurnstileVerificationResult>(cacheKey, out var cachedResult))
         {
             _logger.LogDebug("Turnstile token found in cache");
+
+            // Check age if max age is specified and we have a cached timestamp
+            if (maxAgeSeconds.HasValue && cachedResult.ChallengeTimestamp.HasValue)
+            {
+                var ageSeconds = (DateTime.UtcNow - cachedResult.ChallengeTimestamp.Value).TotalSeconds;
+                if (ageSeconds > maxAgeSeconds.Value)
+                {
+                    _logger.LogInformation($"Cached token exceeds max age. Age: {ageSeconds:F0} seconds, max allowed: {maxAgeSeconds.Value} seconds, IP: {remoteIp}");
+                    return TurnstileVerificationResult.ExpiredByAge(cachedResult.ChallengeTimestamp.Value);
+                }
+            }
+
             return cachedResult;
         }
 
@@ -103,19 +173,32 @@ public class TurnstileService : ITurnstileService
 
             if (result.Success)
             {
+                var verificationResult = TurnstileVerificationResult.Success(result.ChallengeTs);
+
+                // Check age if max age is specified
+                if (maxAgeSeconds.HasValue && result.ChallengeTs.HasValue)
+                {
+                    var ageSeconds = (DateTime.UtcNow - result.ChallengeTs.Value).TotalSeconds;
+                    if (ageSeconds > maxAgeSeconds.Value)
+                    {
+                        _logger.LogInformation($"Token exceeds max age. Age: {ageSeconds:F0} seconds, max allowed: {maxAgeSeconds.Value} seconds, IP: {remoteIp}");
+                        return TurnstileVerificationResult.ExpiredByAge(result.ChallengeTs.Value);
+                    }
+                }
+
                 // Cache successful verification
-                _cache.Set(cacheKey, true, TimeSpan.FromMinutes(CACHE_DURATION_MINUTES));
-                _logger.LogDebug("Turnstile token verified successfully");
-                return true;
+                _cache.Set(cacheKey, verificationResult, TimeSpan.FromMinutes(CACHE_DURATION_MINUTES));
+                _logger.LogDebug($"Turnstile token verified successfully. IP: {remoteIp}");
+                return verificationResult;
             }
 
             // Token verification failed (invalid token, expired, already used, etc.)
             if (result.ErrorCodes != null && result.ErrorCodes.Count > 0)
             {
-                _logger.LogDebug($"Turnstile verification failed: {string.Join(", ", result.ErrorCodes)}");
+                _logger.LogDebug($"Turnstile verification failed: {string.Join(", ", result.ErrorCodes)}, IP: {remoteIp}");
             }
 
-            return false;
+            return TurnstileVerificationResult.Failed("Token verification failed");
         }
         catch (HttpRequestException ex)
         {
