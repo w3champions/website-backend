@@ -5,23 +5,67 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ports;
 using System;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
+using Microsoft.Extensions.Caching.Memory;
 
 [Trace]
-public class MmrDistributionHandler(IPlayerRepository playerRepository)
+public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan? cacheTtl = null)
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
+    private static readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+    private readonly TimeSpan _cacheTtl = cacheTtl ?? TimeSpan.FromHours(1);
 
     public async Task<MmrStats> GetDistributions(int season, GateWay gateWay, GameMode gameMode)
     {
+        string cacheKey = $"mmr-dist-{season}-{gateWay}-{gameMode}";
+        if (_cache.TryGetValue(cacheKey, out MmrStats cachedStats))
+        {
+            return cachedStats;
+        }
         var mmrs = await _playerRepository.LoadMmrs(season, gateWay, gameMode);
         var orderedMMrs = mmrs.OrderByDescending(m => m).ToList();
-        var ranges = Ranges(2325, 575, 25).ToList();
-        var highest = ranges.First();
+        if (orderedMMrs.Count == 0)
+        {
+            var stats = new MmrStats(new List<MmrCount>(), orderedMMrs);
+            return stats;
+        }
+        var max = orderedMMrs.FirstOrDefault(MmrConstants.MaxMmrPerGameMode[gameMode]);
+        var min = orderedMMrs.LastOrDefault();
+        var ranges = Ranges(max, min, 25).ToList();
+        var highest = ranges.Count > 0 ? ranges.First() : max;
         var grouped = ranges.Select(r => new MmrCount(r, orderedMMrs.Count(x => ((x - r < 25) && (x >= r)) || x >= highest))).ToList();
-        grouped.Remove(grouped.Last());
-        return new MmrStats(grouped, orderedMMrs);
+        if (grouped.Count > 0)
+        {
+            grouped.Remove(grouped.Last());
+        }
+        var statsFinal = new MmrStats(grouped, orderedMMrs);
+        _cache.Set(cacheKey, statsFinal, _cacheTtl);
+        return statsFinal;
+    }
+
+    public async Task<(int minMmr, int maxMmr)> GetPercentileMmr(int season, GateWay gateWay, GameMode gameMode, int minPercentile, int maxPercentile)
+    {
+        var mmrs = await _playerRepository.LoadMmrs(season, gateWay, gameMode);
+        if (mmrs.Count == 0)
+        {
+            return (0, MmrConstants.MaxMmrPerGameMode[gameMode]);
+        }
+        mmrs.Sort();
+        mmrs.Reverse();
+
+        int topIndex = (int)Math.Floor(mmrs.Count * (minPercentile / 100.0));
+        int bottomIndex = (int)Math.Floor(mmrs.Count * (maxPercentile / 100.0)) - 1;
+
+        if (topIndex < 0) topIndex = 0;
+        if (bottomIndex < 0) bottomIndex = 0;
+        if (topIndex >= mmrs.Count) topIndex = mmrs.Count - 1;
+        if (bottomIndex >= mmrs.Count) bottomIndex = mmrs.Count - 1;
+
+        int maxMmr = mmrs[topIndex]; // highest percentile
+        int minMmr = mmrs[bottomIndex]; // lowest percentile in range
+        return (minMmr, maxMmr);
     }
 
     [NoTrace]
@@ -52,11 +96,24 @@ public class MmrStats
     {
         DistributedMmrs = distributedMmrs;
 
-        Top2PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 50]));
-        Top5PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 20]));
-        Top10PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 10]));
-        Top25PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 4]));
-        Top50PercentIndex = DistributedMmrs.IndexOf(DistributedMmrs.Last(d => d.Mmr > mmrs[mmrs.Count / 2]));
+        if (DistributedMmrs.Count == 0 || mmrs.Count == 0)
+        {
+            Top2PercentIndex = Top5PercentIndex = Top10PercentIndex = Top25PercentIndex = Top50PercentIndex = -1;
+        }
+        else
+        {
+            int mmr2 = mmrs[mmrs.Count / 50];
+            int mmr5 = mmrs[mmrs.Count / 20];
+            int mmr10 = mmrs[mmrs.Count / 10];
+            int mmr25 = mmrs[mmrs.Count / 4];
+            int mmr50 = mmrs[mmrs.Count / 2];
+
+            Top2PercentIndex = DistributedMmrs.FindLastIndex(d => d.Mmr > mmr2);
+            Top5PercentIndex = DistributedMmrs.FindLastIndex(d => d.Mmr > mmr5);
+            Top10PercentIndex = DistributedMmrs.FindLastIndex(d => d.Mmr > mmr10);
+            Top25PercentIndex = DistributedMmrs.FindLastIndex(d => d.Mmr > mmr25);
+            Top50PercentIndex = DistributedMmrs.FindLastIndex(d => d.Mmr > mmr50);
+        }
 
         StandardDeviation = CalculateStandardDeviation(mmrs);
     }

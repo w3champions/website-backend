@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using W3ChampionsStatisticService.Common.Constants;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,14 +23,15 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         GateWay gateWay,
         string map,
         int minMmr,
-        int maxMmr)
+        int? maxMmr)
     {
         await UpdateCacheIfNeeded();
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                     && (map == "Overall" || m.Map == map)
                                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                                    && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
+                                    && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
     }
 
     public async Task<List<OnGoingMatchup>> LoadOnGoingMatches(
@@ -39,17 +41,17 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         int pageSize,
         string map,
         int minMmr,
-        int maxMmr,
+        int? maxMmr,
         string sort)
     {
         await UpdateCacheIfNeeded();
-
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var matches = _values
             .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                         && (map == "Overall" || m.Map == map)
                         && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr < minMmr)))
-                        && (maxMmr == 3000 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
+                        && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr > maxMmr))));
 
         if (sort == "mmrDescending")
         {
@@ -123,7 +125,7 @@ public interface IOngoingMatchesCache
         GateWay gateWay,
         string map,
         int minMmr,
-        int maxMmr);
+        int? maxMmr);
 
     Task<List<OnGoingMatchup>> LoadOnGoingMatches(
         GameMode gameMode,
@@ -132,7 +134,7 @@ public interface IOngoingMatchesCache
         int pageSize,
         string map,
         int minMmr,
-        int maxMmr,
+        int? maxMmr,
         string sort);
 
     Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
