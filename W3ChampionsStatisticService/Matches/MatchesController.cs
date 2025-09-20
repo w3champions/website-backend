@@ -10,6 +10,7 @@ using W3C.Domain.Tracing;
 using W3C.Domain.GameModes;
 using W3ChampionsStatisticService.Common.Constants;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
+using System;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -31,6 +32,27 @@ public class MatchesController(
     private readonly MmrDistributionHandler _mmrDistributionHandler = mmrDistributionHandler;
 
 
+    /// <summary>
+    /// Gets a paginated list of matches with optional filters.
+    /// </summary>
+    /// <param name="offset">The offset for pagination.</param>
+    /// <param name="pageSize">The number of matches per page (max 100).</param>
+    /// <param name="gameMode">The game mode filter.</param>
+    /// <param name="gateWay">The gateway filter.</param>
+    /// <param name="season">The season filter. If less than 0, uses the latest season.</param>
+    /// <param name="hero">The hero filter.</param>
+    /// <param name="minMmr">The minimum MMR filter.</param>
+    /// <param name="maxMmr">The maximum MMR filter.</param>
+    /// <param name="minPercentile">The minimum percentile filter.</param>
+    /// <param name="maxPercentile">The maximum percentile filter.</param>
+    /// <returns>
+    /// 200 OK: An object containing a list of matches and the total count.
+    /// {
+    ///   matches: List&lt;MatchFinishedEvent&gt;,
+    ///   count: int
+    /// }
+    /// </returns>
+    [ProducesResponseType(typeof(object), 200)]
     [HttpGet("")]
     public async Task<IActionResult> GetMatches(
         int offset = 0,
@@ -41,17 +63,20 @@ public class MatchesController(
         HeroType hero = HeroType.AllFilter,
         int minMmr = 0,
         int? maxMmr = null,
-        int minPercentile = 0,
-        int maxPercentile = 0
+        int? minPercentile = null,
+        int? maxPercentile = null
     )
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        if (minPercentile > 0 || maxPercentile > 0)
+        if (minPercentile != null || maxPercentile != null)
         {
-            if (minPercentile < 0 || minPercentile > 100) return BadRequest("minPercentile must be between 0 and 100");
-            if (maxPercentile < 0 || maxPercentile > 100) return BadRequest("maxPercentile must be between 0 and 100");
-            if (minPercentile >= maxPercentile) return BadRequest("minPercentile must be less than maxPercentile");
-            (minMmr, maxMmr) = await _mmrDistributionHandler.GetPercentileMmr(season, gateWay, gameMode, minPercentile, maxPercentile);
+            var minPercentileParam = minPercentile ?? 0;
+            var maxPercentileParam = maxPercentile ?? 100;
+            if (maxPercentileParam < 0 || maxPercentileParam > 100) return BadRequest("maxPercentile must be between 0 and 100");
+            if (minPercentileParam >= maxPercentileParam) return BadRequest("minPercentile must be less than maxPercentile");
+            var (mmr1, mmr2) = await _mmrDistributionHandler.GetPercentileMmr(season, gateWay, gameMode, minPercentileParam, maxPercentileParam);
+            minMmr = Math.Min(mmr1, mmr2);
+            maxMmr = Math.Max(mmr1, mmr2);
         }
         if (season < 0)
         {
