@@ -40,12 +40,12 @@ public class MatchesController(
         int season = -1,
         HeroType hero = HeroType.AllFilter,
         int minMmr = 0,
-        int maxMmr = -1,
+        int? maxMmr = null,
         int minPercentile = 0,
         int maxPercentile = 0
     )
     {
-        if (maxMmr < 0) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         if (minPercentile > 0 || maxPercentile > 0)
         {
             if (minPercentile < 0 || minPercentile > 100) return BadRequest("minPercentile must be between 0 and 100");
@@ -115,11 +115,11 @@ public class MatchesController(
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = -1,
+        int? maxMmr = null,
         string sort = "startTimeDescending"
         )
     {
-        if (maxMmr < 0) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         if (pageSize > 200) pageSize = 200;
         var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
         var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
