@@ -101,6 +101,6 @@ public class MmrDistributionHandlerTests
 
         var (minMmr, maxMmr) = await _handler.GetPercentileMmr(1, GateWay.Europe, GameMode.GM_1v1, 0, 2);
         Assert.AreEqual(0, minMmr);
-        Assert.AreEqual(W3ChampionsStatisticService.Common.Constants.MmrConstants.CurrentMaxMmr, maxMmr);
+        Assert.AreEqual(W3ChampionsStatisticService.Common.Constants.MmrConstants.MaxMmr, maxMmr);
     }
 }

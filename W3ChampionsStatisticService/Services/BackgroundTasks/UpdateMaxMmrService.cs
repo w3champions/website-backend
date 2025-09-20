@@ -25,8 +25,6 @@ public class UpdateMaxMmrService(ILogger<UpdateMaxMmrService> logger, PlayerRepo
                     MmrConstants.MaxMmrPerGameMode[gameMode] = maxMmr;
                     _logger.LogInformation($"MaxMmr for {gameMode} updated to {maxMmr} at {DateTime.UtcNow}");
                 }
-                // Optionally, update CurrentMaxMmr to the highest value across all game modes
-                MmrConstants.CurrentMaxMmr = MmrConstants.MaxMmrPerGameMode.Values.Max();
             }
             catch (Exception ex)
             {
