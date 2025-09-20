@@ -15,7 +15,32 @@ public static class ServiceCollectionExtensions
         where TInterface : class
         where TImplementation : class, TInterface
     {
-        services.AddSingleton<TImplementation>(); // Register the actual implementation
+        // Register the concrete implementation with a factory that constructs it using
+        // safe constructor-arg resolution to avoid asking the container for non-service
+        // parameters (like TimeSpan?). Then register the interface as a proxy that
+        // delegates to that implementation.
+        services.AddSingleton<TImplementation>(serviceProvider =>
+        {
+            var constructor = typeof(TImplementation).GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+            if (constructor == null)
+            {
+                throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
+            }
+            var constructorArgs = constructor.GetParameters()
+                .Select(p =>
+                {
+                    var svc = serviceProvider.GetService(p.ParameterType);
+                    if (svc != null) return svc;
+                    if (p.HasDefaultValue) return p.DefaultValue;
+                    if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+                    if (!p.ParameterType.IsValueType) return null;
+                    return Activator.CreateInstance(p.ParameterType);
+                })
+                .ToArray();
+
+            return (TImplementation)Activator.CreateInstance(typeof(TImplementation), constructorArgs);
+        });
+
         services.AddSingleton<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
@@ -30,7 +55,31 @@ public static class ServiceCollectionExtensions
         where TInterface : class
         where TImplementation : class, TInterface
     {
-        services.AddTransient<TImplementation>(); // Register the actual implementation
+        // Register transient implementation using a factory that constructs the
+        // instance with safe constructor resolution, then register the interface
+        // as a proxy that delegates to that implementation.
+        services.AddTransient<TImplementation>(serviceProvider =>
+        {
+            var constructor = typeof(TImplementation).GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+            if (constructor == null)
+            {
+                throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
+            }
+            var constructorArgs = constructor.GetParameters()
+                .Select(p =>
+                {
+                    var svc = serviceProvider.GetService(p.ParameterType);
+                    if (svc != null) return svc;
+                    if (p.HasDefaultValue) return p.DefaultValue;
+                    if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+                    if (!p.ParameterType.IsValueType) return null;
+                    return Activator.CreateInstance(p.ParameterType);
+                })
+                .ToArray();
+
+            return (TImplementation)Activator.CreateInstance(typeof(TImplementation), constructorArgs);
+        });
+
         services.AddTransient<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
@@ -45,7 +94,31 @@ public static class ServiceCollectionExtensions
         where TInterface : class
         where TImplementation : class, TInterface
     {
-        services.AddScoped<TImplementation>(); // Register the actual implementation
+        // Register scoped implementation using a factory that constructs the
+        // instance with safe constructor resolution, then register the interface
+        // as a proxy that delegates to that implementation.
+        services.AddScoped<TImplementation>(serviceProvider =>
+        {
+            var constructor = typeof(TImplementation).GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+            if (constructor == null)
+            {
+                throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
+            }
+            var constructorArgs = constructor.GetParameters()
+                .Select(p =>
+                {
+                    var svc = serviceProvider.GetService(p.ParameterType);
+                    if (svc != null) return svc;
+                    if (p.HasDefaultValue) return p.DefaultValue;
+                    if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+                    if (!p.ParameterType.IsValueType) return null;
+                    return Activator.CreateInstance(p.ParameterType);
+                })
+                .ToArray();
+
+            return (TImplementation)Activator.CreateInstance(typeof(TImplementation), constructorArgs);
+        });
+
         services.AddScoped<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
@@ -70,7 +143,24 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
             }
             var constructorArgs = constructor.GetParameters()
-                .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
+                .Select(p =>
+                {
+                    // Try to resolve from DI first
+                    var svc = serviceProvider.GetService(p.ParameterType);
+                    if (svc != null) return svc;
+
+                    // If parameter has a default value, use it
+                    if (p.HasDefaultValue) return p.DefaultValue;
+
+                    // If nullable value type (e.g., TimeSpan?), return null
+                    if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+
+                    // For reference types not registered, return null
+                    if (!p.ParameterType.IsValueType) return null;
+
+                    // For value types, use default(T)
+                    return Activator.CreateInstance(p.ParameterType);
+                })
                 .ToArray();
 
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
@@ -92,7 +182,15 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
             }
             var constructorArgs = constructor.GetParameters()
-                .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
+                .Select(p =>
+                {
+                    var svc = serviceProvider.GetService(p.ParameterType);
+                    if (svc != null) return svc;
+                    if (p.HasDefaultValue) return p.DefaultValue;
+                    if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+                    if (!p.ParameterType.IsValueType) return null;
+                    return Activator.CreateInstance(p.ParameterType);
+                })
                 .ToArray();
 
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
@@ -114,7 +212,15 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
             }
             var constructorArgs = constructor.GetParameters()
-                .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
+                .Select(p =>
+                {
+                    var svc = serviceProvider.GetService(p.ParameterType);
+                    if (svc != null) return svc;
+                    if (p.HasDefaultValue) return p.DefaultValue;
+                    if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+                    if (!p.ParameterType.IsValueType) return null;
+                    return Activator.CreateInstance(p.ParameterType);
+                })
                 .ToArray();
 
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
