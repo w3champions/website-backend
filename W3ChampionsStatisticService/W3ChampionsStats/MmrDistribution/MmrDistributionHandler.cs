@@ -36,7 +36,8 @@ public class MmrDistributionHandler(IPlayerRepository playerRepository, TimeSpan
         var ranges = Ranges(max, min, 25).ToList();
         var highest = ranges.Count > 0 ? ranges.First() : max;
         var grouped = ranges.Select(r => new MmrCount(r, orderedMMrs.Count(x => ((x - r < 25) && (x >= r)) || x >= highest))).ToList();
-        if (grouped.Count > 0) {
+        if (grouped.Count > 0)
+        {
             grouped.Remove(grouped.Last());
         }
         var statsFinal = new MmrStats(grouped, orderedMMrs);

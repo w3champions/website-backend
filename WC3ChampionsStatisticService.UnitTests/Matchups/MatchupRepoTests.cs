@@ -28,19 +28,19 @@ public class MatchupRepoTests : IntegrationTestBase
         await matchRepository.EnsureIndices();
     }
 
-    
+
     [Test]
     public async Task Load_WithMinMaxMmrFilter_ReturnsCorrectMatches()
     {
         var matchLowMmr = TestDtoHelper.CreateFakeEvent();
-        matchLowMmr.match.players[0].mmr = new Mmr{ rating = 900, rd = 30, vol = 0.06, rating_lower_bound = 820 };
-        matchLowMmr.match.players[1].mmr = new Mmr{ rating = 950, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchLowMmr.match.players[0].mmr = new Mmr { rating = 900, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchLowMmr.match.players[1].mmr = new Mmr { rating = 950, rd = 30, vol = 0.06, rating_lower_bound = 820 };
         var matchMidMmr = TestDtoHelper.CreateFakeEvent();
-        matchMidMmr.match.players[0].mmr = new Mmr{ rating = 1500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
-        matchMidMmr.match.players[1].mmr = new Mmr{ rating = 1550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchMidMmr.match.players[0].mmr = new Mmr { rating = 1500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchMidMmr.match.players[1].mmr = new Mmr { rating = 1550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
         var matchHighMmr = TestDtoHelper.CreateFakeEvent();
-        matchHighMmr.match.players[0].mmr = new Mmr{ rating = 2500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
-        matchHighMmr.match.players[1].mmr = new Mmr{ rating = 2550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchHighMmr.match.players[0].mmr = new Mmr { rating = 2500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchHighMmr.match.players[1].mmr = new Mmr { rating = 2550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
 
         var matchupLow = Matchup.Create(matchLowMmr);
         var matchupMid = Matchup.Create(matchMidMmr);
@@ -80,14 +80,14 @@ public class MatchupRepoTests : IntegrationTestBase
     public async Task Count_WithMinMaxMmrFilter_ReturnsCorrectCount()
     {
         var matchLowMmr = TestDtoHelper.CreateFakeEvent();
-        matchLowMmr.match.players[0].mmr = new Mmr{ rating = 900, rd = 30, vol = 0.06, rating_lower_bound = 820 };
-        matchLowMmr.match.players[1].mmr = new Mmr{ rating = 950, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchLowMmr.match.players[0].mmr = new Mmr { rating = 900, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchLowMmr.match.players[1].mmr = new Mmr { rating = 950, rd = 30, vol = 0.06, rating_lower_bound = 820 };
         var matchMidMmr = TestDtoHelper.CreateFakeEvent();
-        matchMidMmr.match.players[0].mmr = new Mmr{ rating = 1500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
-        matchMidMmr.match.players[1].mmr = new Mmr{ rating = 1550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchMidMmr.match.players[0].mmr = new Mmr { rating = 1500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchMidMmr.match.players[1].mmr = new Mmr { rating = 1550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
         var matchHighMmr = TestDtoHelper.CreateFakeEvent();
-        matchHighMmr.match.players[0].mmr = new Mmr{ rating = 2500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
-        matchHighMmr.match.players[1].mmr = new Mmr{ rating = 2550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchHighMmr.match.players[0].mmr = new Mmr { rating = 2500, rd = 30, vol = 0.06, rating_lower_bound = 820 };
+        matchHighMmr.match.players[1].mmr = new Mmr { rating = 2550, rd = 30, vol = 0.06, rating_lower_bound = 820 };
 
         var matchupLow = Matchup.Create(matchLowMmr);
         var matchupMid = Matchup.Create(matchMidMmr);
