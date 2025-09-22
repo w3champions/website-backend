@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
+using W3C.Contracts.Matchmaking.Queue;
 
 namespace W3C.Domain.MatchmakingService;
 
@@ -49,6 +50,7 @@ public class UnfinishedMatchPlayer : IMatchPlayerServerInfo
     public Race race { get; set; }
     public Mmr mmr { get; set; }
     public Ranking ranking { get; set; }
+    public QueueQuantiles quantiles { get; set; }
     public string country { get; set; }
     public FloPing[] floPings { get; set; }
 }

@@ -20,6 +20,7 @@ public static class PlayersObfuscator
                     player.Name = "*";
                     player.CurrentMmr = 0;
                     player.OldMmr = 0;
+                    player.OldMmrQuantile = null;
                     player.CountryCode = null;
                     player.Location = null;
                     player.Twitch = null;
