@@ -2,6 +2,6 @@
 
 public class QueueQuantiles
 {
-    public float quantile { get; set; }
-    public float activityQuantile { get; set; }
+    public double quantile { get; set; }
+    public double activityQuantile { get; set; }
 }
