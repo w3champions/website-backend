@@ -53,6 +53,7 @@ public class OnGoingMatchup : Matchup
             Name = w.battleTag.Split("#")[0],
             BattleTag = w.battleTag,
             OldMmr = (int)w.mmr.rating,
+            OldMmrQuantile = w.quantiles?.quantile,
             Race = w.race,
             Location = w.country
         });

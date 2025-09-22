@@ -302,6 +302,7 @@ public class Matchup
             InviteName = w.inviteName,
             CurrentMmr = (int?)w.updatedMmr?.rating ?? (int)w.mmr.rating,
             OldMmr = (int)w.mmr.rating,
+            OldMmrQuantile = w.quantiles?.quantile,
             Won = w.won,
             Race = w.race,
             RndRace = w.rndRace,
