@@ -35,7 +35,7 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
     public int LeagueId { get; set; }
     public int LeagueOrder { get; set; }
     public int Division { get; set; }
-    public float? Quantile { get; set; }
+    public double? Quantile { get; set; }
 
     public RankProgression RankingPointsProgress
     {

@@ -9,7 +9,7 @@ public class PlayerOverviewMatches
     public Race Race { get; set; }
     public Race? RndRace { get; set; }
     public int OldMmr { get; set; }
-    public float? OldMmrQuantile { get; set; }
+    public double? OldMmrQuantile { get; set; }
     public int CurrentMmr { get; set; }
     public string BattleTag { get; set; }
     public string InviteName { get; set; }
