@@ -24,6 +24,7 @@ public static class PlayersObfuscator
                     player.CountryCode = null;
                     player.Location = null;
                     player.Twitch = null;
+                    player.Ranking = null;
                 }
             }
 

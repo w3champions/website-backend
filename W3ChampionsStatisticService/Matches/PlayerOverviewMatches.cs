@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using W3C.Contracts.GameObjects;
-using W3ChampionsStatisticService.Heroes;
+using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -21,5 +21,6 @@ public class PlayerOverviewMatches
     public string CountryCode { get; set; }
     public string Country { get; set; }
     public string Twitch { get; set; }
-    public IList<Hero> Heroes { get; set; }
+    public IList<Heroes.Hero> Heroes { get; set; }
+    public Ranking Ranking { get; set; }
 }

@@ -307,6 +307,8 @@ public class Matchup
             Race = w.race,
             RndRace = w.rndRace,
             MatchRanking = w.matchRanking,
+            Location = w.country,
+            Ranking = w.updatedRanking,
         });
     }
 }
