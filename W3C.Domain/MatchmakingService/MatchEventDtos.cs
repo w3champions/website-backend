@@ -60,8 +60,10 @@ public class Ranking
 {
     public double rp { get; set; }
     public int rank { get; set; }
+    public int? division { get; set; }
     public int? leagueId { get; set; }
     public int? leagueOrder { get; set; }
+    public double? progress { get; set; }
 }
 
 [BsonIgnoreExtraElements]

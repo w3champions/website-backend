@@ -55,7 +55,8 @@ public class OnGoingMatchup : Matchup
             OldMmr = (int)w.mmr.rating,
             OldMmrQuantile = w.quantiles?.quantile,
             Race = w.race,
-            Location = w.country
+            Location = w.country,
+            Ranking = w.ranking,
         });
     }
 }
