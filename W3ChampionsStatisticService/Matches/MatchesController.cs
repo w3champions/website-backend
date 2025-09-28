@@ -43,7 +43,12 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMatchDetails(string id)
     {
-        var match = await _matchRepository.LoadFinishedMatchDetails(new ObjectId(id));
+        if (!ObjectId.TryParse(id, out var objectId))
+        {
+            return BadRequest($"Invalid match ID format: {id}");
+        }
+
+        var match = await _matchRepository.LoadFinishedMatchDetails(objectId);
         return Ok(match);
     }
 
