@@ -212,15 +212,18 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
 
     private static PlayerScore CreateDetail(PlayerBlizzard playerBlizzard)
     {
-        foreach (var player in playerBlizzard.heroes)
+        if (playerBlizzard.heroes != null)
         {
-            player.icon = player.icon.ParseReforgedName();
+            foreach (var player in playerBlizzard.heroes)
+            {
+                player.icon = player.icon.ParseReforgedName();
+            }
         }
 
         return new PlayerScore(
             playerBlizzard.battleTag,
             playerBlizzard.unitScore,
-            playerBlizzard.heroes.Select(h => new Heroes.Hero(h)).ToList(),
+            playerBlizzard.heroes?.Select(h => new Heroes.Hero(h)).ToList() ?? new List<Heroes.Hero>(),
             playerBlizzard.heroScore,
             playerBlizzard.resourceScore,
             playerBlizzard.teamIndex);
