@@ -172,6 +172,11 @@ public class ClanCommandHandler(
     public async Task<Clan> LoadClan(string clanId)
     {
         var clan = await _clanRepository.LoadClan(clanId);
+        if (clan == null)
+        {
+            return null;
+        }
+
         var seasons = await _rankRepository.LoadSeasons();
         var season = seasons.Max(s => s.Id);
         var leagueConstellation = await _rankRepository.LoadLeagueConstellation(season);

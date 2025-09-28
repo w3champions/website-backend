@@ -171,6 +171,11 @@ public class PersonalSetting : IVersionable, IIdentifiable
             return;
         }
 
+        if (ChatIcons == null)
+        {
+            ChatIcons = [];
+        }
+
         if (ChatIcons.Intersect(selectedChatIcons).Count() != selectedChatIcons.Count)
         {
             throw new InvalidOperationException("User does not own the selected chat icons.");
