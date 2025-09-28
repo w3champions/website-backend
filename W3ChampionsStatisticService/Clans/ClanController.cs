@@ -28,6 +28,10 @@ public class ClanController(
     public async Task<IActionResult> GetClan(string clanId)
     {
         var clan = await _clanCommandHandler.LoadClan(clanId);
+        if (clan == null)
+        {
+            return NotFound();
+        }
 
         return Ok(clan);
     }
