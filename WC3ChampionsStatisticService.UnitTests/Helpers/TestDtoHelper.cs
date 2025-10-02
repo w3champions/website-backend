@@ -11,6 +11,11 @@ using Moq;
 using W3ChampionsStatisticService.Services;
 using Microsoft.AspNetCore.Http;
 using System.Diagnostics;
+using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Cache;
+using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.PersonalSettings;
+using MongoDB.Driver;
 
 namespace WC3ChampionsStatisticService.Tests;
 
@@ -379,6 +384,14 @@ public static class TestDtoHelper
         {
             CallBase = true // This ensures unmocked methods use the real implementation
         };
+    }
+
+    public static Mock<MatchService> CreateMockMatchService(MongoClient mongoClient)
+    {
+        return new Mock<MatchService>(new Mock<IMatchRepository>().Object,
+            new Mock<ICachedDataProvider<List<Matchup>>>().Object,
+            new Mock<ICachedDataProvider<CachedLong>>().Object,
+            new PersonalSettingsRepository(mongoClient));
     }
 
     public static MatchCanceledEvent CreateFakeMatchCanceledEvent()
