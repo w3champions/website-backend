@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 using W3C.Domain.Tracing;
-using W3ChampionsStatisticService.Services.Tracing;
 namespace W3ChampionsStatisticService.Services.Interceptors;
 
 public class TracingInterceptor(ActivitySource activitySource) : IInterceptor

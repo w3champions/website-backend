@@ -1,13 +1,11 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using W3C.Domain.Common.Repositories;
 using W3C.Domain.Common.Services;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Rewards.Services;

@@ -6,7 +6,6 @@ using Castle.DynamicProxy;
 using NUnit.Framework;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Services.Interceptors;
-using W3ChampionsStatisticService.Services.Tracing;
 
 namespace WC3ChampionsStatisticService.Tests.Tracing;
 

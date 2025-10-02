@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Rewards.Entities;
-using W3C.Domain.Rewards.ValueObjects;
 
 namespace W3C.Domain.Rewards.Repositories;
 

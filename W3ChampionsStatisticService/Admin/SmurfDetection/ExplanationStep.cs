@@ -1,6 +1,3 @@
-
-using System.Collections.Generic;
-
 namespace W3ChampionsStatisticService.Admin.SmurfDetection;
 
 public class ExplanationStep

@@ -4,9 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Rewards.Services;
-using static W3ChampionsStatisticService.Rewards.Services.PatreonDriftDetectionService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Common.Services;
 

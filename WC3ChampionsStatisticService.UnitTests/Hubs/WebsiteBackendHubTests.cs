@@ -8,14 +8,12 @@ using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Services;
-using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Filters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.Features;
 using NUnit.Framework;
-using MongoDB.Driver;
 
 // Minimal in-memory implementations for testing (no inheritance)
 public class TestFriendListCache

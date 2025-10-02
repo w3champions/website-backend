@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +9,6 @@ using NUnit.Framework;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
-using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Hubs;
