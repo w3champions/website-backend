@@ -14,6 +14,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.WebApiCompatShim" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageVersion Include="Mongo2Go" Version="4.1.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
     <PackageVersion Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="2.1.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />

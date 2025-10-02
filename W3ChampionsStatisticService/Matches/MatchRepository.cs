@@ -15,6 +15,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -229,13 +230,12 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter)
+    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null)
     {
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = GetLoadFilter(season, gameMode, hero);
-
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
         var results = mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
-
         return results;
     }
 
@@ -246,14 +246,16 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null)
     {
-        var filter = GetLoadFilter(season, gameMode, hero);
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
         return CreateCollection<Matchup>().CountDocumentsAsync(filter);
     }
 
-    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter)
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null)
     {
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var builder = Builders<Matchup>.Filter;
         var filter = builder.Eq(m => m.GameMode, gameMode) & builder.Eq(m => m.Season, season);
 
@@ -261,6 +263,12 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         {
             var heroFilter = builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.Heroes.Count > 0 && p.Heroes[0].Id == hero)));
             filter &= heroFilter;
+        }
+
+        // Filter by minMmr and maxMmr for any player in any team
+        if (minMmr > 0 || maxMmr < MmrConstants.MaxMmrPerGameMode[gameMode])
+        {
+            filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.CurrentMmr >= minMmr && player.CurrentMmr <= maxMmr)));
         }
 
         return filter;
@@ -309,19 +317,21 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int pageSize = 100,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000,
+        int? maxMmr = null,
         string sort = "startTimeDescending")
     {
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
     }
 
     public Task<long> CountOnGoingMatches(
-        GameMode gameMode = GameMode.Undefined,
-        GateWay gateWay = GateWay.Undefined,
-        string map = "Overall",
-        int minMmr = 0,
-        int maxMmr = 3000)
+            GameMode gameMode = GameMode.Undefined,
+            GateWay gateWay = GateWay.Undefined,
+            string map = "Overall",
+            int minMmr = 0,
+            int? maxMmr = null)
     {
+        if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
     }
 

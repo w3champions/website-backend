@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Castle.DynamicProxy;
 using W3ChampionsStatisticService.Services.Interceptors;
 using System.Linq;
+using System.Reflection;
 
 namespace W3ChampionsStatisticService.Extensions;
 
@@ -10,12 +11,45 @@ public static class ServiceCollectionExtensions
 {
     private static readonly ProxyGenerator ProxyGenerator = new ProxyGenerator();
 
+    // Return the public constructor with the most parameters (greediest)
+    private static ConstructorInfo GetGreediestConstructor(Type type) =>
+        type.GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+
+    // Resolve constructor parameters safely: prefer DI, then defaults/nulls, then default(T) for value types
+    private static object[] ResolveConstructorArgs(IServiceProvider serviceProvider, ParameterInfo[] parameters)
+    {
+        return parameters.Select(p =>
+        {
+            var svc = serviceProvider.GetService(p.ParameterType);
+            if (svc != null) return svc;
+            if (p.HasDefaultValue) return p.DefaultValue;
+            if (Nullable.GetUnderlyingType(p.ParameterType) != null) return null;
+            if (!p.ParameterType.IsValueType) return null;
+            return Activator.CreateInstance(p.ParameterType);
+        }).ToArray();
+    }
+
     public static IServiceCollection AddInterceptedSingleton<TInterface, TImplementation>(
         this IServiceCollection services)
         where TInterface : class
         where TImplementation : class, TInterface
     {
-        services.AddSingleton<TImplementation>(); // Register the actual implementation
+        // Register the concrete implementation with a factory that constructs it using
+        // safe constructor-arg resolution to avoid asking the container for non-service
+        // parameters (like TimeSpan?). Then register the interface as a proxy that
+        // delegates to that implementation.
+        services.AddSingleton<TImplementation>(serviceProvider =>
+        {
+            var constructor = GetGreediestConstructor(typeof(TImplementation));
+            if (constructor == null)
+            {
+                throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
+            }
+            var constructorArgs = ResolveConstructorArgs(serviceProvider, constructor.GetParameters());
+
+            return (TImplementation)Activator.CreateInstance(typeof(TImplementation), constructorArgs);
+        });
+
         services.AddSingleton<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
@@ -30,7 +64,21 @@ public static class ServiceCollectionExtensions
         where TInterface : class
         where TImplementation : class, TInterface
     {
-        services.AddTransient<TImplementation>(); // Register the actual implementation
+        // Register transient implementation using a factory that constructs the
+        // instance with safe constructor resolution, then register the interface
+        // as a proxy that delegates to that implementation.
+        services.AddTransient<TImplementation>(serviceProvider =>
+        {
+            var constructor = GetGreediestConstructor(typeof(TImplementation));
+            if (constructor == null)
+            {
+                throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
+            }
+            var constructorArgs = ResolveConstructorArgs(serviceProvider, constructor.GetParameters());
+
+            return (TImplementation)Activator.CreateInstance(typeof(TImplementation), constructorArgs);
+        });
+
         services.AddTransient<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
@@ -45,7 +93,21 @@ public static class ServiceCollectionExtensions
         where TInterface : class
         where TImplementation : class, TInterface
     {
-        services.AddScoped<TImplementation>(); // Register the actual implementation
+        // Register scoped implementation using a factory that constructs the
+        // instance with safe constructor resolution, then register the interface
+        // as a proxy that delegates to that implementation.
+        services.AddScoped<TImplementation>(serviceProvider =>
+        {
+            var constructor = GetGreediestConstructor(typeof(TImplementation));
+            if (constructor == null)
+            {
+                throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
+            }
+            var constructorArgs = ResolveConstructorArgs(serviceProvider, constructor.GetParameters());
+
+            return (TImplementation)Activator.CreateInstance(typeof(TImplementation), constructorArgs);
+        });
+
         services.AddScoped<TInterface>(serviceProvider =>
         {
             var implementation = serviceProvider.GetRequiredService<TImplementation>();
@@ -64,14 +126,12 @@ public static class ServiceCollectionExtensions
         {
             var interceptor = serviceProvider.GetRequiredService<TracingInterceptor>();
             // Get constructor with most parameters (assuming it's the one DI would use)
-            var constructor = typeof(TImplementation).GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+            var constructor = GetGreediestConstructor(typeof(TImplementation));
             if (constructor == null)
             {
                 throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
             }
-            var constructorArgs = constructor.GetParameters()
-                .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
-                .ToArray();
+            var constructorArgs = ResolveConstructorArgs(serviceProvider, constructor.GetParameters());
 
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
         });
@@ -86,14 +146,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<TImplementation>(serviceProvider =>
         {
             var interceptor = serviceProvider.GetRequiredService<TracingInterceptor>();
-            var constructor = typeof(TImplementation).GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+            var constructor = GetGreediestConstructor(typeof(TImplementation));
             if (constructor == null)
             {
                 throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
             }
-            var constructorArgs = constructor.GetParameters()
-                .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
-                .ToArray();
+            var constructorArgs = ResolveConstructorArgs(serviceProvider, constructor.GetParameters());
 
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
         });
@@ -108,14 +166,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TImplementation>(serviceProvider =>
         {
             var interceptor = serviceProvider.GetRequiredService<TracingInterceptor>();
-            var constructor = typeof(TImplementation).GetConstructors().OrderByDescending(c => c.GetParameters().Length).FirstOrDefault();
+            var constructor = GetGreediestConstructor(typeof(TImplementation));
             if (constructor == null)
             {
                 throw new InvalidOperationException($"Could not find a public constructor for {typeof(TImplementation)}.");
             }
-            var constructorArgs = constructor.GetParameters()
-                .Select(p => serviceProvider.GetRequiredService(p.ParameterType))
-                .ToArray();
+            var constructorArgs = ResolveConstructorArgs(serviceProvider, constructor.GetParameters());
 
             return ProxyGenerator.CreateClassProxy<TImplementation>(constructorArgs, interceptor);
         });

@@ -13,12 +13,39 @@ using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 using W3C.Domain.Tracing;
+using System;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [Trace]
 public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
+    private readonly Dictionary<string, (DateTime cacheTime, List<int> mmrs)> _mmrsCache = new();
+    private readonly Dictionary<GameMode, (int? maxMmr, DateTime cacheTime)> _maxMmrCache = new();
+
+    public int LoadMaxMMR(GameMode gameMode)
+    {
+        if (_maxMmrCache.TryGetValue(gameMode, out var cacheEntry))
+        {
+            if (cacheEntry.maxMmr.HasValue && DateTime.UtcNow - cacheEntry.cacheTime < TimeSpan.FromHours(12))
+            {
+                return cacheEntry.maxMmr.Value;
+            }
+        }
+        var mongoCollection = CreateCollection<PlayerOverview>();
+        int maxMmr;
+        if (gameMode == GameMode.Undefined)
+        {
+            maxMmr = mongoCollection.AsQueryable().Max(p => p.MMR);
+        }
+        else
+        {
+            maxMmr = mongoCollection.AsQueryable().Where(p => p.GameMode == gameMode).Max(p => p.MMR);
+        }
+        _maxMmrCache[gameMode] = (maxMmr, DateTime.UtcNow);
+        return maxMmr;
+    }
+
     public async Task UpsertPlayer(PlayerOverallStats playerOverallStats)
     {
         await Upsert(playerOverallStats, p => p.BattleTag == playerOverallStats.BattleTag);
@@ -56,6 +83,14 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
 
     public async Task<List<int>> LoadMmrs(int season, GateWay gateWay, GameMode gameMode)
     {
+        string cacheKey = $"{season}_{gateWay}_{gameMode}";
+        if (_mmrsCache.TryGetValue(cacheKey, out var cacheEntry))
+        {
+            if (DateTime.UtcNow - cacheEntry.cacheTime < TimeSpan.FromHours(1))
+            {
+                return cacheEntry.mmrs;
+            }
+        }
         var mongoCollection = CreateCollection<PlayerOverview>();
         var mmrs = await mongoCollection
             .Find(p => p.Season == season &&
@@ -63,6 +98,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
                         p.GameMode == gameMode)
             .Project(p => p.MMR)
             .ToListAsync();
+        _mmrsCache[cacheKey] = (DateTime.UtcNow, mmrs);
         return mmrs;
     }
 
