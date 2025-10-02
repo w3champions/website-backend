@@ -5,13 +5,17 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using Serilog;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Matches;
 
 [Trace]
-public class MatchReadModelHandler(IMatchRepository matchRepository) : IMatchFinishedReadModelHandler
+public class MatchReadModelHandler(
+    IMatchRepository matchRepository,
+    MatchService matchService) : IMatchFinishedReadModelHandler
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
+    private readonly MatchService _matchService = matchService;
 
     public async Task Update(MatchFinishedEvent nextEvent)
     {
@@ -19,6 +23,7 @@ public class MatchReadModelHandler(IMatchRepository matchRepository) : IMatchFin
         {
             if (nextEvent.WasFakeEvent) return;
             var matchup = Matchup.Create(nextEvent);
+            await _matchService.SetPlayersCountryCode(matchup);
 
             await _matchRepository.Insert(matchup);
             await _matchRepository.DeleteOnGoingMatch(matchup);
