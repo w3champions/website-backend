@@ -10,9 +10,6 @@ using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
 using W3C.Domain.Repositories;
 using W3C.Contracts.Matchmaking;
-using W3ChampionsStatisticService.Services;
-using W3ChampionsStatisticService.Cache;
-using W3ChampionsStatisticService.PersonalSettings;
 
 namespace WC3ChampionsStatisticService.Tests.ReadModel;
 
