@@ -195,8 +195,8 @@ builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
 builder.Services.AddMemoryCache();
 
 // Rate limiting services
-builder.Services.AddInterceptedScoped<W3ChampionsStatisticService.RateLimiting.Repositories.IApiTokenRepository, W3ChampionsStatisticService.RateLimiting.Repositories.ApiTokenRepository>();
-builder.Services.AddInterceptedScoped<W3ChampionsStatisticService.RateLimiting.Services.IApiTokenService, W3ChampionsStatisticService.RateLimiting.Services.ApiTokenService>();
+builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Repositories.IApiTokenRepository, W3ChampionsStatisticService.RateLimiting.Repositories.ApiTokenRepository>();
+builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Services.IApiTokenService, W3ChampionsStatisticService.RateLimiting.Services.ApiTokenService>();
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Services.IRateLimitService, W3ChampionsStatisticService.RateLimiting.Services.RateLimitService>();
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Services.IRateLimitBucketService, W3ChampionsStatisticService.RateLimiting.Services.RateLimitBucketService>();
 
