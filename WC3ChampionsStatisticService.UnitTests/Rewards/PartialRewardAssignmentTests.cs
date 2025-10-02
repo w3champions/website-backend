@@ -1,11 +1,8 @@
 using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.ValueObjects;
-using WC3ChampionsStatisticService.Tests.Rewards;
 
 namespace WC3ChampionsStatisticService.Tests.Rewards;
 

@@ -7,11 +7,9 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.Matchmaking;
-using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
 using Serilog;
-using Newtonsoft.Json;
 namespace W3ChampionsStatisticService.Admin;
 
 [ApiController]

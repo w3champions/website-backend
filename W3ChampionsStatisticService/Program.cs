@@ -1,6 +1,5 @@
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.StaticFiles;
@@ -62,7 +61,6 @@ using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
 using Serilog.Events;
 using Serilog.Formatting.Json;
-using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Services.Tracing;
 using W3ChampionsStatisticService.Rewards.Middleware;

@@ -1,7 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using W3C.Domain.Rewards.Abstractions;
-using W3C.Domain.Common.Repositories;
-using W3C.Domain.Common.Services;
 using W3C.Domain.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Extensions;
@@ -11,8 +9,6 @@ using W3ChampionsStatisticService.Rewards.Providers.KoFi;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
 using W3ChampionsStatisticService.Rewards.Repositories;
 using W3ChampionsStatisticService.Rewards.Services;
-using W3ChampionsStatisticService.Common.Repositories;
-using W3ChampionsStatisticService.Common.Services;
 
 namespace W3ChampionsStatisticService.Rewards.Extensions;
 

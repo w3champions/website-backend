@@ -3,8 +3,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Net;
 using Newtonsoft.Json;
-using System.Collections.Generic;
-using Serilog;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.Extensions;

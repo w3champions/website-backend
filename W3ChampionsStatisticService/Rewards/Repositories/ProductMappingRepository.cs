@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
 using W3C.Domain.Rewards.Entities;
-using W3C.Domain.Common.Repositories;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Common.Services;
 using W3C.Domain.Tracing;
