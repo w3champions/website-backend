@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Heroes;
+using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.Services;
 
@@ -22,11 +23,13 @@ public class CachedLong
 public class MatchService(
     IMatchRepository matchRepository,
     ICachedDataProvider<List<Matchup>> cachedMatchesProvider,
-    ICachedDataProvider<CachedLong> cachedMatchCountProvider)
+    ICachedDataProvider<CachedLong> cachedMatchCountProvider,
+    IPersonalSettingsRepository personalSettingsRepository)
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly ICachedDataProvider<List<Matchup>> _cachedMatchesProvider = cachedMatchesProvider;
     private readonly ICachedDataProvider<CachedLong> _cachedMatchCountProvider = cachedMatchCountProvider;
+    private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
 
     public async Task<List<Matchup>> GetMatchesPerPlayer(
         string playerId,
@@ -80,5 +83,17 @@ public class MatchService(
                     opponentRace, season, hero)
             }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
+    }
+
+    public async Task SetPlayersCountryCode(Matchup matchup)
+    {
+        foreach (Team team in matchup.Teams)
+        {
+            foreach (PlayerOverviewMatches player in team.Players)
+            {
+                PersonalSetting personalSettings = await _personalSettingsRepository.LoadOrCreate(player.BattleTag);
+                player.CountryCode = personalSettings.CountryCode;
+            }
+        }
     }
 }

@@ -32,13 +32,13 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var mockMatchRepo = new Mock<IMatchRepository>();
         var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
-
+        var mockMatchService = TestDtoHelper.CreateMockMatchService(MongoClient);
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object),
+            new MatchReadModelHandler(mockMatchRepo.Object, mockMatchService.Object),
             mockTrackingService.Object);
 
         await handler.Update();
@@ -60,13 +60,13 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         var mockMatchRepo = new Mock<IMatchRepository>();
         var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
-
+        var mockMatchService = TestDtoHelper.CreateMockMatchService(MongoClient);
         var versionRepository = new VersionRepository(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             mockEvents.Object,
             versionRepository,
-            new MatchReadModelHandler(mockMatchRepo.Object),
+            new MatchReadModelHandler(mockMatchRepo.Object, mockMatchService.Object),
             mockTrackingService.Object);
 
         Assert.ThrowsAsync<InvalidOperationException>(() => handler.Update());
@@ -116,11 +116,12 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         var mockTracingService = TestDtoHelper.CreateMockedTracingService();
         var matchRepository = new MatchRepository(MongoClient, new OngoingMatchesCache(MongoClient, mockTracingService.Object));
         var versionRepository = new VersionRepository(MongoClient);
+        var mockMatchService = TestDtoHelper.CreateMockMatchService(MongoClient);
 
         var handler = new MatchFinishedReadModelHandler<MatchReadModelHandler>(
             new MatchEventRepository(MongoClient),
             versionRepository,
-            new MatchReadModelHandler(matchRepository),
+            new MatchReadModelHandler(matchRepository, mockMatchService.Object),
             mockTrackingService.Object);
 
         await handler.Update();
