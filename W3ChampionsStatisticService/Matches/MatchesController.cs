@@ -97,7 +97,7 @@ public class MatchesController(IMatchRepository matchRepository, MatchQueryHandl
         string map = "Overall",
         int minMmr = 0,
         int maxMmr = 3000,
-        string sort = "startTimeDescending"
+        MatchSortMethod sort = MatchSortMethod.StartTimeDescending
         )
     {
         if (pageSize > 200) pageSize = 200;
