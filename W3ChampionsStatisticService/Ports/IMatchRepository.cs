@@ -8,17 +8,20 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.Ports;
 
 public interface IMatchRepository
 {
-    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter);
+    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null);
 
     Task<long> Count(
         int season,
         GameMode gameMode,
-        HeroType hero = HeroType.AllFilter);
+        HeroType hero = HeroType.AllFilter,
+        int minMmr = 0,
+        int? maxMmr = null);
 
     Task Insert(Matchup matchup);
 
@@ -58,7 +61,7 @@ public interface IMatchRepository
         int pageSize = 100,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000,
+        int? maxMmr = null,
         string sort = "startTimeDescending");
 
     Task<long> CountOnGoingMatches(
@@ -66,7 +69,7 @@ public interface IMatchRepository
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int maxMmr = 3000);
+        int? maxMmr = null);
 
     Task EnsureIndices();
 
