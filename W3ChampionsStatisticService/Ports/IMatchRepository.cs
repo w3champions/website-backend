@@ -8,7 +8,6 @@ using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.Ports;
 
