@@ -6,8 +6,6 @@ using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ladder;
 using W3C.Contracts.Matchmaking;
 using System.Threading.Tasks;
-using Moq;
-using System.Threading;
 
 namespace WC3ChampionsStatisticService.UnitTests.PlayerProfiles;
 

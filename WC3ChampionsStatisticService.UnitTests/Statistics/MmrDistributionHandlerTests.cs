@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Memory;
 using NUnit.Framework;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
 using W3ChampionsStatisticService.Ports;
