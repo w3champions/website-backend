@@ -110,12 +110,15 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
     {
         var mongoCollection = CreateCollection<Matchup>();
         var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero);
-        return await mongoCollection
+        var matchups = await mongoCollection
             .Find(filter)
             .SortByDescending(s => s.Id)
             .Skip(offset)
             .Limit(pageSize)
             .ToListAsync();
+
+        PlayersObfuscator.ObfuscateMmr(matchups);
+        return matchups;
     }
 
     public Task<long> CountFor(
@@ -230,12 +233,13 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null)
+    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var mongoCollection = CreateCollection<Matchup>();
         var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr);
-        var results = mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
+        var results = await mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
+        PlayersObfuscator.ObfuscateMmr(results);
         return results;
     }
 
@@ -268,35 +272,44 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         // Filter by minMmr and maxMmr for any player in any team
         if (minMmr > 0 || maxMmr < MmrConstants.MaxMmrPerGameMode[gameMode])
         {
-            filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.CurrentMmr >= minMmr && player.CurrentMmr <= maxMmr)));
+            filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player =>
+            (player.OldRankDeviation == null || player.OldRankDeviation < PlayersObfuscator.RankDeviationObfuscationThreshold)
+                && player.CurrentMmr >= minMmr
+                && player.CurrentMmr <= maxMmr)));
         }
 
         return filter;
     }
 
-    public Task InsertOnGoingMatch(OnGoingMatchup matchup)
+    public async Task InsertOnGoingMatch(OnGoingMatchup matchup)
     {
+        await Upsert(matchup, m => m.MatchId == matchup.MatchId);
+        PlayersObfuscator.ObfuscateMmr(matchup);
         _cache.Upsert(matchup);
-        return Upsert(matchup, m => m.MatchId == matchup.MatchId);
     }
 
-    public Task<OnGoingMatchup> LoadOnGoingMatchByMatchId(string matchId)
+    public async Task<OnGoingMatchup> LoadOnGoingMatchByMatchId(string matchId)
     {
         var mongoCollection = CreateCollection<OnGoingMatchup>();
-        return mongoCollection.Find(m => m.MatchId == matchId).FirstOrDefaultAsync();
+        var matchup = await mongoCollection.Find(m => m.MatchId == matchId).FirstOrDefaultAsync();
+        PlayersObfuscator.ObfuscateMmr(matchup);
+        return matchup;
     }
 
-    public Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
+    public async Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId)
     {
         var mongoCollection = CreateCollection<OnGoingMatchup>();
 
-        return mongoCollection
+        var matchup = await mongoCollection
             .Find(m => m.Team1Players.Contains(playerId)
                     || m.Team2Players.Contains(playerId)
                     || m.Team3Players.Contains(playerId)
                     || m.Team4Players.Contains(playerId)
             )
             .FirstOrDefaultAsync();
+
+        PlayersObfuscator.ObfuscateMmr(matchup);
+        return matchup;
     }
 
     public Task<OnGoingMatchup> TryLoadOnGoingMatchForPlayer(string playerId)

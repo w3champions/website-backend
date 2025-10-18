@@ -54,6 +54,7 @@ public class OnGoingMatchup : Matchup
             BattleTag = w.battleTag,
             OldMmr = (int)w.mmr.rating,
             OldMmrQuantile = w.quantiles?.quantile,
+            OldRankDeviation = w.mmr.rd,
             Race = w.race,
             Location = w.country,
             Ranking = w.ranking,
