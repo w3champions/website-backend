@@ -85,6 +85,7 @@ public class MatchesController(
         }
         if (pageSize > 100) pageSize = 100;
         var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr);
+        PlayersObfuscator.ObfuscateMmr(matches);
         var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr);
         return Ok(new { matches, count });
     }
@@ -98,6 +99,7 @@ public class MatchesController(
         }
 
         var match = await _matchRepository.LoadFinishedMatchDetails(objectId);
+        PlayersObfuscator.ObfuscateMmr(match);
         return Ok(match);
     }
 
@@ -106,6 +108,7 @@ public class MatchesController(
     {
         var match = await _matchRepository.LoadMatchFinishedEventByGameName(gameName);
         if (match == null) return NotFound();
+        PlayersObfuscator.ObfuscateMmr(match);
         return Ok(match.Id.ToString());
     }
 
@@ -113,6 +116,7 @@ public class MatchesController(
     public async Task<IActionResult> GetMatchDetailsByOngoingMatchId(string id)
     {
         var match = await _matchRepository.LoadFinishedMatchDetailsByMatchId(id);
+        PlayersObfuscator.ObfuscateMmr(match);
         return Ok(match);
     }
 
@@ -133,6 +137,7 @@ public class MatchesController(
 
         var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero);
         var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero);
+        PlayersObfuscator.ObfuscateMmr(matches);
         return Ok(new { matches, count });
     }
 
@@ -157,6 +162,7 @@ public class MatchesController(
         await _matchQueryHandler.PopulatePlayerInfos(matches);
 
         PlayersObfuscator.ObfuscatePlayersForFFA(matches.ToArray());
+        PlayersObfuscator.ObfuscateMmr(matches);
 
         return Ok(new { matches, count });
     }
@@ -172,6 +178,7 @@ public class MatchesController(
         }
 
         PlayersObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
+        PlayersObfuscator.ObfuscateMmr(onGoingMatch);
 
         return Ok(onGoingMatch);
     }
