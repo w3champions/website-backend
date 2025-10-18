@@ -15,7 +15,7 @@ public class PlayerOverviewMatches
     public string BattleTag { get; set; }
     public string InviteName { get; set; }
     public string Name { get; set; }
-    public int? MmrGain => CurrentMmr != null && OldMmr != null ? CurrentMmr - OldMmr : null;
+    public int? MmrGain => CurrentMmr != null && CurrentMmr > 0 && OldMmr != null ? CurrentMmr - OldMmr : null;
     public bool Won { get; set; }
     public int? MatchRanking { get; set; }
     public string Location { get; set; }
