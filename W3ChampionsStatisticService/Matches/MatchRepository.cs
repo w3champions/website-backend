@@ -273,7 +273,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         if (minMmr > 0 || maxMmr < MmrConstants.MaxMmrPerGameMode[gameMode])
         {
             filter &= builder.Where(m => m.Teams.Any(team => team.Players.Any(player =>
-            player.OldRankDeviation < PlayersObfuscator.RankDeviationObfuscationThreshold
+            (player.OldRankDeviation == null || player.OldRankDeviation < PlayersObfuscator.RankDeviationObfuscationThreshold)
                 && player.CurrentMmr >= minMmr
                 && player.CurrentMmr <= maxMmr)));
         }

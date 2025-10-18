@@ -63,9 +63,6 @@ public static class PlayersObfuscator
         {
             foreach (var player in team.Players)
             {
-                // Never expose these values to the outside, they are internal!
-                player.OldRankDeviation = null;
-
                 // If the system is still not confident about the MMR, don't expose it.
                 if (player.OldRankDeviation != null && player.OldRankDeviation >= RankDeviationObfuscationThreshold)
                 {
@@ -73,6 +70,9 @@ public static class PlayersObfuscator
                     player.OldMmr = null;
                     player.OldMmrQuantile = null;
                 }
+
+                // Never expose these values to the outside, they are internal!
+                player.OldRankDeviation = null;
             }
         }
     }

@@ -30,7 +30,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                     && (map == "Overall" || m.Map == map)
-                                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr != null && player.OldMmr < minMmr)))
+                                    && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr < minMmr)))
                                     && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr > maxMmr))));
     }
 
@@ -50,7 +50,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                         && (map == "Overall" || m.Map == map)
-                        && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr != null && player.OldMmr < minMmr)))
+                        && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr < minMmr)))
                         && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr > maxMmr))));
 
         if (sort == "mmrDescending")
