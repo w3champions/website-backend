@@ -76,4 +76,63 @@ public static class PlayersObfuscator
             }
         }
     }
+
+    public static void ObfuscateMmr(W3ChampionsStatisticService.Ports.MatchupDetail matchupDetail)
+    {
+        if (matchupDetail == null) return;
+        ObfuscateMmr(matchupDetail.Match);
+    }
+
+    public static void ObfuscateMmr(W3C.Domain.MatchmakingService.MatchFinishedEvent matchFinishedEvent)
+    {
+        if (matchFinishedEvent?.match?.players == null) return;
+
+        foreach (var player in matchFinishedEvent.match.players)
+        {
+            // If the system is still not confident about the MMR, don't expose it.
+            if (player.mmr?.rd >= RankDeviationObfuscationThreshold)
+            {
+                if (player.updatedMmr != null)
+                {
+                    player.updatedMmr.rating = 0;
+                    player.updatedMmr.rd = 0;
+                    player.updatedMmr.vol = 0;
+                    player.updatedMmr.rating_lower_bound = 0;
+                }
+                if (player.mmr != null)
+                {
+                    player.mmr.rating = 0;
+                    player.mmr.rd = 0;
+                    player.mmr.vol = 0;
+                    player.mmr.rating_lower_bound = 0;
+                }
+            }
+
+            // Never expose rank deviation to the outside, it's internal!
+            if (player.mmr != null)
+            {
+                player.mmr.rd = 0;
+            }
+            if (player.updatedMmr != null)
+            {
+                player.updatedMmr.rd = 0;
+            }
+        }
+    }
+
+    public static void ObfuscateMmr(OnGoingMatchup onGoingMatchup)
+    {
+        // OnGoingMatchup inherits from Matchup, so we can use the base method
+        ObfuscateMmr((Matchup)onGoingMatchup);
+    }
+
+    public static void ObfuscateMmr(System.Collections.Generic.List<OnGoingMatchup> matches)
+    {
+        if (matches == null) return;
+
+        foreach (var match in matches)
+        {
+            ObfuscateMmr(match);
+        }
+    }
 }
