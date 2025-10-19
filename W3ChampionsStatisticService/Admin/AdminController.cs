@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.MatchmakingService;
@@ -61,6 +63,46 @@ public class AdminController(
     {
         await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
         return Ok();
+    }
+
+    [HttpPost("bannedPlayers/batch")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetBannedPlayersBatch([FromBody] BattleTagsBatchRequest request)
+    {
+        if (request?.BattleTags == null || !request.BattleTags.Any())
+        {
+            return BadRequest("BattleTags list cannot be empty");
+        }
+
+        if (request.BattleTags.Count > 100)
+        {
+            return BadRequest("Maximum 100 battleTags per request");
+        }
+
+        // Fetch banned players for each battleTag in parallel
+        var tasks = request.BattleTags.Select(tag =>
+            _matchmakingServiceRepository.GetBannedPlayers(new BannedPlayersGetRequest
+            {
+                Page = 1,
+                ItemsPerPage = 100,
+                Search = tag.Trim()
+            })
+        );
+
+        var results = await Task.WhenAll(tasks);
+
+        // Filter to exact matches only (case-insensitive)
+        var allPlayers = results
+            .SelectMany(r => r.players)
+            .Where(p => request.BattleTags.Any(tag =>
+                string.Equals(p.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        return Ok(new BannedPlayerResponse
+        {
+            total = allPlayers.Count(),
+            players = allPlayers
+        });
     }
 
     [HttpGet("news")]
@@ -220,6 +262,41 @@ public class AdminController(
     {
         await _adminRepository.DeleteChatBan(id);
         return Ok();
+    }
+
+    [HttpPost("globalChatBans/batch")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetGlobalChatBansBatch([FromBody] BattleTagsBatchRequest request)
+    {
+        if (request?.BattleTags == null || !request.BattleTags.Any())
+        {
+            return BadRequest("BattleTags list cannot be empty");
+        }
+
+        if (request.BattleTags.Count > 100)
+        {
+            return BadRequest("Maximum 100 battleTags per request");
+        }
+
+        // Fetch global chat bans for each battleTag in parallel
+        var tasks = request.BattleTags.Select(tag =>
+            _adminRepository.GetChatBans(tag.Trim(), null)
+        );
+
+        var results = await Task.WhenAll(tasks);
+
+        // Filter to exact matches only (case-insensitive)
+        var allBans = results
+            .SelectMany(r => r.globalChatBans)
+            .Where(b => request.BattleTags.Any(tag =>
+                string.Equals(b.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        return Ok(new GlobalChatBanResponse
+        {
+            globalChatBans = allBans,
+            next_id = null // No pagination for batch queries
+        });
     }
 
     // This API endpoint just runs the 'CheckIfBattleTagIsAdmin' filter which then checks the jwt lifetime.

@@ -588,3 +588,8 @@ public class TournamentUpdateBody
     public TournamentFloNode FloNode { get; set; }
     public int? FloNodeMaxPing { get; set; }
 }
+
+public class BattleTagsBatchRequest
+{
+    public List<string> BattleTags { get; set; }
+}

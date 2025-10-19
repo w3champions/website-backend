@@ -1,6 +1,9 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Domain.ChatService;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using System.Net;
 using W3C.Contracts.Admin.Moderation;
@@ -23,6 +26,38 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     {
         var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
         return Ok(loungeMutes);
+    }
+
+    [HttpPost("loungeMute/batch")]
+    [InjectAuthToken]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetLoungeMutesBatch([FromBody] BattleTagsBatchRequest request, [NoTrace] string authToken)
+    {
+        if (request?.BattleTags == null || !request.BattleTags.Any())
+        {
+            return BadRequest("BattleTags list cannot be empty");
+        }
+
+        if (request.BattleTags.Count > 100)
+        {
+            return BadRequest("Maximum 100 battleTags per request");
+        }
+
+        // Fetch all lounge mutes
+        var allLoungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
+
+        if (allLoungeMutes == null)
+        {
+            return Ok(System.Array.Empty<LoungeMuteResponse>());
+        }
+
+        // Filter to exact matches only (case-insensitive)
+        var filteredMutes = allLoungeMutes
+            .Where(m => request.BattleTags.Any(tag =>
+                string.Equals(m.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        return Ok(filteredMutes);
     }
 
     [HttpPost("loungeMute")]
