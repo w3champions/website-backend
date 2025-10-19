@@ -20,9 +20,9 @@ public class ReplaysController(
 
     [HttpGet("{gameId}")]
     [ReplayRateLimit(
-        StrictHourlyLimit = 10,
-        StrictDailyLimit = 50,
-        RelaxedHourlyLimit = 30,
+        StrictHourlyLimit = 30,
+        StrictDailyLimit = 70,
+        RelaxedHourlyLimit = 50,
         RelaxedDailyLimit = 100,
         MatchAgeThresholdDays = 7)]
     public async Task<IActionResult> GetReplay(string gameId)
