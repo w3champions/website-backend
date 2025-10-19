@@ -51,10 +51,12 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
             return Ok(System.Array.Empty<LoungeMuteResponse>());
         }
 
-        // Filter to exact matches only (case-insensitive)
+        // Filter to exact matches only (case-insensitive) and select most recent mute per battleTag
         var filteredMutes = allLoungeMutes
             .Where(m => request.BattleTags.Any(tag =>
                 string.Equals(m.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
+            .GroupBy(m => m.battleTag.ToLower())
+            .Select(g => g.OrderByDescending(m => m.insertDate).First())
             .ToList();
 
         return Ok(filteredMutes);

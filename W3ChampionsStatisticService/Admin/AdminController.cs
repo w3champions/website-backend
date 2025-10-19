@@ -91,11 +91,13 @@ public class AdminController(
 
         var results = await Task.WhenAll(tasks);
 
-        // Filter to exact matches only (case-insensitive)
+        // Filter to exact matches only (case-insensitive) and select most recent ban per battleTag
         var allPlayers = results
             .SelectMany(r => r.players)
             .Where(p => request.BattleTags.Any(tag =>
                 string.Equals(p.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
+            .GroupBy(p => p.battleTag.ToLower())
+            .Select(g => g.OrderByDescending(p => p.banInsertDate).First())
             .ToList();
 
         return Ok(new BannedPlayerResponse
@@ -285,11 +287,13 @@ public class AdminController(
 
         var results = await Task.WhenAll(tasks);
 
-        // Filter to exact matches only (case-insensitive)
+        // Filter to exact matches only (case-insensitive) and select most recent mute per battleTag
         var allBans = results
             .SelectMany(r => r.globalChatBans)
             .Where(b => request.BattleTags.Any(tag =>
                 string.Equals(b.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
+            .GroupBy(b => b.battleTag.ToLower())
+            .Select(g => g.OrderByDescending(b => b.createdAt).First())
             .ToList();
 
         return Ok(new GlobalChatBanResponse
