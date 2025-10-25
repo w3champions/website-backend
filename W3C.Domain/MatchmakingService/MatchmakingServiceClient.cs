@@ -621,6 +621,7 @@ public class UserVisibleBanReason
 {
     public string translationId { get; set; }
     public string freeText { get; set; }
+    public BanReasonTranslations inlineTranslations { get; set; }
 }
 
 public class BanReasonTranslations
