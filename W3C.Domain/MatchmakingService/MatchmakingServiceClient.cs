@@ -421,6 +421,90 @@ public class MatchmakingServiceClient
         return deserializeObject;
     }
 
+    public async Task<List<BanReasonTranslation>> GetBanReasonTranslations()
+    {
+        var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<List<BanReasonTranslation>>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<BanReasonTranslation> GetBanReasonTranslation(string id)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations/{id}";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<BanReasonTranslation>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<BanReasonTranslation> CreateBanReasonTranslation(CreateBanReasonTranslationRequest createRequest)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations";
+        var httpcontent = new StringContent(SerializeData(createRequest), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<BanReasonTranslation>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<BanReasonTranslation> UpdateBanReasonTranslation(string id, UpdateBanReasonTranslationRequest updateRequest)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations/{id}";
+        var httpcontent = new StringContent(SerializeData(updateRequest), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Put, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<BanReasonTranslation>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<HttpResponseMessage> DeleteBanReasonTranslation(string id)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations/{id}";
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return response;
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
     private async Task HandleMMError(HttpResponseMessage response)
     {
         var errorReponse = await GetResult<ErrorResponse>(response);
@@ -533,6 +617,41 @@ public class BannedPlayerResponse
     public List<BannedPlayerReadmodel> players { get; set; }
 }
 
+public class UserVisibleBanReason
+{
+    public string translationId { get; set; }
+    public string freeText { get; set; }
+}
+
+public class BanReasonTranslations
+{
+    public string en { get; set; }
+    public string cn { get; set; }
+    public string es { get; set; }
+}
+
+public class BanReasonTranslation : IIdentifiable
+{
+    public string _id { get; set; }
+    public BanReasonTranslations translations { get; set; }
+    public string createdBy { get; set; }
+    public DateTime createdAt { get; set; }
+    public DateTime? updatedAt { get; set; }
+    public string Id => _id;
+}
+
+public class CreateBanReasonTranslationRequest
+{
+    public BanReasonTranslations translations { get; set; }
+    public string author { get; set; }
+}
+
+public class UpdateBanReasonTranslationRequest
+{
+    public BanReasonTranslations translations { get; set; }
+    public string author { get; set; }
+}
+
 public class BannedPlayerReadmodel : IIdentifiable
 {
     public string battleTag { get; set; }
@@ -543,6 +662,7 @@ public class BannedPlayerReadmodel : IIdentifiable
     public string Id => battleTag;
     public string banInsertDate { get; set; }
     public string author { get; set; }
+    public UserVisibleBanReason userVisibleBanReason { get; set; }
 }
 
 public class ActiveGameMode
