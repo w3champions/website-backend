@@ -65,6 +65,54 @@ public class AdminController(
         return Ok();
     }
 
+    [HttpGet("ban-reason-translations")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetBanReasonTranslations()
+    {
+        var translations = await _matchmakingServiceRepository.GetBanReasonTranslations();
+        return Ok(translations);
+    }
+
+    [HttpGet("ban-reason-translations/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetBanReasonTranslation(string id)
+    {
+        var translation = await _matchmakingServiceRepository.GetBanReasonTranslation(id);
+        if (translation == null)
+        {
+            return NotFound();
+        }
+        return Ok(translation);
+    }
+
+    [HttpPost("ban-reason-translations")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> CreateBanReasonTranslation([FromBody] CreateBanReasonTranslationRequest request)
+    {
+        var translation = await _matchmakingServiceRepository.CreateBanReasonTranslation(request);
+        return Ok(translation);
+    }
+
+    [HttpPut("ban-reason-translations/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> UpdateBanReasonTranslation(string id, [FromBody] UpdateBanReasonTranslationRequest request)
+    {
+        var translation = await _matchmakingServiceRepository.UpdateBanReasonTranslation(id, request);
+        if (translation == null)
+        {
+            return NotFound();
+        }
+        return Ok(translation);
+    }
+
+    [HttpDelete("ban-reason-translations/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> DeleteBanReasonTranslation(string id)
+    {
+        await _matchmakingServiceRepository.DeleteBanReasonTranslation(id);
+        return Ok();
+    }
+
     [HttpPost("bannedPlayers/batch")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBannedPlayersBatch([FromBody] BattleTagsBatchRequest request)
