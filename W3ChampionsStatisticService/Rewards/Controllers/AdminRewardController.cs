@@ -240,28 +240,28 @@ public class AdminRewardController(
         }
     }
 
-    [HttpGet("patreon/members/{battleTag}")]
+    [HttpGet("patreon/members/{requestedBattleTag}")]
     [CheckIfBattleTagIsAdmin]
-    public async Task<IActionResult> GetPatreonMemberDetails(string battleTag)
+    public async Task<IActionResult> GetPatreonMemberDetails(string requestedBattleTag)
     {
         try
         {
             // Check if Patreon link exists
-            var accountLink = await _patreonLinkRepo.GetByBattleTag(battleTag);
+            var accountLink = await _patreonLinkRepo.GetByBattleTag(requestedBattleTag);
             if (accountLink == null)
             {
-                return NotFound(new { error = $"No Patreon link found for BattleTag: {battleTag}" });
+                return NotFound(new { error = $"No Patreon link found for BattleTag: {requestedBattleTag}" });
             }
 
             // Fetch member details from Patreon API
-            var memberDetails = await _patreonDriftService.GetPatreonMemberDetails(battleTag, accountLink.PatreonUserId);
+            var memberDetails = await _patreonDriftService.GetPatreonMemberDetails(requestedBattleTag, accountLink.PatreonUserId);
 
             if (!memberDetails.Found)
             {
                 return Ok(new
                 {
                     found = false,
-                    battleTag = battleTag,
+                    battleTag = requestedBattleTag,
                     patreonUserId = accountLink.PatreonUserId,
                     error = memberDetails.ErrorMessage,
                     message = "User has a Patreon link but was not found in current campaign members"
@@ -287,7 +287,7 @@ public class AdminRewardController(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching Patreon member details for {BattleTag}", battleTag);
+            _logger.LogError(ex, "Error fetching Patreon member details for {BattleTag}", requestedBattleTag);
             return StatusCode(500, new { error = "Failed to fetch member details", details = ex.Message });
         }
     }
