@@ -85,7 +85,7 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     [NoTrace]
     private void RemoveDuplicateFriendRequests()
     {
-        var uniqueFriendRequests = _requests.GroupBy(x => new {x.Sender, x.Receiver}).Select(group => group.First()).ToList();
+        var uniqueFriendRequests = _requests.GroupBy(x => new { x.Sender, x.Receiver }).Select(group => group.First()).ToList();
         _requests = uniqueFriendRequests;
     }
 }

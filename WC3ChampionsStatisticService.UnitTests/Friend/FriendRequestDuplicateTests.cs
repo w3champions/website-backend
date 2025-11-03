@@ -13,7 +13,7 @@ public class FriendRequestDuplicateTests : IntegrationTestBase
     {
         _friendRequestCache = new FriendRequestCache(MongoClient);
     }
-    
+
     [Test]
     public void SimulateDuplicateFriendRequests()
     {
