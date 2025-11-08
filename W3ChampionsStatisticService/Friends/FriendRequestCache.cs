@@ -46,7 +46,6 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     public virtual async Task<FriendRequest> LoadFriendRequest(FriendRequest req)
     {
         await UpdateCacheIfNeeded();
-        RemoveDuplicateFriendRequests();
         return _requests.FirstOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver);
     }
 
@@ -64,11 +63,11 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
         }
     }
 
-    public virtual void Delete(FriendRequest req)
+    public virtual void Delete(FriendRequest request)
     {
         lock (_lock)
         {
-            _requests.Remove(req);
+            _requests.RemoveAll(r => r.Sender == request.Sender && r.Receiver == request.Receiver);
         }
     }
 
@@ -80,12 +79,5 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
             var mongoCollection = CreateCollection<FriendRequest>();
             _requests = await mongoCollection.Find(r => true).ToListAsync();
         }
-    }
-
-    [NoTrace]
-    private void RemoveDuplicateFriendRequests()
-    {
-        var uniqueFriendRequests = _requests.GroupBy(x => new { x.Sender, x.Receiver }).Select(group => group.First()).ToList();
-        _requests = uniqueFriendRequests;
     }
 }
