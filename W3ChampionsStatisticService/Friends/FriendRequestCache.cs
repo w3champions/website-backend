@@ -46,13 +46,13 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
     public virtual async Task<FriendRequest> LoadFriendRequest(FriendRequest req)
     {
         await UpdateCacheIfNeeded();
-        return _requests.SingleOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver);
+        return _requests.FirstOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver);
     }
 
     public virtual async Task<bool> FriendRequestExists(FriendRequest req)
     {
         await UpdateCacheIfNeeded();
-        return _requests.SingleOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver) != null;
+        return _requests.FirstOrDefault(x => x.Sender == req.Sender && x.Receiver == req.Receiver) != null;
     }
 
     public virtual void Insert(FriendRequest req)
@@ -63,11 +63,11 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
         }
     }
 
-    public virtual void Delete(FriendRequest req)
+    public virtual void Delete(FriendRequest request)
     {
         lock (_lock)
         {
-            _requests.Remove(req);
+            _requests.RemoveAll(r => r.Sender == request.Sender && r.Receiver == request.Receiver);
         }
     }
 
