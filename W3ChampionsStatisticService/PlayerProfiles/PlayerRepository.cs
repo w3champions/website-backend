@@ -40,7 +40,8 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         }
         else
         {
-            maxMmr = mongoCollection.AsQueryable().Where(p => p.GameMode == gameMode).Max(p => p.MMR);
+            IQueryable<PlayerOverview> query = mongoCollection.AsQueryable().Where(p => p.GameMode == gameMode);
+            maxMmr = query.Any() ? query.Max(p => p.MMR) : 3000;
         }
         _maxMmrCache[gameMode] = (maxMmr, DateTime.UtcNow);
         return maxMmr;
