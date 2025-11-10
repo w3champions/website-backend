@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,10 +19,11 @@ using System;
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [Trace]
-public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
+public class PlayerRepository(MongoClient mongoClient, ILogger<PlayerRepository> logger) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
 {
     private readonly Dictionary<string, (DateTime cacheTime, List<int> mmrs)> _mmrsCache = new();
     private readonly Dictionary<GameMode, (int? maxMmr, DateTime cacheTime)> _maxMmrCache = new();
+    private readonly ILogger<PlayerRepository> _logger = logger;
 
     public int LoadMaxMMR(GameMode gameMode)
     {
@@ -40,7 +42,16 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         }
         else
         {
-            maxMmr = mongoCollection.AsQueryable().Where(p => p.GameMode == gameMode).Max(p => p.MMR);
+            IQueryable<PlayerOverview> query = mongoCollection.AsQueryable().Where(p => p.GameMode == gameMode);
+            if (query.Any())
+            {
+                maxMmr = query.Max(p => p.MMR);
+            }
+            else
+            {
+                maxMmr = 0;
+                _logger.LogInformation("Error updating MaxMmr for {gameMode}: No elements in sequence.", gameMode);
+            }
         }
         _maxMmrCache[gameMode] = (maxMmr, DateTime.UtcNow);
         return maxMmr;
