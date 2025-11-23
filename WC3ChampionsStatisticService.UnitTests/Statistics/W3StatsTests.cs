@@ -37,10 +37,10 @@ public class MockMatchmakingProvider : IMatchmakingProvider
     {
         var activeModes = _activeGameModes.Select(gameMode => new ActiveGameMode
         {
-            id = gameMode,
-            maps = new List<MapShortInfo>(), // Empty list for testing
-            name = gameMode.ToString(),
-            type = "test"
+            Id = gameMode,
+            Maps = new List<MapShortInfo>(), // Empty list for testing
+            Name = gameMode.ToString(),
+            Type = "test"
         }).ToList();
         return Task.FromResult(activeModes);
     }
