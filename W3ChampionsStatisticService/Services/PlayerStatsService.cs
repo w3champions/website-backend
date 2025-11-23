@@ -43,7 +43,7 @@ public class PlayerStatisticsService(
     {
         var gameModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
         var mapNames = new Dictionary<string, string>();
-        foreach (var map in gameModes.SelectMany(x => x.maps))
+        foreach (var map in gameModes.SelectMany(x => x.Maps))
         {
             var mapName = new MapName(map.path).Name;
             mapNames[mapName] = map.name;

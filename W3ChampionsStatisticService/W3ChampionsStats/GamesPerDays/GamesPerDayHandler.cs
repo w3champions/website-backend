@@ -51,7 +51,7 @@ public class GamesPerDayHandler(IW3StatsRepo w3Stats, IMatchmakingProvider match
 
     private async Task MakeSureEveryDayHasAStat(DateTime endTime)
     {
-        var currentlyActiveModes = (await matchmakingProvider.GetCurrentlyActiveGameModesAsync()).Select(x => x.id).ToHashSet();
+        var currentlyActiveModes = (await matchmakingProvider.GetCurrentlyActiveGameModesAsync()).Select(x => x.Id).ToHashSet();
         foreach (GameMode mode in currentlyActiveModes)
         {
             var gamesPerDays = new List<GamesPerDay>();
