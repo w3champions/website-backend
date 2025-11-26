@@ -668,10 +668,12 @@ public class BannedPlayerReadmodel : IIdentifiable
 
 public class ActiveGameMode
 {
-    public GameMode id { get; set; }
-    public List<MapShortInfo> maps { get; set; }
-    public string name { get; set; }
-    public string type { get; set; }
+    public GameMode Id { get; set; }
+    public List<MapShortInfo> Maps { get; set; }
+    public string Name { get; set; }
+    public string Type { get; set; }
+    public int TeamCount { get; set; }
+    public int TeamSize { get; set; }
 }
 
 public class MapShortInfo
