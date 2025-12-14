@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using W3C.Domain.ChatService;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using System.Net;
 using W3C.Contracts.Admin.Moderation;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
@@ -19,7 +18,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
 {
     private readonly ChatServiceClient _chatServiceRepository = chatServiceRepository;
 
-    [HttpGet("loungeMute")]
+    [HttpGet("lounge-mute")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetLoungeMutes([NoTrace] string authToken)
@@ -28,7 +27,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
         return Ok(loungeMutes);
     }
 
-    [HttpPost("loungeMute/batch")]
+    [HttpPost("lounge-mute/batch")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetLoungeMutesBatch([FromBody] BattleTagsBatchRequest request, [NoTrace] string authToken)
@@ -62,7 +61,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
         return Ok(filteredMutes);
     }
 
-    [HttpPost("loungeMute")]
+    [HttpPost("lounge-mute")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostLoungeMute([FromBody] LoungeMute loungeMute, [NoTrace] string authToken)
@@ -77,47 +76,17 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
             return BadRequest("Ban End Date must be set.");
         }
 
-        var result = await _chatServiceRepository.PostLoungeMute(loungeMute, authToken);
-        if (result.StatusCode == HttpStatusCode.Forbidden)
-        {
-            return StatusCode(403);
-        }
-        if (result.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var reason = result.Content.ReadAsStringAsync().Result;
-            return BadRequest(reason);
-        }
-        if (result.StatusCode == HttpStatusCode.OK)
-        {
-            return Ok();
-        }
-        return StatusCode(500);
+        string response = await _chatServiceRepository.PostLoungeMute(loungeMute, authToken);
+
+        return Ok(response);
     }
 
-    [HttpDelete("loungeMute/{bTag}")]
+    [HttpDelete("lounge-mute/{bTag}")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, [NoTrace] string authToken)
     {
-        var result = await _chatServiceRepository.DeleteLoungeMute(bTag, authToken);
-        if (result.StatusCode == HttpStatusCode.BadRequest)
-        {
-            var reason = result.Content.ReadAsStringAsync().Result;
-            return BadRequest(reason);
-        }
-        if (result.StatusCode == HttpStatusCode.Forbidden)
-        {
-            return StatusCode(403);
-        }
-        if (result.StatusCode == HttpStatusCode.NotFound)
-        {
-            var reason = result.Content.ReadAsStringAsync().Result;
-            return NotFound(reason);
-        }
-        if (result.StatusCode == HttpStatusCode.OK)
-        {
-            return Ok();
-        }
-        return StatusCode(500);
+        string response = await _chatServiceRepository.DeleteLoungeMute(bTag, authToken);
+        return Ok(response);
     }
 }

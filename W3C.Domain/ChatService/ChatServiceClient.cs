@@ -13,7 +13,6 @@ namespace W3C.Domain.ChatService;
 public class ChatServiceClient
 {
     private static readonly string ChatServiceApiUrl = Environment.GetEnvironmentVariable("CHAT_API") ?? "https://chat-service.test.w3champions.com";
-    private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
     private readonly JsonSerializerSettings _jsonSerializerSettings;
     private readonly HttpClient _httpClient;
     public ChatServiceClient(IHttpClientFactory httpClientFactory)
@@ -33,39 +32,51 @@ public class ChatServiceClient
     [Trace]
     public async Task<LoungeMuteResponse[]> GetLoungeMutes([NoTrace] string authorization)
     {
-        var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
+        string url = $"{ChatServiceApiUrl}/api/loungeMute";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        var response = await _httpClient.SendAsync(request);
+        request.Headers.Add("Authorization", $"Bearer {authorization}");
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
 
-        var content = await response.Content.ReadAsStringAsync();
+        string content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<LoungeMuteResponse[]>(content);
         return deserializeObject;
     }
 
     [Trace]
-    public async Task<HttpResponseMessage> PostLoungeMute(LoungeMute loungeMute, [NoTrace] string authorization)
+    public async Task<string> PostLoungeMute(LoungeMute loungeMute, [NoTrace] string authorization)
     {
-        var url = $"{ChatServiceApiUrl}/api/loungeMute/?authorization={authorization}&secret={AdminSecret}";
+        string url = $"{ChatServiceApiUrl}/api/loungeMute";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(loungeMute), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Headers.Add("Authorization", $"Bearer {authorization}");
         request.Content = httpcontent;
-        var response = await _httpClient.SendAsync(request);
-
-        return response;
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
+        return content;
     }
 
     [Trace]
-    public async Task<HttpResponseMessage> DeleteLoungeMute(string battleTag, [NoTrace] string authorization)
+    public async Task<string> DeleteLoungeMute(string battleTag, [NoTrace] string authorization)
     {
-        var encodedTag = HttpUtility.UrlEncode(battleTag);
-        var url = $"{ChatServiceApiUrl}/api/loungeMute/{encodedTag}?authorization={authorization}&secret={AdminSecret}";
+        string encodedTag = HttpUtility.UrlEncode(battleTag);
+        string url = $"{ChatServiceApiUrl}/api/loungeMute/{encodedTag}";
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        var response = await _httpClient.SendAsync(request);
-
-        return response;
+        request.Headers.Add("Authorization", $"Bearer {authorization}");
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
+        return content;
     }
 }
