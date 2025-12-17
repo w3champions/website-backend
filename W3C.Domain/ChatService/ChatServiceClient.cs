@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -78,5 +79,30 @@ public class ChatServiceClient
             throw new HttpRequestException(content, null, response.StatusCode);
         }
         return content;
+    }
+
+    [NoTrace]
+    public async Task<ChatMessage[]> GetChatRoomMessages(string chatRoom, string authorization)
+    {
+        string url = $"{ChatServiceApiUrl}/api/chat/{chatRoom}";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Authorization", $"Bearer {authorization}");
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
+        var deserializeObject = JsonConvert.DeserializeObject<ChatMessageDto[]>(content);
+
+        ChatMessage[] chatmessages = [.. deserializeObject.Select(d => new ChatMessage
+        {
+            Id = d.Id,
+            Message = d.Message,
+            Time = d.Time,
+            BattleTag = d.User.BattleTag
+        })];
+
+        return chatmessages;
     }
 }
