@@ -14,16 +14,16 @@ namespace W3ChampionsStatisticService.Moderation;
 [ApiController]
 [Route("api/moderation")]
 [Trace]
-public class ModerationController(ChatServiceClient chatServiceRepository) : ControllerBase
+public class ModerationController(ChatServiceClient chatServiceClient) : ControllerBase
 {
-    private readonly ChatServiceClient _chatServiceRepository = chatServiceRepository;
+    private readonly ChatServiceClient _chatServiceClient = chatServiceClient;
 
     [HttpGet("lounge-mute")]
     [InjectAuthToken]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetLoungeMutes([NoTrace] string authToken)
     {
-        var loungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
+        LoungeMuteResponse[] loungeMutes = await _chatServiceClient.GetLoungeMutes(authToken);
         return Ok(loungeMutes);
     }
 
@@ -43,7 +43,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
         }
 
         // Fetch all lounge mutes
-        var allLoungeMutes = await _chatServiceRepository.GetLoungeMutes(authToken);
+        var allLoungeMutes = await _chatServiceClient.GetLoungeMutes(authToken);
 
         if (allLoungeMutes == null)
         {
@@ -76,7 +76,7 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
             return BadRequest("Ban End Date must be set.");
         }
 
-        string response = await _chatServiceRepository.PostLoungeMute(loungeMute, authToken);
+        string response = await _chatServiceClient.PostLoungeMute(loungeMute, authToken);
 
         return Ok(response);
     }
@@ -86,7 +86,17 @@ public class ModerationController(ChatServiceClient chatServiceRepository) : Con
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> DeleteLoungeMute([FromRoute] string bTag, [NoTrace] string authToken)
     {
-        string response = await _chatServiceRepository.DeleteLoungeMute(bTag, authToken);
+        string response = await _chatServiceClient.DeleteLoungeMute(bTag, authToken);
         return Ok(response);
+    }
+
+    [HttpGet("launcher-chat/{chatRoom}")]
+    [NoTrace]
+    [InjectAuthToken]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetChatRoomMessages([FromRoute] string chatRoom, string authToken)
+    {
+        ChatMessage[] chatHistory = await _chatServiceClient.GetChatRoomMessages(chatRoom, authToken);
+        return Ok(chatHistory);
     }
 }
