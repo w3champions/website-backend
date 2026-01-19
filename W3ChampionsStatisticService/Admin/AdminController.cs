@@ -415,8 +415,8 @@ public class AdminController(
 
     [HttpPost("gamemode-params/{gmId}")]
     [BearerHasPermissionFilter(Permission = EPermission.GameModeParameters)]
-    public async Task<IActionResult> GetGmParameters(int gmId, [FromBody] object params) {
-        await _matchmakingServiceRepository.PostGamemodeParams(gmId, params);
-        return Ok();
+    public async Task<IActionResult> GetGmParameters(int gmId, [FromBody] object _params) {
+        var res = await _matchmakingServiceRepository.PostGamemodeParams(gmId, _params);
+        return Ok(res);
     }
 }

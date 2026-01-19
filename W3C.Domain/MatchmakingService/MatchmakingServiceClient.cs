@@ -505,9 +505,9 @@ public class MatchmakingServiceClient
         return null;
     }
 
-    public async Task<BannedPlayerResponse> GetGamemodeParams(int id)
+    public async Task<object> GetGamemodeParams(int id)
         {
-            var url = $"{MatchmakingApiUrl}/admin/getGamemodeParams/{id}"''
+            var url = $"{MatchmakingApiUrl}/admin/getGamemodeParams/{id}";
 
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("x-admin-secret", AdminSecret);
@@ -522,12 +522,13 @@ public class MatchmakingServiceClient
             return null;
         }
 
-    public async Task<HttpResponseMessage> PostGamemodeParams(int id, object params)
+    public async Task<object> PostGamemodeParams(int id, object _params)
         {
-            var payload = new {
+            var payload = new
+            {
                 gmId = id,
-                newParams = params
-            }
+                newParams = _params
+            };
             var url = $"{MatchmakingApiUrl}/setGamemodeParams";
             var httpcontent = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Post, url);
@@ -537,7 +538,7 @@ public class MatchmakingServiceClient
 
             if (response.IsSuccessStatusCode)
             {
-                return response;
+                return await GetResult<object>(response);
             }
 
             await HandleMMError(response);
