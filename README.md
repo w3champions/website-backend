@@ -1,7 +1,6 @@
 # w3champions-statistic-service
 
-The statisticservice is the Backend for the https://github.com/w3champions/w3champions-ui Project. Among the data for
-the website it also provides the chat backend that is used from the ingame client and the clan functions.
+The statistic-service is the backend for the W3Champions Launcher and Website projects.
 
 ## Setup
 You will need a mongodb to run the service. If you do not have a local mongo container, spin one up with
