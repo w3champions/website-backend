@@ -3,7 +3,7 @@
 The statistic-service is the backend for the W3Champions Launcher and Website projects.
 
 ## Setup
-You will need a mongodb to run the service. If you do not have a local mongo container, spin one up with
+You need mongodb to run the service. If you do not have a local mongo container, start one up with
 
 ```
 docker run mongo
