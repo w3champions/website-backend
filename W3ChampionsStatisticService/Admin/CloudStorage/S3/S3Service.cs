@@ -54,6 +54,7 @@ public class S3Service : IS3Service
             BucketName = S3BucketName,
             Key = $"{S3Prefix}{file.Name}",
             CannedACL = S3CannedACL.PublicRead,
+            DisablePayloadSigning = true,
         };
         using var ms = new MemoryStream(bytes);
         putObjectRequest.InputStream = ms;
