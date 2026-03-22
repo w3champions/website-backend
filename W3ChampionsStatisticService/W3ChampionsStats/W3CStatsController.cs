@@ -34,9 +34,7 @@ public class W3CStatsController(
     }
 
     [HttpGet("games-per-day")]
-    public async Task<IActionResult> GetGamesPerDay(
-        DateTimeOffset from = default,
-        DateTimeOffset to = default)
+    public async Task<IActionResult> GetGamesPerDay(DateTimeOffset from = default, DateTimeOffset to = default)
     {
         from = from != default ? from : GetDefaultMinDateOffset();
         to = to != default ? to : DateTimeOffset.MaxValue;

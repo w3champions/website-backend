@@ -39,7 +39,7 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
 
     public Task<GamesPerDay> LoadGamesPerDay(DateTime date, GameMode gameMode, GateWay gateway)
     {
-        return LoadFirst<GamesPerDay>($"{gateway.ToString()}_{gameMode.ToString()}_{date:yyyy-MM-dd}");
+        return LoadFirst<GamesPerDay>($"{gateway}_{gameMode}_{date:yyyy-MM-dd}");
     }
 
     public Task Save(List<GamesPerDay> stat)
@@ -83,22 +83,23 @@ public class W3StatsRepo(MongoClient mongoClient) : MongoDbRepositoryBase(mongoC
         return stats;
     }
 
-    public async Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(
-        DateTimeOffset from,
-        DateTimeOffset to)
+    public async Task<List<List<GameDayGroup>>> LoadGamesPerDayBetween(DateTimeOffset from, DateTimeOffset to)
     {
         var mongoCollection = CreateCollection<GamesPerDay>();
 
-        var stats = await mongoCollection.Find(s =>
-                s.Date >= from
-                && s.Date <= to)
-            .SortBy(s => s.Date)
+        List<GamesPerDay> stats = await mongoCollection.Find(s =>
+                s.Date >= from && s.Date <= to)
             .ToListAsync();
 
-        var americaStats = stats.Where(g => g.GateWay == GateWay.America).ToList();
-        var euStats = stats.Where(g => g.GateWay == GateWay.Europe).ToList();
-        var allStats = stats.Where(g => g.GateWay == GateWay.Undefined).ToList();
-        var gamesPerDays = new[] { allStats, americaStats, euStats };
+        List<GamesPerDay> euStats = [.. stats
+            .Where(g => g.GateWay == GateWay.Europe)
+            .OrderBy(g => g.Date)];
+
+        List<GamesPerDay> allStats = [.. stats
+            .Where(g => g.GateWay == GateWay.Undefined)
+            .OrderBy(g => g.Date)];
+
+        List<GamesPerDay>[] gamesPerDays = [allStats, euStats];
         return gamesPerDays.Select(s =>
             s.GroupBy(gamesPerDay => gamesPerDay.GameMode)
             .Select(g => new GameDayGroup(g.Key, g.ToList()))

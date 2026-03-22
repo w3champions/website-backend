@@ -55,7 +55,7 @@ public class GamesPerDayHandler(IW3StatsRepo w3Stats, IMatchmakingProvider match
         foreach (GameMode mode in currentlyActiveModes)
         {
             var gamesPerDays = new List<GamesPerDay>();
-            foreach (GateWay gw in Enum.GetValues(typeof(GateWay)))
+            foreach (GateWay gw in new List<GateWay> { GateWay.Europe, GateWay.Undefined })
             {
                 var stat = await _w3Stats.LoadGamesPerDay(endTime, mode, gw)
                             ?? GamesPerDay.Create(endTime, mode, gw);
