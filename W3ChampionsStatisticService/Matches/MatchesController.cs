@@ -64,7 +64,9 @@ public class MatchesController(
         int minMmr = 0,
         int? maxMmr = null,
         int? minPercentile = null,
-        int? maxPercentile = null
+        int? maxPercentile = null,
+        int? minDuration = null,
+        int? maxDuration = null
     )
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
@@ -84,9 +86,9 @@ public class MatchesController(
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration);
         PlayersObfuscator.ObfuscateMmr(matches);
-        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr);
+        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration);
         return Ok(new { matches, count });
     }
 
