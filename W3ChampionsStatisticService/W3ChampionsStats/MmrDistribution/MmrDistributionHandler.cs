@@ -8,6 +8,7 @@ using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Common.Constants;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
+
 using Microsoft.Extensions.Caching.Memory;
 
 [Trace]
