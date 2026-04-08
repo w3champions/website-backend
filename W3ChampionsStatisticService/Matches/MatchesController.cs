@@ -45,7 +45,9 @@ public class MatchesController(
     /// <param name="maxMmr">The maximum MMR filter.</param>
     /// <param name="minPercentile">The minimum percentile filter.</param>
     /// <param name="maxPercentile">The maximum percentile filter.</param>
-    /// <returns>
+    /// <param name="minDuration">The minimum match duration in seconds (recommended minimum: 300s).
+    /// <param name="maxDuration">The maximum match duration in seconds (recommended maximum: 99999s).
+    /// /// <returns>
     /// 200 OK: An object containing a list of matches and the total count.
     /// {
     ///   matches: List&lt;MatchFinishedEvent&gt;,
