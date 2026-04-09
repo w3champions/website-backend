@@ -21,6 +21,10 @@ public enum EConnectionEventType
     Reconnect,
     FailureDisconnect,
     GameCrashed,
+    GamePaused,
+    GameResumed,
+    StartLag,
+    StopLag,
 }
 
 public enum EConnectionType
