@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Domain.Repositories;
@@ -56,6 +57,7 @@ public class LagReportPlayer
     public string ClientIp { get; set; }
 
     /// <summary>Whether the player connected directly or via a proxy node.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public EConnectionType ConnectionType { get; set; }
 
     /// <summary>Name of the proxy node (null if direct).</summary>
@@ -71,6 +73,7 @@ public class LagReportPlayer
     public bool IsExplicit { get; set; }
 
     /// <summary>Issue categories selected by the player (e.g. SpikeLag, Reconnecting).</summary>
+    [JsonConverter(typeof(JsonStringEnumListConverter<EIssueCategory>))]
     public List<EIssueCategory> IssueCategories { get; set; } = [];
 
     /// <summary>Free-text description from the player.</summary>
@@ -190,6 +193,7 @@ public class ConnectionEventData
     /// <summary>Milliseconds since game start. Frozen during disconnects (no ticks arrive).</summary>
     public long GameTimeOffsetMs { get; set; }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public EConnectionEventType EventType { get; set; }
 
     /// <summary>For reconnects: how long the disconnection lasted (ms). Null for disconnects.</summary>
