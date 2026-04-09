@@ -62,7 +62,7 @@ public class MatchupRepoTests : IntegrationTestBase
         await matchRepository.Insert(matchupHigh);
 
         // Only mid MMR match should be returned
-        var matches = await matchRepository.Load(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 1200, maxMmr: 2000);
+        var matches = await matchRepository.Load(matchLowMmr.match.season, matchLowMmr.match.gameMode, minMmr: 1200, maxMmr: 2000, minDuration: null, maxDuration: null);
         Assert.AreEqual(1, matches.Count);
         Assert.IsTrue(matches.All(m => m.Teams.SelectMany(t => t.Players).Any(p => p.CurrentMmr >= 1200 && p.CurrentMmr <= 2000)));
 

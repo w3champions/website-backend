@@ -8,6 +8,7 @@ using W3C.Contracts.Matchmaking;
 using Moq;
 
 namespace WC3ChampionsStatisticService.Statistics;
+
 [TestFixture]
 public class MmrDistributionHandlerTests
 {
