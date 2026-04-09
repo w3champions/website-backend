@@ -12,6 +12,7 @@ public enum EIssueCategory
     FullDisconnect,
     Desync,
     FpsDrops,
+    GameCrashed,
     Other,
 }
 
@@ -19,6 +20,7 @@ public enum EConnectionEventType
 {
     Reconnect,
     FailureDisconnect,
+    GameCrashed,
 }
 
 public enum EConnectionType
