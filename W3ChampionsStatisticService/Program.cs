@@ -168,6 +168,9 @@ builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepo
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
 builder.Services.AddInterceptedTransient<IPatchRepository, PatchRepository>();
 builder.Services.AddInterceptedTransient<IAdminRepository, AdminRepository>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.LagReports.LagReportRepository>();
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, W3ChampionsStatisticService.LagReports.LagReportRepository>();
+builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IFloStatsService, W3ChampionsStatisticService.LagReports.FloStatsService>();
 builder.Services.AddInterceptedTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
 builder.Services.AddInterceptedTransient<IW3CAuthenticationService, W3CAuthenticationService>();
 builder.Services.AddInterceptedSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
@@ -271,6 +274,10 @@ if (startHandlers == "true")
     // On going matches
     builder.Services.AddUnversionedReadModelService<StartedMatchIntoOngoingMatchesHandler>();
     builder.Services.AddMatchCanceledReadModelService<OngoingRemovalMatchCanceledHandler>();
+
+    // Lag reports — fetch server-side ping from flo-stats on match end
+    builder.Services.AddMatchFinishedReadModelService<W3ChampionsStatisticService.LagReports.LagReportMatchFinishedHandler>();
+    builder.Services.AddMatchCanceledReadModelService<W3ChampionsStatisticService.LagReports.LagReportMatchCanceledHandler>();
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
