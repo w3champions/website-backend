@@ -133,25 +133,31 @@ public class LagReportRepositoryTests : IntegrationTestBase
         await _repo.UpsertPlayerData(t1.FloGameId, CreatePlayer("Alice#1111"), t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("Bob#2222"), t2);
 
+        // Exact match
         var (items, total) = await _repo.GetReports(new LagReportQueryRequest { BattleTag = "Alice#1111" });
         Assert.AreEqual(1, total);
         Assert.AreEqual(1, items.Count);
         Assert.AreEqual(2001, items[0].FloGameId);
+
+        // Partial match (case-insensitive)
+        var (items2, total2) = await _repo.GetReports(new LagReportQueryRequest { BattleTag = "alice" });
+        Assert.AreEqual(1, total2);
+        Assert.AreEqual(1, items2.Count);
     }
 
     [Test]
-    public async Task GetReports_FiltersByServerNodeId()
+    public async Task GetReports_FiltersByServerName()
     {
         var t1 = CreateTemplate(floGameId: 3001, gameId: 7001);
-        t1.ServerNodeId = 10;
+        t1.ServerNodeName = "EU West";
         var t2 = CreateTemplate(floGameId: 3002, gameId: 7002);
-        t2.ServerNodeId = 20;
+        t2.ServerNodeName = "US East";
         await _repo.UpsertPlayerData(t1.FloGameId, CreatePlayer("P1#1"), t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("P2#2"), t2);
 
-        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ServerNodeId = 10 });
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ServerName = "EU" });
         Assert.AreEqual(1, items.Count);
-        Assert.AreEqual(10, items[0].ServerNodeId);
+        Assert.AreEqual("EU West", items[0].ServerNodeName);
     }
 
     [Test]

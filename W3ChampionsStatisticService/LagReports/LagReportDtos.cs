@@ -235,8 +235,8 @@ public class LagReportSubmissionResponse
 public class LagReportQueryRequest
 {
     public string BattleTag { get; set; }
-    public int? GameId { get; set; }
-    public int? ServerNodeId { get; set; }
+    public string GameSearch { get; set; }
+    public string ServerName { get; set; }
     public string ProxyName { get; set; }
     public string ProxyIp { get; set; }
     public string DateFrom { get; set; }

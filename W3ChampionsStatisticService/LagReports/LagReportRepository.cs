@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
@@ -28,6 +30,12 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
 
             // Server filter
             new(Builders<LagReport>.IndexKeys.Ascending(r => r.ServerNodeId)),
+
+            // Server name filter (partial match)
+            new(Builders<LagReport>.IndexKeys.Ascending(r => r.ServerNodeName)),
+
+            // Game name filter (partial match)
+            new(Builders<LagReport>.IndexKeys.Ascending(r => r.GameName)),
 
             // Player battle tag filter (inside nested array)
             new(Builders<LagReport>.IndexKeys.Ascending("Players.BattleTag")),
@@ -145,27 +153,47 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
 
         if (!string.IsNullOrEmpty(req.BattleTag))
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.BattleTag == req.BattleTag));
+            var pattern = new BsonRegularExpression(Regex.Escape(req.BattleTag), "i");
+            filters.Add(builder.ElemMatch(r => r.Players,
+                Builders<LagReportPlayer>.Filter.Regex(p => p.BattleTag, pattern)));
         }
 
-        if (req.GameId.HasValue)
+        if (!string.IsNullOrEmpty(req.GameSearch))
         {
-            filters.Add(builder.Eq(r => r.GameId, req.GameId.Value));
+            var gameFilters = new List<FilterDefinition<LagReport>>();
+
+            // Match GameId or FloGameId if the search term is numeric
+            if (int.TryParse(req.GameSearch, out var gameIdNum))
+            {
+                gameFilters.Add(builder.Eq(r => r.GameId, gameIdNum));
+                gameFilters.Add(builder.Eq(r => r.FloGameId, gameIdNum));
+            }
+
+            // Always also match GameName as partial (case-insensitive)
+            var namePattern = new BsonRegularExpression(Regex.Escape(req.GameSearch), "i");
+            gameFilters.Add(builder.Regex(r => r.GameName, namePattern));
+
+            filters.Add(builder.Or(gameFilters));
         }
 
-        if (req.ServerNodeId.HasValue)
+        if (!string.IsNullOrEmpty(req.ServerName))
         {
-            filters.Add(builder.Eq(r => r.ServerNodeId, req.ServerNodeId.Value));
+            var pattern = new BsonRegularExpression(Regex.Escape(req.ServerName), "i");
+            filters.Add(builder.Regex(r => r.ServerNodeName, pattern));
         }
 
         if (!string.IsNullOrEmpty(req.ProxyName))
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.ProxyName == req.ProxyName));
+            var pattern = new BsonRegularExpression(Regex.Escape(req.ProxyName), "i");
+            filters.Add(builder.ElemMatch(r => r.Players,
+                Builders<LagReportPlayer>.Filter.Regex(p => p.ProxyName, pattern)));
         }
 
         if (!string.IsNullOrEmpty(req.ProxyIp))
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.ProxyIp == req.ProxyIp));
+            var pattern = new BsonRegularExpression(Regex.Escape(req.ProxyIp), "i");
+            filters.Add(builder.ElemMatch(r => r.Players,
+                Builders<LagReportPlayer>.Filter.Regex(p => p.ProxyIp, pattern)));
         }
 
         if (!string.IsNullOrEmpty(req.DateFrom) && DateTimeOffset.TryParse(req.DateFrom, out var dateFrom))
