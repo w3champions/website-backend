@@ -278,7 +278,6 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
                 && player.CurrentMmr <= maxMmr)));
         }
 
-        // Duration filter (ALWAYS applied)
         if (minDuration.HasValue)
         {
             filter &= builder.Gte(
