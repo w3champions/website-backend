@@ -276,25 +276,26 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             (player.OldRankDeviation == null || player.OldRankDeviation < PlayersObfuscator.RankDeviationObfuscationThreshold)
                 && player.CurrentMmr >= minMmr
                 && player.CurrentMmr <= maxMmr)));
-            // Filter by Duration.
-            if (minDuration.HasValue)
-            {
-                filter &= builder.Gte(
-                    m => m.Duration,
-                    TimeSpan.FromSeconds(minDuration.Value));
-            }
+        }
 
-            if (maxDuration.HasValue)
-            {
-                filter &= builder.Lte(
-                    m => m.Duration,
-                    TimeSpan.FromSeconds(maxDuration.Value));
-            }
+        // Duration filter (ALWAYS applied)
+        if (minDuration.HasValue)
+        {
+            filter &= builder.Gte(
+                m => m.Duration,
+                TimeSpan.FromSeconds(minDuration.Value));
+        }
 
+        if (maxDuration.HasValue)
+        {
+            filter &= builder.Lte(
+                m => m.Duration,
+                TimeSpan.FromSeconds(maxDuration.Value));
         }
 
         return filter;
-    }
+        }
+
 
     public async Task InsertOnGoingMatch(OnGoingMatchup matchup)
     {

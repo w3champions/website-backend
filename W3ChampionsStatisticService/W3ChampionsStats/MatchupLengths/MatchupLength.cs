@@ -4,6 +4,7 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.W3ChampionsStats.GameLengths;
 
 namespace W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
+
 public class MatchupLength : IIdentifiable
 {
     public string Id => CompoundNormalizedId(Race1, Race2, Season);
