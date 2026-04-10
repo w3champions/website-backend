@@ -294,7 +294,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         }
 
         return filter;
-        }
+    }
 
 
     public async Task InsertOnGoingMatch(OnGoingMatchup matchup)
