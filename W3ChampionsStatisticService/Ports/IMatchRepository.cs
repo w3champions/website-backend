@@ -13,14 +13,17 @@ namespace W3ChampionsStatisticService.Ports;
 
 public interface IMatchRepository
 {
-    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null);
+    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null);
 
     Task<long> Count(
         int season,
         GameMode gameMode,
         HeroType hero = HeroType.AllFilter,
         int minMmr = 0,
-        int? maxMmr = null);
+        int? maxMmr = null,
+        int? minDuration = null,
+        int? maxDuration = null);
+    
 
     Task Insert(Matchup matchup);
 
