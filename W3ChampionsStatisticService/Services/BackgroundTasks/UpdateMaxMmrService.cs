@@ -8,6 +8,7 @@ using System.Linq;
 using W3ChampionsStatisticService.PlayerProfiles;
 
 namespace W3ChampionsStatisticService.Services.BackgroundTasks;
+
 public class UpdateMaxMmrService(ILogger<UpdateMaxMmrService> logger, PlayerRepository playerRepository) : BackgroundService
 {
     private readonly ILogger<UpdateMaxMmrService> _logger = logger;
