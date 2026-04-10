@@ -23,6 +23,10 @@ public class ReplayChatsPlayerInfo
 
 public class ReplayChatsMessage
 {
+    // Time in milliseconds, when the player said this in-game
+    [JsonProperty("time")]
+    public int Time { get; set; }
+
     [JsonProperty("from_player")]
     public int FromPlayer { get; set; }
 
