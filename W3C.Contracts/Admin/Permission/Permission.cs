@@ -22,4 +22,5 @@ public enum EPermission
     SmurfCheckerQuery,
     SmurfCheckerQueryExplanation,
     SmurfCheckerAdministration,
+    GameModeSettings,
 }

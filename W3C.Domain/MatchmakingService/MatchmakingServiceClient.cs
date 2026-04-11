@@ -505,6 +505,46 @@ public class MatchmakingServiceClient
         return null;
     }
 
+    public async Task<object> GetGamemodeParams(int id)
+        {
+            var url = $"{MatchmakingApiUrl}/admin/getGamemodeParams/{id}";
+
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("x-admin-secret", AdminSecret);
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await GetResult<object>(response);
+            }
+
+            await HandleMMError(response);
+            return null;
+        }
+
+    public async Task<object> PostGamemodeParams(int id, object _params)
+        {
+            var payload = new
+            {
+                gmId = id,
+                newParams = _params
+            };
+            var url = $"{MatchmakingApiUrl}/setGamemodeParams";
+            var httpcontent = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("x-admin-secret", AdminSecret);
+            request.Content = httpcontent;
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await GetResult<object>(response);
+            }
+
+            await HandleMMError(response);
+            return null;
+        }
+
     private async Task HandleMMError(HttpResponseMessage response)
     {
         var errorReponse = await GetResult<ErrorResponse>(response);

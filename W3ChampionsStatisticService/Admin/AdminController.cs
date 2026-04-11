@@ -406,4 +406,17 @@ public class AdminController(
         var smurfSearchResult = await _adminRepository.QuerySmurfsFor(identifierType, identifier, generateExplanation, iterationDepth);
         return Ok(smurfSearchResult);
     }
+
+    [HttpGet("gamemode-params/{gmId}")]
+    [BearerHasPermissionFilter(Permission = EPermission.GameModeSettings)]
+    public async Task<IActionResult> GetGmParameters(int gmId) {
+        return Ok(await _matchmakingServiceRepository.GetGamemodeParams(gmId));
+    }
+
+    [HttpPost("gamemode-params/{gmId}")]
+    [BearerHasPermissionFilter(Permission = EPermission.GameModeSettings)]
+    public async Task<IActionResult> GetGmParameters(int gmId, [FromBody] object _params) {
+        var res = await _matchmakingServiceRepository.PostGamemodeParams(gmId, _params);
+        return Ok(res);
+    }
 }
