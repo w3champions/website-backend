@@ -233,11 +233,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null)
+    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string map = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, map);
         var results = await mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
         PlayersObfuscator.ObfuscateMmr(results);
         return results;
@@ -250,18 +250,23 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null)
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string map = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, map);
         return CreateCollection<Matchup>().CountDocumentsAsync(filter);
     }
 
-    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null)
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string map = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var builder = Builders<Matchup>.Filter;
         var filter = builder.Eq(m => m.GameMode, gameMode) & builder.Eq(m => m.Season, season);
+
+        if (!string.IsNullOrEmpty(map))
+        {
+            filter &= builder.Eq(m => m.Map, map);
+        }
 
         if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
         {
