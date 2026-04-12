@@ -47,6 +47,7 @@ public class MatchesController(
     /// <param name="maxPercentile">The maximum percentile filter.</param>
     /// <param name="minDuration">The minimum match duration in seconds (recommended minimum: 300s).<filter.</param>
     /// <param name="maxDuration">The maximum match duration in seconds (recommended maximum: 99999s)<.filter.</param>
+    /// <param name="map">the map name</param>param>
     /// <returns>
     /// 200 OK: An object containing a list of matches and the total count.
     /// {
@@ -68,7 +69,8 @@ public class MatchesController(
         int? minPercentile = null,
         int? maxPercentile = null,
         int? minDuration = null,
-        int? maxDuration = null
+        int? maxDuration = null,
+        string map = null
     )
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
@@ -88,9 +90,9 @@ public class MatchesController(
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration, map);
         PlayersObfuscator.ObfuscateMmr(matches);
-        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration);
+        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, map);
         return Ok(new { matches, count });
     }
 
