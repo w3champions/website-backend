@@ -132,6 +132,57 @@ public class MatchupRepoTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task LoadMapNames_ReturnsDistinctMapNamesForSeason()
+    {
+        var amazonia = TestDtoHelper.CreateFakeEvent();
+        amazonia.match.mapName = "Amazonia";
+        amazonia.match.season = 1;
+
+        var duplicateAmazonia = TestDtoHelper.CreateFakeEvent();
+        duplicateAmazonia.match.mapName = "Amazonia";
+        duplicateAmazonia.match.season = 1;
+
+        var concealedHill = TestDtoHelper.CreateFakeEvent();
+        concealedHill.match.mapName = "Concealed Hill";
+        concealedHill.match.season = 1;
+
+        var otherSeason = TestDtoHelper.CreateFakeEvent();
+        otherSeason.match.mapName = "Autumn Leaves";
+        otherSeason.match.season = 2;
+
+        await matchRepository.Insert(Matchup.Create(amazonia));
+        await matchRepository.Insert(Matchup.Create(duplicateAmazonia));
+        await matchRepository.Insert(Matchup.Create(concealedHill));
+        await matchRepository.Insert(Matchup.Create(otherSeason));
+
+        var mapNames = await matchRepository.LoadMapNames(1, amazonia.match.gameMode);
+
+        Assert.AreEqual(new[] { "Amazonia", "Concealed Hill" }, mapNames);
+    }
+
+    [Test]
+    public async Task LoadAndCount_WithMapFilter_ReturnsOnlySelectedMap()
+    {
+        var amazonia = TestDtoHelper.CreateFakeEvent();
+        amazonia.match.mapName = "Amazonia";
+        amazonia.match.season = 1;
+
+        var concealedHill = TestDtoHelper.CreateFakeEvent();
+        concealedHill.match.mapName = "Concealed Hill";
+        concealedHill.match.season = 1;
+
+        await matchRepository.Insert(Matchup.Create(amazonia));
+        await matchRepository.Insert(Matchup.Create(concealedHill));
+
+        var matches = await matchRepository.Load(1, amazonia.match.gameMode, mapName: "Amazonia");
+        var count = await matchRepository.Count(1, amazonia.match.gameMode, mapName: "Amazonia");
+
+        Assert.AreEqual(1, matches.Count);
+        Assert.AreEqual(1, count);
+        Assert.AreEqual("Amazonia", matches.Single().MapName);
+    }
+
+    [Test]
     public async Task LoadWithHeroFilter()
     {
         var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Contracts.Matchmaking;
@@ -31,6 +32,24 @@ public class MatchesController(
     private readonly MatchService _matchService = matchService;
     private readonly MmrDistributionHandler _mmrDistributionHandler = mmrDistributionHandler;
 
+    /// <summary>
+    /// Gets the distinct map names for a season and game mode.
+    /// </summary>
+    /// <param name="season">The season filter.</param>
+    /// <param name="gameMode">The game mode filter.</param>
+    /// <returns>
+    /// 200 OK: The array of distinct map names from the season
+    /// </returns>
+    [ProducesResponseType(typeof(List<string>), 200)]
+    [HttpGet("map-names")]
+    public async Task<IActionResult> GetMapNames(
+        GameMode gameMode,
+        int season
+    )
+    {
+        var mapNames = await _matchRepository.LoadMapNames(season, gameMode);
+        return Ok(mapNames);
+    }
 
     /// <summary>
     /// Gets a paginated list of matches with optional filters.
@@ -68,7 +87,8 @@ public class MatchesController(
         int? minPercentile = null,
         int? maxPercentile = null,
         int? minDuration = null,
-        int? maxDuration = null
+        int? maxDuration = null,
+        string mapName = "Overall"
     )
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
@@ -88,9 +108,9 @@ public class MatchesController(
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
         PlayersObfuscator.ObfuscateMmr(matches);
-        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration);
+        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
         return Ok(new { matches, count });
     }
 
