@@ -156,8 +156,8 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         }
         filter &= builder.Where(m => gameMode == GameMode.Undefined || m.GameMode == gameMode);
         filter &= builder.Where(m => gateWay == GateWay.Undefined || m.GateWay == gateWay);
-        filter &= builder.Where(m => playerRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == playerRace && playerId == team.Players[0].BattleTag));
-        filter &= builder.Where(m => opponentRace == Race.Total || m.Teams.Any(team => team.Players[0].Race == opponentRace && playerId != team.Players[0].BattleTag));
+        filter &= builder.Where(m => playerRace == Race.Total || m.Teams.Any(team => team.Players.Any(p => p.BattleTag == playerId && (p.Race == playerRace || (p.Race == Race.RnD && p.RndRace == playerRace)))));
+        filter &= builder.Where(m => opponentRace == Race.Total || m.Teams.Any(team => team.Players.Any(p => p.BattleTag != playerId && (p.Race == opponentRace || (p.Race == Race.RnD && p.RndRace == opponentRace)))));
         filter &= builder.Where(m => m.Season == season);
         if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
         {
