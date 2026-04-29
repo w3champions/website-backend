@@ -47,7 +47,7 @@ public class MatchesController(
         int season
     )
     {
-        var mapNames = await _matchRepository.LoadMapNames(season, gameMode);
+        var mapNames = await _matchService.GetMapNames(season, gameMode);
         return Ok(mapNames);
     }
 
