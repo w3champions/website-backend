@@ -24,11 +24,13 @@ public class MatchService(
     IMatchRepository matchRepository,
     ICachedDataProvider<List<Matchup>> cachedMatchesProvider,
     ICachedDataProvider<CachedLong> cachedMatchCountProvider,
+    ICachedDataProvider<List<string>> cachedMapNamesProvider,
     IPersonalSettingsRepository personalSettingsRepository)
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly ICachedDataProvider<List<Matchup>> _cachedMatchesProvider = cachedMatchesProvider;
     private readonly ICachedDataProvider<CachedLong> _cachedMatchCountProvider = cachedMatchCountProvider;
+    private readonly ICachedDataProvider<List<string>> _cachedMapNamesProvider = cachedMapNamesProvider;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
 
     public async Task<List<Matchup>> GetMatchesPerPlayer(
@@ -83,6 +85,16 @@ public class MatchService(
                     opponentRace, season, hero)
             }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
+    }
+
+    public async Task<List<string>> GetMapNames(int season, GameMode gameMode)
+    {
+        string cacheKey = $"map_names_{season}_{gameMode}";
+
+        return await _cachedMapNamesProvider.GetCachedOrRequestAsync(
+            async () => await _matchRepository.LoadMapNames(season, gameMode),
+            cacheKey,
+            TimeSpan.FromMinutes(10));
     }
 
     public async Task SetPlayersCountryCode(Matchup matchup)
