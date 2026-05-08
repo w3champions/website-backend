@@ -300,7 +300,9 @@ public class PatreonMember
 
     public bool IsActivePatron =>
         PatronStatus == "active_patron" &&
-        LastChargeStatus == "Paid";
+        (LastChargeStatus == "Paid"
+            || LastChargeStatus == "Pending"
+            || LastChargeStatus == "Free Trial");
 }
 
 public class PatreonApiResponse
