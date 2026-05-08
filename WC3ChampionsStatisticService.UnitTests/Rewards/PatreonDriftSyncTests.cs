@@ -113,7 +113,7 @@ public class PatreonDriftSyncTests
                     PatreonMemberId = "member123",
                     PatreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     PatronStatus = "active_patron",
-                    EntitledTierIds = new List<string> { "tier1" },
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tier1" } },
                     Reason = "Test missing member"
                 }
             },
@@ -202,7 +202,7 @@ public class PatreonDriftSyncTests
                     PatreonMemberId = "member123",
                     PatreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     PatronStatus = "active_patron",
-                    EntitledTierIds = new List<string> { "tier1" },
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tier1" } },
                     Reason = "Test missing member"
                 }
             }
@@ -589,7 +589,7 @@ public class PatreonDriftSyncTests
                     PatreonMemberId = patreonMemberId,
                     PatreonUserId = patreonUserId,
                     PatronStatus = "active_patron",
-                    EntitledTierIds = newPatreonTiers,
+                    EntitledTiers = newPatreonTiers.Select(id => new EntitledTier { TierId = id }).ToList(),
                     Reason = $"{scenarioName}: Active patron found in Patreon but no active rewards in our system"
                 }
             };
@@ -794,7 +794,7 @@ public class PatreonDriftSyncTests
                     PatreonMemberId = patreonMemberId,
                     PatreonUserId = patreonUserId,
                     PatronStatus = "active_patron",
-                    EntitledTierIds = new List<string> { "6482057", "6482051" }, // Multiple TIERED rewards
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "6482057" }, new EntitledTier { TierId = "6482051" } }, // Multiple TIERED rewards
                     Reason = "Active patron with multiple tiers"
                 }
             }
@@ -925,7 +925,7 @@ public class PatreonDriftSyncTests
                     PatreonUserId = patreonUserId,
                     PatronStatus = "active_patron",
                     // Mix of TIERED and non-TIERED tiers
-                    EntitledTierIds = new List<string> { "tiered-1", "tiered-2", "onetime-bonus", "recurring-perk" },
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tiered-1" }, new EntitledTier { TierId = "tiered-2" }, new EntitledTier { TierId = "onetime-bonus" }, new EntitledTier { TierId = "recurring-perk" } },
                     Reason = "Active patron with mixed tier types"
                 }
             }
@@ -1068,7 +1068,7 @@ public class PatreonDriftSyncTests
                 PatreonUserId = patreonUserId,
                 PatronStatus = "active_patron",
                 LastChargeStatus = "Paid",  // This makes IsActivePatron = true
-                EntitledTierIds = patreonEntitledTiers
+                EntitledTiers = patreonEntitledTiers.Select(id => new EntitledTier { TierId = id }).ToList()
             });
         }
 

@@ -157,7 +157,7 @@ public class RewardServiceTests
             ProviderId = providerId,
             UserId = userId,
             ProviderReference = providerReference,
-            EntitledTierIds = new List<string> { tierId },
+            EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = tierId } },
             Timestamp = DateTime.UtcNow,
             Metadata = new Dictionary<string, object>
             {
@@ -230,7 +230,7 @@ public class RewardServiceTests
             ProviderId = providerId,
             UserId = userId,
             ProviderReference = "member_123",
-            EntitledTierIds = new List<string> { tierId },
+            EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = tierId } },
             Timestamp = DateTime.UtcNow
         };
 
@@ -282,7 +282,7 @@ public class RewardServiceTests
             ProviderId = providerId,
             UserId = userId,
             ProviderReference = "member_123",
-            EntitledTierIds = new List<string> { tierId },
+            EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = tierId } },
             Timestamp = DateTime.UtcNow
         };
 
@@ -375,7 +375,7 @@ public class RewardServiceTests
             ProviderId = providerId,
             UserId = userId,
             ProviderReference = "member_123",
-            EntitledTierIds = new List<string> { tier1Id, tier2Id },
+            EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = tier1Id }, new EntitledTier { TierId = tier2Id } },
             Timestamp = DateTime.UtcNow
         };
 

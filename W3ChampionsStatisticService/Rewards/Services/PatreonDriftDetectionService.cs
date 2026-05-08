@@ -113,7 +113,7 @@ public class PatreonDriftDetectionService(
                     PatreonMemberId = patreonMember.Id,
                     PatreonUserId = patreonMember.PatreonUserId,
                     PatronStatus = patreonMember.PatronStatus,
-                    EntitledTierIds = patreonMember.EntitledTierIds,
+                    EntitledTiers = patreonMember.EntitledTiers,
                     Reason = "Active patron found in Patreon but no active rewards in our system"
                 });
             }
@@ -124,7 +124,7 @@ public class PatreonDriftDetectionService(
                 var internalTierIds = ExtractTierIdsFromAssociations(associations);
 
                 // Apply the same TIERED filtering logic that would be applied during sync to BOTH sides
-                var filteredPatreonTiers = FilterTierIdsForProcessing(patreonMember.EntitledTierIds, allProductMappings);
+                var filteredPatreonTiers = FilterTierIdsForProcessing(patreonMember.EntitledTiers.Select(t => t.TierId).ToList(), allProductMappings);
                 var filteredInternalTiers = FilterTierIdsForProcessing(internalTierIds, allProductMappings);
 
                 if (!AreTierSetsEqual(filteredPatreonTiers, filteredInternalTiers))
@@ -133,7 +133,7 @@ public class PatreonDriftDetectionService(
                     {
                         UserId = battleTag,
                         PatreonMemberId = patreonMember.Id,
-                        PatreonTiers = patreonMember.EntitledTierIds,  // Original unfiltered tiers
+                        PatreonTiers = patreonMember.EntitledTiers.Select(t => t.TierId).ToList(),  // Original unfiltered tiers
                         PatreonTiersFiltered = filteredPatreonTiers,   // What was actually compared
                         InternalTiers = internalTierIds,               // Original internal tiers
                         InternalTiersFiltered = filteredInternalTiers, // What was actually compared
@@ -233,7 +233,7 @@ public class PatreonDriftDetectionService(
             {
                 Log.Warning("Missing member: Email={Email}, PatreonId={Id}, Status={Status}, Tiers={Tiers}",
                     missing.PatreonUserId, missing.PatreonMemberId, missing.PatronStatus,
-                    string.Join(",", missing.EntitledTierIds ?? new List<string>()));
+                    string.Join(",", missing.EntitledTiers?.Select(t => t.TierId) ?? new List<string>()));
             }
 
             // Log details for extra assignments
@@ -504,7 +504,7 @@ public class PatreonDriftDetectionService(
                 Email = patreonMember.Email,
                 PatronStatus = patreonMember.PatronStatus,
                 IsActivePatron = patreonMember.IsActivePatron,
-                EntitledTierIds = patreonMember.EntitledTierIds ?? new List<string>(),
+                EntitledTiers = patreonMember.EntitledTiers ?? new List<EntitledTier>(),
                 LastChargeDate = patreonMember.LastChargeDate,
                 LastChargeStatus = patreonMember.LastChargeStatus,
                 PledgeRelationshipStart = patreonMember.PledgeRelationshipStart,
@@ -615,7 +615,7 @@ public class PatreonDriftDetectionService(
     private UserSyncAction DetermineRequiredSyncAction(PatreonMember patreonData, List<ProductMappingUserAssociation> currentAssociations)
     {
         var internalTierIds = ExtractTierIdsFromAssociations(currentAssociations);
-        var patreonTierIds = patreonData.EntitledTierIds ?? new List<string>();
+        var patreonTierIds = patreonData.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>();
 
         // If user is not an active patron, they should have no associations
         if (!patreonData.IsActivePatron)
@@ -687,7 +687,7 @@ public class PatreonDriftDetectionService(
         if (!dryRun)
         {
             // Create associations for each entitled tier using batch-optimized method
-            await CreateAssociationsForTiers(battleTag, missingMember.EntitledTierIds ?? new List<string>(), "drift_sync_missing");
+            await CreateAssociationsForTiers(battleTag, missingMember.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(), "drift_sync_missing");
 
             var eventIdPrefix = $"drift_sync_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
@@ -816,7 +816,7 @@ public class PatreonDriftDetectionService(
         var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
 
         // Filter tier IDs - for TIERED rewards, only process the first one
-        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTierIds ?? new List<string>(), allProductMappings);
+        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(), allProductMappings);
 
         foreach (var tierId in filteredTierIds)
         {
@@ -848,7 +848,7 @@ public class PatreonDriftDetectionService(
         var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
 
         // Filter tier IDs - for TIERED rewards, only process the first one
-        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTierIds ?? new List<string>(), allProductMappings);
+        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(), allProductMappings);
 
         // Create new associations
         foreach (var tierId in filteredTierIds)
@@ -1021,7 +1021,7 @@ public class MissingMember
     public string PatreonMemberId { get; set; }
     public string PatreonUserId { get; set; }
     public string PatronStatus { get; set; }
-    public List<string> EntitledTierIds { get; set; }
+    public List<EntitledTier> EntitledTiers { get; set; }
     public string Reason { get; set; }
 }
 
@@ -1091,7 +1091,7 @@ public class PatreonMemberDetails
     public string Email { get; set; }
     public string PatronStatus { get; set; }
     public bool IsActivePatron { get; set; }
-    public List<string> EntitledTierIds { get; set; } = new();
+    public List<EntitledTier> EntitledTiers { get; set; } = new();
     public DateTime? LastChargeDate { get; set; }
     public string LastChargeStatus { get; set; }
     public DateTime? PledgeRelationshipStart { get; set; }

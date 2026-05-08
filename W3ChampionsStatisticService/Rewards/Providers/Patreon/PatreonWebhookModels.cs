@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace W3ChampionsStatisticService.Rewards.Providers.Patreon;
@@ -6,6 +7,9 @@ public class PatreonWebhookData
 {
     [JsonPropertyName("data")]
     public PatreonData Data { get; set; }
+
+    [JsonPropertyName("included")]
+    public List<PatreonIncludedResource> Included { get; set; }
 }
 
 public class PatreonData
@@ -60,4 +64,25 @@ public class PatreonTiersRelationship
 {
     [JsonPropertyName("data")]
     public PatreonRelationshipData[] Data { get; set; }
+}
+
+public class PatreonIncludedResource
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; }
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; }
+
+    [JsonPropertyName("attributes")]
+    public PatreonIncludedAttributes Attributes { get; set; }
+}
+
+public class PatreonIncludedAttributes
+{
+    [JsonPropertyName("amount_cents")]
+    public long? AmountCents { get; set; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; }
 }

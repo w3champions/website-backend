@@ -277,7 +277,7 @@ public class AdminRewardController(
                 email = memberDetails.Email,
                 patronStatus = memberDetails.PatronStatus,
                 isActivePatron = memberDetails.IsActivePatron,
-                entitledTierIds = memberDetails.EntitledTierIds,
+                entitledTierIds = memberDetails.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(),
                 lastChargeDate = memberDetails.LastChargeDate?.ToString("O"),
                 lastChargeStatus = memberDetails.LastChargeStatus,
                 pledgeRelationshipStart = memberDetails.PledgeRelationshipStart?.ToString("O"),

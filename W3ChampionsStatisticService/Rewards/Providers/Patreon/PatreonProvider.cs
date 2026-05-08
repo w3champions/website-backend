@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
+using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
 
@@ -68,7 +69,7 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
 
             var eventType = MapPatreonEventType(headers, webhookData.Data.Attributes.PatronStatus);
             var userId = await ResolveUserId(webhookData.Data.Id);
-            var tierIds = ExtractAllTierIdsFromRelationships(webhookData);
+            var entitledTiers = ExtractEntitledTiersFromRelationships(webhookData);
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -86,11 +87,11 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
                 UserId = userId,
                 ProviderReference = webhookData.Data.Id,
                 Timestamp = DateTime.UtcNow,
-                EntitledTierIds = tierIds,
+                EntitledTiers = entitledTiers,
                 Metadata = new Dictionary<string, object>
                 {
                     ["patron_status"] = webhookData.Data.Attributes.PatronStatus ?? "unknown",
-                    ["total_entitled_tiers"] = tierIds.Count,
+                    ["total_entitled_tiers"] = entitledTiers.Count,
                     ["patreon_user_id"] = webhookData.Data.Id
                 }
             };
@@ -174,7 +175,7 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
         };
     }
 
-    private List<string> ExtractAllTierIdsFromRelationships(PatreonWebhookData webhookData)
+    private List<EntitledTier> ExtractEntitledTiersFromRelationships(PatreonWebhookData webhookData)
     {
         var tierIds = new List<string>();
 
@@ -189,6 +190,20 @@ public class PatreonProvider(ILogger<PatreonProvider> logger, IPatreonAccountLin
             );
         }
 
-        return tierIds;
+        var includedTiers = webhookData.Included?
+            .Where(i => i.Type == "tier")
+            .ToDictionary(i => i.Id, i => i, StringComparer.Ordinal)
+            ?? new Dictionary<string, PatreonIncludedResource>();
+
+        return tierIds.Select(id =>
+        {
+            includedTiers.TryGetValue(id, out var inc);
+            return new EntitledTier
+            {
+                TierId = id,
+                AmountCents = inc?.Attributes?.AmountCents,
+                Title = inc?.Attributes?.Title
+            };
+        }).ToList();
     }
 }

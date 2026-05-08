@@ -47,8 +47,8 @@ public class RewardService(
         if (string.IsNullOrEmpty(rewardEvent.ProviderReference))
             throw new RewardsValidationException("ProviderReference cannot be null or empty", nameof(rewardEvent.ProviderReference));
 
-        if (rewardEvent.EntitledTierIds == null)
-            throw new RewardsValidationException("EntitledTierIds cannot be null", nameof(rewardEvent.EntitledTierIds));
+        if (rewardEvent.EntitledTiers == null)
+            throw new RewardsValidationException("EntitledTiers cannot be null", nameof(rewardEvent.EntitledTiers));
 
         try
         {
@@ -69,7 +69,7 @@ public class RewardService(
 
             // Get previous entitled tiers from the database for diffing
             var previousTiers = await GetPreviousEntitledTiers(rewardEvent.UserId, rewardEvent.ProviderId);
-            var currentTiers = rewardEvent.EntitledTierIds ?? new List<string>();
+            var currentTiers = rewardEvent.EntitledTiers.Select(t => t.TierId).ToList();
 
             // Calculate tier changes
             var addedTiers = currentTiers.Except(previousTiers).ToList();

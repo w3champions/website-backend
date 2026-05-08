@@ -67,7 +67,7 @@ public class PatreonWebhookController(
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(rewardEvent.UserId, rewardEvent.EventId, dryRun: false);
 
             _logger.LogInformation("Successfully processed Patreon webhook for user {UserId} with {TierCount} entitled tiers. Associations: {AssociationCount}, Rewards Added: {Added}, Rewards Revoked: {Revoked}",
-                rewardEvent.UserId, rewardEvent.EntitledTierIds.Count, associationResults.Count, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+                rewardEvent.UserId, rewardEvent.EntitledTiers.Count, associationResults.Count, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
 
             return Ok(new
             {
@@ -75,7 +75,7 @@ public class PatreonWebhookController(
                 associationsProcessed = associationResults.Count,
                 rewardsAdded = reconciliationResult.RewardsAdded,
                 rewardsRevoked = reconciliationResult.RewardsRevoked,
-                entitledTiers = rewardEvent.EntitledTierIds
+                entitledTiers = rewardEvent.EntitledTiers.Select(t => t.TierId).ToList()
             });
         }
         catch (Exception ex)
@@ -109,10 +109,11 @@ public class PatreonWebhookController(
             }
 
             // Create new associations for entitled tiers (if any)
-            if (rewardEvent.EntitledTierIds?.Any() == true)
+            if (rewardEvent.EntitledTiers?.Any() == true)
             {
-                foreach (var tierId in rewardEvent.EntitledTierIds)
+                foreach (var tier in rewardEvent.EntitledTiers)
                 {
+                    var tierId = tier.TierId;
                     var association = await CreateAssociationForTier(rewardEvent, tierId);
                     if (association != null)
                     {
