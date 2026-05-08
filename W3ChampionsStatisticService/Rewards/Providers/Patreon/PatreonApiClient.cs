@@ -184,6 +184,56 @@ public class PatreonApiClient
         }
     }
 
+    /// <summary>
+    /// Searches the campaign-members endpoint (using the campaign creator token) for the member
+    /// matching the given Patreon user ID. Paginates through all pages until a match is found.
+    /// Returns null if the user is not a member of this campaign.
+    /// </summary>
+    public virtual async Task<PatreonMember> GetCampaignMemberByPatreonUserId(string patreonUserId)
+    {
+        var url = $"{BaseUrl}/campaigns/{_campaignId}/members"
+            + "?include=currently_entitled_tiers,user"
+            + "&fields[member]=patron_status,last_charge_status,last_charge_date,currently_entitled_amount_cents,pledge_relationship_start"
+            + "&fields[tier]=title,amount_cents"
+            + "&fields[user]=full_name"
+            + "&page[count]=200";
+
+        while (!string.IsNullOrEmpty(url))
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var apiResponse = JsonSerializer.Deserialize<PatreonApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            var match = apiResponse?.Data?.FirstOrDefault(d =>
+                d.Type == "member" && GetUserIdFromRelationships(d) == patreonUserId);
+
+            if (match != null)
+                return ParseMemberData(match, apiResponse.Included);
+
+            url = apiResponse?.Links?.Next;
+        }
+
+        return null;
+    }
+
+    private static string GetUserIdFromRelationships(PatreonApiData memberData)
+    {
+        if (memberData.Relationships?.ContainsKey("user") != true)
+            return null;
+        var userRelation = memberData.Relationships["user"];
+        if (userRelation?.Data is JsonElement userData)
+            return userData.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+        return null;
+    }
+
     private PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included = null)
     {
         try
