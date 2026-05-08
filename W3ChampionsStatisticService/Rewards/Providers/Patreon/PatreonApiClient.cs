@@ -236,7 +236,7 @@ public class PatreonApiClient
         return null;
     }
 
-    private bool IsMemberForCampaign(PatreonApiData memberData)
+    internal bool IsMemberForCampaign(PatreonApiData memberData)
     {
         if (memberData.Relationships?.ContainsKey("campaign") != true)
             return false;
@@ -246,7 +246,7 @@ public class PatreonApiClient
         return false;
     }
 
-    private PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included = null)
+    internal PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included = null)
     {
         try
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,6 +10,7 @@ using Moq;
 using Moq.Protected;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
+using WC3ChampionsStatisticService.UnitTests.Rewards.Fixtures;
 
 namespace WC3ChampionsStatisticService.UnitTests.Rewards;
 
@@ -256,5 +258,365 @@ public class PatreonApiClientCampaignMemberTests
             included = members.Select(m => new { type = "tier", id = m.tierId, attributes = new { title = "X", amount_cents = 100 } }).ToArray(),
             links = new { next = nextLink }
         });
+    }
+}
+
+/// <summary>
+/// Tests for PatreonApiClient.ParseMemberData (made internal for testability).
+/// Tests build PatreonApiData objects programmatically using JsonSerializer to produce
+/// the JsonElement values that ParseMemberData reads via dictionary deserialization.
+/// </summary>
+[TestFixture]
+public class ParseMemberDataTests
+{
+    private HttpClient _httpClient;
+    private PatreonApiClient _client;
+
+    [SetUp]
+    public void SetUp()
+    {
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_CAMPAIGN_ID", "4973374");
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_ACCESS_TOKEN", "test-token");
+        _httpClient = new HttpClient(new Mock<HttpMessageHandler>().Object);
+        _client = new PatreonApiClient(_httpClient);
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_CAMPAIGN_ID", null);
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_ACCESS_TOKEN", null);
+        _httpClient?.Dispose();
+    }
+
+    // Deserializes a JSON string to PatreonApiData using the same options as production code.
+    private static PatreonApiData DeserializeMemberData(string json)
+    {
+        return JsonSerializer.Deserialize<PatreonApiData>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    private static List<PatreonApiData> DeserializeIncluded(string json)
+    {
+        return JsonSerializer.Deserialize<List<PatreonApiData>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 1: Real members-create payload — extract all key fields
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_RealMembersCreatePayload_ExtractsAllFields()
+    {
+        // The real members-create.json is a webhook envelope: the member is in data{}
+        // and tier details are in included[]. We parse data{} as the member element.
+        var rawJson = PatreonPayloadLoader.MembersCreateJson();
+        var root = JsonSerializer.Deserialize<JsonElement>(rawJson);
+
+        var memberJson = root.GetProperty("data").GetRawText();
+        var includedJson = root.GetProperty("included").GetRawText();
+
+        var memberData = DeserializeMemberData(memberJson);
+        var included = DeserializeIncluded(includedJson);
+
+        var member = _client.ParseMemberData(memberData, included);
+
+        Assert.IsNotNull(member);
+        Assert.AreEqual("d29e61b6-f73b-4662-955e-dade715cef83", member.Id);
+        Assert.AreEqual("active_patron", member.PatronStatus);
+        Assert.IsNull(member.LastChargeStatus, "Fresh signup has null last_charge_status");
+        Assert.AreEqual("108692085", member.PatreonUserId);
+        Assert.IsNotNull(member.EntitledTiers);
+        Assert.AreEqual(1, member.EntitledTiers.Count);
+        Assert.AreEqual("196241737", member.EntitledTiers[0].TierId);
+        Assert.AreEqual(1337, member.EntitledTiers[0].AmountCents);
+        Assert.AreEqual("Elite Tier", member.EntitledTiers[0].Title);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 2: amount_cents populated from matching included tier resource
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_AmountCentsPopulatedFromIncludedTier_AssociatedWithTierId()
+    {
+        var memberJson = JsonSerializer.Serialize(new
+        {
+            id = "member-1",
+            type = "member",
+            attributes = new { patron_status = "active_patron", last_charge_status = "Paid" },
+            relationships = new
+            {
+                user = new { data = new { id = "user-99", type = "user" } },
+                currently_entitled_tiers = new { data = new[] { new { id = "tier-42", type = "tier" } } }
+            }
+        });
+
+        var includedJson = JsonSerializer.Serialize(new[]
+        {
+            new { id = "tier-42", type = "tier", attributes = new { title = "Silver", amount_cents = 500 } }
+        });
+
+        var member = _client.ParseMemberData(DeserializeMemberData(memberJson), DeserializeIncluded(includedJson));
+
+        Assert.IsNotNull(member);
+        Assert.AreEqual(1, member.EntitledTiers.Count);
+        Assert.AreEqual("tier-42", member.EntitledTiers[0].TierId);
+        Assert.AreEqual(500, member.EntitledTiers[0].AmountCents);
+        Assert.AreEqual("Silver", member.EntitledTiers[0].Title);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 3: Tier ID in currently_entitled_tiers but not in included[] → null amount/title
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_TierResourceMissingFromIncluded_ProducesEntitledTierWithNullAmount()
+    {
+        var memberJson = JsonSerializer.Serialize(new
+        {
+            id = "member-1",
+            type = "member",
+            attributes = new { patron_status = "active_patron", last_charge_status = "Paid" },
+            relationships = new
+            {
+                user = new { data = new { id = "user-1", type = "user" } },
+                currently_entitled_tiers = new { data = new[] { new { id = "tier-missing", type = "tier" } } }
+            }
+        });
+
+        // included[] has a different tier, not the one referenced above
+        var includedJson = JsonSerializer.Serialize(new[]
+        {
+            new { id = "tier-other", type = "tier", attributes = new { title = "Other", amount_cents = 200 } }
+        });
+
+        var member = _client.ParseMemberData(DeserializeMemberData(memberJson), DeserializeIncluded(includedJson));
+
+        Assert.IsNotNull(member);
+        Assert.AreEqual(1, member.EntitledTiers.Count);
+        Assert.AreEqual("tier-missing", member.EntitledTiers[0].TierId);
+        Assert.IsNull(member.EntitledTiers[0].AmountCents, "No matching included[] resource → AmountCents must be null");
+        Assert.IsNull(member.EntitledTiers[0].Title, "No matching included[] resource → Title must be null");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 4: null patron_status preserved (free-tier member)
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_NullPatronStatus_PreservedAsNull()
+    {
+        var memberJson = JsonSerializer.Serialize(new
+        {
+            id = "member-free",
+            type = "member",
+            attributes = new { patron_status = (string)null, last_charge_status = (string)null },
+            relationships = new
+            {
+                user = new { data = new { id = "user-free", type = "user" } },
+                currently_entitled_tiers = new { data = Array.Empty<object>() }
+            }
+        });
+
+        var member = _client.ParseMemberData(DeserializeMemberData(memberJson), new List<PatreonApiData>());
+
+        Assert.IsNotNull(member);
+        Assert.IsNull(member.PatronStatus, "Free-tier member patron_status must be null");
+        Assert.IsFalse(member.IsActivePatron, "Free-tier member is not an active patron");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 5: null last_charge_status preserved (fresh signup)
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_NullLastChargeStatus_PreservedAsNull()
+    {
+        var rawJson = PatreonPayloadLoader.MembersCreateJson();
+        var root = JsonSerializer.Deserialize<JsonElement>(rawJson);
+
+        var memberData = DeserializeMemberData(root.GetProperty("data").GetRawText());
+        var included = DeserializeIncluded(root.GetProperty("included").GetRawText());
+
+        var member = _client.ParseMemberData(memberData, included);
+
+        Assert.IsNotNull(member);
+        Assert.AreEqual("active_patron", member.PatronStatus);
+        Assert.IsNull(member.LastChargeStatus, "Fresh signup: last_charge_status is null before first charge");
+        Assert.IsFalse(member.IsActivePatron, "active_patron + null last_charge_status → not IsActivePatron");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 6: Multiple tiers all populated with correct amounts from included[]
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_MultipleTiers_AllPopulatedWithCorrectAmounts()
+    {
+        var memberJson = JsonSerializer.Serialize(new
+        {
+            id = "member-multi",
+            type = "member",
+            attributes = new { patron_status = "active_patron", last_charge_status = "Paid" },
+            relationships = new
+            {
+                user = new { data = new { id = "user-1", type = "user" } },
+                currently_entitled_tiers = new
+                {
+                    data = new[]
+                    {
+                        new { id = "tier-bronze", type = "tier" },
+                        new { id = "tier-silver", type = "tier" },
+                        new { id = "tier-gold",   type = "tier" }
+                    }
+                }
+            }
+        });
+
+        var includedJson = JsonSerializer.Serialize(new[]
+        {
+            new { id = "tier-bronze", type = "tier", attributes = new { title = "Bronze", amount_cents = 100 } },
+            new { id = "tier-silver", type = "tier", attributes = new { title = "Silver", amount_cents = 500 } },
+            new { id = "tier-gold",   type = "tier", attributes = new { title = "Gold",   amount_cents = 1000 } }
+        });
+
+        var member = _client.ParseMemberData(DeserializeMemberData(memberJson), DeserializeIncluded(includedJson));
+
+        Assert.IsNotNull(member);
+        Assert.AreEqual(3, member.EntitledTiers.Count);
+
+        var bronze = member.EntitledTiers.Single(t => t.TierId == "tier-bronze");
+        var silver = member.EntitledTiers.Single(t => t.TierId == "tier-silver");
+        var gold = member.EntitledTiers.Single(t => t.TierId == "tier-gold");
+
+        Assert.AreEqual(100, bronze.AmountCents);
+        Assert.AreEqual("Bronze", bronze.Title);
+        Assert.AreEqual(500, silver.AmountCents);
+        Assert.AreEqual("Silver", silver.Title);
+        Assert.AreEqual(1000, gold.AmountCents);
+        Assert.AreEqual("Gold", gold.Title);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 7: Empty currently_entitled_tiers.data → empty EntitledTiers list
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void ParseMemberData_EmptyEntitledTiers_ResultsInEmptyList()
+    {
+        var memberJson = JsonSerializer.Serialize(new
+        {
+            id = "member-empty",
+            type = "member",
+            attributes = new { patron_status = "former_patron", last_charge_status = "Declined" },
+            relationships = new
+            {
+                user = new { data = new { id = "user-1", type = "user" } },
+                currently_entitled_tiers = new { data = Array.Empty<object>() }
+            }
+        });
+
+        var member = _client.ParseMemberData(DeserializeMemberData(memberJson), new List<PatreonApiData>());
+
+        Assert.IsNotNull(member);
+        Assert.IsNotNull(member.EntitledTiers);
+        Assert.AreEqual(0, member.EntitledTiers.Count, "Empty currently_entitled_tiers.data → zero entitled tiers");
+    }
+}
+
+/// <summary>
+/// Cross-campaign defense tests for IsMemberForCampaign (made internal for testability).
+/// These verify that identity-endpoint payloads with multiple campaign memberships are
+/// filtered correctly so only the W3Champions campaign member is selected.
+/// </summary>
+[TestFixture]
+public class CrossCampaignDefenseTests
+{
+    private const string OurCampaignId = "4973374";
+
+    private HttpClient _httpClient;
+    private PatreonApiClient _client;
+
+    [SetUp]
+    public void SetUp()
+    {
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_CAMPAIGN_ID", OurCampaignId);
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_ACCESS_TOKEN", "test-token");
+        _httpClient = new HttpClient(new Mock<HttpMessageHandler>().Object);
+        _client = new PatreonApiClient(_httpClient);
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_CAMPAIGN_ID", null);
+        Environment.SetEnvironmentVariable("REWARDS_PATREON_ACCESS_TOKEN", null);
+        _httpClient?.Dispose();
+    }
+
+    private static PatreonApiData MakeMemberResource(string memberId, string campaignId)
+    {
+        var json = JsonSerializer.Serialize(new
+        {
+            id = memberId,
+            type = "member",
+            attributes = new { patron_status = "active_patron", last_charge_status = "Paid" },
+            relationships = new
+            {
+                campaign = new { data = new { id = campaignId, type = "campaign" } },
+                user = new { data = new { id = "user-1", type = "user" } },
+                currently_entitled_tiers = new { data = Array.Empty<object>() }
+            }
+        });
+        return JsonSerializer.Deserialize<PatreonApiData>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    private static PatreonApiData MakeMemberResourceNoCampaign(string memberId)
+    {
+        var json = JsonSerializer.Serialize(new
+        {
+            id = memberId,
+            type = "member",
+            attributes = new { patron_status = "active_patron", last_charge_status = "Paid" },
+            relationships = new
+            {
+                user = new { data = new { id = "user-1", type = "user" } },
+                currently_entitled_tiers = new { data = Array.Empty<object>() }
+                // no "campaign" key
+            }
+        });
+        return JsonSerializer.Deserialize<PatreonApiData>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 8: identity endpoint with two member resources → pick our campaign's member
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void IsMemberForCampaign_MultipleMembers_ReturnsTrueOnlyForOurCampaign()
+    {
+        var ourMember = MakeMemberResource("member-ours", OurCampaignId);
+        var foreignMember = MakeMemberResource("member-foreign", "99999999");
+
+        Assert.IsTrue(_client.IsMemberForCampaign(ourMember),
+            "Should match the member whose campaign.data.id == our campaign");
+        Assert.IsFalse(_client.IsMemberForCampaign(foreignMember),
+            "Should not match a member from a different campaign");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 9: identity endpoint where the only member is from a foreign campaign → no match
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void IsMemberForCampaign_ForeignCampaignMemberOnly_ReturnsFalse()
+    {
+        var foreignMember = MakeMemberResource("member-foreign", "99999999");
+
+        Assert.IsFalse(_client.IsMemberForCampaign(foreignMember),
+            "A member for a foreign campaign must not match our campaign filter");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Test 10: member resource has no relationships.campaign key → no match
+    // ──────────────────────────────────────────────────────────────────────────
+    [Test]
+    public void IsMemberForCampaign_MissingCampaignRelationship_ReturnsFalse()
+    {
+        var memberWithNoCampaign = MakeMemberResourceNoCampaign("member-no-campaign");
+
+        Assert.IsFalse(_client.IsMemberForCampaign(memberWithNoCampaign),
+            "Member with no campaign relationship must not match our campaign filter");
     }
 }
