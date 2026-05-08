@@ -87,12 +87,12 @@ public class PatreonDriftDetectionService(
         {
             if (patreonUserIdToAccountLink.TryGetValue(member.PatreonUserId, out var accountLink))
             {
-                patreonByBattleTag[accountLink.BattleTag.ToLowerInvariant()] = member;
+                patreonByBattleTag[accountLink.BattleTag] = member;
             }
         }
 
         var internalByUserId = internalAssociations
-            .GroupBy(a => a.UserId.ToLowerInvariant())
+            .GroupBy(a => a.UserId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // Find missing members (in Patreon but not in our system)

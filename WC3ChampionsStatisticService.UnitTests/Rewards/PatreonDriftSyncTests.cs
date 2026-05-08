@@ -1920,4 +1920,87 @@ public class PatreonDriftSyncTests
             a => a.UserId == "TestBattleTag#1234")), Times.Once,
             "Should create association only for the user with a linked account");
     }
+
+    [Test]
+    public async Task AnalyzeDrift_TierMismatch_UserIdIsCanonical()
+    {
+        // Regression test for drift detection casing canonicalization.
+        // After removing .ToLowerInvariant() from AnalyzeDrift, TierMismatch.UserId
+        // must be the canonical (mixed-case) BattleTag, not lowercased.
+        const string canonicalBattleTag = "TORREN#11438";
+        const string patreonUserId = "152572628";
+
+        var accountLink = new PatreonAccountLink(canonicalBattleTag, patreonUserId);
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { accountLink });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "bronze-mapping",
+                    ProductName = "Bronze Tier",
+                    Type = ProductMappingType.Tiered,
+                    RewardIds = new List<string> { "reward-bronze" },
+                    ProductProviders = new List<ProductProviderPair>
+                    {
+                        new ProductProviderPair { ProviderId = "patreon", ProductId = "6482051" }
+                    }
+                },
+                new ProductMapping
+                {
+                    Id = "gold-mapping",
+                    ProductName = "Gold Tier",
+                    Type = ProductMappingType.Tiered,
+                    RewardIds = new List<string> { "reward-gold" },
+                    ProductProviders = new List<ProductProviderPair>
+                    {
+                        new ProductProviderPair { ProviderId = "patreon", ProductId = "6482070" }
+                    }
+                }
+            });
+
+        // Patreon: user is active patron with Bronze and Gold entitlements
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>
+            {
+                new PatreonMember
+                {
+                    Id = "patreon-member-id",
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "active_patron",
+                    LastChargeStatus = "Paid",
+                    EntitledTiers = new List<EntitledTier>
+                    {
+                        EntitledTierBuilder.Bronze(),
+                        EntitledTierBuilder.Gold()
+                    }
+                }
+            });
+
+        // Internal: user only has Bronze association (missing Gold)
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>
+            {
+                new ProductMappingUserAssociation
+                {
+                    Id = "bronze-assoc",
+                    UserId = canonicalBattleTag,
+                    ProductMappingId = "bronze-mapping",
+                    ProviderId = "patreon",
+                    ProviderProductId = "6482051",
+                    Status = AssociationStatus.Active,
+                    AssignedAt = DateTime.UtcNow.AddDays(-30)
+                }
+            });
+
+        var driftResult = await _service.DetectDrift();
+
+        Assert.IsTrue(driftResult.HasDrift, "Should detect tier mismatch");
+        var mismatch = driftResult.MismatchedTiers.SingleOrDefault();
+        Assert.IsNotNull(mismatch, "Should report exactly one tier mismatch");
+        Assert.AreEqual(canonicalBattleTag, mismatch.UserId,
+            "TierMismatch.UserId must be the canonical-cased BattleTag (TORREN#11438), not lowercased");
+    }
 }
