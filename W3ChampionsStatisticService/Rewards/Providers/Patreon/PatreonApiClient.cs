@@ -151,8 +151,10 @@ public class PatreonApiClient
             var userData = apiResponse.Data;
             var patreonUserId = userData.Id;
 
-            // Find membership data in included resources
-            var membershipData = apiResponse.Included?.FirstOrDefault(i => i.Type == "member");
+            // Find membership data in included resources (campaign-scoped to prevent cross-campaign identity-endpoint artifacts)
+            var membershipData = apiResponse.Included?
+                .FirstOrDefault(i => i.Type == "member"
+                    && IsMemberForCampaign(i));
             if (membershipData == null)
             {
                 Log.Information("User {PatreonUserId} has no active memberships", patreonUserId);
@@ -232,6 +234,16 @@ public class PatreonApiClient
         if (userRelation?.Data is JsonElement userData)
             return userData.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
         return null;
+    }
+
+    private bool IsMemberForCampaign(PatreonApiData memberData)
+    {
+        if (memberData.Relationships?.ContainsKey("campaign") != true)
+            return false;
+        var campaignRelation = memberData.Relationships["campaign"];
+        if (campaignRelation?.Data is JsonElement campaignData)
+            return campaignData.TryGetProperty("id", out var idProp) && idProp.GetString() == _campaignId;
+        return false;
     }
 
     private PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included = null)

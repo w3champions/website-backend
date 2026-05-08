@@ -555,8 +555,8 @@ public class PatreonDriftDetectionService(
 
             Log.Information("[USER-SYNC] Starting single user sync for BattleTag {BattleTag}", battleTag);
 
-            // Fetch fresh Patreon data using access token
-            var patreonData = await _patreonApiClient.GetUserMemberships(accessToken);
+            // Fetch fresh Patreon data using campaign endpoint (authoritative for our campaign)
+            var patreonData = await _patreonApiClient.GetCampaignMemberByPatreonUserId(patreonUserId);
             if (patreonData == null)
             {
                 result.Success = false;
