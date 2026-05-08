@@ -29,7 +29,8 @@ public class PersonalSettingsController(
             PersonalSetting setting = await _personalSettingsRepository.Load(battleTag);
             if (setting == null)
             {
-                bool userExists = await _identityServiceClient.UserExists(battleTag);
+                // TEMP: migrated to ResolveCanonical in Task 3b
+                var userExists = await _identityServiceClient.ResolveCanonicalBattleTag(battleTag) != null;
                 if (!userExists)
                 {
                     return NotFound($"Personal settings of {battleTag} not found.");

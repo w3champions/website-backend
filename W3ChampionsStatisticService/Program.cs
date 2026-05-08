@@ -214,6 +214,7 @@ builder.Services.AddInterceptedTransient<PlayerStatisticsService>();
 builder.Services.AddInterceptedTransient<PlayerService>();
 builder.Services.AddInterceptedTransient<MatchService>();
 builder.Services.AddInterceptedTransient<IdentityServiceClient>();
+builder.Services.AddInterceptedTransient<IBattleTagResolver, BattleTagResolver>();
 builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
