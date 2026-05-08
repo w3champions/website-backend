@@ -13,6 +13,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Web;
 
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
@@ -26,7 +27,7 @@ public class PlayersController(
     IClanRepository clanRepository,
     PlayerAkaProvider playerAkaProvider,
     PlayerService playerService,
-    IdentityServiceClient identityServiceClient) : ControllerBase
+    IBattleTagResolver battleTagResolver) : ControllerBase
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly GameModeStatQueryHandler _queryHandler = queryHandler;
@@ -34,7 +35,7 @@ public class PlayersController(
     private readonly IClanRepository _clanRepository = clanRepository;
     private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
     private readonly PlayerService _playerService = playerService;
-    private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
     [HttpGet("global-search")]
     public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
@@ -47,23 +48,18 @@ public class PlayersController(
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPlayer([FromRoute] string battleTag)
     {
-        PlayerOverallStats player = await _playerRepository.LoadPlayerOverallStats(battleTag);
+        var canonical = await _battleTagResolver.ResolveCanonical(battleTag);
+        if (canonical == null)
+            return NotFound($"Player {battleTag} not found.");
+        if (canonical != battleTag)
+            return RedirectPermanent($"/api/players/{HttpUtility.UrlEncode(canonical)}");
 
+        PlayerOverallStats player = await _playerRepository.LoadPlayerOverallStats(canonical);
         if (player == null)
-        {
-            // TEMP: migrated to ResolveCanonical in Task 3
-            var userExists = await _identityServiceClient.ResolveCanonicalBattleTag(battleTag) != null;
-            if (!userExists)
-            {
-                return NotFound($"Player {battleTag} not found.");
-            }
-            player = PlayerOverallStats.Create(battleTag);
-        }
+            player = PlayerOverallStats.Create(canonical);
 
-        // Akas are stored in cache - preferences for showing akas are stored in DB
-        PersonalSetting settings = await _personalSettingsRepository.LoadOrCreate(battleTag);
-        player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferencesAsync(battleTag, settings);
-
+        PersonalSetting settings = await _personalSettingsRepository.LoadOrCreate(canonical);
+        player.PlayerAkaData = await _playerAkaProvider.GetAkaDataByPreferencesAsync(canonical, settings);
         await _playerRepository.UpsertPlayer(player);
 
         return Ok(player);
