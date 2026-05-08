@@ -11,6 +11,7 @@ using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
+using W3ChampionsStatisticService.Rewards.Services;
 
 namespace W3ChampionsStatisticService.Rewards.Controllers;
 
@@ -108,12 +109,13 @@ public class PatreonWebhookController(
                     association.Id, rewardEvent.UserId);
             }
 
-            // Create new associations for entitled tiers (if any)
+            // Create new associations for entitled tiers (if any), applying tier filter
             if (rewardEvent.EntitledTiers?.Any() == true)
             {
-                foreach (var tier in rewardEvent.EntitledTiers)
+                var productMappings = await _productMappingRepository.GetByProviderId(rewardEvent.ProviderId);
+                var filteredTierIds = PatreonTierFilter.Filter(rewardEvent.EntitledTiers, productMappings);
+                foreach (var tierId in filteredTierIds)
                 {
-                    var tierId = tier.TierId;
                     var association = await CreateAssociationForTier(rewardEvent, tierId);
                     if (association != null)
                     {

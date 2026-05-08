@@ -124,8 +124,12 @@ public class PatreonDriftDetectionService(
                 var internalTierIds = ExtractTierIdsFromAssociations(associations);
 
                 // Apply the same TIERED filtering logic that would be applied during sync to BOTH sides
-                var filteredPatreonTiers = FilterTierIdsForProcessing(patreonMember.EntitledTiers.Select(t => t.TierId).ToList(), allProductMappings);
-                var filteredInternalTiers = FilterTierIdsForProcessing(internalTierIds, allProductMappings);
+                var filteredPatreonTiers = FilterTierIdsForProcessing(patreonMember.EntitledTiers, allProductMappings);
+                var filteredInternalTiers = FilterTierIdsForProcessing(
+                    associations.Where(a => a.IsActive() && a.ProviderId == "patreon")
+                        .Select(a => new EntitledTier { TierId = a.ProviderProductId, AmountCents = null })
+                        .ToList(),
+                    allProductMappings);
 
                 if (!AreTierSetsEqual(filteredPatreonTiers, filteredInternalTiers))
                 {
@@ -687,7 +691,7 @@ public class PatreonDriftDetectionService(
         if (!dryRun)
         {
             // Create associations for each entitled tier using batch-optimized method
-            await CreateAssociationsForTiers(battleTag, missingMember.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(), "drift_sync_missing");
+            await CreateAssociationsForTiers(battleTag, missingMember.EntitledTiers ?? new List<EntitledTier>(), "drift_sync_missing");
 
             var eventIdPrefix = $"drift_sync_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
@@ -756,56 +760,10 @@ public class PatreonDriftDetectionService(
     }
 
     /// <summary>
-    /// Filters tier IDs based on ProductMappingType - for TIERED rewards, only process the first tier
+    /// Filters tier IDs based on ProductMappingType - for TIERED rewards, only process the highest-amount tier
     /// </summary>
-    private List<string> FilterTierIdsForProcessing(List<string> tierIds, List<ProductMapping> productMappings)
-    {
-        if (tierIds == null || !tierIds.Any())
-            return new List<string>();
-
-        // Group tiers by their mapping type
-        var tieredMappings = new List<string>();
-        var nonTieredMappings = new List<string>();
-
-        foreach (var tierId in tierIds)
-        {
-            var mapping = productMappings
-                .FirstOrDefault(pm => pm.ProductProviders
-                    .Any(pp => pp.ProviderId == ProviderId && pp.ProductId == tierId));
-
-            if (mapping != null && mapping.Type == ProductMappingType.Tiered)
-            {
-                tieredMappings.Add(tierId);
-            }
-            else
-            {
-                nonTieredMappings.Add(tierId);
-            }
-        }
-
-        // For TIERED mappings, only take the first one
-        var resultTiers = new List<string>();
-        if (tieredMappings.Any())
-        {
-            resultTiers.Add(tieredMappings.First());
-            if (tieredMappings.Count > 1)
-            {
-                Log.Debug("Filtering TIERED rewards: keeping only first tier {FirstTier} from {AllTiers}",
-                    tieredMappings.First(), string.Join(", ", tieredMappings));
-            }
-        }
-
-        // Add all non-tiered mappings
-        resultTiers.AddRange(nonTieredMappings);
-
-        if (tierIds.Count != resultTiers.Count)
-        {
-            Log.Information("Filtered tier IDs from [{OriginalTiers}] to [{FilteredTiers}]",
-                string.Join(", ", tierIds), string.Join(", ", resultTiers));
-        }
-
-        return resultTiers;
-    }
+    private List<string> FilterTierIdsForProcessing(List<EntitledTier> tiers, List<ProductMapping> productMappings)
+        => PatreonTierFilter.Filter(tiers, productMappings);
 
     /// <summary>
     /// Creates associations for new patrons
@@ -815,8 +773,8 @@ public class PatreonDriftDetectionService(
         // Get all product mappings once to avoid multiple DB calls
         var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
 
-        // Filter tier IDs - for TIERED rewards, only process the first one
-        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(), allProductMappings);
+        // Filter tier IDs - for TIERED rewards, only process the highest-amount one
+        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTiers ?? new List<EntitledTier>(), allProductMappings);
 
         foreach (var tierId in filteredTierIds)
         {
@@ -847,8 +805,8 @@ public class PatreonDriftDetectionService(
         // Get all product mappings once to avoid multiple DB calls
         var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
 
-        // Filter tier IDs - for TIERED rewards, only process the first one
-        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(), allProductMappings);
+        // Filter tier IDs - for TIERED rewards, only process the highest-amount one
+        var filteredTierIds = FilterTierIdsForProcessing(patreonData.EntitledTiers ?? new List<EntitledTier>(), allProductMappings);
 
         // Create new associations
         foreach (var tierId in filteredTierIds)
@@ -884,15 +842,15 @@ public class PatreonDriftDetectionService(
     /// <summary>
     /// Creates associations for multiple tiers in batch to avoid repeated DB calls
     /// </summary>
-    private async Task CreateAssociationsForTiers(string battleTag, List<string> tierIds, string source)
+    private async Task CreateAssociationsForTiers(string battleTag, List<EntitledTier> tiers, string source)
     {
-        if (!tierIds.Any()) return;
+        if (!tiers.Any()) return;
 
         // Get all product mappings for these tiers in one call
         var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
 
-        // Filter tier IDs - for TIERED rewards, only process the first one
-        var filteredTierIds = FilterTierIdsForProcessing(tierIds, allProductMappings);
+        // Filter tier IDs - for TIERED rewards, only process the highest-amount one
+        var filteredTierIds = FilterTierIdsForProcessing(tiers, allProductMappings);
 
         // Filter for mappings that match the tier IDs for Patreon provider
         var tierMappings = allProductMappings
