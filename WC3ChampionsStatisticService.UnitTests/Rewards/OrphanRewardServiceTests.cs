@@ -201,6 +201,33 @@ public class OrphanRewardServiceTests
     }
 
     [Test]
+    public async Task RevokeOrphans_AllAssignmentsForUserFail_DoesNotIncrementUsersTouched()
+    {
+        var bubu = "Bubu#23550";
+        var actor = "Faro#2494";
+
+        _mockAssignmentRepo.Setup(x => x.GetActiveAssignmentsByProvider("patreon"))
+            .ReturnsAsync(new List<RewardAssignment>
+            {
+                new RewardAssignment { Id = "ra-1", UserId = bubu, RewardId = "r1", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:m" },
+                new RewardAssignment { Id = "ra-2", UserId = bubu, RewardId = "r2", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:m" }
+            });
+        _mockAssociationRepo.Setup(x => x.GetAll(AssociationStatus.Active)).ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockLinkRepo.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink>());
+        _mockPatreonApi.Setup(x => x.GetAllCampaignMembers()).ReturnsAsync(new List<PatreonMember>());
+
+        // Every revoke throws
+        _mockRewardService.Setup(x => x.RevokeReward(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new System.InvalidOperationException("simulated"));
+
+        var result = await _service.RevokeOrphans(new HashSet<string> { bubu }, actor);
+
+        Assert.That(result.AssignmentsRevoked, Is.EqualTo(0), "No assignments succeeded.");
+        Assert.That(result.UsersTouched, Is.EqualTo(0), "User should not be counted as touched if 0 assignments succeeded.");
+        Assert.That(result.Errors, Has.Count.EqualTo(2));
+    }
+
+    [Test]
     public async Task RevokeOrphans_LogsAndContinues_OnRevokeFailure()
     {
         var bubu = "Bubu#23550";

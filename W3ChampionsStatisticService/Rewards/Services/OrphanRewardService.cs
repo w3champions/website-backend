@@ -97,6 +97,7 @@ public class OrphanRewardService(
             }
 
             var entry = freshReport.Entries.First(e => e.UserId == requestedUserId);
+            var revokedForUser = 0;
             foreach (var assignment in entry.Assignments)
             {
                 try
@@ -104,6 +105,7 @@ public class OrphanRewardService(
                     await _rewardService.RevokeReward(assignment.AssignmentId,
                         $"Admin orphan cleanup by {actorBattleTag}: no backing active PMUA, not active patron");
                     result.AssignmentsRevoked++;
+                    revokedForUser++;
                     _logger.LogInformation("Admin orphan cleanup revoked {AssignmentId} for {UserId} (actor: {Actor})",
                         assignment.AssignmentId, requestedUserId, actorBattleTag);
                 }
@@ -114,7 +116,7 @@ public class OrphanRewardService(
                     result.Errors.Add($"{assignment.AssignmentId}: {ex.Message}");
                 }
             }
-            result.UsersTouched++;
+            if (revokedForUser > 0) result.UsersTouched++;
         }
 
         return result;
