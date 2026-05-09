@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Serilog;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
@@ -71,19 +70,7 @@ public class PatreonWebhookController(
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(rewardEvent.UserId, rewardEvent.EventId, dryRun: false);
 
             // Refresh LastSyncAt on the account link — non-fatal bookkeeping
-            try
-            {
-                var link = await _patreonAccountLinkRepository.GetByBattleTag(rewardEvent.UserId);
-                if (link != null)
-                {
-                    link.UpdateLastSync();
-                    await _patreonAccountLinkRepository.Update(link);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Failed to update LastSyncAt for {BattleTag} after webhook", rewardEvent.UserId);
-            }
+            await _patreonAccountLinkRepository.RefreshLastSyncAt(rewardEvent.UserId);
 
             _logger.LogInformation("Successfully processed Patreon webhook for user {UserId} with {TierCount} entitled tiers. Associations: {AssociationCount}, Rewards Added: {Added}, Rewards Revoked: {Revoked}",
                 rewardEvent.UserId, rewardEvent.EntitledTiers.Count, associationResults.Count, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
