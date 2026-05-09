@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
+using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
 
 namespace W3ChampionsStatisticService.Rewards.Providers.KoFi;
@@ -89,7 +90,7 @@ public class KoFiProvider(ILogger<KoFiProvider> logger) : IRewardProvider
                     : null,
                 Currency = webhookData.Currency ?? "USD",
                 Timestamp = DateTime.UtcNow,
-                EntitledTierIds = new List<string> { tierId },
+                EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = tierId, AmountCents = null, Title = null } },
                 Metadata = new Dictionary<string, object>
                 {
                     ["message"] = webhookData.Message ?? "",

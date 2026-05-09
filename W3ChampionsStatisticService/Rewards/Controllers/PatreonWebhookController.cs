@@ -11,6 +11,7 @@ using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Events;
 using W3C.Domain.Rewards.Repositories;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
+using W3ChampionsStatisticService.Rewards.Services;
 
 namespace W3ChampionsStatisticService.Rewards.Controllers;
 
@@ -67,7 +68,7 @@ public class PatreonWebhookController(
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(rewardEvent.UserId, rewardEvent.EventId, dryRun: false);
 
             _logger.LogInformation("Successfully processed Patreon webhook for user {UserId} with {TierCount} entitled tiers. Associations: {AssociationCount}, Rewards Added: {Added}, Rewards Revoked: {Revoked}",
-                rewardEvent.UserId, rewardEvent.EntitledTierIds.Count, associationResults.Count, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+                rewardEvent.UserId, rewardEvent.EntitledTiers.Count, associationResults.Count, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
 
             return Ok(new
             {
@@ -75,7 +76,7 @@ public class PatreonWebhookController(
                 associationsProcessed = associationResults.Count,
                 rewardsAdded = reconciliationResult.RewardsAdded,
                 rewardsRevoked = reconciliationResult.RewardsRevoked,
-                entitledTiers = rewardEvent.EntitledTierIds
+                entitledTiers = rewardEvent.EntitledTiers
             });
         }
         catch (Exception ex)
@@ -108,10 +109,12 @@ public class PatreonWebhookController(
                     association.Id, rewardEvent.UserId);
             }
 
-            // Create new associations for entitled tiers (if any)
-            if (rewardEvent.EntitledTierIds?.Any() == true)
+            // Create new associations for entitled tiers (if any), applying tier filter
+            if (rewardEvent.EntitledTiers?.Any() == true)
             {
-                foreach (var tierId in rewardEvent.EntitledTierIds)
+                var productMappings = await _productMappingRepository.GetByProviderId(rewardEvent.ProviderId);
+                var filteredTierIds = PatreonTierFilter.Filter(rewardEvent.EntitledTiers, productMappings);
+                foreach (var tierId in filteredTierIds)
                 {
                     var association = await CreateAssociationForTier(rewardEvent, tierId);
                     if (association != null)

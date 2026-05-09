@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using W3C.Domain.Rewards.Entities;
 
 namespace W3C.Domain.Rewards.Events;
 
@@ -17,7 +18,7 @@ public class RewardEvent
     public Dictionary<string, object> Metadata { get; set; } = new();
 
     // All providers use this - single tier providers will have one item, multi-tier will have multiple
-    public List<string> EntitledTierIds { get; set; } = new();
+    public List<EntitledTier> EntitledTiers { get; set; } = new();
 
     /// <summary>
     /// Validates the reward event for required fields and business rules
@@ -36,16 +37,17 @@ public class RewardEvent
         if (string.IsNullOrEmpty(ProviderReference))
             throw new InvalidOperationException("ProviderReference cannot be null or empty");
 
-        if (EntitledTierIds == null)
-            throw new InvalidOperationException("EntitledTierIds cannot be null");
+        if (EntitledTiers == null)
+            throw new InvalidOperationException("EntitledTiers cannot be null");
 
         // Validate tier IDs are not empty strings
-        if (EntitledTierIds.Any(string.IsNullOrWhiteSpace))
-            throw new InvalidOperationException("EntitledTierIds cannot contain null or empty tier IDs");
+        if (EntitledTiers.Any(t => string.IsNullOrWhiteSpace(t?.TierId)))
+            throw new InvalidOperationException("EntitledTiers cannot contain null or empty tier IDs");
 
         // Validate no duplicate tier IDs
-        if (EntitledTierIds.Count != EntitledTierIds.Distinct().Count())
-            throw new InvalidOperationException("EntitledTierIds cannot contain duplicate tier IDs");
+        var tierIds = EntitledTiers.Select(t => t.TierId).ToList();
+        if (tierIds.Count != tierIds.Distinct().Count())
+            throw new InvalidOperationException("EntitledTiers cannot contain duplicate tier IDs");
 
         if (Timestamp == DateTime.MinValue || Timestamp == default)
             throw new InvalidOperationException("Timestamp must be set to a valid date");

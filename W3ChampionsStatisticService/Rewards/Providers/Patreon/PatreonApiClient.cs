@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Serilog;
+using W3C.Domain.Rewards.Entities;
 
 namespace W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
@@ -77,7 +78,7 @@ public class PatreonApiClient
                 {
                     foreach (var memberData in apiResponse.Data)
                     {
-                        var member = ParseMemberData(memberData);
+                        var member = ParseMemberData(memberData, apiResponse.Included);
                         if (member != null)
                         {
                             allMembers.Add(member);
@@ -150,8 +151,10 @@ public class PatreonApiClient
             var userData = apiResponse.Data;
             var patreonUserId = userData.Id;
 
-            // Find membership data in included resources
-            var membershipData = apiResponse.Included?.FirstOrDefault(i => i.Type == "member");
+            // Find membership data in included resources (campaign-scoped to prevent cross-campaign identity-endpoint artifacts)
+            var membershipData = apiResponse.Included?
+                .FirstOrDefault(i => i.Type == "member"
+                    && IsMemberForCampaign(i));
             if (membershipData == null)
             {
                 Log.Information("User {PatreonUserId} has no active memberships", patreonUserId);
@@ -161,17 +164,17 @@ public class PatreonApiClient
                     PatreonUserId = patreonUserId,
                     PatronStatus = "never_patron",
                     LastChargeStatus = null,
-                    EntitledTierIds = new List<string>()
+                    EntitledTiers = new List<EntitledTier>()
                 };
             }
 
             // Parse membership data into PatreonMember
-            var member = ParseMemberData(membershipData);
+            var member = ParseMemberData(membershipData, apiResponse.Included);
             if (member != null)
             {
                 member.PatreonUserId = patreonUserId;
                 Log.Information("Successfully fetched membership data for user {PatreonUserId}, Status: {Status}, Tiers: {Tiers}",
-                    patreonUserId, member.PatronStatus, string.Join(",", member.EntitledTierIds));
+                    patreonUserId, member.PatronStatus, string.Join(",", member.EntitledTiers.Select(t => t.TierId)));
             }
 
             return member;
@@ -183,7 +186,70 @@ public class PatreonApiClient
         }
     }
 
-    private PatreonMember ParseMemberData(PatreonApiData memberData)
+    /// <summary>
+    /// Searches the campaign-members endpoint (using the campaign creator token) for the member
+    /// matching the given Patreon user ID. Paginates through all pages until a match is found.
+    /// Returns null if the user is not a member of this campaign.
+    /// </summary>
+    public virtual async Task<PatreonMember> GetCampaignMemberByPatreonUserId(string patreonUserId)
+    {
+        var url = $"{BaseUrl}/campaigns/{_campaignId}/members"
+            + "?include=currently_entitled_tiers,user"
+            + "&fields[member]=patron_status,last_charge_status,last_charge_date,currently_entitled_amount_cents,pledge_relationship_start"
+            + "&fields[tier]=title,amount_cents"
+            + "&fields[user]=full_name"
+            + "&page[count]=200";
+
+        while (!string.IsNullOrEmpty(url))
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            var apiResponse = JsonSerializer.Deserialize<PatreonApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            var match = apiResponse?.Data?.FirstOrDefault(d =>
+                d.Type == "member" && GetUserIdFromRelationships(d) == patreonUserId);
+
+            if (match != null)
+                return ParseMemberData(match, apiResponse.Included);
+
+            url = apiResponse?.Links?.Next;
+        }
+
+        return null;
+    }
+
+    private static string GetUserIdFromRelationships(PatreonApiData memberData)
+    {
+        if (memberData.Relationships?.ContainsKey("user") != true)
+            return null;
+        var userRelation = memberData.Relationships["user"];
+        if (userRelation?.Data is JsonElement userData)
+            return userData.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+        return null;
+    }
+
+    internal bool IsMemberForCampaign(PatreonApiData memberData)
+    {
+        if (memberData?.Relationships == null) return false;
+        if (!memberData.Relationships.TryGetValue("campaign", out var campaignRel) || campaignRel?.Data == null)
+        {
+            Log.Warning("Patreon identity-endpoint member {MemberId} missing 'campaign' relationship; rejecting.", memberData.Id);
+            return false;
+        }
+        if (campaignRel.Data is JsonElement campaignData)
+            return campaignData.TryGetProperty("id", out var idProp) && idProp.GetString() == _campaignId;
+        return false;
+    }
+
+    internal PatreonMember ParseMemberData(PatreonApiData memberData, List<PatreonApiData> included = null)
     {
         try
         {
@@ -192,7 +258,7 @@ public class PatreonApiClient
                 Id = memberData.Id,
                 PatronStatus = memberData.Attributes?.GetValueOrDefault("patron_status")?.ToString(),
                 LastChargeStatus = memberData.Attributes?.GetValueOrDefault("last_charge_status")?.ToString(),
-                EntitledTierIds = new List<string>()
+                EntitledTiers = new List<EntitledTier>()
             };
 
             // Extract email
@@ -232,7 +298,13 @@ public class PatreonApiClient
                 }
             }
 
-            // Get entitled tiers
+            // Build a lookup of included tier resources by ID
+            var includedTierLookup = included?
+                .Where(i => i.Type == "tier")
+                .ToDictionary(i => i.Id, i => i, StringComparer.Ordinal)
+                ?? new Dictionary<string, PatreonApiData>();
+
+            // Get entitled tiers with rich data from included resources
             if (memberData.Relationships?.ContainsKey("currently_entitled_tiers") == true)
             {
                 var tiersRelation = memberData.Relationships["currently_entitled_tiers"];
@@ -242,7 +314,29 @@ public class PatreonApiClient
                     {
                         if (tierElement.TryGetProperty("id", out var idProp))
                         {
-                            member.EntitledTierIds.Add(idProp.GetString());
+                            var tierId = idProp.GetString();
+                            includedTierLookup.TryGetValue(tierId, out var tierResource);
+
+                            long? amountCents = null;
+                            string title = null;
+
+                            if (tierResource?.Attributes != null)
+                            {
+                                if (tierResource.Attributes.TryGetValue("amount_cents", out var amountObj) && amountObj is JsonElement amountEl)
+                                {
+                                    if (amountEl.ValueKind == JsonValueKind.Number && amountEl.TryGetInt64(out var amount))
+                                        amountCents = amount;
+                                }
+                                if (tierResource.Attributes.TryGetValue("title", out var titleObj))
+                                    title = titleObj?.ToString();
+                            }
+
+                            member.EntitledTiers.Add(new EntitledTier
+                            {
+                                TierId = tierId,
+                                AmountCents = amountCents,
+                                Title = title
+                            });
                         }
                     }
                 }
@@ -267,11 +361,13 @@ public class PatreonMember
     public string LastChargeStatus { get; set; }
     public DateTime? LastChargeDate { get; set; }
     public DateTime? PledgeRelationshipStart { get; set; }
-    public List<string> EntitledTierIds { get; set; } = new();
+    public List<EntitledTier> EntitledTiers { get; set; } = new();
 
     public bool IsActivePatron =>
-        PatronStatus == "active_patron" &&
-        LastChargeStatus == "Paid";
+        string.Equals(PatronStatus, "active_patron", StringComparison.OrdinalIgnoreCase) &&
+        (string.Equals(LastChargeStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(LastChargeStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(LastChargeStatus, "Free Trial", StringComparison.OrdinalIgnoreCase));
 }
 
 public class PatreonApiResponse

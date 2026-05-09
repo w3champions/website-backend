@@ -19,4 +19,10 @@
     <ProjectReference Include="..\W3ChampionsStatisticService\W3ChampionsStatisticService.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Rewards\Fixtures\Payloads\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
