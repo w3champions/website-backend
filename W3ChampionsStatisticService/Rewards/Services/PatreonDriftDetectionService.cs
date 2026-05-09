@@ -602,7 +602,7 @@ public class PatreonDriftDetectionService(
                 Log.Information("[USER-SYNC] Successfully processed {SyncAction} for BattleTag {BattleTag} (PatreonUserId: {PatreonUserId})",
                     syncAction, battleTag, patreonUserId);
 
-                await TouchLastSync(battleTag);
+                await _patreonLinkRepository.RefreshLastSyncAt(battleTag);
             }
 
             return result;
@@ -701,7 +701,7 @@ public class PatreonDriftDetectionService(
             Log.Information("Reconciled rewards for missing member {PatreonUserId} -> {UserId}: Added={Added}, Revoked={Revoked}",
                 missingMember.PatreonUserId, battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
 
-            await TouchLastSync(battleTag);
+            await _patreonLinkRepository.RefreshLastSyncAt(battleTag);
         }
     }
 
@@ -748,7 +748,7 @@ public class PatreonDriftDetectionService(
         Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
             extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
 
-        await TouchLastSync(extraAssignment.UserId);
+        await _patreonLinkRepository.RefreshLastSyncAt(extraAssignment.UserId);
     }
 
     /// <summary>
@@ -808,7 +808,7 @@ public class PatreonDriftDetectionService(
         Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
             tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
 
-        await TouchLastSync(tierMismatch.UserId);
+        await _patreonLinkRepository.RefreshLastSyncAt(tierMismatch.UserId);
 
         return true;
     }
@@ -1023,26 +1023,6 @@ public class PatreonDriftDetectionService(
         }
     }
 
-    /// <summary>
-    /// Refresh the PatreonAccountLink.LastSyncAt timestamp after a successful sync action for this user.
-    /// Non-fatal on failure — the main sync already succeeded; this is just bookkeeping.
-    /// </summary>
-    private async Task TouchLastSync(string battleTag)
-    {
-        try
-        {
-            var link = await _patreonLinkRepository.GetByBattleTag(battleTag);
-            if (link != null)
-            {
-                link.UpdateLastSync();
-                await _patreonLinkRepository.Update(link);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to update LastSyncAt for {BattleTag}", battleTag);
-        }
-    }
 }
 
 public class DriftDetectionResult

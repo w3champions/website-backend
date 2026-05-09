@@ -2365,7 +2365,6 @@ public class PatreonDriftSyncTests
             LastSyncAt = null
         };
         _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId(patreonUserId)).ReturnsAsync(existingLink);
-        _mockPatreonLinkRepository.Setup(x => x.GetByBattleTag(userId)).ReturnsAsync(existingLink);
 
         _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
             .ReturnsAsync(new List<ProductMappingUserAssociation>());
@@ -2397,9 +2396,9 @@ public class PatreonDriftSyncTests
         // Act
         var result = await _service.SyncSingleUser(userId, patreonUserId, "valid-token");
 
-        // Assert — Update was called on the link with non-null LastSyncAt
+        // Assert — RefreshLastSyncAt was delegated to the repository (bookkeeping now owned by repo layer)
         Assert.That(result.Success, Is.True, result.ErrorMessage);
-        _mockPatreonLinkRepository.Verify(x => x.Update(It.Is<PatreonAccountLink>(l => l.LastSyncAt != null && l.BattleTag == userId)), Times.AtLeastOnce);
+        _mockPatreonLinkRepository.Verify(x => x.RefreshLastSyncAt(userId), Times.AtLeastOnce);
     }
 
     [Test]
@@ -2429,7 +2428,6 @@ public class PatreonDriftSyncTests
 
         var link = new PatreonAccountLink(userId, patreonUserId) { LastSyncAt = null };
         _mockPatreonLinkRepository.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink> { link });
-        _mockPatreonLinkRepository.Setup(x => x.GetByBattleTag(userId)).ReturnsAsync(link);
 
         _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
             .ReturnsAsync(new List<PatreonMember>
@@ -2446,6 +2444,7 @@ public class PatreonDriftSyncTests
         var driftResult = await _service.DetectDrift();
         var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
 
-        _mockPatreonLinkRepository.Verify(x => x.Update(It.Is<PatreonAccountLink>(l => l.LastSyncAt != null && l.BattleTag == userId)), Times.AtLeastOnce);
+        // Assert — RefreshLastSyncAt was delegated to the repository (bookkeeping now owned by repo layer)
+        _mockPatreonLinkRepository.Verify(x => x.RefreshLastSyncAt(userId), Times.AtLeastOnce);
     }
 }
