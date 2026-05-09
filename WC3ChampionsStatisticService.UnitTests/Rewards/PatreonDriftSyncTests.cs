@@ -25,6 +25,7 @@ public class PatreonDriftSyncTests
     private Mock<IPatreonAccountLinkRepository> _mockPatreonLinkRepository;
     private Mock<IProductMappingReconciliationService> _mockReconciliationService;
     private Mock<IRewardService> _mockRewardService;
+    private Mock<IRewardAssignmentRepository> _mockRewardAssignmentRepository;
     private PatreonDriftDetectionService _service;
     private PatreonOAuthService _oauthService;
 
@@ -80,12 +81,20 @@ public class PatreonDriftSyncTests
         _mockAssociationRepository.Setup(x => x.Create(It.IsAny<ProductMappingUserAssociation>()))
             .ReturnsAsync((ProductMappingUserAssociation a) => a);
 
+        _mockRewardAssignmentRepository = new Mock<IRewardAssignmentRepository>();
+
+        // Default behavior: empty list (most tests will not exercise it; specific tests override)
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(It.IsAny<string>(), It.IsAny<RewardStatus>()))
+            .ReturnsAsync(new List<RewardAssignment>());
+
         _service = new PatreonDriftDetectionService(
             _mockPatreonApiClient.Object,
             _mockAssociationRepository.Object,
             _mockProductMappingRepository.Object,
             _mockPatreonLinkRepository.Object,
-            _mockReconciliationService.Object);
+            _mockReconciliationService.Object,
+            _mockRewardAssignmentRepository.Object,
+            _mockRewardService.Object);
 
         // Setup OAuth service for unlinking tests
         var mockHttpClient = new Mock<HttpClient>();

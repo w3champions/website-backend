@@ -16,13 +16,17 @@ public class PatreonDriftDetectionService(
     IProductMappingUserAssociationRepository associationRepository,
     IProductMappingRepository productMappingRepository,
     IPatreonAccountLinkRepository patreonLinkRepository,
-    IProductMappingReconciliationService reconciliationService)
+    IProductMappingReconciliationService reconciliationService,
+    IRewardAssignmentRepository rewardAssignmentRepository,
+    IRewardService rewardService)
 {
     private readonly PatreonApiClient _patreonApiClient = patreonApiClient;
     private readonly IProductMappingUserAssociationRepository _associationRepository = associationRepository;
     private readonly IProductMappingRepository _productMappingRepository = productMappingRepository;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepository = patreonLinkRepository;
     private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
+    private readonly IRewardAssignmentRepository _rewardAssignmentRepository = rewardAssignmentRepository;
+    private readonly IRewardService _rewardService = rewardService;
     private const string ProviderId = "patreon";
 
     public async Task<DriftDetectionResult> DetectDrift()
