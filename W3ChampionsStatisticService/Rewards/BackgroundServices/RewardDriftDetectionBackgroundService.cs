@@ -8,6 +8,20 @@ using W3ChampionsStatisticService.Rewards.Services;
 
 namespace W3ChampionsStatisticService.Rewards.BackgroundServices;
 
+/// <summary>
+/// Immutable snapshot of a single drift detection cycle.
+/// Assigned atomically via <see cref="Volatile"/> so readers always see a
+/// fully-formed value — never a mix of properties from two different cycles.
+/// </summary>
+public sealed record DriftRunSnapshot(
+    DateTime? StartedAtUtc,
+    DateTime? CompletedAtUtc,
+    bool Succeeded,
+    string ErrorMessage,
+    int MembersAdded,
+    int AssignmentsRevoked,
+    int TiersUpdated);
+
 public class RewardDriftDetectionBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -17,14 +31,16 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
     private readonly bool _autoSyncEnabled;
     private readonly bool _syncDryRun;
 
-    // Last-run state — populated by each scheduled cycle
-    public DateTime? LastRunStartedAtUtc { get; private set; }
-    public DateTime? LastRunCompletedAtUtc { get; private set; }
-    public bool LastRunSucceeded { get; private set; }
-    public string LastRunErrorMessage { get; private set; }
-    public int LastRunMembersAdded { get; private set; }
-    public int LastRunAssignmentsRevoked { get; private set; }
-    public int LastRunTiersUpdated { get; private set; }
+    // Atomic snapshot of the most recent drift cycle. Single reference assignment
+    // is atomic on .NET; Volatile.Read/Write provide the required memory-barrier.
+    // Null until the first cycle completes (or starts).
+    private DriftRunSnapshot _lastRun;
+
+    /// <summary>
+    /// Returns the snapshot from the most recent (or in-flight) drift cycle,
+    /// or null if no cycle has run yet.
+    /// </summary>
+    public virtual DriftRunSnapshot LastRun => Volatile.Read(ref _lastRun);
 
     public RewardDriftDetectionBackgroundService(
         IServiceProvider serviceProvider,
@@ -39,14 +55,9 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
             ? interval
             : 60; // Default 1 hour
 
-        var enabledStr = Environment.GetEnvironmentVariable("REWARDS_DRIFT_DETECTION_ENABLED");
-        _enabled = enabledStr?.ToLower() == "true"; // Default disabled
-
-        var autoSyncStr = Environment.GetEnvironmentVariable("REWARDS_DRIFT_AUTO_SYNC_ENABLED");
-        _autoSyncEnabled = autoSyncStr?.ToLower() == "true"; // Default disabled
-
-        var dryRunStr = Environment.GetEnvironmentVariable("REWARDS_DRIFT_SYNC_DRY_RUN");
-        _syncDryRun = string.IsNullOrEmpty(dryRunStr) || dryRunStr.ToLower() == "true"; // Default true for safety
+        _enabled = bool.TryParse(Environment.GetEnvironmentVariable("REWARDS_DRIFT_DETECTION_ENABLED"), out var e) ? e : false; // Default disabled
+        _autoSyncEnabled = bool.TryParse(Environment.GetEnvironmentVariable("REWARDS_DRIFT_AUTO_SYNC_ENABLED"), out var a) ? a : false; // Default disabled
+        _syncDryRun = bool.TryParse(Environment.GetEnvironmentVariable("REWARDS_DRIFT_SYNC_DRY_RUN"), out var d) ? d : true; // Default true for safety
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -83,7 +94,17 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
     {
         _logger.LogInformation("Starting scheduled drift detection run");
 
-        LastRunStartedAtUtc = DateTime.UtcNow;
+        var startedAt = DateTime.UtcNow;
+
+        // Record that a cycle is in-flight before doing any work.
+        Volatile.Write(ref _lastRun, new DriftRunSnapshot(
+            StartedAtUtc: startedAt,
+            CompletedAtUtc: null,
+            Succeeded: false,
+            ErrorMessage: null,
+            MembersAdded: 0,
+            AssignmentsRevoked: 0,
+            TiersUpdated: 0));
 
         using var scope = _serviceProvider.CreateScope();
 
@@ -163,20 +184,32 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
 
             _logger.LogInformation("Scheduled drift detection run completed");
 
-            LastRunCompletedAtUtc = DateTime.UtcNow;
-            LastRunSucceeded = true;
-            LastRunErrorMessage = null;
-            LastRunMembersAdded = membersAdded;
-            LastRunAssignmentsRevoked = assignmentsRevoked;
-            LastRunTiersUpdated = tiersUpdated;
+            // Atomically publish the success snapshot — all counts are consistent.
+            Volatile.Write(ref _lastRun, new DriftRunSnapshot(
+                StartedAtUtc: startedAt,
+                CompletedAtUtc: DateTime.UtcNow,
+                Succeeded: true,
+                ErrorMessage: null,
+                MembersAdded: membersAdded,
+                AssignmentsRevoked: assignmentsRevoked,
+                TiersUpdated: tiersUpdated));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during scheduled drift detection");
 
-            LastRunCompletedAtUtc = DateTime.UtcNow;
-            LastRunSucceeded = false;
-            LastRunErrorMessage = ex.Message;
+            // Failure snapshot — counts explicitly 0 to avoid stale values from a
+            // prior successful cycle leaking through on the error path.
+            Volatile.Write(ref _lastRun, new DriftRunSnapshot(
+                StartedAtUtc: startedAt,
+                CompletedAtUtc: DateTime.UtcNow,
+                Succeeded: false,
+                ErrorMessage: ex.Message,
+                MembersAdded: 0,
+                AssignmentsRevoked: 0,
+                TiersUpdated: 0));
+
+            throw;
         }
     }
 }

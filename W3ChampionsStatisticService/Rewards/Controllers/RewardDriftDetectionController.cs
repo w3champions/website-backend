@@ -142,21 +142,23 @@ public class RewardDriftDetectionController(
         var dryRun = ParseBool("REWARDS_DRIFT_SYNC_DRY_RUN", true);
         var ignoredTierIds = Environment.GetEnvironmentVariable("REWARDS_PATREON_IGNORED_TIER_IDS") ?? "";
 
+        var snapshot = _backgroundService.LastRun;
+
         return Ok(new
         {
             detectionEnabled,
             autoSyncEnabled,
             dryRun,
             ignoredTierIds,
-            lastRun = new
+            lastRun = snapshot == null ? null : (object)new
             {
-                startedAtUtc = _backgroundService.LastRunStartedAtUtc?.ToString("O"),
-                completedAtUtc = _backgroundService.LastRunCompletedAtUtc?.ToString("O"),
-                succeeded = _backgroundService.LastRunSucceeded,
-                errorMessage = _backgroundService.LastRunErrorMessage,
-                membersAdded = _backgroundService.LastRunMembersAdded,
-                assignmentsRevoked = _backgroundService.LastRunAssignmentsRevoked,
-                tiersUpdated = _backgroundService.LastRunTiersUpdated
+                startedAtUtc = snapshot.StartedAtUtc?.ToString("O"),
+                completedAtUtc = snapshot.CompletedAtUtc?.ToString("O"),
+                succeeded = snapshot.Succeeded,
+                errorMessage = snapshot.ErrorMessage,
+                membersAdded = snapshot.MembersAdded,
+                assignmentsRevoked = snapshot.AssignmentsRevoked,
+                tiersUpdated = snapshot.TiersUpdated
             },
             providers = new[]
             {

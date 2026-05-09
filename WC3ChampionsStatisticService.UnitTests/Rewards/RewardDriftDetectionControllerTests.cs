@@ -16,11 +16,13 @@ using W3ChampionsStatisticService.Rewards.Services;
 namespace WC3ChampionsStatisticService.Tests.Rewards;
 
 /// <summary>
-/// A testable subclass that exposes a helper to preset the last-run state
-/// without needing to run the actual background cycle.
+/// A testable subclass that overrides LastRun so tests can inject an arbitrary
+/// snapshot without running the actual background cycle.
 /// </summary>
 internal sealed class StubDriftBackgroundService : RewardDriftDetectionBackgroundService
 {
+    private DriftRunSnapshot _stub;
+
     public StubDriftBackgroundService()
         : base(
             new ServiceCollection().BuildServiceProvider(),
@@ -28,25 +30,11 @@ internal sealed class StubDriftBackgroundService : RewardDriftDetectionBackgroun
     {
     }
 
-    public void SetLastRunState(
-        DateTime? startedAtUtc,
-        DateTime? completedAtUtc,
-        bool succeeded,
-        string errorMessage,
-        int membersAdded,
-        int assignmentsRevoked,
-        int tiersUpdated)
+    public override DriftRunSnapshot LastRun => _stub;
+
+    public void SetLastRun(DriftRunSnapshot snapshot)
     {
-        // Use reflection to set the private setters (they are auto-properties
-        // with private set — the simplest approach that avoids changing production code).
-        var t = typeof(RewardDriftDetectionBackgroundService);
-        t.GetProperty(nameof(LastRunStartedAtUtc))!.SetValue(this, startedAtUtc);
-        t.GetProperty(nameof(LastRunCompletedAtUtc))!.SetValue(this, completedAtUtc);
-        t.GetProperty(nameof(LastRunSucceeded))!.SetValue(this, succeeded);
-        t.GetProperty(nameof(LastRunErrorMessage))!.SetValue(this, errorMessage);
-        t.GetProperty(nameof(LastRunMembersAdded))!.SetValue(this, membersAdded);
-        t.GetProperty(nameof(LastRunAssignmentsRevoked))!.SetValue(this, assignmentsRevoked);
-        t.GetProperty(nameof(LastRunTiersUpdated))!.SetValue(this, tiersUpdated);
+        _stub = snapshot;
     }
 }
 
@@ -90,14 +78,14 @@ public class RewardDriftDetectionControllerTests
             var completed = new DateTime(2026, 1, 15, 10, 0, 5, DateTimeKind.Utc);
 
             var bgService = new StubDriftBackgroundService();
-            bgService.SetLastRunState(
-                startedAtUtc: started,
-                completedAtUtc: completed,
-                succeeded: true,
-                errorMessage: null,
-                membersAdded: 3,
-                assignmentsRevoked: 1,
-                tiersUpdated: 2);
+            bgService.SetLastRun(new DriftRunSnapshot(
+                StartedAtUtc: started,
+                CompletedAtUtc: completed,
+                Succeeded: true,
+                ErrorMessage: null,
+                MembersAdded: 3,
+                AssignmentsRevoked: 1,
+                TiersUpdated: 2));
 
             var controller = BuildController(bgService);
 
@@ -138,7 +126,7 @@ public class RewardDriftDetectionControllerTests
         Environment.SetEnvironmentVariable("REWARDS_PATREON_IGNORED_TIER_IDS", null);
 
         var bgService = new StubDriftBackgroundService();
-        // No last-run state set — all properties at defaults (null / false / 0)
+        // No last-run snapshot set — LastRun returns null
 
         var controller = BuildController(bgService);
 
@@ -154,7 +142,40 @@ public class RewardDriftDetectionControllerTests
         Assert.That(json, Does.Contain("\"autoSyncEnabled\":false"), "Default: auto-sync disabled");
         Assert.That(json, Does.Contain("\"dryRun\":true"), "Default: dry-run on for safety");
         Assert.That(json, Does.Contain("\"ignoredTierIds\":\"\""), "Default: empty ignored-tier list");
-        Assert.That(json, Does.Contain("\"startedAtUtc\":null"), "No cycle run yet — startedAtUtc null");
-        Assert.That(json, Does.Contain("\"completedAtUtc\":null"), "No cycle run yet — completedAtUtc null");
+        Assert.That(json, Does.Contain("\"lastRun\":null"), "No cycle run yet — lastRun should be null");
+    }
+
+    [Test]
+    public void GetDriftDetectionStatus_FailedCycle_ExposesErrorMessageAndZeroCounts()
+    {
+        // Arrange
+        var started = DateTime.UtcNow.AddMinutes(-5);
+        var completed = DateTime.UtcNow.AddMinutes(-4);
+
+        var bgService = new StubDriftBackgroundService();
+        bgService.SetLastRun(new DriftRunSnapshot(
+            StartedAtUtc: started,
+            CompletedAtUtc: completed,
+            Succeeded: false,
+            ErrorMessage: "Patreon API timeout",
+            MembersAdded: 0,
+            AssignmentsRevoked: 0,
+            TiersUpdated: 0));
+
+        var controller = BuildController(bgService);
+
+        // Act
+        var actionResult = controller.GetDriftDetectionStatus() as OkObjectResult;
+
+        // Assert
+        Assert.That(actionResult, Is.Not.Null, "Expected OkObjectResult");
+
+        var json = JsonSerializer.Serialize(actionResult!.Value);
+
+        Assert.That(json, Does.Contain("\"succeeded\":false"), "lastRun.succeeded should be false");
+        Assert.That(json, Does.Contain("\"errorMessage\":\"Patreon API timeout\""), "lastRun.errorMessage should carry exception message");
+        Assert.That(json, Does.Contain("\"membersAdded\":0"), "lastRun.membersAdded must be 0 on failure — no stale counts");
+        Assert.That(json, Does.Contain("\"assignmentsRevoked\":0"), "lastRun.assignmentsRevoked must be 0 on failure");
+        Assert.That(json, Does.Contain("\"tiersUpdated\":0"), "lastRun.tiersUpdated must be 0 on failure");
     }
 }
