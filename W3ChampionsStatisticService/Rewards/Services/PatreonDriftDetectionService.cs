@@ -700,6 +700,8 @@ public class PatreonDriftDetectionService(
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
             Log.Information("Reconciled rewards for missing member {PatreonUserId} -> {UserId}: Added={Added}, Revoked={Revoked}",
                 missingMember.PatreonUserId, battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+
+            await TouchLastSync(battleTag);
         }
     }
 
@@ -745,6 +747,8 @@ public class PatreonDriftDetectionService(
         var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(extraAssignment.UserId, eventIdPrefix, dryRun: false);
         Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
             extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+
+        await TouchLastSync(extraAssignment.UserId);
     }
 
     /// <summary>
@@ -803,6 +807,8 @@ public class PatreonDriftDetectionService(
         var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(tierMismatch.UserId, eventIdPrefix, dryRun: false);
         Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
             tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+
+        await TouchLastSync(tierMismatch.UserId);
 
         return true;
     }
