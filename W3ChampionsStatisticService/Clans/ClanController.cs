@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3ChampionsStatisticService.Clans.Commands;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Tracing;
 
@@ -10,9 +11,11 @@ namespace W3ChampionsStatisticService.Clans;
 [Route("api/clans")]
 [Trace]
 public class ClanController(
-    ClanCommandHandler clanCommandHandler) : ControllerBase
+    ClanCommandHandler clanCommandHandler,
+    IBattleTagResolver battleTagResolver) : ControllerBase
 {
     private readonly ClanCommandHandler _clanCommandHandler = clanCommandHandler;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
     [HttpPost]
     [InjectActingPlayerAuthCode]
@@ -60,7 +63,9 @@ public class ClanController(
         string actingPlayer,
         [FromBody] PlayerDto playerDto)
     {
-        await _clanCommandHandler.InviteToClan(playerDto.PlayerBattleTag, clanId, actingPlayer);
+        var (canonical, error) = await ResolveOrReject(playerDto.PlayerBattleTag);
+        if (error != null) return error;
+        await _clanCommandHandler.InviteToClan(canonical, clanId, actingPlayer);
         return Ok();
     }
 
@@ -71,7 +76,9 @@ public class ClanController(
         string actingPlayer,
         [FromBody] PlayerDto playerDto)
     {
-        await _clanCommandHandler.RevokeInvitationToClan(playerDto.PlayerBattleTag, clanId, actingPlayer);
+        var (canonical, error) = await ResolveOrReject(playerDto.PlayerBattleTag);
+        if (error != null) return error;
+        await _clanCommandHandler.RevokeInvitationToClan(canonical, clanId, actingPlayer);
         return Ok();
     }
 
@@ -82,7 +89,9 @@ public class ClanController(
         string actingPlayer,
         [FromBody] PlayerDto playerDto)
     {
-        var clan = await _clanCommandHandler.SwitchChieftain(playerDto.PlayerBattleTag, clanId, actingPlayer);
+        var (canonical, error) = await ResolveOrReject(playerDto.PlayerBattleTag);
+        if (error != null) return error;
+        var clan = await _clanCommandHandler.SwitchChieftain(canonical, clanId, actingPlayer);
         return Ok(clan);
     }
 
@@ -94,7 +103,9 @@ public class ClanController(
         string actingPlayer,
         [FromBody] PlayerDto playerDto)
     {
-        var clan = await _clanCommandHandler.AddShamanToClan(playerDto.PlayerBattleTag, clanId, actingPlayer);
+        var (canonical, error) = await ResolveOrReject(playerDto.PlayerBattleTag);
+        if (error != null) return error;
+        var clan = await _clanCommandHandler.AddShamanToClan(canonical, clanId, actingPlayer);
         return Ok(clan);
     }
 
@@ -105,7 +116,9 @@ public class ClanController(
         string actingPlayer,
         string shamanId)
     {
-        var clan = await _clanCommandHandler.RemoveShamanFromClan(shamanId, clanId, actingPlayer);
+        var (canonical, error) = await ResolveOrReject(shamanId);
+        if (error != null) return error;
+        var clan = await _clanCommandHandler.RemoveShamanFromClan(canonical, clanId, actingPlayer);
         return Ok(clan);
     }
 
@@ -126,7 +139,9 @@ public class ClanController(
         string actingPlayer,
         string battleTag)
     {
-        var clan = await _clanCommandHandler.KickPlayer(battleTag, clanId, actingPlayer);
+        var (canonical, error) = await ResolveOrReject(battleTag);
+        if (error != null) return error;
+        var clan = await _clanCommandHandler.KickPlayer(canonical, clanId, actingPlayer);
         return Ok(clan);
     }
 
@@ -144,5 +159,15 @@ public class ClanController(
     {
         var clan = await _clanCommandHandler.RejectInvite(clanId, battleTag);
         return Ok(clan);
+    }
+
+    private async Task<(string canonical, IActionResult error)> ResolveOrReject(string input)
+    {
+        var canonical = await _battleTagResolver.ResolveCanonical(input);
+        if (canonical == null)
+            return (null, BadRequest(new { error = "user_not_found", input }));
+        if (canonical != input)
+            return (null, BadRequest(new { error = "non_canonical_battletag", input, canonical }));
+        return (canonical, null);
     }
 }

@@ -6,6 +6,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Tournaments;
 
@@ -14,11 +15,13 @@ namespace W3ChampionsStatisticService.Tournaments;
 [Trace]
 public class TournamentsController(
     MatchmakingServiceClient matchmakingServiceRepository,
-    IPersonalSettingsRepository personalSettingsRepository
+    IPersonalSettingsRepository personalSettingsRepository,
+    IBattleTagResolver battleTagResolver
     ) : ControllerBase
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly MatchmakingServiceClient _matchmakingServiceRepository = matchmakingServiceRepository;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
     [HttpGet("")]
     public async Task<IActionResult> GetTournaments()
@@ -68,8 +71,14 @@ public class TournamentsController(
     [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> RegisterPlayer(string id, [FromBody] RegisterPlayerBody body)
     {
-        var personalSetting = await _personalSettingsRepository.LoadOrCreate(body.BattleTag);
-        var tournament = await _matchmakingServiceRepository.RegisterPlayer(id, body.BattleTag, body.Race, personalSetting.CountryCode);
+        var canonical = await _battleTagResolver.ResolveCanonical(body.BattleTag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = body.BattleTag });
+        if (canonical != body.BattleTag)
+            return BadRequest(new { error = "non_canonical_battletag", input = body.BattleTag, canonical });
+
+        var personalSetting = await _personalSettingsRepository.LoadOrCreate(canonical);
+        var tournament = await _matchmakingServiceRepository.RegisterPlayer(id, canonical, body.Race, personalSetting.CountryCode);
         return Ok(tournament);
     }
 
@@ -77,7 +86,13 @@ public class TournamentsController(
     [BearerHasPermissionFilter(Permission = EPermission.Tournaments)]
     public async Task<IActionResult> UnregisterPlayer(string id, [FromBody] UnregisterPlayerBody body)
     {
-        var tournament = await _matchmakingServiceRepository.UnregisterPlayer(id, body.BattleTag);
+        var canonical = await _battleTagResolver.ResolveCanonical(body.BattleTag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = body.BattleTag });
+        if (canonical != body.BattleTag)
+            return BadRequest(new { error = "non_canonical_battletag", input = body.BattleTag, canonical });
+
+        var tournament = await _matchmakingServiceRepository.UnregisterPlayer(id, canonical);
         return Ok(tournament);
     }
 
