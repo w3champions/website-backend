@@ -2411,6 +2411,21 @@ public class PatreonDriftSyncTests
 
         _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
             .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        var productMapping = new ProductMapping
+        {
+            Id = "mapping-drift-123",
+            ProductName = "Tier 1",
+            RewardIds = new List<string> { "reward-1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tier1" }
+            }
+        };
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { productMapping });
 
         var link = new PatreonAccountLink(userId, patreonUserId) { LastSyncAt = null };
         _mockPatreonLinkRepository.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink> { link });
