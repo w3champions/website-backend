@@ -431,15 +431,7 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    // We no longer create events - we work directly with associations
-                    // var syncEvent = CreateTierMismatchEvent(tierMismatch);
-                    // syncResult.GeneratedEvents.Add(syncEvent);
-
-                    bool didWork = true;
-                    if (!dryRun)
-                    {
-                        didWork = await UpdateUserAssociationTiers(tierMismatch, dryRun);
-                    }
+                    var didWork = await UpdateUserAssociationTiers(tierMismatch, dryRun);
 
                     if (didWork)
                     {
@@ -754,12 +746,14 @@ public class PatreonDriftDetectionService(
     }
 
     /// <summary>
-    /// Updates associations for tier mismatch
+    /// Updates associations for tier mismatch.
+    /// Consults the no-op guard FIRST (before checking dryRun) so that dry-run callers
+    /// receive an accurate preview of what a live sync would do.
     /// </summary>
-    /// <returns>true when tiers were actually updated; false when the actionable set already matches and no work was done.</returns>
+    /// <returns>true when tiers would be (or were) updated; false when the actionable set already
+    /// matches the existing active set and no work is needed.</returns>
     private async Task<bool> UpdateUserAssociationTiers(TierMismatch tierMismatch, bool dryRun = false)
     {
-        // Deactivate current associations
         var currentAssociations = await _associationRepository.GetProductMappingsByUserId(tierMismatch.UserId);
         var activePatreonAssociations = currentAssociations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
@@ -780,8 +774,14 @@ public class PatreonDriftDetectionService(
         if (existingActive.SetEquals(actionableTiers))
         {
             Log.Debug("Drift no-op for {UserId}: actionable tier set {Tiers} matches existing active.",
-                tierMismatch.UserId, string.Join(",", actionableTiers));
+                tierMismatch.UserId, string.Join(",", actionableTiers.OrderBy(t => t, System.StringComparer.Ordinal)));
             return false;
+        }
+
+        if (dryRun)
+        {
+            // Real change would occur but we are in preview mode — report it without mutating.
+            return true;
         }
 
         foreach (var association in activePatreonAssociations)
@@ -790,20 +790,17 @@ public class PatreonDriftDetectionService(
             await _associationRepository.Update(association);
         }
 
-        // Create new associations for current tiers
+        // filteredTierIds may include unmapped tiers (e.g., the campaign's free-follower tier).
+        // CreateOrUpdateAssociation skips those silently when no mapping exists.
         foreach (var tierId in filteredTierIds)
         {
-            await CreateOrUpdateAssociation(tierMismatch.UserId, tierId, "drift_sync_tier_update", skipReconciliation: dryRun);
+            await CreateOrUpdateAssociation(tierMismatch.UserId, tierId, "drift_sync_tier_update", skipReconciliation: false);
         }
 
-        // Immediately reconcile rewards for this user (unless dry run)
-        if (!dryRun)
-        {
-            var eventIdPrefix = $"tier_mismatch_fix_{DateTime.UtcNow:yyyyMMddHHmmss}_{tierMismatch.UserId}";
-            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(tierMismatch.UserId, eventIdPrefix, dryRun: false);
-            Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
-                tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
-        }
+        var eventIdPrefix = $"tier_mismatch_fix_{DateTime.UtcNow:yyyyMMddHHmmss}_{tierMismatch.UserId}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(tierMismatch.UserId, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
+            tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
 
         return true;
     }

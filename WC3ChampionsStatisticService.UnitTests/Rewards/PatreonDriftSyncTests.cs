@@ -111,7 +111,15 @@ public class PatreonDriftSyncTests
     [Test]
     public async Task SyncDrift_DryRun_GeneratesEventsWithCorrectIdentification()
     {
-        // Arrange
+        // Arrange — "TestUser#789" has no PatreonTiersFiltered set (null), so the actionable
+        // tier set is empty and the no-op guard fires: TiersUpdated stays 0.
+        // This is correct: UpdateUserAssociationTiers is now always called (even in dry-run)
+        // and the no-op guard is consulted before any dryRun short-circuit.
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId("TestUser#789"))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
         var driftResult = new DriftDetectionResult
         {
             Timestamp = DateTime.UtcNow,
@@ -146,6 +154,8 @@ public class PatreonDriftSyncTests
                     PatreonMemberId = "member789",
                     PatreonTiers = new List<string> { "tier2" },
                     InternalTiers = new List<string> { "tier1" },
+                    // PatreonTiersFiltered intentionally null — simulates a mismatch entry
+                    // where no filtered tiers are set, so the actionable set is empty → no-op.
                     Reason = "Test tier mismatch"
                 }
             }
@@ -159,7 +169,9 @@ public class PatreonDriftSyncTests
         Assert.IsTrue(syncResult.WasDryRun);
         Assert.AreEqual(1, syncResult.MembersAdded);
         Assert.AreEqual(1, syncResult.AssignmentsRevoked);
-        Assert.AreEqual(1, syncResult.TiersUpdated);
+        // TiersUpdated is 0: the no-op guard fires before the dry-run short-circuit.
+        // PatreonTiersFiltered is null → actionableTiers is empty → matches existing empty set.
+        Assert.AreEqual(0, syncResult.TiersUpdated);
         Assert.AreEqual(0, syncResult.ProcessedAssociations.Count); // No processing in dry run
 
         // Verify no actual association changes happened in dry run
@@ -2229,5 +2241,116 @@ public class PatreonDriftSyncTests
         // Assert — no revoke or update of the existing PMUA
         _mockAssociationRepository.Verify(x => x.Update(It.Is<ProductMappingUserAssociation>(a => a.Status == AssociationStatus.Revoked)), Times.Never);
         Assert.That(syncResult.TiersUpdated, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task UpdateUserAssociationTiers_DryRun_NoOp_DoesNotIncrementTiersUpdated()
+    {
+        // Regression test: dry-run mode must respect the no-op guard so operators get
+        // an accurate preview of what a live sync would do. The 6 production users in
+        // the churn loop should report TiersUpdated=0 in a dry-run.
+        var userId = "ChurnLoopUser#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1", UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon", ProviderProductId = "6482057",
+            Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "mapping-silver",
+                    ProductName = "Silver",
+                    Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" } }
+                }
+                // 15145463 deliberately unmapped
+            });
+
+        var tierMismatch = new TierMismatch
+        {
+            UserId = userId,
+            PatreonMemberId = "memberId",
+            PatreonTiers = new List<string> { "15145463", "6482057" },
+            PatreonTiersFiltered = new List<string> { "15145463", "6482057" },
+            InternalTiers = new List<string> { "6482057" },
+            InternalTiersFiltered = new List<string> { "6482057" }
+        };
+
+        var driftResult = new DriftDetectionResult
+        {
+            ProviderId = "patreon", Timestamp = DateTime.UtcNow,
+            MismatchedTiers = new List<TierMismatch> { tierMismatch }
+        };
+
+        // Act — dry-run
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: true);
+
+        // Assert — no DB writes, TiersUpdated == 0 (matches the live sync behavior, not the pre-fix overstatement)
+        _mockAssociationRepository.Verify(x => x.Update(It.IsAny<ProductMappingUserAssociation>()), Times.Never);
+        Assert.That(syncResult.TiersUpdated, Is.EqualTo(0),
+            "Dry-run must respect the no-op guard — otherwise operators get a misleading preview.");
+    }
+
+    [Test]
+    public async Task UpdateUserAssociationTiers_DryRun_RealTierUpgrade_DoesNotMutateDbButReportsCount()
+    {
+        // For a real tier change (Silver→Gold), dry-run should NOT mutate but SHOULD report TiersUpdated=1.
+        var userId = "Upgrader#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-silver", UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon", ProviderProductId = "6482057",
+            Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "mapping-silver", ProductName = "Silver", Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" } }
+                },
+                new ProductMapping
+                {
+                    Id = "mapping-gold", ProductName = "Gold", Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482070" } }
+                }
+            });
+
+        var tierMismatch = new TierMismatch
+        {
+            UserId = userId, PatreonMemberId = "memberId",
+            PatreonTiers = new List<string> { "6482070" },
+            PatreonTiersFiltered = new List<string> { "6482070" }, // Gold
+            InternalTiers = new List<string> { "6482057" },        // Silver
+            InternalTiersFiltered = new List<string> { "6482057" }
+        };
+
+        var driftResult = new DriftDetectionResult
+        {
+            ProviderId = "patreon", Timestamp = DateTime.UtcNow,
+            MismatchedTiers = new List<TierMismatch> { tierMismatch }
+        };
+
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: true);
+
+        // Assert: NO DB writes (dry-run is honest), but TiersUpdated reports 1 (real change would happen)
+        _mockAssociationRepository.Verify(x => x.Update(It.IsAny<ProductMappingUserAssociation>()), Times.Never,
+            "Dry-run must not mutate DB even for real tier upgrades.");
+        Assert.That(syncResult.TiersUpdated, Is.EqualTo(1),
+            "Real tier upgrade should still be reported in dry-run.");
     }
 }
