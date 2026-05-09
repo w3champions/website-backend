@@ -2012,4 +2012,53 @@ public class PatreonDriftSyncTests
         Assert.AreEqual(canonicalBattleTag, mismatch.UserId,
             "TierMismatch.UserId must be the canonical-cased BattleTag (TORREN#11438), not lowercased");
     }
+
+    [Test]
+    public async Task SyncDrift_ExtraAssignment_RevokesActivePatreonRewardAssignments()
+    {
+        // Arrange — user has 1 active patreon PMUA and 2 active patreon RAs
+        var userId = "Bubu#23550";
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-grandmaster",
+            ProviderId = "patreon",
+            ProviderProductId = "6482092",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddMonths(-3)
+        };
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
+        var activeRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-1", UserId = userId, RewardId = "reward-grandmaster-icon", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-2", UserId = userId, RewardId = "reward-grandmaster-portrait", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" }
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(activeRAs);
+
+        // No matching active patron in Patreon → user shows up as ExtraAssignment
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>());
+
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink>());
+
+        // Act
+        var driftResult = await _service.DetectDrift();
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert — both RA revocations actually happened
+        _mockRewardService.Verify(x => x.RevokeReward("ra-1", It.Is<string>(s => s.Contains("Drift sync"))), Times.Once);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-2", It.Is<string>(s => s.Contains("Drift sync"))), Times.Once);
+        Assert.That(syncResult.AssignmentsRevoked, Is.GreaterThanOrEqualTo(1));
+    }
 }
