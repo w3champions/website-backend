@@ -2353,4 +2353,69 @@ public class PatreonDriftSyncTests
         Assert.That(syncResult.TiersUpdated, Is.EqualTo(1),
             "Real tier upgrade should still be reported in dry-run.");
     }
+
+    [Test]
+    public async Task SyncSingleUser_OnSuccess_UpdatesLastSyncOnAccountLink()
+    {
+        var userId = "TestUser#1234";
+        var patreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+        var existingLink = new PatreonAccountLink(userId, patreonUserId)
+        {
+            LastSyncAt = null
+        };
+        _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId(patreonUserId)).ReturnsAsync(existingLink);
+        _mockPatreonLinkRepository.Setup(x => x.GetByBattleTag(userId)).ReturnsAsync(existingLink);
+
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        _mockPatreonApiClient.Setup(x => x.GetCampaignMemberByPatreonUserId(patreonUserId))
+            .ReturnsAsync(new PatreonMember
+            {
+                PatreonUserId = patreonUserId,
+                PatronStatus = "active_patron",
+                LastChargeStatus = "Paid",
+                EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tier1", AmountCents = 100 } }
+            });
+
+        // Act
+        var result = await _service.SyncSingleUser(userId, patreonUserId, "valid-token");
+
+        // Assert — Update was called on the link with non-null LastSyncAt
+        Assert.That(result.Success, Is.True);
+        _mockPatreonLinkRepository.Verify(x => x.Update(It.Is<PatreonAccountLink>(l => l.LastSyncAt != null && l.BattleTag == userId)), Times.AtLeastOnce);
+    }
+
+    [Test]
+    public async Task SyncDrift_AfterMissingMemberSync_UpdatesLastSync()
+    {
+        // Arrange — user is missing from internal but active patron
+        var userId = "Reactivating#1234";
+        var patreonUserId = "999";
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        var link = new PatreonAccountLink(userId, patreonUserId) { LastSyncAt = null };
+        _mockPatreonLinkRepository.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink> { link });
+        _mockPatreonLinkRepository.Setup(x => x.GetByBattleTag(userId)).ReturnsAsync(link);
+
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>
+            {
+                new PatreonMember
+                {
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "active_patron",
+                    LastChargeStatus = "Paid",
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tier1", AmountCents = 100 } }
+                }
+            });
+
+        var driftResult = await _service.DetectDrift();
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        _mockPatreonLinkRepository.Verify(x => x.Update(It.Is<PatreonAccountLink>(l => l.LastSyncAt != null && l.BattleTag == userId)), Times.AtLeastOnce);
+    }
 }

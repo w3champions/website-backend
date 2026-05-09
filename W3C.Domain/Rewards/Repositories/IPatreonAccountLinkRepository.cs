@@ -32,6 +32,11 @@ public interface IPatreonAccountLinkRepository
     Task<List<PatreonAccountLink>> GetAll();
 
     /// <summary>
+    /// Update an existing account link in-place (e.g. to refresh LastSyncAt)
+    /// </summary>
+    Task Update(PatreonAccountLink link);
+
+    /// <summary>
     /// Delete account link by ID
     /// </summary>
     Task Delete(string id);
