@@ -146,7 +146,7 @@ public class WebsiteBackendHub(
             PersonalSetting personalSetting =
                 await _personalSettingsRepository.Find(req.Receiver) ?? throw new ValidationException($"Player {req.Receiver} not found.");
 
-            if (req.Sender.Equals(req.Receiver, StringComparison.CurrentCultureIgnoreCase))
+            if (req.Sender == req.Receiver)
             {
                 throw new ValidationException("Cannot request yourself as a friend.");
             }

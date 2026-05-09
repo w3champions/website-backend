@@ -416,6 +416,246 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
+    public async Task AcceptIncomingFriendRequest_OverwritesPayloadReceiverWithJwtBattleTag()
+    {
+        // Arrange: attacker sends a request with forged Receiver, JWT says "JwtUser#1234"
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.AddFriend(It.IsAny<Friendlist>(), It.IsAny<string>()))
+            .ReturnsAsync((Friendlist fl, string bt) => fl);
+        friendCommandHandlerMock
+            .Setup(h => h.DeleteFriendRequest(It.IsAny<FriendRequest>()))
+            .Returns(Task.CompletedTask);
+
+        // Use a mock IFriendRequestCache so we can fully control LoadFriendRequest
+        var friendRequestCacheMock = new Mock<IFriendRequestCache>();
+
+        // The pinned req will have {Sender="Sender#9999", Receiver="JwtUser#1234"}
+        var storedReq = new FriendRequest("Sender#9999", "JwtUser#1234");
+        // Return the stored request when the correct (JWT-pinned) parameters are used
+        friendRequestCacheMock
+            .Setup(c => c.LoadFriendRequest(It.IsAny<FriendRequest>()))
+            .ReturnsAsync((FriendRequest r) =>
+                r.Sender == "Sender#9999" && r.Receiver == "JwtUser#1234" ? storedReq : null);
+        friendRequestCacheMock
+            .Setup(c => c.LoadSentFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadReceivedFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+
+        // Sender is canonical so canonicalization passes through
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("Sender#9999"))
+            .ReturnsAsync("Sender#9999");
+
+        // Build hub with the mock IFriendRequestCache instead of friendRequestCache
+        var hub = new WebsiteBackendHub(
+            authService.Object,
+            connections,
+            contextAccessor.Object,
+            friendRequestCacheMock.Object,
+            personalSettingsRepo.Object,
+            friendCommandHandlerMock.Object,
+            tracingService,
+            _battleTagResolverMock.Object
+        );
+        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "JwtUser#1234", ConnectionId = "connection-id-1" });
+
+        var req = new FriendRequest("Sender#9999", "Impersonated#5678"); // forged Receiver
+
+        // Act
+        await hub.AcceptIncomingFriendRequest(req);
+
+        // Assert: LoadFriendRequest was called with the JWT-pinned Receiver (Sender#9999 + JwtUser#1234)
+        // If the Receiver was NOT pinned (still "Impersonated#5678"), the mock returns null and
+        // AcceptIncomingFriendRequest throws ValidationException — success response would not be sent.
+        friendRequestCacheMock.Verify(
+            c => c.LoadFriendRequest(It.Is<FriendRequest>(r => r.Sender == "Sender#9999" && r.Receiver == "JwtUser#1234")),
+            Times.Once,
+            "LoadFriendRequest must be called with the JWT-pinned Receiver."
+        );
+    }
+
+    [Test]
+    public async Task DenyIncomingFriendRequest_OverwritesPayloadReceiverWithJwtBattleTag()
+    {
+        // Arrange: attacker sends a request with forged Receiver, JWT says "JwtUser#1234"
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.DeleteFriendRequest(It.IsAny<FriendRequest>()))
+            .Returns(Task.CompletedTask);
+
+        var friendRequestCacheMock = new Mock<IFriendRequestCache>();
+        var storedReq = new FriendRequest("Sender#9999", "JwtUser#1234");
+        friendRequestCacheMock
+            .Setup(c => c.LoadSentFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadReceivedFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadFriendRequest(It.IsAny<FriendRequest>()))
+            .ReturnsAsync((FriendRequest r) =>
+                r.Sender == "Sender#9999" && r.Receiver == "JwtUser#1234" ? storedReq : null);
+
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("Sender#9999"))
+            .ReturnsAsync("Sender#9999");
+
+        var hub = new WebsiteBackendHub(
+            authService.Object,
+            connections,
+            contextAccessor.Object,
+            friendRequestCacheMock.Object,
+            personalSettingsRepo.Object,
+            friendCommandHandlerMock.Object,
+            tracingService,
+            _battleTagResolverMock.Object
+        );
+        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "JwtUser#1234", ConnectionId = "connection-id-1" });
+
+        var req = new FriendRequest("Sender#9999", "Impersonated#5678"); // forged Receiver
+
+        // Act
+        await hub.DenyIncomingFriendRequest(req);
+
+        // Assert: LoadFriendRequest was called with the JWT-pinned Receiver
+        // If the Receiver was NOT pinned (still "Impersonated#5678"), the mock returns null and
+        // DenyIncomingFriendRequest throws ValidationException — the success path is not reached.
+        friendRequestCacheMock.Verify(
+            c => c.LoadFriendRequest(It.Is<FriendRequest>(r => r.Sender == "Sender#9999" && r.Receiver == "JwtUser#1234")),
+            Times.Once,
+            "LoadFriendRequest must be called with the JWT-pinned Receiver."
+        );
+    }
+
+    [Test]
+    public async Task BlockIncomingFriendRequest_OverwritesPayloadReceiverWithJwtBattleTag()
+    {
+        // Arrange: attacker sends a request with forged Receiver, JWT says "JwtUser#1234"
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.UpsertFriendList(It.IsAny<Friendlist>()))
+            .Returns(Task.CompletedTask);
+        friendCommandHandlerMock
+            .Setup(h => h.DeleteFriendRequest(It.IsAny<FriendRequest>()))
+            .Returns(Task.CompletedTask);
+
+        var friendRequestCacheMock = new Mock<IFriendRequestCache>();
+        var storedReq = new FriendRequest("Sender#9999", "JwtUser#1234");
+        friendRequestCacheMock
+            .Setup(c => c.LoadSentFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadReceivedFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadFriendRequest(It.IsAny<FriendRequest>()))
+            .ReturnsAsync((FriendRequest r) =>
+                r.Sender == "Sender#9999" && r.Receiver == "JwtUser#1234" ? storedReq : null);
+
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("Sender#9999"))
+            .ReturnsAsync("Sender#9999");
+
+        var hub = new WebsiteBackendHub(
+            authService.Object,
+            connections,
+            contextAccessor.Object,
+            friendRequestCacheMock.Object,
+            personalSettingsRepo.Object,
+            friendCommandHandlerMock.Object,
+            tracingService,
+            _battleTagResolverMock.Object
+        );
+        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "JwtUser#1234", ConnectionId = "connection-id-1" });
+
+        var req = new FriendRequest("Sender#9999", "Impersonated#5678"); // forged Receiver
+
+        // Act
+        await hub.BlockIncomingFriendRequest(req);
+
+        // Assert: LoadFriendRequest was called with the JWT-pinned Receiver
+        friendRequestCacheMock.Verify(
+            c => c.LoadFriendRequest(It.Is<FriendRequest>(r => r.Sender == "Sender#9999" && r.Receiver == "JwtUser#1234")),
+            Times.Once,
+            "LoadFriendRequest must be called with the JWT-pinned Receiver."
+        );
+    }
+
+    [Test]
+    public async Task DeleteOutgoingFriendRequest_OverwritesPayloadSenderWithJwtBattleTag()
+    {
+        // Arrange: attacker sends a request with forged Sender, JWT says "JwtUser#1234"
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.DeleteFriendRequest(It.IsAny<FriendRequest>()))
+            .Returns(Task.CompletedTask);
+
+        var friendRequestCacheMock = new Mock<IFriendRequestCache>();
+        var storedReq = new FriendRequest("JwtUser#1234", "Receiver#9999");
+        friendRequestCacheMock
+            .Setup(c => c.LoadSentFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadReceivedFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new System.Collections.Generic.List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadFriendRequest(It.IsAny<FriendRequest>()))
+            .ReturnsAsync((FriendRequest r) =>
+                r.Sender == "JwtUser#1234" && r.Receiver == "Receiver#9999" ? storedReq : null);
+
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("Receiver#9999"))
+            .ReturnsAsync("Receiver#9999");
+
+        var hub = new WebsiteBackendHub(
+            authService.Object,
+            connections,
+            contextAccessor.Object,
+            friendRequestCacheMock.Object,
+            personalSettingsRepo.Object,
+            friendCommandHandlerMock.Object,
+            tracingService,
+            _battleTagResolverMock.Object
+        );
+        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "JwtUser#1234", ConnectionId = "connection-id-1" });
+
+        var req = new FriendRequest("Impersonated#5678", "Receiver#9999"); // forged Sender
+
+        // Act
+        await hub.DeleteOutgoingFriendRequest(req);
+
+        // Assert: LoadFriendRequest was called with the JWT-pinned Sender
+        friendRequestCacheMock.Verify(
+            c => c.LoadFriendRequest(It.Is<FriendRequest>(r => r.Sender == "JwtUser#1234" && r.Receiver == "Receiver#9999")),
+            Times.Once,
+            "LoadFriendRequest must be called with the JWT-pinned Sender."
+        );
+    }
+
+    [Test]
     public async Task MakeFriendRequest_CanonicalReceiver_ProceedsToCreate()
     {
         // Arrange: client sends a properly-canonical Receiver

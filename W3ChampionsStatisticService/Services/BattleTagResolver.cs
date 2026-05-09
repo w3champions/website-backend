@@ -30,8 +30,8 @@ public class BattleTagResolver(IdentityServiceClient identityClient, IMemoryCach
 
     public async Task<IDictionary<string, string>> ResolveCanonicalBatch(IEnumerable<string> inputs)
     {
-        var inputList = inputs?.ToList() ?? new List<string>();
-        var tasks = inputList.Select(async input => new { input, canonical = await ResolveCanonical(input) });
+        var distinctInputs = inputs?.Where(i => i != null).Distinct().ToList() ?? new List<string>();
+        var tasks = distinctInputs.Select(async input => new { input, canonical = await ResolveCanonical(input) });
         var resolved = await Task.WhenAll(tasks);
         return resolved.ToDictionary(r => r.input, r => r.canonical);
     }

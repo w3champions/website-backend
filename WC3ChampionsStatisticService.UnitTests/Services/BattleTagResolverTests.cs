@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
@@ -109,5 +110,27 @@ public class BattleTagResolverTests
         Assert.AreEqual("TORREN#11438", result["torren#11438"]);
         Assert.AreEqual("TORREN#11438", result["TORREN#11438"]);
         _identityClientMock.Verify(c => c.ResolveCanonicalBattleTag(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ResolveCanonicalBatch_DuplicateInputs_DoesNotThrow()
+    {
+        _identityClientMock
+            .Setup(c => c.ResolveCanonicalBattleTag("torren#11438"))
+            .ReturnsAsync("TORREN#11438");
+
+        // Three strings: two exact duplicates and one differing only in case
+        // The cache key is lowercased, so all three map to the same cache entry.
+        // After dedup by Distinct(), "torren#11438" and "TORREN#11438" are two entries.
+        _identityClientMock
+            .Setup(c => c.ResolveCanonicalBattleTag("TORREN#11438"))
+            .ReturnsAsync("TORREN#11438");
+
+        var result = await _resolver.ResolveCanonicalBatch(new[] { "torren#11438", "torren#11438", "TORREN#11438" });
+
+        // Dictionary must not throw and all values must be the canonical form
+        Assert.IsTrue(result.Values.All(v => v == "TORREN#11438"));
+        // Exact duplicate "torren#11438" should only hit identity service once (deduped)
+        _identityClientMock.Verify(c => c.ResolveCanonicalBattleTag("torren#11438"), Times.Once);
     }
 }

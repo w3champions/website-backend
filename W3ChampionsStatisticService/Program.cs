@@ -195,7 +195,6 @@ builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
 
 // Turnstile service for captcha verification
 builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
-builder.Services.AddMemoryCache();
 
 // Rate limiting services
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimiting.Repositories.IApiTokenRepository, W3ChampionsStatisticService.RateLimiting.Repositories.ApiTokenRepository>();

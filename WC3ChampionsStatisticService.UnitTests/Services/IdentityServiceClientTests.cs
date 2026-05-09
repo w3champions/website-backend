@@ -43,4 +43,18 @@ public class IdentityServiceClientTests
 
         Assert.IsNull(canonical);
     }
+
+    [Test]
+    public void ResolveCanonicalBattleTag_ServerError_ThrowsHttpRequestException()
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        var client = new IdentityServiceClient(new HttpClient(handler.Object));
+
+        Assert.ThrowsAsync<HttpRequestException>(async () =>
+            await client.ResolveCanonicalBattleTag("torren#11438"));
+    }
 }

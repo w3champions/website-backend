@@ -64,6 +64,11 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
     {
+        var canonical = await _battleTagResolver.ResolveCanonical(bannedPlayerReadmodel.battleTag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = bannedPlayerReadmodel.battleTag });
+
+        bannedPlayerReadmodel.battleTag = canonical;
         await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
         return Ok();
     }
