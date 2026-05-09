@@ -726,15 +726,15 @@ public class PatreonDriftDetectionService(
             }
         }
 
+        if (dryRun)
+        {
+            return;
+        }
+
         foreach (var association in activePatreonAssociations)
         {
             association.Revoke($"Drift sync: {extraAssignment.Reason}");
             await _associationRepository.Update(association);
-        }
-
-        if (dryRun)
-        {
-            return;
         }
 
         // Reconciliation pass — covers any RA the direct revoke didn't catch
