@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Repositories;
 using W3C.Domain.CommonValueObjects;
@@ -23,7 +24,8 @@ public class AdminController(
     INewsRepository newsRepository,
     IInformationMessagesRepository informationMessagesRepository,
     IAdminRepository adminRepository,
-    IRankRepository rankRepository) : ControllerBase
+    IRankRepository rankRepository,
+    IBattleTagResolver battleTagResolver) : ControllerBase
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly MatchmakingServiceClient _matchmakingServiceRepository = matchmakingServiceRepository;
@@ -31,6 +33,7 @@ public class AdminController(
     private readonly IInformationMessagesRepository _informationMessagesRepository = informationMessagesRepository;
     private readonly IAdminRepository _adminRepository = adminRepository;
     private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
     [HttpGet("health-check")]
     [NoTrace]
@@ -278,7 +281,11 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> UpdateProxies([FromBody] ProxyUpdate proxyUpdateData, [FromRoute] string tag)
     {
-        await _adminRepository.UpdateProxies(proxyUpdateData, tag);
+        var canonical = await _battleTagResolver.ResolveCanonical(tag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = tag });
+
+        await _adminRepository.UpdateProxies(proxyUpdateData, canonical);
         return Ok();
     }
 
@@ -302,6 +309,11 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> PutChatBan([FromBody] ChatBanPutDto chatBan)
     {
+        var canonical = await _battleTagResolver.ResolveCanonical(chatBan.battleTag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = chatBan.battleTag });
+
+        chatBan.battleTag = canonical;
         await _adminRepository.PutChatBan(chatBan);
         return Ok();
     }
