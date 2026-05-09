@@ -24,8 +24,8 @@ public class PatreonDriftSyncTests
     private Mock<IProductMappingRepository> _mockProductMappingRepository;
     private Mock<IPatreonAccountLinkRepository> _mockPatreonLinkRepository;
     private Mock<IProductMappingReconciliationService> _mockReconciliationService;
-    private Mock<IRewardService> _mockRewardService;
     private Mock<IRewardAssignmentRepository> _mockRewardAssignmentRepository;
+    private Mock<IRewardService> _mockRewardService;
     private PatreonDriftDetectionService _service;
     private PatreonOAuthService _oauthService;
 
