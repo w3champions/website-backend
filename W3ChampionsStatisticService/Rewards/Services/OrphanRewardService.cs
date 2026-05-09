@@ -36,6 +36,9 @@ public class OrphanRewardService(
         if (!activePatreonRAs.Any()) return report;
 
         var activeAssociations = await _associationRepository.GetAll(AssociationStatus.Active);
+        // Use IsActive() rather than just status: a row may have Status=Active but ExpiresAt
+        // in the past if the periodic expiry sweep hasn't transitioned it yet. Such PMUAs no
+        // longer represent a live entitlement and should not gate orphan detection.
         var userIdsWithActivePmua = activeAssociations
             .Where(a => a.ProviderId == ProviderId && a.IsActive())
             .Select(a => a.UserId)

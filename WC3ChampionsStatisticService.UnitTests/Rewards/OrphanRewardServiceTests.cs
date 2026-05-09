@@ -253,5 +253,7 @@ public class OrphanRewardServiceTests
         Assert.That(result.AssignmentsRevoked, Is.EqualTo(1));
         Assert.That(result.Errors, Has.Count.EqualTo(1));
         Assert.That(result.Errors[0], Does.Contain("ra-1"));
+        // ra-2 must still be attempted even though ra-1 threw (log-and-continue behavior)
+        _mockRewardService.Verify(x => x.RevokeReward("ra-2", It.IsAny<string>()), Times.Once);
     }
 }
