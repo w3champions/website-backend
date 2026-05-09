@@ -7,6 +7,7 @@ using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Constants;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
+using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
 namespace W3ChampionsStatisticService.Rewards.Services;
@@ -719,14 +720,31 @@ public class PatreonDriftDetectionService(
             await _associationRepository.Update(association);
         }
 
-        // Immediately reconcile rewards for this user to revoke assignments (unless dry run)
-        if (!dryRun)
+        if (dryRun)
         {
-            var eventIdPrefix = $"extra_assignment_removal_{DateTime.UtcNow:yyyyMMddHHmmss}_{extraAssignment.UserId}";
-            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(extraAssignment.UserId, eventIdPrefix, dryRun: false);
-            Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
-                extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+            return;
         }
+
+        // Directly revoke active patreon RewardAssignment rows for this user.
+        // The reconciler can NOT do this on its own because it iterates active PMUAs;
+        // by this point the user has zero active PMUAs and the reconciler would no-op.
+        // Mirror the proven path from PatreonAccountLinkRepository.HandleLinkRemoval.
+        var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(extraAssignment.UserId, RewardStatus.Active);
+        var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
+
+        foreach (var ra in patreonRAs)
+        {
+            await _rewardService.RevokeReward(ra.Id, $"Drift sync: {extraAssignment.Reason}");
+            Log.Information("Drift sync revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                ra.Id, extraAssignment.UserId, ra.RewardId);
+        }
+
+        // Reconciliation pass — covers any RA the direct revoke didn't catch
+        // (e.g., legacy webhook-created RAs with a different match key).
+        var eventIdPrefix = $"extra_assignment_removal_{DateTime.UtcNow:yyyyMMddHHmmss}_{extraAssignment.UserId}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(extraAssignment.UserId, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
+            extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
     }
 
     /// <summary>
