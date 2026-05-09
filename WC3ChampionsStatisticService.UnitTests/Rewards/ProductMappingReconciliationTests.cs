@@ -474,4 +474,158 @@ public class ProductMappingReconciliationTests
             Throws.TypeOf<InvalidOperationException>()
                 .With.Message.Contain("Product mapping non-existent not found"));
     }
+
+    [Test]
+    public async Task ReconcileUserAssociations_WithNoActivePMUAs_RevokesActivePatreonOrphanRAs()
+    {
+        // Arrange — user has zero active PMUAs but two active patreon RAs (orphans)
+        var userId = "Bubu#23550";
+
+        _mockProductMappingService.Setup(x => x.GetUserAssociationsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>()); // no active PMUAs
+
+        var orphanRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-1", UserId = userId, RewardId = "reward-grandmaster-icon", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-2", UserId = userId, RewardId = "reward-grandmaster-portrait", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" }
+        };
+        _mockRewardService.Setup(x => x.GetUserRewards(userId)).ReturnsAsync(orphanRAs);
+
+        // Act
+        var result = await _service.ReconcileUserAssociations(userId, "test_prefix", dryRun: false);
+
+        // Assert
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.RewardsRevoked, Is.EqualTo(2));
+        _mockRewardService.Verify(x => x.RevokeReward("ra-1", It.IsAny<string>()), Times.Once);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-2", It.IsAny<string>()), Times.Once);
+    }
+
+    [Test]
+    public async Task ReconcileUserAssociations_WithActivePMUA_LeavesMatchingPatreonRAsAlone()
+    {
+        // Arrange — user has active PMUA for mapping-grandmaster and matching RAs (healthy state)
+        var userId = "Healthy#1234";
+
+        _mockProductMappingService.Setup(x => x.GetUserAssociationsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>
+            {
+                new ProductMappingUserAssociation
+                {
+                    Id = "pmua-1", UserId = userId, ProductMappingId = "mapping-grandmaster",
+                    ProviderId = "patreon", ProviderProductId = "6482092",
+                    Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+                }
+            });
+
+        _mockProductMappingService.Setup(x => x.GetProductMappingById("mapping-grandmaster"))
+            .ReturnsAsync(new ProductMapping
+            {
+                Id = "mapping-grandmaster",
+                ProductName = "Grand Master",
+                RewardIds = new List<string> { "reward-grandmaster-icon" },
+                ProductProviders = new List<ProductProviderPair>
+                {
+                    new ProductProviderPair { ProviderId = "patreon", ProductId = "6482092" }
+                }
+            });
+
+        var existingRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-1", UserId = userId, RewardId = "reward-grandmaster-icon", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" }
+        };
+        _mockRewardService.Setup(x => x.GetUserRewards(userId)).ReturnsAsync(existingRAs);
+
+        // Act
+        var result = await _service.ReconcileUserAssociations(userId, "test_prefix", dryRun: false);
+
+        // Assert — no revocations
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.RewardsRevoked, Is.EqualTo(0));
+        _mockRewardService.Verify(x => x.RevokeReward(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ReconcileUserAssociations_WithActivePMUAForBronze_RevokesGoldOrphanRA()
+    {
+        // Arrange — user downgraded from gold to bronze; one bronze PMUA active, but a stale gold RA still active
+        var userId = "Downgraded#1234";
+
+        _mockProductMappingService.Setup(x => x.GetUserAssociationsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>
+            {
+                new ProductMappingUserAssociation
+                {
+                    Id = "pmua-bronze", UserId = userId, ProductMappingId = "mapping-bronze",
+                    ProviderId = "patreon", ProviderProductId = "6482051",
+                    Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+                }
+            });
+
+        _mockProductMappingService.Setup(x => x.GetProductMappingById("mapping-bronze"))
+            .ReturnsAsync(new ProductMapping
+            {
+                Id = "mapping-bronze", ProductName = "Bronze",
+                RewardIds = new List<string> { "reward-bronze" },
+                ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482051" } }
+            });
+
+        var ras = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-bronze", UserId = userId, RewardId = "reward-bronze", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-bronze" },
+            new RewardAssignment { Id = "ra-gold-orphan", UserId = userId, RewardId = "reward-gold", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-gold" }
+        };
+        _mockRewardService.Setup(x => x.GetUserRewards(userId)).ReturnsAsync(ras);
+
+        // Act
+        var result = await _service.ReconcileUserAssociations(userId, "test_prefix", dryRun: false);
+
+        // Assert
+        Assert.That(result.RewardsRevoked, Is.EqualTo(1));
+        _mockRewardService.Verify(x => x.RevokeReward("ra-gold-orphan", It.IsAny<string>()), Times.Once);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-bronze", It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ReconcileUserAssociations_DryRun_DoesNotRevokeOrphans()
+    {
+        // Arrange — orphan RAs but dryRun=true
+        var userId = "DryRunTest#1234";
+        _mockProductMappingService.Setup(x => x.GetUserAssociationsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockRewardService.Setup(x => x.GetUserRewards(userId))
+            .ReturnsAsync(new List<RewardAssignment>
+            {
+                new RewardAssignment { Id = "ra-orphan", UserId = userId, RewardId = "reward-x", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-x" }
+            });
+
+        // Act
+        var result = await _service.ReconcileUserAssociations(userId, "test_prefix", dryRun: true);
+
+        // Assert — no revocation actually fired, but report says it would
+        _mockRewardService.Verify(x => x.RevokeReward(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        Assert.That(result.RewardsRevoked, Is.EqualTo(1)); // counted but not executed
+    }
+
+    [Test]
+    public async Task ReconcileUserAssociations_LeavesNonPatreonRAsAlone()
+    {
+        // Arrange — orphan-shaped RA but ProviderId != "patreon" (e.g., kofi, manual)
+        var userId = "Mixed#1234";
+        _mockProductMappingService.Setup(x => x.GetUserAssociationsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockRewardService.Setup(x => x.GetUserRewards(userId))
+            .ReturnsAsync(new List<RewardAssignment>
+            {
+                new RewardAssignment { Id = "ra-kofi", UserId = userId, RewardId = "reward-x", ProviderId = "kofi", Status = RewardStatus.Active },
+                new RewardAssignment { Id = "ra-manual", UserId = userId, RewardId = "reward-y", ProviderId = null, Status = RewardStatus.Active }
+            });
+
+        // Act
+        var result = await _service.ReconcileUserAssociations(userId, "test_prefix", dryRun: false);
+
+        // Assert — neither touched
+        _mockRewardService.Verify(x => x.RevokeReward(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        Assert.That(result.RewardsRevoked, Is.EqualTo(0));
+    }
 }
