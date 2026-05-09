@@ -2175,4 +2175,59 @@ public class PatreonDriftSyncTests
         Assert.That(existingPmua.Status, Is.EqualTo(AssociationStatus.Active),
             "PMUA in-memory state must remain Active after RA revoke failure (RA revoke must come first).");
     }
+
+    [Test]
+    public async Task UpdateUserAssociationTiers_SkipsRevokeRecreate_WhenActionableTierSetEqualsExistingActive()
+    {
+        // Arrange — user has 1 active PMUA for tier 6482057. Patreon says they have tiers
+        // [15145463 (unmapped), 6482057 (mapped)]. Filter would produce [15145463, 6482057].
+        // Internal mapped set = {6482057}. Without the guard, the drift loops every cycle.
+        var userId = "ChurnLoopUser#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1", UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon", ProviderProductId = "6482057",
+            Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "mapping-silver",
+                    ProductName = "Silver",
+                    Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" } }
+                }
+                // mapping for 15145463 deliberately absent — unmapped/free tier
+            });
+
+        var tierMismatch = new TierMismatch
+        {
+            UserId = userId,
+            PatreonMemberId = "memberId",
+            PatreonTiers = new List<string> { "15145463", "6482057" },
+            PatreonTiersFiltered = new List<string> { "15145463", "6482057" },
+            InternalTiers = new List<string> { "6482057" },
+            InternalTiersFiltered = new List<string> { "6482057" }
+        };
+
+        var driftResult = new DriftDetectionResult
+        {
+            ProviderId = "patreon", Timestamp = DateTime.UtcNow,
+            MismatchedTiers = new List<TierMismatch> { tierMismatch }
+        };
+
+        // Act
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert — no revoke or update of the existing PMUA
+        _mockAssociationRepository.Verify(x => x.Update(It.Is<ProductMappingUserAssociation>(a => a.Status == AssociationStatus.Revoked)), Times.Never);
+        Assert.That(syncResult.TiersUpdated, Is.EqualTo(0));
+    }
 }
