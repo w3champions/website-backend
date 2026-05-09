@@ -2123,12 +2123,13 @@ public class PatreonDriftSyncTests
     }
 
     [Test]
-    public async Task DeactivateUserAssociation_WhenRevokeRewardThrows_PMUAStaysActive()
+    public async Task DeactivateUserAssociation_WhenAllRevokesFail_SyncDoesNotThrow()
     {
-        // Regression test for order-of-operations safety.
-        // If RevokeReward throws, the PMUA must NOT have been revoked yet.
-        // Revoked PMUA + active RA recreates the orphan-RA bug; the next drift cycle
-        // would see zero active PMUAs and skip the user entirely.
+        // When every RA revoke throws (all failing, none succeeding), SyncDrift must still
+        // not propagate the exception to the caller — per-RA failures are logged and swallowed.
+        // The PMUA revocation proceeds regardless, because we cannot leave PMUAs active if
+        // the user is no longer a patron. The orphan-RA risk from a partial failure is handled
+        // by the bidirectional reconciler on the next cycle.
         var userId = "Bubu#23550";
         var existingPmua = new ProductMappingUserAssociation
         {
@@ -2171,21 +2172,63 @@ public class PatreonDriftSyncTests
         _mockPatreonLinkRepository.Setup(x => x.GetAll())
             .ReturnsAsync(new List<PatreonAccountLink>());
 
-        // Act — SyncDrift catches per-user errors and continues; should not throw
+        // Act — SyncDrift catches per-RA errors and continues; must not throw
         var driftResult = await _service.DetectDrift();
-        SyncResult syncResult = null;
         Assert.DoesNotThrowAsync(async () =>
-        {
-            syncResult = await _service.SyncDrift(driftResult, dryRun: false);
-        }, "SyncDrift must swallow per-user errors and not propagate them to the caller.");
+            await _service.SyncDrift(driftResult, dryRun: false),
+            "SyncDrift must swallow per-RA errors and not propagate them to the caller.");
+    }
 
-        // Assert — PMUA was NOT updated. The RA revoke threw BEFORE the PMUA was touched,
-        // so the PMUA must remain Active. If the PMUA were revoked first, we'd have an
-        // orphaned active RA with no PMUA — exactly the bug we're fixing.
-        _mockAssociationRepository.Verify(x => x.Update(It.IsAny<ProductMappingUserAssociation>()), Times.Never,
-            "PMUA must not be revoked when RA revoke throws — revoking it first would orphan the RA.");
-        Assert.That(existingPmua.Status, Is.EqualTo(AssociationStatus.Active),
-            "PMUA in-memory state must remain Active after RA revoke failure (RA revoke must come first).");
+    [Test]
+    public async Task DeactivateUserAssociation_OneRevokeThrows_RemainingRAsStillRevoked()
+    {
+        // Regression: a single failing RA must not halt the entire user's sync.
+        // Otherwise we leak partial state (some RAs revoked, others active, PMUAs untouched).
+        var userId = "PartialFailUser#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-grandmaster",
+            ProviderId = "patreon",
+            ProviderProductId = "6482092",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddMonths(-3)
+        };
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
+        var activeRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-1", UserId = userId, RewardId = "r1", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-2", UserId = userId, RewardId = "r2", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-3", UserId = userId, RewardId = "r3", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" }
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(activeRAs);
+
+        // Middle RA throws; first and last should still be revoked
+        _mockRewardService.Setup(x => x.RevokeReward("ra-2", It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("simulated transient failure"));
+
+        // No matching active patron in Patreon → user shows up as ExtraAssignment
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers()).ReturnsAsync(new List<PatreonMember>());
+        _mockPatreonLinkRepository.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink>());
+
+        // Act
+        var driftResult = await _service.DetectDrift();
+        Assert.DoesNotThrowAsync(async () => await _service.SyncDrift(driftResult, dryRun: false),
+            "SyncDrift must not throw when one RA revoke fails — remaining RAs must still be processed.");
+
+        // Assert — ra-1 and ra-3 were revoked despite ra-2 throwing
+        _mockRewardService.Verify(x => x.RevokeReward("ra-1", It.IsAny<string>()), Times.Once);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-3", It.IsAny<string>()), Times.Once);
     }
 
     [Test]

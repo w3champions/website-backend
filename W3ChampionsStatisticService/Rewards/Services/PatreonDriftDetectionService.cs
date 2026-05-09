@@ -724,9 +724,17 @@ public class PatreonDriftDetectionService(
 
             foreach (var ra in patreonRAs)
             {
-                await _rewardService.RevokeReward(ra.Id, $"Drift sync: {extraAssignment.Reason}");
-                Log.Information("Drift sync revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
-                    ra.Id, extraAssignment.UserId, ra.RewardId);
+                try
+                {
+                    await _rewardService.RevokeReward(ra.Id, $"Drift sync: {extraAssignment.Reason}");
+                    Log.Information("Drift sync revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                        ra.Id, extraAssignment.UserId, ra.RewardId);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Drift sync failed to revoke RewardAssignment {AssignmentId} for {UserId} — continuing with remaining RAs",
+                        ra.Id, extraAssignment.UserId);
+                }
             }
         }
 
@@ -888,9 +896,17 @@ public class PatreonDriftDetectionService(
 
         foreach (var ra in patreonRAs)
         {
-            await _rewardService.RevokeReward(ra.Id, "Patron no longer active");
-            Log.Information("SyncSingleUser revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
-                ra.Id, battleTag, ra.RewardId);
+            try
+            {
+                await _rewardService.RevokeReward(ra.Id, "Patron no longer active");
+                Log.Information("SyncSingleUser revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                    ra.Id, battleTag, ra.RewardId);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "SyncSingleUser failed to revoke RewardAssignment {AssignmentId} for {UserId} — continuing with remaining RAs",
+                    ra.Id, battleTag);
+            }
         }
 
         foreach (var association in currentAssociations)
