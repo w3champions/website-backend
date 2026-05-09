@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Rewards.Portraits;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Tracing;
 
@@ -13,15 +16,20 @@ namespace W3ChampionsStatisticService.Rewards;
 [Trace]
 public class RewardsController(
     IPortraitRepository portraitRepository,
-    PortraitCommandHandler portraitCommandHandler) : ControllerBase
+    PortraitCommandHandler portraitCommandHandler,
+    IBattleTagResolver battleTagResolver) : ControllerBase
 {
     private readonly PortraitCommandHandler _portraitCommandHandler = portraitCommandHandler;
     private readonly IPortraitRepository _portraitRepository = portraitRepository;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
     [HttpPut("portraits")]
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> PutPortraits([FromBody] PortraitsCommand command)
     {
+        var rejection = await ValidateBnetTagsCanonical(command.BnetTags);
+        if (rejection != null) return rejection;
+
         await _portraitCommandHandler.UpsertSpecialPortraits(command);
         return Ok();
     }
@@ -30,8 +38,24 @@ public class RewardsController(
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> DeletePortraits([FromBody] PortraitsCommand command)
     {
+        var rejection = await ValidateBnetTagsCanonical(command.BnetTags);
+        if (rejection != null) return rejection;
+
         await _portraitCommandHandler.DeleteSpecialPortraits(command);
         return Ok();
+    }
+
+    private async Task<IActionResult> ValidateBnetTagsCanonical(List<string> bnetTags)
+    {
+        if (bnetTags == null || bnetTags.Count == 0) return null;
+        var resolution = await _battleTagResolver.ResolveCanonicalBatch(bnetTags);
+        var failures = bnetTags
+            .Select(i => new { input = i, canonical = resolution[i] })
+            .Where(r => r.canonical == null || r.canonical != r.input)
+            .ToList();
+        if (failures.Count > 0)
+            return BadRequest(new { error = "non_canonical_or_unknown_battletags", details = failures });
+        return null;
     }
 
     [HttpGet("portrait-definitions")]
