@@ -486,12 +486,20 @@ public class RewardService(
     public async Task RevokeReward(string assignmentId, string reason)
     {
         var assignment = await _assignmentRepo.GetById(assignmentId);
-        if (assignment != null)
+        if (assignment == null)
         {
-            assignment.Revoke(reason);
-            await _assignmentRepo.Update(assignment);
-            await RevokeRewardModule(assignment);
+            return;
         }
+        if (assignment.Status == RewardStatus.Revoked)
+        {
+            // Idempotent: do not re-revoke. Prevents module side-effects from firing twice
+            // when multiple call paths (direct revoke + reconciler) hit the same RA.
+            _logger.LogDebug("RevokeReward called for already-revoked assignment {AssignmentId}; skipping.", assignmentId);
+            return;
+        }
+        assignment.Revoke(reason);
+        await _assignmentRepo.Update(assignment);
+        await RevokeRewardModule(assignment);
     }
 
     public async Task ExpireReward(string assignmentId)

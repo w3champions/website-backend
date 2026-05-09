@@ -309,6 +309,42 @@ public class RewardServiceTests
     }
 
     [Test]
+    public async Task RevokeReward_WhenAssignmentAlreadyRevoked_IsIdempotent()
+    {
+        // Regression test for double-revoke safety.
+        // Several call paths in the drift sync PR can hit the same RA twice:
+        // the direct revoke loop + the bidirectional reconciler. If RevokeReward
+        // is not idempotent, the module side-effect (e.g. portrait removal) fires twice,
+        // which may corrupt state or cause double-revocation errors.
+        var assignmentId = "ra-already-revoked";
+        var revokedAssignment = new RewardAssignment
+        {
+            Id = assignmentId,
+            UserId = "User#1234",
+            RewardId = "reward-x",
+            ProviderId = "patreon",
+            Status = RewardStatus.Revoked,
+            RevokedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssignmentRepo.Setup(x => x.GetById(assignmentId)).ReturnsAsync(revokedAssignment);
+
+        // Act — call RevokeReward on an assignment that is already Revoked
+        await _rewardService.RevokeReward(assignmentId, "second call");
+
+        // Assert — Update NOT called (no DB churn), no module side-effect fired again.
+        // The RewardService constructor injects IServiceScopeFactory for module resolution;
+        // modules are looked up from the scope. An Update call is the observable evidence
+        // that the method did not return early.
+        _mockAssignmentRepo.Verify(x => x.Update(It.IsAny<RewardAssignment>()), Times.Never,
+            "RevokeReward must not call Update for an already-revoked assignment (idempotent early return).");
+
+        // Also assert the no-reason overload is equally idempotent
+        await _rewardService.RevokeReward(assignmentId);
+        _mockAssignmentRepo.Verify(x => x.Update(It.IsAny<RewardAssignment>()), Times.Never,
+            "The no-reason overload must also be idempotent for an already-revoked assignment.");
+    }
+
+    [Test]
     public async Task ProcessRewardEvent_MultipleTiersWithPartialRewards_OnlyAssignsMissingOnes()
     {
         // Arrange - User has tier1 completely, tier2 partially (missing one reward)
