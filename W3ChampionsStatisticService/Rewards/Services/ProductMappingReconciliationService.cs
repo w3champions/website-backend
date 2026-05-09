@@ -75,6 +75,25 @@ public class ProductMappingReconciliationService(
     }
 
     /// <summary>
+    /// Extracts the ProductMapping ID an active RA was created for, using the same three-way matching
+    /// logic as GetUserAssignmentsForMapping but in reverse. Returns null if the RA can't be matched
+    /// to any mapping (e.g., manual grant, malformed metadata) — such RAs are left alone.
+    /// </summary>
+    private static string TryExtractMappingId(RewardAssignment ra)
+    {
+        if (!string.IsNullOrEmpty(ra.ProviderReference) && ra.ProviderReference.StartsWith("reconciliation:"))
+        {
+            return ra.ProviderReference.Substring("reconciliation:".Length);
+        }
+        if (ra.Metadata != null && ra.Metadata.TryGetValue("product_mapping_id", out var mappingIdObj) && mappingIdObj != null)
+        {
+            return mappingIdObj.ToString();
+        }
+        // Webhook-created RAs use Metadata["tier_id"] — caller must resolve via product mapping lookup.
+        return null;
+    }
+
+    /// <summary>
     /// Reconciles rewards for a specific user based on their current associations
     /// </summary>
     public async Task<ProductMappingReconciliationResult> ReconcileUserAssociations(string userId, string eventIdPrefix, bool dryRun = false)
@@ -93,9 +112,11 @@ public class ProductMappingReconciliationService(
 
             // Get all active associations for this user
             var activeAssociations = await _productMappingService.GetUserAssociationsByUserId(userId);
+            var expectedMappingIds = activeAssociations.Select(a => a.ProductMappingId).ToHashSet();
 
             _logger.LogInformation("Found {ActiveCount} active associations for user {UserId}", activeAssociations.Count, userId);
 
+            // Forward sweep: for each active PMUA, ensure RAs for its mapping match the mapping's reward list
             foreach (var association in activeAssociations)
             {
                 var mapping = await _productMappingService.GetProductMappingById(association.ProductMappingId);
@@ -120,11 +141,38 @@ public class ProductMappingReconciliationService(
                 }
             }
 
-            result.TotalUsersAffected = result.UserReconciliations.Any() ? 1 : 0;
+            // Backward sweep: revoke active patreon RAs whose mapping has no backing active PMUA.
+            // This closes the gap where a PMUA has been revoked but its RAs remain active —
+            // the structural bug that caused the orphan RA pattern in production. Manual grants
+            // (ProviderId != "patreon", or null) are NOT touched.
+            var allUserRewards = await _rewardService.GetUserRewards(userId);
+            var activePatreonOrphans = allUserRewards
+                .Where(ra => ra.Status == RewardStatus.Active && ra.ProviderId == "patreon")
+                .Where(ra =>
+                {
+                    var raMappingId = TryExtractMappingId(ra);
+                    // Only revoke if we can identify the mapping AND it's not in the active set.
+                    // RAs we can't classify are left alone (defensive: avoid revoking webhook-only or unknown rows).
+                    return raMappingId != null && !expectedMappingIds.Contains(raMappingId);
+                })
+                .ToList();
+
+            foreach (var orphan in activePatreonOrphans)
+            {
+                if (!dryRun)
+                {
+                    await _rewardService.RevokeReward(orphan.Id, "Reconciliation: no backing active PMUA");
+                    _logger.LogInformation("Reconciler revoked orphan RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                        orphan.Id, userId, orphan.RewardId);
+                }
+                result.RewardsRevoked++;
+            }
+
+            result.TotalUsersAffected = (result.UserReconciliations.Any() || activePatreonOrphans.Any()) ? 1 : 0;
             result.Success = result.Errors.Count == 0;
 
-            _logger.LogInformation("User reconciliation completed for {UserId}: Success={Success}, Added={Added}, Revoked={Revoked}",
-                userId, result.Success, result.RewardsAdded, result.RewardsRevoked);
+            _logger.LogInformation("User reconciliation completed for {UserId}: Success={Success}, Added={Added}, Revoked={Revoked} (Orphans={OrphanCount})",
+                userId, result.Success, result.RewardsAdded, result.RewardsRevoked, activePatreonOrphans.Count);
 
             return result;
         }
