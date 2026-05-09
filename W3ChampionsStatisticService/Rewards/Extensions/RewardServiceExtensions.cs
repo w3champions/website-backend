@@ -52,6 +52,9 @@ public static class RewardServiceExtensions
         services.AddInterceptedTransient<IProductMappingReconciliationService, ProductMappingReconciliationService>();
         services.AddInterceptedTransient<ProductMappingReconciliationService>();
 
+        // Orphan reward cleanup service
+        services.AddInterceptedTransient<IOrphanRewardService, OrphanRewardService>();
+
         // Background services
         services.AddHostedService<RewardDriftDetectionBackgroundService>();
 
