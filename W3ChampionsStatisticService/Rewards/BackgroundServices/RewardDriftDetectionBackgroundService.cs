@@ -17,6 +17,15 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
     private readonly bool _autoSyncEnabled;
     private readonly bool _syncDryRun;
 
+    // Last-run state — populated by each scheduled cycle
+    public DateTime? LastRunStartedAtUtc { get; private set; }
+    public DateTime? LastRunCompletedAtUtc { get; private set; }
+    public bool LastRunSucceeded { get; private set; }
+    public string LastRunErrorMessage { get; private set; }
+    public int LastRunMembersAdded { get; private set; }
+    public int LastRunAssignmentsRevoked { get; private set; }
+    public int LastRunTiersUpdated { get; private set; }
+
     public RewardDriftDetectionBackgroundService(
         IServiceProvider serviceProvider,
         ILogger<RewardDriftDetectionBackgroundService> logger)
@@ -74,10 +83,16 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
     {
         _logger.LogInformation("Starting scheduled drift detection run");
 
+        LastRunStartedAtUtc = DateTime.UtcNow;
+
         using var scope = _serviceProvider.CreateScope();
 
         try
         {
+            int membersAdded = 0;
+            int assignmentsRevoked = 0;
+            int tiersUpdated = 0;
+
             // Run Patreon drift detection
             var patreonDriftService = scope.ServiceProvider.GetService<PatreonDriftDetectionService>();
             if (patreonDriftService != null)
@@ -99,6 +114,10 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
                         {
                             _logger.LogInformation("Starting automatic drift synchronization. DryRun: {DryRun}", _syncDryRun);
                             var syncResult = await patreonDriftService.SyncDrift(patreonResult, _syncDryRun);
+
+                            membersAdded = syncResult.MembersAdded;
+                            assignmentsRevoked = syncResult.AssignmentsRevoked;
+                            tiersUpdated = syncResult.TiersUpdated;
 
                             if (syncResult.Success)
                             {
@@ -143,10 +162,21 @@ public class RewardDriftDetectionBackgroundService : BackgroundService
             // }
 
             _logger.LogInformation("Scheduled drift detection run completed");
+
+            LastRunCompletedAtUtc = DateTime.UtcNow;
+            LastRunSucceeded = true;
+            LastRunErrorMessage = null;
+            LastRunMembersAdded = membersAdded;
+            LastRunAssignmentsRevoked = assignmentsRevoked;
+            LastRunTiersUpdated = tiersUpdated;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during scheduled drift detection");
+
+            LastRunCompletedAtUtc = DateTime.UtcNow;
+            LastRunSucceeded = false;
+            LastRunErrorMessage = ex.Message;
         }
     }
 }
