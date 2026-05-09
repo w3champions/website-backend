@@ -42,7 +42,7 @@ public class OrphanRewardService(
         var userIdsWithActivePmua = activeAssociations
             .Where(a => a.ProviderId == ProviderId && a.IsActive())
             .Select(a => a.UserId)
-            .ToHashSet();
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var allLinks = await _linkRepository.GetAll();
         var patreonUserIdToBattleTag = allLinks.ToDictionary(l => l.PatreonUserId, l => l.BattleTag);

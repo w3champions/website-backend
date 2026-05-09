@@ -173,6 +173,40 @@ public class OrphanRewardServiceTests
     }
 
     [Test]
+    public async Task DetectOrphans_DoesNotMisclassifyOrphan_WhenPmuaUserIdCasingDiffersFromRA()
+    {
+        // Regression test for PMUA-side casing. Pre-canonicalization, RA.UserId and
+        // PMUA.UserId could differ in casing. The case-insensitive lookup must protect
+        // healthy users from being flagged as orphan in this case.
+        var raUserId = "Player#1234";
+        var pmuaUserId = "player#1234";  // lowercase variant from legacy data
+
+        _mockAssignmentRepo.Setup(x => x.GetActiveAssignmentsByProvider("patreon"))
+            .ReturnsAsync(new List<RewardAssignment>
+            {
+                new RewardAssignment { Id = "ra-1", UserId = raUserId, RewardId = "r", ProviderId = "patreon", Status = RewardStatus.Active }
+            });
+
+        _mockAssociationRepo.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>
+            {
+                new ProductMappingUserAssociation
+                {
+                    Id = "pmua-1", UserId = pmuaUserId, ProductMappingId = "mapping-x",
+                    ProviderId = "patreon", Status = AssociationStatus.Active
+                }
+            });
+
+        _mockLinkRepo.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink>());
+        _mockPatreonApi.Setup(x => x.GetAllCampaignMembers()).ReturnsAsync(new List<PatreonMember>());
+
+        var report = await _service.DetectOrphans();
+
+        Assert.That(report.Entries, Is.Empty,
+            "User with case-different PMUA must not be flagged as orphan.");
+    }
+
+    [Test]
     public async Task RevokeOrphans_RevokesOnlyApprovedUsers_ThatStillAppearInFreshDetection()
     {
         var bubu = "Bubu#23550";
