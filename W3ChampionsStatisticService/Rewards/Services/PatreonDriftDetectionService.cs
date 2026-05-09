@@ -714,6 +714,22 @@ public class PatreonDriftDetectionService(
         var associations = userAssociationsLookup.GetValueOrDefault(extraAssignment.UserId) ?? new List<ProductMappingUserAssociation>();
         var activePatreonAssociations = associations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
+        if (!dryRun)
+        {
+            // Revoke RewardAssignments FIRST. If this throws, PMUAs stay active and
+            // the next drift cycle retries the whole user cleanly. Revoking PMUAs first
+            // would leave active RAs with no PMUA — recreating the orphan-RA bug.
+            var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(extraAssignment.UserId, RewardStatus.Active);
+            var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
+
+            foreach (var ra in patreonRAs)
+            {
+                await _rewardService.RevokeReward(ra.Id, $"Drift sync: {extraAssignment.Reason}");
+                Log.Information("Drift sync revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                    ra.Id, extraAssignment.UserId, ra.RewardId);
+            }
+        }
+
         foreach (var association in activePatreonAssociations)
         {
             association.Revoke($"Drift sync: {extraAssignment.Reason}");
@@ -723,20 +739,6 @@ public class PatreonDriftDetectionService(
         if (dryRun)
         {
             return;
-        }
-
-        // Directly revoke active patreon RewardAssignment rows for this user.
-        // The reconciler can NOT do this on its own because it iterates active PMUAs;
-        // by this point the user has zero active PMUAs and the reconciler would no-op.
-        // Mirror the proven path from PatreonAccountLinkRepository.HandleLinkRemoval.
-        var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(extraAssignment.UserId, RewardStatus.Active);
-        var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
-
-        foreach (var ra in patreonRAs)
-        {
-            await _rewardService.RevokeReward(ra.Id, $"Drift sync: {extraAssignment.Reason}");
-            Log.Information("Drift sync revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
-                ra.Id, extraAssignment.UserId, ra.RewardId);
         }
 
         // Reconciliation pass — covers any RA the direct revoke didn't catch
@@ -848,15 +850,9 @@ public class PatreonDriftDetectionService(
     /// </summary>
     private async Task DeactivateAllUserAssociations(string battleTag, List<ProductMappingUserAssociation> currentAssociations)
     {
-        foreach (var association in currentAssociations)
-        {
-            association.Revoke("Patron no longer active");
-            await _associationRepository.Update(association);
-        }
-
-        // Directly revoke active patreon RewardAssignment rows for this user.
-        // Mirror DeactivateUserAssociation; the reconciler alone cannot do this
-        // because it iterates active PMUAs and would see an empty set.
+        // Revoke RewardAssignments FIRST. If this throws, PMUAs stay active and
+        // the next sync cycle retries cleanly. Revoking PMUAs first would leave active
+        // RAs with no PMUA — recreating the orphan-RA bug.
         var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(battleTag, RewardStatus.Active);
         var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
 
@@ -865,6 +861,12 @@ public class PatreonDriftDetectionService(
             await _rewardService.RevokeReward(ra.Id, "Patron no longer active");
             Log.Information("SyncSingleUser revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
                 ra.Id, battleTag, ra.RewardId);
+        }
+
+        foreach (var association in currentAssociations)
+        {
+            association.Revoke("Patron no longer active");
+            await _associationRepository.Update(association);
         }
 
         // Reconciliation pass for completeness
