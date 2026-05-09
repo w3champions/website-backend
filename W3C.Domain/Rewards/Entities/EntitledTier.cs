@@ -6,11 +6,12 @@ namespace W3C.Domain.Rewards.Entities;
 /// display.
 /// </summary>
 /// <remarks>
-/// Wire format: external API responses currently project to
-/// <c>entitledTierIds: List&lt;string&gt;</c> via <c>.Select(t => t.TierId)</c>
-/// at the controller boundary to preserve compatibility with admin
-/// frontend tooling. Do not serialize this type directly to public APIs
-/// without intentional coordination.
+/// Serialized directly on the wire by AdminRewardController.GetPatreonMemberDetails,
+/// PatreonWebhookController webhook ack, and RewardDriftDetectionController
+/// missing-members payloads as <c>entitledTiers: [{tierId, amountCents, title}]</c>
+/// (camelCase via System.Text.Json defaults). The admin frontend consumes all three
+/// fields to render readable titles plus a tooltip with the tier ID and amount.
+/// Preserve this shape when modifying the type.
 /// </remarks>
 public class EntitledTier
 {
