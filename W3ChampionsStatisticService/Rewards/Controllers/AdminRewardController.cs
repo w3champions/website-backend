@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Common.Services;
+using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
 using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.DTOs;
@@ -277,7 +278,7 @@ public class AdminRewardController(
                 email = memberDetails.Email,
                 patronStatus = memberDetails.PatronStatus,
                 isActivePatron = memberDetails.IsActivePatron,
-                entitledTierIds = memberDetails.EntitledTiers?.Select(t => t.TierId).ToList() ?? new List<string>(),
+                entitledTiers = memberDetails.EntitledTiers ?? new List<EntitledTier>(),
                 lastChargeDate = memberDetails.LastChargeDate?.ToString("O"),
                 lastChargeStatus = memberDetails.LastChargeStatus,
                 pledgeRelationshipStart = memberDetails.PledgeRelationshipStart?.ToString("O"),

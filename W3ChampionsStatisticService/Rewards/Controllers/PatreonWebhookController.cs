@@ -76,7 +76,7 @@ public class PatreonWebhookController(
                 associationsProcessed = associationResults.Count,
                 rewardsAdded = reconciliationResult.RewardsAdded,
                 rewardsRevoked = reconciliationResult.RewardsRevoked,
-                entitledTiers = rewardEvent.EntitledTiers.Select(t => t.TierId).ToList()
+                entitledTiers = rewardEvent.EntitledTiers
             });
         }
         catch (Exception ex)
