@@ -128,6 +128,19 @@ public class WebsiteBackendHub(
         }
         req.Sender = jwtBattleTag;
 
+        var canonicalReceiver = await _battleTagResolver.ResolveCanonical(req.Receiver);
+        if (canonicalReceiver == null || canonicalReceiver != req.Receiver)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalReceiver == null ? "user_not_found" : "non_canonical_battletag",
+                input = req.Receiver,
+                canonical = canonicalReceiver
+            });
+            return;
+        }
+        req.Receiver = canonicalReceiver;
+
         try
         {
             PersonalSetting personalSetting =
@@ -175,6 +188,19 @@ public class WebsiteBackendHub(
         }
         req.Sender = jwtBattleTag;
 
+        var canonicalReceiver = await _battleTagResolver.ResolveCanonical(req.Receiver);
+        if (canonicalReceiver == null || canonicalReceiver != req.Receiver)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalReceiver == null ? "user_not_found" : "non_canonical_battletag",
+                input = req.Receiver,
+                canonical = canonicalReceiver
+            });
+            return;
+        }
+        req.Receiver = canonicalReceiver;
+
         try
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to delete.");
@@ -207,6 +233,19 @@ public class WebsiteBackendHub(
             return;
         }
         req.Receiver = jwtBattleTag;
+
+        var canonicalSender = await _battleTagResolver.ResolveCanonical(req.Sender);
+        if (canonicalSender == null || canonicalSender != req.Sender)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalSender == null ? "user_not_found" : "non_canonical_battletag",
+                input = req.Sender,
+                canonical = canonicalSender
+            });
+            return;
+        }
+        req.Sender = canonicalSender;
 
         try
         {
@@ -255,6 +294,19 @@ public class WebsiteBackendHub(
         }
         req.Receiver = jwtBattleTag;
 
+        var canonicalSender = await _battleTagResolver.ResolveCanonical(req.Sender);
+        if (canonicalSender == null || canonicalSender != req.Sender)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalSender == null ? "user_not_found" : "non_canonical_battletag",
+                input = req.Sender,
+                canonical = canonicalSender
+            });
+            return;
+        }
+        req.Sender = canonicalSender;
+
         try
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to deny.");
@@ -287,6 +339,19 @@ public class WebsiteBackendHub(
             return;
         }
         req.Receiver = jwtBattleTag;
+
+        var canonicalSender = await _battleTagResolver.ResolveCanonical(req.Sender);
+        if (canonicalSender == null || canonicalSender != req.Sender)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalSender == null ? "user_not_found" : "non_canonical_battletag",
+                input = req.Sender,
+                canonical = canonicalSender
+            });
+            return;
+        }
+        req.Sender = canonicalSender;
 
         try
         {
@@ -324,6 +389,20 @@ public class WebsiteBackendHub(
         {
             return;
         }
+
+        var canonicalBattleTag = await _battleTagResolver.ResolveCanonical(battleTag);
+        if (canonicalBattleTag == null || canonicalBattleTag != battleTag)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalBattleTag == null ? "user_not_found" : "non_canonical_battletag",
+                input = battleTag,
+                canonical = canonicalBattleTag
+            });
+            return;
+        }
+        battleTag = canonicalBattleTag;
+
         try
         {
             var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
@@ -351,6 +430,20 @@ public class WebsiteBackendHub(
         {
             return;
         }
+
+        var canonicalBattleTag = await _battleTagResolver.ResolveCanonical(battleTag);
+        if (canonicalBattleTag == null || canonicalBattleTag != battleTag)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalBattleTag == null ? "user_not_found" : "non_canonical_battletag",
+                input = battleTag,
+                canonical = canonicalBattleTag
+            });
+            return;
+        }
+        battleTag = canonicalBattleTag;
+
         try
         {
             var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
@@ -382,6 +475,20 @@ public class WebsiteBackendHub(
         {
             return;
         }
+
+        var canonicalFriend = await _battleTagResolver.ResolveCanonical(friend);
+        if (canonicalFriend == null || canonicalFriend != friend)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new
+            {
+                reason = canonicalFriend == null ? "user_not_found" : "non_canonical_battletag",
+                input = friend,
+                canonical = canonicalFriend
+            });
+            return;
+        }
+        friend = canonicalFriend;
+
         try
         {
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(currentUser);

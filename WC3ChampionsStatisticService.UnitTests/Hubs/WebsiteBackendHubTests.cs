@@ -121,6 +121,11 @@ public class WebsiteBackendHubTests
         mockCaller = new Mock<ISingleClientProxy>();
         mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
         _battleTagResolverMock = new Mock<IBattleTagResolver>();
+        // Default: every BattleTag resolves as canonical (returns input unchanged).
+        // Individual tests override this for non-canonical or not-found scenarios.
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical(It.IsAny<string>()))
+            .ReturnsAsync((string input) => input);
     }
 
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
@@ -362,6 +367,11 @@ public class WebsiteBackendHubTests
             .Setup(r => r.Find(It.IsAny<string>()))
             .ReturnsAsync(new PersonalSetting("Receiver#9999"));
 
+        // Receiver is canonical so canonicalization passes through
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("Receiver#9999"))
+            .ReturnsAsync("Receiver#9999");
+
         var hub = CreateHub(friendCommandHandlerMock.Object);
         SetHubContext(hub, "connection-id-1");
         connections.Add("connection-id-1", new WebSocketUser { BattleTag = "JwtUser#1234", ConnectionId = "connection-id-1" });
@@ -380,6 +390,62 @@ public class WebsiteBackendHubTests
         // Assert: Sender must be overwritten with JWT BattleTag
         Assert.IsNotNull(capturedReq, "CreateFriendRequest should have been called.");
         Assert.AreEqual("JwtUser#1234", capturedReq.Sender, "Sender must be overwritten with JWT BattleTag.");
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_NonCanonicalReceiver_EmitsErrorEvent()
+    {
+        // Arrange: client sends a non-canonical (lowercase) Receiver
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("torren#11438"))
+            .ReturnsAsync("TORREN#11438"); // canonical differs — non-canonical input
+
+        var hub = CreateHub(friendCommandHandler);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "Sender#1234", ConnectionId = "connection-id-1" });
+
+        var req = new FriendRequest("Sender#1234", "torren#11438");
+
+        // Act
+        await hub.MakeFriendRequest(req);
+
+        // Assert: error event emitted, handler NOT called
+        mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError", It.IsAny<object[]>(), default), Times.Once);
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_CanonicalReceiver_ProceedsToCreate()
+    {
+        // Arrange: client sends a properly-canonical Receiver
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.CreateFriendRequest(It.IsAny<FriendRequest>()))
+            .Returns(Task.CompletedTask);
+
+        personalSettingsRepo
+            .Setup(r => r.Find(It.IsAny<string>()))
+            .ReturnsAsync(new PersonalSetting("TORREN#11438"));
+
+        _battleTagResolverMock
+            .Setup(r => r.ResolveCanonical("TORREN#11438"))
+            .ReturnsAsync("TORREN#11438"); // canonical matches input — passes through
+
+        var hub = CreateHub(friendCommandHandlerMock.Object);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "Sender#1234", ConnectionId = "connection-id-1" });
+
+        var req = new FriendRequest("Sender#1234", "TORREN#11438");
+
+        // Act
+        await hub.MakeFriendRequest(req);
+
+        // Assert: CreateFriendRequest was called (flow proceeded)
+        friendCommandHandlerMock.Verify(h => h.CreateFriendRequest(It.IsAny<FriendRequest>()), Times.Once);
     }
 
     // Helper mock for HubCallerContext
