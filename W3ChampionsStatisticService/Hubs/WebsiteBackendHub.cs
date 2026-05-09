@@ -24,7 +24,8 @@ public class WebsiteBackendHub(
     IFriendRequestCache friendRequestCache,
     IPersonalSettingsRepository personalSettingsRepository,
     IFriendCommandHandler friendCommandHandler,
-    TracingService tracingService
+    TracingService tracingService,
+    IBattleTagResolver battleTagResolver
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -52,6 +53,7 @@ public class WebsiteBackendHub(
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly IFriendCommandHandler _friendCommandHandler = friendCommandHandler;
     private readonly TracingService _tracingService = tracingService;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
 
     [NoTrace]
@@ -118,6 +120,14 @@ public class WebsiteBackendHub(
 
     public async Task MakeFriendRequest(FriendRequest req)
     {
+        var jwtBattleTag = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (jwtBattleTag == null)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new { reason = "not_authenticated" });
+            return;
+        }
+        req.Sender = jwtBattleTag;
+
         try
         {
             PersonalSetting personalSetting =
@@ -157,6 +167,14 @@ public class WebsiteBackendHub(
 
     public async Task DeleteOutgoingFriendRequest(FriendRequest req)
     {
+        var jwtBattleTag = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (jwtBattleTag == null)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new { reason = "not_authenticated" });
+            return;
+        }
+        req.Sender = jwtBattleTag;
+
         try
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to delete.");
@@ -182,6 +200,14 @@ public class WebsiteBackendHub(
 
     public async Task AcceptIncomingFriendRequest(FriendRequest req)
     {
+        var jwtBattleTag = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (jwtBattleTag == null)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new { reason = "not_authenticated" });
+            return;
+        }
+        req.Receiver = jwtBattleTag;
+
         try
         {
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
@@ -221,6 +247,14 @@ public class WebsiteBackendHub(
 
     public async Task DenyIncomingFriendRequest(FriendRequest req)
     {
+        var jwtBattleTag = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (jwtBattleTag == null)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new { reason = "not_authenticated" });
+            return;
+        }
+        req.Receiver = jwtBattleTag;
+
         try
         {
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to deny.");
@@ -246,6 +280,14 @@ public class WebsiteBackendHub(
 
     public async Task BlockIncomingFriendRequest(FriendRequest req)
     {
+        var jwtBattleTag = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (jwtBattleTag == null)
+        {
+            await Clients.Caller.SendAsync("BattleTagResolutionError", new { reason = "not_authenticated" });
+            return;
+        }
+        req.Receiver = jwtBattleTag;
+
         try
         {
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);

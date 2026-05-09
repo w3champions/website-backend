@@ -104,6 +104,7 @@ public class WebsiteBackendHubTests
     private TracingService tracingService;
     private Mock<IHubCallerClients> mockClients;
     private Mock<ISingleClientProxy> mockCaller;
+    private Mock<IBattleTagResolver> _battleTagResolverMock;
 
     [SetUp]
     public void SetUp()
@@ -119,6 +120,7 @@ public class WebsiteBackendHubTests
         mockClients = new Mock<IHubCallerClients>();
         mockCaller = new Mock<ISingleClientProxy>();
         mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
+        _battleTagResolverMock = new Mock<IBattleTagResolver>();
     }
 
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
@@ -130,7 +132,8 @@ public class WebsiteBackendHubTests
             friendRequestCache,
             personalSettingsRepo.Object,
             friendCommandHandler,
-            tracingService
+            tracingService,
+            _battleTagResolverMock.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         return hub;
@@ -344,6 +347,39 @@ public class WebsiteBackendHubTests
                 Assert.That(reqInCache3, Is.Null);
                 break;
         }
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_OverwritesPayloadSenderWithJwtBattleTag()
+    {
+        // Arrange: attacker sends a request claiming to be "Impersonated#5678", but JWT says "JwtUser#1234"
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+
+        personalSettingsRepo
+            .Setup(r => r.Find(It.IsAny<string>()))
+            .ReturnsAsync(new PersonalSetting("Receiver#9999"));
+
+        var hub = CreateHub(friendCommandHandlerMock.Object);
+        SetHubContext(hub, "connection-id-1");
+        connections.Add("connection-id-1", new WebSocketUser { BattleTag = "JwtUser#1234", ConnectionId = "connection-id-1" });
+
+        FriendRequest capturedReq = null;
+        friendCommandHandlerMock
+            .Setup(h => h.CreateFriendRequest(It.IsAny<FriendRequest>()))
+            .Callback<FriendRequest>(r => capturedReq = r)
+            .Returns(Task.CompletedTask);
+
+        var req = new FriendRequest("Impersonated#5678", "Receiver#9999"); // attacker-controllable Sender
+
+        // Act
+        await hub.MakeFriendRequest(req);
+
+        // Assert: Sender must be overwritten with JWT BattleTag
+        Assert.IsNotNull(capturedReq, "CreateFriendRequest should have been called.");
+        Assert.AreEqual("JwtUser#1234", capturedReq.Sender, "Sender must be overwritten with JWT BattleTag.");
     }
 
     // Helper mock for HubCallerContext
