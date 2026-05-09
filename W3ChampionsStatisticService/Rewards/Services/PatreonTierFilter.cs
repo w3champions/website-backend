@@ -28,7 +28,7 @@ internal static class PatreonTierFilter
         if (tieredCandidates.Any())
         {
             var winner = tieredCandidates
-                .OrderByDescending(c => c.AmountCents ?? long.MinValue)
+                .OrderByDescending(c => c.AmountCents.HasValue && c.AmountCents.Value >= 0 ? c.AmountCents.Value : long.MinValue)
                 .ThenBy(c => c.TierId, System.StringComparer.Ordinal)
                 .First();
             result.Add(winner.TierId);

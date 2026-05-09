@@ -83,6 +83,22 @@ public class FilterTierIdsForProcessingTests
     }
 
     [Test]
+    public void NegativeAmount_LosesToNullAmount_TiebreakerByTierIdOrdinal()
+    {
+        // Both negative and null are mapped to long.MinValue; lexicographic tiebreaker decides.
+        var negative = new EntitledTierBuilder().WithTierId("Z-tier").WithAmountCents(-100).Build();
+        var nullAmt = new EntitledTierBuilder().WithTierId("A-tier").WithAmountCents(null).Build();
+        var mappings = new List<ProductMapping>
+        {
+            new ProductMapping { Type = ProductMappingType.Tiered, ProductProviders = new() { new ProductProviderPair { ProviderId = "patreon", ProductId = "Z-tier" } } },
+            new ProductMapping { Type = ProductMappingType.Tiered, ProductProviders = new() { new ProductProviderPair { ProviderId = "patreon", ProductId = "A-tier" } } },
+        };
+        var result = PatreonTierFilter.Filter(new List<EntitledTier> { negative, nullAmt }, mappings);
+        Assert.AreEqual(new[] { "A-tier" }, result.ToArray(),
+            "Negative and null amounts both rank as long.MinValue; lexicographic tiebreaker → A-tier wins.");
+    }
+
+    [Test]
     public void VeryLargeAmountCents_DoesNotOverflow()
     {
         var huge = new EntitledTierBuilder().WithTierId("6482051").WithAmountCents(long.MaxValue).Build();

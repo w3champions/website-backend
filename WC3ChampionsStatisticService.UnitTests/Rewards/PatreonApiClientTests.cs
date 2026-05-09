@@ -20,6 +20,9 @@ public class PatreonApiClientTests
     [TestCase("active_patron", "Paid", true)]
     [TestCase("active_patron", "Pending", true)] // NEW
     [TestCase("active_patron", "Free Trial", true)] // NEW
+    [TestCase("ACTIVE_PATRON", "PAID", true)] // casing-drift guard
+    [TestCase("active_patron", "paid", true)] // casing-drift guard
+    [TestCase("active_patron", "free trial", true)] // casing-drift guard
     [TestCase("active_patron", null, false)] // free-tier members have null status
     [TestCase("active_patron", "Declined", false)]
     [TestCase("active_patron", "Refunded", false)]

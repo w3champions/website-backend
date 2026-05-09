@@ -238,10 +238,13 @@ public class PatreonApiClient
 
     internal bool IsMemberForCampaign(PatreonApiData memberData)
     {
-        if (memberData.Relationships?.ContainsKey("campaign") != true)
+        if (memberData?.Relationships == null) return false;
+        if (!memberData.Relationships.TryGetValue("campaign", out var campaignRel) || campaignRel?.Data == null)
+        {
+            Log.Warning("Patreon identity-endpoint member {MemberId} missing 'campaign' relationship; rejecting.", memberData.Id);
             return false;
-        var campaignRelation = memberData.Relationships["campaign"];
-        if (campaignRelation?.Data is JsonElement campaignData)
+        }
+        if (campaignRel.Data is JsonElement campaignData)
             return campaignData.TryGetProperty("id", out var idProp) && idProp.GetString() == _campaignId;
         return false;
     }
@@ -361,10 +364,10 @@ public class PatreonMember
     public List<EntitledTier> EntitledTiers { get; set; } = new();
 
     public bool IsActivePatron =>
-        PatronStatus == "active_patron" &&
-        (LastChargeStatus == "Paid"
-            || LastChargeStatus == "Pending"
-            || LastChargeStatus == "Free Trial");
+        string.Equals(PatronStatus, "active_patron", StringComparison.OrdinalIgnoreCase) &&
+        (string.Equals(LastChargeStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(LastChargeStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(LastChargeStatus, "Free Trial", StringComparison.OrdinalIgnoreCase));
 }
 
 public class PatreonApiResponse
