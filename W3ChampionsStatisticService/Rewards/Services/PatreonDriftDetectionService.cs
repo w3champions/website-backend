@@ -435,17 +435,21 @@ public class PatreonDriftDetectionService(
                     // var syncEvent = CreateTierMismatchEvent(tierMismatch);
                     // syncResult.GeneratedEvents.Add(syncEvent);
 
+                    bool didWork = true;
                     if (!dryRun)
                     {
-                        await UpdateUserAssociationTiers(tierMismatch, dryRun);
+                        didWork = await UpdateUserAssociationTiers(tierMismatch, dryRun);
                     }
 
-                    syncResult.TiersUpdated++;
-                    Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} " +
-                        "(Patreon Filtered: [{PatreonFiltered}], Internal Filtered: [{InternalFiltered}])",
-                        dryRun ? "Would update" : "Updated", tierMismatch.UserId,
-                        string.Join(",", tierMismatch.PatreonTiersFiltered ?? tierMismatch.PatreonTiers ?? new List<string>()),
-                        string.Join(",", tierMismatch.InternalTiersFiltered ?? tierMismatch.InternalTiers ?? new List<string>()));
+                    if (didWork)
+                    {
+                        syncResult.TiersUpdated++;
+                        Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} " +
+                            "(Patreon Filtered: [{PatreonFiltered}], Internal Filtered: [{InternalFiltered}])",
+                            dryRun ? "Would update" : "Updated", tierMismatch.UserId,
+                            string.Join(",", tierMismatch.PatreonTiersFiltered ?? tierMismatch.PatreonTiers ?? new List<string>()),
+                            string.Join(",", tierMismatch.InternalTiersFiltered ?? tierMismatch.InternalTiers ?? new List<string>()));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -752,20 +756,39 @@ public class PatreonDriftDetectionService(
     /// <summary>
     /// Updates associations for tier mismatch
     /// </summary>
-    private async Task UpdateUserAssociationTiers(TierMismatch tierMismatch, bool dryRun = false)
+    /// <returns>true when tiers were actually updated; false when the actionable set already matches and no work was done.</returns>
+    private async Task<bool> UpdateUserAssociationTiers(TierMismatch tierMismatch, bool dryRun = false)
     {
         // Deactivate current associations
         var currentAssociations = await _associationRepository.GetProductMappingsByUserId(tierMismatch.UserId);
         var activePatreonAssociations = currentAssociations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
+
+        var existingActive = activePatreonAssociations.Select(a => a.ProviderProductId).ToHashSet();
+
+        var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
+
+        // Compute the actionable tier set: filtered Patreon tiers that have a corresponding ProductMapping.
+        // Tiers without a mapping (e.g., the campaign's free-follower tier) cannot be stored as PMUAs and
+        // would be skipped during create — so they should also be excluded from the comparison to avoid
+        // an infinite revoke+recreate churn loop.
+        var filteredTierIds = tierMismatch.PatreonTiersFiltered ?? new List<string>();
+        var actionableTiers = filteredTierIds
+            .Where(tid => allProductMappings.Any(pm =>
+                pm.ProductProviders.Any(pp => pp.ProviderId == ProviderId && pp.ProductId == tid)))
+            .ToHashSet();
+
+        if (existingActive.SetEquals(actionableTiers))
+        {
+            Log.Debug("Drift no-op for {UserId}: actionable tier set {Tiers} matches existing active.",
+                tierMismatch.UserId, string.Join(",", actionableTiers));
+            return false;
+        }
 
         foreach (var association in activePatreonAssociations)
         {
             association.Revoke("Tier mismatch - updating to match Patreon");
             await _associationRepository.Update(association);
         }
-
-        // Use the pre-filtered tiers from the TierMismatch that were already processed during detection
-        var filteredTierIds = tierMismatch.PatreonTiersFiltered ?? new List<string>();
 
         // Create new associations for current tiers
         foreach (var tierId in filteredTierIds)
@@ -781,6 +804,8 @@ public class PatreonDriftDetectionService(
             Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
                 tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
         }
+
+        return true;
     }
 
     /// <summary>
