@@ -132,6 +132,47 @@ public class OrphanRewardServiceTests
     }
 
     [Test]
+    public async Task DetectOrphans_DoesNotMisclassifyActivePatron_WhenLinkBattleTagCasingDiffersFromRA()
+    {
+        // Regression test: PatreonAccountLink.BattleTag and RewardAssignment.UserId may
+        // have differed historically (pre-canonicalization). The active-patron exclusion
+        // must be case-insensitive so we don't revoke a paying patron's rewards.
+        var raUserId = "Player#1234";
+        var linkBattleTag = "player#1234"; // lowercase variant from older data
+        var patreonUserId = "12345";
+
+        _mockAssignmentRepo.Setup(x => x.GetActiveAssignmentsByProvider("patreon"))
+            .ReturnsAsync(new List<RewardAssignment>
+            {
+                new RewardAssignment { Id = "ra-1", UserId = raUserId, RewardId = "r", ProviderId = "patreon", Status = RewardStatus.Active }
+            });
+
+        _mockAssociationRepo.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        _mockLinkRepo.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink> { new PatreonAccountLink(linkBattleTag, patreonUserId) });
+
+        _mockPatreonApi.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>
+            {
+                new PatreonMember
+                {
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "active_patron",
+                    LastChargeStatus = "Paid",
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "t1", AmountCents = 100 } }
+                }
+            });
+
+        var report = await _service.DetectOrphans();
+
+        // Should NOT be classified as orphan — they are an active patron despite casing mismatch
+        Assert.That(report.Entries, Is.Empty,
+            "Active patron with case-different BattleTag must not be flagged as orphan.");
+    }
+
+    [Test]
     public async Task RevokeOrphans_RevokesOnlyApprovedUsers_ThatStillAppearInFreshDetection()
     {
         var bubu = "Bubu#23550";

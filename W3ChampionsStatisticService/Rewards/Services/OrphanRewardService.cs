@@ -49,7 +49,7 @@ public class OrphanRewardService(
             .Where(m => m.IsActivePatron && !string.IsNullOrEmpty(m.PatreonUserId))
             .Select(m => patreonUserIdToBattleTag.GetValueOrDefault(m.PatreonUserId))
             .Where(bt => !string.IsNullOrEmpty(bt))
-            .ToHashSet();
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var grouped = activePatreonRAs.GroupBy(ra => ra.UserId);
         foreach (var group in grouped)
