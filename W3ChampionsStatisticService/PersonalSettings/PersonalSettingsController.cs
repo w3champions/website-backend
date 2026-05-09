@@ -15,29 +15,27 @@ namespace W3ChampionsStatisticService.PersonalSettings;
 public class PersonalSettingsController(
     IPersonalSettingsRepository personalSettingsRepository,
     PortraitCommandHandler commandHandler,
-    IdentityServiceClient identityServiceClient) : ControllerBase
+    IBattleTagResolver battleTagResolver) : ControllerBase
 {
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly PortraitCommandHandler _commandHandler = commandHandler;
-    private readonly IdentityServiceClient _identityServiceClient = identityServiceClient;
+    private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
 
     [HttpGet("{battleTag}")]
     public async Task<IActionResult> GetPersonalSetting(string battleTag)
     {
         try
         {
-            PersonalSetting setting = await _personalSettingsRepository.Load(battleTag);
-            if (setting == null)
-            {
-                // TEMP: migrated to ResolveCanonical in Task 3b
-                var userExists = await _identityServiceClient.ResolveCanonicalBattleTag(battleTag) != null;
-                if (!userExists)
-                {
-                    return NotFound($"Personal settings of {battleTag} not found.");
-                }
-                setting = new PersonalSetting(battleTag);
-            }
-            return Ok(setting);
+            var canonical = await _battleTagResolver.ResolveCanonical(battleTag);
+            if (canonical == null)
+                return NotFound();
+
+            // Load (not Find) so that RaceWins is populated from PlayerOverallStats,
+            // preserving the join that the original implementation provided.
+            // Returns null when the document doesn't exist yet; we hand back a
+            // default PersonalSetting in that case without writing to the DB.
+            var settings = await _personalSettingsRepository.Load(canonical);
+            return Ok(settings ?? new PersonalSetting(canonical));
         }
         catch
         {
