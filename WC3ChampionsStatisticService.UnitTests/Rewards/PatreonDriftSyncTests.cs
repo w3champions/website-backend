@@ -2370,6 +2370,21 @@ public class PatreonDriftSyncTests
         _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
             .ReturnsAsync(new List<ProductMappingUserAssociation>());
 
+        var productMapping = new ProductMapping
+        {
+            Id = "mapping-sync-123",
+            ProductName = "Tier 1",
+            RewardIds = new List<string> { "reward-1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tier1" }
+            }
+        };
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { productMapping });
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "tier1"))
+            .ReturnsAsync(new List<ProductMapping> { productMapping });
+
         _mockPatreonApiClient.Setup(x => x.GetCampaignMemberByPatreonUserId(patreonUserId))
             .ReturnsAsync(new PatreonMember
             {
@@ -2383,7 +2398,7 @@ public class PatreonDriftSyncTests
         var result = await _service.SyncSingleUser(userId, patreonUserId, "valid-token");
 
         // Assert — Update was called on the link with non-null LastSyncAt
-        Assert.That(result.Success, Is.True);
+        Assert.That(result.Success, Is.True, result.ErrorMessage);
         _mockPatreonLinkRepository.Verify(x => x.Update(It.Is<PatreonAccountLink>(l => l.LastSyncAt != null && l.BattleTag == userId)), Times.AtLeastOnce);
     }
 

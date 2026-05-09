@@ -205,6 +205,13 @@ public class PatreonAccountLinkRepository(
         }
     }
 
+    public async Task Update(PatreonAccountLink link)
+    {
+        var collection = CreateCollection<PatreonAccountLink>();
+        var filter = Builders<PatreonAccountLink>.Filter.Eq(x => x.Id, link.Id);
+        await collection.ReplaceOneAsync(filter, link);
+    }
+
     public Task<List<PatreonAccountLink>> GetAll()
     {
         return LoadAll<PatreonAccountLink>();

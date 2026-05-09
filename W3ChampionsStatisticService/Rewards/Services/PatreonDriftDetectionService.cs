@@ -601,6 +601,8 @@ public class PatreonDriftDetectionService(
 
                 Log.Information("[USER-SYNC] Successfully processed {SyncAction} for BattleTag {BattleTag} (PatreonUserId: {PatreonUserId})",
                     syncAction, battleTag, patreonUserId);
+
+                await TouchLastSync(battleTag);
             }
 
             return result;
@@ -1012,6 +1014,27 @@ public class PatreonDriftDetectionService(
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
             Log.Information("Reconciled rewards for user {UserId}: Added={Added}, Revoked={Revoked}",
                 battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+        }
+    }
+
+    /// <summary>
+    /// Refresh the PatreonAccountLink.LastSyncAt timestamp after a successful sync action for this user.
+    /// Non-fatal on failure — the main sync already succeeded; this is just bookkeeping.
+    /// </summary>
+    private async Task TouchLastSync(string battleTag)
+    {
+        try
+        {
+            var link = await _patreonLinkRepository.GetByBattleTag(battleTag);
+            if (link != null)
+            {
+                link.UpdateLastSync();
+                await _patreonLinkRepository.Update(link);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to update LastSyncAt for {BattleTag}", battleTag);
         }
     }
 }
