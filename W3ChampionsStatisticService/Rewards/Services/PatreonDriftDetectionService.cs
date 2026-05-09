@@ -854,7 +854,20 @@ public class PatreonDriftDetectionService(
             await _associationRepository.Update(association);
         }
 
-        // Immediately reconcile rewards to revoke all assignments
+        // Directly revoke active patreon RewardAssignment rows for this user.
+        // Mirror DeactivateUserAssociation; the reconciler alone cannot do this
+        // because it iterates active PMUAs and would see an empty set.
+        var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(battleTag, RewardStatus.Active);
+        var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
+
+        foreach (var ra in patreonRAs)
+        {
+            await _rewardService.RevokeReward(ra.Id, "Patron no longer active");
+            Log.Information("SyncSingleUser revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                ra.Id, battleTag, ra.RewardId);
+        }
+
+        // Reconciliation pass for completeness
         var eventIdPrefix = $"deactivate_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
         var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
         Log.Information("Reconciled rewards for deactivated patron {UserId}: Added={Added}, Revoked={Revoked}",

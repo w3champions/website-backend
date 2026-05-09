@@ -2061,4 +2061,52 @@ public class PatreonDriftSyncTests
         _mockRewardService.Verify(x => x.RevokeReward("ra-2", It.Is<string>(s => s.Contains("Drift sync"))), Times.Once);
         Assert.That(syncResult.AssignmentsRevoked, Is.GreaterThanOrEqualTo(1));
     }
+
+    [Test]
+    public async Task DeactivateAllUserAssociations_RevokesActivePatreonRewardAssignments()
+    {
+        // Arrange — user is going from active to "no longer active patron" via SyncSingleUser
+        var userId = "TestUser#1234";
+        var patreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-30)
+        };
+
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        var activeRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-silver-1", UserId = userId, RewardId = "reward-silver", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-silver" }
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(activeRAs);
+
+        // Patreon API says: not an active patron anymore (former patron)
+        _mockPatreonApiClient.Setup(x => x.GetCampaignMemberByPatreonUserId(patreonUserId))
+            .ReturnsAsync(new PatreonMember
+            {
+                PatreonUserId = patreonUserId,
+                PatronStatus = "former_patron",
+                LastChargeStatus = "Paid",
+                EntitledTiers = new List<EntitledTier>()
+            });
+
+        // Act
+        var result = await _service.SyncSingleUser(userId, patreonUserId, accessToken: "valid-token");
+
+        // Assert
+        Assert.That(result.Success, Is.True);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-silver-1", It.Is<string>(s => s.Contains("Patron no longer active") || s.Contains("Drift sync"))), Times.Once);
+    }
 }
