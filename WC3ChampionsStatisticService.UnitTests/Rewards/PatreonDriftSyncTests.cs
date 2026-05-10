@@ -24,6 +24,7 @@ public class PatreonDriftSyncTests
     private Mock<IProductMappingRepository> _mockProductMappingRepository;
     private Mock<IPatreonAccountLinkRepository> _mockPatreonLinkRepository;
     private Mock<IProductMappingReconciliationService> _mockReconciliationService;
+    private Mock<IRewardAssignmentRepository> _mockRewardAssignmentRepository;
     private Mock<IRewardService> _mockRewardService;
     private PatreonDriftDetectionService _service;
     private PatreonOAuthService _oauthService;
@@ -80,12 +81,20 @@ public class PatreonDriftSyncTests
         _mockAssociationRepository.Setup(x => x.Create(It.IsAny<ProductMappingUserAssociation>()))
             .ReturnsAsync((ProductMappingUserAssociation a) => a);
 
+        _mockRewardAssignmentRepository = new Mock<IRewardAssignmentRepository>();
+
+        // Default behavior: empty list (most tests will not exercise it; specific tests override)
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(It.IsAny<string>(), It.IsAny<RewardStatus>()))
+            .ReturnsAsync(new List<RewardAssignment>());
+
         _service = new PatreonDriftDetectionService(
             _mockPatreonApiClient.Object,
             _mockAssociationRepository.Object,
             _mockProductMappingRepository.Object,
             _mockPatreonLinkRepository.Object,
-            _mockReconciliationService.Object);
+            _mockReconciliationService.Object,
+            _mockRewardAssignmentRepository.Object,
+            _mockRewardService.Object);
 
         // Setup OAuth service for unlinking tests
         var mockHttpClient = new Mock<HttpClient>();
@@ -102,7 +111,15 @@ public class PatreonDriftSyncTests
     [Test]
     public async Task SyncDrift_DryRun_GeneratesEventsWithCorrectIdentification()
     {
-        // Arrange
+        // Arrange — "TestUser#789" has no PatreonTiersFiltered set (null), so the actionable
+        // tier set is empty and the no-op guard fires: TiersUpdated stays 0.
+        // This is correct: UpdateUserAssociationTiers is now always called (even in dry-run)
+        // and the no-op guard is consulted before any dryRun short-circuit.
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId("TestUser#789"))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
         var driftResult = new DriftDetectionResult
         {
             Timestamp = DateTime.UtcNow,
@@ -137,6 +154,8 @@ public class PatreonDriftSyncTests
                     PatreonMemberId = "member789",
                     PatreonTiers = new List<string> { "tier2" },
                     InternalTiers = new List<string> { "tier1" },
+                    // PatreonTiersFiltered intentionally null — simulates a mismatch entry
+                    // where no filtered tiers are set, so the actionable set is empty → no-op.
                     Reason = "Test tier mismatch"
                 }
             }
@@ -150,7 +169,9 @@ public class PatreonDriftSyncTests
         Assert.IsTrue(syncResult.WasDryRun);
         Assert.AreEqual(1, syncResult.MembersAdded);
         Assert.AreEqual(1, syncResult.AssignmentsRevoked);
-        Assert.AreEqual(1, syncResult.TiersUpdated);
+        // TiersUpdated is 0: the no-op guard fires before the dry-run short-circuit.
+        // PatreonTiersFiltered is null → actionableTiers is empty → matches existing empty set.
+        Assert.AreEqual(0, syncResult.TiersUpdated);
         Assert.AreEqual(0, syncResult.ProcessedAssociations.Count); // No processing in dry run
 
         // Verify no actual association changes happened in dry run
@@ -2002,5 +2023,484 @@ public class PatreonDriftSyncTests
         Assert.IsNotNull(mismatch, "Should report exactly one tier mismatch");
         Assert.AreEqual(canonicalBattleTag, mismatch.UserId,
             "TierMismatch.UserId must be the canonical-cased BattleTag (TORREN#11438), not lowercased");
+    }
+
+    [Test]
+    public async Task SyncDrift_ExtraAssignment_RevokesActivePatreonRewardAssignments()
+    {
+        // Arrange — user has 1 active patreon PMUA and 2 active patreon RAs
+        var userId = "Bubu#23550";
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-grandmaster",
+            ProviderId = "patreon",
+            ProviderProductId = "6482092",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddMonths(-3)
+        };
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
+        var activeRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-1", UserId = userId, RewardId = "reward-grandmaster-icon", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-2", UserId = userId, RewardId = "reward-grandmaster-portrait", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" }
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(activeRAs);
+
+        // No matching active patron in Patreon → user shows up as ExtraAssignment
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>());
+
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink>());
+
+        // Act
+        var driftResult = await _service.DetectDrift();
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert — both RA revocations actually happened
+        _mockRewardService.Verify(x => x.RevokeReward("ra-1", It.Is<string>(s => s.Contains("Drift sync"))), Times.Once);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-2", It.Is<string>(s => s.Contains("Drift sync"))), Times.Once);
+        Assert.That(syncResult.AssignmentsRevoked, Is.GreaterThanOrEqualTo(1));
+    }
+
+    [Test]
+    public async Task DeactivateAllUserAssociations_RevokesActivePatreonRewardAssignments()
+    {
+        // Arrange — user is going from active to "no longer active patron" via SyncSingleUser
+        var userId = "TestUser#1234";
+        var patreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-30)
+        };
+
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        var activeRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-silver-1", UserId = userId, RewardId = "reward-silver", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-silver" }
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(activeRAs);
+
+        // Patreon API says: not an active patron anymore (former patron)
+        _mockPatreonApiClient.Setup(x => x.GetCampaignMemberByPatreonUserId(patreonUserId))
+            .ReturnsAsync(new PatreonMember
+            {
+                PatreonUserId = patreonUserId,
+                PatronStatus = "former_patron",
+                LastChargeStatus = "Paid",
+                EntitledTiers = new List<EntitledTier>()
+            });
+
+        // Act
+        var result = await _service.SyncSingleUser(userId, patreonUserId, accessToken: "valid-token");
+
+        // Assert
+        Assert.That(result.Success, Is.True);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-silver-1", It.Is<string>(s => s.Contains("Patron no longer active") || s.Contains("Drift sync"))), Times.Once);
+    }
+
+    [Test]
+    public async Task DeactivateUserAssociation_WhenAllRevokesFail_SyncDoesNotThrow()
+    {
+        // When every RA revoke throws (all failing, none succeeding), SyncDrift must still
+        // not propagate the exception to the caller — per-RA failures are logged and swallowed.
+        // The PMUA revocation proceeds regardless, because we cannot leave PMUAs active if
+        // the user is no longer a patron. The orphan-RA risk from a partial failure is handled
+        // by the bidirectional reconciler on the next cycle.
+        var userId = "Bubu#23550";
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-grandmaster",
+            ProviderId = "patreon",
+            ProviderProductId = "6482092",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddMonths(-3)
+        };
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
+        var activeRA = new RewardAssignment
+        {
+            Id = "ra-1",
+            UserId = userId,
+            RewardId = "r1",
+            ProviderId = "patreon",
+            Status = RewardStatus.Active,
+            ProviderReference = "reconciliation:mapping-grandmaster"
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(new List<RewardAssignment> { activeRA });
+
+        // Simulate a transient failure on RA revoke
+        _mockRewardService.Setup(x => x.RevokeReward("ra-1", It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("simulated RA revoke failure"));
+
+        // No matching active patron in Patreon → user shows up as ExtraAssignment
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>());
+        _mockPatreonLinkRepository.Setup(x => x.GetAll())
+            .ReturnsAsync(new List<PatreonAccountLink>());
+
+        // Act — SyncDrift catches per-RA errors and continues; must not throw
+        var driftResult = await _service.DetectDrift();
+        Assert.DoesNotThrowAsync(async () =>
+            await _service.SyncDrift(driftResult, dryRun: false),
+            "SyncDrift must swallow per-RA errors and not propagate them to the caller.");
+    }
+
+    [Test]
+    public async Task DeactivateUserAssociation_OneRevokeThrows_RemainingRAsStillRevoked()
+    {
+        // Regression: a single failing RA must not halt the entire user's sync.
+        // Otherwise we leak partial state (some RAs revoked, others active, PMUAs untouched).
+        var userId = "PartialFailUser#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-grandmaster",
+            ProviderId = "patreon",
+            ProviderProductId = "6482092",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddMonths(-3)
+        };
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+        _mockAssociationRepository.Setup(x => x.Update(It.IsAny<ProductMappingUserAssociation>()))
+            .ReturnsAsync((ProductMappingUserAssociation a) => a);
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>());
+
+        var activeRAs = new List<RewardAssignment>
+        {
+            new RewardAssignment { Id = "ra-1", UserId = userId, RewardId = "r1", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-2", UserId = userId, RewardId = "r2", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" },
+            new RewardAssignment { Id = "ra-3", UserId = userId, RewardId = "r3", ProviderId = "patreon", Status = RewardStatus.Active, ProviderReference = "reconciliation:mapping-grandmaster" }
+        };
+        _mockRewardAssignmentRepository.Setup(x => x.GetByUserIdAndStatus(userId, RewardStatus.Active))
+            .ReturnsAsync(activeRAs);
+
+        // Middle RA throws; first and last should still be revoked
+        _mockRewardService.Setup(x => x.RevokeReward("ra-2", It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("simulated transient failure"));
+
+        // No matching active patron in Patreon → user shows up as ExtraAssignment
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers()).ReturnsAsync(new List<PatreonMember>());
+        _mockPatreonLinkRepository.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink>());
+
+        // Act
+        var driftResult = await _service.DetectDrift();
+        Assert.DoesNotThrowAsync(async () => await _service.SyncDrift(driftResult, dryRun: false),
+            "SyncDrift must not throw when one RA revoke fails — remaining RAs must still be processed.");
+
+        // Assert — ra-1 and ra-3 were revoked despite ra-2 throwing
+        _mockRewardService.Verify(x => x.RevokeReward("ra-1", It.IsAny<string>()), Times.Once);
+        _mockRewardService.Verify(x => x.RevokeReward("ra-3", It.IsAny<string>()), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateUserAssociationTiers_SkipsRevokeRecreate_WhenActionableTierSetEqualsExistingActive()
+    {
+        // Arrange — user has 1 active PMUA for tier 6482057. Patreon says they have tiers
+        // [15145463 (unmapped), 6482057 (mapped)]. Filter would produce [15145463, 6482057].
+        // Internal mapped set = {6482057}. Without the guard, the drift loops every cycle.
+        var userId = "ChurnLoopUser#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "mapping-silver",
+                    ProductName = "Silver",
+                    Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" } }
+                }
+                // mapping for 15145463 deliberately absent — unmapped/free tier
+            });
+
+        var tierMismatch = new TierMismatch
+        {
+            UserId = userId,
+            PatreonMemberId = "memberId",
+            PatreonTiers = new List<string> { "15145463", "6482057" },
+            PatreonTiersFiltered = new List<string> { "15145463", "6482057" },
+            InternalTiers = new List<string> { "6482057" },
+            InternalTiersFiltered = new List<string> { "6482057" }
+        };
+
+        var driftResult = new DriftDetectionResult
+        {
+            ProviderId = "patreon",
+            Timestamp = DateTime.UtcNow,
+            MismatchedTiers = new List<TierMismatch> { tierMismatch }
+        };
+
+        // Act
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert — no revoke or update of the existing PMUA
+        _mockAssociationRepository.Verify(x => x.Update(It.Is<ProductMappingUserAssociation>(a => a.Status == AssociationStatus.Revoked)), Times.Never);
+        Assert.That(syncResult.TiersUpdated, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task UpdateUserAssociationTiers_DryRun_NoOp_DoesNotIncrementTiersUpdated()
+    {
+        // Regression test: dry-run mode must respect the no-op guard so operators get
+        // an accurate preview of what a live sync would do. The 6 production users in
+        // the churn loop should report TiersUpdated=0 in a dry-run.
+        var userId = "ChurnLoopUser#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-1",
+            UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "mapping-silver",
+                    ProductName = "Silver",
+                    Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" } }
+                }
+                // 15145463 deliberately unmapped
+            });
+
+        var tierMismatch = new TierMismatch
+        {
+            UserId = userId,
+            PatreonMemberId = "memberId",
+            PatreonTiers = new List<string> { "15145463", "6482057" },
+            PatreonTiersFiltered = new List<string> { "15145463", "6482057" },
+            InternalTiers = new List<string> { "6482057" },
+            InternalTiersFiltered = new List<string> { "6482057" }
+        };
+
+        var driftResult = new DriftDetectionResult
+        {
+            ProviderId = "patreon",
+            Timestamp = DateTime.UtcNow,
+            MismatchedTiers = new List<TierMismatch> { tierMismatch }
+        };
+
+        // Act — dry-run
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: true);
+
+        // Assert — no DB writes, TiersUpdated == 0 (matches the live sync behavior, not the pre-fix overstatement)
+        _mockAssociationRepository.Verify(x => x.Update(It.IsAny<ProductMappingUserAssociation>()), Times.Never);
+        Assert.That(syncResult.TiersUpdated, Is.EqualTo(0),
+            "Dry-run must respect the no-op guard — otherwise operators get a misleading preview.");
+    }
+
+    [Test]
+    public async Task UpdateUserAssociationTiers_DryRun_RealTierUpgrade_DoesNotMutateDbButReportsCount()
+    {
+        // For a real tier change (Silver→Gold), dry-run should NOT mutate but SHOULD report TiersUpdated=1.
+        var userId = "Upgrader#1234";
+
+        var existingPmua = new ProductMappingUserAssociation
+        {
+            Id = "pmua-silver",
+            UserId = userId,
+            ProductMappingId = "mapping-silver",
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
+
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping>
+            {
+                new ProductMapping
+                {
+                    Id = "mapping-silver", ProductName = "Silver", Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482057" } }
+                },
+                new ProductMapping
+                {
+                    Id = "mapping-gold", ProductName = "Gold", Type = ProductMappingType.Tiered,
+                    ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482070" } }
+                }
+            });
+
+        var tierMismatch = new TierMismatch
+        {
+            UserId = userId,
+            PatreonMemberId = "memberId",
+            PatreonTiers = new List<string> { "6482070" },
+            PatreonTiersFiltered = new List<string> { "6482070" }, // Gold
+            InternalTiers = new List<string> { "6482057" },        // Silver
+            InternalTiersFiltered = new List<string> { "6482057" }
+        };
+
+        var driftResult = new DriftDetectionResult
+        {
+            ProviderId = "patreon",
+            Timestamp = DateTime.UtcNow,
+            MismatchedTiers = new List<TierMismatch> { tierMismatch }
+        };
+
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: true);
+
+        // Assert: NO DB writes (dry-run is honest), but TiersUpdated reports 1 (real change would happen)
+        _mockAssociationRepository.Verify(x => x.Update(It.IsAny<ProductMappingUserAssociation>()), Times.Never,
+            "Dry-run must not mutate DB even for real tier upgrades.");
+        Assert.That(syncResult.TiersUpdated, Is.EqualTo(1),
+            "Real tier upgrade should still be reported in dry-run.");
+    }
+
+    [Test]
+    public async Task SyncSingleUser_OnSuccess_UpdatesLastSyncOnAccountLink()
+    {
+        var userId = "TestUser#1234";
+        var patreonUserId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+        var existingLink = new PatreonAccountLink(userId, patreonUserId)
+        {
+            LastSyncAt = null
+        };
+        _mockPatreonLinkRepository.Setup(x => x.GetByPatreonUserId(patreonUserId)).ReturnsAsync(existingLink);
+
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        var productMapping = new ProductMapping
+        {
+            Id = "mapping-sync-123",
+            ProductName = "Tier 1",
+            RewardIds = new List<string> { "reward-1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tier1" }
+            }
+        };
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { productMapping });
+        _mockProductMappingRepository.Setup(x => x.GetByProviderAndProductId("patreon", "tier1"))
+            .ReturnsAsync(new List<ProductMapping> { productMapping });
+
+        _mockPatreonApiClient.Setup(x => x.GetCampaignMemberByPatreonUserId(patreonUserId))
+            .ReturnsAsync(new PatreonMember
+            {
+                PatreonUserId = patreonUserId,
+                PatronStatus = "active_patron",
+                LastChargeStatus = "Paid",
+                EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tier1", AmountCents = 100 } }
+            });
+
+        // Act
+        var result = await _service.SyncSingleUser(userId, patreonUserId, "valid-token");
+
+        // Assert — RefreshLastSyncAt was delegated to the repository (bookkeeping now owned by repo layer)
+        Assert.That(result.Success, Is.True, result.ErrorMessage);
+        _mockPatreonLinkRepository.Verify(x => x.RefreshLastSyncAt(userId), Times.AtLeastOnce);
+    }
+
+    [Test]
+    public async Task SyncDrift_AfterMissingMemberSync_UpdatesLastSync()
+    {
+        // Arrange — user is missing from internal but active patron
+        var userId = "Reactivating#1234";
+        var patreonUserId = "999";
+
+        _mockAssociationRepository.Setup(x => x.GetAll(AssociationStatus.Active))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+        _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
+            .ReturnsAsync(new List<ProductMappingUserAssociation>());
+
+        var productMapping = new ProductMapping
+        {
+            Id = "mapping-drift-123",
+            ProductName = "Tier 1",
+            RewardIds = new List<string> { "reward-1" },
+            ProductProviders = new List<ProductProviderPair>
+            {
+                new ProductProviderPair { ProviderId = "patreon", ProductId = "tier1" }
+            }
+        };
+        _mockProductMappingRepository.Setup(x => x.GetByProviderId("patreon"))
+            .ReturnsAsync(new List<ProductMapping> { productMapping });
+
+        var link = new PatreonAccountLink(userId, patreonUserId) { LastSyncAt = null };
+        _mockPatreonLinkRepository.Setup(x => x.GetAll()).ReturnsAsync(new List<PatreonAccountLink> { link });
+
+        _mockPatreonApiClient.Setup(x => x.GetAllCampaignMembers())
+            .ReturnsAsync(new List<PatreonMember>
+            {
+                new PatreonMember
+                {
+                    PatreonUserId = patreonUserId,
+                    PatronStatus = "active_patron",
+                    LastChargeStatus = "Paid",
+                    EntitledTiers = new List<EntitledTier> { new EntitledTier { TierId = "tier1", AmountCents = 100 } }
+                }
+            });
+
+        var driftResult = await _service.DetectDrift();
+        var syncResult = await _service.SyncDrift(driftResult, dryRun: false);
+
+        // Assert — RefreshLastSyncAt was delegated to the repository (bookkeeping now owned by repo layer)
+        _mockPatreonLinkRepository.Verify(x => x.RefreshLastSyncAt(userId), Times.AtLeastOnce);
     }
 }

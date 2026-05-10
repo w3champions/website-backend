@@ -205,6 +205,30 @@ public class PatreonAccountLinkRepository(
         }
     }
 
+    public async Task Update(PatreonAccountLink link)
+    {
+        var collection = CreateCollection<PatreonAccountLink>();
+        var filter = Builders<PatreonAccountLink>.Filter.Eq(x => x.Id, link.Id);
+        await collection.ReplaceOneAsync(filter, link);
+    }
+
+    public async Task RefreshLastSyncAt(string battleTag)
+    {
+        try
+        {
+            var link = await GetByBattleTag(battleTag);
+            if (link != null)
+            {
+                link.UpdateLastSync();
+                await Update(link);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to refresh LastSyncAt for {BattleTag}", battleTag);
+        }
+    }
+
     public Task<List<PatreonAccountLink>> GetAll()
     {
         return LoadAll<PatreonAccountLink>();

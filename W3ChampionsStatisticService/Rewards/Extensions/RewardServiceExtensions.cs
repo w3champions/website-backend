@@ -52,8 +52,13 @@ public static class RewardServiceExtensions
         services.AddInterceptedTransient<IProductMappingReconciliationService, ProductMappingReconciliationService>();
         services.AddInterceptedTransient<ProductMappingReconciliationService>();
 
-        // Background services
-        services.AddHostedService<RewardDriftDetectionBackgroundService>();
+        // Orphan reward cleanup service
+        services.AddInterceptedTransient<IOrphanRewardService, OrphanRewardService>();
+
+        // Background services — registered as singleton so the controller can resolve
+        // the same running instance to read last-run state properties.
+        services.AddSingleton<RewardDriftDetectionBackgroundService>();
+        services.AddHostedService(sp => sp.GetRequiredService<RewardDriftDetectionBackgroundService>());
 
         return services;
     }

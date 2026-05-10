@@ -27,6 +27,7 @@ public class AdminRewardController(
     IProductMappingReconciliationService reconciliationService,
     PatreonDriftDetectionService patreonDriftService,
     IAuditLogService auditLogService,
+    IOrphanRewardService orphanRewardService,
     ILogger<AdminRewardController> logger) : ControllerBase
 {
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
@@ -35,6 +36,7 @@ public class AdminRewardController(
     private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
     private readonly PatreonDriftDetectionService _patreonDriftService = patreonDriftService;
     private readonly IAuditLogService _auditLogService = auditLogService;
+    private readonly IOrphanRewardService _orphanRewardService = orphanRewardService;
     private readonly ILogger<AdminRewardController> _logger = logger;
 
     [HttpGet("summary")]
@@ -439,4 +441,68 @@ public class AdminRewardController(
             return StatusCode(500, new { error = "Bulk reconciliation failed", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Lists active patreon RewardAssignments that have no backing active PMUA and whose
+    /// owner is not an active patron. Read-only — does not revoke. Pair with the POST
+    /// orphan-rewards/revoke endpoint to clean up after manual review.
+    /// </summary>
+    [HttpGet("orphan-rewards")]
+    [CheckIfBattleTagIsAdmin]
+    public async Task<IActionResult> GetOrphanRewards()
+    {
+        try
+        {
+            var report = await _orphanRewardService.DetectOrphans();
+            return Ok(report);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to detect orphan rewards");
+            return StatusCode(500, new { error = "orphan_detection_failed", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Revokes orphan RewardAssignments for the specified user IDs. The service re-detects
+    /// orphans against fresh data internally — any user in the request body who is no longer
+    /// an orphan at execution time is skipped and surfaced in the result.
+    /// </summary>
+    [HttpPost("orphan-rewards/revoke")]
+    [CheckIfBattleTagIsAdmin]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> RevokeOrphanRewards(
+        [FromBody] OrphanRevocationRequest request,
+        [FromQuery] string actingPlayer)
+    {
+        if (request?.UserIds == null || request.UserIds.Count == 0)
+        {
+            return BadRequest(new { error = "user_ids_required" });
+        }
+
+        try
+        {
+            var result = await _orphanRewardService.RevokeOrphans(request.UserIds.ToHashSet(), actingPlayer);
+            await _auditLogService.LogAdminAction(actingPlayer, "ORPHAN_REWARDS_REVOKE", "RewardAssignment", "bulk",
+                metadata: new Dictionary<string, object>
+                {
+                    ["request_user_count"] = request.UserIds.Count,
+                    ["users_touched"] = result.UsersTouched,
+                    ["assignments_revoked"] = result.AssignmentsRevoked,
+                    ["skipped_count"] = result.SkippedUserIdsNotInLatestDetection.Count,
+                    ["error_count"] = result.Errors.Count
+                });
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to revoke orphan rewards");
+            return StatusCode(500, new { error = "orphan_revocation_failed", details = ex.Message });
+        }
+    }
+}
+
+public class OrphanRevocationRequest
+{
+    public List<string> UserIds { get; set; } = new();
 }

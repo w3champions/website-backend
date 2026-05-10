@@ -7,6 +7,7 @@ using W3C.Domain.Rewards.Abstractions;
 using W3C.Domain.Rewards.Constants;
 using W3C.Domain.Rewards.Entities;
 using W3C.Domain.Rewards.Repositories;
+using W3C.Domain.Rewards.ValueObjects;
 using W3ChampionsStatisticService.Rewards.Providers.Patreon;
 
 namespace W3ChampionsStatisticService.Rewards.Services;
@@ -16,13 +17,17 @@ public class PatreonDriftDetectionService(
     IProductMappingUserAssociationRepository associationRepository,
     IProductMappingRepository productMappingRepository,
     IPatreonAccountLinkRepository patreonLinkRepository,
-    IProductMappingReconciliationService reconciliationService)
+    IProductMappingReconciliationService reconciliationService,
+    IRewardAssignmentRepository rewardAssignmentRepository,
+    IRewardService rewardService)
 {
     private readonly PatreonApiClient _patreonApiClient = patreonApiClient;
     private readonly IProductMappingUserAssociationRepository _associationRepository = associationRepository;
     private readonly IProductMappingRepository _productMappingRepository = productMappingRepository;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepository = patreonLinkRepository;
     private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
+    private readonly IRewardAssignmentRepository _rewardAssignmentRepository = rewardAssignmentRepository;
+    private readonly IRewardService _rewardService = rewardService;
     private const string ProviderId = "patreon";
 
     public async Task<DriftDetectionResult> DetectDrift()
@@ -426,21 +431,17 @@ public class PatreonDriftDetectionService(
             {
                 try
                 {
-                    // We no longer create events - we work directly with associations
-                    // var syncEvent = CreateTierMismatchEvent(tierMismatch);
-                    // syncResult.GeneratedEvents.Add(syncEvent);
+                    var didWork = await UpdateUserAssociationTiers(tierMismatch, dryRun);
 
-                    if (!dryRun)
+                    if (didWork)
                     {
-                        await UpdateUserAssociationTiers(tierMismatch, dryRun);
+                        syncResult.TiersUpdated++;
+                        Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} " +
+                            "(Patreon Filtered: [{PatreonFiltered}], Internal Filtered: [{InternalFiltered}])",
+                            dryRun ? "Would update" : "Updated", tierMismatch.UserId,
+                            string.Join(",", tierMismatch.PatreonTiersFiltered ?? tierMismatch.PatreonTiers ?? new List<string>()),
+                            string.Join(",", tierMismatch.InternalTiersFiltered ?? tierMismatch.InternalTiers ?? new List<string>()));
                     }
-
-                    syncResult.TiersUpdated++;
-                    Log.Information("[DRIFT-SYNC] {Action} tiers for user: {UserId} " +
-                        "(Patreon Filtered: [{PatreonFiltered}], Internal Filtered: [{InternalFiltered}])",
-                        dryRun ? "Would update" : "Updated", tierMismatch.UserId,
-                        string.Join(",", tierMismatch.PatreonTiersFiltered ?? tierMismatch.PatreonTiers ?? new List<string>()),
-                        string.Join(",", tierMismatch.InternalTiersFiltered ?? tierMismatch.InternalTiers ?? new List<string>()));
                 }
                 catch (Exception ex)
                 {
@@ -600,6 +601,8 @@ public class PatreonDriftDetectionService(
 
                 Log.Information("[USER-SYNC] Successfully processed {SyncAction} for BattleTag {BattleTag} (PatreonUserId: {PatreonUserId})",
                     syncAction, battleTag, patreonUserId);
+
+                await _patreonLinkRepository.RefreshLastSyncAt(battleTag);
             }
 
             return result;
@@ -697,6 +700,8 @@ public class PatreonDriftDetectionService(
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
             Log.Information("Reconciled rewards for missing member {PatreonUserId} -> {UserId}: Added={Added}, Revoked={Revoked}",
                 missingMember.PatreonUserId, battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+
+            await _patreonLinkRepository.RefreshLastSyncAt(battleTag);
         }
     }
 
@@ -709,30 +714,89 @@ public class PatreonDriftDetectionService(
         var associations = userAssociationsLookup.GetValueOrDefault(extraAssignment.UserId) ?? new List<ProductMappingUserAssociation>();
         var activePatreonAssociations = associations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
 
+        if (!dryRun)
+        {
+            // Revoke RewardAssignments FIRST. If this throws, PMUAs stay active and
+            // the next drift cycle retries the whole user cleanly. Revoking PMUAs first
+            // would leave active RAs with no PMUA — recreating the orphan-RA bug.
+            var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(extraAssignment.UserId, RewardStatus.Active);
+            var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
+
+            foreach (var ra in patreonRAs)
+            {
+                try
+                {
+                    await _rewardService.RevokeReward(ra.Id, $"Drift sync: {extraAssignment.Reason}");
+                    Log.Information("Drift sync revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                        ra.Id, extraAssignment.UserId, ra.RewardId);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Drift sync failed to revoke RewardAssignment {AssignmentId} for {UserId} — continuing with remaining RAs",
+                        ra.Id, extraAssignment.UserId);
+                }
+            }
+        }
+
+        if (dryRun)
+        {
+            return;
+        }
+
         foreach (var association in activePatreonAssociations)
         {
             association.Revoke($"Drift sync: {extraAssignment.Reason}");
             await _associationRepository.Update(association);
         }
 
-        // Immediately reconcile rewards for this user to revoke assignments (unless dry run)
-        if (!dryRun)
-        {
-            var eventIdPrefix = $"extra_assignment_removal_{DateTime.UtcNow:yyyyMMddHHmmss}_{extraAssignment.UserId}";
-            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(extraAssignment.UserId, eventIdPrefix, dryRun: false);
-            Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
-                extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
-        }
+        // Reconciliation pass — covers any RA the direct revoke didn't catch
+        // (e.g., legacy webhook-created RAs with a different match key).
+        var eventIdPrefix = $"extra_assignment_removal_{DateTime.UtcNow:yyyyMMddHHmmss}_{extraAssignment.UserId}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(extraAssignment.UserId, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for extra assignment user {UserId}: Added={Added}, Revoked={Revoked}",
+            extraAssignment.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+
+        await _patreonLinkRepository.RefreshLastSyncAt(extraAssignment.UserId);
     }
 
     /// <summary>
-    /// Updates associations for tier mismatch
+    /// Updates associations for tier mismatch.
+    /// Consults the no-op guard FIRST (before checking dryRun) so that dry-run callers
+    /// receive an accurate preview of what a live sync would do.
     /// </summary>
-    private async Task UpdateUserAssociationTiers(TierMismatch tierMismatch, bool dryRun = false)
+    /// <returns>true when tiers would be (or were) updated; false when the actionable set already
+    /// matches the existing active set and no work is needed.</returns>
+    private async Task<bool> UpdateUserAssociationTiers(TierMismatch tierMismatch, bool dryRun = false)
     {
-        // Deactivate current associations
         var currentAssociations = await _associationRepository.GetProductMappingsByUserId(tierMismatch.UserId);
         var activePatreonAssociations = currentAssociations.Where(a => a.ProviderId == ProviderId && a.IsActive()).ToList();
+
+        var existingActive = activePatreonAssociations.Select(a => a.ProviderProductId).ToHashSet();
+
+        var allProductMappings = await _productMappingRepository.GetByProviderId(ProviderId);
+
+        // Compute the actionable tier set: filtered Patreon tiers that have a corresponding ProductMapping.
+        // Tiers without a mapping (e.g., the campaign's free-follower tier) cannot be stored as PMUAs and
+        // would be skipped during create — so they should also be excluded from the comparison to avoid
+        // an infinite revoke+recreate churn loop.
+        var filteredTierIds = tierMismatch.PatreonTiersFiltered ?? new List<string>();
+        var actionableTiers = filteredTierIds
+            .Where(tid => allProductMappings.Any(pm =>
+                pm.ProductProviders.Any(pp => pp.ProviderId == ProviderId && pp.ProductId == tid)))
+            .ToHashSet();
+
+        if (existingActive.SetEquals(actionableTiers))
+        {
+            Log.Debug("Drift no-op for {UserId}: actionable tier set {Tiers} matches existing active.",
+                tierMismatch.UserId, string.Join(",", actionableTiers.OrderBy(t => t, System.StringComparer.Ordinal)));
+            return false;
+        }
+
+        if (dryRun)
+        {
+            // Real change would occur but we are in preview mode — report it without mutating.
+            return true;
+        }
 
         foreach (var association in activePatreonAssociations)
         {
@@ -740,23 +804,21 @@ public class PatreonDriftDetectionService(
             await _associationRepository.Update(association);
         }
 
-        // Use the pre-filtered tiers from the TierMismatch that were already processed during detection
-        var filteredTierIds = tierMismatch.PatreonTiersFiltered ?? new List<string>();
-
-        // Create new associations for current tiers
+        // filteredTierIds may include unmapped tiers (e.g., the campaign's free-follower tier).
+        // CreateOrUpdateAssociation skips those silently when no mapping exists.
         foreach (var tierId in filteredTierIds)
         {
-            await CreateOrUpdateAssociation(tierMismatch.UserId, tierId, "drift_sync_tier_update", skipReconciliation: dryRun);
+            await CreateOrUpdateAssociation(tierMismatch.UserId, tierId, "drift_sync_tier_update", skipReconciliation: false);
         }
 
-        // Immediately reconcile rewards for this user (unless dry run)
-        if (!dryRun)
-        {
-            var eventIdPrefix = $"tier_mismatch_fix_{DateTime.UtcNow:yyyyMMddHHmmss}_{tierMismatch.UserId}";
-            var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(tierMismatch.UserId, eventIdPrefix, dryRun: false);
-            Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
-                tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
-        }
+        var eventIdPrefix = $"tier_mismatch_fix_{DateTime.UtcNow:yyyyMMddHHmmss}_{tierMismatch.UserId}";
+        var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(tierMismatch.UserId, eventIdPrefix, dryRun: false);
+        Log.Information("Reconciled rewards for tier mismatch user {UserId}: Added={Added}, Revoked={Revoked}",
+            tierMismatch.UserId, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
+
+        await _patreonLinkRepository.RefreshLastSyncAt(tierMismatch.UserId);
+
+        return true;
     }
 
     /// <summary>
@@ -826,13 +888,34 @@ public class PatreonDriftDetectionService(
     /// </summary>
     private async Task DeactivateAllUserAssociations(string battleTag, List<ProductMappingUserAssociation> currentAssociations)
     {
+        // Revoke RewardAssignments FIRST. If this throws, PMUAs stay active and
+        // the next sync cycle retries cleanly. Revoking PMUAs first would leave active
+        // RAs with no PMUA — recreating the orphan-RA bug.
+        var activeRAs = await _rewardAssignmentRepository.GetByUserIdAndStatus(battleTag, RewardStatus.Active);
+        var patreonRAs = activeRAs.Where(a => a.ProviderId == ProviderId).ToList();
+
+        foreach (var ra in patreonRAs)
+        {
+            try
+            {
+                await _rewardService.RevokeReward(ra.Id, "Patron no longer active");
+                Log.Information("SyncSingleUser revoked RewardAssignment {AssignmentId} for {UserId} (reward {RewardId})",
+                    ra.Id, battleTag, ra.RewardId);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "SyncSingleUser failed to revoke RewardAssignment {AssignmentId} for {UserId} — continuing with remaining RAs",
+                    ra.Id, battleTag);
+            }
+        }
+
         foreach (var association in currentAssociations)
         {
             association.Revoke("Patron no longer active");
             await _associationRepository.Update(association);
         }
 
-        // Immediately reconcile rewards to revoke all assignments
+        // Reconciliation pass for completeness
         var eventIdPrefix = $"deactivate_{DateTime.UtcNow:yyyyMMddHHmmss}_{battleTag}";
         var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(battleTag, eventIdPrefix, dryRun: false);
         Log.Information("Reconciled rewards for deactivated patron {UserId}: Added={Added}, Revoked={Revoked}",
@@ -955,6 +1038,7 @@ public class PatreonDriftDetectionService(
                 battleTag, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);
         }
     }
+
 }
 
 public class DriftDetectionResult

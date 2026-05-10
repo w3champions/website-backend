@@ -32,6 +32,17 @@ public interface IPatreonAccountLinkRepository
     Task<List<PatreonAccountLink>> GetAll();
 
     /// <summary>
+    /// Update an existing account link in-place (e.g. to refresh LastSyncAt)
+    /// </summary>
+    Task Update(PatreonAccountLink link);
+
+    /// <summary>
+    /// Refreshes the LastSyncAt timestamp on the link matching this battleTag, if one exists.
+    /// No-op if no link exists. Failures are caught + logged internally — never throws to caller.
+    /// </summary>
+    Task RefreshLastSyncAt(string battleTag);
+
+    /// <summary>
     /// Delete account link by ID
     /// </summary>
     Task Delete(string id);

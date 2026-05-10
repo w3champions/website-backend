@@ -22,12 +22,14 @@ public class PatreonWebhookController(
     IProductMappingUserAssociationRepository associationRepository,
     IProductMappingRepository productMappingRepository,
     IProductMappingReconciliationService reconciliationService,
+    IPatreonAccountLinkRepository patreonAccountLinkRepository,
     ILogger<PatreonWebhookController> logger) : ControllerBase
 {
     private readonly PatreonProvider _patreonProvider = patreonProvider;
     private readonly IProductMappingUserAssociationRepository _associationRepository = associationRepository;
     private readonly IProductMappingRepository _productMappingRepository = productMappingRepository;
     private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
+    private readonly IPatreonAccountLinkRepository _patreonAccountLinkRepository = patreonAccountLinkRepository;
     private readonly ILogger<PatreonWebhookController> _logger = logger;
 
     [HttpPost]
@@ -66,6 +68,9 @@ public class PatreonWebhookController(
 
             // Immediately trigger user-specific reconciliation to create/update reward assignments
             var reconciliationResult = await _reconciliationService.ReconcileUserAssociations(rewardEvent.UserId, rewardEvent.EventId, dryRun: false);
+
+            // Refresh LastSyncAt on the account link — non-fatal bookkeeping
+            await _patreonAccountLinkRepository.RefreshLastSyncAt(rewardEvent.UserId);
 
             _logger.LogInformation("Successfully processed Patreon webhook for user {UserId} with {TierCount} entitled tiers. Associations: {AssociationCount}, Rewards Added: {Added}, Rewards Revoked: {Revoked}",
                 rewardEvent.UserId, rewardEvent.EntitledTiers.Count, associationResults.Count, reconciliationResult.RewardsAdded, reconciliationResult.RewardsRevoked);

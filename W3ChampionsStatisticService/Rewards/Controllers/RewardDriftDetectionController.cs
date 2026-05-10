@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using W3ChampionsStatisticService.Rewards.BackgroundServices;
 using W3ChampionsStatisticService.Rewards.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.Common.Services;
@@ -15,11 +16,13 @@ namespace W3ChampionsStatisticService.Rewards.Controllers;
 public class RewardDriftDetectionController(
     PatreonDriftDetectionService patreonDriftService,
     IAuditLogService auditLogService,
-    ILogger<RewardDriftDetectionController> logger) : ControllerBase
+    ILogger<RewardDriftDetectionController> logger,
+    RewardDriftDetectionBackgroundService backgroundService) : ControllerBase
 {
     private readonly PatreonDriftDetectionService _patreonDriftService = patreonDriftService;
     private readonly IAuditLogService _auditLogService = auditLogService;
     private readonly ILogger<RewardDriftDetectionController> _logger = logger;
+    private readonly RewardDriftDetectionBackgroundService _backgroundService = backgroundService;
 
     [HttpPost("patreon/detect")]
     [CheckIfBattleTagIsAdmin]
@@ -127,14 +130,40 @@ public class RewardDriftDetectionController(
     [CheckIfBattleTagIsAdmin]
     public IActionResult GetDriftDetectionStatus()
     {
-        // This could be enhanced to return last run time, next scheduled run, etc.
+        static bool ParseBool(string envVar, bool defaultValue)
+        {
+            var raw = Environment.GetEnvironmentVariable(envVar);
+            if (string.IsNullOrEmpty(raw)) return defaultValue;
+            return bool.TryParse(raw, out var parsed) ? parsed : defaultValue;
+        }
+
+        var detectionEnabled = ParseBool("REWARDS_DRIFT_DETECTION_ENABLED", false);
+        var autoSyncEnabled = ParseBool("REWARDS_DRIFT_AUTO_SYNC_ENABLED", false);
+        var dryRun = ParseBool("REWARDS_DRIFT_SYNC_DRY_RUN", true);
+        var ignoredTierIds = Environment.GetEnvironmentVariable("REWARDS_PATREON_IGNORED_TIER_IDS") ?? "";
+
+        var snapshot = _backgroundService.LastRun;
+
         return Ok(new
         {
-            enabled = true, // This should come from configuration
+            detectionEnabled,
+            autoSyncEnabled,
+            dryRun,
+            ignoredTierIds,
+            lastRun = snapshot == null ? null : (object)new
+            {
+                startedAtUtc = snapshot.StartedAtUtc?.ToString("O"),
+                completedAtUtc = snapshot.CompletedAtUtc?.ToString("O"),
+                succeeded = snapshot.Succeeded,
+                errorMessage = snapshot.ErrorMessage,
+                membersAdded = snapshot.MembersAdded,
+                assignmentsRevoked = snapshot.AssignmentsRevoked,
+                tiersUpdated = snapshot.TiersUpdated
+            },
             providers = new[]
             {
                 new { provider = "patreon", available = true },
-                new { provider = "kofi", available = false } // Not implemented yet
+                new { provider = "kofi", available = false }
             }
         });
     }
