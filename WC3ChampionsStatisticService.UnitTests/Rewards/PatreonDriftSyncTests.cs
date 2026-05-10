@@ -2241,10 +2241,13 @@ public class PatreonDriftSyncTests
 
         var existingPmua = new ProductMappingUserAssociation
         {
-            Id = "pmua-1", UserId = userId,
+            Id = "pmua-1",
+            UserId = userId,
             ProductMappingId = "mapping-silver",
-            ProviderId = "patreon", ProviderProductId = "6482057",
-            Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-1)
         };
         _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
             .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
@@ -2274,7 +2277,8 @@ public class PatreonDriftSyncTests
 
         var driftResult = new DriftDetectionResult
         {
-            ProviderId = "patreon", Timestamp = DateTime.UtcNow,
+            ProviderId = "patreon",
+            Timestamp = DateTime.UtcNow,
             MismatchedTiers = new List<TierMismatch> { tierMismatch }
         };
 
@@ -2296,10 +2300,13 @@ public class PatreonDriftSyncTests
 
         var existingPmua = new ProductMappingUserAssociation
         {
-            Id = "pmua-1", UserId = userId,
+            Id = "pmua-1",
+            UserId = userId,
             ProductMappingId = "mapping-silver",
-            ProviderId = "patreon", ProviderProductId = "6482057",
-            Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-1)
         };
         _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
             .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
@@ -2329,7 +2336,8 @@ public class PatreonDriftSyncTests
 
         var driftResult = new DriftDetectionResult
         {
-            ProviderId = "patreon", Timestamp = DateTime.UtcNow,
+            ProviderId = "patreon",
+            Timestamp = DateTime.UtcNow,
             MismatchedTiers = new List<TierMismatch> { tierMismatch }
         };
 
@@ -2350,10 +2358,13 @@ public class PatreonDriftSyncTests
 
         var existingPmua = new ProductMappingUserAssociation
         {
-            Id = "pmua-silver", UserId = userId,
+            Id = "pmua-silver",
+            UserId = userId,
             ProductMappingId = "mapping-silver",
-            ProviderId = "patreon", ProviderProductId = "6482057",
-            Status = AssociationStatus.Active, AssignedAt = DateTime.UtcNow.AddDays(-1)
+            ProviderId = "patreon",
+            ProviderProductId = "6482057",
+            Status = AssociationStatus.Active,
+            AssignedAt = DateTime.UtcNow.AddDays(-1)
         };
         _mockAssociationRepository.Setup(x => x.GetProductMappingsByUserId(userId))
             .ReturnsAsync(new List<ProductMappingUserAssociation> { existingPmua });
@@ -2375,7 +2386,8 @@ public class PatreonDriftSyncTests
 
         var tierMismatch = new TierMismatch
         {
-            UserId = userId, PatreonMemberId = "memberId",
+            UserId = userId,
+            PatreonMemberId = "memberId",
             PatreonTiers = new List<string> { "6482070" },
             PatreonTiersFiltered = new List<string> { "6482070" }, // Gold
             InternalTiers = new List<string> { "6482057" },        // Silver
@@ -2384,7 +2396,8 @@ public class PatreonDriftSyncTests
 
         var driftResult = new DriftDetectionResult
         {
-            ProviderId = "patreon", Timestamp = DateTime.UtcNow,
+            ProviderId = "patreon",
+            Timestamp = DateTime.UtcNow,
             MismatchedTiers = new List<TierMismatch> { tierMismatch }
         };
 

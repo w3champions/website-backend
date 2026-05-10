@@ -565,7 +565,8 @@ public class ProductMappingReconciliationTests
         _mockProductMappingService.Setup(x => x.GetProductMappingById("mapping-bronze"))
             .ReturnsAsync(new ProductMapping
             {
-                Id = "mapping-bronze", ProductName = "Bronze",
+                Id = "mapping-bronze",
+                ProductName = "Bronze",
                 RewardIds = new List<string> { "reward-bronze" },
                 ProductProviders = new List<ProductProviderPair> { new ProductProviderPair { ProviderId = "patreon", ProductId = "6482051" } }
             });
