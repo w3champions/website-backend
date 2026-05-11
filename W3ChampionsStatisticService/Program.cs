@@ -2,8 +2,6 @@ using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
@@ -236,8 +234,6 @@ builder.Services.AddRewardServices();
 builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();
 builder.Services.AddHostedService<W3ChampionsStatisticService.Services.BackgroundTasks.UpdateMaxMmrService>();
 
-builder.Services.AddDirectoryBrowser();
-
 string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
 
 if (startHandlers == "true")
@@ -334,29 +330,6 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "w3champions");
-});
-
-// Configure log path
-var fileProvider = new PhysicalFileProvider(System.IO.Path.Combine(app.Environment.ContentRootPath, "Logs"));
-var requestPath = "/logs";
-
-// Allow serving files with .log extension
-var contentTypeProvider = new FileExtensionContentTypeProvider();
-contentTypeProvider.Mappings[".log"] = "text/plain";
-
-// Serve files in the logs directory
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = fileProvider,
-    ContentTypeProvider = contentTypeProvider,
-    RequestPath = requestPath
-});
-
-// Allow browsing the logs directory
-app.UseDirectoryBrowser(new DirectoryBrowserOptions
-{
-    FileProvider = fileProvider,
-    RequestPath = requestPath
 });
 
 // Add SignalR FriendHub
