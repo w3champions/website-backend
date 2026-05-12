@@ -292,7 +292,8 @@ var app = builder.Build();
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-    KnownNetworks = { new IPNetwork(IPAddress.Parse("172.18.0.0"), 16) } // Docker network
+    KnownNetworks = { new IPNetwork(IPAddress.Parse("172.18.0.0"), 16) }, // Docker network
+    KnownProxies = { IPAddress.Parse("212.60.5.180") } // Russia gateway
 });
 app.Use(
     (context, next) =>
