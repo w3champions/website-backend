@@ -156,6 +156,39 @@ public static class TestDtoHelper
         return fakeEvent;
     }
 
+    public static MatchFinishedEvent CreateFakeLegionTdEvent()
+    {
+        var fakeEvent = CreateFakeEvent();
+        fakeEvent.match.gameMode = GameMode.GM_LTW_FFA;
+        fakeEvent.match.map = "Maps/frozenthrone/community/(4)LegionTD.w3x";
+
+        // Add a map-forced computer to result.players (mirrors flo's LegionTD creep slot).
+        fakeEvent.result.players.Add(new PlayerBlizzard
+        {
+            battleTag = "",
+            isAi = true,
+            teamIndex = 2,
+            playerColor = 11,
+            toonName = "Computer (Insane)",
+            won = false,
+            heroes = new List<Hero>(),
+            overallScore = new OverallScore(),
+            unitScore = new UnitScore(),
+            heroScore = new HeroScore(),
+            resourceScore = new ResourceScore(),
+        });
+
+        // Also add a phantom PlayerMMrChange with no battleTag to exercise match.players filtering.
+        fakeEvent.match.players.Add(new PlayerMMrChange
+        {
+            battleTag = "",
+            team = 2,
+            won = false,
+        });
+
+        return fakeEvent;
+    }
+
     private static void CreateMatchTeam(MatchFinishedEvent fakeEvent, bool won, int team, int playersPerTeam)
     {
         CreateMatchTeamWithRanking(fakeEvent, won, team, playersPerTeam);
