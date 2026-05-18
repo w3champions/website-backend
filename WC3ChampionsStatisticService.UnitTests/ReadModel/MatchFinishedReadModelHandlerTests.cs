@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using Moq;
@@ -136,5 +137,48 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         Assert.AreEqual(fakeEvent3.match.id, matches[0].MatchId);
         Assert.AreEqual(fakeEvent3.Id, matches[0].Id);
         mockTrackingService.Verify(m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task InnerHandlerReceivesNoAiPlayers()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeLegionTdEvent();
+        fakeEvent.match.state = EMatchState.FINISHED;
+        fakeEvent.WasFakeEvent = false;
+
+        var mockEvents = new Mock<IMatchEventRepository>();
+        mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync([fakeEvent])
+            .ReturnsAsync([]);
+
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
+        var versionRepository = new VersionRepository(MongoClient);
+
+        MatchFinishedEvent receivedEvent = null;
+        var innerHandlerMock = new Mock<IMatchFinishedReadModelHandler>();
+        innerHandlerMock
+            .Setup(h => h.Update(It.IsAny<MatchFinishedEvent>()))
+            .Callback<MatchFinishedEvent>(e => receivedEvent = e)
+            .Returns(Task.CompletedTask);
+
+        var handler = new MatchFinishedReadModelHandler<IMatchFinishedReadModelHandler>(
+            mockEvents.Object,
+            versionRepository,
+            innerHandlerMock.Object,
+            mockTrackingService.Object);
+
+        await handler.Update();
+
+        Assert.That(receivedEvent, Is.Not.Null);
+        Assert.That(receivedEvent.result.players.Any(p => p.isAi), Is.False,
+            "Inner handler must not see AI players in result.players");
+        Assert.That(receivedEvent.result.players.Any(p => string.IsNullOrEmpty(p.battleTag)), Is.False,
+            "Inner handler must not see players with empty battleTag in result.players");
+        Assert.That(receivedEvent.match.players.Any(p => string.IsNullOrEmpty(p.battleTag)), Is.False,
+            "Inner handler must not see players with empty battleTag in match.players");
+        Assert.That(receivedEvent.result.players.Count, Is.EqualTo(2),
+            "Human players must be preserved in result.players after stripping");
+        Assert.That(receivedEvent.match.players.Count, Is.EqualTo(2),
+            "Human players must be preserved in match.players after stripping");
     }
 }
