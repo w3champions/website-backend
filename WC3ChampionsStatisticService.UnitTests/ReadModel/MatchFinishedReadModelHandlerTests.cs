@@ -176,5 +176,9 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             "Inner handler must not see players with empty battleTag in result.players");
         Assert.That(receivedEvent.match.players.Any(p => string.IsNullOrEmpty(p.battleTag)), Is.False,
             "Inner handler must not see players with empty battleTag in match.players");
+        Assert.That(receivedEvent.result.players.Count, Is.EqualTo(2),
+            "Human players must be preserved in result.players after stripping");
+        Assert.That(receivedEvent.match.players.Count, Is.EqualTo(2),
+            "Human players must be preserved in match.players after stripping");
     }
 }

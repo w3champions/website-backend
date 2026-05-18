@@ -162,6 +162,13 @@ public static class TestDtoHelper
         fakeEvent.match.gameMode = GameMode.GM_LTW_FFA;
         fakeEvent.match.map = "Maps/frozenthrone/community/(4)LegionTD.w3x";
 
+        // AutoFixture marks generated PlayerBlizzard entries as AI; force them human
+        // so the added map-forced AI below is the only computer in the fixture.
+        foreach (var p in fakeEvent.result.players)
+        {
+            p.isAi = false;
+        }
+
         // Add a map-forced computer to result.players (mirrors flo's LegionTD creep slot).
         fakeEvent.result.players.Add(new PlayerBlizzard
         {
