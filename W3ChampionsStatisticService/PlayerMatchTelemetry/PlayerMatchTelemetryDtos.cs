@@ -16,19 +16,33 @@ namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 // binding uses JsonSerializerDefaults.Web (PropertyNamingPolicy =
 // CamelCase, PropertyNameCaseInsensitive = true), so PascalCase C#
 // properties map automatically without [JsonPropertyName] attributes.
-public record PlayerMatchTelemetrySubmissionDto(
-    [property: Range(1L, long.MaxValue)] long GameId,
-    DateTime MatchWallStart,
-    [property: Range(0u, uint.MaxValue)] uint GameLengthMs,
-    DateTime? CrashedAt,
-    [property: Required, EnumDataType(typeof(Transport))] Transport ConnectionType,
-    [property: Required] List<DisconnectEventDto> DisconnectEvents,
-    [property: Required] ActionLatencyAggregateDto ActionLatencyAggregate,
-    [property: Required] ActionLatencyTimeseriesDto ActionLatencyTimeseries,
-    uint DroppedUnmatchedCount
-) : IValidatableObject
+public record PlayerMatchTelemetrySubmissionDto : IValidatableObject
 {
     private const int MaxTimeseriesBuckets = 28_800;
+
+    [Range(1L, long.MaxValue)]
+    public long GameId { get; init; }
+
+    public DateTime MatchWallStart { get; init; }
+
+    public uint GameLengthMs { get; init; }
+
+    public DateTime? CrashedAt { get; init; }
+
+    [EnumDataType(typeof(Transport))]
+    public Transport ConnectionType { get; init; }
+
+    [Required]
+    public List<DisconnectEventDto> DisconnectEvents { get; init; } = new();
+
+    [Required]
+    public ActionLatencyAggregateDto ActionLatencyAggregate { get; init; } = new(0, 0, 0, 0, 0, 0, 0);
+
+    [Required]
+    public ActionLatencyTimeseriesDto ActionLatencyTimeseries { get; init; } =
+        new(Array.Empty<uint>(), Array.Empty<ushort>(), Array.Empty<byte>());
+
+    public uint DroppedUnmatchedCount { get; init; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

@@ -26,19 +26,21 @@ public class PlayerMatchTelemetryControllerTests
     }
 
     private static PlayerMatchTelemetrySubmissionDto MakeSubmission(int buckets = 3)
-        => new(
-            GameId: 12345,
-            MatchWallStart: new DateTime(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc),
-            GameLengthMs: 600_000,
-            CrashedAt: null,
-            ConnectionType: Transport.QUIC,
-            DisconnectEvents: new List<DisconnectEventDto>(),
-            ActionLatencyAggregate: new ActionLatencyAggregateDto(100, 20, 40, 200, 400, 60, 30),
-            ActionLatencyTimeseries: new ActionLatencyTimeseriesDto(
+        => new()
+        {
+            GameId = 12345,
+            MatchWallStart = new DateTime(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc),
+            GameLengthMs = 600_000,
+            CrashedAt = null,
+            ConnectionType = Transport.QUIC,
+            DisconnectEvents = new List<DisconnectEventDto>(),
+            ActionLatencyAggregate = new ActionLatencyAggregateDto(100, 20, 40, 200, 400, 60, 30),
+            ActionLatencyTimeseries = new ActionLatencyTimeseriesDto(
                 Enumerable.Range(0, buckets).Select(i => (uint)(i * 1000)).ToArray(),
                 Enumerable.Repeat<ushort>(30, buckets).ToArray(),
                 Enumerable.Repeat<byte>(5, buckets).ToArray()),
-            DroppedUnmatchedCount: 0);
+            DroppedUnmatchedCount = 0,
+        };
 
     [Test]
     public async Task Submit_calls_repository_with_authenticated_battletag()

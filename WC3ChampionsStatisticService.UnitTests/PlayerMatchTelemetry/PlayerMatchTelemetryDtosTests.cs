@@ -19,19 +19,21 @@ public class PlayerMatchTelemetryDtosTests
     }
 
     private static PlayerMatchTelemetrySubmissionDto MakeValid()
-        => new(
-            GameId: 12345,
-            MatchWallStart: new DateTime(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc),
-            GameLengthMs: 600_000,
-            CrashedAt: null,
-            ConnectionType: Transport.QUIC,
-            DisconnectEvents: new List<DisconnectEventDto>(),
-            ActionLatencyAggregate: new ActionLatencyAggregateDto(100, 20, 40, 200, 400, 60, 30),
-            ActionLatencyTimeseries: new ActionLatencyTimeseriesDto(
+        => new()
+        {
+            GameId = 12345,
+            MatchWallStart = new DateTime(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc),
+            GameLengthMs = 600_000,
+            CrashedAt = null,
+            ConnectionType = Transport.QUIC,
+            DisconnectEvents = new List<DisconnectEventDto>(),
+            ActionLatencyAggregate = new ActionLatencyAggregateDto(100, 20, 40, 200, 400, 60, 30),
+            ActionLatencyTimeseries = new ActionLatencyTimeseriesDto(
                 new uint[] { 0, 1000, 2000 },
                 new ushort[] { 30, 42, 38 },
                 new byte[] { 5, 7, 6 }),
-            DroppedUnmatchedCount: 0);
+            DroppedUnmatchedCount = 0,
+        };
 
     [Test]
     public void Valid_dto_passes_validation()
