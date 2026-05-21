@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using NUnit.Framework;
 using W3ChampionsStatisticService.PlayerMatchTelemetry;
@@ -98,5 +100,47 @@ public class PlayerMatchTelemetryJsonBindingTests
         """;
         Assert.Throws<JsonException>(() =>
             JsonSerializer.Deserialize<ActionLatencyTimeseriesDto>(bad, WebDefaults));
+    }
+
+    [Test]
+    public void Response_dto_serializes_with_extended_json_v2_bindata_shape()
+    {
+        // Regression for the GET /api/player-match-telemetry/by-game/{gameId} 500-error
+        // bug: the raw domain model has BsonBinaryData fields that System.Text.Json
+        // cannot serialize. The response DTO must emit MongoDB Extended JSON v2
+        // envelopes — { "$binary": { "base64": "...", "subType": "00" } } — so the
+        // website's IBinData decoder can parse them.
+        var dto = new PlayerMatchTelemetryResponseDto(
+            GameId: 1L,
+            MatchWallStart: DateTime.UtcNow,
+            BucketMs: 1000,
+            Players: new List<PlayerMatchTelemetryEntryResponseDto>
+            {
+                new(
+                    BattleTag: "Alice#1234",
+                    FloPlayerId: null,
+                    ConnectionType: "QUIC",
+                    ServerNodeId: null,
+                    ServerNodeName: null,
+                    GameLengthMs: 100,
+                    Crashed: false,
+                    Disconnects: new DisconnectsDto(0, 0, 0),
+                    ActionLatencyAggregate: new ActionLatencyAggregateDto(1, 1, 1, 1, 1, 1, 1),
+                    BucketCount: 1,
+                    GameTimeOffsetsMs: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 0, 0, 0, 0 }), "00")),
+                    MeansMs: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 5, 0 }), "00")),
+                    SampleCounts: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 1 }), "00")),
+                    DroppedUnmatchedCount: 0,
+                    SubmittedAt: DateTime.UtcNow
+                )
+            },
+            CreatedAt: DateTime.UtcNow,
+            ExpiresAt: DateTime.UtcNow.AddDays(90)
+        );
+
+        var json = JsonSerializer.Serialize(dto);
+        Assert.That(json, Does.Contain("\"$binary\":{\"base64\":"), "BinData envelopes must serialize with $binary wrapper");
+        Assert.That(json, Does.Contain("\"sample_counts\":{\"$binary\":"), "sample_counts is on the entry, not nested");
+        Assert.That(json, Does.Contain("\"game_id\":1"));
     }
 }

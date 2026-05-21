@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NUnit.Framework;
 using W3ChampionsStatisticService.PlayerMatchTelemetry;
-using PlayerMatchTelemetryDoc = W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetry;
 
 namespace WC3ChampionsStatisticService.Tests.PlayerMatchTelemetry;
 
@@ -46,17 +45,18 @@ public class PlayerMatchTelemetryEndToEndTests : IntegrationTestBase
 
         var getResult = await _controller.GetByGame(54321);
         Assert.That(getResult, Is.InstanceOf<OkObjectResult>());
-        var doc = (PlayerMatchTelemetryDoc)((OkObjectResult)getResult).Value!;
+        var doc = (PlayerMatchTelemetryResponseDto)((OkObjectResult)getResult).Value!;
         Assert.That(doc.GameId, Is.EqualTo(54321));
         Assert.That(doc.Players.Count, Is.EqualTo(1));
 
         var p = doc.Players[0];
         Assert.That(p.BattleTag, Is.EqualTo("Alice#1234"));
         Assert.That(p.BucketCount, Is.EqualTo(3));
-        Assert.That(p.GameTimeOffsetsMs.Bytes.Length, Is.EqualTo(12)); // 3 × uint32
-        Assert.That(p.MeansMs.Bytes.Length, Is.EqualTo(6));            // 3 × uint16
-        Assert.That(p.SampleCounts.Bytes.Length, Is.EqualTo(3));       // 3 × uint8
-        Assert.That(p.SampleCounts.Bytes.SequenceEqual(new byte[] { 5, 7, 6 }), Is.True);
+        // BinData envelopes: base64 strings whose decoded length matches the
+        // little-endian byte counts (3 × uint32 = 12, 3 × uint16 = 6, 3 × uint8 = 3).
+        Assert.That(Convert.FromBase64String(p.GameTimeOffsetsMs.Binary.Base64).Length, Is.EqualTo(12));
+        Assert.That(Convert.FromBase64String(p.MeansMs.Binary.Base64).Length, Is.EqualTo(6));
+        Assert.That(p.SampleCounts.Binary.Base64, Is.EqualTo(Convert.ToBase64String(new byte[] { 5, 7, 6 })));
     }
 
     [Test]
@@ -66,7 +66,7 @@ public class PlayerMatchTelemetryEndToEndTests : IntegrationTestBase
         await _controller.Submit(sub, "Alice#1234");
         await _controller.Submit(sub, "Bob#5678");
         var getResult = await _controller.GetByGame(54322);
-        var doc = (PlayerMatchTelemetryDoc)((OkObjectResult)getResult).Value!;
+        var doc = (PlayerMatchTelemetryResponseDto)((OkObjectResult)getResult).Value!;
         Assert.That(doc.Players.Count, Is.EqualTo(2));
         Assert.That(doc.Players.Select(p => p.BattleTag).ToHashSet(),
             Is.EquivalentTo(new[] { "Alice#1234", "Bob#5678" }));

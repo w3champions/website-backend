@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MongoDB.Bson;
 
 namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
@@ -125,3 +127,106 @@ public sealed class ByteArrayAsJsonNumberArrayConverter : JsonConverter<byte[]>
         writer.WriteEndArray();
     }
 }
+
+// ─────────────────────────────────────────────────────────
+// Response DTOs for GET /api/player-match-telemetry/by-game/{gameId}
+// Projection of the domain model with BsonBinaryData fields
+// exposed as MongoDB Extended JSON v2 envelope shapes
+// ({ "$binary": { "base64": "...", "subType": "00" } }) so the
+// website's IBinData decoder can parse them. Returning the raw
+// domain model crashes System.Text.Json because BsonBinaryData has
+// no serializer registered — that bug is what this DTO layer fixes.
+// ─────────────────────────────────────────────────────────
+
+public record BinDataEnvelopeDto(
+    [property: JsonPropertyName("$binary")] BinDataPayloadDto Binary
+);
+
+public record BinDataPayloadDto(
+    [property: JsonPropertyName("base64")] string Base64,
+    [property: JsonPropertyName("subType")] string SubType
+);
+
+#nullable enable
+public record PlayerMatchTelemetryEntryResponseDto(
+    [property: JsonPropertyName("battle_tag")] string BattleTag,
+    [property: JsonPropertyName("flo_player_id")] int? FloPlayerId,
+    [property: JsonPropertyName("connection_type")] string ConnectionType,
+    [property: JsonPropertyName("server_node_id")] int? ServerNodeId,
+    [property: JsonPropertyName("server_node_name")] string? ServerNodeName,
+    [property: JsonPropertyName("game_length_ms")] uint GameLengthMs,
+    [property: JsonPropertyName("crashed")] bool Crashed,
+    [property: JsonPropertyName("disconnects")] DisconnectsDto Disconnects,
+    [property: JsonPropertyName("action_latency_aggregate")] ActionLatencyAggregateDto ActionLatencyAggregate,
+    [property: JsonPropertyName("bucket_count")] int BucketCount,
+    [property: JsonPropertyName("game_time_offsets_ms")] BinDataEnvelopeDto GameTimeOffsetsMs,
+    [property: JsonPropertyName("means_ms")] BinDataEnvelopeDto MeansMs,
+    [property: JsonPropertyName("sample_counts")] BinDataEnvelopeDto SampleCounts,
+    [property: JsonPropertyName("dropped_unmatched_count")] uint DroppedUnmatchedCount,
+    [property: JsonPropertyName("submitted_at")] DateTime SubmittedAt
+);
+
+public record PlayerMatchTelemetryResponseDto(
+    [property: JsonPropertyName("game_id")] long GameId,
+    [property: JsonPropertyName("match_wall_start")] DateTime MatchWallStart,
+    [property: JsonPropertyName("bucket_ms")] int BucketMs,
+    [property: JsonPropertyName("players")] List<PlayerMatchTelemetryEntryResponseDto> Players,
+    [property: JsonPropertyName("created_at")] DateTime CreatedAt,
+    [property: JsonPropertyName("expires_at")] DateTime ExpiresAt
+);
+
+public static class PlayerMatchTelemetryMapper
+{
+    public static PlayerMatchTelemetryResponseDto ToResponseDto(PlayerMatchTelemetry doc)
+    {
+        return new PlayerMatchTelemetryResponseDto(
+            GameId: doc.GameId,
+            MatchWallStart: doc.MatchWallStart,
+            BucketMs: doc.BucketMs,
+            Players: doc.Players.Select(ToEntryResponseDto).ToList(),
+            CreatedAt: doc.CreatedAt,
+            ExpiresAt: doc.ExpiresAt
+        );
+    }
+
+    private static PlayerMatchTelemetryEntryResponseDto ToEntryResponseDto(PlayerMatchTelemetryEntry e)
+    {
+        return new PlayerMatchTelemetryEntryResponseDto(
+            BattleTag: e.BattleTag,
+            FloPlayerId: e.FloPlayerId,
+            ConnectionType: e.ConnectionType,
+            ServerNodeId: e.ServerNodeId,
+            ServerNodeName: e.ServerNodeName,
+            GameLengthMs: e.GameLengthMs,
+            Crashed: e.Crashed,
+            Disconnects: new DisconnectsDto(e.Disconnects.Count, e.Disconnects.TotalDurationMs, e.Disconnects.MeanDurationMs),
+            ActionLatencyAggregate: new ActionLatencyAggregateDto(
+                e.ActionLatencyAggregate.SampleCount,
+                e.ActionLatencyAggregate.P10Ms,
+                e.ActionLatencyAggregate.P50Ms,
+                e.ActionLatencyAggregate.P99Ms,
+                e.ActionLatencyAggregate.P999Ms,
+                e.ActionLatencyAggregate.MeanMs,
+                e.ActionLatencyAggregate.StddevMs
+            ),
+            BucketCount: e.BucketCount,
+            GameTimeOffsetsMs: ToEnvelope(e.GameTimeOffsetsMs),
+            MeansMs: ToEnvelope(e.MeansMs),
+            SampleCounts: ToEnvelope(e.SampleCounts),
+            DroppedUnmatchedCount: e.DroppedUnmatchedCount,
+            SubmittedAt: e.SubmittedAt
+        );
+    }
+
+    // Encodes a BsonBinaryData as a MongoDB Extended JSON v2 envelope:
+    //   { "$binary": { "base64": "...", "subType": "00" } }
+    // The website's IBinData decoder reads $binary.base64 (ignores subType),
+    // but we emit subType anyway to stay spec-compliant.
+    private static BinDataEnvelopeDto ToEnvelope(BsonBinaryData bin)
+    {
+        var base64 = Convert.ToBase64String(bin?.Bytes ?? Array.Empty<byte>());
+        var subType = ((byte)(bin?.SubType ?? BsonBinarySubType.Binary)).ToString("X2");
+        return new BinDataEnvelopeDto(new BinDataPayloadDto(base64, subType));
+    }
+}
+#nullable disable

@@ -78,12 +78,17 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
     }
 
     /// <summary>Fetch a telemetry document by game id. Returns 404 if not present.</summary>
+    /// <remarks>
+    /// The raw domain model contains <see cref="BsonBinaryData"/> fields that System.Text.Json
+    /// cannot serialize (would crash with HTTP 500). We project to a response DTO that emits
+    /// MongoDB Extended JSON v2 BinData envelopes the website's IBinData decoder understands.
+    /// </remarks>
     [HttpGet("by-game/{gameId:long}")]
     public async Task<IActionResult> GetByGame(long gameId)
     {
         var doc = await _repo.GetByGameIdAsync(gameId);
         if (doc is null) return NotFound();
-        return Ok(doc);
+        return Ok(PlayerMatchTelemetryMapper.ToResponseDto(doc));
     }
 
     /// <summary>

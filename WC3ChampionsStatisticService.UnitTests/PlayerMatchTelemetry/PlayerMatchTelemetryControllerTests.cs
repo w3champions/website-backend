@@ -64,10 +64,15 @@ public class PlayerMatchTelemetryControllerTests
     [Test]
     public async Task GetByGame_returns_doc_when_present()
     {
+        // The controller now projects the domain model to a response DTO so
+        // System.Text.Json can serialize BsonBinaryData fields (the raw domain
+        // model would 500). Verify identity-by-projection on GameId.
         var doc = new PlayerMatchTelemetryDoc { GameId = 99 };
         _repo.Setup(r => r.GetByGameIdAsync(99)).ReturnsAsync(doc);
         var result = await _controller.GetByGame(99);
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
-        Assert.That(((OkObjectResult)result).Value, Is.SameAs(doc));
+        var value = ((OkObjectResult)result).Value;
+        Assert.That(value, Is.InstanceOf<PlayerMatchTelemetryResponseDto>());
+        Assert.That(((PlayerMatchTelemetryResponseDto)value!).GameId, Is.EqualTo(99));
     }
 }
