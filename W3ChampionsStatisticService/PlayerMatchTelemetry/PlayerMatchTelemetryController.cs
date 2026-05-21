@@ -2,12 +2,14 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
+using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
-// Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.
+// Per-player per-match telemetry API: receives PlayerMatchTelemetryReport
+// from launcher-e after each game and exposes an admin GET for inspection.
 [ApiController]
 [Route("api/player-match-telemetry")]
 [Trace]
@@ -37,18 +39,15 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
         var entry = new PlayerMatchTelemetryEntry
         {
             BattleTag = actingPlayer,
-            FloPlayerId = null,
-            ConnectionType = submission.ConnectionType.ToUpperInvariant(),
-            ServerNodeId = null,
-            ServerNodeName = null,
+            ConnectionType = submission.ConnectionType,
             GameLengthMs = submission.GameLengthMs,
-            Crashed = submission.Crashed,
-            Disconnects = new DisconnectStats
-            {
-                Count = submission.Disconnects.Count,
-                TotalDurationMs = submission.Disconnects.TotalDurationMs,
-                MeanDurationMs = submission.Disconnects.MeanDurationMs,
-            },
+            CrashedAt = submission.CrashedAt,
+            DisconnectEvents = (submission.DisconnectEvents ?? new())
+                .ConvertAll(d => new DisconnectEvent
+                {
+                    StartedAt = d.StartedAt,
+                    DurationMs = d.DurationMs,
+                }),
             ActionLatencyAggregate = new ActionLatencyAggregate
             {
                 SampleCount = submission.ActionLatencyAggregate.SampleCount,
@@ -70,20 +69,21 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
         await _repo.UpsertPlayerEntryAsync(
             submission.GameId,
             submission.MatchWallStart,
-            submission.BucketMs,
             entry,
             DefaultTtl);
 
         return Ok();
     }
 
-    /// <summary>Fetch a telemetry document by game id. Returns 404 if not present.</summary>
+    /// <summary>Admin: fetch a telemetry document by game id. Returns 404 if not present.</summary>
     /// <remarks>
     /// The raw domain model contains <see cref="BsonBinaryData"/> fields that System.Text.Json
-    /// cannot serialize (would crash with HTTP 500). We project to a response DTO that emits
-    /// MongoDB Extended JSON v2 BinData envelopes the website's IBinData decoder understands.
+    /// cannot serialize. We project to a response DTO that decodes them into plain
+    /// <c>uint[]</c>/<c>ushort[]</c>/<c>byte[]</c> arrays so the website receives ordinary
+    /// JSON number arrays.
     /// </remarks>
     [HttpGet("by-game/{gameId:long}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> GetByGame(long gameId)
     {
         var doc = await _repo.GetByGameIdAsync(gameId);

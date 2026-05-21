@@ -2,26 +2,19 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
-// Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.2 + §4.8.4.
-// _id == GameId. Per-player entries merged into Players[] via idempotent upsert.
 /// <summary>
 /// Mongo repository for <see cref="PlayerMatchTelemetry"/>. Implements
 /// <see cref="IRequiresIndexes"/> so the existing
 /// <c>MongoIndexInitializationService</c> creates the TTL and lookup indexes
-/// at application startup — but only after this type is registered with DI.
+/// at application startup once this type is registered with DI.
 /// </summary>
-/// <remarks>
-/// DI registration is wired in Task 1.18 (see
-/// docs/superpowers/plans/2026-05-21-flo-action-latency-01-foundation.md).
-/// Until then, <see cref="EnsureIndexesAsync"/> must be called explicitly
-/// (the integration tests do this).
-/// </remarks>
 [Trace]
 public class PlayerMatchTelemetryRepository(MongoClient mongoClient)
     : MongoDbRepositoryBase(mongoClient), IPlayerMatchTelemetryRepository, IRequiresIndexes
@@ -32,49 +25,102 @@ public class PlayerMatchTelemetryRepository(MongoClient mongoClient)
         => CreateCollection<PlayerMatchTelemetry>();
 
     /// <summary>
-    /// Upserts a single player's entry into the per-game document. Uses a 3-step pattern
-    /// (init top-level via SetOnInsert → pull existing entry by BattleTag → push new entry),
-    /// mirroring <see cref="W3ChampionsStatisticService.LagReports.LagReportRepository"/>.
+    /// Upserts a single player's entry into the per-game document atomically
+    /// via a single aggregation-pipeline UpdateOneAsync.
     /// </summary>
     /// <remarks>
-    /// The 3-step sequence is NOT atomic. Concurrent invocations for the same
-    /// <paramref name="gameId"/> and <c>entry.BattleTag</c> can interleave between
-    /// the pull and push steps and produce duplicate array entries.
-    /// This is acceptable under the deployment assumption that one launcher
-    /// instance per player submits at most once per game (fire-and-forget, no retry —
-    /// see spec §4.7 and §4.8.4). If concurrent same-(gameId, battleTag) submissions
-    /// become possible, replace this with an arrayFilters-based atomic update.
+    /// One MongoDB round trip: the pipeline initializes top-level fields on insert
+    /// (via $ifNull), then either replaces the existing Players entry whose
+    /// BattleTag matches (via $map + $cond) or appends a new entry (via
+    /// $concatArrays). This eliminates the race window where two concurrent
+    /// submissions for the same (gameId, battleTag) could interleave and
+    /// produce duplicate array entries.
     /// </remarks>
     public async Task UpsertPlayerEntryAsync(
         long gameId,
         DateTime matchWallStart,
-        int bucketMs,
         PlayerMatchTelemetryEntry entry,
         TimeSpan ttl)
     {
         var now = DateTime.UtcNow;
+        var expiresAt = now + ttl;
+        var newEntryBson = entry.ToBsonDocument();
+
+        var setStage = new BsonDocument("$set", new BsonDocument
+        {
+            { "_id", gameId },
+            {
+                "MatchWallStart",
+                new BsonDocument("$ifNull", new BsonArray { "$MatchWallStart", matchWallStart })
+            },
+            {
+                "CreatedAt",
+                new BsonDocument("$ifNull", new BsonArray { "$CreatedAt", now })
+            },
+            {
+                "ExpiresAt",
+                new BsonDocument("$ifNull", new BsonArray { "$ExpiresAt", expiresAt })
+            },
+            {
+                "Players",
+                new BsonDocument("$cond", new BsonDocument
+                {
+                    {
+                        "if",
+                        new BsonDocument("$in", new BsonArray
+                        {
+                            entry.BattleTag,
+                            new BsonDocument("$ifNull", new BsonArray
+                            {
+                                "$Players.BattleTag",
+                                new BsonArray()
+                            })
+                        })
+                    },
+                    {
+                        "then",
+                        new BsonDocument("$map", new BsonDocument
+                        {
+                            { "input", "$Players" },
+                            { "as", "p" },
+                            {
+                                "in",
+                                new BsonDocument("$cond", new BsonDocument
+                                {
+                                    {
+                                        "if",
+                                        new BsonDocument("$eq", new BsonArray
+                                        {
+                                            "$$p.BattleTag",
+                                            entry.BattleTag
+                                        })
+                                    },
+                                    { "then", newEntryBson },
+                                    { "else", "$$p" }
+                                })
+                            }
+                        })
+                    },
+                    {
+                        "else",
+                        new BsonDocument("$concatArrays", new BsonArray
+                        {
+                            new BsonDocument("$ifNull", new BsonArray
+                            {
+                                "$Players",
+                                new BsonArray()
+                            }),
+                            new BsonArray { newEntryBson }
+                        })
+                    }
+                })
+            }
+        });
+
+        var pipeline = new BsonDocumentStagePipelineDefinition<PlayerMatchTelemetry, PlayerMatchTelemetry>(
+            new[] { setStage });
         var filter = Builders<PlayerMatchTelemetry>.Filter.Eq(x => x.GameId, gameId);
-
-        // 1. Initial upsert — establish top-level fields exactly once.
-        var initUpdate = Builders<PlayerMatchTelemetry>.Update
-            .SetOnInsert(x => x.GameId, gameId)
-            .SetOnInsert(x => x.MatchWallStart, matchWallStart)
-            .SetOnInsert(x => x.BucketMs, bucketMs)
-            .SetOnInsert(x => x.CreatedAt, now)
-            .SetOnInsert(x => x.ExpiresAt, now + ttl)
-            .SetOnInsert(x => x.Players, new List<PlayerMatchTelemetryEntry>());
-        await Collection.UpdateOneAsync(filter, initUpdate, new UpdateOptions { IsUpsert = true });
-
-        // 2. Remove any existing entry for this BattleTag — keeps the merge idempotent
-        //    when the same player resubmits (e.g. after a crash recovery).
-        var pull = Builders<PlayerMatchTelemetry>.Update.PullFilter(
-            x => x.Players,
-            Builders<PlayerMatchTelemetryEntry>.Filter.Eq(p => p.BattleTag, entry.BattleTag));
-        await Collection.UpdateOneAsync(filter, pull);
-
-        // 3. Push the new entry.
-        var push = Builders<PlayerMatchTelemetry>.Update.Push(x => x.Players, entry);
-        await Collection.UpdateOneAsync(filter, push);
+        await Collection.UpdateOneAsync(filter, pipeline, new UpdateOptions { IsUpsert = true });
     }
 
     public async Task<PlayerMatchTelemetry?> GetByGameIdAsync(long gameId)

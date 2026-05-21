@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NUnit.Framework;
+using W3ChampionsStatisticService.LagReports;
 using W3ChampionsStatisticService.PlayerMatchTelemetry;
 using PlayerMatchTelemetryDoc = W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetry;
 
@@ -26,10 +28,10 @@ public class PlayerMatchTelemetryRepositoryTests : IntegrationTestBase
     private static PlayerMatchTelemetryEntry MakeEntry(string battleTag) => new()
     {
         BattleTag = battleTag,
-        ConnectionType = "QUIC",
+        ConnectionType = Transport.QUIC,
         GameLengthMs = 600_000,
-        Crashed = false,
-        Disconnects = new DisconnectStats(),
+        CrashedAt = null,
+        DisconnectEvents = new List<DisconnectEvent>(),
         ActionLatencyAggregate = new ActionLatencyAggregate { SampleCount = 100, P50Ms = 42 },
         BucketCount = 3,
         GameTimeOffsetsMs = new BsonBinaryData(new byte[12]),
@@ -42,7 +44,7 @@ public class PlayerMatchTelemetryRepositoryTests : IntegrationTestBase
     public async Task Upsert_then_get_round_trips()
     {
         var gameId = 7777L;
-        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, 1000,
+        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow,
             MakeEntry("Alice#1234"), TimeSpan.FromDays(90));
 
         var doc = await _repo.GetByGameIdAsync(gameId);
@@ -56,9 +58,9 @@ public class PlayerMatchTelemetryRepositoryTests : IntegrationTestBase
     public async Task Two_players_same_game_id_produce_one_doc_with_two_entries()
     {
         var gameId = 7778L;
-        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, 1000,
+        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow,
             MakeEntry("Alice#1234"), TimeSpan.FromDays(90));
-        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, 1000,
+        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow,
             MakeEntry("Bob#5678"), TimeSpan.FromDays(90));
 
         var doc = await _repo.GetByGameIdAsync(gameId);
@@ -75,11 +77,11 @@ public class PlayerMatchTelemetryRepositoryTests : IntegrationTestBase
 
         var entry1 = MakeEntry("Alice#1234");
         entry1.ActionLatencyAggregate.P50Ms = 42;
-        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, 1000, entry1, TimeSpan.FromDays(90));
+        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, entry1, TimeSpan.FromDays(90));
 
         var entry2 = MakeEntry("Alice#1234");
         entry2.ActionLatencyAggregate.P50Ms = 99;
-        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, 1000, entry2, TimeSpan.FromDays(90));
+        await _repo.UpsertPlayerEntryAsync(gameId, DateTime.UtcNow, entry2, TimeSpan.FromDays(90));
 
         var doc = await _repo.GetByGameIdAsync(gameId);
 

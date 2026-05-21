@@ -1,42 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
+using W3ChampionsStatisticService.LagReports;
 
 namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
-// Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.1.
-//
-// Launcher-e serializes via Rust serde with snake_case field names, so every
-// property needs an explicit [JsonPropertyName] to bind correctly under
-// ASP.NET Core's System.Text.Json defaults (which only case-fold PascalCase
-// ↔ camelCase, never snake_case). Mirrors the convention used by
-// LagReports/LagReportDtos.cs.
+// Submission DTO for POST /api/player-match-telemetry. Mirrors the wire
+// shape emitted by launcher-e: camelCase property names, "TCP" / "QUIC"
+// transport literals, ISO-8601 timestamps. ASP.NET Core's [FromBody]
+// binding uses JsonSerializerDefaults.Web (PropertyNamingPolicy =
+// CamelCase, PropertyNameCaseInsensitive = true), so PascalCase C#
+// properties map automatically without [JsonPropertyName] attributes.
 public record PlayerMatchTelemetrySubmissionDto(
-    [property: JsonPropertyName("game_id")]
     [property: Range(1L, long.MaxValue)] long GameId,
-    [property: JsonPropertyName("bucket_ms")]
-    [property: Range(100, 10_000)] int BucketMs,
-    [property: JsonPropertyName("match_wall_start")]
     DateTime MatchWallStart,
-    [property: JsonPropertyName("game_length_ms")]
-    uint GameLengthMs,
-    [property: JsonPropertyName("crashed")]
-    bool Crashed,
-    [property: JsonPropertyName("connection_type")]
-    [property: RegularExpression("^(TCP|QUIC)$",
-        ErrorMessage = "ConnectionType must be 'TCP' or 'QUIC'.")]
-    string ConnectionType,
-    [property: JsonPropertyName("disconnects")]
-    [property: Required] DisconnectsDto Disconnects,
-    [property: JsonPropertyName("action_latency_aggregate")]
+    [property: Range(0u, uint.MaxValue)] uint GameLengthMs,
+    DateTime? CrashedAt,
+    [property: Required, EnumDataType(typeof(Transport))] Transport ConnectionType,
+    [property: Required] List<DisconnectEventDto> DisconnectEvents,
     [property: Required] ActionLatencyAggregateDto ActionLatencyAggregate,
-    [property: JsonPropertyName("action_latency_timeseries")]
     [property: Required] ActionLatencyTimeseriesDto ActionLatencyTimeseries,
-    [property: JsonPropertyName("dropped_unmatched_count")]
     uint DroppedUnmatchedCount
 ) : IValidatableObject
 {
@@ -50,10 +38,10 @@ public record PlayerMatchTelemetrySubmissionDto(
             ts.MeansMs.Length != ts.SampleCounts.Length)
         {
             yield return new ValidationResult(
-                $"Timeseries parallel arrays must be the same length: " +
-                $"GameTimeOffsetsMs={ts.GameTimeOffsetsMs.Length}, " +
-                $"MeansMs={ts.MeansMs.Length}, " +
-                $"SampleCounts={ts.SampleCounts.Length}",
+                $"Timeseries parallel arrays must have the same length: " +
+                $"gameTimeOffsetsMs={ts.GameTimeOffsetsMs.Length}, " +
+                $"meansMs={ts.MeansMs.Length}, " +
+                $"sampleCounts={ts.SampleCounts.Length}",
                 new[] { nameof(ActionLatencyTimeseries) });
         }
         if (ts.MeansMs.Length > MaxTimeseriesBuckets)
@@ -65,25 +53,21 @@ public record PlayerMatchTelemetrySubmissionDto(
     }
 }
 
-public record DisconnectsDto(
-    [property: JsonPropertyName("count")] uint Count,
-    [property: JsonPropertyName("total_duration_ms")] uint TotalDurationMs,
-    [property: JsonPropertyName("mean_duration_ms")] uint MeanDurationMs);
+public record DisconnectEventDto(DateTime StartedAt, uint DurationMs);
 
 public record ActionLatencyAggregateDto(
-    [property: JsonPropertyName("sample_count")] uint SampleCount,
-    [property: JsonPropertyName("p10_ms")] ushort P10Ms,
-    [property: JsonPropertyName("p50_ms")] ushort P50Ms,
-    [property: JsonPropertyName("p99_ms")] ushort P99Ms,
-    [property: JsonPropertyName("p999_ms")] ushort P999Ms,
-    [property: JsonPropertyName("mean_ms")] ushort MeanMs,
-    [property: JsonPropertyName("stddev_ms")] ushort StddevMs
+    uint SampleCount,
+    ushort P10Ms,
+    ushort P50Ms,
+    ushort P99Ms,
+    ushort P999Ms,
+    ushort MeanMs,
+    ushort StddevMs
 );
 
 public record ActionLatencyTimeseriesDto(
-    [property: JsonPropertyName("game_time_offsets_ms")] uint[] GameTimeOffsetsMs,
-    [property: JsonPropertyName("means_ms")] ushort[] MeansMs,
-    [property: JsonPropertyName("sample_counts")]
+    uint[] GameTimeOffsetsMs,
+    ushort[] MeansMs,
     [property: JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
     byte[] SampleCounts
 );
@@ -102,7 +86,7 @@ public sealed class ByteArrayAsJsonNumberArrayConverter : JsonConverter<byte[]>
         if (reader.TokenType != JsonTokenType.StartArray)
         {
             throw new JsonException(
-                $"Expected start of array for byte[] (sample_counts), got {reader.TokenType}.");
+                $"Expected start of array for byte[] (sampleCounts), got {reader.TokenType}.");
         }
         var buffer = new List<byte>(capacity: 256);
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
@@ -110,7 +94,7 @@ public sealed class ByteArrayAsJsonNumberArrayConverter : JsonConverter<byte[]>
             if (reader.TokenType != JsonTokenType.Number)
             {
                 throw new JsonException(
-                    $"Expected number element in byte[] (sample_counts), got {reader.TokenType}.");
+                    $"Expected number element in byte[] (sampleCounts), got {reader.TokenType}.");
             }
             buffer.Add(reader.GetByte()); // Throws OverflowException-derived JsonException if out of 0..255.
         }
@@ -130,70 +114,30 @@ public sealed class ByteArrayAsJsonNumberArrayConverter : JsonConverter<byte[]>
 
 // ─────────────────────────────────────────────────────────
 // Response DTOs for GET /api/player-match-telemetry/by-game/{gameId}
-// Projection of the domain model with BsonBinaryData fields
-// exposed as MongoDB Extended JSON v2 envelope shapes
-// ({ "$binary": { "base64": "...", "subType": "00" } }) so the
-// website's IBinData decoder can parse them. Returning the raw
-// domain model crashes System.Text.Json because BsonBinaryData has
-// no serializer registered — that bug is what this DTO layer fixes.
+// Projection of the domain model. BsonBinaryData fields are decoded
+// server-side into plain uint[] / ushort[] / byte[] so the frontend
+// receives ordinary JSON number arrays with no MongoDB Extended JSON
+// envelopes to unwrap.
 //
-// Wire shape convention: response DTOs emit camelCase to match the
-// website's TypeScript IPlayerMatchTelemetry types (battleTag,
-// gameId, sampleCounts, etc.). ASP.NET Core's default
+// Wire shape: camelCase property names (matches website's TypeScript
+// IPlayerMatchTelemetry types). ASP.NET Core's default
 // JsonSerializerOptions.PropertyNamingPolicy = CamelCase auto-converts
-// PascalCase C# names — no [JsonPropertyName] needed on these records.
-//
-// Exception: BinDataEnvelopeDto/BinDataPayloadDto keep explicit
-// [JsonPropertyName] attrs because their wire keys ($binary, base64,
-// subType) are literal MongoDB Extended JSON v2 strings, not
-// naming-policy-derived.
+// PascalCase C# names — no [JsonPropertyName] attrs needed.
 // ─────────────────────────────────────────────────────────
-
-public record BinDataEnvelopeDto(
-    [property: JsonPropertyName("$binary")] BinDataPayloadDto Binary
-);
-
-public record BinDataPayloadDto(
-    [property: JsonPropertyName("base64")] string Base64,
-    [property: JsonPropertyName("subType")] string SubType
-);
-
-// Response-side aggregates. Distinct from the submission-side
-// DisconnectsDto/ActionLatencyAggregateDto so the GET response can emit
-// camelCase keys (e.g. totalDurationMs) without the snake_case
-// [JsonPropertyName] attrs that the submission DTOs need for Rust serde
-// compatibility on the POST side.
-public record DisconnectsResponseDto(
-    uint Count,
-    uint TotalDurationMs,
-    uint MeanDurationMs
-);
-
-public record ActionLatencyAggregateResponseDto(
-    uint SampleCount,
-    ushort P10Ms,
-    ushort P50Ms,
-    ushort P99Ms,
-    ushort P999Ms,
-    ushort MeanMs,
-    ushort StddevMs
-);
 
 #nullable enable
 public record PlayerMatchTelemetryEntryResponseDto(
     string BattleTag,
-    int? FloPlayerId,
-    string ConnectionType,
-    int? ServerNodeId,
-    string? ServerNodeName,
+    Transport ConnectionType,
     uint GameLengthMs,
-    bool Crashed,
-    DisconnectsResponseDto Disconnects,
-    ActionLatencyAggregateResponseDto ActionLatencyAggregate,
+    DateTime? CrashedAt,
+    List<DisconnectEvent> DisconnectEvents,
+    ActionLatencyAggregate ActionLatencyAggregate,
     int BucketCount,
-    BinDataEnvelopeDto GameTimeOffsetsMs,
-    BinDataEnvelopeDto MeansMs,
-    BinDataEnvelopeDto SampleCounts,
+    uint[] GameTimeOffsetsMs,
+    ushort[] MeansMs,
+    [property: JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
+    byte[] SampleCounts,
     uint DroppedUnmatchedCount,
     DateTime SubmittedAt
 );
@@ -201,7 +145,6 @@ public record PlayerMatchTelemetryEntryResponseDto(
 public record PlayerMatchTelemetryResponseDto(
     long GameId,
     DateTime MatchWallStart,
-    int BucketMs,
     List<PlayerMatchTelemetryEntryResponseDto> Players,
     DateTime CreatedAt,
     DateTime ExpiresAt
@@ -214,7 +157,6 @@ public static class PlayerMatchTelemetryMapper
         return new PlayerMatchTelemetryResponseDto(
             GameId: doc.GameId,
             MatchWallStart: doc.MatchWallStart,
-            BucketMs: doc.BucketMs,
             Players: doc.Players.Select(ToEntryResponseDto).ToList(),
             CreatedAt: doc.CreatedAt,
             ExpiresAt: doc.ExpiresAt
@@ -225,43 +167,63 @@ public static class PlayerMatchTelemetryMapper
     {
         return new PlayerMatchTelemetryEntryResponseDto(
             BattleTag: e.BattleTag,
-            FloPlayerId: e.FloPlayerId,
             ConnectionType: e.ConnectionType,
-            ServerNodeId: e.ServerNodeId,
-            ServerNodeName: e.ServerNodeName,
             GameLengthMs: e.GameLengthMs,
-            Crashed: e.Crashed,
-            Disconnects: new DisconnectsResponseDto(
-                e.Disconnects.Count,
-                e.Disconnects.TotalDurationMs,
-                e.Disconnects.MeanDurationMs),
-            ActionLatencyAggregate: new ActionLatencyAggregateResponseDto(
-                e.ActionLatencyAggregate.SampleCount,
-                e.ActionLatencyAggregate.P10Ms,
-                e.ActionLatencyAggregate.P50Ms,
-                e.ActionLatencyAggregate.P99Ms,
-                e.ActionLatencyAggregate.P999Ms,
-                e.ActionLatencyAggregate.MeanMs,
-                e.ActionLatencyAggregate.StddevMs
-            ),
+            CrashedAt: e.CrashedAt,
+            DisconnectEvents: e.DisconnectEvents,
+            ActionLatencyAggregate: e.ActionLatencyAggregate,
             BucketCount: e.BucketCount,
-            GameTimeOffsetsMs: ToEnvelope(e.GameTimeOffsetsMs),
-            MeansMs: ToEnvelope(e.MeansMs),
-            SampleCounts: ToEnvelope(e.SampleCounts),
+            GameTimeOffsetsMs: DecodeU32Le(e.GameTimeOffsetsMs),
+            MeansMs: DecodeU16Le(e.MeansMs),
+            SampleCounts: DecodeU8(e.SampleCounts),
             DroppedUnmatchedCount: e.DroppedUnmatchedCount,
             SubmittedAt: e.SubmittedAt
         );
     }
 
-    // Encodes a BsonBinaryData as a MongoDB Extended JSON v2 envelope:
-    //   { "$binary": { "base64": "...", "subType": "00" } }
-    // The website's IBinData decoder reads $binary.base64 (ignores subType),
-    // but we emit subType anyway to stay spec-compliant.
-    private static BinDataEnvelopeDto ToEnvelope(BsonBinaryData bin)
+    /// <summary>
+    /// Decodes a <see cref="BsonBinaryData"/> blob of little-endian uint32 values
+    /// into a <c>uint[]</c>. Portable across host endianness — does not rely on
+    /// <see cref="Buffer.BlockCopy"/>.
+    /// </summary>
+    private static uint[] DecodeU32Le(BsonBinaryData? bin)
     {
-        var base64 = Convert.ToBase64String(bin?.Bytes ?? Array.Empty<byte>());
-        var subType = ((byte)(bin?.SubType ?? BsonBinarySubType.Binary)).ToString("X2");
-        return new BinDataEnvelopeDto(new BinDataPayloadDto(base64, subType));
+        var bytes = bin?.Bytes ?? Array.Empty<byte>();
+        if (bytes.Length % 4 != 0)
+        {
+            throw new InvalidDataException(
+                $"DecodeU32Le: byte length {bytes.Length} is not divisible by 4");
+        }
+        var span = bytes.AsSpan();
+        var result = new uint[bytes.Length / 4];
+        for (int i = 0; i < result.Length; i++)
+        {
+            result[i] = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i * 4, 4));
+        }
+        return result;
     }
+
+    /// <summary>
+    /// Decodes a <see cref="BsonBinaryData"/> blob of little-endian uint16 values
+    /// into a <c>ushort[]</c>. Portable across host endianness.
+    /// </summary>
+    private static ushort[] DecodeU16Le(BsonBinaryData? bin)
+    {
+        var bytes = bin?.Bytes ?? Array.Empty<byte>();
+        if (bytes.Length % 2 != 0)
+        {
+            throw new InvalidDataException(
+                $"DecodeU16Le: byte length {bytes.Length} is not divisible by 2");
+        }
+        var span = bytes.AsSpan();
+        var result = new ushort[bytes.Length / 2];
+        for (int i = 0; i < result.Length; i++)
+        {
+            result[i] = System.Buffers.Binary.BinaryPrimitives.ReadUInt16LittleEndian(span.Slice(i * 2, 2));
+        }
+        return result;
+    }
+
+    private static byte[] DecodeU8(BsonBinaryData? bin) => bin?.Bytes ?? Array.Empty<byte>();
 }
 #nullable disable

@@ -2,61 +2,58 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using NUnit.Framework;
+using W3ChampionsStatisticService.LagReports;
 using W3ChampionsStatisticService.PlayerMatchTelemetry;
 
 namespace WC3ChampionsStatisticService.Tests.PlayerMatchTelemetry;
 
-// Regression: launcher-e sends snake_case JSON (Rust serde default). ASP.NET
-// Core's System.Text.Json defaults (JsonSerializerDefaults.Web) only fold
-// PascalCase/camelCase property names — snake_case fields would silently
-// deserialize to zero/null and trip [Range(1, …)] on GameId. Confirms every
-// property on the submission DTO graph has a [JsonPropertyName] mapping.
+// Regression: launcher-e now sends camelCase JSON (Rust serde with
+// #[serde(rename_all = "camelCase")]). ASP.NET Core's
+// JsonSerializerDefaults.Web (used by [FromBody]) folds PascalCase C#
+// property names ↔ camelCase wire keys automatically — no
+// [JsonPropertyName] attributes required on the submission DTO graph.
 [TestFixture]
 public class PlayerMatchTelemetryJsonBindingTests
 {
     // Mirrors the JsonSerializerOptions ASP.NET Core 8 uses for [FromBody] binding.
     private static readonly JsonSerializerOptions WebDefaults = new(JsonSerializerDefaults.Web);
 
-    private const string SnakeCasePayload = """
+    private const string CamelCasePayload = """
     {
-      "game_id": 12345,
-      "bucket_ms": 1000,
-      "match_wall_start": "2026-05-21T12:00:00Z",
-      "game_length_ms": 600000,
-      "crashed": false,
-      "connection_type": "QUIC",
-      "disconnects": { "count": 0, "total_duration_ms": 0, "mean_duration_ms": 0 },
-      "action_latency_aggregate": {
-        "sample_count": 100, "p10_ms": 20, "p50_ms": 40,
-        "p99_ms": 200, "p999_ms": 400, "mean_ms": 60, "stddev_ms": 30
+      "gameId": 12345,
+      "matchWallStart": "2026-05-21T12:00:00Z",
+      "gameLengthMs": 600000,
+      "crashedAt": null,
+      "connectionType": "QUIC",
+      "disconnectEvents": [],
+      "actionLatencyAggregate": {
+        "sampleCount": 100, "p10Ms": 20, "p50Ms": 40,
+        "p99Ms": 200, "p999Ms": 400, "meanMs": 60, "stddevMs": 30
       },
-      "action_latency_timeseries": {
-        "game_time_offsets_ms": [0, 1000, 2000],
-        "means_ms": [30, 42, 38],
-        "sample_counts": [5, 7, 6]
+      "actionLatencyTimeseries": {
+        "gameTimeOffsetsMs": [0, 1000, 2000],
+        "meansMs": [30, 42, 38],
+        "sampleCounts": [5, 7, 6]
       },
-      "dropped_unmatched_count": 0
+      "droppedUnmatchedCount": 0
     }
     """;
 
     [Test]
-    public void Snake_case_json_deserializes_into_submission_dto()
+    public void CamelCase_json_deserializes_into_submission_dto()
     {
-        var dto = JsonSerializer.Deserialize<PlayerMatchTelemetrySubmissionDto>(SnakeCasePayload, WebDefaults);
+        var dto = JsonSerializer.Deserialize<PlayerMatchTelemetrySubmissionDto>(CamelCasePayload, WebDefaults);
 
         Assert.That(dto, Is.Not.Null);
         Assert.That(dto!.GameId, Is.EqualTo(12345L));
-        Assert.That(dto.BucketMs, Is.EqualTo(1000));
         Assert.That(dto.MatchWallStart.Year, Is.EqualTo(2026));
         Assert.That(dto.GameLengthMs, Is.EqualTo(600_000u));
-        Assert.That(dto.Crashed, Is.False);
-        Assert.That(dto.ConnectionType, Is.EqualTo("QUIC"));
+        Assert.That(dto.CrashedAt, Is.Null);
+        Assert.That(dto.ConnectionType, Is.EqualTo(Transport.QUIC));
         Assert.That(dto.DroppedUnmatchedCount, Is.EqualTo(0u));
 
-        Assert.That(dto.Disconnects, Is.Not.Null);
-        Assert.That(dto.Disconnects.Count, Is.EqualTo(0u));
-        Assert.That(dto.Disconnects.TotalDurationMs, Is.EqualTo(0u));
-        Assert.That(dto.Disconnects.MeanDurationMs, Is.EqualTo(0u));
+        Assert.That(dto.DisconnectEvents, Is.Not.Null);
+        Assert.That(dto.DisconnectEvents, Is.Empty);
 
         Assert.That(dto.ActionLatencyAggregate, Is.Not.Null);
         Assert.That(dto.ActionLatencyAggregate.SampleCount, Is.EqualTo(100u));
@@ -74,6 +71,43 @@ public class PlayerMatchTelemetryJsonBindingTests
     }
 
     [Test]
+    public void Disconnect_events_deserialize_into_typed_records()
+    {
+        const string payload = """
+        {
+          "gameId": 1,
+          "matchWallStart": "2026-05-21T12:00:00Z",
+          "gameLengthMs": 600000,
+          "crashedAt": "2026-05-21T12:05:00Z",
+          "connectionType": "TCP",
+          "disconnectEvents": [
+            { "startedAt": "2026-05-21T12:03:00Z", "durationMs": 4500 },
+            { "startedAt": "2026-05-21T12:04:00Z", "durationMs": 2100 }
+          ],
+          "actionLatencyAggregate": {
+            "sampleCount": 100, "p10Ms": 20, "p50Ms": 40,
+            "p99Ms": 200, "p999Ms": 400, "meanMs": 60, "stddevMs": 30
+          },
+          "actionLatencyTimeseries": {
+            "gameTimeOffsetsMs": [0],
+            "meansMs": [30],
+            "sampleCounts": [5]
+          },
+          "droppedUnmatchedCount": 0
+        }
+        """;
+
+        var dto = JsonSerializer.Deserialize<PlayerMatchTelemetrySubmissionDto>(payload, WebDefaults);
+
+        Assert.That(dto, Is.Not.Null);
+        Assert.That(dto!.CrashedAt, Is.Not.Null);
+        Assert.That(dto.CrashedAt!.Value.Year, Is.EqualTo(2026));
+        Assert.That(dto.DisconnectEvents.Count, Is.EqualTo(2));
+        Assert.That(dto.DisconnectEvents[0].DurationMs, Is.EqualTo(4500u));
+        Assert.That(dto.DisconnectEvents[1].DurationMs, Is.EqualTo(2100u));
+    }
+
+    [Test]
     public void Sample_counts_writes_as_number_array_not_base64()
     {
         var dto = new ActionLatencyTimeseriesDto(
@@ -84,7 +118,7 @@ public class PlayerMatchTelemetryJsonBindingTests
         var json = JsonSerializer.Serialize(dto, WebDefaults);
 
         // Must serialize as JSON array of numbers, never as base64 ("BQcG"==[5,7,6]).
-        Assert.That(json, Does.Contain("\"sample_counts\":[5,7,6]"));
+        Assert.That(json, Does.Contain("\"sampleCounts\":[5,7,6]"));
         Assert.That(json, Does.Not.Contain("BQcG"));
     }
 
@@ -93,9 +127,9 @@ public class PlayerMatchTelemetryJsonBindingTests
     {
         const string bad = """
         {
-          "game_time_offsets_ms": [0],
-          "means_ms": [30],
-          "sample_counts": [300]
+          "gameTimeOffsetsMs": [0],
+          "meansMs": [30],
+          "sampleCounts": [300]
         }
         """;
         Assert.Throws<JsonException>(() =>
@@ -103,15 +137,14 @@ public class PlayerMatchTelemetryJsonBindingTests
     }
 
     [Test]
-    public void Response_dto_serializes_with_camelcase_outer_and_bindata_inner_shape()
+    public void Response_dto_serializes_with_camelcase_outer_and_plain_arrays()
     {
-        // Regression for the GET /api/player-match-telemetry/by-game/{gameId} 500-error
-        // bug: the raw domain model has BsonBinaryData fields that System.Text.Json
-        // cannot serialize. The response DTO must emit MongoDB Extended JSON v2
-        // envelopes — { "$binary": { "base64": "...", "subType": "00" } } — so the
-        // website's IBinData decoder can parse them.
+        // The GET /api/player-match-telemetry/by-game/{gameId} response uses
+        // plain JSON number arrays (uint[]/ushort[]/byte[]) instead of MongoDB
+        // Extended JSON BinData envelopes. The frontend consumes ordinary arrays
+        // directly — no Base64 decode step required.
         //
-        // Additionally, the outer/entry property names must serialize as camelCase
+        // The outer/entry property names must serialize as camelCase
         // (battleTag, gameId, sampleCounts, …) so the website's TypeScript
         // IPlayerMatchTelemetry interface (src/store/admin/playerMatchTelemetry/types.ts)
         // can consume the response via a typed cast. ASP.NET Core's HTTP pipeline
@@ -120,23 +153,19 @@ public class PlayerMatchTelemetryJsonBindingTests
         var dto = new PlayerMatchTelemetryResponseDto(
             GameId: 1L,
             MatchWallStart: DateTime.UtcNow,
-            BucketMs: 1000,
             Players: new List<PlayerMatchTelemetryEntryResponseDto>
             {
                 new(
                     BattleTag: "Alice#1234",
-                    FloPlayerId: null,
-                    ConnectionType: "QUIC",
-                    ServerNodeId: null,
-                    ServerNodeName: null,
+                    ConnectionType: Transport.QUIC,
                     GameLengthMs: 100,
-                    Crashed: false,
-                    Disconnects: new DisconnectsResponseDto(0, 0, 0),
-                    ActionLatencyAggregate: new ActionLatencyAggregateResponseDto(1, 1, 1, 1, 1, 1, 1),
+                    CrashedAt: null,
+                    DisconnectEvents: new List<DisconnectEvent>(),
+                    ActionLatencyAggregate: new ActionLatencyAggregate { SampleCount = 1, P10Ms = 1, P50Ms = 1, P99Ms = 1, P999Ms = 1, MeanMs = 1, StddevMs = 1 },
                     BucketCount: 1,
-                    GameTimeOffsetsMs: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 0, 0, 0, 0 }), "00")),
-                    MeansMs: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 5, 0 }), "00")),
-                    SampleCounts: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 1 }), "00")),
+                    GameTimeOffsetsMs: new uint[] { 0 },
+                    MeansMs: new ushort[] { 5 },
+                    SampleCounts: new byte[] { 1 },
                     DroppedUnmatchedCount: 0,
                     SubmittedAt: DateTime.UtcNow
                 )
@@ -150,29 +179,28 @@ public class PlayerMatchTelemetryJsonBindingTests
         // camelCase outer wire shape (matches website's IPlayerMatchTelemetry types).
         Assert.That(json, Does.Contain("\"gameId\":1"));
         Assert.That(json, Does.Contain("\"battleTag\":\"Alice#1234\""));
-        Assert.That(json, Does.Contain("\"bucketMs\":1000"));
         Assert.That(json, Does.Contain("\"bucketCount\":1"));
-        Assert.That(json, Does.Contain("\"gameTimeOffsetsMs\":{\"$binary\":"));
-        Assert.That(json, Does.Contain("\"meansMs\":{\"$binary\":"));
-        Assert.That(json, Does.Contain("\"sampleCounts\":{\"$binary\":"));
+        Assert.That(json, Does.Contain("\"gameTimeOffsetsMs\":[0]"));
+        Assert.That(json, Does.Contain("\"meansMs\":[5]"));
+        Assert.That(json, Does.Contain("\"sampleCounts\":[1]"));
         Assert.That(json, Does.Contain("\"droppedUnmatchedCount\":0"));
+        Assert.That(json, Does.Contain("\"connectionType\":\"QUIC\""));
 
-        // Nested aggregates also camelCase (separate response-side records, no snake_case attrs).
-        Assert.That(json, Does.Contain("\"totalDurationMs\":0"));
+        // Nested aggregates also camelCase.
         Assert.That(json, Does.Contain("\"sampleCount\":1"));
         Assert.That(json, Does.Contain("\"p999Ms\":1"));
 
-        // BinData inner literal keys ($binary, base64, subType) are NOT camelCase-derived
-        // and must remain exactly as MongoDB Extended JSON v2 specifies.
-        Assert.That(json, Does.Contain("\"$binary\":{\"base64\":"),
-            "BinData envelopes must serialize with $binary wrapper and literal base64 key");
-        Assert.That(json, Does.Contain("\"subType\":\"00\""));
+        // No BinData envelope leakage on the response wire shape.
+        Assert.That(json, Does.Not.Contain("$binary"));
+        Assert.That(json, Does.Not.Contain("\"base64\""));
 
-        // Negative assertions: no snake_case leakage on the response wire shape.
+        // No snake_case leakage.
         Assert.That(json, Does.Not.Contain("\"battle_tag\""));
         Assert.That(json, Does.Not.Contain("\"game_id\""));
         Assert.That(json, Does.Not.Contain("\"sample_counts\""));
-        Assert.That(json, Does.Not.Contain("\"total_duration_ms\""));
         Assert.That(json, Does.Not.Contain("\"p999_ms\""));
+
+        // BucketMs is dropped from the wire (hardcoded to 1 s flo-side).
+        Assert.That(json, Does.Not.Contain("\"bucketMs\""));
     }
 }

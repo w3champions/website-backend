@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using NUnit.Framework;
+using W3ChampionsStatisticService.LagReports;
 using W3ChampionsStatisticService.PlayerMatchTelemetry;
 
 namespace WC3ChampionsStatisticService.Tests.PlayerMatchTelemetry;
@@ -20,12 +21,11 @@ public class PlayerMatchTelemetryDtosTests
     private static PlayerMatchTelemetrySubmissionDto MakeValid()
         => new(
             GameId: 12345,
-            BucketMs: 1000,
             MatchWallStart: new DateTime(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc),
             GameLengthMs: 600_000,
-            Crashed: false,
-            ConnectionType: "QUIC",
-            Disconnects: new DisconnectsDto(0, 0, 0),
+            CrashedAt: null,
+            ConnectionType: Transport.QUIC,
+            DisconnectEvents: new List<DisconnectEventDto>(),
             ActionLatencyAggregate: new ActionLatencyAggregateDto(100, 20, 40, 200, 400, 60, 30),
             ActionLatencyTimeseries: new ActionLatencyTimeseriesDto(
                 new uint[] { 0, 1000, 2000 },
@@ -74,37 +74,33 @@ public class PlayerMatchTelemetryDtosTests
     }
 
     [Test]
-    public void Invalid_connection_type_fails_validation()
+    public void Invalid_connection_type_value_fails_validation()
     {
+        // The Transport enum can be cast from an arbitrary int — DataAnnotations'
+        // EnumDataType attribute catches values that aren't defined members.
         var v = MakeValid();
-        var bad = v with { ConnectionType = "UDP" };
+        var bad = v with { ConnectionType = (Transport)999 };
         var (ok, _) = Validate(bad);
         Assert.That(ok, Is.False);
     }
 
     [Test]
-    public void Lowercase_connection_type_is_rejected_after_tightening()
+    public void Game_id_zero_fails_range_validation()
     {
+        // [Range(1, long.MaxValue)] on GameId — repurposed from the dropped
+        // BucketMs range check now that bucketMs is hardcoded to 1 s and gone
+        // from the wire.
         var v = MakeValid();
-        var bad = v with { ConnectionType = "Tcp" };
+        var bad = v with { GameId = 0 };
         var (ok, _) = Validate(bad);
         Assert.That(ok, Is.False);
     }
 
     [Test]
-    public void Bucket_ms_out_of_range_fails_validation()
+    public void Null_disconnect_events_fails_validation()
     {
         var v = MakeValid();
-        var bad = v with { BucketMs = 50 };  // below 100
-        var (ok, _) = Validate(bad);
-        Assert.That(ok, Is.False);
-    }
-
-    [Test]
-    public void Null_disconnects_fails_validation()
-    {
-        var v = MakeValid();
-        var bad = v with { Disconnects = null! };
+        var bad = v with { DisconnectEvents = null! };
         var (ok, _) = Validate(bad);
         Assert.That(ok, Is.False);
     }

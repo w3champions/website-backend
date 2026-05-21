@@ -9,7 +9,6 @@ public interface IPlayerMatchTelemetryRepository
     Task UpsertPlayerEntryAsync(
         long gameId,
         DateTime matchWallStart,
-        int bucketMs,
         PlayerMatchTelemetryEntry entry,
         TimeSpan ttl);
 

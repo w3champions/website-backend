@@ -61,10 +61,10 @@ public class LagReportPlayer
     public EConnectionType ConnectionType { get; set; }
 
     /// <summary>
-    /// Transport protocol used for the game stream ("TCP" or "QUIC").
-    /// Defaults to "TCP" so existing documents that lack the field deserialize cleanly.
+    /// Transport protocol used for the game stream (TCP or QUIC).
+    /// Defaults to TCP so existing documents that lack the field deserialize cleanly.
     /// </summary>
-    public string Transport { get; set; } = "TCP";
+    public Transport Transport { get; set; } = Transport.TCP;
 
     /// <summary>Name of the proxy node (null if direct).</summary>
     public string ProxyName { get; set; }

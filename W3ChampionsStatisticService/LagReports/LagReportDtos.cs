@@ -69,12 +69,12 @@ public class ConnectionTopologyDto
     public string ClientIp { get; set; }
 
     /// <summary>
-    /// Transport protocol used for the game stream ("TCP" or "QUIC").
-    /// Defaults to "TCP" so older launchers that don't send this field stay valid.
+    /// Transport protocol used for the game stream (TCP or QUIC).
+    /// Defaults to TCP so older launchers that don't send this field stay valid.
     /// </summary>
     [JsonPropertyName("transport")]
-    [RegularExpression("^(TCP|QUIC)$", ErrorMessage = "Transport must be TCP or QUIC.")]
-    public string Transport { get; set; } = "TCP";
+    [EnumDataType(typeof(Transport), ErrorMessage = "Transport must be TCP or QUIC.")]
+    public Transport Transport { get; set; } = Transport.TCP;
 }
 
 public class DiagnosticsDataDto

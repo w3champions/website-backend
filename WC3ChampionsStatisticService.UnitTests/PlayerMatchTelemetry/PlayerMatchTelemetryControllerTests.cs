@@ -1,10 +1,12 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
+using W3ChampionsStatisticService.LagReports;
 using W3ChampionsStatisticService.PlayerMatchTelemetry;
 using PlayerMatchTelemetryDoc = W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetry;
 
@@ -26,12 +28,11 @@ public class PlayerMatchTelemetryControllerTests
     private static PlayerMatchTelemetrySubmissionDto MakeSubmission(int buckets = 3)
         => new(
             GameId: 12345,
-            BucketMs: 1000,
             MatchWallStart: new DateTime(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc),
             GameLengthMs: 600_000,
-            Crashed: false,
-            ConnectionType: "QUIC",
-            Disconnects: new DisconnectsDto(0, 0, 0),
+            CrashedAt: null,
+            ConnectionType: Transport.QUIC,
+            DisconnectEvents: new List<DisconnectEventDto>(),
             ActionLatencyAggregate: new ActionLatencyAggregateDto(100, 20, 40, 200, 400, 60, 30),
             ActionLatencyTimeseries: new ActionLatencyTimeseriesDto(
                 Enumerable.Range(0, buckets).Select(i => (uint)(i * 1000)).ToArray(),
@@ -47,7 +48,6 @@ public class PlayerMatchTelemetryControllerTests
         _repo.Verify(r => r.UpsertPlayerEntryAsync(
             12345L,
             It.IsAny<DateTime>(),
-            1000,
             It.Is<PlayerMatchTelemetryEntry>(e => e.BattleTag == "Alice#1234" && e.BucketCount == 3),
             It.IsAny<TimeSpan>()),
             Times.Once);
@@ -64,9 +64,10 @@ public class PlayerMatchTelemetryControllerTests
     [Test]
     public async Task GetByGame_returns_doc_when_present()
     {
-        // The controller now projects the domain model to a response DTO so
-        // System.Text.Json can serialize BsonBinaryData fields (the raw domain
-        // model would 500). Verify identity-by-projection on GameId.
+        // The controller projects the domain model to a response DTO that decodes
+        // BsonBinaryData fields into plain number arrays (the raw domain model
+        // would 500 because System.Text.Json can't serialize BsonBinaryData).
+        // Verify identity-by-projection on GameId.
         var doc = new PlayerMatchTelemetryDoc { GameId = 99 };
         _repo.Setup(r => r.GetByGameIdAsync(99)).ReturnsAsync(doc);
         var result = await _controller.GetByGame(99);

@@ -4,11 +4,12 @@ using System;
 using System.Collections.Generic;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using W3ChampionsStatisticService.LagReports;
 
 namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
-// Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.2.
-// _id == GameId. Players merged by BattleTag via upsert.
+// Per-game telemetry document. _id == GameId. Each player's submission is
+// merged into Players[] via an idempotent upsert (one entry per BattleTag).
 [BsonIgnoreExtraElements]
 public class PlayerMatchTelemetry
 {
@@ -16,8 +17,6 @@ public class PlayerMatchTelemetry
     public long GameId { get; set; }
 
     public DateTime MatchWallStart { get; set; }
-
-    public int BucketMs { get; set; }
 
     public List<PlayerMatchTelemetryEntry> Players { get; set; } = new();
 
@@ -31,20 +30,14 @@ public class PlayerMatchTelemetryEntry
 {
     public string BattleTag { get; set; } = string.Empty;
 
-    // Resolved server-side from the matchmaking-service game record. Nullable until joined.
-    public int? FloPlayerId { get; set; }
-
-    public string ConnectionType { get; set; } = string.Empty;   // "TCP" | "QUIC"
-
-    // Resolved server-side from flo-controller. Nullable until joined.
-    public int? ServerNodeId { get; set; }
-    public string? ServerNodeName { get; set; }
+    public Transport ConnectionType { get; set; } = Transport.TCP;
 
     public uint GameLengthMs { get; set; }
 
-    public bool Crashed { get; set; }
+    /// <summary>UTC timestamp when the launcher detected a crash; null when the game ended cleanly.</summary>
+    public DateTime? CrashedAt { get; set; }
 
-    public DisconnectStats Disconnects { get; set; } = new();
+    public List<DisconnectEvent> DisconnectEvents { get; set; } = new();
 
     public ActionLatencyAggregate ActionLatencyAggregate { get; set; } = new();
 
@@ -64,11 +57,14 @@ public class PlayerMatchTelemetryEntry
     public DateTime SubmittedAt { get; set; }
 }
 
-public class DisconnectStats
+/// <summary>
+/// A single disconnect that occurred during the match. The launcher emits one
+/// entry per disconnection with the wall-clock start time and total duration.
+/// </summary>
+public class DisconnectEvent
 {
-    public uint Count { get; set; }
-    public uint TotalDurationMs { get; set; }
-    public uint MeanDurationMs { get; set; }
+    public DateTime StartedAt { get; set; }
+    public uint DurationMs { get; set; }
 }
 
 public class ActionLatencyAggregate
