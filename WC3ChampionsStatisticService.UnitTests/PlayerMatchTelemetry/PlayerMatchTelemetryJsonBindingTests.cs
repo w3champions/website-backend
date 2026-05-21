@@ -103,13 +103,20 @@ public class PlayerMatchTelemetryJsonBindingTests
     }
 
     [Test]
-    public void Response_dto_serializes_with_extended_json_v2_bindata_shape()
+    public void Response_dto_serializes_with_camelcase_outer_and_bindata_inner_shape()
     {
         // Regression for the GET /api/player-match-telemetry/by-game/{gameId} 500-error
         // bug: the raw domain model has BsonBinaryData fields that System.Text.Json
         // cannot serialize. The response DTO must emit MongoDB Extended JSON v2
         // envelopes — { "$binary": { "base64": "...", "subType": "00" } } — so the
         // website's IBinData decoder can parse them.
+        //
+        // Additionally, the outer/entry property names must serialize as camelCase
+        // (battleTag, gameId, sampleCounts, …) so the website's TypeScript
+        // IPlayerMatchTelemetry interface (src/store/admin/playerMatchTelemetry/types.ts)
+        // can consume the response via a typed cast. ASP.NET Core's HTTP pipeline
+        // applies PropertyNamingPolicy = CamelCase by default — we replicate that
+        // here via WebDefaults so the assertion matches the real wire shape.
         var dto = new PlayerMatchTelemetryResponseDto(
             GameId: 1L,
             MatchWallStart: DateTime.UtcNow,
@@ -124,8 +131,8 @@ public class PlayerMatchTelemetryJsonBindingTests
                     ServerNodeName: null,
                     GameLengthMs: 100,
                     Crashed: false,
-                    Disconnects: new DisconnectsDto(0, 0, 0),
-                    ActionLatencyAggregate: new ActionLatencyAggregateDto(1, 1, 1, 1, 1, 1, 1),
+                    Disconnects: new DisconnectsResponseDto(0, 0, 0),
+                    ActionLatencyAggregate: new ActionLatencyAggregateResponseDto(1, 1, 1, 1, 1, 1, 1),
                     BucketCount: 1,
                     GameTimeOffsetsMs: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 0, 0, 0, 0 }), "00")),
                     MeansMs: new BinDataEnvelopeDto(new BinDataPayloadDto(Convert.ToBase64String(new byte[] { 5, 0 }), "00")),
@@ -138,9 +145,34 @@ public class PlayerMatchTelemetryJsonBindingTests
             ExpiresAt: DateTime.UtcNow.AddDays(90)
         );
 
-        var json = JsonSerializer.Serialize(dto);
-        Assert.That(json, Does.Contain("\"$binary\":{\"base64\":"), "BinData envelopes must serialize with $binary wrapper");
-        Assert.That(json, Does.Contain("\"sample_counts\":{\"$binary\":"), "sample_counts is on the entry, not nested");
-        Assert.That(json, Does.Contain("\"game_id\":1"));
+        var json = JsonSerializer.Serialize(dto, WebDefaults);
+
+        // camelCase outer wire shape (matches website's IPlayerMatchTelemetry types).
+        Assert.That(json, Does.Contain("\"gameId\":1"));
+        Assert.That(json, Does.Contain("\"battleTag\":\"Alice#1234\""));
+        Assert.That(json, Does.Contain("\"bucketMs\":1000"));
+        Assert.That(json, Does.Contain("\"bucketCount\":1"));
+        Assert.That(json, Does.Contain("\"gameTimeOffsetsMs\":{\"$binary\":"));
+        Assert.That(json, Does.Contain("\"meansMs\":{\"$binary\":"));
+        Assert.That(json, Does.Contain("\"sampleCounts\":{\"$binary\":"));
+        Assert.That(json, Does.Contain("\"droppedUnmatchedCount\":0"));
+
+        // Nested aggregates also camelCase (separate response-side records, no snake_case attrs).
+        Assert.That(json, Does.Contain("\"totalDurationMs\":0"));
+        Assert.That(json, Does.Contain("\"sampleCount\":1"));
+        Assert.That(json, Does.Contain("\"p999Ms\":1"));
+
+        // BinData inner literal keys ($binary, base64, subType) are NOT camelCase-derived
+        // and must remain exactly as MongoDB Extended JSON v2 specifies.
+        Assert.That(json, Does.Contain("\"$binary\":{\"base64\":"),
+            "BinData envelopes must serialize with $binary wrapper and literal base64 key");
+        Assert.That(json, Does.Contain("\"subType\":\"00\""));
+
+        // Negative assertions: no snake_case leakage on the response wire shape.
+        Assert.That(json, Does.Not.Contain("\"battle_tag\""));
+        Assert.That(json, Does.Not.Contain("\"game_id\""));
+        Assert.That(json, Does.Not.Contain("\"sample_counts\""));
+        Assert.That(json, Does.Not.Contain("\"total_duration_ms\""));
+        Assert.That(json, Does.Not.Contain("\"p999_ms\""));
     }
 }

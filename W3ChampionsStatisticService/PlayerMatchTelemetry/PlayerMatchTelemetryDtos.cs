@@ -136,6 +136,17 @@ public sealed class ByteArrayAsJsonNumberArrayConverter : JsonConverter<byte[]>
 // website's IBinData decoder can parse them. Returning the raw
 // domain model crashes System.Text.Json because BsonBinaryData has
 // no serializer registered — that bug is what this DTO layer fixes.
+//
+// Wire shape convention: response DTOs emit camelCase to match the
+// website's TypeScript IPlayerMatchTelemetry types (battleTag,
+// gameId, sampleCounts, etc.). ASP.NET Core's default
+// JsonSerializerOptions.PropertyNamingPolicy = CamelCase auto-converts
+// PascalCase C# names — no [JsonPropertyName] needed on these records.
+//
+// Exception: BinDataEnvelopeDto/BinDataPayloadDto keep explicit
+// [JsonPropertyName] attrs because their wire keys ($binary, base64,
+// subType) are literal MongoDB Extended JSON v2 strings, not
+// naming-policy-derived.
 // ─────────────────────────────────────────────────────────
 
 public record BinDataEnvelopeDto(
@@ -147,32 +158,53 @@ public record BinDataPayloadDto(
     [property: JsonPropertyName("subType")] string SubType
 );
 
+// Response-side aggregates. Distinct from the submission-side
+// DisconnectsDto/ActionLatencyAggregateDto so the GET response can emit
+// camelCase keys (e.g. totalDurationMs) without the snake_case
+// [JsonPropertyName] attrs that the submission DTOs need for Rust serde
+// compatibility on the POST side.
+public record DisconnectsResponseDto(
+    uint Count,
+    uint TotalDurationMs,
+    uint MeanDurationMs
+);
+
+public record ActionLatencyAggregateResponseDto(
+    uint SampleCount,
+    ushort P10Ms,
+    ushort P50Ms,
+    ushort P99Ms,
+    ushort P999Ms,
+    ushort MeanMs,
+    ushort StddevMs
+);
+
 #nullable enable
 public record PlayerMatchTelemetryEntryResponseDto(
-    [property: JsonPropertyName("battle_tag")] string BattleTag,
-    [property: JsonPropertyName("flo_player_id")] int? FloPlayerId,
-    [property: JsonPropertyName("connection_type")] string ConnectionType,
-    [property: JsonPropertyName("server_node_id")] int? ServerNodeId,
-    [property: JsonPropertyName("server_node_name")] string? ServerNodeName,
-    [property: JsonPropertyName("game_length_ms")] uint GameLengthMs,
-    [property: JsonPropertyName("crashed")] bool Crashed,
-    [property: JsonPropertyName("disconnects")] DisconnectsDto Disconnects,
-    [property: JsonPropertyName("action_latency_aggregate")] ActionLatencyAggregateDto ActionLatencyAggregate,
-    [property: JsonPropertyName("bucket_count")] int BucketCount,
-    [property: JsonPropertyName("game_time_offsets_ms")] BinDataEnvelopeDto GameTimeOffsetsMs,
-    [property: JsonPropertyName("means_ms")] BinDataEnvelopeDto MeansMs,
-    [property: JsonPropertyName("sample_counts")] BinDataEnvelopeDto SampleCounts,
-    [property: JsonPropertyName("dropped_unmatched_count")] uint DroppedUnmatchedCount,
-    [property: JsonPropertyName("submitted_at")] DateTime SubmittedAt
+    string BattleTag,
+    int? FloPlayerId,
+    string ConnectionType,
+    int? ServerNodeId,
+    string? ServerNodeName,
+    uint GameLengthMs,
+    bool Crashed,
+    DisconnectsResponseDto Disconnects,
+    ActionLatencyAggregateResponseDto ActionLatencyAggregate,
+    int BucketCount,
+    BinDataEnvelopeDto GameTimeOffsetsMs,
+    BinDataEnvelopeDto MeansMs,
+    BinDataEnvelopeDto SampleCounts,
+    uint DroppedUnmatchedCount,
+    DateTime SubmittedAt
 );
 
 public record PlayerMatchTelemetryResponseDto(
-    [property: JsonPropertyName("game_id")] long GameId,
-    [property: JsonPropertyName("match_wall_start")] DateTime MatchWallStart,
-    [property: JsonPropertyName("bucket_ms")] int BucketMs,
-    [property: JsonPropertyName("players")] List<PlayerMatchTelemetryEntryResponseDto> Players,
-    [property: JsonPropertyName("created_at")] DateTime CreatedAt,
-    [property: JsonPropertyName("expires_at")] DateTime ExpiresAt
+    long GameId,
+    DateTime MatchWallStart,
+    int BucketMs,
+    List<PlayerMatchTelemetryEntryResponseDto> Players,
+    DateTime CreatedAt,
+    DateTime ExpiresAt
 );
 
 public static class PlayerMatchTelemetryMapper
@@ -199,8 +231,11 @@ public static class PlayerMatchTelemetryMapper
             ServerNodeName: e.ServerNodeName,
             GameLengthMs: e.GameLengthMs,
             Crashed: e.Crashed,
-            Disconnects: new DisconnectsDto(e.Disconnects.Count, e.Disconnects.TotalDurationMs, e.Disconnects.MeanDurationMs),
-            ActionLatencyAggregate: new ActionLatencyAggregateDto(
+            Disconnects: new DisconnectsResponseDto(
+                e.Disconnects.Count,
+                e.Disconnects.TotalDurationMs,
+                e.Disconnects.MeanDurationMs),
+            ActionLatencyAggregate: new ActionLatencyAggregateResponseDto(
                 e.ActionLatencyAggregate.SampleCount,
                 e.ActionLatencyAggregate.P10Ms,
                 e.ActionLatencyAggregate.P50Ms,
