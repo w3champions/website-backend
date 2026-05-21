@@ -91,7 +91,7 @@ public class PlayerMatchTelemetryRepositoryTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task EnsureIndexes_creates_ttl_and_lookup()
+    public async Task EnsureIndexes_creates_ttl_lookup_and_recency()
     {
         await _repo.EnsureIndexesAsync();
 
@@ -117,6 +117,11 @@ public class PlayerMatchTelemetryRepositoryTests : IntegrationTestBase
             }),
             Is.True,
             "Players.BattleTag lookup index missing — got: " + indexDump);
+
+        Assert.That(
+            indexes.Any(i => i.GetValue("name", BsonString.Empty).AsString == "CreatedAt_recency"),
+            Is.True,
+            "CreatedAt recency index missing — got: " + indexDump);
     }
 
     [Test]

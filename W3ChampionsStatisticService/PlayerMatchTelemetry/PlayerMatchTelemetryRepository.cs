@@ -145,6 +145,11 @@ public class PlayerMatchTelemetryRepository(MongoClient mongoClient)
                     .Ascending("Players.BattleTag")
                     .Descending(x => x.MatchWallStart),
                 new CreateIndexOptions { Name = "Players_BattleTag_MatchWallStart" }),
+
+            // Recency index — "N most recent telemetry submissions".
+            new(
+                Builders<PlayerMatchTelemetry>.IndexKeys.Descending(x => x.CreatedAt),
+                new CreateIndexOptions { Name = "CreatedAt_recency" }),
         };
 
         await Collection.Indexes.CreateManyAsync(indexes);
