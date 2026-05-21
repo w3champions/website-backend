@@ -86,6 +86,14 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
         return Ok(doc);
     }
 
+    /// <summary>
+    /// Encodes a <see cref="uint"/>[] as little-endian bytes via <see cref="Buffer.BlockCopy"/>.
+    /// </summary>
+    /// <remarks>
+    /// On x86_64 and arm64 Linux (the deployment platforms) this produces little-endian output
+    /// directly. If the service is ever ported to a big-endian host, swap to
+    /// <c>System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian</c> per element.
+    /// </remarks>
     private static byte[] EncodeU32Le(uint[] values)
     {
         var bytes = new byte[values.Length * 4];
@@ -93,6 +101,14 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
         return bytes;
     }
 
+    /// <summary>
+    /// Encodes a <see cref="ushort"/>[] as little-endian bytes via <see cref="Buffer.BlockCopy"/>.
+    /// </summary>
+    /// <remarks>
+    /// On x86_64 and arm64 Linux (the deployment platforms) this produces little-endian output
+    /// directly. If the service is ever ported to a big-endian host, swap to
+    /// <c>System.Buffers.Binary.BinaryPrimitives.WriteUInt16LittleEndian</c> per element.
+    /// </remarks>
     private static byte[] EncodeU16Le(ushort[] values)
     {
         var bytes = new byte[values.Length * 2];
