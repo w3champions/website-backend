@@ -10,6 +10,18 @@ namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
 // Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.2 + §4.8.4.
 // _id == GameId. Per-player entries merged into Players[] via idempotent upsert.
+/// <summary>
+/// Mongo repository for <see cref="PlayerMatchTelemetry"/>. Implements
+/// <see cref="IRequiresIndexes"/> so the existing
+/// <c>MongoIndexInitializationService</c> creates the TTL and lookup indexes
+/// at application startup — but only after this type is registered with DI.
+/// </summary>
+/// <remarks>
+/// DI registration is wired in Task 1.18 (see
+/// docs/superpowers/plans/2026-05-21-flo-action-latency-01-foundation.md).
+/// Until then, <see cref="EnsureIndexesAsync"/> must be called explicitly
+/// (the integration tests do this).
+/// </remarks>
 [Trace]
 public class PlayerMatchTelemetryRepository(MongoClient mongoClient)
     : MongoDbRepositoryBase(mongoClient), IPlayerMatchTelemetryRepository, IRequiresIndexes
@@ -19,6 +31,20 @@ public class PlayerMatchTelemetryRepository(MongoClient mongoClient)
     private IMongoCollection<PlayerMatchTelemetry> Collection
         => CreateCollection<PlayerMatchTelemetry>();
 
+    /// <summary>
+    /// Upserts a single player's entry into the per-game document. Uses a 3-step pattern
+    /// (init top-level via SetOnInsert → pull existing entry by BattleTag → push new entry),
+    /// mirroring <see cref="W3ChampionsStatisticService.LagReports.LagReportRepository"/>.
+    /// </summary>
+    /// <remarks>
+    /// The 3-step sequence is NOT atomic. Concurrent invocations for the same
+    /// <paramref name="gameId"/> and <c>entry.BattleTag</c> can interleave between
+    /// the pull and push steps and produce duplicate array entries.
+    /// This is acceptable under the deployment assumption that one launcher
+    /// instance per player submits at most once per game (fire-and-forget, no retry —
+    /// see spec §4.7 and §4.8.4). If concurrent same-(gameId, battleTag) submissions
+    /// become possible, replace this with an arrayFilters-based atomic update.
+    /// </remarks>
     public async Task UpsertPlayerEntryAsync(
         long gameId,
         DateTime matchWallStart,
