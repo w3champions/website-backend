@@ -6,12 +6,12 @@ namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
 // Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.1.
 public record PlayerMatchTelemetrySubmissionDto(
-    [property: Range(0L, long.MaxValue)] long GameId,
+    [property: Range(1L, long.MaxValue)] long GameId,
     [property: Range(100, 10_000)] int BucketMs,
     DateTime MatchWallStart,
-    [property: Range(typeof(uint), "0", "4294967295")] uint GameLengthMs,
+    uint GameLengthMs,
     bool Crashed,
-    [property: RegularExpression("^(TCP|QUIC|Tcp|Quic)$",
+    [property: RegularExpression("^(TCP|QUIC)$",
         ErrorMessage = "ConnectionType must be 'TCP' or 'QUIC'.")]
     string ConnectionType,
     [property: Required] DisconnectsDto Disconnects,
@@ -20,6 +20,8 @@ public record PlayerMatchTelemetrySubmissionDto(
     uint DroppedUnmatchedCount
 ) : IValidatableObject
 {
+    private const int MaxTimeseriesBuckets = 28_800;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var ts = ActionLatencyTimeseries;
@@ -34,10 +36,10 @@ public record PlayerMatchTelemetrySubmissionDto(
                 $"SampleCounts={ts.SampleCounts.Length}",
                 new[] { nameof(ActionLatencyTimeseries) });
         }
-        if (ts.MeansMs.Length > 28_800)
+        if (ts.MeansMs.Length > MaxTimeseriesBuckets)
         {
             yield return new ValidationResult(
-                $"Timeseries length {ts.MeansMs.Length} exceeds max 28800 buckets.",
+                $"Timeseries length {ts.MeansMs.Length} exceeds max {MaxTimeseriesBuckets} buckets.",
                 new[] { nameof(ActionLatencyTimeseries) });
         }
     }

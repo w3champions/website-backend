@@ -59,9 +59,10 @@ public class PlayerMatchTelemetryDtosTests
     [Test]
     public void Bucket_count_over_28800_fails_validation()
     {
-        var huge = new uint[28_801];
-        var means = new ushort[28_801];
-        var counts = new byte[28_801];
+        const int MaxTimeseriesBuckets = 28_800;
+        var huge = new uint[MaxTimeseriesBuckets + 1];
+        var means = new ushort[MaxTimeseriesBuckets + 1];
+        var counts = new byte[MaxTimeseriesBuckets + 1];
         var v = MakeValid();
         var bad = v with
         {
@@ -69,7 +70,7 @@ public class PlayerMatchTelemetryDtosTests
         };
         var (ok, errors) = Validate(bad);
         Assert.That(ok, Is.False);
-        Assert.That(string.Join(";", errors), Does.Contain("28800"));
+        Assert.That(string.Join(";", errors), Does.Contain(MaxTimeseriesBuckets.ToString()));
     }
 
     [Test]
@@ -82,10 +83,37 @@ public class PlayerMatchTelemetryDtosTests
     }
 
     [Test]
+    public void Lowercase_connection_type_is_rejected_after_tightening()
+    {
+        var v = MakeValid();
+        var bad = v with { ConnectionType = "Tcp" };
+        var (ok, _) = Validate(bad);
+        Assert.That(ok, Is.False);
+    }
+
+    [Test]
     public void Bucket_ms_out_of_range_fails_validation()
     {
         var v = MakeValid();
         var bad = v with { BucketMs = 50 };  // below 100
+        var (ok, _) = Validate(bad);
+        Assert.That(ok, Is.False);
+    }
+
+    [Test]
+    public void Null_disconnects_fails_validation()
+    {
+        var v = MakeValid();
+        var bad = v with { Disconnects = null! };
+        var (ok, _) = Validate(bad);
+        Assert.That(ok, Is.False);
+    }
+
+    [Test]
+    public void Null_action_latency_aggregate_fails_validation()
+    {
+        var v = MakeValid();
+        var bad = v with { ActionLatencyAggregate = null! };
         var (ok, _) = Validate(bad);
         Assert.That(ok, Is.False);
     }
