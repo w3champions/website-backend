@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace W3ChampionsStatisticService.LagReports;
@@ -66,6 +67,14 @@ public class ConnectionTopologyDto
 
     [JsonPropertyName("client_ip")]
     public string ClientIp { get; set; }
+
+    /// <summary>
+    /// Transport protocol used for the game stream ("TCP" or "QUIC").
+    /// Defaults to "TCP" so older launchers that don't send this field stay valid.
+    /// </summary>
+    [JsonPropertyName("transport")]
+    [RegularExpression("^(TCP|QUIC)$", ErrorMessage = "Transport must be TCP or QUIC.")]
+    public string Transport { get; set; } = "TCP";
 }
 
 public class DiagnosticsDataDto
