@@ -7,6 +7,7 @@ namespace W3ChampionsStatisticService.PlayerMatchTelemetry;
 
 // Spec: docs/superpowers/specs/2026-05-21-flo-action-latency-design.md §4.8.2.
 // _id == GameId. Players merged by BattleTag via upsert.
+[BsonIgnoreExtraElements]
 public class PlayerMatchTelemetry
 {
     [BsonId]
