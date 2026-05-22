@@ -184,6 +184,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             BattleTag = battleTag,
             ClientIp = topo.ClientIp,
             ConnectionType = topo.ConnectionType,
+            Transport = topo.Transport,
             ProxyName = topo.ProxyName,
             ProxyIp = proxyIp,
             ProxyPort = proxyPort,

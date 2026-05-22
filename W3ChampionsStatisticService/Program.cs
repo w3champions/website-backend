@@ -168,6 +168,8 @@ builder.Services.AddInterceptedTransient<IPatchRepository, PatchRepository>();
 builder.Services.AddInterceptedTransient<IAdminRepository, AdminRepository>();
 builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.LagReports.LagReportRepository>();
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, W3ChampionsStatisticService.LagReports.LagReportRepository>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.PlayerMatchTelemetry.IPlayerMatchTelemetryRepository, W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetryRepository>();
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetryRepository>();
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IFloStatsService, W3ChampionsStatisticService.LagReports.FloStatsService>();
 builder.Services.AddInterceptedTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
 builder.Services.AddInterceptedTransient<IW3CAuthenticationService, W3CAuthenticationService>();
