@@ -30,6 +30,7 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
     public int Season { get; set; }
     public string Id { get; set; }
     public int MMR { set; get; }
+    public int? RatingLowerBound { get; set; }
     public double RankingPoints { get; set; }
     public int Rank { get; set; }
     public int LeagueId { get; set; }
@@ -50,7 +51,7 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
         }
     }
 
-    public void RecordRanking(in int mmr, in double rankingPoints)
+    public void RecordRanking(in int mmr, in double rankingPoints, in int? ratingLowerBound = null)
     {
         if (RankProgressionStart == null || LastGameWasBefore8Hours())
         {
@@ -58,6 +59,7 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
         }
 
         MMR = mmr;
+        RatingLowerBound = ratingLowerBound;
         RankingPoints = rankingPoints;
     }
 

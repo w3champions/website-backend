@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using W3C.Contracts.GameObjects;
@@ -157,6 +158,31 @@ public class PlayerTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task PlayerStatsMapping_IncludesRatingLowerBound()
+    {
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var battleTagIdCombined = new BattleTagIdCombined(new List<PlayerId>
+            {
+                PlayerId.Create("peter#123")
+            },
+            GateWay.Europe,
+            GameMode.GM_1v1,
+            2,
+            null);
+        var player = PlayerGameModeStatPerGateway.Create(battleTagIdCombined);
+        player.RecordRanking(234, 123, 222);
+
+        await playerRepository.UpsertPlayerGameModeStatPerGateway(player);
+
+        var playerLoadedAgain = await playerRepository.LoadGameModeStatPerGateway("peter#123", GateWay.Europe, 2);
+        var serialized = JsonSerializer.Serialize(playerLoadedAgain.Single(), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.AreEqual(222, playerLoadedAgain.Single().RatingLowerBound);
+        StringAssert.Contains("\"ratingLowerBound\":222", serialized);
+    }
+
+    [Test]
     public async Task PlayerIdMappedRight()
     {
         var playerRepository = new PlayerRepository(MongoClient);
@@ -218,9 +244,11 @@ public class PlayerTests : IntegrationTestBase
 
         ev.match.players[0].battleTag = "peter#123";
         ev.match.players[0].won = true;
+        ev.match.players[0].updatedMmr.rating_lower_bound = 1700;
 
         ev.match.players[1].battleTag = "wolf#456";
         ev.match.players[1].won = false;
+        ev.match.players[1].updatedMmr.rating_lower_bound = 1600;
 
         await handler.Update(ev);
 
@@ -228,9 +256,11 @@ public class PlayerTests : IntegrationTestBase
         var loser = await playerRepository.LoadGameModeStatPerGateway("wolf#456", GateWay.Europe, 1);
 
         Assert.AreEqual(1, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_1v1).Wins);
+        Assert.AreEqual(1700, winnerStatGateWay.First(x => x.GameMode == GameMode.GM_1v1).RatingLowerBound);
 
         Assert.AreEqual(1, loser.First(x => x.GameMode == GameMode.GM_1v1).Losses);
         Assert.AreEqual(0, loser.First(x => x.GameMode == GameMode.GM_1v1).Wins);
+        Assert.AreEqual(1600, loser.First(x => x.GameMode == GameMode.GM_1v1).RatingLowerBound);
     }
 
     [Test]

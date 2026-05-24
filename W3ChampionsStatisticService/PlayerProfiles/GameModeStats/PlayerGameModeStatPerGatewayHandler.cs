@@ -71,11 +71,12 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
 
         loser.RecordWin(false);
 
-        var firstLooser = losingTeam.First();
+        var firstLoser = losingTeam.First();
 
         loser.RecordRanking(
-            (int?)firstLooser.updatedMmr?.rating ?? (int?)firstLooser.mmr?.rating ?? 0,
-            firstLooser.updatedRanking?.rp ?? firstLooser.ranking?.rp ?? 0);
+            (int?)firstLoser.updatedMmr?.rating ?? (int?)firstLoser.mmr?.rating ?? 0,
+            firstLoser.updatedRanking?.rp ?? firstLoser.ranking?.rp ?? 0,
+            GetRatingLowerBound(firstLoser));
 
         await _playerRepository.UpsertPlayerGameModeStatPerGateway(loser);
     }
@@ -110,7 +111,8 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
         winner.RecordWin(true);
         winner.RecordRanking(
             (int?)winners.First().updatedMmr?.rating ?? (int?)winners.First().mmr?.rating ?? 0,
-            winners.First().updatedRanking?.rp ?? winners.First().ranking?.rp ?? 0);
+            winners.First().updatedRanking?.rp ?? winners.First().ranking?.rp ?? 0,
+            GetRatingLowerBound(winners.First()));
 
         await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
     }
@@ -154,5 +156,22 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
         }
 
         return gameMode;
+    }
+
+    [NoTrace]
+    private static int? GetRatingLowerBound(PlayerMMrChange player)
+    {
+        var lowerBound = player.updatedMmr?.rating_lower_bound;
+        if (lowerBound == null)
+        {
+            lowerBound = player.mmr?.rating_lower_bound;
+        }
+
+        if (lowerBound == null)
+        {
+            return null;
+        }
+
+        return (int)lowerBound.Value;
     }
 }
