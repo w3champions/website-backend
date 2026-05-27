@@ -1,21 +1,21 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Serilog;
 using W3C.Contracts.GameObjects;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
-using W3ChampionsStatisticService.Ports;
-using W3C.Contracts.Matchmaking;
-using W3ChampionsStatisticService.Heroes;
-using W3ChampionsStatisticService.Ladder;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Common.Constants;
+using W3ChampionsStatisticService.Heroes;
+using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -106,10 +106,12 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int pageSize = 100,
         int offset = 0,
         int season = 1,
-        HeroType hero = HeroType.AllFilter)
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero);
+        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, selfIncludeRandom, opponentIncludeRandom);
         var matchups = await mongoCollection
             .Find(filter)
             .SortByDescending(s => s.Id)
@@ -129,10 +131,12 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race playerRace = Race.Total,
         Race opponentRace = Race.Total,
         int season = 1,
-        HeroType hero = HeroType.AllFilter)
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero);
+        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, selfIncludeRandom, opponentIncludeRandom);
         return mongoCollection.CountDocumentsAsync(filter);
     }
 
@@ -144,7 +148,9 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race playerRace,
         Race opponentRace,
         int season,
-        HeroType hero)
+        HeroType hero,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         var builder = Builders<Matchup>.Filter;
         FilterDefinition<Matchup> filter = builder.Empty;
@@ -156,8 +162,16 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         }
         filter &= builder.Where(m => gameMode == GameMode.Undefined || m.GameMode == gameMode);
         filter &= builder.Where(m => gateWay == GateWay.Undefined || m.GateWay == gateWay);
-        filter &= builder.Where(m => playerRace == Race.Total || m.Teams.Any(team => team.Players.Any(p => p.BattleTag == playerId && (p.Race == playerRace || (p.Race == Race.RnD && p.RndRace == playerRace)))));
-        filter &= builder.Where(m => opponentRace == Race.Total || m.Teams.Any(team => team.Players.Any(p => p.BattleTag != playerId && (p.Race == opponentRace || (p.Race == Race.RnD && p.RndRace == opponentRace)))));
+        if (playerRace != Race.Total)
+        {
+            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.BattleTag == playerId && (p.Race == playerRace || (selfIncludeRandom && p.Race == Race.RnD && p.RndRace == playerRace)))));
+        }
+
+        if (opponentRace != Race.Total)
+        {
+            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.BattleTag != playerId && (p.Race == opponentRace || (opponentIncludeRandom && p.Race == Race.RnD && p.RndRace == opponentRace)))));
+        }
+
         filter &= builder.Where(m => m.Season == season);
         if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
         {

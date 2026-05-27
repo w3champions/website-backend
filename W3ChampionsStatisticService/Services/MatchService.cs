@@ -1,14 +1,14 @@
 using System;
-using System.Threading.Tasks;
-using W3ChampionsStatisticService.Cache;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
-using W3ChampionsStatisticService.Matches;
-using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Heroes;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Services;
 
@@ -43,11 +43,13 @@ public class MatchService(
         Race opponentRace,
         int offset,
         int pageSize,
-        HeroType hero = HeroType.AllFilter)
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         // Generate a unique cache key based on the request parameters
         string cacheKeyMatches =
-            $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}_{hero}";
+            $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}_{hero}_{selfIncludeRandom}_{opponentIncludeRandom}";
 
         var matches = await _cachedMatchesProvider.GetCachedOrRequestAsync(
             async () => await _matchRepository.LoadFor(
@@ -60,7 +62,9 @@ public class MatchService(
                 pageSize,
                 offset,
                 season,
-                hero), cacheKeyMatches, TimeSpan.FromSeconds(5));
+                hero,
+                selfIncludeRandom,
+                opponentIncludeRandom), cacheKeyMatches, TimeSpan.FromSeconds(5));
         return matches;
     }
 
@@ -72,17 +76,20 @@ public class MatchService(
         GateWay gateWay,
         Race playerRace,
         Race opponentRace,
-        HeroType hero = HeroType.AllFilter)
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         // Generate a unique cache key based on the request parameters
         string cacheKeyCount =
-            $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{hero}";
+            $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{hero}_{selfIncludeRandom}_{opponentIncludeRandom}";
 
         var count = await _cachedMatchCountProvider.GetCachedOrRequestAsync(
             async () => new CachedLong
             {
                 Value = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace,
-                    opponentRace, season, hero)
+                    opponentRace, season, hero, selfIncludeRandom,
+                opponentIncludeRandom)
             }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
     }

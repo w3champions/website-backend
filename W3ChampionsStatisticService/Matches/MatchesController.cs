@@ -155,12 +155,14 @@ public class MatchesController(
         Race opponentRace = Race.Total,
         int offset = 0,
         int pageSize = 100,
-        HeroType hero = HeroType.AllFilter)
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         if (pageSize > 100) pageSize = 100;
 
-        var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero);
-        var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero);
+        var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero, selfIncludeRandom, opponentIncludeRandom);
+        var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero, selfIncludeRandom, opponentIncludeRandom);
         PlayersObfuscator.ObfuscateMmr(matches);
         return Ok(new { matches, count });
     }

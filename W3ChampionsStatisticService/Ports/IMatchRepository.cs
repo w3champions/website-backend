@@ -38,7 +38,9 @@ public interface IMatchRepository
         int pageSize = 100,
         int offset = 0,
         int season = 1,
-        HeroType hero = HeroType.AllFilter);
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false);
     Task<long> CountFor(string playerId,
         string opponentId = null,
         GateWay gateWay = GateWay.Undefined,
@@ -46,7 +48,9 @@ public interface IMatchRepository
         Race playerRace = Race.Total,
         Race opponentRace = Race.Total,
         int season = 1,
-        HeroType hero = HeroType.AllFilter);
+        HeroType hero = HeroType.AllFilter,
+        bool selfIncludeRandom = false,
+        bool opponentIncludeRandom = false);
 
     Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);
     Task<MatchupDetail> LoadFinishedMatchDetailsByMatchId(string id);
