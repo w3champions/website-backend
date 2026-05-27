@@ -44,12 +44,12 @@ public class MatchService(
         int offset,
         int pageSize,
         HeroType hero = HeroType.AllFilter,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false)
     {
         // Generate a unique cache key based on the request parameters
         string cacheKeyMatches =
-            $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}_{hero}_{selfIncludeRandom}_{opponentIncludeRandom}";
+            $"matches_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{offset}_{pageSize}_{hero}_{playerIncludeRandom}_{opponentIncludeRandom}";
 
         var matches = await _cachedMatchesProvider.GetCachedOrRequestAsync(
             async () => await _matchRepository.LoadFor(
@@ -63,7 +63,7 @@ public class MatchService(
                 offset,
                 season,
                 hero,
-                selfIncludeRandom,
+                playerIncludeRandom,
                 opponentIncludeRandom), cacheKeyMatches, TimeSpan.FromSeconds(5));
         return matches;
     }
@@ -77,19 +77,18 @@ public class MatchService(
         Race playerRace,
         Race opponentRace,
         HeroType hero = HeroType.AllFilter,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false)
     {
         // Generate a unique cache key based on the request parameters
         string cacheKeyCount =
-            $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{hero}_{selfIncludeRandom}_{opponentIncludeRandom}";
+            $"count_{playerId}_{season}_{opponentId}_{gameMode}_{gateWay}_{playerRace}_{opponentRace}_{hero}_{playerIncludeRandom}_{opponentIncludeRandom}";
 
         var count = await _cachedMatchCountProvider.GetCachedOrRequestAsync(
             async () => new CachedLong
             {
                 Value = await _matchRepository.CountFor(playerId, opponentId, gateWay, gameMode, playerRace,
-                    opponentRace, season, hero, selfIncludeRandom,
-                opponentIncludeRandom)
+                    opponentRace, season, hero, playerIncludeRandom, opponentIncludeRandom)
             }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
     }

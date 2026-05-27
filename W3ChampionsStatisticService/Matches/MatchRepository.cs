@@ -107,11 +107,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int offset = 0,
         int season = 1,
         HeroType hero = HeroType.AllFilter,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, selfIncludeRandom, opponentIncludeRandom);
+        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, playerIncludeRandom, opponentIncludeRandom);
         var matchups = await mongoCollection
             .Find(filter)
             .SortByDescending(s => s.Id)
@@ -132,11 +132,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race opponentRace = Race.Total,
         int season = 1,
         HeroType hero = HeroType.AllFilter,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false)
     {
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, selfIncludeRandom, opponentIncludeRandom);
+        var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, playerIncludeRandom, opponentIncludeRandom);
         return mongoCollection.CountDocumentsAsync(filter);
     }
 
@@ -149,7 +149,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         Race opponentRace,
         int season,
         HeroType hero,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false)
     {
         var builder = Builders<Matchup>.Filter;
@@ -164,7 +164,7 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         filter &= builder.Where(m => gateWay == GateWay.Undefined || m.GateWay == gateWay);
         if (playerRace != Race.Total)
         {
-            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.BattleTag == playerId && (p.Race == playerRace || (selfIncludeRandom && p.Race == Race.RnD && p.RndRace == playerRace)))));
+            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p => p.BattleTag == playerId && (p.Race == playerRace || (playerIncludeRandom && p.Race == Race.RnD && p.RndRace == playerRace)))));
         }
 
         if (opponentRace != Race.Total)

@@ -39,7 +39,7 @@ public interface IMatchRepository
         int offset = 0,
         int season = 1,
         HeroType hero = HeroType.AllFilter,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false);
     Task<long> CountFor(string playerId,
         string opponentId = null,
@@ -49,7 +49,7 @@ public interface IMatchRepository
         Race opponentRace = Race.Total,
         int season = 1,
         HeroType hero = HeroType.AllFilter,
-        bool selfIncludeRandom = false,
+        bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false);
 
     Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);
