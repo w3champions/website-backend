@@ -24,7 +24,24 @@ public class MapMetadataBackfillTests
     }
 
     [Test]
-    public void Resolve_UsesEarliestNameWhenOneMapIdHasLaterDisplayName()
+    public void Resolve_UsesSeason24NameWhenOneMapIdHasLaterDisplayName()
+    {
+        var resolver = new MapMetadataResolver(new[]
+        {
+            new SourceMapMetadata("AutumnLeavesv2-0", "Autumn Leaves", 44, 11, 11, new[] { 1 }, 10),
+            new SourceMapMetadata("2404091839AutumnLeavesv2_0", "Autumn Leaves v2", 44, 24, 24, new[] { 1 }, 10)
+        });
+
+        var resolution = resolver.Resolve("AutumnLeavesv2_0");
+
+        Assert.AreEqual(MapMetadataResolutionStatus.Resolved, resolution.Status);
+        Assert.AreEqual("Autumn Leaves v2", resolution.MapName);
+        Assert.AreEqual(44, resolution.MapId);
+        StringAssert.Contains("season 24", resolution.Notes);
+    }
+
+    [Test]
+    public void Resolve_UsesLatestNameWhenPreferredNameSeasonIsUnavailable()
     {
         var resolver = new MapMetadataResolver(new[]
         {
@@ -35,8 +52,9 @@ public class MapMetadataBackfillTests
         var resolution = resolver.Resolve("AutumnLeavesv2_0");
 
         Assert.AreEqual(MapMetadataResolutionStatus.Resolved, resolution.Status);
-        Assert.AreEqual("Autumn Leaves", resolution.MapName);
+        Assert.AreEqual("Autumn Leaves v2", resolution.MapName);
         Assert.AreEqual(44, resolution.MapId);
+        StringAssert.Contains("latest source-season", resolution.Notes);
     }
 
     [Test]
@@ -82,6 +100,21 @@ public class MapMetadataBackfillTests
 
         Assert.IsFalse(options.Apply);
         Assert.AreEqual(25, options.PreviewLimit);
+        Assert.AreEqual(24, options.PreferredNameSeason);
+    }
+
+    [Test]
+    public void Parse_AllowsPreferredNameSeasonOverride()
+    {
+        var options = MapMetadataBackfillOptions.Parse(new[]
+        {
+            "--connection-string",
+            "mongodb://localhost:27017",
+            "--preferred-name-season",
+            "23"
+        });
+
+        Assert.AreEqual(23, options.PreferredNameSeason);
     }
 
     [Test]

@@ -8,6 +8,7 @@ public sealed class MapMetadataBackfillOptions
 {
     public const string DefaultDatabaseName = "W3Champions-Statistic-Service";
     public const string DefaultCollectionName = "Matchup";
+    public const int DefaultPreferredNameSeason = 24;
 
     public string ConnectionString { get; init; }
     public string DatabaseName { get; init; } = DefaultDatabaseName;
@@ -16,6 +17,7 @@ public sealed class MapMetadataBackfillOptions
     public int TargetMaxSeason { get; init; } = 10;
     public int SourceMinSeason { get; init; } = 11;
     public int? SourceMaxSeason { get; init; }
+    public int PreferredNameSeason { get; init; } = DefaultPreferredNameSeason;
     public IReadOnlyCollection<int> GameModes { get; init; } = Array.Empty<int>();
     public bool Apply { get; init; }
     public bool RequireMapId { get; init; }
@@ -42,6 +44,7 @@ public sealed class MapMetadataBackfillOptions
           --target-max-season <number>         Defaults to 10.
           --source-min-season <number>         Defaults to 11.
           --source-max-season <number>         Optional upper bound for catalog rows.
+          --preferred-name-season <number>     Source season to prefer for display names. Defaults to 24.
           --game-mode <ids>                    Optional comma-separated list, for example 1 or 1,2,4.
           --report <path>                      CSV report path. Defaults to map-metadata-backfill-report.csv.
           --manual-map <path>                  Optional JSON file with extra legacy map mappings.
@@ -73,6 +76,7 @@ public sealed class MapMetadataBackfillOptions
         int? targetSeason = null;
         int sourceMinSeason = 11;
         int? sourceMaxSeason = null;
+        int preferredNameSeason = DefaultPreferredNameSeason;
         IReadOnlyCollection<int> gameModes = Array.Empty<int>();
         bool apply = false;
         bool requireMapId = false;
@@ -112,6 +116,9 @@ public sealed class MapMetadataBackfillOptions
                     break;
                 case "--source-max-season":
                     sourceMaxSeason = ReadInt(queue, arg);
+                    break;
+                case "--preferred-name-season":
+                    preferredNameSeason = ReadInt(queue, arg);
                     break;
                 case "--game-mode":
                 case "--game-modes":
@@ -162,6 +169,11 @@ public sealed class MapMetadataBackfillOptions
             throw new ArgumentException("--source-min-season must be less than or equal to --source-max-season.");
         }
 
+        if (preferredNameSeason < 0)
+        {
+            throw new ArgumentException("--preferred-name-season must be zero or greater.");
+        }
+
         if (sampleIdsPerMap < 0)
         {
             throw new ArgumentException("--sample-ids-per-map must be zero or greater.");
@@ -181,6 +193,7 @@ public sealed class MapMetadataBackfillOptions
             TargetMaxSeason = targetMaxSeason,
             SourceMinSeason = sourceMinSeason,
             SourceMaxSeason = sourceMaxSeason,
+            PreferredNameSeason = preferredNameSeason,
             GameModes = gameModes,
             Apply = apply,
             RequireMapId = requireMapId,

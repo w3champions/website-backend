@@ -45,6 +45,7 @@ MONGO_CONNECTION_STRING="mongodb://..." dotnet run \
 ```
 
 The resolver uses newer `Matchup` rows as the source catalog, plus a small built-in mapping for old-only map keys. Ambiguous or missing matches are reported and skipped.
+When one map id has had multiple display names, the resolver prefers the name from season 24 by default. Use `--preferred-name-season <season>` to choose a different source season for display names.
 
 Dry runs print a short human-readable preview and write the full CSV report. Use `--preview-limit 0` to hide the console preview or increase the limit when reviewing a small dataset.
 

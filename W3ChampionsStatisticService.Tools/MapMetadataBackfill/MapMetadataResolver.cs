@@ -38,6 +38,7 @@ public enum MapMetadataResolutionStatus
 
 public sealed class MapMetadataResolver
 {
+    private readonly int _preferredNameSeason;
     private readonly Dictionary<string, List<SourceMapMetadata>> _exactSourceIndex;
     private readonly Dictionary<string, List<SourceMapMetadata>> _stableSourceIndex;
     private readonly Dictionary<string, List<SourceMapMetadata>> _familySourceIndex;
@@ -47,8 +48,10 @@ public sealed class MapMetadataResolver
 
     public MapMetadataResolver(
         IEnumerable<SourceMapMetadata> sourceMetadata,
-        IEnumerable<KeyValuePair<string, ManualMapMetadata>> manualMetadata = null)
+        IEnumerable<KeyValuePair<string, ManualMapMetadata>> manualMetadata = null,
+        int preferredNameSeason = MapMetadataBackfillOptions.DefaultPreferredNameSeason)
     {
+        _preferredNameSeason = preferredNameSeason;
         var source = sourceMetadata?.ToList() ?? new List<SourceMapMetadata>();
         _exactSourceIndex = BuildSourceIndex(source, MapKeyNormalizer.ExactKey);
         _stableSourceIndex = BuildSourceIndex(source, MapKeyNormalizer.StableKey);
@@ -151,7 +154,7 @@ public sealed class MapMetadataResolver
             "Matched built-in or supplied manual metadata.");
     }
 
-    private static MapMetadataResolution ResolveFromSource(
+    private MapMetadataResolution ResolveFromSource(
         IReadOnlyDictionary<string, List<SourceMapMetadata>> index,
         string key,
         string confidence)
@@ -183,11 +186,8 @@ public sealed class MapMetadataResolver
                 "Matched multiple map identities. Add a manual mapping before applying.");
         }
 
-        var selected = candidates
-            .OrderBy(c => c.MinSeason)
-            .ThenBy(c => c.MapName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => c.Map, StringComparer.OrdinalIgnoreCase)
-            .First();
+        var selected = SelectPreferredNameCandidate(candidates);
+        var distinctNameCount = candidates.Select(c => c.MapName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
 
         return new MapMetadataResolution(
             MapMetadataResolutionStatus.Resolved,
@@ -195,9 +195,35 @@ public sealed class MapMetadataResolver
             selected.MapName,
             selected.MapId,
             candidates.Select(SourceLabel).Distinct().OrderBy(s => s).ToList(),
-            candidates.Select(c => c.MapName).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1
-                ? "Matched one map id with multiple display names; using earliest source-season name."
+            distinctNameCount > 1
+                ? PreferredNameNote(selected)
                 : "Matched source metadata.");
+    }
+
+    private SourceMapMetadata SelectPreferredNameCandidate(IReadOnlyCollection<SourceMapMetadata> candidates)
+    {
+        return candidates
+            .OrderByDescending(CoversPreferredNameSeason)
+            .ThenByDescending(c => c.MaxSeason)
+            .ThenByDescending(c => c.Count)
+            .ThenBy(c => c.MapName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.Map, StringComparer.OrdinalIgnoreCase)
+            .First();
+    }
+
+    private bool CoversPreferredNameSeason(SourceMapMetadata source)
+    {
+        return source.MinSeason <= _preferredNameSeason && source.MaxSeason >= _preferredNameSeason;
+    }
+
+    private string PreferredNameNote(SourceMapMetadata selected)
+    {
+        if (CoversPreferredNameSeason(selected))
+        {
+            return $"Matched one map id with multiple display names; using season {_preferredNameSeason} source-season name.";
+        }
+
+        return $"Matched one map id with multiple display names; no season {_preferredNameSeason} name found, using latest source-season name.";
     }
 
     private static string IdentityKey(SourceMapMetadata source)

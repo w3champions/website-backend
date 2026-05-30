@@ -46,6 +46,7 @@ public static class MapMetadataBackfillCommand
         Console.WriteLine(options.Apply ? "Running map metadata backfill in APPLY mode." : "Running map metadata backfill in dry-run mode.");
         Console.WriteLine($"Database: {options.DatabaseName}, collection: {options.CollectionName}");
         Console.WriteLine($"Target seasons: {options.TargetMinSeason}-{options.TargetMaxSeason}; source seasons: {options.SourceMinSeason}-{(options.SourceMaxSeason?.ToString() ?? "latest")}");
+        Console.WriteLine($"Preferred display-name source season: {options.PreferredNameSeason}");
         Console.WriteLine(options.HasGameModeFilter
             ? $"Game modes: {string.Join(", ", options.GameModes.OrderBy(g => g))}"
             : "Game modes: all");
@@ -60,7 +61,7 @@ public static class MapMetadataBackfillCommand
         var sourceMetadata = await LoadSourceMetadataAsync(collection, options);
         var targetGroups = await LoadTargetGroupsAsync(collection, options);
         var manualMetadata = MapMetadataResolver.LoadManualMetadata(options.ManualMapPath);
-        var resolver = new MapMetadataResolver(sourceMetadata, manualMetadata);
+        var resolver = new MapMetadataResolver(sourceMetadata, manualMetadata, options.PreferredNameSeason);
 
         Console.WriteLine($"Loaded {sourceMetadata.Count} source map metadata rows.");
         Console.WriteLine($"Found {targetGroups.Count} target map groups with missing metadata.");
