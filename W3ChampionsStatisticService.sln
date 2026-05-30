@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "W3C.Domain", "W3C.Domain\W3
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "W3C.Contracts", "W3C.Contracts\W3C.Contracts.csproj", "{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "W3ChampionsStatisticService.Tools", "W3ChampionsStatisticService.Tools\W3ChampionsStatisticService.Tools.csproj", "{4C14E6E6-4212-4C31-AB14-392382FAADF7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4634CE7A-D4EB-4E26-A0FC-1D7252FD260C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C14E6E6-4212-4C31-AB14-392382FAADF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C14E6E6-4212-4C31-AB14-392382FAADF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C14E6E6-4212-4C31-AB14-392382FAADF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C14E6E6-4212-4C31-AB14-392382FAADF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

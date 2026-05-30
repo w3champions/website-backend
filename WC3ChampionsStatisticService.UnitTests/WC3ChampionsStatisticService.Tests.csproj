@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\W3C.Domain\W3C.Domain.csproj" />
     <ProjectReference Include="..\W3ChampionsStatisticService\W3ChampionsStatisticService.csproj" />
+    <ProjectReference Include="..\W3ChampionsStatisticService.Tools\W3ChampionsStatisticService.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>
