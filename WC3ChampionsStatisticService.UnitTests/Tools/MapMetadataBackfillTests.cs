@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Reflection;
+using MongoDB.Bson;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Tools.MapMetadataBackfill;
 
@@ -138,5 +140,22 @@ public class MapMetadataBackfillTests
 
         Assert.AreEqual(3, options.TargetMinSeason);
         Assert.AreEqual(3, options.TargetMaxSeason);
+    }
+
+    [Test]
+    public void MissingCountExpressions_TreatAbsentFieldsAsNull()
+    {
+        var mapIdExpression = InvokePrivateBsonDocument("CountMissingExpression", "$MapId").ToString();
+        var mapNameExpression = InvokePrivateBsonDocument("CountMissingOrEmptyExpression", "$MapName").ToString();
+
+        StringAssert.Contains("$ifNull", mapIdExpression);
+        StringAssert.Contains("$ifNull", mapNameExpression);
+        StringAssert.Contains("$in", mapNameExpression);
+    }
+
+    private static BsonDocument InvokePrivateBsonDocument(string methodName, string fieldName)
+    {
+        var method = typeof(MapMetadataBackfillCommand).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static);
+        return (BsonDocument)method.Invoke(null, new object[] { fieldName });
     }
 }

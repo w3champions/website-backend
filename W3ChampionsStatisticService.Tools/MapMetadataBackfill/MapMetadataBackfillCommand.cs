@@ -317,7 +317,7 @@ public static class MapMetadataBackfillCommand
     {
         return new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
         {
-            new BsonDocument("$eq", new BsonArray { fieldName, BsonNull.Value }),
+            new BsonDocument("$eq", new BsonArray { NullIfMissingExpression(fieldName), BsonNull.Value }),
             1,
             0
         }));
@@ -327,14 +327,19 @@ public static class MapMetadataBackfillCommand
     {
         return new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray
         {
-            new BsonDocument("$or", new BsonArray
+            new BsonDocument("$in", new BsonArray
             {
-                new BsonDocument("$eq", new BsonArray { fieldName, BsonNull.Value }),
-                new BsonDocument("$eq", new BsonArray { fieldName, string.Empty })
+                NullIfMissingExpression(fieldName),
+                new BsonArray { BsonNull.Value, string.Empty }
             }),
             1,
             0
         }));
+    }
+
+    private static BsonDocument NullIfMissingExpression(string fieldName)
+    {
+        return new BsonDocument("$ifNull", new BsonArray { fieldName, BsonNull.Value });
     }
 
     private static FilterDefinition<BsonDocument> BuildSeasonFilter(int minSeason, int? maxSeason, MapMetadataBackfillOptions options)
