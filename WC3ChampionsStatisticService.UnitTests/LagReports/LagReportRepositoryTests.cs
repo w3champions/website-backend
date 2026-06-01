@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using NUnit.Framework;
 using W3ChampionsStatisticService.LagReports;
 
@@ -247,5 +249,111 @@ public class LagReportRepositoryTests : IntegrationTestBase
 
         var (items, _) = await _repo.GetReports(new LagReportQueryRequest());
         Assert.IsTrue(items[0].CreatedAt >= items[1].CreatedAt);
+    }
+
+    [Test]
+    public async Task GetReports_ExcludesHeavyDiagnosticsArraysButKeepsEventCounts()
+    {
+        // CreatePlayer populates LagEvents (needed by the list view) AND PingHistory
+        // (one of the heavy arrays the list projection drops). UpdateServerSidePing
+        // adds the top-level ServerSidePing array, which the list view also drops.
+        var template = CreateTemplate(floGameId: 9101, gameId: 13101);
+        var reportId = await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer("Heavy#1"), template);
+        await _repo.UpdateServerSidePing(reportId, new List<ServerSidePingData>
+        {
+            new() { PlayerId = 1, PlayerName = "Heavy#1", Samples = [new ServerPingSample { Time = 60, Avg = 22 }] }
+        });
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest());
+
+        Assert.AreEqual(1, total); // unfiltered total comes from the fast metadata count
+        Assert.AreEqual(1, items.Count);
+
+        var diag = items[0].Players[0].Diagnostics;
+        Assert.AreEqual(1, diag.LagEvents.Count, "LagEvents must be kept — the list view reports their count");
+        Assert.That(diag.PingHistory, Is.Null.Or.Empty, "PingHistory is a heavy array and must be projected out");
+        Assert.That(diag.TargetMtr, Is.Null.Or.Empty, "TargetMtr is a heavy array and must be projected out");
+        Assert.IsNull(items[0].ServerSidePing, "ServerSidePing must be projected out of the list view");
+    }
+
+    [Test]
+    public async Task GetReports_BattleTagSearchIsCaseInsensitivePrefix()
+    {
+        var t = CreateTemplate(floGameId: 9201, gameId: 13201);
+        await _repo.UpsertPlayerData(t.FloGameId, CreatePlayer("Alice#1111"), t);
+
+        // Case-insensitive: different casing than stored still matches.
+        var (upper, _) = await _repo.GetReports(new LagReportQueryRequest { BattleTag = "ALICE" });
+        Assert.AreEqual(1, upper.Count);
+
+        // Prefix, not contains: a mid-string fragment must NOT match.
+        var (mid, _) = await _repo.GetReports(new LagReportQueryRequest { BattleTag = "lice" });
+        Assert.AreEqual(0, mid.Count);
+    }
+
+    [Test]
+    public async Task BackfillSearchFields_PopulatesLegacyDocumentsForPrefixSearch()
+    {
+        // Simulate a document written before the *Search fields existed (fields absent, not null).
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<BsonDocument>("LagReport");
+        await collection.InsertOneAsync(new BsonDocument
+        {
+            { "_id", Guid.NewGuid().ToString() },
+            { "GameId", 99001 },
+            { "FloGameId", 99001 },
+            { "GameName", "Legacy Game" },
+            { "ServerNodeName", "EU Legacy" },
+            { "HasExplicitReport", false },
+            { "Players", new BsonArray { new BsonDocument { { "BattleTag", "Legacy#9999" } } } },
+            { "CreatedAt", DateTime.UtcNow },
+            { "UpdatedAt", DateTime.UtcNow },
+        });
+
+        // Before backfill: prefix search can't find it — there is no BattleTagSearch field.
+        var (before, _) = await _repo.GetReports(new LagReportQueryRequest { BattleTag = "Legacy" });
+        Assert.AreEqual(0, before.Count);
+
+        var updated = await _repo.BackfillSearchFields();
+        Assert.AreEqual(1, updated);
+
+        // After backfill: case-insensitive prefix search finds it.
+        var (after, _) = await _repo.GetReports(new LagReportQueryRequest { BattleTag = "legacy" });
+        Assert.AreEqual(1, after.Count);
+        Assert.AreEqual("Legacy#9999", after[0].Players[0].BattleTag);
+
+        // Re-running is a no-op (idempotent guard).
+        Assert.AreEqual(0, await _repo.BackfillSearchFields());
+    }
+
+    [Test]
+    public async Task EnsureIndexesAsync_DropsSupersededIndexesAndIsIdempotent()
+    {
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<BsonDocument>("LagReport");
+
+        // First run on a clean DB: the obsolete indexes don't exist, so the drops must be tolerated.
+        Assert.DoesNotThrowAsync(async () => await _repo.EnsureIndexesAsync());
+
+        // Simulate a legacy raw-field index left over from before the migration.
+        await collection.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("Players.BattleTag")));
+
+        // Second run must drop the superseded index — and re-running stays idempotent.
+        Assert.DoesNotThrowAsync(async () => await _repo.EnsureIndexesAsync());
+
+        var names = new List<string>();
+        using (var cursor = await collection.Indexes.ListAsync())
+        {
+            foreach (var idx in await cursor.ToListAsync())
+            {
+                names.Add(idx["name"].AsString);
+            }
+        }
+
+        Assert.IsFalse(names.Contains("Players.BattleTag_1"), "superseded raw-field index should be dropped");
+        Assert.IsTrue(names.Contains("Players.BattleTagSearch_1"), "new shadow-field index should exist");
     }
 }

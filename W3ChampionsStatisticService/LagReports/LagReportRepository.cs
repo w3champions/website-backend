@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -31,20 +32,14 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             // Server filter
             new(Builders<LagReport>.IndexKeys.Ascending(r => r.ServerNodeId)),
 
-            // Server name filter (partial match)
-            new(Builders<LagReport>.IndexKeys.Ascending(r => r.ServerNodeName)),
-
-            // Game name filter (partial match)
-            new(Builders<LagReport>.IndexKeys.Ascending(r => r.GameName)),
-
-            // Player battle tag filter (inside nested array)
-            new(Builders<LagReport>.IndexKeys.Ascending("Players.BattleTag")),
-
-            // Proxy name filter (inside nested array)
-            new(Builders<LagReport>.IndexKeys.Ascending("Players.ProxyName")),
-
-            // Proxy IP filter (inside nested array)
-            new(Builders<LagReport>.IndexKeys.Ascending("Players.ProxyIp")),
+            // Case-insensitive prefix search: the admin list filters on lowercased shadow
+            // fields with an anchored /^.../ regex so the index can bound the scan. A
+            // case-insensitive regex on the raw field cannot, and fetches every document.
+            new(Builders<LagReport>.IndexKeys.Ascending(r => r.GameNameSearch)),
+            new(Builders<LagReport>.IndexKeys.Ascending(r => r.ServerNodeNameSearch)),
+            new(Builders<LagReport>.IndexKeys.Ascending("Players.BattleTagSearch")),
+            new(Builders<LagReport>.IndexKeys.Ascending("Players.ProxyNameSearch")),
+            new(Builders<LagReport>.IndexKeys.Ascending("Players.ProxyIpSearch")),
 
             // Issue category filter (inside nested array)
             new(Builders<LagReport>.IndexKeys.Ascending("Players.IssueCategories")),
@@ -61,6 +56,25 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         };
 
         await collection.Indexes.CreateManyAsync(indexes);
+
+        // Drop the raw-field text indexes superseded by the lowercased *Search indexes above:
+        // the list view now filters on the prefix-searchable shadow fields, so these are dead
+        // write overhead. Tolerate "already dropped" so this stays idempotent across restarts.
+        var obsoleteIndexes = new[]
+        {
+            "ServerNodeName_1", "GameName_1", "Players.BattleTag_1", "Players.ProxyName_1", "Players.ProxyIp_1",
+        };
+        foreach (var name in obsoleteIndexes)
+        {
+            try
+            {
+                await collection.Indexes.DropOneAsync(name);
+            }
+            catch (MongoCommandException ex) when (ex.Code == 27 || ex.CodeName == "IndexNotFound")
+            {
+                // Index doesn't exist (fresh DB or already dropped) — nothing to do.
+            }
+        }
     }
 
     /// <summary>
@@ -75,6 +89,12 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
 
         var filter = Builders<LagReport>.Filter.Eq(r => r.FloGameId, floGameId);
 
+        // Maintain lowercased search fields so the admin list can do index-backed
+        // case-insensitive prefix search (see BuildFilters / EnsureIndexesAsync).
+        playerData.BattleTagSearch = playerData.BattleTag?.ToLowerInvariant();
+        playerData.ProxyNameSearch = playerData.ProxyName?.ToLowerInvariant();
+        playerData.ProxyIpSearch = playerData.ProxyIp?.ToLowerInvariant();
+
         // Atomic upsert: push the player and set UpdatedAt on every call,
         // $setOnInsert the template fields only when creating a new document.
         var update = Builders<LagReport>.Update
@@ -84,9 +104,11 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             .SetOnInsert(r => r.GameId, template.GameId)
             .SetOnInsert(r => r.FloGameId, template.FloGameId)
             .SetOnInsert(r => r.GameName, template.GameName)
+            .SetOnInsert(r => r.GameNameSearch, template.GameName?.ToLowerInvariant())
             .SetOnInsert(r => r.MapPath, template.MapPath)
             .SetOnInsert(r => r.ServerNodeId, template.ServerNodeId)
             .SetOnInsert(r => r.ServerNodeName, template.ServerNodeName)
+            .SetOnInsert(r => r.ServerNodeNameSearch, template.ServerNodeName?.ToLowerInvariant())
             .SetOnInsert(r => r.CreatedAt, DateTime.UtcNow);
 
         if (playerData.IsExplicit)
@@ -131,31 +153,51 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
     public async Task<(List<LagReport> Items, long Total)> GetReports(LagReportQueryRequest req)
     {
         var collection = CreateCollection<LagReport>();
-        var filter = BuildFilter(req);
+        var filters = BuildFilters(req);
+        var hasFilter = filters.Count > 0;
+        var filter = hasFilter ? Builders<LagReport>.Filter.And(filters) : Builders<LagReport>.Filter.Empty;
 
-        var total = await collection.CountDocumentsAsync(filter);
+        // CountDocuments on an empty filter forces a full collection scan: the driver
+        // runs it as a {$group} aggregation rather than the O(1) metadata count, which
+        // dominates the response time of the common unfiltered list view. Use the fast
+        // metadata count when nothing is filtered; filtered counts are index-assisted.
+        var totalTask = hasFilter
+            ? collection.CountDocumentsAsync(filter)
+            : collection.EstimatedDocumentCountAsync();
 
         var sort = Builders<LagReport>.Sort.Descending(r => r.CreatedAt);
 
-        var items = await collection.Find(filter)
+        // The list view only needs the LagEvents/ConnectionEvents counts, never the
+        // heavy per-player MTR/ping arrays. Excluding them avoids deserializing (and
+        // then discarding) multi-megabyte diagnostics payloads on every page.
+        var projection = Builders<LagReport>.Projection
+            .Exclude("Players.Diagnostics.TargetMtr")
+            .Exclude("Players.Diagnostics.AllServerBaselines")
+            .Exclude("Players.Diagnostics.ReverseMtr")
+            .Exclude("Players.Diagnostics.PingHistory")
+            .Exclude(r => r.ServerSidePing);
+
+        var itemsTask = collection.Find(filter)
+            .Project<LagReport>(projection)
             .Sort(sort)
             .Skip(req.Page * req.PageSize)
             .Limit(req.PageSize)
             .ToListAsync();
 
-        return (items, total);
+        // Run the count and the page fetch concurrently rather than serially.
+        await Task.WhenAll(totalTask, itemsTask);
+
+        return (itemsTask.Result, totalTask.Result);
     }
 
-    private static FilterDefinition<LagReport> BuildFilter(LagReportQueryRequest req)
+    private static List<FilterDefinition<LagReport>> BuildFilters(LagReportQueryRequest req)
     {
         var builder = Builders<LagReport>.Filter;
         var filters = new List<FilterDefinition<LagReport>>();
 
         if (!string.IsNullOrEmpty(req.BattleTag))
         {
-            var pattern = new BsonRegularExpression(Regex.Escape(req.BattleTag), "i");
-            filters.Add(builder.ElemMatch(r => r.Players,
-                Builders<LagReportPlayer>.Filter.Regex(p => p.BattleTag, pattern)));
+            filters.Add(builder.Regex("Players.BattleTagSearch", PrefixPattern(req.BattleTag)));
         }
 
         if (!string.IsNullOrEmpty(req.GameSearch))
@@ -169,31 +211,25 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
                 gameFilters.Add(builder.Eq(r => r.FloGameId, gameIdNum));
             }
 
-            // Always also match GameName as partial (case-insensitive)
-            var namePattern = new BsonRegularExpression(Regex.Escape(req.GameSearch), "i");
-            gameFilters.Add(builder.Regex(r => r.GameName, namePattern));
+            // Always also match GameName as a case-insensitive prefix
+            gameFilters.Add(builder.Regex(r => r.GameNameSearch, PrefixPattern(req.GameSearch)));
 
             filters.Add(builder.Or(gameFilters));
         }
 
         if (!string.IsNullOrEmpty(req.ServerName))
         {
-            var pattern = new BsonRegularExpression(Regex.Escape(req.ServerName), "i");
-            filters.Add(builder.Regex(r => r.ServerNodeName, pattern));
+            filters.Add(builder.Regex(r => r.ServerNodeNameSearch, PrefixPattern(req.ServerName)));
         }
 
         if (!string.IsNullOrEmpty(req.ProxyName))
         {
-            var pattern = new BsonRegularExpression(Regex.Escape(req.ProxyName), "i");
-            filters.Add(builder.ElemMatch(r => r.Players,
-                Builders<LagReportPlayer>.Filter.Regex(p => p.ProxyName, pattern)));
+            filters.Add(builder.Regex("Players.ProxyNameSearch", PrefixPattern(req.ProxyName)));
         }
 
         if (!string.IsNullOrEmpty(req.ProxyIp))
         {
-            var pattern = new BsonRegularExpression(Regex.Escape(req.ProxyIp), "i");
-            filters.Add(builder.ElemMatch(r => r.Players,
-                Builders<LagReportPlayer>.Filter.Regex(p => p.ProxyIp, pattern)));
+            filters.Add(builder.Regex("Players.ProxyIpSearch", PrefixPattern(req.ProxyIp)));
         }
 
         if (!string.IsNullOrEmpty(req.DateFrom) && DateTimeOffset.TryParse(req.DateFrom, out var dateFrom))
@@ -216,6 +252,66 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Eq(r => r.HasExplicitReport, true));
         }
 
-        return filters.Count > 0 ? builder.And(filters) : builder.Empty;
+        return filters;
+    }
+
+    /// <summary>
+    /// Anchored, case-sensitive regex against a lowercased *Search field — index-backed
+    /// case-insensitive PREFIX matching. A case-insensitive regex on the raw field cannot
+    /// use the index and scans the whole collection.
+    /// </summary>
+    private static BsonRegularExpression PrefixPattern(string value) =>
+        new("^" + Regex.Escape(value.ToLowerInvariant()));
+
+    /// <summary>
+    /// One-shot backfill of the lowercased *Search fields onto documents written before the
+    /// fields existed. Idempotent via the {GameNameSearch exists:false} guard; runs entirely
+    /// server-side as a single aggregation-pipeline UpdateMany. Returns documents updated.
+    /// </summary>
+    public async Task<long> BackfillSearchFields(CancellationToken ct = default)
+    {
+        var collection = CreateCollection<LagReport>();
+
+        var filter = Builders<LagReport>.Filter.Exists(r => r.GameNameSearch, false);
+
+        // $toLower yields "" for null/missing; keep null instead so backfilled values match the
+        // write path (BattleTag?.ToLowerInvariant()) and direct-connection players stay null.
+        static BsonValue Lower(string field) => new BsonDocument("$cond", new BsonArray
+        {
+            new BsonDocument("$ne", new BsonArray { field, BsonNull.Value }),
+            new BsonDocument("$toLower", field),
+            BsonNull.Value,
+        });
+
+        var setStage = new BsonDocument("$set", new BsonDocument
+        {
+            { "GameNameSearch", Lower("$GameName") },
+            { "ServerNodeNameSearch", Lower("$ServerNodeName") },
+            {
+                "Players",
+                new BsonDocument("$map", new BsonDocument
+                {
+                    { "input", "$Players" },
+                    { "as", "p" },
+                    {
+                        "in",
+                        new BsonDocument("$mergeObjects", new BsonArray
+                        {
+                            "$$p",
+                            new BsonDocument
+                            {
+                                { "BattleTagSearch", Lower("$$p.BattleTag") },
+                                { "ProxyNameSearch", Lower("$$p.ProxyName") },
+                                { "ProxyIpSearch", Lower("$$p.ProxyIp") },
+                            },
+                        })
+                    },
+                })
+            },
+        });
+
+        var pipeline = new BsonDocumentStagePipelineDefinition<LagReport, LagReport>(new[] { setStage });
+        var result = await collection.UpdateManyAsync(filter, pipeline, cancellationToken: ct);
+        return result.ModifiedCount;
     }
 }

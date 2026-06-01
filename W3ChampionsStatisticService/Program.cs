@@ -289,6 +289,10 @@ if (runBackfill == "true")
     builder.Services.AddUnversionedReadModelService<MatchupHeroBackfillService>();
 }
 
+// One-shot, self-gating backfill of the LagReport lowercased *Search fields onto pre-existing
+// documents. Runs automatically once (marker in HandlerVersions); a cheap no-op on later startups.
+builder.Services.AddHostedService<W3ChampionsStatisticService.LagReports.LagReportSearchBackfillService>();
+
 var app = builder.Build();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions

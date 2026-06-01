@@ -24,11 +24,18 @@ public class LagReport : IIdentifiable
     public int FloGameId { get; set; }
 
     public string GameName { get; set; }
+
+    /// <summary>Lowercased copy of GameName for index-backed case-insensitive prefix search.</summary>
+    public string GameNameSearch { get; set; }
+
     public string MapPath { get; set; }
 
     /// <summary>The flo-node that hosted this game.</summary>
     public int ServerNodeId { get; set; }
     public string ServerNodeName { get; set; }
+
+    /// <summary>Lowercased copy of ServerNodeName for index-backed case-insensitive prefix search.</summary>
+    public string ServerNodeNameSearch { get; set; }
 
     /// <summary>True if at least one player explicitly submitted (clicked Submit).</summary>
     public bool HasExplicitReport { get; set; }
@@ -53,6 +60,9 @@ public class LagReportPlayer
 {
     public string BattleTag { get; set; }
 
+    /// <summary>Lowercased copy of BattleTag for index-backed case-insensitive prefix search.</summary>
+    public string BattleTagSearch { get; set; }
+
     /// <summary>Player's public IP at time of game (self-reported by launcher).</summary>
     public string ClientIp { get; set; }
 
@@ -69,8 +79,14 @@ public class LagReportPlayer
     /// <summary>Name of the proxy node (null if direct).</summary>
     public string ProxyName { get; set; }
 
+    /// <summary>Lowercased copy of ProxyName for index-backed case-insensitive prefix search.</summary>
+    public string ProxyNameSearch { get; set; }
+
     /// <summary>IP of the proxy node (null if direct). Split from proxy_address for filtering.</summary>
     public string ProxyIp { get; set; }
+
+    /// <summary>Lowercased copy of ProxyIp for index-backed case-insensitive prefix search.</summary>
+    public string ProxyIpSearch { get; set; }
 
     /// <summary>Port of the proxy node (null if direct).</summary>
     public int? ProxyPort { get; set; }
