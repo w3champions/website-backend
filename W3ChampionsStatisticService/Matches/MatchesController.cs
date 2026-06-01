@@ -1,17 +1,17 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.GameModes;
+using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Common.Constants;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ports;
-using W3C.Contracts.GameObjects;
 using W3ChampionsStatisticService.Services;
-using W3C.Domain.Tracing;
-using W3C.Domain.GameModes;
-using W3ChampionsStatisticService.Common.Constants;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
-using System;
 
 namespace W3ChampionsStatisticService.Matches;
 
@@ -155,12 +155,14 @@ public class MatchesController(
         Race opponentRace = Race.Total,
         int offset = 0,
         int pageSize = 100,
-        HeroType hero = HeroType.AllFilter)
+        HeroType hero = HeroType.AllFilter,
+        bool playerIncludeRandom = false,
+        bool opponentIncludeRandom = false)
     {
         if (pageSize > 100) pageSize = 100;
 
-        var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero);
-        var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero);
+        var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero, playerIncludeRandom, opponentIncludeRandom);
+        var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero, playerIncludeRandom, opponentIncludeRandom);
         PlayersObfuscator.ObfuscateMmr(matches);
         return Ok(new { matches, count });
     }
