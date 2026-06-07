@@ -73,6 +73,56 @@ public class AdminController(
         return Ok();
     }
 
+    [HttpGet("warnings")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> GetWarnings([FromQuery] PlayerWarningsGetRequest req)
+    {
+        if (!string.IsNullOrWhiteSpace(req.BattleTag))
+        {
+            var canonical = await _battleTagResolver.ResolveCanonical(req.BattleTag);
+            if (canonical == null)
+                return BadRequest(new { error = "user_not_found", input = req.BattleTag });
+
+            req.BattleTag = canonical;
+        }
+
+        req.Page = req.Page <= 0 ? 1 : req.Page;
+        req.ItemsPerPage = req.ItemsPerPage <= 0 ? 25 : req.ItemsPerPage;
+        var warnings = await _matchmakingServiceRepository.GetPlayerWarnings(req);
+        return Ok(warnings);
+    }
+
+    [HttpPost("warnings")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> CreateWarning([FromBody] CreatePlayerWarningRequest request, [NoTrace] string battleTag)
+    {
+        if (request == null)
+            return BadRequest(new { error = "invalid_request" });
+
+        var canonical = await _battleTagResolver.ResolveCanonical(request.targetBattleTag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = request.targetBattleTag });
+
+        request.targetBattleTag = canonical;
+        request.issuedByBattleTag = battleTag;
+        request.severity = string.IsNullOrWhiteSpace(request.severity) ? "Warning" : request.severity;
+
+        var warning = await _matchmakingServiceRepository.CreatePlayerWarning(request);
+        return Ok(warning);
+    }
+
+    [HttpPost("warnings/{id}/cancel")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> CancelWarning([FromRoute] string id, [NoTrace] string battleTag)
+    {
+        var warning = await _matchmakingServiceRepository.CancelPlayerWarning(id, new CancelPlayerWarningRequest
+        {
+            cancelledByBattleTag = battleTag
+        });
+
+        return Ok(warning);
+    }
+
     [HttpGet("ban-reason-translations")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBanReasonTranslations()
