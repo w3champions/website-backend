@@ -27,8 +27,23 @@ public class AdminWarningsControllerTests
     public void WarningEndpointsRequireWarningsPermission()
     {
         AssertWarningsPermission(nameof(AdminController.GetWarnings));
+        AssertWarningsPermission(nameof(AdminController.GetWarningDefinitions));
         AssertWarningsPermission(nameof(AdminController.CreateWarning));
         AssertWarningsPermission(nameof(AdminController.CancelWarning));
+    }
+
+    [Test]
+    public async Task GetWarningDefinitionsForwardsAdminSecret()
+    {
+        var handler = new CapturingHandler("[{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":true,\"sortOrder\":10}]");
+        var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
+
+        var result = await controller.GetWarningDefinitions();
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(handler.Requests[0].Headers.Contains("x-admin-secret"), Is.True);
+        Assert.That(handler.Requests[0].RequestUri!.AbsolutePath, Does.EndWith("/admin/warning-definitions"));
     }
 
     [Test]
@@ -42,9 +57,7 @@ public class AdminWarningsControllerTests
         var result = await controller.CreateWarning(new CreatePlayerWarningRequest
         {
             targetBattleTag = "grubby#1234",
-            severity = "",
-            title = new Dictionary<string, string> { ["en"] = "Careful" },
-            body = new Dictionary<string, string> { ["en"] = "Please mind rule 2." },
+            warningDefinitionId = "chat-conduct",
         }, "Admin#1");
 
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
@@ -54,9 +67,10 @@ public class AdminWarningsControllerTests
         var body = JObject.Parse(handler.RequestBodies[0]);
         Assert.That(body["targetBattleTag"]!.Value<string>(), Is.EqualTo("Grubby#1234"));
         Assert.That(body["issuedByBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
-        Assert.That(body["rule"], Is.Null);
-        Assert.That(body["category"], Is.Null);
-        Assert.That(body["severity"]!.Value<string>(), Is.EqualTo("Warning"));
+        Assert.That(body["warningDefinitionId"]!.Value<string>(), Is.EqualTo("chat-conduct"));
+        Assert.That(body["severity"], Is.Null);
+        Assert.That(body["title"], Is.Null);
+        Assert.That(body["body"], Is.Null);
     }
 
     [Test]
@@ -99,6 +113,34 @@ public class AdminWarningsControllerTests
     }
 
     [Test]
+    public async Task CreateCustomWarningCanonicalizesTargetAndForwardsCustomSnapshot()
+    {
+        var handler = new CapturingHandler();
+        var resolver = new Mock<IBattleTagResolver>();
+        resolver.Setup(r => r.ResolveCanonical("grubby#1234")).ReturnsAsync("Grubby#1234");
+        var controller = CreateController(handler, resolver.Object);
+
+        var result = await controller.CreateWarning(new CreatePlayerWarningRequest
+        {
+            targetBattleTag = "grubby#1234",
+            severity = "Critical",
+            title = new Dictionary<string, string> { ["en"] = "Custom title" },
+            body = new Dictionary<string, string> { ["en"] = "Custom body" },
+        }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+
+        var body = JObject.Parse(handler.RequestBodies[0]);
+        Assert.That(body["targetBattleTag"]!.Value<string>(), Is.EqualTo("Grubby#1234"));
+        Assert.That(body["issuedByBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
+        Assert.That(body["warningDefinitionId"], Is.Null);
+        Assert.That(body["severity"]!.Value<string>(), Is.EqualTo("Critical"));
+        Assert.That(body["title"]!["en"]!.Value<string>(), Is.EqualTo("Custom title"));
+        Assert.That(body["body"]!["en"]!.Value<string>(), Is.EqualTo("Custom body"));
+    }
+
+    [Test]
     public async Task CreateWarningRejectsUnknownTargetBeforeProxying()
     {
         var handler = new CapturingHandler();
@@ -109,9 +151,7 @@ public class AdminWarningsControllerTests
         var result = await controller.CreateWarning(new CreatePlayerWarningRequest
         {
             targetBattleTag = "missing#1",
-            severity = "Warning",
-            title = new Dictionary<string, string> { ["en"] = "Careful" },
-            body = new Dictionary<string, string> { ["en"] = "Please mind rule 2." },
+            warningDefinitionId = "chat-conduct",
         }, "Admin#1");
 
         Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
@@ -163,7 +203,7 @@ public class AdminWarningsControllerTests
         public HttpClient CreateClient(string name) => client;
     }
 
-    private class CapturingHandler(string responseBody = "{\"warning\":{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"rule\":\"Rule 2\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Pending\",\"createdAt\":\"2026-06-06T20:00:00Z\"},\"delivered\":false}") : HttpMessageHandler
+    private class CapturingHandler(string responseBody = "{\"warning\":{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"warningDefinitionId\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Pending\",\"createdAt\":\"2026-06-06T20:00:00Z\"},\"delivered\":false}") : HttpMessageHandler
     {
         public List<HttpRequestMessage> Requests { get; } = [];
         public List<string> RequestBodies { get; } = [];

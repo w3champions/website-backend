@@ -92,6 +92,14 @@ public class AdminController(
         return Ok(warnings);
     }
 
+    [HttpGet("warning-definitions")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> GetWarningDefinitions()
+    {
+        var definitions = await _matchmakingServiceRepository.GetPlayerWarningDefinitions();
+        return Ok(definitions);
+    }
+
     [HttpPost("warnings")]
     [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
     public async Task<IActionResult> CreateWarning([FromBody] CreatePlayerWarningRequest request, [NoTrace] string battleTag)
@@ -105,7 +113,6 @@ public class AdminController(
 
         request.targetBattleTag = canonical;
         request.issuedByBattleTag = battleTag;
-        request.severity = string.IsNullOrWhiteSpace(request.severity) ? "Warning" : request.severity;
 
         var warning = await _matchmakingServiceRepository.CreatePlayerWarning(request);
         return Ok(warning);

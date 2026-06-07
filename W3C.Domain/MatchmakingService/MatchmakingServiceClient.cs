@@ -114,6 +114,22 @@ public class MatchmakingServiceClient
         return null;
     }
 
+    public async Task<List<PlayerWarningDefinition>> GetPlayerWarningDefinitions()
+    {
+        var url = $"{MatchmakingApiUrl}/admin/warning-definitions";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<List<PlayerWarningDefinition>>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
     public async Task<CreatePlayerWarningResponse> CreatePlayerWarning(CreatePlayerWarningRequest warningRequest)
     {
         var url = $"{MatchmakingApiUrl}/admin/warnings";
@@ -704,8 +720,7 @@ public class CreatePlayerWarningRequest
 {
     public string targetBattleTag { get; set; }
     public string issuedByBattleTag { get; set; }
-    public string rule { get; set; }
-    public string category { get; set; }
+    public string warningDefinitionId { get; set; }
     public string severity { get; set; }
     public Dictionary<string, string> title { get; set; }
     public Dictionary<string, string> body { get; set; }
@@ -721,6 +736,7 @@ public class PlayerWarning
     public string _id { get; set; }
     public string targetBattleTag { get; set; }
     public string issuedByBattleTag { get; set; }
+    public string warningDefinitionId { get; set; }
     public string rule { get; set; }
     public string category { get; set; }
     public string severity { get; set; }
@@ -733,6 +749,16 @@ public class PlayerWarning
     public DateTime? cancelledAt { get; set; }
     public string cancelledByBattleTag { get; set; }
     public List<PlayerWarningDeliveryAttempt> deliveryAttempts { get; set; }
+}
+
+public class PlayerWarningDefinition
+{
+    public string _id { get; set; }
+    public string severity { get; set; }
+    public Dictionary<string, string> title { get; set; }
+    public Dictionary<string, string> body { get; set; }
+    public bool enabled { get; set; }
+    public int sortOrder { get; set; }
 }
 
 public class PlayerWarningDeliveryAttempt
