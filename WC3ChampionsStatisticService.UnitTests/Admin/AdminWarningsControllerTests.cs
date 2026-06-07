@@ -28,6 +28,9 @@ public class AdminWarningsControllerTests
     {
         AssertWarningsPermission(nameof(AdminController.GetWarnings));
         AssertWarningsPermission(nameof(AdminController.GetWarningDefinitions));
+        AssertWarningsPermission(nameof(AdminController.CreateWarningDefinition));
+        AssertWarningsPermission(nameof(AdminController.UpdateWarningDefinition));
+        AssertWarningsPermission(nameof(AdminController.DeleteWarningDefinition));
         AssertWarningsPermission(nameof(AdminController.CreateWarning));
         AssertWarningsPermission(nameof(AdminController.CancelWarning));
     }
@@ -44,6 +47,90 @@ public class AdminWarningsControllerTests
         Assert.That(handler.Requests, Has.Count.EqualTo(1));
         Assert.That(handler.Requests[0].Headers.Contains("x-admin-secret"), Is.True);
         Assert.That(handler.Requests[0].RequestUri!.AbsolutePath, Does.EndWith("/admin/warning-definitions"));
+    }
+
+    [Test]
+    public async Task GetWarningDefinitionsCanIncludeDisabledDefinitions()
+    {
+        var handler = new CapturingHandler("[{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":false,\"sortOrder\":10}]");
+        var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
+
+        var result = await controller.GetWarningDefinitions(true);
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(handler.Requests[0].RequestUri!.Query, Does.Contain("includeDisabled=true"));
+    }
+
+    [Test]
+    public async Task CreateWarningDefinitionInjectsAdminBattleTagAndForwardsAdminSecret()
+    {
+        var handler = new CapturingHandler("{\"_id\":\"warning-template-1\",\"severity\":\"Info\",\"title\":{\"en\":\"Notice\"},\"body\":{\"en\":\"Message\"},\"enabled\":true,\"sortOrder\":20}");
+        var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
+
+        var result = await controller.CreateWarningDefinition(new PlayerWarningDefinitionRequest
+        {
+            severity = "Info",
+            title = new Dictionary<string, string> { ["en"] = "Notice" },
+            body = new Dictionary<string, string> { ["en"] = "Message" },
+            enabled = true,
+            sortOrder = 20,
+        }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(handler.Requests[0].Headers.Contains("x-admin-secret"), Is.True);
+        Assert.That(handler.Requests[0].RequestUri!.AbsolutePath, Does.EndWith("/admin/warning-definitions"));
+
+        var body = JObject.Parse(handler.RequestBodies[0]);
+        Assert.That(body["createdByBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
+        Assert.That(body["updatedByBattleTag"], Is.Null);
+        Assert.That(body["severity"]!.Value<string>(), Is.EqualTo("Info"));
+        Assert.That(body["title"]!["en"]!.Value<string>(), Is.EqualTo("Notice"));
+    }
+
+    [Test]
+    public async Task UpdateWarningDefinitionInjectsAdminBattleTagAndForwardsAdminSecret()
+    {
+        var handler = new CapturingHandler("{\"_id\":\"chat-conduct\",\"severity\":\"Critical\",\"title\":{\"en\":\"Updated\"},\"body\":{\"en\":\"Updated body\"},\"enabled\":false,\"sortOrder\":5}");
+        var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
+
+        var result = await controller.UpdateWarningDefinition("chat-conduct", new PlayerWarningDefinitionRequest
+        {
+            severity = "Critical",
+            title = new Dictionary<string, string> { ["en"] = "Updated" },
+            body = new Dictionary<string, string> { ["en"] = "Updated body" },
+            enabled = false,
+            sortOrder = 5,
+        }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(handler.Requests[0].Headers.Contains("x-admin-secret"), Is.True);
+        Assert.That(handler.Requests[0].RequestUri!.AbsolutePath, Does.EndWith("/admin/warning-definitions/chat-conduct"));
+
+        var body = JObject.Parse(handler.RequestBodies[0]);
+        Assert.That(body["updatedByBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
+        Assert.That(body["createdByBattleTag"], Is.Null);
+        Assert.That(body["enabled"]!.Value<bool>(), Is.False);
+    }
+
+    [Test]
+    public async Task DeleteWarningDefinitionSoftDisablesThroughMatchmaking()
+    {
+        var handler = new CapturingHandler("{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":false,\"sortOrder\":10}");
+        var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
+
+        var result = await controller.DeleteWarningDefinition("chat-conduct", "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(handler.Requests[0].Method, Is.EqualTo(HttpMethod.Delete));
+        Assert.That(handler.Requests[0].Headers.Contains("x-admin-secret"), Is.True);
+        Assert.That(handler.Requests[0].RequestUri!.AbsolutePath, Does.EndWith("/admin/warning-definitions/chat-conduct"));
+
+        var body = JObject.Parse(handler.RequestBodies[0]);
+        Assert.That(body["updatedByBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
     }
 
     [Test]
@@ -161,7 +248,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task CancelWarningInjectsAdminBattleTagAndForwardsAdminSecret()
     {
-        var handler = new CapturingHandler("{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"rule\":\"Rule 2\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Cancelled\",\"createdAt\":\"2026-06-06T20:00:00Z\"}");
+        var handler = new CapturingHandler("{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Cancelled\",\"createdAt\":\"2026-06-06T20:00:00Z\"}");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.CancelWarning("warning-1", "Admin#1");

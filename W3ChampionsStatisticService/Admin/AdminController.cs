@@ -94,10 +94,45 @@ public class AdminController(
 
     [HttpGet("warning-definitions")]
     [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
-    public async Task<IActionResult> GetWarningDefinitions()
+    public async Task<IActionResult> GetWarningDefinitions([FromQuery] bool includeDisabled = false)
     {
-        var definitions = await _matchmakingServiceRepository.GetPlayerWarningDefinitions();
+        var definitions = await _matchmakingServiceRepository.GetPlayerWarningDefinitions(includeDisabled);
         return Ok(definitions);
+    }
+
+    [HttpPost("warning-definitions")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> CreateWarningDefinition([FromBody] PlayerWarningDefinitionRequest request, [NoTrace] string battleTag)
+    {
+        if (request == null)
+            return BadRequest(new { error = "invalid_request" });
+
+        request.createdByBattleTag = battleTag;
+        var definition = await _matchmakingServiceRepository.CreatePlayerWarningDefinition(request);
+        return Ok(definition);
+    }
+
+    [HttpPut("warning-definitions/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> UpdateWarningDefinition([FromRoute] string id, [FromBody] PlayerWarningDefinitionRequest request, [NoTrace] string battleTag)
+    {
+        if (request == null)
+            return BadRequest(new { error = "invalid_request" });
+
+        request.updatedByBattleTag = battleTag;
+        var definition = await _matchmakingServiceRepository.UpdatePlayerWarningDefinition(id, request);
+        return Ok(definition);
+    }
+
+    [HttpDelete("warning-definitions/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> DeleteWarningDefinition([FromRoute] string id, [NoTrace] string battleTag)
+    {
+        var definition = await _matchmakingServiceRepository.DisablePlayerWarningDefinition(id, new DisablePlayerWarningDefinitionRequest
+        {
+            updatedByBattleTag = battleTag
+        });
+        return Ok(definition);
     }
 
     [HttpPost("warnings")]

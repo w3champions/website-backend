@@ -114,9 +114,14 @@ public class MatchmakingServiceClient
         return null;
     }
 
-    public async Task<List<PlayerWarningDefinition>> GetPlayerWarningDefinitions()
+    public async Task<List<PlayerWarningDefinition>> GetPlayerWarningDefinitions(bool includeDisabled = false)
     {
         var url = $"{MatchmakingApiUrl}/admin/warning-definitions";
+        if (includeDisabled)
+        {
+            url += "?includeDisabled=true";
+        }
+
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
@@ -124,6 +129,60 @@ public class MatchmakingServiceClient
         if (response.IsSuccessStatusCode)
         {
             return await GetResult<List<PlayerWarningDefinition>>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<PlayerWarningDefinition> CreatePlayerWarningDefinition(PlayerWarningDefinitionRequest warningDefinitionRequest)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/warning-definitions";
+        var httpcontent = new StringContent(SerializeData(warningDefinitionRequest), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<PlayerWarningDefinition>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<PlayerWarningDefinition> UpdatePlayerWarningDefinition(string id, PlayerWarningDefinitionRequest warningDefinitionRequest)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/warning-definitions/{HttpUtility.UrlEncode(id)}";
+        var httpcontent = new StringContent(SerializeData(warningDefinitionRequest), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Put, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<PlayerWarningDefinition>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<PlayerWarningDefinition> DisablePlayerWarningDefinition(string id, DisablePlayerWarningDefinitionRequest disableRequest)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/warning-definitions/{HttpUtility.UrlEncode(id)}";
+        var httpcontent = new StringContent(SerializeData(disableRequest), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<PlayerWarningDefinition>(response);
         }
 
         await HandleMMError(response);
@@ -737,8 +796,6 @@ public class PlayerWarning
     public string targetBattleTag { get; set; }
     public string issuedByBattleTag { get; set; }
     public string warningDefinitionId { get; set; }
-    public string rule { get; set; }
-    public string category { get; set; }
     public string severity { get; set; }
     public Dictionary<string, string> title { get; set; }
     public Dictionary<string, string> body { get; set; }
@@ -759,6 +816,24 @@ public class PlayerWarningDefinition
     public Dictionary<string, string> body { get; set; }
     public bool enabled { get; set; }
     public int sortOrder { get; set; }
+    public string createdByBattleTag { get; set; }
+    public string updatedByBattleTag { get; set; }
+}
+
+public class PlayerWarningDefinitionRequest
+{
+    public string severity { get; set; }
+    public Dictionary<string, string> title { get; set; }
+    public Dictionary<string, string> body { get; set; }
+    public bool? enabled { get; set; }
+    public int? sortOrder { get; set; }
+    public string createdByBattleTag { get; set; }
+    public string updatedByBattleTag { get; set; }
+}
+
+public class DisablePlayerWarningDefinitionRequest
+{
+    public string updatedByBattleTag { get; set; }
 }
 
 public class PlayerWarningDeliveryAttempt
