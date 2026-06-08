@@ -805,6 +805,8 @@ public class PlayerWarning
     public DateTime? acknowledgedAt { get; set; }
     public DateTime? cancelledAt { get; set; }
     public string cancelledByBattleTag { get; set; }
+    public DateTime? undeliverableAt { get; set; }
+    public string undeliverableReason { get; set; }
     public List<PlayerWarningDeliveryAttempt> deliveryAttempts { get; set; }
 }
 
