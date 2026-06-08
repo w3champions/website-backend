@@ -1,0 +1,29 @@
+namespace W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
+
+// Pure, config-free ordering of published progression-rank snapshots.
+// Encoding (authoritative): lower League = higher rank (GrandMaster 0 .. Grass 8);
+// lower Division = better (I=1 .. IV=4); higher Points = better; apexPoints (when set) ranks above all
+// steered leagues, higher = better.
+public static class PrestigeRankComparer
+{
+    // True iff `candidate` is a strictly higher rank than `current`.
+    public static bool IsHigher(PeakRank candidate, PeakRank current)
+    {
+        if (candidate?.League == null) return false; // not a placed rank
+        if (current?.League == null) return true;     // any placed rank beats none
+
+        var candidateIsApex = candidate.ApexPoints != null;
+        var currentIsApex = current.ApexPoints != null;
+        if (candidateIsApex != currentIsApex) return candidateIsApex; // apex outranks steered
+
+        if (candidateIsApex)
+        {
+            if (candidate.ApexPoints != current.ApexPoints) return candidate.ApexPoints > current.ApexPoints;
+            return candidate.League < current.League; // tie: GrandMaster(0) over Master(1)
+        }
+
+        if (candidate.League != current.League) return candidate.League < current.League;
+        if (candidate.Division != current.Division) return candidate.Division < current.Division;
+        return candidate.Points > current.Points;
+    }
+}
