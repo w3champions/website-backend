@@ -674,6 +674,7 @@ public class ActiveGameMode
     public string Type { get; set; }
     public int TeamCount { get; set; }
     public int TeamSize { get; set; }
+    public int? ProgressionStartSeason { get; set; }
 }
 
 public class MapShortInfo
