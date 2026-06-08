@@ -10,6 +10,7 @@ using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.Ports;
 using W3C.Contracts.Matchmaking;
 
@@ -247,7 +248,8 @@ public class RankTests : IntegrationTestBase
         var playerRepository = new PlayerRepository(MongoClient);
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -289,7 +291,8 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -321,7 +324,8 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -353,7 +357,8 @@ public class RankTests : IntegrationTestBase
         // Arrange
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, new ClanRepository(MongoClient));
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, new ClanRepository(MongoClient),
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
 
         var ranks = new List<Rank>
         {
@@ -450,5 +455,141 @@ public class RankTests : IntegrationTestBase
 
         // Assert
         Assert.AreEqual(2, playerLoaded2.Count);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfLeague_StampsProgression_WhenRecordExists_AndLeavesRpUntouched()
+    {
+        // Arrange
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var clanRepository = new ClanRepository(MongoClient);
+        var progressionRepository = new PlayerProgressionRepository(MongoClient);
+        var progressionViewLoader = new ProgressionViewLoader(progressionRepository);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader);
+
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        await rankRepository.InsertRanks(ranks);
+
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        player.RecordWin(true, 1234);
+        await playerRepository.UpsertPlayerOverview(player);
+
+        // matching progression doc -- same composite id as Rank.PlayerId ("1_peter#123@10_GM_1v1")
+        var progId = new BattleTagIdCombined(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        var prog = PlayerProgression.Create(progId);
+        prog.RecordRank(3, 2, 50, null);
+        await progressionRepository.UpsertProgression(prog);
+
+        // Act
+        var loaded = await queryHandler.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);
+
+        // Assert
+        Assert.AreEqual(1, loaded.Count);
+        Assert.IsNotNull(loaded[0].Progression, "progression should be stamped for a matching record");
+        Assert.AreEqual(3, loaded[0].Progression.League);
+        Assert.AreEqual(2, loaded[0].Progression.Division);
+        Assert.AreEqual(50, loaded[0].Progression.Points);
+        Assert.IsNull(loaded[0].Progression.ApexPoints);
+        // legacy RP untouched
+        Assert.AreEqual(1456, loaded[0].RankingPoints);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfLeague_ProgressionNull_WhenNoRecord()
+    {
+        // Arrange
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var clanRepository = new ClanRepository(MongoClient);
+        var progressionViewLoader = new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient));
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader);
+
+        var ranks = new List<Rank> { new(new List<string> { "noprog#1" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        await rankRepository.InsertRanks(ranks);
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("noprog#1") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        player.RecordWin(true, 1234);
+        await playerRepository.UpsertPlayerOverview(player);
+
+        // Act
+        var loaded = await queryHandler.LoadPlayersOfLeague(1, 1, GateWay.America, GameMode.GM_1v1);
+
+        // Assert
+        Assert.AreEqual(1, loaded.Count);
+        Assert.IsNull(loaded[0].Progression);
+    }
+
+    [Test]
+    public async Task SearchPlayersOfLeague_StampsProgression_WhenRecordExists()
+    {
+        // Arrange
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var clanRepository = new ClanRepository(MongoClient);
+        var progressionRepository = new PlayerProgressionRepository(MongoClient);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
+            new ProgressionViewLoader(progressionRepository));
+
+        var ranks = new List<Rank> { new(new List<string> { "searchme#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        await rankRepository.InsertRanks(ranks);
+
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("searchme#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        player.RecordWin(true, 1234);
+        await playerRepository.UpsertPlayerOverview(player);
+
+        var progId = new BattleTagIdCombined(new List<PlayerId> { PlayerId.Create("searchme#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        var prog = PlayerProgression.Create(progId);
+        prog.RecordRank(3, 2, 50, null);
+        await progressionRepository.UpsertProgression(prog);
+
+        // Act
+        var loaded = await queryHandler.SearchPlayersOfLeague("searchme", 1, GateWay.America, GameMode.GM_1v1);
+
+        // Assert
+        var rank = loaded.Find(r => r.Id == "1_searchme#123@10_GM_1v1");
+        Assert.IsNotNull(rank, "the inserted rank should be found by search");
+        Assert.IsNotNull(rank.Progression);
+        Assert.AreEqual(3, rank.Progression.League);
+        Assert.AreEqual(2, rank.Progression.Division);
+        Assert.AreEqual(50, rank.Progression.Points);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfCountry_StampsProgression_WhenRecordExists()
+    {
+        // Arrange
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+        var clanRepository = new ClanRepository(MongoClient);
+        var progressionRepository = new PlayerProgressionRepository(MongoClient);
+        var progressionViewLoader = new ProgressionViewLoader(progressionRepository);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader);
+
+        var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        await rankRepository.InsertRanks(ranks);
+
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        player.RecordWin(true, 1234);
+        await playerRepository.UpsertPlayerOverview(player);
+
+        // LoadPlayersOfCountry filters by personal-settings CountryCode (or Location).
+        var settings = new PersonalSetting("peter#123") { CountryCode = "US" };
+        await personalSettingsRepository.Save(settings);
+
+        // matching progression doc -- same composite id as Rank.PlayerId ("1_peter#123@10_GM_1v1")
+        var progId = new BattleTagIdCombined(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        var prog = PlayerProgression.Create(progId);
+        prog.RecordRank(3, 2, 50, null);
+        await progressionRepository.UpsertProgression(prog);
+
+        // Act
+        var countryRankings = await queryHandler.LoadPlayersOfCountry("US", 1, GateWay.America, GameMode.GM_1v1);
+
+        // Assert
+        var stampedRank = countryRankings.SelectMany(cr => cr.Ranks).Single(r => r.Id == "1_peter#123@10_GM_1v1");
+        Assert.IsNotNull(stampedRank.Progression, "progression should be stamped for a matching record");
+        Assert.AreEqual(3, stampedRank.Progression.League);
+        Assert.AreEqual(50, stampedRank.Progression.Points);
     }
 }

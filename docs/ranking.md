@@ -1,5 +1,7 @@
 # Progression ranking — website-backend
 
+> Read-model ingest + serving of the progression rank is documented in [ranking/README.md](ranking/README.md).
+
 website-backend serves the ranking data the website and launcher render; it does not compute rank. A new
 progression ranking system runs alongside the legacy "RP" ladder. Each game mode uses exactly one of the
 two, selected per mode by a season flag sourced from matchmaking-service.

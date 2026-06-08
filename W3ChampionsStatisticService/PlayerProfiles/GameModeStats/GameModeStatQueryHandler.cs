@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using Serilog;
@@ -16,12 +17,14 @@ public class GameModeStatQueryHandler(
     IPlayerRepository playerRepository,
     PlayerService playerService,
     ITrackingService trackingService,
-    IRankRepository rankRepository)
+    IRankRepository rankRepository,
+    ProgressionViewLoader progressionViewLoader)
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly PlayerService _playerService = playerService;
     private readonly ITrackingService _trackingService = trackingService;
     private readonly IRankRepository _rankRepository = rankRepository;
+    private readonly ProgressionViewLoader _progressionViewLoader = progressionViewLoader;
 
     public async Task<List<PlayerGameModeStatPerGateway>> LoadPlayerStatsWithRanks(
         string battleTag,
@@ -38,6 +41,7 @@ public class GameModeStatQueryHandler(
         }
 
         await PopulateQuantilesAsync(playerGameModeStats, season);
+        await PopulateProgression(playerGameModeStats);
 
         return playerGameModeStats.OrderByDescending(r => r.RankingPoints).ToList();
     }
@@ -86,6 +90,15 @@ public class GameModeStatQueryHandler(
         foreach (var gameModeStat in playerGameModeStats)
         {
             gameModeStat.Quantile = await _playerService.GetQuantileForPlayer(gameModeStat.PlayerIds, gameModeStat.GateWay, gameModeStat.GameMode, gameModeStat.Race, season);
+        }
+    }
+
+    private async Task PopulateProgression(List<PlayerGameModeStatPerGateway> stats)
+    {
+        var views = await _progressionViewLoader.LoadViews(stats.Select(s => s.Id).ToList());
+        foreach (var stat in stats)
+        {
+            stat.Progression = views.GetValueOrDefault(stat.Id);
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 
 namespace W3ChampionsStatisticService.Ladder;
 
@@ -63,4 +64,7 @@ public class Rank : IIdentifiable
     [JsonIgnore]
     [BsonIgnoreIfNull]
     public List<PersonalSettings.PersonalSetting> PlayerSettings { get; set; } = new List<PersonalSettings.PersonalSetting>();
+
+    [BsonIgnore]
+    public PlayerProgressionView Progression { get; set; }
 }
