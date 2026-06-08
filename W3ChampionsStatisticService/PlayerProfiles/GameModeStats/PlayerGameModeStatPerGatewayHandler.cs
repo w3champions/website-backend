@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
+using W3C.Domain.GameModes;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -58,14 +59,14 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
 
     private async Task RecordLoss(Match match, List<PlayerMMrChange> losingTeam)
     {
-        var gameMode = GetGameModeStatGameMode(match.gameMode, losingTeam[0]);
+        var gameMode = GameModesHelper.ToArrangedTeamVariant(match.gameMode, losingTeam[0].IsAt);
 
         var loserId = new BattleTagIdCombined(
             losingTeam.Select(w => PlayerId.Create(w.battleTag)).ToList(),
             match.gateway,
             gameMode,
             match.season,
-            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?)losingTeam.Single().race : null);
+            GameModesHelper.UsesRaceInLadderKey(match.gameMode, match.season) ? (Race?)losingTeam.Single().race : null);
 
         var loser = await _playerRepository.LoadGameModeStatPerGateway(loserId.Id) ?? PlayerGameModeStatPerGateway.Create(loserId);
 
@@ -97,14 +98,14 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
 
     private async Task RecordWin(Match match, List<PlayerMMrChange> winners)
     {
-        var gameMode = GetGameModeStatGameMode(match.gameMode, winners[0]);
+        var gameMode = GameModesHelper.ToArrangedTeamVariant(match.gameMode, winners[0].IsAt);
 
         var winnerId = new BattleTagIdCombined(
             winners.Select(w => PlayerId.Create(w.battleTag)).ToList(),
             match.gateway,
             gameMode,
             match.season,
-            match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?)winners.Single().race : null);
+            GameModesHelper.UsesRaceInLadderKey(match.gameMode, match.season) ? (Race?)winners.Single().race : null);
 
         var winner = await _playerRepository.LoadGameModeStatPerGateway(winnerId.Id) ?? PlayerGameModeStatPerGateway.Create(winnerId);
         winner.RecordWin(true);
@@ -115,44 +116,4 @@ public class PlayerGameModeStatPerGatewayHandler(IPlayerRepository playerReposit
         await _playerRepository.UpsertPlayerGameModeStatPerGateway(winner);
     }
 
-    [NoTrace]
-    private GameMode GetGameModeStatGameMode(GameMode gameMode, PlayerMMrChange player)
-    {
-        if (gameMode == GameMode.GM_2v2 && player.IsAt)
-        {
-            return GameMode.GM_2v2_AT;
-        }
-
-        if (gameMode == GameMode.GM_4v4 && player.IsAt)
-        {
-            return GameMode.GM_4v4_AT;
-        }
-
-        if (gameMode == GameMode.GM_LEGION_4v4_x20 && player.IsAt)
-        {
-            return GameMode.GM_LEGION_4v4_x20_AT;
-        }
-
-        if (gameMode == GameMode.GM_DOTA_5ON5 && player.IsAt)
-        {
-            return GameMode.GM_DOTA_5ON5_AT;
-        }
-
-        if (gameMode == GameMode.GM_DS && player.IsAt)
-        {
-            return GameMode.GM_DS_AT;
-        }
-
-        if (gameMode == GameMode.GM_CF && player.IsAt)
-        {
-            return GameMode.GM_CF_AT;
-        }
-
-        if (gameMode == GameMode.GM_MINIDOTA_3ON3 && player.IsAt)
-        {
-            return GameMode.GM_MINIDOTA_3ON3_AT;
-        }
-
-        return gameMode;
-    }
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
+using W3C.Domain.GameModes;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.ReadModelBase;
@@ -63,9 +64,9 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IMatchFin
         var playerIds = players.Select(w => PlayerId.Create(w.battleTag)).ToList();
 
         var match = nextEvent.match;
-        var playerRaceIfSingle = match.gameMode == GameMode.GM_1v1 && match.season >= 2 ? (Race?)players.Single().race : null;
+        var playerRaceIfSingle = GameModesHelper.UsesRaceInLadderKey(match.gameMode, match.season) ? (Race?)players.Single().race : null;
 
-        var gameMode = GetOverviewGameMode(match.gameMode, players[0]);
+        var gameMode = GameModesHelper.ToArrangedTeamVariant(match.gameMode, players[0].IsAt);
 
         var winnerIdCombined = new BattleTagIdCombined(
             players.Select(p =>
@@ -90,44 +91,4 @@ public class PlayOverviewHandler(IPlayerRepository playerRepository) : IMatchFin
         return winner;
     }
 
-    [NoTrace]
-    private GameMode GetOverviewGameMode(GameMode gameMode, PlayerMMrChange player)
-    {
-        if (gameMode == GameMode.GM_2v2 && player.IsAt)
-        {
-            return GameMode.GM_2v2_AT;
-        }
-
-        if (gameMode == GameMode.GM_4v4 && player.IsAt)
-        {
-            return GameMode.GM_4v4_AT;
-        }
-
-        if (gameMode == GameMode.GM_LEGION_4v4_x20 && player.IsAt)
-        {
-            return GameMode.GM_LEGION_4v4_x20_AT;
-        }
-
-        if (gameMode == GameMode.GM_DOTA_5ON5 && player.IsAt)
-        {
-            return GameMode.GM_DOTA_5ON5_AT;
-        }
-
-        if (gameMode == GameMode.GM_DS && player.IsAt)
-        {
-            return GameMode.GM_DS_AT;
-        }
-
-        if (gameMode == GameMode.GM_CF && player.IsAt)
-        {
-            return GameMode.GM_CF_AT;
-        }
-
-        if (gameMode == GameMode.GM_MINIDOTA_3ON3 && player.IsAt)
-        {
-            return GameMode.GM_MINIDOTA_3ON3_AT;
-        }
-
-        return gameMode;
-    }
 }
