@@ -40,6 +40,20 @@ public class GameModesHelperTests
         Assert.AreEqual(GameMode.GM_DOTA_5ON5_AT, GameModesHelper.ToArrangedTeamVariant(GameMode.GM_DOTA_5ON5, true));
     }
 
+    // IsRaceSplitGameMode
+
+    [Test]
+    public void IsRaceSplitGameMode_1v1_ReturnsTrue()
+    {
+        Assert.IsTrue(GameModesHelper.IsRaceSplitGameMode(GameMode.GM_1v1));
+    }
+
+    [Test]
+    public void IsRaceSplitGameMode_2v2_ReturnsFalse()
+    {
+        Assert.IsFalse(GameModesHelper.IsRaceSplitGameMode(GameMode.GM_2v2));
+    }
+
     // UsesRaceInLadderKey
 
     [Test]

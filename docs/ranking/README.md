@@ -27,3 +27,33 @@ placed rank. The snapshot carries the published rank fields only:
 
 Read-model handlers are off by default locally (`IS_DEVELOPMENT`) — do not enable them against shared
 data.
+
+## Lifetime win-milestone read-model
+
+A separate, **permanent** downstream read-model tracks each player's lifetime win-milestone progress — a
+cosmetic "always something to climb" track that is independent of rank and never resets. It is fed from the
+same event stream but keyed differently from the season-scoped progression rank above.
+
+- **Read-model:** `ProgressionMilestone` (collection `ProgressionMilestone`,
+  `PlayerProfiles/ProgressionStats/`) — one document per entity (a single player, or an arranged team) per
+  game mode, and per race for `GM_1v1`. The `_id` is **season-less**
+  (`"{tags@gateway}_{gameMode}[_race]"`), so wins accumulate across all seasons into one document
+  (contrast `PlayerProgression`, whose `_id` includes the season).
+- **What it stores:** `TotalWins` (monotonic, never decreases) and a compact rolling weekly activity
+  window (`ActivityWeeks`, ~90 days) recording how many games the entity played each week. `LastPlayedAt`
+  is retained for a future display path.
+- **Source of truth:** the per-player `won` flag on `MatchFinishedEvent` (`PlayerMMrChange.won`) — counted
+  for every match, independent of whether a progression rank was recorded. `TotalWins` increments on a win;
+  the activity window records every game (won or lost).
+- **Handler:** `ProgressionMilestoneHandler : IMatchFinishedReadModelHandler` — groups arranged-team players
+  by `atTeamId` into one shared team document and processes solo players individually (mirrors
+  `PlayerProgressionHandler`); skips fake events. Registered via
+  `AddMatchFinishedReadModelService<ProgressionMilestoneHandler>()`.
+- **Next-milestone target:** `MilestoneTargetCalculator` is a pure function of `TotalWins` and the entity's
+  own recent activity. The target is the next round-number of wins on a curve whose step coarsens as totals
+  grow; a returning or low-activity player is given a *nearer* milestone (never a farther one). It is
+  computed **on read** — nothing is stored for it and there is no scheduled job.
+- **Idempotency:** `TotalWins` is an additive counter, so — like the other counting read-models
+  (`PlayerOverallStats`, `GamesPerDay`) — it relies on the read-model cursor (`HandlerVersions`) for
+  at-least-once delivery rather than a per-document guard. A deliberate cursor rewind/backfill would
+  re-count; this is accepted, consistent with those existing handlers.

@@ -163,6 +163,7 @@ builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IPlayerProgressionRepository, PlayerProgressionRepository>();
+builder.Services.AddInterceptedTransient<IProgressionMilestoneRepository, ProgressionMilestoneRepository>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
@@ -254,6 +255,7 @@ if (startHandlers == "true")
     builder.Services.AddMatchFinishedReadModelService<PlayerRaceStatPerGatewayHandler>();
     builder.Services.AddMatchFinishedReadModelService<PlayerMmrRpTimelineHandler>();
     builder.Services.AddMatchFinishedReadModelService<PlayerProgressionHandler>();
+    builder.Services.AddMatchFinishedReadModelService<ProgressionMilestoneHandler>();
     builder.Services.AddMatchFinishedReadModelService<GameLengthForPlayerStatisticsHandler>();
 
     // General Stats

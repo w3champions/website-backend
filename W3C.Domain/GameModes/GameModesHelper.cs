@@ -43,7 +43,11 @@ public class GameModesHelper
     public static GameMode ToArrangedTeamVariant(GameMode gameMode, bool isAt)
         => isAt && ArrangedTeamVariants.TryGetValue(gameMode, out var atVariant) ? atVariant : gameMode;
 
+    // 1v1 is the only race-split game mode (its ladder/progression is tracked per race).
+    public static bool IsRaceSplitGameMode(GameMode gameMode)
+        => gameMode == GameMode.GM_1v1;
+
     // 1v1 ladders are keyed per race from RaceSplitStartSeason onward; other modes/seasons are not.
     public static bool UsesRaceInLadderKey(GameMode gameMode, int season)
-        => gameMode == GameMode.GM_1v1 && season >= RaceSplitStartSeason;
+        => IsRaceSplitGameMode(gameMode) && season >= RaceSplitStartSeason;
 }
