@@ -57,3 +57,32 @@ same event stream but keyed differently from the season-scoped progression rank 
   (`PlayerOverallStats`, `GamesPerDay`) — it relies on the read-model cursor (`HandlerVersions`) for
   at-least-once delivery rather than a per-document guard. A deliberate cursor rewind/backfill would
   re-count; this is accepted, consistent with those existing handlers.
+
+## Prestige store (peak rank)
+
+`ProgressionPrestige` is a permanent, per-player read-model (one document per battleTag) recording the
+**highest progression rank ever reached** in each individual-rank game mode (per race for race-split
+modes). Each mode entry keeps an all-time peak, the peak reached in each season, and a reserved slot for
+future cosmetic badges. The peak only ever rises, so it is retained across the seasonal reset (the
+current-season rank lives in the season-keyed progression read-model; the peak here is never cleared).
+It is built from the match-finished event stream and is ingest-only — there is no read API yet.
+
+- **Read-model:** `ProgressionPrestige` (collection `ProgressionPrestige`,
+  `PlayerProfiles/ProgressionStats/`) — one document per player (battleTag). Each document holds a list
+  of `PrestigePeakEntry` records, one per `(gameMode, race)` combination. Race is populated only for
+  race-split game modes (e.g. `GM_1v1`); it is `null` for non-race-split modes.
+- **What it stores:** `AllTimePeak` — the single highest rank the player has ever held in that
+  mode/race — and `SeasonPeaks`, a per-season list of the peak rank reached within each individual
+  season. The all-time peak is always equal to the best entry across all season peaks (invariant
+  maintained on every write). A `Badges` list is reserved for future cosmetic awards; it is always
+  empty in the current stage.
+- **Scope:** only **non-arranged-team** placements are recorded. Arranged-team rank is attributed to
+  the team as a whole, not to individual players, so those events are skipped.
+- **Handler:** `ProgressionPrestigeHandler : IMatchFinishedReadModelHandler` — for each placed,
+  non-arranged-team player it reads (or creates) the player's prestige document, applies the peak
+  candidate, and upserts the result. The update is a monotonic `max`; replaying the same event is a
+  no-op. Skips fake events. Registered via
+  `AddMatchFinishedReadModelService<ProgressionPrestigeHandler>()`.
+- **Idempotency:** the peak is updated only when the incoming rank strictly exceeds the stored peak,
+  so replays and out-of-order deliveries are safe. The read-model cursor (`HandlerVersions`) provides
+  at-least-once delivery.
