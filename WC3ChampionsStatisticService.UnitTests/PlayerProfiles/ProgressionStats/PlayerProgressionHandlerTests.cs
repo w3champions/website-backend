@@ -181,4 +181,29 @@ public class PlayerProgressionHandlerTests
         Assert.AreEqual(3, (await _repository.LoadProgression("1_p#1@20_GM_1v1")).League);
         Assert.AreEqual(4, (await _repository.LoadProgression("2_p#1@20_GM_1v1_HU")).League);
     }
+
+    [Test]
+    public async Task TwoAtTeamsOnSameGameTeam_WriteSeparateDocs()
+    {
+        // A 4v4-AT side (team 0) containing two distinct arranged teams of 2.
+        var teamX = new UpdatedProgression { league = 3, division = 1, points = 60 };
+        var teamY = new UpdatedProgression { league = 5, division = 4, points = 20 };
+        var ev = Event(GameMode.GM_4v4, 2, GateWay.Europe, new List<PlayerMMrChange>
+        {
+            Player("x1#1", 0, true, Race.HU, atTeamId: "team-X", progression: teamX),
+            Player("x2#2", 0, true, Race.OC, atTeamId: "team-X", progression: teamX),
+            Player("y1#3", 0, true, Race.NE, atTeamId: "team-Y", progression: teamY),
+            Player("y2#4", 0, true, Race.UD, atTeamId: "team-Y", progression: teamY),
+        });
+
+        await _handler.Update(ev);
+
+        Assert.AreEqual(2, await Count());
+        var x = await _repository.LoadProgression("2_x1#1@20_x2#2@20_GM_4v4_AT");
+        var y = await _repository.LoadProgression("2_y1#3@20_y2#4@20_GM_4v4_AT");
+        Assert.IsNotNull(x);
+        Assert.IsNotNull(y);
+        Assert.AreEqual(3, x.League);
+        Assert.AreEqual(5, y.League);
+    }
 }
