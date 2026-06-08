@@ -43,8 +43,6 @@ public class ProgressionMilestoneHandlerTests
             won = won,
             race = race,
             atTeamId = atTeamId,
-            mmr = new Mmr { rating = 1500 },
-            updatedMmr = new Mmr { rating = won ? 1520 : 1480 },
         };
     }
 
@@ -68,7 +66,7 @@ public class ProgressionMilestoneHandlerTests
 
     private Task<ProgressionMilestone> Load(string id) => _repository.LoadMilestone(id);
     private Task<long> Count() => _mongoClient.GetDatabase("W3Champions-Statistic-Service")
-        .GetCollection<ProgressionMilestone>("ProgressionMilestone")
+        .GetCollection<ProgressionMilestone>(nameof(ProgressionMilestone))
         .CountDocumentsAsync(FilterDefinition<ProgressionMilestone>.Empty);
 
     [Test]
@@ -104,6 +102,11 @@ public class ProgressionMilestoneHandlerTests
         Assert.IsNotNull(t1);
         Assert.AreEqual(1, t1.TotalWins);
         Assert.IsNull(t1.Race);
+
+        var t2 = await Load("c#3@20_d#4@20_GM_2v2_AT");
+        Assert.IsNotNull(t2);
+        Assert.AreEqual(0, t2.TotalWins);
+        Assert.AreEqual(1, t2.ActivityWeeks.Count); // loss still records activity
     }
 
     [Test]
@@ -180,5 +183,33 @@ public class ProgressionMilestoneHandlerTests
         await _handler.Update(ev);
 
         Assert.AreEqual(2, (await Load("zed#1@20_GM_1v1_HU")).TotalWins);
+    }
+
+    [Test]
+    public async Task MixedAtAndSolo_InSameMatch_WriteCorrectDocs()
+    {
+        await _handler.Update(Event(GameMode.GM_2v2, 2, GateWay.Europe, Ms(2026, 6, 3), new List<PlayerMMrChange>
+        {
+            Player("a#1", 0, true, Race.HU, atTeamId: "T1"),   // AT pair, won
+            Player("b#2", 0, true, Race.OC, atTeamId: "T1"),
+            Player("c#3", 1, false, Race.NE),                  // solo-queued, lost (IsAt false)
+            Player("d#4", 1, false, Race.UD),                  // solo-queued, lost
+        }));
+
+        Assert.AreEqual(3, await Count()); // 1 AT-pair doc + 2 solo docs
+        var atPair = await Load("a#1@20_b#2@20_GM_2v2_AT");
+        Assert.AreEqual(1, atPair.TotalWins);
+        Assert.IsNull(atPair.Race);
+        var solo1 = await Load("c#3@20_GM_2v2");   // solos key under the base (non-AT) variant, no race
+        var solo2 = await Load("d#4@20_GM_2v2");
+        Assert.AreEqual(0, solo1.TotalWins);
+        Assert.AreEqual(0, solo2.TotalWins);
+    }
+
+    [Test]
+    public async Task EmptyPlayers_WritesNothing()
+    {
+        await _handler.Update(Event(GameMode.GM_1v1, 2, GateWay.Europe, Ms(2026, 6, 3), new List<PlayerMMrChange>()));
+        Assert.AreEqual(0, await Count());
     }
 }

@@ -62,6 +62,10 @@ public class ProgressionMilestoneHandler(IProgressionMilestoneRepository milesto
         var milestone = await _milestoneRepository.LoadMilestone(id)
                         ?? ProgressionMilestone.Create(playerIds, match.gateway, gameMode, race);
 
+        // Every member of an AT team shares the same match result (MM emits one team outcome), so
+        // entityPlayers[0].won represents the whole entity. Activity is recorded for every game (won
+        // or lost); PruneStaleActivity runs after RecordActivity — the just-added bucket can never be
+        // its own victim because the prune margin exceeds the window.
         if (first.won)
         {
             milestone.RecordWin();
