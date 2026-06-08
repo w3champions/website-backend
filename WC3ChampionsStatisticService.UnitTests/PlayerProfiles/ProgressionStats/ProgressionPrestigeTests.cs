@@ -91,4 +91,12 @@ public class ProgressionPrestigeTests
         Assert.AreEqual(3, nullRaceEntry.AllTimePeak.League);   // both null-race calls hit the same entry
         Assert.AreEqual(2, p.Peaks.Count);                      // exactly two entries: (2v2, null) and (1v1, HU)
     }
+
+    [Test]
+    public void RecordPeak_IgnoresUnplacedRank()
+    {
+        var p = ProgressionPrestige.Create("unplaced#1");
+        p.RecordPeak(GameMode.GM_1v1, Race.HU, new PeakRank { League = null, Season = 1 });
+        Assert.IsEmpty(p.Peaks); // unplaced/calibrating rank creates no entry or bucket
+    }
 }

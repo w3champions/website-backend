@@ -18,6 +18,8 @@ public class ProgressionPrestige : IIdentifiable
 
     public void RecordPeak(GameMode gameMode, Race? race, PeakRank candidate)
     {
+        if (candidate?.League == null) return; // ignore unplaced/calibrating ranks; the store holds placed ranks only
+
         var entry = Peaks.FirstOrDefault(e => e.GameMode == gameMode && e.Race == race);
         if (entry == null)
         {
