@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Mongo2Go;
 using MongoDB.Driver;
@@ -28,12 +29,7 @@ public class ProgressionMilestoneRepositoryTests
     [TearDown]
     public void TearDown() => _runner.Dispose();
 
-    private static List<PlayerId> Tags(params string[] tags)
-    {
-        var list = new List<PlayerId>();
-        foreach (var t in tags) list.Add(PlayerId.Create(t));
-        return list;
-    }
+    private static List<PlayerId> Tags(params string[] tags) => tags.Select(PlayerId.Create).ToList();
 
     [Test]
     public async Task UpsertAndLoad_RoundTrips()
