@@ -1,19 +1,25 @@
+using System;
+
 namespace W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 
 // Pure, on-read next-milestone selection. Baseline granularity curve (the next round-number of
-// wins; the step coarsens as totals grow) plus a player-local catch-up that only ever NARROWS the
-// gap (a returning/low-volume player gets a nearer milestone; an active player gets the baseline —
-// never a widening gap). All thresholds are tunable constants; tests assert behaviour + invariants.
+// wins; the step coarsens as totals grow, capped at 100) plus a player-local catch-up that only
+// ever NARROWS the gap (a returning/low-volume player gets a nearer milestone; an active player
+// gets the baseline — never a widening gap). All thresholds are tunable constants; tests assert
+// behaviour + invariants.
 public static class MilestoneTargetCalculator
 {
-    // (upperBoundExclusive, step). Coarser steps are integer multiples of finer ones so a finer
-    // catch-up step never produces a farther target.
+    // (upperBoundExclusive, step). Step sizes are 5, 10, 25, 50, 100 — capped at 100. They are NOT
+    // all integer multiples of one another (25 is not a multiple of 10), so a finer catch-up step can
+    // occasionally land beyond the baseline milestone; Compute clamps the catch-up to the baseline so
+    // it can never widen the gap regardless of the step set.
     private static readonly (long UpperExclusive, long Step)[] Bands =
     {
         (50, 5),
+        (100, 10),
+        (250, 25),
         (500, 50),
-        (5000, 250),
-        (long.MaxValue, 1000),
+        (long.MaxValue, 100),
     };
 
     // Catch-up thresholds over the trailing recent-activity window (tunable).
@@ -23,12 +29,19 @@ public static class MilestoneTargetCalculator
 
     public static MilestoneTarget Compute(long totalWins, MilestoneActivity activity)
     {
-        var baseBand = BaselineBandIndex(totalWins);
-        var band = ApplyCatchUp(baseBand, activity);
-        var step = Bands[band].Step;
-        var next = ((totalWins / step) + 1) * step; // strictly greater multiple of step
+        var baselineTarget = NextMultiple(totalWins, Bands[BaselineBandIndex(totalWins)].Step);
+
+        var catchUpBand = ApplyCatchUp(BaselineBandIndex(totalWins), activity);
+        var catchUpTarget = NextMultiple(totalWins, Bands[catchUpBand].Step);
+
+        // Catch-up may only narrow. Because the step set is not fully nested, a finer step can land
+        // beyond the baseline milestone, so clamp to the baseline — never widen.
+        var next = Math.Min(baselineTarget, catchUpTarget);
         return new MilestoneTarget(next, next - totalWins);
     }
+
+    // The next multiple of step strictly greater than totalWins.
+    private static long NextMultiple(long totalWins, long step) => ((totalWins / step) + 1) * step;
 
     private static int BaselineBandIndex(long totalWins)
     {

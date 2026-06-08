@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
-using W3C.Contracts.Matchmaking;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.GameModes;
 using W3C.Domain.MatchmakingService;
@@ -51,10 +50,10 @@ public class ProgressionMilestoneHandler(IProgressionMilestoneRepository milesto
         var first = entityPlayers[0];
         var playerIds = entityPlayers.Select(p => PlayerId.Create(p.battleTag)).ToList();
         var gameMode = GameModesHelper.ToArrangedTeamVariant(match.gameMode, first.IsAt);
-        // Milestones accumulate across seasons, so the key must be season-less and stable.
-        // Unlike the season-keyed ladder (which gates race on RaceSplitStartSeason), we
-        // always include race for solo GM_1v1 so pre-season-2 wins roll up into the same doc.
-        var race = gameMode == GameMode.GM_1v1
+        // Milestones accumulate across seasons, so the key must be season-less and stable. Unlike the
+        // season-keyed ladder (UsesRaceInLadderKey gates on RaceSplitStartSeason), we include race for a
+        // race-split mode in ALL seasons so pre-season-2 wins roll up into the same per-race doc.
+        var race = GameModesHelper.IsRaceSplitGameMode(match.gameMode)
             ? (Race?)entityPlayers.Single().race
             : null;
 

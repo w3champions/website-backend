@@ -11,6 +11,8 @@ public class MilestoneTargetCalculatorTests
     private static readonly MilestoneActivity LowVolume = new(6, 3);
     private static readonly MilestoneActivity Dormant = new(0, 0);
 
+    // Baseline curve: steps 5, 10, 25, 50, 100 — capped at 100.
+
     [Test]
     public void Baseline_Band0_Step5()
     {
@@ -20,35 +22,51 @@ public class MilestoneTargetCalculatorTests
     }
 
     [Test]
-    public void Baseline_Band1_Step50()
+    public void Baseline_Band1_Step10()
     {
-        var t = MilestoneTargetCalculator.Compute(220, Active);
-        Assert.AreEqual(250, t.NextTarget);
+        var t = MilestoneTargetCalculator.Compute(64, Active);
+        Assert.AreEqual(70, t.NextTarget);
+        Assert.AreEqual(6, t.WinsToNext);
+    }
+
+    [Test]
+    public void Baseline_Band2_Step25()
+    {
+        var t = MilestoneTargetCalculator.Compute(120, Active);
+        Assert.AreEqual(125, t.NextTarget);
+        Assert.AreEqual(5, t.WinsToNext);
+    }
+
+    [Test]
+    public void Baseline_Band3_Step50()
+    {
+        var t = MilestoneTargetCalculator.Compute(320, Active);
+        Assert.AreEqual(350, t.NextTarget);
         Assert.AreEqual(30, t.WinsToNext);
     }
 
     [Test]
-    public void Baseline_Band2_Step250()
+    public void Baseline_Band4_Step100()
     {
-        var t = MilestoneTargetCalculator.Compute(1230, Active);
-        Assert.AreEqual(1250, t.NextTarget);
-        Assert.AreEqual(20, t.WinsToNext);
+        var t = MilestoneTargetCalculator.Compute(7300, Active);
+        Assert.AreEqual(7400, t.NextTarget);
+        Assert.AreEqual(100, t.WinsToNext);
     }
 
     [Test]
-    public void Baseline_Band3_Step1000()
+    public void MaxStep_IsCappedAt100_NoMatterHowLargeTheTotal()
     {
-        var t = MilestoneTargetCalculator.Compute(7300, Active);
-        Assert.AreEqual(8000, t.NextTarget);
-        Assert.AreEqual(700, t.WinsToNext);
+        var t = MilestoneTargetCalculator.Compute(100_000, Active);
+        Assert.AreEqual(100_100, t.NextTarget);
+        Assert.AreEqual(100, t.WinsToNext); // step never exceeds 100
     }
 
     [Test]
     public void NextTarget_IsAlwaysStrictlyGreater_EvenOnAMilestone()
     {
-        var t = MilestoneTargetCalculator.Compute(50, Active);   // exactly on 50, now in band1 (step 50)
-        Assert.AreEqual(100, t.NextTarget);
-        Assert.AreEqual(50, t.WinsToNext);
+        var t = MilestoneTargetCalculator.Compute(50, Active);   // exactly on 50, now in band1 (step 10)
+        Assert.AreEqual(60, t.NextTarget);
+        Assert.AreEqual(10, t.WinsToNext);
         Assert.Greater(t.WinsToNext, 0);
     }
 
@@ -62,8 +80,10 @@ public class MilestoneTargetCalculatorTests
     [Test]
     public void CatchUp_Dormant_NarrowsTargetVsBaseline()
     {
-        var baseline = MilestoneTargetCalculator.Compute(1230, Active);
-        var dormant = MilestoneTargetCalculator.Compute(1230, Dormant);
+        var baseline = MilestoneTargetCalculator.Compute(1230, Active);  // step 100 → 1300
+        var dormant = MilestoneTargetCalculator.Compute(1230, Dormant);  // finest step 5 → 1235
+        Assert.AreEqual(1300, baseline.NextTarget);
+        Assert.AreEqual(1235, dormant.NextTarget);
         Assert.Less(dormant.NextTarget, baseline.NextTarget); // nearer
         Assert.Greater(dormant.WinsToNext, 0);
     }
@@ -71,27 +91,27 @@ public class MilestoneTargetCalculatorTests
     [Test]
     public void CatchUp_LowVolume_NarrowsOrEquals_NeverWidens()
     {
-        var baseline = MilestoneTargetCalculator.Compute(1230, Active);
-        var low = MilestoneTargetCalculator.Compute(1230, LowVolume);
+        var baseline = MilestoneTargetCalculator.Compute(1230, Active);    // step 100 → 1300
+        var low = MilestoneTargetCalculator.Compute(1230, LowVolume);      // one band finer, step 50 → 1250
         Assert.LessOrEqual(low.NextTarget, baseline.NextTarget);
+        Assert.AreEqual(1250, low.NextTarget);
         Assert.Greater(low.WinsToNext, 0);
-        // 1230 is a multiple of 50 as well as 250, so the low-volume (band1, step50) target equals the baseline here — narrows-or-equals, never widens.
     }
 
     [Test]
     public void CatchUp_FewActiveWeeks_EvenWithEnoughGames_Narrows()
     {
         var fewWeeks = new MilestoneActivity(15, 2); // RecentGames >= 10 but ActiveWeeks < 3
-        var baseline = MilestoneTargetCalculator.Compute(1260, Active);
-        var narrowed = MilestoneTargetCalculator.Compute(1260, fewWeeks);
-        Assert.Less(narrowed.NextTarget, baseline.NextTarget); // band2 step250 → 1500; band1 step50 → 1300 (narrower)
+        var baseline = MilestoneTargetCalculator.Compute(1230, Active);    // step 100 → 1300
+        var narrowed = MilestoneTargetCalculator.Compute(1230, fewWeeks);  // one band finer, step 50 → 1250
+        Assert.Less(narrowed.NextTarget, baseline.NextTarget);
         Assert.Greater(narrowed.WinsToNext, 0);
     }
 
     [Test]
     public void Invariant_CatchUpNeverWidens_AcrossSamples()
     {
-        long[] totals = { 0, 7, 49, 50, 213, 499, 500, 1230, 4999, 5000, 7300, 99999 };
+        long[] totals = { 0, 7, 49, 50, 64, 99, 100, 213, 249, 250, 300, 499, 500, 1230, 7300, 99999 };
         foreach (var total in totals)
         {
             var baseline = MilestoneTargetCalculator.Compute(total, Active);
