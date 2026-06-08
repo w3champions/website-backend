@@ -13,12 +13,21 @@ namespace W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 // Permanent, monotonic per-entity/mode/race lifetime win-milestone track. One document per
 // (entity, gateway, gameMode, race?) — season-less, so wins accumulate across all seasons.
 // totalWins counts wins only; activityWeeks counts every game (won or lost) in a rolling
-// ~90-day window, pre-computed on write so the on-read target calculator needs no history query.
+// recent window (see RecentWindowDays), pre-computed on write so the on-read target calculator
+// needs no history query.
 public class ProgressionMilestone : IIdentifiable
 {
+    // The recent-activity window, in days. Activity is bucketed and filtered at ISO-week
+    // granularity, so the effective window width is ~91–97 days depending on day-of-week —
+    // this is not an exact 90-day boundary. Week granularity is intended.
     public const int RecentWindowDays = 90;
 
-    public List<PlayerId> PlayerIds { get; set; }
+    // Keep a small buffer beyond the read window so the ISO-week-aligned lower bound used by
+    // ActivityIn is never pruned away (ActivityIn looks back up to ~7 days past RecentWindowDays
+    // due to week-alignment).
+    private const int ActivityPruneMarginDays = 7;
+
+    public List<PlayerId> PlayerIds { get; set; } = new();
     public GateWay GateWay { get; set; }
     public GameMode GameMode { get; set; }
     public Race? Race { get; set; }
@@ -76,6 +85,11 @@ public class ProgressionMilestone : IIdentifiable
         var cutoffWeek = StartOfIsoWeek(cutoff);
         ActivityWeeks.RemoveAll(w => w.WeekStartUtc < cutoffWeek);
     }
+
+    // Drop activity weeks older than the rolling window (+ alignment margin), measured from `reference`
+    // (typically the just-ingested game's timestamp). Bounds the stored array; ActivityIn re-filters on read.
+    public void PruneStaleActivity(DateTimeOffset reference)
+        => PruneActivityBefore(reference.AddDays(-(RecentWindowDays + ActivityPruneMarginDays)));
 
     public MilestoneActivity ActivityIn(DateTimeOffset now)
     {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
@@ -11,12 +12,7 @@ namespace WC3ChampionsStatisticService.UnitTests.PlayerProfiles.ProgressionStats
 [TestFixture]
 public class ProgressionMilestoneTests
 {
-    private static List<PlayerId> Tags(params string[] tags)
-    {
-        var list = new List<PlayerId>();
-        foreach (var t in tags) list.Add(PlayerId.Create(t));
-        return list;
-    }
+    private static List<PlayerId> Tags(params string[] tags) => tags.Select(PlayerId.Create).ToList();
 
     [Test]
     public void BuildId_Solo_NoRace_SortsTagsAndEmbedsGatewayInt()
@@ -116,5 +112,39 @@ public class ProgressionMilestoneTests
         var activity = m.ActivityIn(now);
         Assert.AreEqual(0, activity.RecentGames);
         Assert.AreEqual(0, activity.ActiveWeeks);
+    }
+
+    [Test]
+    public void PruneActivityBefore_RetainsWeekEqualToCutoffWeek()
+    {
+        var m = ProgressionMilestone.Create(Tags("zed#1"), GateWay.Europe, GameMode.GM_1v1, Race.HU);
+        m.RecordActivity(new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero)); // Mon 2026-06-01
+        m.PruneActivityBefore(new DateTimeOffset(2026, 6, 3, 0, 0, 0, TimeSpan.Zero)); // cutoff week = 2026-06-01
+        Assert.AreEqual(1, m.ActivityWeeks.Count);
+    }
+
+    [Test]
+    public void ActivityIn_IncludesWindowStartWeek_ExcludesEarlierWeek()
+    {
+        var m = ProgressionMilestone.Create(Tags("zed#1"), GateWay.Europe, GameMode.GM_1v1, Race.HU);
+        var now = new DateTimeOffset(2026, 6, 8, 0, 0, 0, TimeSpan.Zero); // Monday
+        var windowStartWeek = ProgressionMilestone.StartOfIsoWeek(now.AddDays(-ProgressionMilestone.RecentWindowDays));
+        m.RecordActivity(windowStartWeek);                 // exactly on the window-start week → included
+        m.RecordActivity(windowStartWeek.AddDays(-1));     // the prior week → excluded
+        var activity = m.ActivityIn(now);
+        Assert.AreEqual(1, activity.RecentGames);
+        Assert.AreEqual(1, activity.ActiveWeeks);
+    }
+
+    [Test]
+    public void PruneStaleActivity_DropsWeeksOlderThanWindowPlusMargin_KeepsRecent()
+    {
+        var m = ProgressionMilestone.Create(Tags("zed#1"), GateWay.Europe, GameMode.GM_1v1, Race.HU);
+        var reference = new DateTimeOffset(2026, 6, 8, 0, 0, 0, TimeSpan.Zero);
+        m.RecordActivity(reference);                       // recent → kept
+        m.RecordActivity(reference.AddDays(-200));         // well outside window+margin → dropped
+        m.PruneStaleActivity(reference);
+        Assert.AreEqual(1, m.ActivityWeeks.Count);
+        Assert.AreEqual(ProgressionMilestone.StartOfIsoWeek(reference), m.ActivityWeeks[0].WeekStartUtc);
     }
 }
