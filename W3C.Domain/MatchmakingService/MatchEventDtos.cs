@@ -27,6 +27,7 @@ public class PlayerMMrChange : UnfinishedMatchPlayer
     public int? matchRanking { get; set; }
     public Mmr updatedMmr { get; set; }
     public Ranking updatedRanking { get; set; }
+    public UpdatedProgression updatedProgression { get; set; }
     public string atTeamId { get; set; }
     public Race? rndRace { get; set; }
 
@@ -64,6 +65,15 @@ public class Ranking
     public int? leagueId { get; set; }
     public int? leagueOrder { get; set; }
     public double? progress { get; set; }
+}
+
+[BsonIgnoreExtraElements]
+public class UpdatedProgression
+{
+    public int? league { get; set; }
+    public int? division { get; set; }
+    public int? points { get; set; }
+    public int? apexPoints { get; set; }
 }
 
 [BsonIgnoreExtraElements]

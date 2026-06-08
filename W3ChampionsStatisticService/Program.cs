@@ -32,6 +32,7 @@ using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.PlayerProfiles.RaceStats;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.PlayerProfiles.War3InfoPlayerAkas;
 using W3ChampionsStatisticService.PlayerStats;
 using W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
@@ -161,6 +162,7 @@ builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
 // Ensure MatchRepository indexes are created at startup
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
+builder.Services.AddInterceptedTransient<IPlayerProgressionRepository, PlayerProgressionRepository>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
@@ -251,6 +253,7 @@ if (startHandlers == "true")
     builder.Services.AddMatchFinishedReadModelService<PlayerGameModeStatPerGatewayHandler>();
     builder.Services.AddMatchFinishedReadModelService<PlayerRaceStatPerGatewayHandler>();
     builder.Services.AddMatchFinishedReadModelService<PlayerMmrRpTimelineHandler>();
+    builder.Services.AddMatchFinishedReadModelService<PlayerProgressionHandler>();
     builder.Services.AddMatchFinishedReadModelService<GameLengthForPlayerStatisticsHandler>();
 
     // General Stats
