@@ -63,9 +63,8 @@ public class ProgressionPrestigeTests
         Assert.AreEqual(3, entry.SeasonPeaks.Single(s => s.Season == 1).League);
         Assert.AreEqual(6, entry.SeasonPeaks.Single(s => s.Season == 2).League);
         Assert.AreEqual(3, entry.AllTimePeak.League);          // all-time = the S1 Diamond
-        // Invariant: all-time == best of the per-season peaks
-        var best = entry.SeasonPeaks.Aggregate((a, b) => PrestigeRankComparer.IsHigher(a, b) ? a : b);
-        Assert.AreEqual(best.League, entry.AllTimePeak.League);
+        // Invariant: all-time is the full S1 peak record (value equality pins every rank field, not just league)
+        Assert.AreEqual(entry.SeasonPeaks.Single(s => s.Season == 1), entry.AllTimePeak);
     }
 
     [Test]
@@ -75,5 +74,21 @@ public class ProgressionPrestigeTests
         p.RecordPeak(GameMode.GM_1v1, Race.HU, Rank(5, 2, 30, season: 1));
         p.RecordPeak(GameMode.GM_1v1, Race.OC, Rank(4, 2, 30, season: 1));
         Assert.AreEqual(2, p.Peaks.Count);
+    }
+
+    [Test]
+    public void NullRaceMode_SharesOneEntry_AndIsDistinctFromRacedMode()
+    {
+        var p = ProgressionPrestige.Create("peak#1");
+        // A non-race-split mode (e.g. 2v2) records under race == null; repeated calls share one entry.
+        p.RecordPeak(GameMode.GM_2v2, null, Rank(5, 2, 30, season: 1));
+        p.RecordPeak(GameMode.GM_2v2, null, Rank(3, 1, 50, season: 1)); // climbed, same (mode, null-race) key
+        // A race-split mode (1v1) with a non-null race lands in its own distinct entry.
+        p.RecordPeak(GameMode.GM_1v1, Race.HU, Rank(4, 2, 30, season: 1));
+
+        var nullRaceEntry = p.Peaks.Single(e => e.GameMode == GameMode.GM_2v2);
+        Assert.IsNull(nullRaceEntry.Race);                      // null-race key preserved
+        Assert.AreEqual(3, nullRaceEntry.AllTimePeak.League);   // both null-race calls hit the same entry
+        Assert.AreEqual(2, p.Peaks.Count);                      // exactly two entries: (2v2, null) and (1v1, HU)
     }
 }

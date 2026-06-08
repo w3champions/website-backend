@@ -40,7 +40,9 @@ public class PrestigePeakEntry
     // Reserved cosmetic slot. Persisted and retained; no awarding logic in this stage.
     public List<PrestigeBadge> Badges { get; set; } = new();
 
-    public void Record(PeakRank candidate)
+    // Internal so callers must route through ProgressionPrestige.RecordPeak, which owns the
+    // (game mode, race) entry lookup; tests reach it via InternalsVisibleTo.
+    internal void Record(PeakRank candidate)
     {
         var index = SeasonPeaks.FindIndex(p => p.Season == candidate.Season);
         if (index < 0)
@@ -60,6 +62,7 @@ public class PrestigePeakEntry
 }
 
 // Reserved placeholder — never populated in this stage; exists so the slot round-trips and survives resets.
+// BSON-safe: implicit parameterless ctor + settable props; keep it that way if fields are added.
 public class PrestigeBadge
 {
     public string Code { get; set; }
