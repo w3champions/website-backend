@@ -73,6 +73,98 @@ public class AdminController(
         return Ok();
     }
 
+    [HttpGet("warnings")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> GetWarnings([FromQuery] PlayerWarningsGetRequest req)
+    {
+        if (!string.IsNullOrWhiteSpace(req.BattleTag))
+        {
+            var canonical = await _battleTagResolver.ResolveCanonical(req.BattleTag);
+            if (canonical == null)
+                return BadRequest(new { error = "user_not_found", input = req.BattleTag });
+
+            req.BattleTag = canonical;
+        }
+
+        req.Page = req.Page <= 0 ? 1 : req.Page;
+        req.ItemsPerPage = req.ItemsPerPage <= 0 ? 25 : req.ItemsPerPage;
+        var warnings = await _matchmakingServiceRepository.GetPlayerWarnings(req);
+        return Ok(warnings);
+    }
+
+    [HttpGet("warning-definitions")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> GetWarningDefinitions([FromQuery] bool includeDisabled = false)
+    {
+        var definitions = await _matchmakingServiceRepository.GetPlayerWarningDefinitions(includeDisabled);
+        return Ok(definitions);
+    }
+
+    [HttpPost("warning-definitions")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> CreateWarningDefinition([FromBody] PlayerWarningDefinitionRequest request, [NoTrace] string battleTag)
+    {
+        if (request == null)
+            return BadRequest(new { error = "invalid_request" });
+
+        request.createdByBattleTag = battleTag;
+        var definition = await _matchmakingServiceRepository.CreatePlayerWarningDefinition(request);
+        return Ok(definition);
+    }
+
+    [HttpPut("warning-definitions/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> UpdateWarningDefinition([FromRoute] string id, [FromBody] PlayerWarningDefinitionRequest request, [NoTrace] string battleTag)
+    {
+        if (request == null)
+            return BadRequest(new { error = "invalid_request" });
+
+        request.updatedByBattleTag = battleTag;
+        var definition = await _matchmakingServiceRepository.UpdatePlayerWarningDefinition(id, request);
+        return Ok(definition);
+    }
+
+    [HttpDelete("warning-definitions/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> DeleteWarningDefinition([FromRoute] string id, [NoTrace] string battleTag)
+    {
+        var definition = await _matchmakingServiceRepository.DisablePlayerWarningDefinition(id, new DisablePlayerWarningDefinitionRequest
+        {
+            updatedByBattleTag = battleTag
+        });
+        return Ok(definition);
+    }
+
+    [HttpPost("warnings")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> CreateWarning([FromBody] CreatePlayerWarningRequest request, [NoTrace] string battleTag)
+    {
+        if (request == null)
+            return BadRequest(new { error = "invalid_request" });
+
+        var canonical = await _battleTagResolver.ResolveCanonical(request.targetBattleTag);
+        if (canonical == null)
+            return BadRequest(new { error = "user_not_found", input = request.targetBattleTag });
+
+        request.targetBattleTag = canonical;
+        request.issuedByBattleTag = battleTag;
+
+        var warning = await _matchmakingServiceRepository.CreatePlayerWarning(request);
+        return Ok(warning);
+    }
+
+    [HttpPost("warnings/{id}/cancel")]
+    [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
+    public async Task<IActionResult> CancelWarning([FromRoute] string id, [NoTrace] string battleTag)
+    {
+        var warning = await _matchmakingServiceRepository.CancelPlayerWarning(id, new CancelPlayerWarningRequest
+        {
+            cancelledByBattleTag = battleTag
+        });
+
+        return Ok(warning);
+    }
+
     [HttpGet("ban-reason-translations")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetBanReasonTranslations()
