@@ -28,6 +28,20 @@ placed rank. The snapshot carries the published rank fields only:
 Read-model handlers are off by default locally (`IS_DEVELOPMENT`) — do not enable them against shared
 data.
 
+## Serving the rank to clients
+
+The read-model is surfaced on the public rank DTOs as a nullable `progression` object carrying the
+published fields only — `{ league, division, points, apexPoints }`:
+
+- `Rank.Progression` (ladder, `Ladder/Rank.cs`) — populated in `RankQueryHandler` for `api/ladder/*`.
+- `PlayerGameModeStatPerGateway.Progression` (profile, `PlayerProfiles/GameModeStats/...`) — populated
+  in `GameModeStatQueryHandler` for `api/players/{tag}/game-mode-stats`.
+
+Both stamp via `ProgressionViewLoader`, which batch-loads `PlayerProgression` by the shared composite id
+and maps it to `PlayerProgressionView`. The field is a serve-time join (`[BsonIgnore]`, never stored) and
+is `null` when the entity has no placed record for that season/mode. Additive — clients that ignore it
+keep rendering the legacy RP fields.
+
 ## Lifetime win-milestone read-model
 
 A separate, **permanent** downstream read-model tracks each player's lifetime win-milestone progress — a

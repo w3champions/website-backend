@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
 
@@ -11,17 +12,20 @@ namespace W3ChampionsStatisticService.Ladder;
 public class RankQueryHandler(
     IRankRepository rankRepository,
     IPlayerRepository playerRepository,
-    IClanRepository clanRepository)
+    IClanRepository clanRepository,
+    ProgressionViewLoader progressionViewLoader)
 {
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly IClanRepository _clanRepository = clanRepository;
+    private readonly ProgressionViewLoader _progressionViewLoader = progressionViewLoader;
 
     public async Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
     {
         var playerRanks = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
 
         await PopulatePlayerInfos(playerRanks);
+        await PopulateProgression(playerRanks);
 
         return playerRanks;
     }
@@ -32,6 +36,7 @@ public class RankQueryHandler(
 
         await PopulatePlayerInfos(playerRanks);
         await PopulateLeagueInfo(playerRanks, season, gateWay, gameMode);
+        await PopulateProgression(playerRanks);
         if (gameMode == GameMode.GM_2v2_AT
             || gameMode == GameMode.GM_4v4_AT
             || gameMode == GameMode.GM_LEGION_4v4_x20_AT
@@ -110,6 +115,15 @@ public class RankQueryHandler(
                 rank.LeagueDivision = league.Division;
                 rank.LeagueOrder = league.Order;
             }
+        }
+    }
+
+    private async Task PopulateProgression(List<Rank> ranks)
+    {
+        var views = await _progressionViewLoader.LoadViews(ranks.Select(r => r.Id).ToList());
+        foreach (var rank in ranks)
+        {
+            rank.Progression = views.GetValueOrDefault(rank.Id);
         }
     }
 

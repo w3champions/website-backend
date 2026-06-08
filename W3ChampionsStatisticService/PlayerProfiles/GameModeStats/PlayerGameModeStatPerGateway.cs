@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Repositories;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
@@ -36,6 +38,9 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
     public int LeagueOrder { get; set; }
     public int Division { get; set; }
     public double? Quantile { get; set; }
+
+    [BsonIgnore]
+    public PlayerProgressionView Progression { get; set; }
 
     public RankProgression RankingPointsProgress
     {
