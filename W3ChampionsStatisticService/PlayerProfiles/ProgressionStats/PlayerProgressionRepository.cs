@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
@@ -18,5 +20,10 @@ public class PlayerProgressionRepository(MongoClient mongoClient)
     public Task UpsertProgression(PlayerProgression progression)
     {
         return Upsert(progression);
+    }
+
+    public Task<List<PlayerProgression>> LoadProgressions(IReadOnlyList<string> ids)
+    {
+        return LoadAll<PlayerProgression>(p => ids.Contains(p.Id));
     }
 }

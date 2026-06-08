@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Mongo2Go;
 using MongoDB.Driver;
@@ -83,5 +84,26 @@ public class PlayerProgressionRepositoryTests
     {
         var loaded = await _repository.LoadProgression("nope");
         Assert.IsNull(loaded);
+    }
+
+    [Test]
+    public async Task LoadProgressions_ReturnsMatchingDocs_OmitsMissing()
+    {
+        var a = Make("a#1", 2, 3, 2, 50);
+        var b = Make("b#2", 2, 4, 1, 10);
+        await _repository.UpsertProgression(a);
+        await _repository.UpsertProgression(b);
+
+        var loaded = await _repository.LoadProgressions(new List<string> { a.Id, b.Id, "missing#9" });
+
+        Assert.AreEqual(2, loaded.Count);
+        CollectionAssert.AreEquivalent(new[] { a.Id, b.Id }, loaded.Select(p => p.Id).ToList());
+    }
+
+    [Test]
+    public async Task LoadProgressions_EmptyInput_ReturnsEmpty()
+    {
+        var loaded = await _repository.LoadProgressions(new List<string>());
+        Assert.IsEmpty(loaded);
     }
 }
