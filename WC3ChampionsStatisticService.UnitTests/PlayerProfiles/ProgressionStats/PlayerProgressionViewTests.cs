@@ -22,4 +22,13 @@ public class PlayerProgressionViewTests
         Assert.AreEqual(50, view.Points);
         Assert.AreEqual(120, view.ApexPoints);
     }
+
+    [TestCase(null, 2, 50, TestName = "FromReadModel_PartialRecord_LeagueNull_ReturnsNull")]
+    [TestCase(3, null, 50, TestName = "FromReadModel_PartialRecord_DivisionNull_ReturnsNull")]
+    [TestCase(3, 2, null, TestName = "FromReadModel_PartialRecord_PointsNull_ReturnsNull")]
+    public void FromReadModel_PartialRecord_ReturnsNull(int? league, int? division, int? points)
+    {
+        var p = new PlayerProgression { League = league, Division = division, Points = points };
+        Assert.IsNull(PlayerProgressionView.FromReadModel(p));
+    }
 }

@@ -33,7 +33,7 @@ public class LadderController(
         {
             return BadRequest("searchFor parameter must be at least 3 letters.");
         }
-        List<Rank> playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
+        List<Rank> playerRanks = await _rankQueryHandler.SearchPlayersOfLeague(searchFor, season, gateWay, gameMode);
 
         var playerStats = await _playerRepository.SearchForPlayer(searchFor);
 

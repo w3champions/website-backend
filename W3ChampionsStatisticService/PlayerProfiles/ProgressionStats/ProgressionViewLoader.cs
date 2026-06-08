@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Ports;
@@ -22,6 +21,16 @@ public class ProgressionViewLoader(IPlayerProgressionRepository repository)
         }
 
         var docs = await _repository.LoadProgressions(ids);
-        return docs.ToDictionary(d => d.Id, PlayerProgressionView.FromReadModel);
+        var views = new Dictionary<string, PlayerProgressionView>();
+        foreach (var doc in docs)
+        {
+            var view = PlayerProgressionView.FromReadModel(doc);
+            if (view != null)
+            {
+                views[doc.Id] = view;
+            }
+        }
+
+        return views;
     }
 }

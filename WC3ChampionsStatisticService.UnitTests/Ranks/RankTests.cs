@@ -520,6 +520,41 @@ public class RankTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task SearchPlayersOfLeague_StampsProgression_WhenRecordExists()
+    {
+        // Arrange
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var clanRepository = new ClanRepository(MongoClient);
+        var progressionRepository = new PlayerProgressionRepository(MongoClient);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
+            new ProgressionViewLoader(progressionRepository));
+
+        var ranks = new List<Rank> { new(new List<string> { "searchme#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
+        await rankRepository.InsertRanks(ranks);
+
+        var player = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("searchme#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        player.RecordWin(true, 1234);
+        await playerRepository.UpsertPlayerOverview(player);
+
+        var progId = new BattleTagIdCombined(new List<PlayerId> { PlayerId.Create("searchme#123") }, GateWay.America, GameMode.GM_1v1, 1, null);
+        var prog = PlayerProgression.Create(progId);
+        prog.RecordRank(3, 2, 50, null);
+        await progressionRepository.UpsertProgression(prog);
+
+        // Act
+        var loaded = await queryHandler.SearchPlayersOfLeague("searchme", 1, GateWay.America, GameMode.GM_1v1);
+
+        // Assert
+        var rank = loaded.Find(r => r.Id == "1_searchme#123@10_GM_1v1");
+        Assert.IsNotNull(rank, "the inserted rank should be found by search");
+        Assert.IsNotNull(rank.Progression);
+        Assert.AreEqual(3, rank.Progression.League);
+        Assert.AreEqual(2, rank.Progression.Division);
+        Assert.AreEqual(50, rank.Progression.Points);
+    }
+
+    [Test]
     public async Task LoadPlayersOfCountry_StampsProgression_WhenRecordExists()
     {
         // Arrange

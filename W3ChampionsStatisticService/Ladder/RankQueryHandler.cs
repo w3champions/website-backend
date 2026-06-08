@@ -20,6 +20,13 @@ public class RankQueryHandler(
     private readonly IClanRepository _clanRepository = clanRepository;
     private readonly ProgressionViewLoader _progressionViewLoader = progressionViewLoader;
 
+    public async Task<List<Rank>> SearchPlayersOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
+    {
+        var playerRanks = await _rankRepository.SearchPlayerOfLeague(searchFor, season, gateWay, gameMode);
+        await PopulateProgression(playerRanks);
+        return playerRanks;
+    }
+
     public async Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
     {
         var playerRanks = await _rankRepository.LoadPlayersOfLeague(leagueId, season, gateWay, gameMode);
