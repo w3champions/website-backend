@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
@@ -26,12 +27,17 @@ public class ProgressionPrestigeHandler(IProgressionPrestigeRepository repositor
         }
 
         var match = nextEvent.match;
+        var players = match.players ?? new List<PlayerMMrChange>();
         var achievedAt = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime > 0 ? match.endTime : match.startTime);
 
         // Only individual-rank placements: arranged-team rank is the team's, not attributable to one player's peak.
-        var placed = match.players.Where(p => p.updatedProgression != null && !p.IsAt);
+        var placed = players.Where(p => p.updatedProgression != null && !p.IsAt);
         foreach (var player in placed)
         {
+            // The peak entry key is (gameMode, race) with per-season peaks held inside, so the race key must be
+            // season-agnostic. Unlike the season-keyed ladder (UsesRaceInLadderKey gates on RaceSplitStartSeason),
+            // we include race for a race-split mode in ALL seasons; otherwise a player's lifetime 1v1 peak would
+            // fragment across a race-less entry (pre-season-2) and per-race entries.
             var race = GameModesHelper.IsRaceSplitGameMode(match.gameMode) ? (Race?)player.race : null;
             var candidate = new PeakRank
             {
