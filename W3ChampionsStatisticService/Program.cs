@@ -257,6 +257,7 @@ if (startHandlers == "true")
     builder.Services.AddMatchFinishedReadModelService<PlayerMmrRpTimelineHandler>();
     builder.Services.AddMatchFinishedReadModelService<PlayerProgressionHandler>();
     builder.Services.AddMatchFinishedReadModelService<ProgressionMilestoneHandler>();
+    builder.Services.AddMatchFinishedReadModelService<ProgressionPrestigeHandler>();
     builder.Services.AddMatchFinishedReadModelService<GameLengthForPlayerStatisticsHandler>();
 
     // General Stats
