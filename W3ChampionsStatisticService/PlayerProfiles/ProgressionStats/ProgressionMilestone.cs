@@ -35,6 +35,9 @@ public class ProgressionMilestone : IIdentifiable
     public long TotalWins { get; set; }
     public List<ActivityWeek> ActivityWeeks { get; set; } = new();
 
+    // Forward-looking: maintained on every game for a future read/display path (e.g. "last played").
+    // The target calculator does NOT consume it (it derives recency from the weekly buckets); kept
+    // here so it backfills for free during the historical replay rather than needing a reprocess later.
     [BsonRepresentation(BsonType.Array)]
     public DateTimeOffset LastPlayedAt { get; set; }
 

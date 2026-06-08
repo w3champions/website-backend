@@ -15,9 +15,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 
 // Ingests MatchFinishedEvent into the permanent per-entity/mode/race win-milestone store.
 // Mirrors PlayerProgressionHandler's AT grouping + keying, but is driven by the per-player `won`
-// flag (NOT updatedProgression) so lifetime wins accrue independently of the progression engine
-// flags, and uses a season-less key so totals accumulate across seasons. totalWins increments on
-// a win; the weekly activity window records every game (won or lost) and is pruned to ~90 days.
+// flag rather than `updatedProgression`, so lifetime wins accrue regardless of whether a rank was
+// recorded for the match. Uses a season-less key so totals accumulate across seasons. totalWins
+// increments on a win; the weekly activity window records every game (won or lost), pruned to ~90 days.
 [Trace]
 public class ProgressionMilestoneHandler(IProgressionMilestoneRepository milestoneRepository) : IMatchFinishedReadModelHandler
 {
