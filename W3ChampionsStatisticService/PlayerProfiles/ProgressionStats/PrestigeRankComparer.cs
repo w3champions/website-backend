@@ -7,6 +7,8 @@ namespace W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 public static class PrestigeRankComparer
 {
     // True iff `candidate` is a strictly higher rank than `current`.
+    // A null reference for either argument is treated identically to a snapshot with League == null
+    // (i.e. not a placed rank): a null candidate is never higher, and any placed candidate beats a null current.
     public static bool IsHigher(PeakRank candidate, PeakRank current)
     {
         if (candidate?.League == null) return false; // not a placed rank

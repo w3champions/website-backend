@@ -6,7 +6,9 @@ namespace W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 
 // A stored progression-rank snapshot (the published rank fields plus when it was reached).
 // Ordering semantics live in PrestigeRankComparer.
-public class PeakRank
+// A record (not a plain class) for value equality, consistent with the sibling value types;
+// settable properties are retained so the BSON driver's parameterless ctor + setters keep working.
+public record PeakRank
 {
     public int? League { get; set; }
     public int? Division { get; set; }
