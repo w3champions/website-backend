@@ -39,13 +39,14 @@ public static class MilestoneTargetCalculator
                 return i;
             }
         }
+        // Reached only when totalWins == long.MaxValue (loop's strict < misses the final band); returns the top band correctly.
         return Bands.Length - 1;
     }
 
     private static int ApplyCatchUp(int baseBand, MilestoneActivity activity)
     {
         var finer = 0;
-        if (activity.RecentGames <= DormantRecentGames)
+        if (activity.RecentGames <= DormantRecentGames) // <= also treats any negative as dormant (structurally impossible from ActivityIn, but Compute is public)
         {
             finer = baseBand; // drop all the way to the finest (band 0)
         }
@@ -57,5 +58,3 @@ public static class MilestoneTargetCalculator
         return band < 0 ? 0 : band;
     }
 }
-
-public readonly record struct MilestoneTarget(long NextTarget, long WinsToNext);

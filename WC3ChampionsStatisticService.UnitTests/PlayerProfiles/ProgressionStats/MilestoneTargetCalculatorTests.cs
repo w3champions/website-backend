@@ -32,6 +32,7 @@ public class MilestoneTargetCalculatorTests
     {
         var t = MilestoneTargetCalculator.Compute(1230, Active);
         Assert.AreEqual(1250, t.NextTarget);
+        Assert.AreEqual(20, t.WinsToNext);
     }
 
     [Test]
@@ -39,6 +40,7 @@ public class MilestoneTargetCalculatorTests
     {
         var t = MilestoneTargetCalculator.Compute(7300, Active);
         Assert.AreEqual(8000, t.NextTarget);
+        Assert.AreEqual(700, t.WinsToNext);
     }
 
     [Test]
@@ -72,6 +74,18 @@ public class MilestoneTargetCalculatorTests
         var baseline = MilestoneTargetCalculator.Compute(1230, Active);
         var low = MilestoneTargetCalculator.Compute(1230, LowVolume);
         Assert.LessOrEqual(low.NextTarget, baseline.NextTarget);
+        Assert.Greater(low.WinsToNext, 0);
+        // 1230 is a multiple of 50 as well as 250, so the low-volume (band1, step50) target equals the baseline here — narrows-or-equals, never widens.
+    }
+
+    [Test]
+    public void CatchUp_FewActiveWeeks_EvenWithEnoughGames_Narrows()
+    {
+        var fewWeeks = new MilestoneActivity(15, 2); // RecentGames >= 10 but ActiveWeeks < 3
+        var baseline = MilestoneTargetCalculator.Compute(1260, Active);
+        var narrowed = MilestoneTargetCalculator.Compute(1260, fewWeeks);
+        Assert.Less(narrowed.NextTarget, baseline.NextTarget); // band2 step250 → 1500; band1 step50 → 1300 (narrower)
+        Assert.Greater(narrowed.WinsToNext, 0);
     }
 
     [Test]
