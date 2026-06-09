@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Mongo2Go;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NUnit.Framework;
 using W3C.Contracts.GameObjects;
@@ -94,5 +95,32 @@ public class ProgressionMilestoneRepositoryTests
         var ids = loaded.Select(m => m.Id).OrderBy(id => id).ToList();
         Assert.AreEqual(2, loaded.Count);
         CollectionAssert.AreEquivalent(new[] { solo.Id, atTeam.Id }, ids);
+    }
+
+    [Test]
+    public async Task EnsureIndexes_creates_player_battletag_multikey()
+    {
+        await _repository.EnsureIndexesAsync();
+
+        var coll = _mongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<ProgressionMilestone>(typeof(ProgressionMilestone).Name);
+        var indexes = await (await coll.Indexes.ListAsync()).ToListAsync();
+        var indexDump = $"count={indexes.Count}; " + string.Join(" | ", indexes.Select(i => i.ToJson()));
+
+        // The owner read (LoadMilestonesForPlayer) filters on PlayerIds.BattleTag; the
+        // multikey index keys on exactly that nested-array path.
+        Assert.That(
+            indexes.Any(i => i.GetValue("name", BsonString.Empty).AsString == "PlayerIds.BattleTag_1"),
+            Is.True,
+            "PlayerIds.BattleTag multikey index missing — got: " + indexDump);
+    }
+
+    [Test]
+    public async Task EnsureIndexes_is_idempotent()
+    {
+        await _repository.EnsureIndexesAsync();
+        // Identical key + options must be a no-op on the second call.
+        Assert.DoesNotThrowAsync(async () => await _repository.EnsureIndexesAsync());
     }
 }
