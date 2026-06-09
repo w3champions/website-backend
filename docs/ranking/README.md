@@ -71,6 +71,19 @@ same event stream but keyed differently from the season-scoped progression rank 
   (`PlayerOverallStats`, `GamesPerDay`) — it relies on the read-model cursor (`HandlerVersions`) for
   at-least-once delivery rather than a per-document guard. A deliberate cursor rewind/backfill would
   re-count; this is accepted, consistent with those existing handlers.
+- **Serving to clients (owner-private endpoint):** the milestone is **not** placed on the public profile
+  DTO. It is served only to the authenticated user, for their own milestones, via a dedicated endpoint
+  `GET /api/players/my-milestones` (`PlayersController`, `[InjectActingPlayerAuthCode]`). The caller's
+  battleTag is taken from the JWT — never from the route — so a caller can only ever read their own data.
+  The response is a flat JSON list of `MilestoneDto` `{ gameMode, gateWay, race, currentWins,
+  previousTarget, nextTarget }` (`gameMode`/`gateWay`/`race` are the numeric enum ids; `race` is `null` for
+  non-race-split modes). `currentWins`/`previousTarget`/`nextTarget` are the raw-wins progress bar to the
+  next round number (`previousTarget` is the current band's lower bound, so a client renders an in-band fill
+  that resets after each milestone). `MilestoneQueryHandler.LoadForPlayer` calls
+  `IProgressionMilestoneRepository.LoadMilestonesForPlayer(battleTag)` — which returns every milestone doc
+  whose `PlayerIds` includes the caller, i.e. their **solo** docs and any **arranged-team** doc they are a
+  member of — and maps each through `MilestoneTargetCalculator`. The endpoint is consumed by launcher-e
+  only; nothing milestone-related appears on the anonymous profile or ladder DTOs.
 
 ## Prestige store (peak rank)
 

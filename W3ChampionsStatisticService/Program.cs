@@ -164,8 +164,11 @@ builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexe
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IPlayerProgressionRepository, PlayerProgressionRepository>();
 builder.Services.AddInterceptedTransient<IProgressionMilestoneRepository, ProgressionMilestoneRepository>();
+// Ensure ProgressionMilestone indexes are created at startup (multikey on PlayerIds.BattleTag for the owner read)
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, ProgressionMilestoneRepository>();
 builder.Services.AddInterceptedTransient<IProgressionPrestigeRepository, ProgressionPrestigeRepository>();
 builder.Services.AddInterceptedTransient<ProgressionViewLoader>();
+builder.Services.AddInterceptedTransient<MilestoneQueryHandler>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();

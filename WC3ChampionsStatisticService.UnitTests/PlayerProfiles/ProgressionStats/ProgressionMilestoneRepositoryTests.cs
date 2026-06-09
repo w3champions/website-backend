@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Mongo2Go;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NUnit.Framework;
 using W3C.Contracts.GameObjects;
@@ -69,5 +70,57 @@ public class ProgressionMilestoneRepositoryTests
     {
         var loaded = await _repository.LoadMilestone("nobody#0@20_GM_1v1_HU");
         Assert.IsNull(loaded);
+    }
+
+    [Test]
+    public async Task LoadMilestonesForPlayer_ReturnsSoloAndAtMember_ExcludesUnrelated()
+    {
+        // A solo (1v1) doc for the player.
+        var solo = ProgressionMilestone.Create(Tags("zed#1"), GateWay.Europe, GameMode.GM_1v1, Race.HU);
+        solo.RecordWin();
+        await _repository.UpsertMilestone(solo);
+
+        // An arranged-team doc whose PlayerIds includes the player (alongside a teammate).
+        var atTeam = ProgressionMilestone.Create(Tags("zed#1", "ally#7"), GateWay.Europe, GameMode.GM_2v2_AT, null);
+        atTeam.RecordWin();
+        await _repository.UpsertMilestone(atTeam);
+
+        // An unrelated player's doc that must NOT be returned.
+        var unrelated = ProgressionMilestone.Create(Tags("ka#2"), GateWay.Europe, GameMode.GM_1v1, Race.NE);
+        unrelated.RecordWin();
+        await _repository.UpsertMilestone(unrelated);
+
+        var loaded = await _repository.LoadMilestonesForPlayer("zed#1");
+
+        var ids = loaded.Select(m => m.Id).OrderBy(id => id).ToList();
+        Assert.AreEqual(2, loaded.Count);
+        CollectionAssert.AreEquivalent(new[] { solo.Id, atTeam.Id }, ids);
+    }
+
+    [Test]
+    public async Task EnsureIndexes_creates_player_battletag_multikey()
+    {
+        await _repository.EnsureIndexesAsync();
+
+        var coll = _mongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<ProgressionMilestone>(typeof(ProgressionMilestone).Name);
+        var indexes = await (await coll.Indexes.ListAsync()).ToListAsync();
+        var indexDump = $"count={indexes.Count}; " + string.Join(" | ", indexes.Select(i => i.ToJson()));
+
+        // The owner read (LoadMilestonesForPlayer) filters on PlayerIds.BattleTag; the
+        // multikey index keys on exactly that nested-array path.
+        Assert.That(
+            indexes.Any(i => i.GetValue("name", BsonString.Empty).AsString == "PlayerIds.BattleTag_1"),
+            Is.True,
+            "PlayerIds.BattleTag multikey index missing — got: " + indexDump);
+    }
+
+    [Test]
+    public async Task EnsureIndexes_is_idempotent()
+    {
+        await _repository.EnsureIndexesAsync();
+        // Identical key + options must be a no-op on the second call.
+        Assert.DoesNotThrowAsync(async () => await _repository.EnsureIndexesAsync());
     }
 }
