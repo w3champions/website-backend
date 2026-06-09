@@ -4,8 +4,10 @@ using MongoDB.Bson.Serialization.Attributes;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.Tracing;
 using Serilog;
@@ -23,6 +25,7 @@ namespace W3ChampionsStatisticService.PlayerProfiles;
 public class PlayersController(
     IPlayerRepository playerRepository,
     GameModeStatQueryHandler queryHandler,
+    MilestoneQueryHandler milestoneQueryHandler,
     IPersonalSettingsRepository personalSettingsRepository,
     IClanRepository clanRepository,
     PlayerAkaProvider playerAkaProvider,
@@ -31,6 +34,7 @@ public class PlayersController(
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly GameModeStatQueryHandler _queryHandler = queryHandler;
+    private readonly MilestoneQueryHandler _milestoneQueryHandler = milestoneQueryHandler;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
     private readonly IClanRepository _clanRepository = clanRepository;
     private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
@@ -122,6 +126,17 @@ public class PlayersController(
     {
         var wins = await _queryHandler.LoadPlayerStatsWithRanks(battleTag, gateWay, season);
         return Ok(wins);
+    }
+
+    // Owner-private: the authenticated caller's own lifetime win-milestones (solo + any arranged team
+    // they belong to). The battleTag is taken from the JWT (injected as `actingPlayer`), never the path,
+    // so a caller can only ever read their own milestones. Consumed by launcher-e.
+    [HttpGet("my-milestones")]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> GetMyMilestones(string actingPlayer)
+    {
+        var milestones = await _milestoneQueryHandler.LoadForPlayer(actingPlayer);
+        return Ok(milestones);
     }
 
     [HttpGet("{battleTag}/race-stats")]

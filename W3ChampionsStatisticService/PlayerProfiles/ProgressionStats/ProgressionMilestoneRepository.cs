@@ -21,4 +21,9 @@ public class ProgressionMilestoneRepository(MongoClient mongoClient)
     {
         return Upsert(milestone);
     }
+
+    public Task<List<ProgressionMilestone>> LoadMilestonesForPlayer(string battleTag)
+    {
+        return LoadAll<ProgressionMilestone>(m => m.PlayerIds.Any(p => p.BattleTag == battleTag));
+    }
 }

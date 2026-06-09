@@ -70,4 +70,29 @@ public class ProgressionMilestoneRepositoryTests
         var loaded = await _repository.LoadMilestone("nobody#0@20_GM_1v1_HU");
         Assert.IsNull(loaded);
     }
+
+    [Test]
+    public async Task LoadMilestonesForPlayer_ReturnsSoloAndAtMember_ExcludesUnrelated()
+    {
+        // A solo (1v1) doc for the player.
+        var solo = ProgressionMilestone.Create(Tags("zed#1"), GateWay.Europe, GameMode.GM_1v1, Race.HU);
+        solo.RecordWin();
+        await _repository.UpsertMilestone(solo);
+
+        // An arranged-team doc whose PlayerIds includes the player (alongside a teammate).
+        var atTeam = ProgressionMilestone.Create(Tags("zed#1", "ally#7"), GateWay.Europe, GameMode.GM_2v2_AT, null);
+        atTeam.RecordWin();
+        await _repository.UpsertMilestone(atTeam);
+
+        // An unrelated player's doc that must NOT be returned.
+        var unrelated = ProgressionMilestone.Create(Tags("ka#2"), GateWay.Europe, GameMode.GM_1v1, Race.NE);
+        unrelated.RecordWin();
+        await _repository.UpsertMilestone(unrelated);
+
+        var loaded = await _repository.LoadMilestonesForPlayer("zed#1");
+
+        var ids = loaded.Select(m => m.Id).OrderBy(id => id).ToList();
+        Assert.AreEqual(2, loaded.Count);
+        CollectionAssert.AreEquivalent(new[] { solo.Id, atTeam.Id }, ids);
+    }
 }
