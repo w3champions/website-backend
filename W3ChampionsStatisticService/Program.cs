@@ -170,6 +170,7 @@ builder.Services.AddInterceptedTransient<IProgressionPrestigeRepository, Progres
 builder.Services.AddInterceptedTransient<ProgressionViewLoader>();
 builder.Services.AddInterceptedTransient<MilestoneQueryHandler>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
+builder.Services.AddInterceptedTransient<IApexLeaderboardRepository, ApexLeaderboardRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
 builder.Services.AddInterceptedTransient<IPatchRepository, PatchRepository>();
@@ -290,6 +291,7 @@ if (startHandlers == "true")
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
+    builder.Services.AddUnversionedReadModelService<ApexSyncHandler>();
 }
 
 var runBackfill = System.Environment.GetEnvironmentVariable("RUN_BACKFILL");
