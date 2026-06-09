@@ -50,9 +50,17 @@ public class W3CUserAuthenticationDto
         var btag = claims.Claims.First(c => c.Type == "battleTag").Value;
         var isAdmin = bool.Parse(claims.Claims.First(c => c.Type == "isAdmin").Value);
         var name = claims.Claims.First(c => c.Type == "name").Value;
+        // Keep only the permissions this service recognizes. identification-service grows its own
+        // EPermission vocabulary independently; a value this enum does not yet contain must NOT throw
+        // here. A hard Enum.Parse on an unknown permission throws ArgumentException, which propagates to
+        // every GetUserByToken caller's catch and 401s the user on ALL admin/permission/acting-player/
+        // hub endpoints — and two of those filters mask the real reason. Skip unknown values via
+        // TryParse so vocabulary drift can never lock a user out.
         var permissions = claims.Claims
             .Where(claim => claim.Type == "permissions")
-            .Select(x => Enum.Parse<EPermission>(x.Value))
+            .Select(x => Enum.TryParse<EPermission>(x.Value, out var permission) ? (EPermission?)permission : null)
+            .Where(permission => permission.HasValue)
+            .Select(permission => permission.Value)
             .ToHashSet();
 
         if (!string.IsNullOrEmpty(btag))
