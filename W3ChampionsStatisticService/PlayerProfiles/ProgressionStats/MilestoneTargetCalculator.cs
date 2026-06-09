@@ -29,19 +29,28 @@ public static class MilestoneTargetCalculator
 
     public static MilestoneTarget Compute(long totalWins, MilestoneActivity activity)
     {
-        var baselineTarget = NextMultiple(totalWins, Bands[BaselineBandIndex(totalWins)].Step);
+        var baselineBand = BaselineBandIndex(totalWins);
+        var baselineStep = Bands[baselineBand].Step;
+        var baselineTarget = NextMultiple(totalWins, baselineStep);
 
-        var catchUpBand = ApplyCatchUp(BaselineBandIndex(totalWins), activity);
+        var catchUpBand = ApplyCatchUp(baselineBand, activity);
         var catchUpTarget = NextMultiple(totalWins, Bands[catchUpBand].Step);
 
         // Catch-up may only narrow. Because the step set is not fully nested, a finer step can land
         // beyond the baseline milestone, so clamp to the baseline — never widen.
         var next = Math.Min(baselineTarget, catchUpTarget);
-        return new MilestoneTarget(next, next - totalWins);
+
+        // The lower bound of the current band's bar: the largest baseline milestone not above totalWins
+        // (0 below the first step). Depends only on totalWins, never on the activity input.
+        var previous = PreviousMultiple(totalWins, baselineStep);
+        return new MilestoneTarget(previous, next, next - totalWins);
     }
 
     // The next multiple of step strictly greater than totalWins.
     private static long NextMultiple(long totalWins, long step) => ((totalWins / step) + 1) * step;
+
+    // The largest multiple of step not greater than totalWins (the band's lower bound).
+    private static long PreviousMultiple(long totalWins, long step) => (totalWins / step) * step;
 
     private static int BaselineBandIndex(long totalWins)
     {

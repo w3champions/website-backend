@@ -108,6 +108,41 @@ public class MilestoneTargetCalculatorTests
         Assert.Greater(narrowed.WinsToNext, 0);
     }
 
+    // PreviousTarget is the lower bound of the current band's bar: the largest milestone <= totalWins
+    // on the baseline curve. It depends only on totalWins, never on the activity input. Invariant:
+    // PreviousTarget <= totalWins < NextTarget.
+    [TestCase(0, 0, 5)]
+    [TestCase(3, 0, 5)]
+    [TestCase(5, 5, 10)]
+    [TestCase(53, 50, 60)]
+    [TestCase(247, 225, 250)]
+    [TestCase(640, 600, 700)]
+    public void Compute_SetsPreviousAndNextTarget(long totalWins, long expectedPrev, long expectedNext)
+    {
+        // Active profile so the upper target sits on the baseline curve. PreviousTarget is the band lower
+        // bound and is activity-independent, so these expected values hold for any activity input.
+        var t = MilestoneTargetCalculator.Compute(totalWins, Active);
+        Assert.That(t.PreviousTarget, Is.EqualTo(expectedPrev));
+        Assert.That(t.NextTarget, Is.EqualTo(expectedNext));
+        Assert.That(t.PreviousTarget, Is.LessThanOrEqualTo(totalWins));
+        Assert.That(totalWins, Is.LessThan(t.NextTarget));
+    }
+
+    [Test]
+    public void PreviousTarget_IsLargestMilestoneNotAbove_AndBelowNextTarget_AcrossSamples()
+    {
+        long[] totals = { 0, 7, 49, 50, 64, 99, 100, 213, 249, 250, 300, 499, 500, 1230, 7300, 99999 };
+        foreach (var total in totals)
+        {
+            foreach (var activity in new[] { Active, LowVolume, Dormant })
+            {
+                var t = MilestoneTargetCalculator.Compute(total, activity);
+                Assert.LessOrEqual(t.PreviousTarget, total, $"previousTarget above total at {total}");
+                Assert.Less(t.PreviousTarget, t.NextTarget, $"previousTarget not below nextTarget at {total}");
+            }
+        }
+    }
+
     [Test]
     public void Invariant_CatchUpNeverWidens_AcrossSamples()
     {

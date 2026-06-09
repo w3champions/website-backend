@@ -119,4 +119,4 @@ public class ActivityWeek
 
 public readonly record struct MilestoneActivity(int RecentGames, int ActiveWeeks);
 
-public readonly record struct MilestoneTarget(long NextTarget, long WinsToNext);
+public readonly record struct MilestoneTarget(long PreviousTarget, long NextTarget, long WinsToNext);
