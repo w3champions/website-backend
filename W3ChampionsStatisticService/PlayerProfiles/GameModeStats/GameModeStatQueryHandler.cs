@@ -108,10 +108,12 @@ public class GameModeStatQueryHandler(
 
     private async Task PopulateMilestone(List<PlayerGameModeStatPerGateway> stats)
     {
-        // The milestone store is season-LESS, so stat.Id (season-prefixed) cannot be reused. Rebuild the
-        // milestone key from the stat's components using the same path the ingest handler used: the stored
-        // gameMode is already the arranged-team variant, and the race is included only for race-split modes
-        // (in all seasons, matching the ingest rule — not the season-gated ladder rule).
+        // The milestone store is season-LESS, so stat.Id (season-prefixed) cannot be reused. Reconstruct the
+        // season-less milestone Id from the stat's components. Milestone Ids key race via IsRaceSplitGameMode
+        // (all seasons); the stat's Race is race-split only from RaceSplitStartSeason, so for the race-split
+        // seasons this surface serves they coincide. A pre-RaceSplitStartSeason 1v1 stat is race-collapsed
+        // (Race == null) and intentionally yields no milestone — a single race-collapsed row can't be
+        // attributed to one of several per-race lifetime milestones.
         var idByStat = stats.ToDictionary(
             s => s,
             s => ProgressionMilestone.BuildId(

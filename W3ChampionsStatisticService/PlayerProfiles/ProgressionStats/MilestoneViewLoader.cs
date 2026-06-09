@@ -22,10 +22,11 @@ public class MilestoneViewLoader(IProgressionMilestoneRepository repository)
         }
 
         var docs = await _repository.LoadMilestones(ids);
+        var now = DateTimeOffset.UtcNow;
         var views = new Dictionary<string, PlayerMilestoneView>();
         foreach (var doc in docs)
         {
-            var view = PlayerMilestoneView.FromReadModel(doc, DateTimeOffset.UtcNow);
+            var view = PlayerMilestoneView.FromReadModel(doc, now);
             if (view != null)
             {
                 views[doc.Id] = view;

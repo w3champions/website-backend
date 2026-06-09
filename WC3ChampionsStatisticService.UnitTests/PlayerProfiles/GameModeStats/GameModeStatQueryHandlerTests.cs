@@ -65,11 +65,11 @@ public class GameModeStatQueryHandlerTests
             new OptionsWrapper<CacheOptionsFor<T>>(new CacheOptionsFor<T>()),
             new MemoryCache(new MemoryCacheOptions()));
 
-    private static PlayerGameModeStatPerGateway MakeStat(GameMode gameMode, Race? race)
+    private static PlayerGameModeStatPerGateway MakeStat(GameMode gameMode, Race? race, int season = Season)
     {
         var id = new BattleTagIdCombined(
             new List<PlayerId> { PlayerId.Create(BattleTag) },
-            Gateway, gameMode, Season, race);
+            Gateway, gameMode, season, race);
         return PlayerGameModeStatPerGateway.Create(id);
     }
 
@@ -115,5 +115,29 @@ public class GameModeStatQueryHandlerTests
 
         var none = stats.Single(s => s.GameMode == GameMode.GM_1v1 && s.Race == Race.NE);
         Assert.IsNull(none.Milestone);
+    }
+
+    [Test]
+    public async Task LoadPlayerStatsWithRanks_PreRaceSplitSeason1v1Stat_YieldsNoMilestone()
+    {
+        // Before RaceSplitStartSeason a 1v1 stat row is race-collapsed (Race == null), exactly as the
+        // ingest handler writes it (UsesRaceInLadderKey gates race on season). Milestone docs, however, are
+        // always race-keyed for 1v1 (IsRaceSplitGameMode, all seasons). The race-collapsed stat therefore
+        // reconstructs a non-race-keyed Id that cannot be attributed to any single per-race milestone doc —
+        // so no milestone is shown. This pins that intended behavior: it FAILS if someone later wrongly joins
+        // (e.g. fans out per-race or sums across races) a race-collapsed row onto the per-race milestone.
+        const int preRaceSplitSeason = 0;
+
+        var soloStat = MakeStat(GameMode.GM_1v1, race: null, season: preRaceSplitSeason);
+        await _playerRepository.UpsertPlayerGameModeStatPerGateway(soloStat);
+
+        // A race-keyed lifetime milestone doc exists (stored the same way ingest stores it, race HU).
+        await _milestoneRepository.UpsertMilestone(MakeMilestone(GameMode.GM_1v1, Race.HU, 53));
+
+        var stats = await _handler.LoadPlayerStatsWithRanks(BattleTag, Gateway, preRaceSplitSeason);
+
+        var solo = stats.Single(s => s.GameMode == GameMode.GM_1v1);
+        Assert.IsNull(solo.Race);
+        Assert.IsNull(solo.Milestone);
     }
 }
