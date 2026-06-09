@@ -166,7 +166,6 @@ builder.Services.AddInterceptedTransient<IPlayerProgressionRepository, PlayerPro
 builder.Services.AddInterceptedTransient<IProgressionMilestoneRepository, ProgressionMilestoneRepository>();
 builder.Services.AddInterceptedTransient<IProgressionPrestigeRepository, ProgressionPrestigeRepository>();
 builder.Services.AddInterceptedTransient<ProgressionViewLoader>();
-builder.Services.AddInterceptedTransient<MilestoneViewLoader>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();

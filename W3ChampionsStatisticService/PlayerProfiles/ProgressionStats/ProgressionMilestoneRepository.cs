@@ -21,9 +21,4 @@ public class ProgressionMilestoneRepository(MongoClient mongoClient)
     {
         return Upsert(milestone);
     }
-
-    public Task<List<ProgressionMilestone>> LoadMilestones(IReadOnlyList<string> ids)
-    {
-        return LoadAll<ProgressionMilestone>(m => ids.Contains(m.Id));
-    }
 }

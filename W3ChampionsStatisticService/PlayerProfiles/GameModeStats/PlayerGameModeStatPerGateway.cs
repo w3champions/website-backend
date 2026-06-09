@@ -42,9 +42,6 @@ public class PlayerGameModeStatPerGateway : WinLoss, IIdentifiable
     [BsonIgnore]
     public PlayerProgressionView Progression { get; set; }
 
-    [BsonIgnore]
-    public PlayerMilestoneView Milestone { get; set; }
-
     public RankProgression RankingPointsProgress
     {
         get
