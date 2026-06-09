@@ -65,6 +65,22 @@ public class LadderController(
         return Ok(playersInLadder);
     }
 
+    [HttpGet("apex")]
+    public async Task<IActionResult> GetApexLeaderboard(int season, GameMode gameMode = GameMode.GM_1v1)
+    {
+        var leaderboard = await _rankQueryHandler.LoadApexLeaderboard(season, gameMode);
+
+        foreach (var row in leaderboard.Players)
+        {
+            foreach (var playerInfo in row.PlayersInfo)
+            {
+                playerInfo.PlayerAkaData = await _playerAkaProvider.GetPlayerAkaDataAsync(playerInfo.BattleTag.ToLower());
+            }
+        }
+
+        return Ok(leaderboard);
+    }
+
     [HttpGet("country/{countryCode}")]
     public async Task<IActionResult> GetCountryLadder([FromRoute] string countryCode, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
     {

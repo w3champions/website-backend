@@ -249,7 +249,7 @@ public class RankTests : IntegrationTestBase
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
-            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)), new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -292,7 +292,7 @@ public class RankTests : IntegrationTestBase
         var playerRepository = new PlayerRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
-            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)), new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -325,7 +325,7 @@ public class RankTests : IntegrationTestBase
         var playerRepository = new PlayerRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
-            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)), new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -358,7 +358,7 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, new ClanRepository(MongoClient),
-            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)));
+            new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient)), new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank>
         {
@@ -466,7 +466,7 @@ public class RankTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var progressionRepository = new PlayerProgressionRepository(MongoClient);
         var progressionViewLoader = new ProgressionViewLoader(progressionRepository);
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader, new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -503,7 +503,7 @@ public class RankTests : IntegrationTestBase
         var playerRepository = new PlayerRepository(MongoClient);
         var clanRepository = new ClanRepository(MongoClient);
         var progressionViewLoader = new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient));
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader, new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "noprog#1" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -528,7 +528,7 @@ public class RankTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var progressionRepository = new PlayerProgressionRepository(MongoClient);
         var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository,
-            new ProgressionViewLoader(progressionRepository));
+            new ProgressionViewLoader(progressionRepository), new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "searchme#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
@@ -564,7 +564,7 @@ public class RankTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var progressionRepository = new PlayerProgressionRepository(MongoClient);
         var progressionViewLoader = new ProgressionViewLoader(progressionRepository);
-        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader);
+        var queryHandler = new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader, new ApexLeaderboardRepository(MongoClient));
 
         var ranks = new List<Rank> { new(new List<string> { "peter#123" }, 1, 12, 1456, null, GateWay.America, GameMode.GM_1v1, 1) };
         await rankRepository.InsertRanks(ranks);
