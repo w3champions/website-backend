@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
@@ -18,5 +20,10 @@ public class ProgressionMilestoneRepository(MongoClient mongoClient)
     public Task UpsertMilestone(ProgressionMilestone milestone)
     {
         return Upsert(milestone);
+    }
+
+    public Task<List<ProgressionMilestone>> LoadMilestones(IReadOnlyList<string> ids)
+    {
+        return LoadAll<ProgressionMilestone>(m => ids.Contains(m.Id));
     }
 }

@@ -70,4 +70,21 @@ public class ProgressionMilestoneRepositoryTests
         var loaded = await _repository.LoadMilestone("nobody#0@20_GM_1v1_HU");
         Assert.IsNull(loaded);
     }
+
+    [Test]
+    public async Task LoadMilestones_ReturnsOnlyMatchingDocs()
+    {
+        var a = ProgressionMilestone.Create(Tags("zed#1"), GateWay.Europe, GameMode.GM_1v1, Race.HU);
+        a.RecordWin();
+        await _repository.UpsertMilestone(a);
+
+        var b = ProgressionMilestone.Create(Tags("ka#2"), GateWay.Europe, GameMode.GM_1v1, Race.NE);
+        b.RecordWin();
+        await _repository.UpsertMilestone(b);
+
+        var loaded = await _repository.LoadMilestones(new List<string> { a.Id, "missing#9@20_GM_1v1_HU" });
+
+        Assert.AreEqual(1, loaded.Count);
+        Assert.AreEqual(a.Id, loaded[0].Id);
+    }
 }
