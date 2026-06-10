@@ -163,6 +163,8 @@ builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IPlayerProgressionRepository, PlayerProgressionRepository>();
+// Ensure PlayerProgression indexes are created at startup (compound index for the per-league progression ladder query)
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, PlayerProgressionRepository>();
 builder.Services.AddInterceptedTransient<IProgressionMilestoneRepository, ProgressionMilestoneRepository>();
 // Ensure ProgressionMilestone indexes are created at startup (multikey on PlayerIds.BattleTag for the owner read)
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, ProgressionMilestoneRepository>();
@@ -170,6 +172,7 @@ builder.Services.AddInterceptedTransient<IProgressionPrestigeRepository, Progres
 builder.Services.AddInterceptedTransient<ProgressionViewLoader>();
 builder.Services.AddInterceptedTransient<MilestoneQueryHandler>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
+builder.Services.AddInterceptedTransient<IApexLeaderboardRepository, ApexLeaderboardRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
 builder.Services.AddInterceptedTransient<IPatchRepository, PatchRepository>();
@@ -290,6 +293,7 @@ if (startHandlers == "true")
 
     builder.Services.AddUnversionedReadModelService<RankSyncHandler>();
     builder.Services.AddUnversionedReadModelService<LeagueSyncHandler>();
+    builder.Services.AddUnversionedReadModelService<ApexSyncHandler>();
 }
 
 var runBackfill = System.Environment.GetEnvironmentVariable("RUN_BACKFILL");

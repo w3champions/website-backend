@@ -42,6 +42,46 @@ and maps it to `PlayerProgressionView`. The field is a serve-time join (`[BsonIg
 is `null` when the entity has no placed record for that season/mode. Additive — clients that ignore it
 keep rendering the legacy RP fields.
 
+## Apex leaderboard endpoint
+
+`GET /api/ladder/apex?season=&gameMode=` (`LadderController`) serves the **apex** cohort — the combined
+Grand Master and Master players for a season and game mode — as a single ordered leaderboard. It is
+anonymous and gateway-agnostic (apex rank is global; there is no `gateWay` parameter).
+
+- **Response:** `{ cutoffApexPoints, gmCount, players: [{ playersInfo, apexPoints, league, rankNumber }] }`.
+  - `cutoffApexPoints` — the floating apex-points cutoff for the Grand Master tier (nullable; `null` before
+    the cohort exists for that season/mode).
+  - `gmCount` — how many of the listed players are Grand Master.
+  - `players` — ordered Grand Master first, then Master, by apex points; `rankNumber` is the 1-based
+    position in that order. `league` is the apex tier (`0` = Grand Master, `1` = Master). `playersInfo`
+    carries the same per-player display data as the ladder rows (name, race, country, clan, picture).
+  - A season/mode with no cohort yet returns `{ cutoffApexPoints: null, gmCount: 0, players: [] }`.
+- **Read-model:** `ApexLeaderboard` (collection `ApexLeaderboard`, `Ladder/`) — one document per
+  `(season, gameMode)`. Unlike the per-match progression read-model above, the apex cohort and its cutoff
+  are recomputed upstream and **synced** into website-backend the same way the ladder itself is: the
+  matchmaking service publishes an apex-standings snapshot, and an ingest handler keeps the read-model
+  current. The endpoint serves this already-built document; it never computes the cohort.
+
+## Progression league ladder endpoint
+
+`GET /api/ladder/progression?season=&gameMode=&league=&division=&race=` (`LadderController`) serves a
+single **non-apex** progression league/division page (Adept through Grass), read directly from the
+`PlayerProgression` read-model. It is anonymous and gateway-agnostic.
+
+- **Shape:** it returns the **same `Rank` array** as `GET /api/ladder/{leagueId}`, so clients reuse the
+  existing ladder grid unchanged. Each row carries the `progression` object (`{ league, division, points,
+  apexPoints }`) stamped from the same record and the usual `playersInfo`; `rankNumber` is the global
+  points-descending position across the league/division page (offset by paging). The legacy RP fields are
+  left at their defaults — clients render `progression`, not RP, in progression mode.
+- **Ordering & paging:** rows are ordered by points descending. `skip`/`take` page the result; `take` is
+  capped server-side at 500 so a caller cannot request an unbounded, fully enriched page.
+- **Apex leagues:** leagues `0` (Grand Master) and `1` (Master) are apex and return an empty list here —
+  use `GET /api/ladder/apex` for those.
+- **Index:** a compound index on `PlayerProgression` over
+  `(Season, GameMode, League, Division, Race, Points desc)` backs this league/division query so it does not
+  scan the collection. It is created at startup via the standard index-initialization path (the repository
+  implements `IRequiresIndexes`).
+
 ## Lifetime win-milestone read-model
 
 A separate, **permanent** downstream read-model tracks each player's lifetime win-milestone progress — a

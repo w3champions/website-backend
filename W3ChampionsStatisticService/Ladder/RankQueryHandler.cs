@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Clans;
+using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
@@ -13,12 +16,16 @@ public class RankQueryHandler(
     IRankRepository rankRepository,
     IPlayerRepository playerRepository,
     IClanRepository clanRepository,
-    ProgressionViewLoader progressionViewLoader)
+    ProgressionViewLoader progressionViewLoader,
+    IApexLeaderboardRepository apexLeaderboardRepository,
+    IPlayerProgressionRepository playerProgressionRepository)
 {
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly IClanRepository _clanRepository = clanRepository;
     private readonly ProgressionViewLoader _progressionViewLoader = progressionViewLoader;
+    private readonly IApexLeaderboardRepository _apexLeaderboardRepository = apexLeaderboardRepository;
+    private readonly IPlayerProgressionRepository _playerProgressionRepository = playerProgressionRepository;
 
     public async Task<List<Rank>> SearchPlayersOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
     {
@@ -62,48 +69,171 @@ public class RankQueryHandler(
 
     private async Task PopulatePlayerInfos(List<Rank> ranks)
     {
-        var playerIds = ranks
+        var battleTags = ranks
             .SelectMany(x => x.Player.PlayerIds)
             .Select(x => x.BattleTag)
             .ToList();
 
-        var raceWinRates = (await _playerRepository.LoadPlayersRaceWins(playerIds))
-            .ToDictionary(x => x.Id);
-
-        var clanMemberships = (await _clanRepository.LoadMemberShips(playerIds))
-            .ToDictionary(x => x.Id);
+        var (raceWinRates, clanMemberships) = await LoadEnrichmentSources(battleTags);
 
         foreach (var rank in ranks)
         {
+            // Rank.PlayersInfo is [BsonIgnore] with a property initializer, so it is never null in
+            // practice; the ??= is a defensive guard kept for clarity after the enrichment refactor.
+            rank.PlayersInfo ??= new List<PlayerInfo>();
             foreach (var playerId in rank.Player.PlayerIds)
             {
-                clanMemberships.TryGetValue(playerId.BattleTag, out var membership);
-                if (raceWinRates.TryGetValue(playerId.BattleTag, out var playerDetails))
+                var info = BuildPlayerInfo(playerId.BattleTag, raceWinRates, clanMemberships);
+                if (info != null)
                 {
-                    if (rank.PlayersInfo == null)
-                    {
-                        rank.PlayersInfo = new List<PlayerInfo>();
-                    }
-
-                    var personalSettings = playerDetails.PersonalSettings?.FirstOrDefault();
-                    var profilePicture = personalSettings?.ProfilePicture;
-
-                    rank.PlayersInfo.Add(new PlayerInfo()
-                    {
-                        BattleTag = playerId.BattleTag,
-                        CalculatedRace = playerDetails.GetMainRace(),
-                        PictureId = profilePicture?.PictureId,
-                        isClassicPicture = profilePicture?.IsClassic ?? false,
-                        SelectedRace = profilePicture?.Race,
-                        Country = personalSettings?.Country,
-                        CountryCode = personalSettings?.CountryCode,
-                        Location = personalSettings?.Location,
-                        TwitchName = personalSettings?.Twitch,
-                        ClanId = membership?.ClanId
-                    });
+                    rank.PlayersInfo.Add(info);
                 }
             }
         }
+    }
+
+    private async Task<(Dictionary<string, PlayerDetails> raceWinRates, Dictionary<string, ClanMembership> clanMemberships)>
+        LoadEnrichmentSources(List<string> battleTags)
+    {
+        var raceWinRates = (await _playerRepository.LoadPlayersRaceWins(battleTags))
+            .ToDictionary(x => x.Id);
+
+        var clanMemberships = (await _clanRepository.LoadMemberShips(battleTags))
+            .ToDictionary(x => x.Id);
+
+        return (raceWinRates, clanMemberships);
+    }
+
+    private static PlayerInfo BuildPlayerInfo(
+        string battleTag,
+        Dictionary<string, PlayerDetails> raceWinRates,
+        Dictionary<string, ClanMembership> clanMemberships)
+    {
+        if (!raceWinRates.TryGetValue(battleTag, out var playerDetails))
+        {
+            return null;
+        }
+
+        clanMemberships.TryGetValue(battleTag, out var membership);
+
+        var personalSettings = playerDetails.PersonalSettings?.FirstOrDefault();
+        var profilePicture = personalSettings?.ProfilePicture;
+
+        return new PlayerInfo
+        {
+            BattleTag = battleTag,
+            CalculatedRace = playerDetails.GetMainRace(),
+            PictureId = profilePicture?.PictureId,
+            isClassicPicture = profilePicture?.IsClassic ?? false,
+            SelectedRace = profilePicture?.Race,
+            Country = personalSettings?.Country,
+            CountryCode = personalSettings?.CountryCode,
+            Location = personalSettings?.Location,
+            TwitchName = personalSettings?.Twitch,
+            ClanId = membership?.ClanId,
+        };
+    }
+
+    public async Task<ApexLeaderboardResponse> LoadApexLeaderboard(int season, GameMode gameMode)
+    {
+        var leaderboard = await _apexLeaderboardRepository.LoadApexLeaderboard(season, gameMode);
+
+        if (leaderboard?.Players == null || leaderboard.Players.Count == 0)
+        {
+            return new ApexLeaderboardResponse
+            {
+                CutoffApexPoints = leaderboard?.CutoffApexPoints,
+                GmCount = leaderboard?.GmCount ?? 0,
+                Players = new List<ApexLeaderboardRow>(),
+            };
+        }
+
+        var battleTags = leaderboard.Players
+            .SelectMany(p => p.BattleTags ?? new List<string>())
+            .Distinct()
+            .ToList();
+
+        var (raceWinRates, clanMemberships) = await LoadEnrichmentSources(battleTags);
+
+        var rows = leaderboard.Players
+            .Select(entry => new ApexLeaderboardRow
+            {
+                ApexPoints = entry.ApexPoints,
+                League = entry.League,
+                RankNumber = entry.RankNumber,
+                PlayersInfo = (entry.BattleTags ?? new List<string>())
+                    .Select(tag => BuildPlayerInfo(tag, raceWinRates, clanMemberships))
+                    .Where(info => info != null)
+                    .ToList(),
+            })
+            .ToList();
+
+        return new ApexLeaderboardResponse
+        {
+            CutoffApexPoints = leaderboard.CutoffApexPoints,
+            GmCount = leaderboard.GmCount,
+            Players = rows,
+        };
+    }
+
+    // Non-apex (Adept..Grass) progression ladder, served directly from the already-fresh
+    // PlayerProgression read-model. Returns the same Rank shape as GET /api/ladder/{leagueId}
+    // so the website's existing grid renders it unchanged: each row carries the Progression view
+    // (league/division/points/apexPoints) and enriched PlayersInfo; RP-only fields stay at default.
+    // Upper bound on a single progression-ladder page so a caller cannot request an unbounded
+    // number of enriched rows (each row triggers player-detail/clan lookups).
+    private const int MaxProgressionLadderTake = 500;
+
+    public async Task<List<Rank>> LoadProgressionLadder(
+        int season, GameMode gameMode, int league, int division, Race? race, int skip, int take)
+    {
+        skip = System.Math.Max(skip, 0);
+        take = System.Math.Min(take, MaxProgressionLadderTake);
+
+        var progressions = await _playerProgressionRepository
+            .LoadPlayersByProgressionLeague(season, gameMode, league, division, race, skip, take);
+
+        if (progressions.Count == 0)
+        {
+            return new List<Rank>();
+        }
+
+        var battleTags = progressions
+            .SelectMany(p => p.PlayerIds.Select(id => id.BattleTag))
+            .Distinct()
+            .ToList();
+
+        var (raceWinRates, clanMemberships) = await LoadEnrichmentSources(battleTags);
+
+        // The repository already returns rows sorted by Points desc; RankNumber follows that order.
+        // It is the GLOBAL rank across the league/division, so it is offset by the page's skip.
+        return progressions
+            .Select((progression, index) =>
+            {
+                // Rank.Players (the joined PlayerOverview) is deliberately left unpopulated on this
+                // path: progression rows carry only battleTags, and consumers read PlayersInfo, not
+                // Player/Players. The Rank.Player computed property therefore serializes as null by
+                // design — that is expected here, not a missing-data bug.
+                var rank = new Rank(
+                    progression.PlayerIds.Select(id => id.BattleTag).ToList(),
+                    progression.League ?? league,
+                    skip + index + 1,
+                    0,
+                    progression.Race,
+                    progression.GateWay,
+                    progression.GameMode,
+                    progression.Season)
+                {
+                    Progression = PlayerProgressionView.FromReadModel(progression),
+                    PlayersInfo = progression.PlayerIds
+                        .Select(id => BuildPlayerInfo(id.BattleTag, raceWinRates, clanMemberships))
+                        .Where(info => info != null)
+                        .ToList(),
+                };
+
+                return rank;
+            })
+            .ToList();
     }
 
 

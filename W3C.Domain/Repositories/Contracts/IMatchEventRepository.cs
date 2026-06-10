@@ -12,5 +12,6 @@ public interface IMatchEventRepository
     Task<bool> InsertIfNotExisting(MatchFinishedEvent matchFinishedEvent, int i = 0);
     Task<List<RankingChangedEvent>> CheckoutForRead();
     Task<List<LeagueConstellationChangedEvent>> LoadLeagueConstellationChanged();
+    Task<List<ApexStandingsChangedEvent>> CheckoutApexStandingsChanged();
     Task DeleteStartedEvent(ObjectId nextEventId);
 }

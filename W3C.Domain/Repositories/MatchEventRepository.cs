@@ -71,6 +71,11 @@ public class MatchEventRepository(MongoClient mongoClient) : MongoDbRepositoryBa
         return Checkout<LeagueConstellationChangedEvent>();
     }
 
+    public Task<List<ApexStandingsChangedEvent>> CheckoutApexStandingsChanged()
+    {
+        return Checkout<ApexStandingsChangedEvent>();
+    }
+
     public Task DeleteStartedEvent(ObjectId nextEventId)
     {
         return Delete<MatchStartedEvent>(e => e.Id == nextEventId);
