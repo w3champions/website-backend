@@ -163,6 +163,8 @@ builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IPlayerProgressionRepository, PlayerProgressionRepository>();
+// Ensure PlayerProgression indexes are created at startup (compound index for the per-league progression ladder query)
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, PlayerProgressionRepository>();
 builder.Services.AddInterceptedTransient<IProgressionMilestoneRepository, ProgressionMilestoneRepository>();
 // Ensure ProgressionMilestone indexes are created at startup (multikey on PlayerIds.BattleTag for the owner read)
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, ProgressionMilestoneRepository>();
