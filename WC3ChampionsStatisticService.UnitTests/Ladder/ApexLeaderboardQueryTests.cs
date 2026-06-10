@@ -23,7 +23,8 @@ public class ApexLeaderboardQueryTests : IntegrationTestBase
         var clanRepository = new ClanRepository(MongoClient);
         var progressionViewLoader = new ProgressionViewLoader(new PlayerProgressionRepository(MongoClient));
         var apexLeaderboardRepository = new ApexLeaderboardRepository(MongoClient);
-        return new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader, apexLeaderboardRepository);
+        var playerProgressionRepository = new PlayerProgressionRepository(MongoClient);
+        return new RankQueryHandler(rankRepository, playerRepository, clanRepository, progressionViewLoader, apexLeaderboardRepository, playerProgressionRepository);
     }
 
     private async Task SeedPlayer(string battleTag, AvatarCategory pictureRace, long pictureId, string country)

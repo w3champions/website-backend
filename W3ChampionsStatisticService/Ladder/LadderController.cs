@@ -2,7 +2,9 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.PlayerProfiles.ProgressionStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3C.Domain.Tracing;
@@ -79,6 +81,29 @@ public class LadderController(
         }
 
         return Ok(leaderboard);
+    }
+
+    [HttpGet("progression")]
+    public async Task<IActionResult> GetProgressionLadder(
+        int season,
+        GameMode gameMode = GameMode.GM_1v1,
+        int league = (int)ProgressionLeague.Adept,
+        int division = 1,
+        Race? race = null,
+        int skip = 0,
+        int take = 100)
+    {
+        var ladder = await _rankQueryHandler.LoadProgressionLadder(season, gameMode, league, division, race, skip, take);
+
+        foreach (var rank in ladder)
+        {
+            foreach (var playerInfo in rank.PlayersInfo)
+            {
+                playerInfo.PlayerAkaData = await _playerAkaProvider.GetPlayerAkaDataAsync(playerInfo.BattleTag.ToLower());
+            }
+        }
+
+        return Ok(ladder);
     }
 
     [HttpGet("country/{countryCode}")]

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.Clans;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -16,13 +17,15 @@ public class RankQueryHandler(
     IPlayerRepository playerRepository,
     IClanRepository clanRepository,
     ProgressionViewLoader progressionViewLoader,
-    IApexLeaderboardRepository apexLeaderboardRepository)
+    IApexLeaderboardRepository apexLeaderboardRepository,
+    IPlayerProgressionRepository playerProgressionRepository)
 {
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly IClanRepository _clanRepository = clanRepository;
     private readonly ProgressionViewLoader _progressionViewLoader = progressionViewLoader;
     private readonly IApexLeaderboardRepository _apexLeaderboardRepository = apexLeaderboardRepository;
+    private readonly IPlayerProgressionRepository _playerProgressionRepository = playerProgressionRepository;
 
     public async Task<List<Rank>> SearchPlayersOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
     {
@@ -171,6 +174,66 @@ public class RankQueryHandler(
             GmCount = leaderboard.GmCount,
             Players = rows,
         };
+    }
+
+    // Non-apex (Adept..Grass) progression ladder, served directly from the already-fresh
+    // PlayerProgression read-model. Returns the same Rank shape as GET /api/ladder/{leagueId}
+    // so the website's existing grid renders it unchanged: each row carries the Progression view
+    // (league/division/points/apexPoints) and enriched PlayersInfo; RP-only fields stay at default.
+    // Upper bound on a single progression-ladder page so a caller cannot request an unbounded
+    // number of enriched rows (each row triggers player-detail/clan lookups).
+    private const int MaxProgressionLadderTake = 500;
+
+    public async Task<List<Rank>> LoadProgressionLadder(
+        int season, GameMode gameMode, int league, int division, Race? race, int skip, int take)
+    {
+        skip = System.Math.Max(skip, 0);
+        take = System.Math.Min(take, MaxProgressionLadderTake);
+
+        var progressions = await _playerProgressionRepository
+            .LoadPlayersByProgressionLeague(season, gameMode, league, division, race, skip, take);
+
+        if (progressions.Count == 0)
+        {
+            return new List<Rank>();
+        }
+
+        var battleTags = progressions
+            .SelectMany(p => p.PlayerIds.Select(id => id.BattleTag))
+            .Distinct()
+            .ToList();
+
+        var (raceWinRates, clanMemberships) = await LoadEnrichmentSources(battleTags);
+
+        // The repository already returns rows sorted by Points desc; RankNumber follows that order.
+        // It is the GLOBAL rank across the league/division, so it is offset by the page's skip.
+        return progressions
+            .Select((progression, index) =>
+            {
+                // Rank.Players (the joined PlayerOverview) is deliberately left unpopulated on this
+                // path: progression rows carry only battleTags, and consumers read PlayersInfo, not
+                // Player/Players. The Rank.Player computed property therefore serializes as null by
+                // design — that is expected here, not a missing-data bug.
+                var rank = new Rank(
+                    progression.PlayerIds.Select(id => id.BattleTag).ToList(),
+                    progression.League ?? league,
+                    skip + index + 1,
+                    0,
+                    progression.Race,
+                    progression.GateWay,
+                    progression.GameMode,
+                    progression.Season)
+                {
+                    Progression = PlayerProgressionView.FromReadModel(progression),
+                    PlayersInfo = progression.PlayerIds
+                        .Select(id => BuildPlayerInfo(id.BattleTag, raceWinRates, clanMemberships))
+                        .Where(info => info != null)
+                        .ToList(),
+                };
+
+                return rank;
+            })
+            .ToList();
     }
 
 
