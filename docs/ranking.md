@@ -26,3 +26,21 @@ wrong for history). The field is additive — clients that ignore it keep render
 | `ActiveGameMode` DTO | `W3C.Domain/MatchmakingService/MatchmakingServiceClient.cs` |
 | `active-modes` endpoint | `W3ChampionsStatisticService/Ladder/LadderController.cs` |
 | Contract test | `WC3ChampionsStatisticService.UnitTests/MatchmakingService/ActiveGameModeTests.cs` |
+
+## Progression bracket metrics
+
+The existing `/metrics` endpoint (scraped by the `websitebackend` Prometheus job) exposes two gauges
+tracking the ladder population for the current ladder season.
+
+| Metric | Labels | Description |
+|---|---|---|
+| `progression_bracket_count` | `gameMode`, `league`, `division` | Ranked entries in each league/division bracket |
+| `progression_ranked_total` | `gameMode` | Total ranked entries across all brackets, per game mode |
+
+The `league` label uses the `ProgressionLeague` enum name (e.g. `Gold`, `Silver`, `Bronze`). The
+`division` label is an empty string for leagues that have no divisions (GrandMaster, Master).
+
+Series that are no longer present in the latest data (e.g. after a season rollover) are removed on the
+next refresh so they do not linger as stale gauges.
+
+The background service that publishes these gauges refreshes every 15 minutes.

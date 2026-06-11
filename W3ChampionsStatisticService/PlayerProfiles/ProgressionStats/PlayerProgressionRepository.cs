@@ -64,6 +64,27 @@ public class PlayerProgressionRepository(MongoClient mongoClient)
             .ToListAsync();
     }
 
+    public async Task<List<ProgressionBracketCount>> CountByBracket(int season)
+    {
+        var collection = CreateCollection<PlayerProgression>();
+        var filter = Builders<PlayerProgression>.Filter.Eq(p => p.Season, season)
+            & Builders<PlayerProgression>.Filter.Ne(p => p.League, null);
+        var grouped = await collection.Aggregate()
+            .Match(filter)
+            .Group(p => new { p.GameMode, p.League, p.Division },
+                g => new { g.Key, Count = g.Count() })
+            .ToListAsync();
+        return grouped
+            .Select(g => new ProgressionBracketCount
+            {
+                GameMode = g.Key.GameMode,
+                League = g.Key.League!.Value,
+                Division = g.Key.Division,
+                Count = g.Count,
+            })
+            .ToList();
+    }
+
     public async Task EnsureIndexesAsync()
     {
         var collection = CreateCollection<PlayerProgression>();

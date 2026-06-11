@@ -220,4 +220,28 @@ public class PlayerProgressionRepositoryTests
         Assert.AreEqual(2, page.Count);
         Assert.AreEqual(new[] { 90, 80 }, page.Select(r => r.Points).ToArray());
     }
+
+    private static PlayerProgression MakeUnplaced(string battleTag, int season)
+    {
+        var id = new BattleTagIdCombined(
+            new List<PlayerId> { PlayerId.Create(battleTag) },
+            GateWay.Europe, GameMode.GM_1v1, season, Race.HU);
+        return PlayerProgression.Create(id); // League stays null
+    }
+
+    [Test]
+    public async Task CountByBracket_GroupsByBracket_ExcludesUnplacedAndOtherSeasons()
+    {
+        await _repository.UpsertProgression(Make("a#1", 2, 5, 1, 10));
+        await _repository.UpsertProgression(Make("b#2", 2, 5, 1, 20));
+        await _repository.UpsertProgression(Make("c#3", 2, 5, 2, 30));
+        await _repository.UpsertProgression(MakeUnplaced("d#4", 2));
+        await _repository.UpsertProgression(Make("e#5", 1, 5, 1, 40));
+
+        var counts = await _repository.CountByBracket(2);
+
+        Assert.AreEqual(2, counts.Single(c => c.League == 5 && c.Division == 1).Count);
+        Assert.AreEqual(1, counts.Single(c => c.League == 5 && c.Division == 2).Count);
+        Assert.AreEqual(2, counts.Count);
+    }
 }
