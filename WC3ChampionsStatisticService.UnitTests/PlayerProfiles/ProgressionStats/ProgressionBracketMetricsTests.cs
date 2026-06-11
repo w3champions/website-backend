@@ -19,6 +19,14 @@ public class ProgressionBracketMetricsTests
         return Encoding.UTF8.GetString(ms.ToArray());
     }
 
+    [TearDown]
+    public void ClearGauges()
+    {
+        // The gauges live on the shared global registry. Publishing an empty set drops every series,
+        // so each test starts from a clean slate instead of relying on disjoint game modes.
+        ProgressionBracketMetrics.Publish(new List<ProgressionBracketCount>());
+    }
+
     [Test]
     public async Task Publish_SetsBracketAndTotalGauges()
     {
@@ -49,6 +57,9 @@ public class ProgressionBracketMetricsTests
         var text = await ExportMetricsText();
         StringAssert.DoesNotContain("gameMode=\"GM_2v2\",league=\"Silver\"", text);
         StringAssert.Contains("progression_bracket_count{gameMode=\"GM_2v2\",league=\"Bronze\",division=\"1\"} 2", text);
+        // The per-mode total tracks the refresh too: 4 (first pass) is replaced by 2 (second pass).
+        StringAssert.DoesNotContain("progression_ranked_total{gameMode=\"GM_2v2\"} 4", text);
+        StringAssert.Contains("progression_ranked_total{gameMode=\"GM_2v2\"} 2", text);
     }
 
     [Test]

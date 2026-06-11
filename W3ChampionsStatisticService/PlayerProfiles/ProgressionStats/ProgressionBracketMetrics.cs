@@ -23,6 +23,8 @@ public static class ProgressionBracketMetrics
 
     public static void Publish(IReadOnlyCollection<ProgressionBracketCount> counts)
     {
+        // A scrape landing mid-Publish may observe a partially-updated series; it self-heals on the
+        // next scrape (the update window is sub-millisecond against the 15-minute refresh cadence).
         var freshBrackets = counts
             .Select(c => new[] { GameModeLabel(c.GameMode), LeagueLabel(c.League), DivisionLabel(c.Division) })
             .ToHashSet(StringArrayComparer.Instance);
@@ -59,6 +61,16 @@ public static class ProgressionBracketMetrics
     {
         public static readonly StringArrayComparer Instance = new();
         public bool Equals(string[] x, string[] y) => x != null && y != null && x.SequenceEqual(y);
-        public int GetHashCode(string[] obj) => string.Join("", obj).GetHashCode();
+
+        public int GetHashCode(string[] obj)
+        {
+            // Order- and boundary-aware combine so ["a","bc"] and ["ab","c"] do not collide.
+            var hc = new HashCode();
+            foreach (var s in obj)
+            {
+                hc.Add(s);
+            }
+            return hc.ToHashCode();
+        }
     }
 }
