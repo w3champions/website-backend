@@ -247,6 +247,11 @@ builder.Services.AddRewardServices();
 builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();
 builder.Services.AddHostedService<W3ChampionsStatisticService.Services.BackgroundTasks.UpdateMaxMmrService>();
 
+if (Environment.GetEnvironmentVariable("PROGRESSION_METRICS_ENABLED") == "true")
+{
+    builder.Services.AddHostedService<W3ChampionsStatisticService.Services.BackgroundTasks.ProgressionBracketMetricsService>();
+}
+
 string startHandlers = Environment.GetEnvironmentVariable("START_HANDLERS");
 
 if (startHandlers == "true")
