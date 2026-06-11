@@ -85,20 +85,6 @@ public class PlayerProgressionRepository(MongoClient mongoClient)
             .ToList();
     }
 
-    public async Task<int?> LoadMaxSeason()
-    {
-        var collection = CreateCollection<PlayerProgression>();
-        // SortByDescending(Season).Limit(1) is served as a cheap reverse scan of the existing
-        // Season-leading compound index. A future index refactor must keep Season as a leading
-        // (ascending) key or this degrades to a COLLSCAN + in-memory sort.
-        var latest = await collection
-            .Find(Builders<PlayerProgression>.Filter.Empty)
-            .SortByDescending(p => p.Season)
-            .Limit(1)
-            .FirstOrDefaultAsync();
-        return latest?.Season;
-    }
-
     public async Task EnsureIndexesAsync()
     {
         var collection = CreateCollection<PlayerProgression>();

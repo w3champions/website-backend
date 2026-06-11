@@ -30,8 +30,7 @@ wrong for history). The field is additive — clients that ignore it keep render
 ## Progression bracket metrics
 
 The existing `/metrics` endpoint (scraped by the `websitebackend` Prometheus job) exposes two gauges
-tracking the current season's ladder population. The current season is determined as the highest season
-present in the `PlayerProgression` collection.
+tracking the ladder population for the current ladder season.
 
 | Metric | Labels | Description |
 |---|---|---|
@@ -44,5 +43,4 @@ The `league` label uses the `ProgressionLeague` enum name (e.g. `Gold`, `Silver`
 Series that are no longer present in the latest data (e.g. after a season rollover) are removed on the
 next refresh so they do not linger as stale gauges.
 
-**Enabling:** the background service that publishes these gauges is off by default. Set
-`PROGRESSION_METRICS_ENABLED=true` to enable it. The service refreshes every 15 minutes.
+The background service that publishes these gauges refreshes every 15 minutes.

@@ -14,5 +14,4 @@ public interface IPlayerProgressionRepository
     Task<List<PlayerProgression>> LoadPlayersByProgressionLeague(
         int season, GameMode gameMode, int league, int division, Race? race, int skip, int take);
     Task<List<ProgressionBracketCount>> CountByBracket(int season);
-    Task<int?> LoadMaxSeason();
 }

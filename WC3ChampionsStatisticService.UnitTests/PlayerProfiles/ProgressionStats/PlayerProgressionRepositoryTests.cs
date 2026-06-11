@@ -244,13 +244,4 @@ public class PlayerProgressionRepositoryTests
         Assert.AreEqual(1, counts.Single(c => c.League == 5 && c.Division == 2).Count);
         Assert.AreEqual(2, counts.Count);
     }
-
-    [Test]
-    public async Task LoadMaxSeason_ReturnsHighestSeason_OrNullWhenEmpty()
-    {
-        Assert.IsNull(await _repository.LoadMaxSeason());
-        await _repository.UpsertProgression(Make("a#1", 2, 5, 1, 10));
-        await _repository.UpsertProgression(Make("b#2", 3, 5, 1, 10));
-        Assert.AreEqual(3, await _repository.LoadMaxSeason());
-    }
 }
