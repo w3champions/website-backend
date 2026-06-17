@@ -84,6 +84,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
                 ConnectionType = p.ConnectionType,
                 ProxyName = p.ProxyName,
                 IssueCategories = p.IssueCategories,
+                Tags = p.Tags ?? [],
                 LagEventCount = p.Diagnostics?.LagEvents?.Count ?? 0,
                 ConnectionEventCount = p.Diagnostics?.ConnectionEvents?.Count ?? 0,
             }).ToList(),

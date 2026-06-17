@@ -322,4 +322,15 @@ public class LagReportControllerTests
         Assert.AreEqual(1, player.Diagnostics.PingHistory.Count);
         Assert.AreEqual(25, player.Diagnostics.PingHistory[0].Avg);
     }
+
+    [Test]
+    public void LagReportPlayerSummary_CarriesTags()
+    {
+        // The admin list maps LagReportPlayer -> LagReportPlayerSummary; tags must
+        // be representable on the summary so the (future) admin UI can show them.
+        var summary = new LagReportPlayerSummary { Tags = [ELagReportTag.LastMile] };
+
+        Assert.AreEqual(1, summary.Tags.Count);
+        Assert.AreEqual(ELagReportTag.LastMile, summary.Tags[0]);
+    }
 }
