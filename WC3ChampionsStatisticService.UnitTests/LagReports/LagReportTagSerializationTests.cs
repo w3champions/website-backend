@@ -8,9 +8,9 @@ namespace WC3ChampionsStatisticService.Tests.LagReports;
 
 /// <summary>
 /// The launcher submits the system-derived connection verdict as a string array
-/// under "tags": ["LAN"] / ["LastMile"] / []. These tests pin the exact wire
-/// contract: the <see cref="ELagReportTag"/> members must serialize to and
-/// deserialize from the literal strings "LAN" and "LastMile" via the shared
+/// under "connection_issue_tags": ["LAN"] / ["LastMile"] / []. These tests pin
+/// the exact wire contract: the <see cref="ELagReportTag"/> members must serialize
+/// to and deserialize from the literal strings "LAN" and "LastMile" via the shared
 /// <see cref="JsonStringEnumListConverter{T}"/> (case-insensitive read).
 /// </summary>
 [TestFixture]
@@ -73,7 +73,7 @@ public class LagReportTagSerializationTests
           "is_explicit": false,
           "free_text": "",
           "categories": ["SpikeLag"],
-          "tags": ["LAN"]
+          "connection_issue_tags": ["LAN"]
         }
         """;
 
@@ -111,7 +111,7 @@ public class LagReportTagSerializationTests
         const string json = """
         {
           "is_explicit": false,
-          "tags": ["LastMile"],
+          "connection_issue_tags": ["LastMile"],
           "some_future_field": { "nested": 123 },
           "another_unknown": "ignored"
         }

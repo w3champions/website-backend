@@ -252,7 +252,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
 
         // ignoreCase: true — ELagReportTag has mixed-case members (LAN, LastMile); URL query params
         // shouldn't need exact casing (matches the wire converter's case-insensitive read).
-        if (!string.IsNullOrEmpty(req.Tag) && Enum.TryParse<ELagReportTag>(req.Tag, ignoreCase: true, out var tag))
+        if (!string.IsNullOrEmpty(req.ConnectionIssueTag) && Enum.TryParse<ELagReportTag>(req.ConnectionIssueTag, ignoreCase: true, out var tag))
         {
             filters.Add(builder.ElemMatch(r => r.Players, p => p.ConnectionIssueTags.Contains(tag)));
         }

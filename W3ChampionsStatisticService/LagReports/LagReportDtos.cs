@@ -28,7 +28,7 @@ public class LagReportSubmissionDto
     [JsonConverter(typeof(JsonStringEnumListConverter<EIssueCategory>))]
     public List<EIssueCategory> Categories { get; set; } = [];
 
-    [JsonPropertyName("tags")]
+    [JsonPropertyName("connection_issue_tags")]
     [JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
     public List<ELagReportTag> ConnectionIssueTags { get; set; } = [];
 
@@ -255,7 +255,8 @@ public class LagReportQueryRequest
     public string DateFrom { get; set; }
     public string DateTo { get; set; }
     public string IssueCategory { get; set; }
-    public string Tag { get; set; }
+    [Microsoft.AspNetCore.Mvc.FromQuery(Name = "connection_issue_tag")]
+    public string ConnectionIssueTag { get; set; }
     public bool? ExplicitOnly { get; set; }
     public int Page { get; set; } = 0;
     public int PageSize { get; set; } = 20;
@@ -286,7 +287,7 @@ public class LagReportPlayerSummary
     public string ProxyName { get; set; }
     [JsonConverter(typeof(JsonStringEnumListConverter<EIssueCategory>))]
     public List<EIssueCategory> IssueCategories { get; set; } = [];
-    [JsonPropertyName("tags")]
+    [JsonPropertyName("connection_issue_tags")]
     [JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
     public List<ELagReportTag> ConnectionIssueTags { get; set; } = [];
     public int LagEventCount { get; set; }

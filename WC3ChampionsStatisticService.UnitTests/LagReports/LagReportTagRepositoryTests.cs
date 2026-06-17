@@ -114,13 +114,13 @@ public class LagReportTagRepositoryTests
         await _repo.UpsertPlayerData(t1.FloGameId, CreatePlayer("Lan#1", [ELagReportTag.LAN]), t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("LastMile#2", [ELagReportTag.LastMile]), t2);
 
-        var (lan, lanTotal) = await _repo.GetReports(new LagReportQueryRequest { Tag = "LAN" });
+        var (lan, lanTotal) = await _repo.GetReports(new LagReportQueryRequest { ConnectionIssueTag = "LAN" });
         Assert.AreEqual(1, lanTotal);
         Assert.AreEqual(1, lan.Count);
         CollectionAssert.Contains(lan.Select(r => r.GameId).ToList(), 6001);
         CollectionAssert.DoesNotContain(lan.Select(r => r.GameId).ToList(), 6002);
 
-        var (lastMile, lmTotal) = await _repo.GetReports(new LagReportQueryRequest { Tag = "LastMile" });
+        var (lastMile, lmTotal) = await _repo.GetReports(new LagReportQueryRequest { ConnectionIssueTag = "LastMile" });
         Assert.AreEqual(1, lmTotal);
         Assert.AreEqual(1, lastMile.Count);
         CollectionAssert.Contains(lastMile.Select(r => r.GameId).ToList(), 6002);
@@ -134,7 +134,7 @@ public class LagReportTagRepositoryTests
         await _repo.UpsertPlayerData(t.FloGameId, CreatePlayer("Lan#1", [ELagReportTag.LAN]), t);
 
         // Enum.TryParse(ignoreCase: true) → "lan" still resolves to LAN.
-        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { Tag = "lan" });
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ConnectionIssueTag = "lan" });
         Assert.AreEqual(1, items.Count);
     }
 
