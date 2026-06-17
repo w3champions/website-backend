@@ -98,6 +98,12 @@ public class LagReportPlayer
     [JsonConverter(typeof(JsonStringEnumListConverter<EIssueCategory>))]
     public List<EIssueCategory> IssueCategories { get; set; } = [];
 
+    /// <summary>
+    /// System-derived connection-issue verdict tags from the launcher
+    /// (e.g. LAN, LastMile). Distinct from the player-selected IssueCategories.
+    /// </summary>
+    public List<ELagReportTag> Tags { get; set; } = [];
+
     /// <summary>Free-text description from the player.</summary>
     public string FreeText { get; set; } = "";
 

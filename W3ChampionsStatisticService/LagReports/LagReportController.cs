@@ -190,6 +190,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             ProxyPort = proxyPort,
             IsExplicit = dto.IsExplicit,
             IssueCategories = dto.Categories ?? [],
+            Tags = dto.Tags ?? [],
             FreeText = dto.FreeText ?? "",
             Annotations = (dto.Annotations ?? []).Select(a => new LagReportAnnotation
             {

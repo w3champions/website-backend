@@ -52,6 +52,7 @@ public class LagReportControllerTests
         },
         IsExplicit = true,
         Categories = [EIssueCategory.SpikeLag],
+        Tags = [ELagReportTag.LAN],
         FreeText = "Lag spike at 5 min",
         Annotations = [new AnnotationDto { GameTimeOffsetMs = 300000, Text = "Froze for 2 seconds" }],
     };
@@ -256,6 +257,32 @@ public class LagReportControllerTests
         Assert.IsEmpty(player.Diagnostics.ConnectionEvents);
         Assert.IsEmpty(player.Annotations);
         Assert.IsEmpty(player.IssueCategories);
+    }
+
+    // ── Tag mapping tests ─────────────────────────────────────────────
+
+    [Test]
+    public void MapToPlayer_CopiesTagsFromDto()
+    {
+        var dto = CreateValidDto();
+        dto.Tags = [ELagReportTag.LastMile];
+
+        var player = LagReportController.MapToPlayer(dto, "P#1");
+
+        Assert.AreEqual(1, player.Tags.Count);
+        Assert.AreEqual(ELagReportTag.LastMile, player.Tags[0]);
+    }
+
+    [Test]
+    public void MapToPlayer_NullTags_ProducesEmptyList()
+    {
+        var dto = CreateValidDto();
+        dto.Tags = null;
+
+        var player = LagReportController.MapToPlayer(dto, "P#1");
+
+        Assert.IsNotNull(player.Tags);
+        Assert.IsEmpty(player.Tags);
     }
 
     [Test]
