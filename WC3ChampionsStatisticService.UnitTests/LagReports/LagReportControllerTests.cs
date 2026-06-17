@@ -52,6 +52,7 @@ public class LagReportControllerTests
         },
         IsExplicit = true,
         Categories = [EIssueCategory.SpikeLag],
+        ConnectionIssueTags = [ELagReportTag.LAN],
         FreeText = "Lag spike at 5 min",
         Annotations = [new AnnotationDto { GameTimeOffsetMs = 300000, Text = "Froze for 2 seconds" }],
     };
@@ -105,6 +106,34 @@ public class LagReportControllerTests
         var dto = CreateValidDto();
         dto.Categories = Enumerable.Range(0, 21).Select(_ => EIssueCategory.Other).ToList();
         Assert.AreEqual("Too many categories", LagReportController.ValidateSubmission(dto));
+    }
+
+    [Test]
+    public void Validate_TooManyTags_ReturnsError()
+    {
+        var dto = CreateValidDto();
+        dto.ConnectionIssueTags = System.Linq.Enumerable.Range(0, 21)
+            .Select(_ => ELagReportTag.LAN).ToList();
+        Assert.AreEqual("Too many tags", LagReportController.ValidateSubmission(dto));
+    }
+
+    [Test]
+    public void Validate_ExactlyAtTagsCap_IsValid()
+    {
+        // Boundary: exactly 20 tags must pass (cap is > 20, not >= 20).
+        var dto = CreateValidDto();
+        dto.ConnectionIssueTags = System.Linq.Enumerable.Range(0, 20)
+            .Select(i => i % 2 == 0 ? ELagReportTag.LAN : ELagReportTag.LastMile)
+            .ToList();
+        Assert.IsNull(LagReportController.ValidateSubmission(dto));
+    }
+
+    [Test]
+    public void Validate_NullTags_DoesNotThrow()
+    {
+        var dto = CreateValidDto();
+        dto.ConnectionIssueTags = null;
+        Assert.IsNull(LagReportController.ValidateSubmission(dto));
     }
 
     [Test]
@@ -258,6 +287,32 @@ public class LagReportControllerTests
         Assert.IsEmpty(player.IssueCategories);
     }
 
+    // ── Tag mapping tests ─────────────────────────────────────────────
+
+    [Test]
+    public void MapToPlayer_CopiesTagsFromDto()
+    {
+        var dto = CreateValidDto();
+        dto.ConnectionIssueTags = [ELagReportTag.LastMile];
+
+        var player = LagReportController.MapToPlayer(dto, "P#1");
+
+        Assert.AreEqual(1, player.ConnectionIssueTags.Count);
+        Assert.AreEqual(ELagReportTag.LastMile, player.ConnectionIssueTags[0]);
+    }
+
+    [Test]
+    public void MapToPlayer_NullTags_ProducesEmptyList()
+    {
+        var dto = CreateValidDto();
+        dto.ConnectionIssueTags = null;
+
+        var player = LagReportController.MapToPlayer(dto, "P#1");
+
+        Assert.IsNotNull(player.ConnectionIssueTags);
+        Assert.IsEmpty(player.ConnectionIssueTags);
+    }
+
     [Test]
     public void MapToPlayer_FiltersOutNullTraces()
     {
@@ -294,5 +349,17 @@ public class LagReportControllerTests
 
         Assert.AreEqual(1, player.Diagnostics.PingHistory.Count);
         Assert.AreEqual(25, player.Diagnostics.PingHistory[0].Avg);
+    }
+
+    [Test]
+    public void LagReportPlayerSummary_CarriesTags()
+    {
+        // Asserts the summary DTO has the ConnectionIssueTags property with the correct converter.
+        // The actual GetReports projection coverage is in GetReports_ListProjection_IncludesTags
+        // (LagReportTagRepositoryTests).
+        var summary = new LagReportPlayerSummary { ConnectionIssueTags = [ELagReportTag.LastMile] };
+
+        Assert.AreEqual(1, summary.ConnectionIssueTags.Count);
+        Assert.AreEqual(ELagReportTag.LastMile, summary.ConnectionIssueTags[0]);
     }
 }

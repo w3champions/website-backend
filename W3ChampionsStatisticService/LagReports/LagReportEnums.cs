@@ -13,6 +13,18 @@ public enum Transport
     QUIC,
 }
 
+/// <summary>
+/// System-derived connection-issue verdict tags attached to a lag report by the
+/// launcher (NOT player-selected — kept distinct from <see cref="EIssueCategory"/>).
+/// Serialized on the wire as the literal strings "LAN" / "LastMile" via
+/// <see cref="JsonStringEnumListConverter{T}"/> (member names ARE the wire values).
+/// </summary>
+public enum ELagReportTag
+{
+    LAN,
+    LastMile,
+}
+
 public enum EIssueCategory
 {
     InputDelay,

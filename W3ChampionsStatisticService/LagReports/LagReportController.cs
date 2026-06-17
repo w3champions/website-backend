@@ -17,6 +17,25 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     private readonly LagReportRepository _lagReportRepository = lagReportRepository;
     private readonly IFloStatsService _floStatsService = floStatsService;
 
+    // ── Submission validation caps ────────────────────────────────────
+    private const int MaxLagEvents = 200;
+    private const int MaxTargetMtrEntries = 500;
+    private const int MaxAllServerBaselines = 1000;
+    private const int MaxReverseMtrEntries = 500;
+    private const int MaxPingHistoryEntries = 5000;
+    private const int MaxConnectionEvents = 200;
+    private const int MaxAnnotations = 200;
+    private const int MaxIssueCategories = 20;
+    private const int MaxTagsPerReport = 20;
+    private const int MaxHopsPerTrace = 64;
+
+    private const int MaxFreeTextLength = 5000;
+    private const int MaxShortStringLength = 500;
+    private const int MaxClientIpLength = 100;
+    private const int MaxAnnotationTextLength = 1000;
+
+    private const int MaxPageSize = 100;
+
     /// <summary>
     /// Submit a lag report — called by the launcher for each player (explicit or auto).
     /// Authenticated users only (any player, not admin-only).
@@ -61,7 +80,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> GetReports([FromQuery] LagReportQueryRequest req)
     {
-        req.PageSize = Math.Clamp(req.PageSize, 1, 100);
+        req.PageSize = Math.Clamp(req.PageSize, 1, MaxPageSize);
         req.Page = Math.Max(req.Page, 0);
 
         var (items, total) = await _lagReportRepository.GetReports(req);
@@ -84,6 +103,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
                 ConnectionType = p.ConnectionType,
                 ProxyName = p.ProxyName,
                 IssueCategories = p.IssueCategories,
+                ConnectionIssueTags = p.ConnectionIssueTags ?? [],
                 LagEventCount = p.Diagnostics?.LagEvents?.Count ?? 0,
                 ConnectionEventCount = p.Diagnostics?.ConnectionEvents?.Count ?? 0,
             }).ToList(),
@@ -112,38 +132,39 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         if (dto.ConnectionTopology == null) return "Missing connection_topology";
 
         var diag = dto.Diagnostics;
-        if ((diag.LagEvents?.Count ?? 0) > 200) return "Too many lag_events";
-        if ((diag.TargetMtr?.Count ?? 0) > 500) return "Too many target_mtr";
-        if ((diag.AllServerBaselines?.Count ?? 0) > 1000) return "Too many all_server_baselines";
-        if ((diag.ReverseMtr?.Count ?? 0) > 500) return "Too many reverse_mtr";
-        if ((diag.PingHistory?.Count ?? 0) > 5000) return "Too many ping_history";
-        if ((diag.ConnectionEvents?.Count ?? 0) > 200) return "Too many connection_events";
-        if ((dto.Annotations?.Count ?? 0) > 200) return "Too many annotations";
-        if ((dto.Categories?.Count ?? 0) > 20) return "Too many categories";
+        if ((diag.LagEvents?.Count ?? 0) > MaxLagEvents) return "Too many lag_events";
+        if ((diag.TargetMtr?.Count ?? 0) > MaxTargetMtrEntries) return "Too many target_mtr";
+        if ((diag.AllServerBaselines?.Count ?? 0) > MaxAllServerBaselines) return "Too many all_server_baselines";
+        if ((diag.ReverseMtr?.Count ?? 0) > MaxReverseMtrEntries) return "Too many reverse_mtr";
+        if ((diag.PingHistory?.Count ?? 0) > MaxPingHistoryEntries) return "Too many ping_history";
+        if ((diag.ConnectionEvents?.Count ?? 0) > MaxConnectionEvents) return "Too many connection_events";
+        if ((dto.Annotations?.Count ?? 0) > MaxAnnotations) return "Too many annotations";
+        if ((dto.Categories?.Count ?? 0) > MaxIssueCategories) return "Too many categories";
+        if ((dto.ConnectionIssueTags?.Count ?? 0) > MaxTagsPerReport) return "Too many tags";
 
-        if (dto.FreeText?.Length > 5000) return "free_text too long";
-        if (dto.GameMetadata.GameName?.Length > 500) return "game_name too long";
-        if (dto.GameMetadata.MapPath?.Length > 500) return "map_path too long";
-        if (dto.ConnectionTopology.ServerNodeName?.Length > 500) return "server_node_name too long";
-        if (dto.ConnectionTopology.ProxyName?.Length > 500) return "proxy_name too long";
-        if (dto.ConnectionTopology.ProxyAddress?.Length > 500) return "proxy_address too long";
-        if (dto.ConnectionTopology.ClientIp?.Length > 100) return "client_ip too long";
+        if (dto.FreeText?.Length > MaxFreeTextLength) return "free_text too long";
+        if (dto.GameMetadata.GameName?.Length > MaxShortStringLength) return "game_name too long";
+        if (dto.GameMetadata.MapPath?.Length > MaxShortStringLength) return "map_path too long";
+        if (dto.ConnectionTopology.ServerNodeName?.Length > MaxShortStringLength) return "server_node_name too long";
+        if (dto.ConnectionTopology.ProxyName?.Length > MaxShortStringLength) return "proxy_name too long";
+        if (dto.ConnectionTopology.ProxyAddress?.Length > MaxShortStringLength) return "proxy_address too long";
+        if (dto.ConnectionTopology.ClientIp?.Length > MaxClientIpLength) return "client_ip too long";
 
         foreach (var trace in (diag.TargetMtr ?? []).Concat(diag.ReverseMtr ?? []))
         {
-            if (trace.Trace?.Hops?.Count > 64) return "Too many hops in trace";
+            if (trace.Trace?.Hops?.Count > MaxHopsPerTrace) return "Too many hops in trace";
         }
         foreach (var baseline in diag.AllServerBaselines ?? [])
         {
-            if (baseline.Trace?.Hops?.Count > 64) return "Too many hops in baseline";
+            if (baseline.Trace?.Hops?.Count > MaxHopsPerTrace) return "Too many hops in baseline";
         }
         foreach (var annotation in dto.Annotations ?? [])
         {
-            if (annotation.Text?.Length > 1000) return "Annotation text too long";
+            if (annotation.Text?.Length > MaxAnnotationTextLength) return "Annotation text too long";
         }
         foreach (var lagEvent in diag.LagEvents ?? [])
         {
-            if (lagEvent.Annotation?.Length > 1000) return "Lag event annotation too long";
+            if (lagEvent.Annotation?.Length > MaxAnnotationTextLength) return "Lag event annotation too long";
         }
 
         return null;
@@ -190,6 +211,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             ProxyPort = proxyPort,
             IsExplicit = dto.IsExplicit,
             IssueCategories = dto.Categories ?? [],
+            ConnectionIssueTags = dto.ConnectionIssueTags ?? [],
             FreeText = dto.FreeText ?? "",
             Annotations = (dto.Annotations ?? []).Select(a => new LagReportAnnotation
             {
