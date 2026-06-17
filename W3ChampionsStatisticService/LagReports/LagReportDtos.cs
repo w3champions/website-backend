@@ -30,7 +30,7 @@ public class LagReportSubmissionDto
 
     [JsonPropertyName("tags")]
     [JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
-    public List<ELagReportTag> Tags { get; set; } = [];
+    public List<ELagReportTag> ConnectionIssueTags { get; set; } = [];
 
     [JsonPropertyName("free_text")]
     public string FreeText { get; set; } = "";
@@ -286,8 +286,9 @@ public class LagReportPlayerSummary
     public string ProxyName { get; set; }
     [JsonConverter(typeof(JsonStringEnumListConverter<EIssueCategory>))]
     public List<EIssueCategory> IssueCategories { get; set; } = [];
+    [JsonPropertyName("tags")]
     [JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
-    public List<ELagReportTag> Tags { get; set; } = [];
+    public List<ELagReportTag> ConnectionIssueTags { get; set; } = [];
     public int LagEventCount { get; set; }
     public int ConnectionEventCount { get; set; }
 }

@@ -103,7 +103,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
                 ConnectionType = p.ConnectionType,
                 ProxyName = p.ProxyName,
                 IssueCategories = p.IssueCategories,
-                Tags = p.Tags ?? [],
+                ConnectionIssueTags = p.ConnectionIssueTags ?? [],
                 LagEventCount = p.Diagnostics?.LagEvents?.Count ?? 0,
                 ConnectionEventCount = p.Diagnostics?.ConnectionEvents?.Count ?? 0,
             }).ToList(),
@@ -140,7 +140,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         if ((diag.ConnectionEvents?.Count ?? 0) > MaxConnectionEvents) return "Too many connection_events";
         if ((dto.Annotations?.Count ?? 0) > MaxAnnotations) return "Too many annotations";
         if ((dto.Categories?.Count ?? 0) > MaxIssueCategories) return "Too many categories";
-        if ((dto.Tags?.Count ?? 0) > MaxTagsPerReport) return "Too many tags";
+        if ((dto.ConnectionIssueTags?.Count ?? 0) > MaxTagsPerReport) return "Too many tags";
 
         if (dto.FreeText?.Length > MaxFreeTextLength) return "free_text too long";
         if (dto.GameMetadata.GameName?.Length > MaxShortStringLength) return "game_name too long";
@@ -211,7 +211,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             ProxyPort = proxyPort,
             IsExplicit = dto.IsExplicit,
             IssueCategories = dto.Categories ?? [],
-            Tags = dto.Tags ?? [],
+            ConnectionIssueTags = dto.ConnectionIssueTags ?? [],
             FreeText = dto.FreeText ?? "",
             Annotations = (dto.Annotations ?? []).Select(a => new LagReportAnnotation
             {

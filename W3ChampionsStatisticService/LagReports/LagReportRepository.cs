@@ -45,7 +45,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             new(Builders<LagReport>.IndexKeys.Ascending("Players.IssueCategories")),
 
             // System-derived tag filter (inside nested array), mirrors IssueCategories
-            new(Builders<LagReport>.IndexKeys.Ascending("Players.Tags")),
+            new(Builders<LagReport>.IndexKeys.Ascending("Players.ConnectionIssueTags")),
 
             // Explicit filter — most reports are auto-submitted, admins typically filter to explicit only
             new(Builders<LagReport>.IndexKeys.Ascending(r => r.HasExplicitReport)),
@@ -254,7 +254,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         // shouldn't need exact casing (matches the wire converter's case-insensitive read).
         if (!string.IsNullOrEmpty(req.Tag) && Enum.TryParse<ELagReportTag>(req.Tag, ignoreCase: true, out var tag))
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.Tags.Contains(tag)));
+            filters.Add(builder.ElemMatch(r => r.Players, p => p.ConnectionIssueTags.Contains(tag)));
         }
 
         if (req.ExplicitOnly == true)

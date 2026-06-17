@@ -79,7 +79,7 @@ public class LagReportTagSerializationTests
 
         var dto = JsonSerializer.Deserialize<LagReportSubmissionDto>(json, Web);
 
-        Assert.That(dto!.Tags, Is.EqualTo(new List<ELagReportTag> { ELagReportTag.LAN }));
+        Assert.That(dto!.ConnectionIssueTags, Is.EqualTo(new List<ELagReportTag> { ELagReportTag.LAN }));
         // Categories still parse independently — the two are distinct fields.
         Assert.That(dto.Categories, Is.EqualTo(new List<EIssueCategory> { EIssueCategory.SpikeLag }));
     }
@@ -99,8 +99,8 @@ public class LagReportTagSerializationTests
 
         var dto = JsonSerializer.Deserialize<LagReportSubmissionDto>(json, Web);
 
-        Assert.That(dto!.Tags, Is.Not.Null);
-        Assert.That(dto.Tags, Is.Empty);
+        Assert.That(dto!.ConnectionIssueTags, Is.Not.Null);
+        Assert.That(dto.ConnectionIssueTags, Is.Empty);
     }
 
     [Test]
@@ -119,6 +119,6 @@ public class LagReportTagSerializationTests
 
         var dto = JsonSerializer.Deserialize<LagReportSubmissionDto>(json, Web);
 
-        Assert.That(dto!.Tags, Is.EqualTo(new List<ELagReportTag> { ELagReportTag.LastMile }));
+        Assert.That(dto!.ConnectionIssueTags, Is.EqualTo(new List<ELagReportTag> { ELagReportTag.LastMile }));
     }
 }

@@ -102,7 +102,7 @@ public class LagReportPlayer
     /// System-derived connection-issue verdict tags from the launcher
     /// (e.g. LAN, LastMile). Distinct from the player-selected IssueCategories.
     /// </summary>
-    public List<ELagReportTag> Tags { get; set; } = [];
+    public List<ELagReportTag> ConnectionIssueTags { get; set; } = [];
 
     /// <summary>Free-text description from the player.</summary>
     public string FreeText { get; set; } = "";

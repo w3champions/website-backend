@@ -9,7 +9,7 @@ using W3ChampionsStatisticService.LagReports;
 namespace WC3ChampionsStatisticService.Tests.LagReports;
 
 /// <summary>
-/// Round-trip + filter coverage for the system-derived <see cref="LagReportPlayer.Tags"/>
+/// Round-trip + filter coverage for the system-derived <see cref="LagReportPlayer.ConnectionIssueTags"/>
 /// field. Uses an ISOLATED in-memory mongod (Mongo2Go) per fixture — NOT the shared
 /// remote Mongo of <c>IntegrationTestBase</c> — to avoid cross-session contamination.
 /// Mirrors the structure of the existing Categories repository tests.
@@ -42,7 +42,7 @@ public class LagReportTagRepositoryTests
             ClientIp = "203.0.113.1",
             ConnectionType = EConnectionType.Direct,
             IssueCategories = [],
-            Tags = tags ?? [],
+            ConnectionIssueTags = tags ?? [],
             FreeText = "",
             Diagnostics = new PlayerDiagnostics(),
         };
@@ -67,8 +67,8 @@ public class LagReportTagRepositoryTests
         var report = await _repo.GetById(reportId);
 
         Assert.AreEqual(1, report.Players.Count);
-        Assert.AreEqual(1, report.Players[0].Tags.Count);
-        Assert.AreEqual(ELagReportTag.LastMile, report.Players[0].Tags[0]);
+        Assert.AreEqual(1, report.Players[0].ConnectionIssueTags.Count);
+        Assert.AreEqual(ELagReportTag.LastMile, report.Players[0].ConnectionIssueTags[0]);
     }
 
     [Test]
@@ -87,8 +87,8 @@ public class LagReportTagRepositoryTests
 
         var report = await _repo.GetById(id1);
         Assert.AreEqual(2, report.Players.Count);
-        CollectionAssert.Contains(report.Players[0].Tags, ELagReportTag.LAN);
-        CollectionAssert.Contains(report.Players[1].Tags, ELagReportTag.LastMile);
+        CollectionAssert.Contains(report.Players[0].ConnectionIssueTags, ELagReportTag.LAN);
+        CollectionAssert.Contains(report.Players[1].ConnectionIssueTags, ELagReportTag.LastMile);
     }
 
     [Test]
@@ -102,8 +102,8 @@ public class LagReportTagRepositoryTests
         var reportId = await _repo.UpsertPlayerData(template.FloGameId, player, template);
         var report = await _repo.GetById(reportId);
 
-        Assert.IsNotNull(report.Players[0].Tags);
-        Assert.IsEmpty(report.Players[0].Tags);
+        Assert.IsNotNull(report.Players[0].ConnectionIssueTags);
+        Assert.IsEmpty(report.Players[0].ConnectionIssueTags);
     }
 
     [Test]
@@ -154,8 +154,8 @@ public class LagReportTagRepositoryTests
             names.Add(idx["name"].AsString);
         }
 
-        Assert.Contains("Players.Tags_1", names,
-            "Tags must be indexed like Players.IssueCategories for filterable queries");
+        Assert.Contains("Players.ConnectionIssueTags_1", names,
+            "ConnectionIssueTags must be indexed like Players.IssueCategories for filterable queries");
     }
 
     [Test]
@@ -170,7 +170,7 @@ public class LagReportTagRepositoryTests
         var (items, _) = await _repo.GetReports(new LagReportQueryRequest());
 
         Assert.AreEqual(1, items.Count);
-        CollectionAssert.Contains(items[0].Players[0].Tags, ELagReportTag.LAN,
-            "Tags are small and must survive the list projection");
+        CollectionAssert.Contains(items[0].Players[0].ConnectionIssueTags, ELagReportTag.LAN,
+            "ConnectionIssueTags are small and must survive the list projection");
     }
 }
