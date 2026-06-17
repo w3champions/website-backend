@@ -324,10 +324,11 @@ public class LagReportControllerTests
     }
 
     [Test]
-    public void LagReportPlayerSummary_CarriesTags()
+    public void LagReportPlayerSummary_CanHoldTags()
     {
-        // The admin list maps LagReportPlayer -> LagReportPlayerSummary; tags must
-        // be representable on the summary so the (future) admin UI can show them.
+        // Asserts the summary DTO has the Tags property with the correct converter.
+        // The actual GetReports projection coverage is in GetReports_ListProjection_IncludesTags
+        // (LagReportTagRepositoryTests).
         var summary = new LagReportPlayerSummary { Tags = [ELagReportTag.LastMile] };
 
         Assert.AreEqual(1, summary.Tags.Count);
