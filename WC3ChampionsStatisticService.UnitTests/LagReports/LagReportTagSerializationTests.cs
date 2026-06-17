@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using NUnit.Framework;
 using W3ChampionsStatisticService.LagReports;
 
@@ -19,8 +20,8 @@ public class LagReportTagSerializationTests
     // is on the DTO property.
     private sealed class TagHolder
     {
-        [System.Text.Json.Serialization.JsonPropertyName("tags")]
-        [System.Text.Json.Serialization.JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
+        [JsonPropertyName("tags")]
+        [JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
         public List<ELagReportTag> Tags { get; set; } = [];
     }
 
@@ -33,9 +34,8 @@ public class LagReportTagSerializationTests
 
         var json = JsonSerializer.Serialize(holder, Web);
 
-        // Exact literals — these are the strings the launcher sends/reads.
-        Assert.That(json, Does.Contain("\"LAN\""));
-        Assert.That(json, Does.Contain("\"LastMile\""));
+        // Exact array shape — pins both member order and wire strings in one assertion.
+        Assert.That(json, Does.Contain("[\"LAN\",\"LastMile\"]"));
     }
 
     [Test]

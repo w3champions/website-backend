@@ -28,6 +28,10 @@ public class LagReportSubmissionDto
     [JsonConverter(typeof(JsonStringEnumListConverter<EIssueCategory>))]
     public List<EIssueCategory> Categories { get; set; } = [];
 
+    [JsonPropertyName("tags")]
+    [JsonConverter(typeof(JsonStringEnumListConverter<ELagReportTag>))]
+    public List<ELagReportTag> Tags { get; set; } = [];
+
     [JsonPropertyName("free_text")]
     public string FreeText { get; set; } = "";
 }
