@@ -109,6 +109,23 @@ public class LagReportControllerTests
     }
 
     [Test]
+    public void Validate_TooManyTags_ReturnsError()
+    {
+        var dto = CreateValidDto();
+        dto.Tags = System.Linq.Enumerable.Range(0, 21)
+            .Select(_ => ELagReportTag.LAN).ToList();
+        Assert.AreEqual("Too many tags", LagReportController.ValidateSubmission(dto));
+    }
+
+    [Test]
+    public void Validate_NullTags_DoesNotThrow()
+    {
+        var dto = CreateValidDto();
+        dto.Tags = null;
+        Assert.IsNull(LagReportController.ValidateSubmission(dto));
+    }
+
+    [Test]
     public void Validate_FreeTextTooLong_ReturnsError()
     {
         var dto = CreateValidDto();

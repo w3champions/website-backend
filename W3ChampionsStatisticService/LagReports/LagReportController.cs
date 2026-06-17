@@ -121,6 +121,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         if ((diag.ConnectionEvents?.Count ?? 0) > 200) return "Too many connection_events";
         if ((dto.Annotations?.Count ?? 0) > 200) return "Too many annotations";
         if ((dto.Categories?.Count ?? 0) > 20) return "Too many categories";
+        if ((dto.Tags?.Count ?? 0) > 20) return "Too many tags";
 
         if (dto.FreeText?.Length > 5000) return "free_text too long";
         if (dto.GameMetadata.GameName?.Length > 500) return "game_name too long";
