@@ -44,6 +44,9 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             // Issue category filter (inside nested array)
             new(Builders<LagReport>.IndexKeys.Ascending("Players.IssueCategories")),
 
+            // System-derived tag filter (inside nested array), mirrors IssueCategories
+            new(Builders<LagReport>.IndexKeys.Ascending("Players.Tags")),
+
             // Explicit filter — most reports are auto-submitted, admins typically filter to explicit only
             new(Builders<LagReport>.IndexKeys.Ascending(r => r.HasExplicitReport)),
 
@@ -245,6 +248,11 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         if (!string.IsNullOrEmpty(req.IssueCategory) && Enum.TryParse<EIssueCategory>(req.IssueCategory, out var category))
         {
             filters.Add(builder.ElemMatch(r => r.Players, p => p.IssueCategories.Contains(category)));
+        }
+
+        if (!string.IsNullOrEmpty(req.Tag) && Enum.TryParse<ELagReportTag>(req.Tag, ignoreCase: true, out var tag))
+        {
+            filters.Add(builder.ElemMatch(r => r.Players, p => p.Tags.Contains(tag)));
         }
 
         if (req.ExplicitOnly == true)

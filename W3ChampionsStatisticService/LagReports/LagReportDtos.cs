@@ -255,6 +255,7 @@ public class LagReportQueryRequest
     public string DateFrom { get; set; }
     public string DateTo { get; set; }
     public string IssueCategory { get; set; }
+    public string Tag { get; set; }
     public bool? ExplicitOnly { get; set; }
     public int Page { get; set; } = 0;
     public int PageSize { get; set; } = 20;

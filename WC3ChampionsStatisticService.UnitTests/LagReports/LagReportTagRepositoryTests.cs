@@ -35,7 +35,7 @@ public class LagReportTagRepositoryTests
     }
 
     private static LagReportPlayer CreatePlayer(
-        string battleTag, List<ELagReportTag>? tags = null) => new()
+        string battleTag, List<ELagReportTag> tags = null) => new()
         {
             BattleTag = battleTag,
             ClientIp = "203.0.113.1",
@@ -103,5 +103,70 @@ public class LagReportTagRepositoryTests
 
         Assert.IsNotNull(report.Players[0].Tags);
         Assert.IsEmpty(report.Players[0].Tags);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByTag()
+    {
+        var t1 = CreateTemplate(2001, 6001);
+        var t2 = CreateTemplate(2002, 6002);
+        await _repo.UpsertPlayerData(t1.FloGameId, CreatePlayer("Lan#1", [ELagReportTag.LAN]), t1);
+        await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("LastMile#2", [ELagReportTag.LastMile]), t2);
+
+        var (lan, lanTotal) = await _repo.GetReports(new LagReportQueryRequest { Tag = "LAN" });
+        Assert.AreEqual(1, lanTotal);
+        Assert.AreEqual(1, lan.Count);
+        Assert.AreEqual(6001, lan[0].GameId);
+
+        var (lastMile, lmTotal) = await _repo.GetReports(new LagReportQueryRequest { Tag = "LastMile" });
+        Assert.AreEqual(1, lmTotal);
+        Assert.AreEqual(6002, lastMile[0].GameId);
+    }
+
+    [Test]
+    public async Task GetReports_TagFilter_IsCaseInsensitive()
+    {
+        var t = CreateTemplate(2003, 6003);
+        await _repo.UpsertPlayerData(t.FloGameId, CreatePlayer("Lan#1", [ELagReportTag.LAN]), t);
+
+        // Enum.TryParse(ignoreCase: true) → "lan" still resolves to LAN.
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { Tag = "lan" });
+        Assert.AreEqual(1, items.Count);
+    }
+
+    [Test]
+    public async Task EnsureIndexesAsync_CreatesPlayersTagsIndex()
+    {
+        await _repo.EnsureIndexesAsync();
+
+        var collection = _mongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<LagReport>("LagReport");
+
+        var names = new List<string>();
+        using var cursor = await collection.Indexes.ListAsync();
+        foreach (var idx in await cursor.ToListAsync())
+        {
+            names.Add(idx["name"].AsString);
+        }
+
+        Assert.Contains("Players.Tags_1", names,
+            "Tags must be indexed like Players.IssueCategories for filterable queries");
+    }
+
+    [Test]
+    public async Task GetReports_ListProjection_IncludesTags()
+    {
+        // Tags are tiny; unlike the heavy diagnostics arrays they are NOT projected
+        // out, so the admin list can show/filter them without a detail fetch.
+        var template = CreateTemplate(2100, 6100);
+        await _repo.UpsertPlayerData(
+            template.FloGameId, CreatePlayer("Lan#1", [ELagReportTag.LAN]), template);
+
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest());
+
+        Assert.AreEqual(1, items.Count);
+        CollectionAssert.Contains(items[0].Players[0].Tags, ELagReportTag.LAN,
+            "Tags are small and must survive the list projection");
     }
 }
