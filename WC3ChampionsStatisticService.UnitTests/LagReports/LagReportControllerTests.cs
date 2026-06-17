@@ -118,6 +118,17 @@ public class LagReportControllerTests
     }
 
     [Test]
+    public void Validate_ExactlyAtTagsCap_IsValid()
+    {
+        // Boundary: exactly 20 tags must pass (cap is > 20, not >= 20).
+        var dto = CreateValidDto();
+        dto.Tags = System.Linq.Enumerable.Range(0, 20)
+            .Select(i => i % 2 == 0 ? ELagReportTag.LAN : ELagReportTag.LastMile)
+            .ToList();
+        Assert.IsNull(LagReportController.ValidateSubmission(dto));
+    }
+
+    [Test]
     public void Validate_NullTags_DoesNotThrow()
     {
         var dto = CreateValidDto();
@@ -341,7 +352,7 @@ public class LagReportControllerTests
     }
 
     [Test]
-    public void LagReportPlayerSummary_CanHoldTags()
+    public void LagReportPlayerSummary_CarriesTags()
     {
         // Asserts the summary DTO has the Tags property with the correct converter.
         // The actual GetReports projection coverage is in GetReports_ListProjection_IncludesTags

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Mongo2Go;
 using MongoDB.Driver;
@@ -116,11 +117,14 @@ public class LagReportTagRepositoryTests
         var (lan, lanTotal) = await _repo.GetReports(new LagReportQueryRequest { Tag = "LAN" });
         Assert.AreEqual(1, lanTotal);
         Assert.AreEqual(1, lan.Count);
-        Assert.AreEqual(6001, lan[0].GameId);
+        CollectionAssert.Contains(lan.Select(r => r.GameId).ToList(), 6001);
+        CollectionAssert.DoesNotContain(lan.Select(r => r.GameId).ToList(), 6002);
 
         var (lastMile, lmTotal) = await _repo.GetReports(new LagReportQueryRequest { Tag = "LastMile" });
         Assert.AreEqual(1, lmTotal);
-        Assert.AreEqual(6002, lastMile[0].GameId);
+        Assert.AreEqual(1, lastMile.Count);
+        CollectionAssert.Contains(lastMile.Select(r => r.GameId).ToList(), 6002);
+        CollectionAssert.DoesNotContain(lastMile.Select(r => r.GameId).ToList(), 6001);
     }
 
     [Test]
