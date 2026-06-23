@@ -8,6 +8,9 @@ public class ReplayChatsData
     public List<ReplayChatsPlayerInfo> Players { get; set; }
 
     public List<ReplayChatsMessage> Messages { get; set; }
+
+    // Pause/resume/leave events parsed from the replay, ordered by Time.
+    public List<ReplayGameEvent> Events { get; set; }
 }
 
 public class ReplayChatsPlayerInfo
@@ -48,4 +51,29 @@ public enum ReplayChatsScopeType
     Allies,
     Observers,
     Player,
+}
+
+public class ReplayGameEvent
+{
+    public ReplayGameEventType Type { get; set; }
+
+    // Time in milliseconds, when this happened in-game
+    [JsonProperty("time")]
+    public int Time { get; set; }
+
+    [JsonProperty("player_id")]
+    public int PlayerId { get; set; }
+
+    // Only present for Leave events. A snake_case LeaveReason string emitted by
+    // the replay service (e.g. "disconnect", "lost_buildings", "won"). Passed
+    // through verbatim; the website remaps it to human-readable text.
+    [JsonProperty("leave_reason")]
+    public string LeaveReason { get; set; }
+}
+
+public enum ReplayGameEventType
+{
+    Pause,
+    Resume,
+    Leave,
 }
