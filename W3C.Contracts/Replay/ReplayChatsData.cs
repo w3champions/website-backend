@@ -64,8 +64,11 @@ public class ReplayGameEvent
     [JsonProperty("player_id")]
     public int PlayerId { get; set; }
 
-    // Only present for Leave events (LeaveReason code from the replay)
-    public int? Reason { get; set; }
+    // Only present for Leave events. A snake_case LeaveReason string emitted by
+    // the replay service (e.g. "disconnect", "lost_buildings", "won"). Passed
+    // through verbatim; the website remaps it to human-readable text.
+    [JsonProperty("leave_reason")]
+    public string LeaveReason { get; set; }
 }
 
 public enum ReplayGameEventType
