@@ -26,9 +26,13 @@ public class ReplayChatsPlayerInfo
 
 public class ReplayChatsMessage
 {
-    // Time in milliseconds, when the player said this in-game
+    // Real elapsed time in milliseconds (advances even while the game is paused).
     [JsonProperty("time")]
     public int Time { get; set; }
+
+    // In-game clock in milliseconds (frozen while the game is paused).
+    [JsonProperty("game_time")]
+    public int GameTime { get; set; }
 
     [JsonProperty("from_player")]
     public int FromPlayer { get; set; }
@@ -57,9 +61,13 @@ public class ReplayGameEvent
 {
     public ReplayGameEventType Type { get; set; }
 
-    // Time in milliseconds, when this happened in-game
+    // Real elapsed time in milliseconds (advances even while the game is paused).
     [JsonProperty("time")]
     public int Time { get; set; }
+
+    // In-game clock in milliseconds (frozen while the game is paused).
+    [JsonProperty("game_time")]
+    public int GameTime { get; set; }
 
     [JsonProperty("player_id")]
     public int PlayerId { get; set; }
