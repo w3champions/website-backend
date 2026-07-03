@@ -1,11 +1,15 @@
 using System.Collections.Generic;
+using System.Linq;
 using Mongo2Go;
 using MongoDB.Driver;
 using NUnit.Framework;
+using W3C.Contracts.GameObjects;
+using W3C.Domain.CommonValueObjects;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.Ladder;
 using W3C.Contracts.Matchmaking;
 using System.Threading.Tasks;
+using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 
 namespace WC3ChampionsStatisticService.UnitTests.PlayerProfiles;
 
@@ -119,5 +123,44 @@ public class PlayerRepositoryTests
 
         // Assert
         Assert.AreEqual(2000, maxMmr);
+    }
+
+    private static PlayerGameModeStatPerGateway CreateStat(
+        string battleTag, GateWay gateWay, GameMode gameMode, int season, Race? race, int wins, int losses)
+    {
+        var stat = PlayerGameModeStatPerGateway.Create(new BattleTagIdCombined(
+            new List<PlayerId> { PlayerId.Create(battleTag) }, gateWay, gameMode, season, race));
+        for (var i = 0; i < wins; i++) stat.RecordWin(true);
+        for (var i = 0; i < losses; i++) stat.RecordWin(false);
+        return stat;
+    }
+
+    [Test]
+    public async Task LoadGameModeStatPerGateway_ByBattleTagAndSeason_ReturnsAllGatewaysAndModes()
+    {
+        await _repository.UpsertPlayerGameModeStatPerGateway(
+            CreateStat("peter#123", GateWay.Europe, GameMode.GM_1v1, 5, Race.HU, wins: 2, losses: 1));
+        await _repository.UpsertPlayerGameModeStatPerGateway(
+            CreateStat("peter#123", GateWay.America, GameMode.GM_2v2, 5, null, wins: 0, losses: 1));
+        await _repository.UpsertPlayerGameModeStatPerGateway(
+            CreateStat("peter#123", GateWay.Europe, GameMode.GM_1v1, 4, Race.HU, wins: 9, losses: 9)); // wrong season
+        await _repository.UpsertPlayerGameModeStatPerGateway(
+            CreateStat("wolf#456", GateWay.Europe, GameMode.GM_1v1, 5, Race.OC, wins: 1, losses: 1)); // other player
+
+        // AT team doc carries BOTH players — must be returned for each member
+        var atStat = PlayerGameModeStatPerGateway.Create(new BattleTagIdCombined(
+            new List<PlayerId> { PlayerId.Create("peter#123"), PlayerId.Create("wolf#456") },
+            GateWay.Europe, GameMode.GM_2v2_AT, 5, null));
+        atStat.RecordWin(true);
+        atStat.RecordWin(false);
+        await _repository.UpsertPlayerGameModeStatPerGateway(atStat);
+
+        var peterStats = await _repository.LoadGameModeStatPerGateway("peter#123", 5);
+        var wolfStats = await _repository.LoadGameModeStatPerGateway("wolf#456", 5);
+
+        Assert.AreEqual(3, peterStats.Count);
+        Assert.AreEqual(6, peterStats.Sum(s => s.Games)); // 3 + 1 + 2, wrong-season and other-player excluded
+        Assert.AreEqual(2, wolfStats.Count);
+        Assert.AreEqual(4, wolfStats.Sum(s => s.Games)); // own 2 + AT 2
     }
 }

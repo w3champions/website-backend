@@ -129,6 +129,13 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
             t.Season == season);
     }
 
+    public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag, int season)
+    {
+        return LoadAll<PlayerGameModeStatPerGateway>(t =>
+            t.PlayerIds.Any(player => player.BattleTag == battleTag) &&
+            t.Season == season);
+    }
+
     public Task<List<PlayerRaceStatPerGateway>> LoadRaceStatPerGateway(string battleTag, GateWay gateWay, int season)
     {
         return LoadAll<PlayerRaceStatPerGateway>(t => t.BattleTag == battleTag && t.Season == season && t.GateWay == gateWay);
