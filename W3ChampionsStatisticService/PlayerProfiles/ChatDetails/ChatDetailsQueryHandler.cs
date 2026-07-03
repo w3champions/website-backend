@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Serilog;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Ports;
 using W3C.Domain.Tracing;
@@ -12,7 +14,7 @@ public class ChatDetailsEnrichment(ChatRank rank, int gamesPlayed, int? season)
 {
     /// <summary>Null = no rank this season (well-defined "unranked", not an error).</summary>
     public ChatRank Rank { get; } = rank;
-    /// <summary>Total current-season ladder games across all gateways, modes and races. 0 = none.</summary>
+    /// <summary>Total current-season ladder games across all gateways and modes. 0 = none.</summary>
     public int GamesPlayed { get; } = gamesPlayed;
     /// <summary>The season the values were resolved for; null only when no season exists at all.</summary>
     public int? Season { get; } = season;
@@ -28,19 +30,32 @@ public class ChatDetailsQueryHandler(
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IPlayerRepository _playerRepository = playerRepository;
 
+    // This enrichment is additive/best-effort on top of the legacy clan-and-picture response.
+    // Any failure here (transient DB hiccup, unexpected duplicate data in SelectBestRank, etc.)
+    // must never take down the must-have legacy fields, so we fail soft and log instead of
+    // propagating — the same "log-and-continue" philosophy used elsewhere for optional data.
     public async Task<ChatDetailsEnrichment> LoadEnrichment(string battleTag)
     {
-        var lastSeason = await _matchRepository.LoadLastSeason();
-        if (lastSeason == null) return new ChatDetailsEnrichment(null, 0, null);
-        var season = lastSeason.Id;
+        try
+        {
+            var lastSeason = await _matchRepository.LoadLastSeason();
+            if (lastSeason == null) return new ChatDetailsEnrichment(null, 0, null);
+            var season = lastSeason.Id;
 
-        var stats = await _playerRepository.LoadGameModeStatPerGateway(battleTag, season);
-        var gamesPlayed = stats.Sum(s => s.Games);
+            var statsTask = _playerRepository.LoadGameModeStatPerGateway(battleTag, season);
+            var ranksTask = _rankRepository.LoadRanksForPlayers(new List<string> { battleTag }, season);
+            var constellationsTask = _rankRepository.LoadLeagueConstellation(season);
+            await Task.WhenAll(statsTask, ranksTask, constellationsTask);
 
-        var ranks = await _rankRepository.LoadRanksForPlayers(new List<string> { battleTag }, season);
-        var constellations = await _rankRepository.LoadLeagueConstellation(season);
+            var gamesPlayed = statsTask.Result.Sum(s => s.Games);
 
-        return new ChatDetailsEnrichment(SelectBestRank(ranks, constellations), gamesPlayed, season);
+            return new ChatDetailsEnrichment(SelectBestRank(ranksTask.Result, constellationsTask.Result), gamesPlayed, season);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to load chat-details enrichment for {BattleTag}", battleTag);
+            return new ChatDetailsEnrichment(null, 0, null);
+        }
     }
 
     // Best = lowest league Order (0 = highest league); ties broken by lowest RankNumber, then

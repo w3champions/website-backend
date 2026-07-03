@@ -220,7 +220,7 @@ public class ChatDetailsDto(string clanId, ProfilePicture profilePicture, ChatCo
 
     /// <summary>Best current-season ladder rank (see ChatRank). Null = unranked this season.</summary>
     public ChatRank Rank { get; } = rank;
-    /// <summary>Total current-season ladder games across all gateways, modes and races. 0 = none.</summary>
+    /// <summary>Total current-season ladder games across all gateways and modes. 0 = none.</summary>
     public int GamesPlayed { get; } = gamesPlayed;
     /// <summary>Season the enrichment was resolved for; null only when no season exists at all.</summary>
     public int? Season { get; } = season;

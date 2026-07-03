@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Moq;
@@ -159,5 +160,21 @@ public class ChatDetailsQueryHandlerTests
         Assert.That(enrichment.Rank.LeagueId, Is.EqualTo(3));
         Assert.That(enrichment.Rank.LeagueName, Is.EqualTo("Diamond"));
         Assert.That(enrichment.Rank.RankNumber, Is.EqualTo(8));
+    }
+
+    [Test]
+    public void RepositoryThrows_ReturnsEmptyEnrichment_DoesNotPropagate()
+    {
+        var handler = CreateHandler();
+        _rankRepo.Setup(r => r.LoadRanksForPlayers(
+                It.Is<List<string>>(l => l.Count == 1 && l[0] == BattleTag), 5))
+            .ThrowsAsync(new Exception("boom"));
+
+        ChatDetailsEnrichment enrichment = null;
+        Assert.DoesNotThrowAsync(async () => enrichment = await handler.LoadEnrichment(BattleTag));
+
+        Assert.That(enrichment, Is.Not.Null);
+        Assert.That(enrichment.Rank, Is.Null);
+        Assert.That(enrichment.GamesPlayed, Is.EqualTo(0));
     }
 }
