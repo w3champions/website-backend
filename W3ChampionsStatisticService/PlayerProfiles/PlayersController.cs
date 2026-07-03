@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PersonalSettings;
+using W3ChampionsStatisticService.PlayerProfiles.ChatDetails;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
@@ -27,7 +28,8 @@ public class PlayersController(
     IClanRepository clanRepository,
     PlayerAkaProvider playerAkaProvider,
     PlayerService playerService,
-    IBattleTagResolver battleTagResolver) : ControllerBase
+    IBattleTagResolver battleTagResolver,
+    ChatDetailsQueryHandler chatDetailsQueryHandler) : ControllerBase
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
     private readonly GameModeStatQueryHandler _queryHandler = queryHandler;
@@ -36,6 +38,7 @@ public class PlayersController(
     private readonly PlayerAkaProvider _playerAkaProvider = playerAkaProvider;
     private readonly PlayerService _playerService = playerService;
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
+    private readonly ChatDetailsQueryHandler _chatDetailsQueryHandler = chatDetailsQueryHandler;
 
     [HttpGet("global-search")]
     public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
@@ -65,7 +68,8 @@ public class PlayersController(
         return Ok(player);
     }
 
-    // Used by ChatService to get the clan and profile picture of a chat user
+    // Used by ChatService to get the clan, profile picture and current-season league/rank +
+    // games played of a chat user (chat-revamp contract §4; consumed by the chat user directory).
     [HttpGet("{battleTag}/clan-and-picture")]
     public async Task<IActionResult> GetClanAndPicture([FromRoute] string battleTag)
     {
@@ -78,7 +82,15 @@ public class PlayersController(
             Log.Information($"{battleTag} has no personal settings. Using a default.");
             profilePic = ProfilePicture.Default();
         }
-        return Ok(new ChatDetailsDto(playersClan?.ClanId, profilePic, settings?.SelectedChatColor, settings?.SelectedChatIcons));
+        var enrichment = await _chatDetailsQueryHandler.LoadEnrichment(battleTag);
+        return Ok(new ChatDetailsDto(
+            playersClan?.ClanId,
+            profilePic,
+            settings?.SelectedChatColor,
+            settings?.SelectedChatIcons,
+            enrichment.Rank,
+            enrichment.GamesPlayed,
+            enrichment.Season));
     }
 
     [HttpGet("clan-memberships")]
@@ -197,13 +209,21 @@ public class ClanMemberhipDto(string battleTag, string clanId, in DateTimeOffset
     public DateTimeOffset LastUpdated { get; } = lastUpdated;
 }
 
-public class ChatDetailsDto(string clanId, ProfilePicture profilePicture, ChatColor chatColor, List<ChatIcon> chatIcons)
+public class ChatDetailsDto(string clanId, ProfilePicture profilePicture, ChatColor chatColor, List<ChatIcon> chatIcons,
+    ChatRank rank = null, int gamesPlayed = 0, int? season = null)
 {
     public string ClanId { get; } = clanId;
     public ProfilePicture ProfilePicture { get; } = profilePicture;
 
     public ChatColor ChatColor { get; } = chatColor;
     public List<ChatIcon> ChatIcons { get; } = chatIcons;
+
+    /// <summary>Best current-season ladder rank (see ChatRank). Null = unranked this season.</summary>
+    public ChatRank Rank { get; } = rank;
+    /// <summary>Total current-season ladder games across all gateways, modes and races. 0 = none.</summary>
+    public int GamesPlayed { get; } = gamesPlayed;
+    /// <summary>Season the enrichment was resolved for; null only when no season exists at all.</summary>
+    public int? Season { get; } = season;
 }
 
 public class UserBrief(string battleTag, ProfilePicture profilePicture)

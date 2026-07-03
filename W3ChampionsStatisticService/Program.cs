@@ -179,6 +179,7 @@ builder.Services.AddInterceptedTransient<PortraitCommandHandler>();
 builder.Services.AddInterceptedTransient<MmrDistributionHandler>();
 builder.Services.AddInterceptedTransient<RankQueryHandler>();
 builder.Services.AddInterceptedTransient<GameModeStatQueryHandler>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.PlayerProfiles.ChatDetails.ChatDetailsQueryHandler>();
 builder.Services.AddInterceptedTransient<IClanRepository, ClanRepository>();
 builder.Services.AddInterceptedTransient<INewsRepository, NewsRepository>();
 builder.Services.AddInterceptedTransient<IPortraitRepository, PortraitRepository>();
