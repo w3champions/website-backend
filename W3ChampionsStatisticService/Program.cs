@@ -228,6 +228,15 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
 builder.Services.AddSingleton(PresenceSettings.FromEnvironment());
 
+// Relationship change-pings (fire-and-forget, HMAC-signed notifications to chat-service)
+ChatPingSettings chatPingSettings = ChatPingSettings.FromEnvironment();
+Log.Information(chatPingSettings.Enabled
+    ? "Chat relationship change-pings ENABLED → {ChatApiUrl}"
+    : "Chat relationship change-pings DISABLED (CHAT_INTERNAL_API_SECRET not set)",
+    chatPingSettings.ChatApiUrl); // the single startup line (AC5); never logs the secret
+builder.Services.AddSingleton(chatPingSettings);
+builder.Services.AddSingleton<IRelationshipChangeNotifier, RelationshipChangeNotifier>();
+
 // Common services (audit logging, optimistic concurrency)
 builder.Services.AddCommonServices();
 
