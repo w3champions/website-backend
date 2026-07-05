@@ -6,10 +6,12 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Serilog;
 using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.ChatService;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Services;
 using static W3ChampionsStatisticService.Filters.SignalRTraceContextFilter;
@@ -26,7 +28,8 @@ public class WebsiteBackendHub(
     IFriendCommandHandler friendCommandHandler,
     TracingService tracingService,
     IBattleTagResolver battleTagResolver,
-    PresenceSettings presenceSettings
+    PresenceSettings presenceSettings,
+    IRelationshipChangeNotifier relationshipChangeNotifier
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -56,6 +59,7 @@ public class WebsiteBackendHub(
     private readonly TracingService _tracingService = tracingService;
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
     private readonly PresenceSettings _presenceSettings = presenceSettings;
+    private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
 
 
     [NoTrace]
@@ -262,6 +266,7 @@ public class WebsiteBackendHub(
 
             currentUserFriendlist = await _friendCommandHandler.AddFriend(currentUserFriendlist, req.Sender);
             senderFriendlist = await _friendCommandHandler.AddFriend(senderFriendlist, req.Receiver);
+            TryNotifyRelationshipChange(RelationshipChangeType.FriendAdd, req.Receiver, req.Sender);
 
             List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Receiver);
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
@@ -365,6 +370,7 @@ public class WebsiteBackendHub(
 
             currentUserFriendlist.BlockedBattleTags.Add(req.Sender);
             await _friendCommandHandler.UpsertFriendList(currentUserFriendlist);
+            TryNotifyRelationshipChange(RelationshipChangeType.Block, req.Receiver, req.Sender);
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await Clients.Caller.SendAsync(
@@ -411,6 +417,7 @@ public class WebsiteBackendHub(
             CanBlock(friendList, battleTag);
             friendList.BlockedBattleTags.Add(battleTag);
             await _friendCommandHandler.UpsertFriendList(friendList);
+            TryNotifyRelationshipChange(RelationshipChangeType.Block, currentUser, battleTag);
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
                 friendList,
@@ -455,6 +462,7 @@ public class WebsiteBackendHub(
             friendList.BlockedBattleTags.Remove(itemToRemove);
 
             await _friendCommandHandler.UpsertFriendList(friendList);
+            TryNotifyRelationshipChange(RelationshipChangeType.Unblock, currentUser, battleTag);
 
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -498,6 +506,7 @@ public class WebsiteBackendHub(
 
             var otherUserFriendlist = await _friendCommandHandler.LoadFriendList(friend);
             otherUserFriendlist = await _friendCommandHandler.RemoveFriend(otherUserFriendlist, currentUser);
+            TryNotifyRelationshipChange(RelationshipChangeType.FriendRemove, currentUser, friend);
 
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -592,6 +601,15 @@ public class WebsiteBackendHub(
         {
             throw new ValidationException("You cannot block a player you are friends with.");
         }
+    }
+
+    // Best-effort chat-service cache-invalidation ping (spec §6/§14). NEVER throws and NEVER
+    // blocks: the notifier enqueues in the background; this guard is defense-in-depth so no
+    // notifier fault can convert a succeeded friend/block action into a user-visible error.
+    private void TryNotifyRelationshipChange(RelationshipChangeType type, string actor, string target)
+    {
+        try { _relationshipChangeNotifier.NotifyChange(type, actor, target); }
+        catch (Exception e) { Log.Warning(e, "Relationship change-ping dispatch failed: {Type} {Actor}/{Target}", type, actor, target); }
     }
 
     public override async Task OnDisconnectedAsync(Exception exception)
