@@ -23,6 +23,8 @@ public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         return friendlist;
     }
 
+    public Task<Friendlist> LoadFriendlistOrNull(string battleTag) => LoadFirst<Friendlist>(battleTag);
+
     public Task UpsertFriendlist(Friendlist friendlist)
     {
         return Upsert(friendlist, p => p.Id == friendlist.Id);
