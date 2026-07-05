@@ -170,6 +170,27 @@ public class RelationshipChangeNotifierTests
         Assert.That(requests, Has.Count.EqualTo(2));
     }
 
+    /// <summary>Regression test for a review finding: body construction (including
+    /// <c>ToWireLiteral</c>, which throws for any <see cref="RelationshipChangeType"/> outside its
+    /// four known cases) must happen INSIDE the per-attempt try/catch, not before the loop, so a
+    /// serialization/mapping failure is retried and logged like any other failure instead of
+    /// silently faulting the returned <see cref="Task"/> with zero HTTP attempts and zero logging.
+    /// Since the invalid enum value never changes between attempts, body construction throws on
+    /// EVERY attempt: attempt 1 is swallowed by the `attempt &lt; MaxAttempts` retry filter, attempt
+    /// 2 falls to the unconditional catch (logs once, returns) -- so no HTTP request is ever sent.</summary>
+    [Test]
+    public void SendWithRetryAsync_BodyConstructionThrowsForOutOfRangeEnum_NeverPropagates_AndSendsNoRequests()
+    {
+        var (factory, requests) = CreateFactory(_ => new HttpResponseMessage(HttpStatusCode.OK));
+        var notifier = new RelationshipChangeNotifier(factory.Object, EnabledSettings());
+        var outOfRangeType = (RelationshipChangeType)999;
+
+        Assert.DoesNotThrowAsync(async () =>
+            await notifier.SendWithRetryAsync(outOfRangeType, "Foo#1234", "Bar#5678"));
+
+        Assert.That(requests, Is.Empty);
+    }
+
     [Test]
     public void NotifyChange_Disabled_SendsNothing_AndDoesNotThrow()
     {

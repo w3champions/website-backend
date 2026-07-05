@@ -60,12 +60,11 @@ public class RelationshipChangeNotifier(IHttpClientFactory httpClientFactory, Ch
     /// </summary>
     public async Task SendWithRetryAsync(RelationshipChangeType type, string actor, string target)
     {
-        var body = JsonConvert.SerializeObject(new { type = ToWireLiteral(type), actor, target });
-
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
         {
             try
             {
+                var body = JsonConvert.SerializeObject(new { type = ToWireLiteral(type), actor, target });
                 var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
                 // Not wrapped in `using`: matches the ChatServiceClient idiom in this codebase
                 // (HttpRequestMessage is never explicitly disposed there either).
