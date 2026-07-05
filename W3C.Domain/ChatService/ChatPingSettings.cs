@@ -8,7 +8,9 @@ namespace W3C.Domain.ChatService;
 /// (<c>CHAT_API</c> — see <see cref="ChatServiceClient"/>) rather than introducing a second env
 /// var pointing at the same host. <see cref="Enabled"/> requires both a non-blank base URL and a
 /// non-blank shared secret; the secret has no fallback default, so an unset
-/// <c>CHAT_INTERNAL_API_SECRET</c> disables ping dispatch entirely (fail-closed, not fail-open).
+/// <c>CHAT_INTERNAL_API_SECRET</c> cleanly and safely disables ping dispatch entirely — the
+/// feature turns itself off, and an unset secret never results in an unsigned or malformed ping
+/// being sent.
 /// </summary>
 public class ChatPingSettings(string chatApiUrl, string secret)
 {
