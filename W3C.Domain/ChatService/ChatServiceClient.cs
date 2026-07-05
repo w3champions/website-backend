@@ -175,7 +175,7 @@ public class ChatServiceClient : IChatServiceClient
             }
         }
 
-        return [.. (page.Messages ?? [])
+        return [.. (page?.Messages ?? [])
             .Where(m => !m.Deleted && !m.Shadow)
             .Select(m => new ChatMessage
             {
@@ -192,11 +192,12 @@ public class ChatServiceClient : IChatServiceClient
     /// channelId for <paramref name="normalizedRoom"/>, or null if no Public channel matches.
     /// A Public row with a null or empty <c>Name</c> is skipped rather than cached, so one
     /// malformed row in the response can never throw and take down resolution for every other
-    /// (valid) room in the same pass.
+    /// (valid) room in the same pass. A non-conforming 200 whose body deserializes to a null array
+    /// is likewise treated as "no channels" rather than throwing.
     /// </summary>
     private async Task<string> ResolveChannelId(string normalizedRoom, string authorization)
     {
-        ModerationChannelDto[] channels = await GetModerationChannels(authorization);
+        ModerationChannelDto[] channels = await GetModerationChannels(authorization) ?? [];
         foreach (ModerationChannelDto channel in channels)
         {
             if (channel.Type == ChatChannelType.Public && !string.IsNullOrEmpty(channel.Name))

@@ -578,4 +578,40 @@ public class ChatServiceClientTests
 
         Assert.That(messages, Is.Empty);
     }
+
+    [Test]
+    public async Task GetChatRoomMessages_NullChannelsListResponse_ReturnsEmptyArrayWithoutThrowing()
+    {
+        // A non-conforming 200 whose body deserializes to a null array (e.g. literal JSON "null")
+        // must degrade to "no channels" rather than NRE inside ResolveChannelId's foreach.
+        var (factory, requests) = CreateRoutingFactory(_ => JsonResponse(HttpStatusCode.OK, "null"));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        var messages = await client.GetChatRoomMessages("W3C Lounge", "token-abc");
+
+        Assert.That(messages, Is.Empty);
+        Assert.That(requests, Has.Count.EqualTo(1));
+        Assert.That(requests[0].RequestUri!.AbsolutePath, Is.EqualTo("/api/moderation/channels"));
+    }
+
+    [Test]
+    public async Task GetChatRoomMessages_NullMessagePageResponse_ReturnsEmptyArrayWithoutThrowing()
+    {
+        // A non-conforming 200 whose body deserializes to a null ModerationMessagePageDto (the page
+        // itself, not just page.Messages) must degrade to [] rather than NRE on `page.Messages`.
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+
+        var (factory, requests) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, "null")
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        var messages = await client.GetChatRoomMessages("W3C Lounge", "token-abc");
+
+        Assert.That(messages, Is.Empty);
+        Assert.That(requests, Has.Count.EqualTo(2));
+    }
 }
