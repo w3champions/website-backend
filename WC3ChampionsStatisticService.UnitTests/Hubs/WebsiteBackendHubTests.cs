@@ -835,7 +835,7 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
-    public async Task OnDisconnectedAsync_UnknownConnection_DoesNotThrow()
+    public void OnDisconnectedAsync_UnknownConnection_DoesNotThrow()
     {
         // Arrange: connection never completed authentication, so `connections.GetUser(...)` is null.
         // Pins the boyscout NRE fix: `user.BattleTag` used to be dereferenced outside the `user != null`
