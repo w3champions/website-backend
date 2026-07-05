@@ -82,6 +82,38 @@ public class ChatServiceClient
     }
 
     [NoTrace]
+    public async Task<ModerationChannelDto[]> GetModerationChannels(string authorization)
+    {
+        string url = $"{ChatServiceApiUrl}/api/moderation/channels?limit=500";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Authorization", $"Bearer {authorization}");
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
+        var deserializeObject = JsonConvert.DeserializeObject<ModerationChannelDto[]>(content);
+        return deserializeObject;
+    }
+
+    [NoTrace]
+    public async Task<ModerationMessagePageDto> GetModerationChannelMessages(string channelId, string authorization)
+    {
+        string url = $"{ChatServiceApiUrl}/api/moderation/channels/{channelId}/messages?limit=100";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Authorization", $"Bearer {authorization}");
+        HttpResponseMessage response = await _httpClient.SendAsync(request);
+        string content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(content, null, response.StatusCode);
+        }
+        var deserializeObject = JsonConvert.DeserializeObject<ModerationMessagePageDto>(content);
+        return deserializeObject;
+    }
+
+    [NoTrace]
     public async Task<ChatMessage[]> GetChatRoomMessages(string chatRoom, string authorization)
     {
         string url = $"{ChatServiceApiUrl}/api/chat/{chatRoom}";
