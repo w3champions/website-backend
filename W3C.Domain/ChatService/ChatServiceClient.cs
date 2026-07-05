@@ -14,7 +14,7 @@ using W3C.Domain.Tracing;
 
 namespace W3C.Domain.ChatService;
 
-public class ChatServiceClient
+public class ChatServiceClient : IChatServiceClient
 {
     private static readonly string ChatServiceApiUrl = Environment.GetEnvironmentVariable("CHAT_API") ?? "https://chat-service.test.w3champions.com";
     private readonly JsonSerializerSettings _jsonSerializerSettings;

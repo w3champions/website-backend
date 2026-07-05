@@ -209,7 +209,7 @@ builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
 builder.Services.AddInterceptedSingleton<ReplayServiceClient>();
 builder.Services.AddInterceptedTransient<MatchQueryHandler>();
-builder.Services.AddInterceptedSingleton<ChatServiceClient>();
+builder.Services.AddInterceptedSingleton<IChatServiceClient, ChatServiceClient>();
 builder.Services.AddInterceptedTransient<PlayerStatisticsService>();
 builder.Services.AddInterceptedTransient<PlayerService>();
 builder.Services.AddInterceptedTransient<MatchService>();

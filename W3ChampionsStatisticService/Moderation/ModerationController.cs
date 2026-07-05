@@ -14,9 +14,9 @@ namespace W3ChampionsStatisticService.Moderation;
 [ApiController]
 [Route("api/moderation")]
 [Trace]
-public class ModerationController(ChatServiceClient chatServiceClient) : ControllerBase
+public class ModerationController(IChatServiceClient chatServiceClient) : ControllerBase
 {
-    private readonly ChatServiceClient _chatServiceClient = chatServiceClient;
+    private readonly IChatServiceClient _chatServiceClient = chatServiceClient;
 
     [HttpGet("lounge-mute")]
     [InjectAuthToken]
