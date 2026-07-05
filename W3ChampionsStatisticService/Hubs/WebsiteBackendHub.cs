@@ -25,7 +25,8 @@ public class WebsiteBackendHub(
     IPersonalSettingsRepository personalSettingsRepository,
     IFriendCommandHandler friendCommandHandler,
     TracingService tracingService,
-    IBattleTagResolver battleTagResolver
+    IBattleTagResolver battleTagResolver,
+    PresenceSettings presenceSettings
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -54,6 +55,7 @@ public class WebsiteBackendHub(
     private readonly IFriendCommandHandler _friendCommandHandler = friendCommandHandler;
     private readonly TracingService _tracingService = tracingService;
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
+    private readonly PresenceSettings _presenceSettings = presenceSettings;
 
 
     [NoTrace]
@@ -598,14 +600,18 @@ public class WebsiteBackendHub(
         if (user != null)
         {
             _connections.Remove(Context.ConnectionId);
+            await NotifyFriendsWithIsOnline(user.BattleTag, false);
         }
 
-        await NotifyFriendsWithIsOnline(user.BattleTag, false);
         await base.OnDisconnectedAsync(exception);
     }
 
     private async Task NotifyFriendsWithIsOnline(string battleTag, bool isOnline)
     {
+        // Cutover-only retirement gate (Decision 10): chat-service's FriendPresenceChanged
+        // fully replaces this broadcast once the launcher fleet cuts over in I2.
+        if (_presenceSettings.RetireFriendOnlineStatus) return;
+
         var friendList = await _friendCommandHandler.LoadFriendList(battleTag);
         var onlineFriends = friendList
             .Friends.Where(tag => _connections.IsUserOnline(tag))

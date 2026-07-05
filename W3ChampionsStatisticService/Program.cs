@@ -226,6 +226,7 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
+builder.Services.AddSingleton(PresenceSettings.FromEnvironment());
 
 // Common services (audit logging, optimistic concurrency)
 builder.Services.AddCommonServices();
