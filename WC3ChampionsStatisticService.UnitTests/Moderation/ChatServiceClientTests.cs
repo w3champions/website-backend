@@ -507,4 +507,75 @@ public class ChatServiceClientTests
         Assert.That(requests, Has.Count.EqualTo(1));
         Assert.That(requests[0].RequestUri!.AbsolutePath, Is.EqualTo("/api/moderation/channels"));
     }
+
+    [TestCase(true)]  // Public row listed first
+    [TestCase(false)] // SemiPublic row listed first
+    public async Task GetChatRoomMessages_PublicAndNonPublicNameCollision_PublicChannelIdWins(bool publicFirst)
+    {
+        const string publicRow = """{ "id": "ch-public", "name": "W3C Lounge", "type": 0 }""";
+        const string semiPublicRow = """{ "id": "ch-semi", "name": "W3C Lounge", "type": 1 }""";
+        string channelsJson = publicFirst
+            ? $"[ {publicRow}, {semiPublicRow} ]"
+            : $"[ {semiPublicRow}, {publicRow} ]";
+        const string messagesJson = """{ "messages": [], "nextBeforeSeq": null }""";
+
+        var (factory, requests) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        await client.GetChatRoomMessages("W3C Lounge", "token-abc");
+
+        // Regardless of list ordering, the Public row's channelId is the one used to fetch
+        // messages -- the SemiPublic row sharing the same name must never win the resolution.
+        Assert.That(requests, Has.Count.EqualTo(2));
+        Assert.That(requests[1].RequestUri!.PathAndQuery, Is.EqualTo("/api/moderation/channels/ch-public/messages?limit=100"));
+    }
+
+    [Test]
+    public async Task GetChatRoomMessages_MalformedPublicRowWithNullName_SkippedWithoutBreakingOtherRooms()
+    {
+        const string channelsJson = """
+        [
+          { "id": "ch-bad", "name": null, "type": 0 },
+          { "id": "ch1", "name": "W3C Lounge", "type": 0 }
+        ]
+        """;
+        const string messagesJson = """{ "messages": [], "nextBeforeSeq": null }""";
+
+        var (factory, requests) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        // A single malformed Public row (null name) must not throw and must not poison the cache
+        // build for the other, valid Public row also present in the same response.
+        var messages = await client.GetChatRoomMessages("W3C Lounge", "token-abc");
+
+        Assert.That(messages, Is.Empty);
+        Assert.That(requests, Has.Count.EqualTo(2));
+        Assert.That(requests[1].RequestUri!.PathAndQuery, Is.EqualTo("/api/moderation/channels/ch1/messages?limit=100"));
+    }
+
+    [Test]
+    public async Task GetChatRoomMessages_NullMessagesArrayInPage_ReturnsEmptyArrayWithoutThrowing()
+    {
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+        const string messagesJson = """{ "messages": null, "nextBeforeSeq": null }""";
+
+        var (factory, _) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        var messages = await client.GetChatRoomMessages("W3C Lounge", "token-abc");
+
+        Assert.That(messages, Is.Empty);
+    }
 }

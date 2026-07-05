@@ -175,7 +175,7 @@ public class ChatServiceClient
             }
         }
 
-        return [.. page.Messages
+        return [.. (page.Messages ?? [])
             .Where(m => !m.Deleted && !m.Shadow)
             .Select(m => new ChatMessage
             {
@@ -190,13 +190,16 @@ public class ChatServiceClient
     /// Refreshes the name→channelId cache from a fresh <see cref="GetModerationChannels"/> call
     /// (caching every returned Public channel, not just the one being looked up) and returns the
     /// channelId for <paramref name="normalizedRoom"/>, or null if no Public channel matches.
+    /// A Public row with a null or empty <c>Name</c> is skipped rather than cached, so one
+    /// malformed row in the response can never throw and take down resolution for every other
+    /// (valid) room in the same pass.
     /// </summary>
     private async Task<string> ResolveChannelId(string normalizedRoom, string authorization)
     {
         ModerationChannelDto[] channels = await GetModerationChannels(authorization);
         foreach (ModerationChannelDto channel in channels)
         {
-            if (channel.Type == ChatChannelType.Public)
+            if (channel.Type == ChatChannelType.Public && !string.IsNullOrEmpty(channel.Name))
             {
                 _chatRoomChannelIdCache[channel.Name.ToLowerInvariant()] = channel.Id;
             }
