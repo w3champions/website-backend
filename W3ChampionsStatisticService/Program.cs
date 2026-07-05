@@ -193,6 +193,7 @@ builder.Services.AddInterceptedTransient<InjectActingPlayerFromAuthCodeFilter>()
 builder.Services.AddInterceptedTransient<BearerHasPermissionFilter>();
 builder.Services.AddInterceptedTransient<InjectAuthTokenFilter>();
 builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
+builder.Services.AddInterceptedTransient<ChatServiceSecretAuthFilter>();
 
 // Turnstile service for captcha verification
 builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
@@ -236,6 +237,14 @@ Log.Information(chatPingSettings.Enabled
     chatPingSettings.ChatApiUrl); // the single startup line (AC5); never logs the secret
 builder.Services.AddSingleton(chatPingSettings);
 builder.Services.AddSingleton<IRelationshipChangeNotifier, RelationshipChangeNotifier>();
+
+// Inbound fail-closed auth guard for the friends/blocked-lists endpoint chat-service calls
+ChatRelationshipsAuthSettings chatRelationshipsAuthSettings = ChatRelationshipsAuthSettings.FromEnvironment();
+if (!chatRelationshipsAuthSettings.Configured)
+{
+    Log.Warning("chat-relationships endpoint LOCKED: CHAT_RELATIONSHIPS_API_SECRET not set — all requests will be rejected 401");
+}
+builder.Services.AddSingleton(chatRelationshipsAuthSettings);
 
 // Common services (audit logging, optimistic concurrency)
 builder.Services.AddCommonServices();
