@@ -6,10 +6,13 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Serilog;
 using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Sessions;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3C.Domain.ChatService;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Services;
 using static W3ChampionsStatisticService.Filters.SignalRTraceContextFilter;
@@ -18,14 +21,15 @@ namespace W3ChampionsStatisticService.Hubs;
 
 [Trace]
 public class WebsiteBackendHub(
-    IW3CAuthenticationService authenticationService,
     ConnectionMapping connections,
     IHttpContextAccessor contextAccessor,
     IFriendRequestCache friendRequestCache,
     IPersonalSettingsRepository personalSettingsRepository,
     IFriendCommandHandler friendCommandHandler,
     TracingService tracingService,
-    IBattleTagResolver battleTagResolver
+    IBattleTagResolver battleTagResolver,
+    IRelationshipChangeNotifier relationshipChangeNotifier,
+    ITicketStore ticketStore
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -46,7 +50,6 @@ public class WebsiteBackendHub(
         }
     }
 
-    private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
     private readonly IFriendRequestCache _friendRequestCache = friendRequestCache;
@@ -54,6 +57,8 @@ public class WebsiteBackendHub(
     private readonly IFriendCommandHandler _friendCommandHandler = friendCommandHandler;
     private readonly TracingService _tracingService = tracingService;
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
+    private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
+    private readonly ITicketStore _ticketStore = ticketStore;
 
 
     [NoTrace]
@@ -61,8 +66,21 @@ public class WebsiteBackendHub(
     {
         await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
-            var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"];
-            W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
+            // TICKET-ONLY auth (WB-1). The launcher is this hub's SOLE client; the browser website
+            // never connects here (it has had zero SignalR since PR #122 — browsers use REST +
+            // Authorization: Bearer <JWT> and never open this WebSocket). So, exactly like
+            // chat-service's hub, this is a HARD CUTOVER to single-use tickets with NO raw-JWT
+            // fallback: access_token MUST be a one-time 60s ticket minted by POST /auth/session;
+            // TryConsume burns it once and yields the validated identity. A missing / invalid /
+            // already-consumed ticket is rejected below. The cutover is lock-step with the forced
+            // launcher update — launchers that have not yet updated lose wb-hub friends/presence
+            // until they update in that coordinated window.
+            var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"].ToString();
+            W3CUserAuthenticationDto w3cUserAuthentication = null;
+            if (!string.IsNullOrEmpty(accessToken) && _ticketStore.TryConsume(accessToken, DateTime.UtcNow, out var ticketIdentity))
+            {
+                w3cUserAuthentication = ticketIdentity;
+            }
             if (w3cUserAuthentication == null)
             {
                 await Clients.Caller.SendAsync("AuthorizationFailed");
@@ -71,7 +89,6 @@ public class WebsiteBackendHub(
             }
             WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
             await LoginAsAuthenticated(user);
-            await NotifyFriendsWithIsOnline(user.BattleTag, true);
         }, forceNewRoot: true);
         await base.OnConnectedAsync();
     }
@@ -260,6 +277,7 @@ public class WebsiteBackendHub(
 
             currentUserFriendlist = await _friendCommandHandler.AddFriend(currentUserFriendlist, req.Sender);
             senderFriendlist = await _friendCommandHandler.AddFriend(senderFriendlist, req.Receiver);
+            TryNotifyRelationshipChange(RelationshipChangeType.FriendAdd, req.Receiver, req.Sender);
 
             List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Receiver);
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
@@ -363,6 +381,7 @@ public class WebsiteBackendHub(
 
             currentUserFriendlist.BlockedBattleTags.Add(req.Sender);
             await _friendCommandHandler.UpsertFriendList(currentUserFriendlist);
+            TryNotifyRelationshipChange(RelationshipChangeType.Block, req.Receiver, req.Sender);
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await Clients.Caller.SendAsync(
@@ -409,6 +428,7 @@ public class WebsiteBackendHub(
             CanBlock(friendList, battleTag);
             friendList.BlockedBattleTags.Add(battleTag);
             await _friendCommandHandler.UpsertFriendList(friendList);
+            TryNotifyRelationshipChange(RelationshipChangeType.Block, currentUser, battleTag);
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
                 friendList,
@@ -453,6 +473,7 @@ public class WebsiteBackendHub(
             friendList.BlockedBattleTags.Remove(itemToRemove);
 
             await _friendCommandHandler.UpsertFriendList(friendList);
+            TryNotifyRelationshipChange(RelationshipChangeType.Unblock, currentUser, battleTag);
 
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -496,6 +517,7 @@ public class WebsiteBackendHub(
 
             var otherUserFriendlist = await _friendCommandHandler.LoadFriendList(friend);
             otherUserFriendlist = await _friendCommandHandler.RemoveFriend(otherUserFriendlist, currentUser);
+            TryNotifyRelationshipChange(RelationshipChangeType.FriendRemove, currentUser, friend);
 
             await Clients.Caller.SendAsync(
                 FriendResponseType.FriendResponseData.ToString(),
@@ -592,6 +614,15 @@ public class WebsiteBackendHub(
         }
     }
 
+    // Best-effort chat-service cache-invalidation ping (spec §6/§14). NEVER throws and NEVER
+    // blocks: the notifier enqueues in the background; this guard is defense-in-depth so no
+    // notifier fault can convert a succeeded friend/block action into a user-visible error.
+    private void TryNotifyRelationshipChange(RelationshipChangeType type, string actor, string target)
+    {
+        try { _relationshipChangeNotifier.NotifyChange(type, actor, target); }
+        catch (Exception e) { Log.Warning(e, "Relationship change-ping dispatch failed: {Type} {Actor}/{Target}", type, actor, target); }
+    }
+
     public override async Task OnDisconnectedAsync(Exception exception)
     {
         var user = _connections.GetUser(Context.ConnectionId);
@@ -600,18 +631,6 @@ public class WebsiteBackendHub(
             _connections.Remove(Context.ConnectionId);
         }
 
-        await NotifyFriendsWithIsOnline(user.BattleTag, false);
         await base.OnDisconnectedAsync(exception);
-    }
-
-    private async Task NotifyFriendsWithIsOnline(string battleTag, bool isOnline)
-    {
-        var friendList = await _friendCommandHandler.LoadFriendList(battleTag);
-        var onlineFriends = friendList
-            .Friends.Where(tag => _connections.IsUserOnline(tag))
-            .Select(tag => _connections.GetConnectionId(tag))
-            .SelectMany(connection => connection);
-
-        await Clients.Clients(onlineFriends).SendAsync(FriendResponseType.FriendOnlineStatus.ToString(), battleTag, isOnline);
     }
 }

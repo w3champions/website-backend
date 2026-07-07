@@ -1,0 +1,45 @@
+# Use this docker-compose file to run website-backend (statistic-service) locally, wired to a
+# locally-run chat-service (feat/chat-revamp).
+#
+# Joins the shared external network `w3c-network-local` (create once:
+# `docker network create w3c-network-local`) so it reaches chat-service and matchmaking-service by
+# container name; a locally-run launcher reaches it at http://127.0.0.1:6123. Auth is hybrid — log
+# in through the TEST identification-service and this service validates the JWT with the public key
+# in ./environments/local-compose.env, where all env config lives.
+#
+#   docker compose up -d --build
+name: w3champions-statistic-service-dev
+services:
+  w3champions-statistic-service-dev:
+    container_name: w3champions-statistic-service-dev
+    depends_on:
+      - mongo-db
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "127.0.0.1:6123:80"
+    env_file:
+      - ./environments/local-compose.env
+
+  mongo-db:
+    image: mongo:8.0.19
+    container_name: mongodb-website-backend-local-compose
+    restart: always
+    ports:
+      - "127.0.0.1:3510:27017"
+    command: --wiredTigerCacheSizeGB=1
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=w3champions
+      - MONGO_INITDB_ROOT_PASSWORD=w3champions
+    volumes:
+      - vol-mongodb-website-backend-local-compose:/data/db
+
+networks:
+  default:
+    name: w3c-network-local
+    external: true
+
+volumes:
+  vol-mongodb-website-backend-local-compose:

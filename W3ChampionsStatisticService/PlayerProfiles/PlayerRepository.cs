@@ -18,8 +18,47 @@ using System;
 namespace W3ChampionsStatisticService.PlayerProfiles;
 
 [Trace]
-public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository
+public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPlayerRepository, IRequiresIndexes
 {
+    public string CollectionName => nameof(PlayerGameModeStatPerGateway);
+
+    private IMongoCollection<PlayerGameModeStatPerGateway> GameModeStatPerGatewayCollection
+        => CreateCollection<PlayerGameModeStatPerGateway>();
+
+    /// <summary>
+    /// Indexes for the <c>PlayerGameModeStatPerGateway</c> collection (649k+ docs in prod).
+    /// <see cref="LoadGameModeStatPerGateway(string, int)"/> is called once per chat user
+    /// rendered (GET /api/players/{battleTag}/clan-and-picture -> ChatDetailsQueryHandler),
+    /// making it a high-frequency, latency-sensitive lookup. Both indexes below already exist
+    /// in prod (provisioned out-of-band) - they are declared here, with an EXACT name/key
+    /// match, purely so they are code-managed and can't silently disappear on a fresh/rebuilt
+    /// environment (which would degrade the lookup to a full collection scan).
+    /// </summary>
+    public async Task EnsureIndexesAsync()
+    {
+        var indexes = new List<CreateIndexModel<PlayerGameModeStatPerGateway>>
+        {
+            // Serves LoadGameModeStatPerGateway(battleTag, season) as a prefix match
+            // (PlayerIds.BattleTag equality + Season equality, GateWay skip-scanned in
+            // the middle), plus the sibling LoadGameModeStatPerGateway(battleTag, gateWay, season)
+            // overload as an exact match.
+            new(
+                Builders<PlayerGameModeStatPerGateway>.IndexKeys
+                    .Ascending("PlayerIds.BattleTag")
+                    .Ascending(x => x.GateWay)
+                    .Ascending(x => x.Season),
+                new CreateIndexOptions { Name = "battleTag_gw_season", Background = true }),
+
+            new(
+                Builders<PlayerGameModeStatPerGateway>.IndexKeys
+                    .Ascending(x => x.GateWay)
+                    .Descending(x => x.Season),
+                new CreateIndexOptions { Name = "ix_gateway_season", Background = true }),
+        };
+
+        await GameModeStatPerGatewayCollection.Indexes.CreateManyAsync(indexes);
+    }
+
     private readonly Dictionary<string, (DateTime cacheTime, List<int> mmrs)> _mmrsCache = new();
     private readonly Dictionary<GameMode, (int? maxMmr, DateTime cacheTime)> _maxMmrCache = new();
 
@@ -126,6 +165,13 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         return LoadAll<PlayerGameModeStatPerGateway>(t =>
             t.PlayerIds.Any(player => player.BattleTag == battleTag) &&
             t.GateWay == gateWay &&
+            t.Season == season);
+    }
+
+    public Task<List<PlayerGameModeStatPerGateway>> LoadGameModeStatPerGateway(string battleTag, int season)
+    {
+        return LoadAll<PlayerGameModeStatPerGateway>(t =>
+            t.PlayerIds.Any(player => player.BattleTag == battleTag) &&
             t.Season == season);
     }
 

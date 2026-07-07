@@ -334,3 +334,8 @@ ASALocalRun/
 
 # direnv file
 .envrc
+
+# Local-dev compose env (environments/local-compose.env) is committed with placeholder values only.
+# Real test/prod env files (created locally with real secrets) are ignored so they never get committed.
+environments/*.env
+!environments/local-compose.env

@@ -10,10 +10,13 @@ using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.Filters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.Sessions;
+using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.Features;
 using NUnit.Framework;
+using W3C.Domain.ChatService;
 
 // Minimal in-memory implementations for testing (no inheritance)
 public class TestFriendListCache
@@ -94,7 +97,6 @@ public class FakeFriendRequestCache : IFriendRequestCache
 
 public class WebsiteBackendHubTests
 {
-    private Mock<IW3CAuthenticationService> authService;
     private ConnectionMapping connections;
     private Mock<IHttpContextAccessor> contextAccessor;
     private FakeFriendRequestCache friendRequestCache;
@@ -104,12 +106,14 @@ public class WebsiteBackendHubTests
     private TracingService tracingService;
     private Mock<IHubCallerClients> mockClients;
     private Mock<ISingleClientProxy> mockCaller;
+    private Mock<IClientProxy> mockFriendsProxy;
     private Mock<IBattleTagResolver> _battleTagResolverMock;
+    private Mock<IRelationshipChangeNotifier> relationshipNotifier;
+    private TicketStore ticketStore;
 
     [SetUp]
     public void SetUp()
     {
-        authService = new Mock<IW3CAuthenticationService>();
         connections = new ConnectionMapping();
         contextAccessor = new Mock<IHttpContextAccessor>();
         friendRequestCache = new FakeFriendRequestCache();
@@ -120,25 +124,30 @@ public class WebsiteBackendHubTests
         mockClients = new Mock<IHubCallerClients>();
         mockCaller = new Mock<ISingleClientProxy>();
         mockClients.Setup(clients => clients.Caller).Returns(mockCaller.Object);
+        mockFriendsProxy = new Mock<IClientProxy>();
+        mockClients.Setup(clients => clients.Clients(It.IsAny<IReadOnlyList<string>>())).Returns(mockFriendsProxy.Object);
         _battleTagResolverMock = new Mock<IBattleTagResolver>();
         // Default: every BattleTag resolves as canonical (returns input unchanged).
         // Individual tests override this for non-canonical or not-found scenarios.
         _battleTagResolverMock
             .Setup(r => r.ResolveCanonical(It.IsAny<string>()))
             .ReturnsAsync((string input) => input);
+        relationshipNotifier = new Mock<IRelationshipChangeNotifier>();
+        ticketStore = new TicketStore();
     }
 
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
     {
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCache,
             personalSettingsRepo.Object,
             friendCommandHandler,
             tracingService,
-            _battleTagResolverMock.Object
+            _battleTagResolverMock.Object,
+            relationshipNotifier.Object,
+            ticketStore
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         return hub;
@@ -454,14 +463,15 @@ public class WebsiteBackendHubTests
 
         // Build hub with the mock IFriendRequestCache instead of friendRequestCache
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
             personalSettingsRepo.Object,
             friendCommandHandlerMock.Object,
             tracingService,
-            _battleTagResolverMock.Object
+            _battleTagResolverMock.Object,
+            relationshipNotifier.Object,
+            ticketStore
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -512,14 +522,15 @@ public class WebsiteBackendHubTests
             .ReturnsAsync("Sender#9999");
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
             personalSettingsRepo.Object,
             friendCommandHandlerMock.Object,
             tracingService,
-            _battleTagResolverMock.Object
+            _battleTagResolverMock.Object,
+            relationshipNotifier.Object,
+            ticketStore
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -573,14 +584,15 @@ public class WebsiteBackendHubTests
             .ReturnsAsync("Sender#9999");
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
             personalSettingsRepo.Object,
             friendCommandHandlerMock.Object,
             tracingService,
-            _battleTagResolverMock.Object
+            _battleTagResolverMock.Object,
+            relationshipNotifier.Object,
+            ticketStore
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -629,14 +641,15 @@ public class WebsiteBackendHubTests
             .ReturnsAsync("Receiver#9999");
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
             personalSettingsRepo.Object,
             friendCommandHandlerMock.Object,
             tracingService,
-            _battleTagResolverMock.Object
+            _battleTagResolverMock.Object,
+            relationshipNotifier.Object,
+            ticketStore
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -686,6 +699,486 @@ public class WebsiteBackendHubTests
 
         // Assert: CreateFriendRequest was called (flow proceeded)
         friendCommandHandlerMock.Verify(h => h.CreateFriendRequest(It.IsAny<FriendRequest>()), Times.Once);
+    }
+
+    [Test]
+    public async Task OnDisconnectedAsync_NeverEmitsFriendOnlineStatus()
+    {
+        // Arrange: "User#1234" is connected and has "Friend#5678" (also connected) as a friend.
+        // Presence is now owned entirely by chat-service's FriendPresenceChanged; the hub must
+        // never broadcast the legacy "FriendOnlineStatus" event, on any proxy.
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("Friend#5678");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
+
+        SetHubContext(hub, "conn1");
+
+        // Act
+        await hub.OnDisconnectedAsync(null);
+
+        // Assert: no FriendOnlineStatus emission anywhere, but connection-mapping bookkeeping
+        // still happened (ConnectionMapping still drives friends-CRUD push).
+        mockFriendsProxy.Verify(
+            p => p.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
+            Times.Never
+        );
+        mockCaller.Verify(
+            c => c.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
+            Times.Never
+        );
+        Assert.That(connections.GetUser("conn1"), Is.Null);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_NeverEmitsFriendOnlineStatus()
+    {
+        // Arrange: "Friend#5678" is already online; "User#1234" (its friend) connects. The
+        // handshake ("Connected") must still fire, but the legacy presence broadcast must not.
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("Friend#5678");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+
+        connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
+
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "User#1234" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn1");
+
+        // Act
+        await hub.OnConnectedAsync();
+
+        // Assert
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
+        mockFriendsProxy.Verify(
+            p => p.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
+            Times.Never
+        );
+        mockCaller.Verify(
+            c => c.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
+            Times.Never
+        );
+    }
+
+    [Test]
+    public void OnDisconnectedAsync_UnknownConnection_DoesNotThrow()
+    {
+        // Arrange: connection never completed authentication, so `connections.GetUser(...)` is null.
+        // Pins the boyscout NRE fix: `user.BattleTag` used to be dereferenced outside the `user != null`
+        // guard, so this used to throw a NullReferenceException.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        SetHubContext(hub, "never-authenticated-conn");
+
+        // Act + Assert
+        Assert.DoesNotThrowAsync(async () => await hub.OnDisconnectedAsync(null));
+    }
+
+    // --- Relationship change-ping wiring (Task 3) ---------------------------------------------
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_FiresExactlyOneFriendAddPing()
+    {
+        var friendList = new Friendlist("Receiver#1");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var req = new FriendRequest("Sender#1", "Receiver#1");
+        friendRequestCache.AddRequest(req);
+        friendRequestCache.AddRequest(new FriendRequest("Receiver#1", "Sender#1"));
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.AcceptIncomingFriendRequest(req);
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(RelationshipChangeType.FriendAdd, "Receiver#1", "Sender#1"),
+            Times.Once
+        );
+        // No double-ping from the mutual add (only one ping call total, for ANY args).
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task RemoveFriend_FiresExactlyOneFriendRemovePing()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("Friend#5678");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.RemoveFriend("Friend#5678");
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(RelationshipChangeType.FriendRemove, "User#1234", "Friend#5678"),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task BlockPlayer_FiresBlockPing()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.BlockPlayer("Blocked#5678");
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(RelationshipChangeType.Block, "User#1234", "Blocked#5678"),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task BlockIncomingFriendRequest_FiresBlockPing()
+    {
+        var friendList = new Friendlist("Receiver#1");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var req = new FriendRequest("Sender#1", "Receiver#1");
+        friendRequestCache.AddRequest(req);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.BlockIncomingFriendRequest(req);
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(RelationshipChangeType.Block, "Receiver#1", "Sender#1"),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task UnblockFriendRequestsFromPlayer_FiresUnblockPing()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.Add("Blocked#5678");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.UnblockFriendRequestsFromPlayer("Blocked#5678");
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(RelationshipChangeType.Unblock, "User#1234", "Blocked#5678"),
+            Times.Once
+        );
+    }
+
+    [TestCase("MakeFriendRequest", "Sender#1")]
+    [TestCase("DenyIncomingFriendRequest", "Receiver#1")]
+    [TestCase("DeleteOutgoingFriendRequest", "Sender#1")]
+    public async Task MakeFriendRequest_DenyIncoming_DeleteOutgoing_NeverPing(string methodName, string userBattleTag)
+    {
+        personalSettingsRepo.Setup(r => r.Find(It.IsAny<string>())).ReturnsAsync(new PersonalSetting("Receiver#1"));
+
+        var friendList = new Friendlist(userBattleTag);
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var req = new FriendRequest("Sender#1", "Receiver#1");
+        if (methodName != "MakeFriendRequest")
+        {
+            friendRequestCache.AddRequest(req);
+        }
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = userBattleTag, ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        var method = typeof(WebsiteBackendHub).GetMethod(methodName);
+        await (Task)method.Invoke(hub, new object[] { req });
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    [Test]
+    public async Task BlockPlayer_AlreadyBlocked_NoPing()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.Add("Blocked#5678");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        // CanBlock throws (already blocked) before any persistence happens.
+        await hub.BlockPlayer("Blocked#5678");
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        mockCaller.Verify(
+            c => c.SendCoreAsync(
+                It.Is<string>(s => s.Contains("FriendResponseMessage")),
+                It.IsAny<object[]>(),
+                default
+            ),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task BlockPlayer_PersistenceFails_NoPing()
+    {
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.UpsertFriendList(It.IsAny<Friendlist>()))
+            .ThrowsAsync(new System.Exception("db down"));
+
+        var hub = CreateHub(friendCommandHandlerMock.Object);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.BlockPlayer("Blocked#5678");
+
+        relationshipNotifier.Verify(
+            n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()),
+            Times.Never
+        );
+        mockCaller.Verify(
+            c => c.SendCoreAsync(
+                It.Is<string>(s => s.Contains("FriendResponseMessage")),
+                It.IsAny<object[]>(),
+                default
+            ),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_PingFiresAfterBothUpserts()
+    {
+        var order = new List<string>();
+
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.DeleteFriendRequest(It.IsAny<FriendRequest>()))
+            .Returns(Task.CompletedTask);
+        friendCommandHandlerMock
+            .Setup(h => h.AddFriend(It.IsAny<Friendlist>(), It.IsAny<string>()))
+            .Returns<Friendlist, string>((fl, bt) =>
+            {
+                order.Add("persist");
+                return Task.FromResult(fl);
+            });
+
+        var friendRequestCacheMock = new Mock<IFriendRequestCache>();
+        var storedReq = new FriendRequest("Sender#1", "Receiver#1");
+        var reciprocalReq = new FriendRequest("Receiver#1", "Sender#1");
+        friendRequestCacheMock
+            .Setup(c => c.LoadFriendRequest(It.Is<FriendRequest>(r => r.Sender == "Sender#1" && r.Receiver == "Receiver#1")))
+            .ReturnsAsync(storedReq);
+        friendRequestCacheMock
+            .Setup(c => c.LoadFriendRequest(It.Is<FriendRequest>(r => r.Sender == "Receiver#1" && r.Receiver == "Sender#1")))
+            .ReturnsAsync(reciprocalReq);
+        friendRequestCacheMock
+            .Setup(c => c.LoadSentFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new List<FriendRequest>());
+        friendRequestCacheMock
+            .Setup(c => c.LoadReceivedFriendRequests(It.IsAny<string>()))
+            .ReturnsAsync(new List<FriendRequest>());
+
+        relationshipNotifier
+            .Setup(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Callback(() => order.Add("ping"));
+
+        var hub = new WebsiteBackendHub(
+            connections,
+            contextAccessor.Object,
+            friendRequestCacheMock.Object,
+            personalSettingsRepo.Object,
+            friendCommandHandlerMock.Object,
+            tracingService,
+            _battleTagResolverMock.Object,
+            relationshipNotifier.Object,
+            ticketStore
+        );
+        typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        var req = new FriendRequest("Sender#1", "Receiver#1");
+
+        await hub.AcceptIncomingFriendRequest(req);
+
+        Assert.That(order, Is.EqualTo(new[] { "persist", "persist", "ping" }));
+    }
+
+    [Test]
+    public void BlockPlayer_ThrowingNotifier_UserVisibleBehaviorUnchanged()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        relationshipNotifier
+            .Setup(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Throws(new System.Exception("notifier boom"));
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        Assert.DoesNotThrowAsync(async () => await hub.BlockPlayer("Blocked#5678"));
+
+        Assert.That(friendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
+        mockCaller.Verify(
+            c => c.SendCoreAsync(
+                It.Is<string>(s => s.Contains("FriendResponseData")),
+                It.IsAny<object[]>(),
+                default
+            ),
+            Times.Once
+        );
+    }
+
+    // --- Ticket-only auth on OnConnectedAsync (WB-1: hard cutover, no raw-JWT fallback) ----------
+    // The launcher is this hub's SOLE client; browsers use REST + Bearer and never open this
+    // WebSocket. A raw JWT (or any non-ticket string) MUST be rejected — there is no fallback.
+
+    [Test]
+    public async Task OnConnectedAsync_ValidTicket_ConnectsWithTicketIdentity()
+    {
+        // Arrange: a one-time ticket is minted into the SHARED store; the hub must consume it and
+        // adopt the ticket's identity. There is no JWT path at all — the hub is ticket-only.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn1");
+
+        // Act
+        await hub.OnConnectedAsync();
+
+        // Assert: connected as the TICKET identity.
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
+        Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
+        // Single-use: the ticket must have been burned on consume.
+        Assert.IsFalse(ticketStore.TryConsume(ticket, DateTime.UtcNow, out _));
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_RawJwtNonTicket_Rejected_NoConnect()
+    {
+        // Arrange: access_token is a raw W3C JWT (or any string the ticket store does not recognize).
+        // The hub is ticket-only now — there is NO raw-JWT fallback — so this MUST be rejected:
+        // AuthorizationFailed + abort, never registered. This pins the removed dual-accept behavior.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString("?access_token=raw-jwt");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn1");
+
+        // Act
+        await hub.OnConnectedAsync();
+
+        // Assert: rejected, never connected, never registered.
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Never);
+        Assert.That(connections.GetUser("conn1"), Is.Null);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_MissingAccessToken_Rejected_NoConnect()
+    {
+        // Arrange: no access_token on the query string at all. Ticket-only means "no ticket → no
+        // connection": AuthorizationFailed + abort, never registered.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        var httpContext = new DefaultHttpContext();
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn1");
+
+        // Act
+        await hub.OnConnectedAsync();
+
+        // Assert: rejected, never connected, never registered.
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Never);
+        Assert.That(connections.GetUser("conn1"), Is.Null);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_ReplayedTicket_Rejected_NoSecondConnect()
+    {
+        // Arrange: a ticket is consumed by a first successful connect, then the SAME ticket is
+        // replayed on a second connect. Single-use must hold at the hub boundary, so a sniffed /
+        // replayed ticket cannot be reused: the second connect is rejected, never registered.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        // First connect consumes (burns) the ticket.
+        var firstHub = CreateHub(friendCommandHandler);
+        SetHubContext(firstHub, "conn1");
+        await firstHub.OnConnectedAsync();
+        Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
+
+        // Second connect replays the now-burned ticket.
+        var secondHub = CreateHub(friendCommandHandler);
+        SetHubContext(secondHub, "conn2");
+        await secondHub.OnConnectedAsync();
+
+        // Assert: replay rejected — the second connection was never registered.
+        Assert.That(connections.GetUser("conn2"), Is.Null);
     }
 
     // Helper mock for HubCallerContext

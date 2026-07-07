@@ -43,6 +43,7 @@ using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Common.Extensions;
 using W3ChampionsStatisticService.Rewards.Extensions;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.Sessions;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.Authorization;
@@ -161,6 +162,8 @@ builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
 // Ensure MatchRepository indexes are created at startup
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
+// Ensure PlayerRepository-owned PlayerGameModeStatPerGateway indexes are created at startup
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
@@ -179,6 +182,7 @@ builder.Services.AddInterceptedTransient<PortraitCommandHandler>();
 builder.Services.AddInterceptedTransient<MmrDistributionHandler>();
 builder.Services.AddInterceptedTransient<RankQueryHandler>();
 builder.Services.AddInterceptedTransient<GameModeStatQueryHandler>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.PlayerProfiles.ChatDetails.ChatDetailsQueryHandler>();
 builder.Services.AddInterceptedTransient<IClanRepository, ClanRepository>();
 builder.Services.AddInterceptedTransient<INewsRepository, NewsRepository>();
 builder.Services.AddInterceptedTransient<IPortraitRepository, PortraitRepository>();
@@ -192,6 +196,7 @@ builder.Services.AddInterceptedTransient<InjectActingPlayerFromAuthCodeFilter>()
 builder.Services.AddInterceptedTransient<BearerHasPermissionFilter>();
 builder.Services.AddInterceptedTransient<InjectAuthTokenFilter>();
 builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
+builder.Services.AddInterceptedTransient<ChatServiceSecretAuthFilter>();
 
 // Turnstile service for captcha verification
 builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
@@ -208,7 +213,7 @@ builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
 builder.Services.AddInterceptedSingleton<ReplayServiceClient>();
 builder.Services.AddInterceptedTransient<MatchQueryHandler>();
-builder.Services.AddInterceptedSingleton<ChatServiceClient>();
+builder.Services.AddInterceptedSingleton<IChatServiceClient, ChatServiceClient>();
 builder.Services.AddInterceptedTransient<PlayerStatisticsService>();
 builder.Services.AddInterceptedTransient<PlayerService>();
 builder.Services.AddInterceptedTransient<MatchService>();
@@ -225,6 +230,29 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
+
+// Auth ticket-mint session store + rate limiter (WB-1). SINGLETONS are load-bearing: the REST
+// endpoint (AuthSessionController) MINTS and the hub (WebsiteBackendHub.OnConnectedAsync) CONSUMES
+// against the SAME in-memory instance. Plain AddSingleton (no tracing interception) — infra state.
+builder.Services.AddSingleton<ITicketStore, TicketStore>();
+builder.Services.AddSingleton<MintRateLimiter>();
+
+// Relationship change-pings (fire-and-forget, HMAC-signed notifications to chat-service)
+ChatPingSettings chatPingSettings = ChatPingSettings.FromEnvironment();
+Log.Information(chatPingSettings.Enabled
+    ? "Chat relationship change-pings ENABLED → {ChatApiUrl}"
+    : "Chat relationship change-pings DISABLED (CHAT_INTERNAL_API_SECRET not set)",
+    chatPingSettings.ChatApiUrl); // the single startup line (AC5); never logs the secret
+builder.Services.AddSingleton(chatPingSettings);
+builder.Services.AddSingleton<IRelationshipChangeNotifier, RelationshipChangeNotifier>();
+
+// Inbound fail-closed auth guard for the friends/blocked-lists endpoint chat-service calls
+ChatRelationshipsAuthSettings chatRelationshipsAuthSettings = ChatRelationshipsAuthSettings.FromEnvironment();
+if (!chatRelationshipsAuthSettings.Configured)
+{
+    Log.Warning("chat-relationships endpoint LOCKED: CHAT_RELATIONSHIPS_API_SECRET not set — all requests will be rejected 401");
+}
+builder.Services.AddSingleton(chatRelationshipsAuthSettings);
 
 // Common services (audit logging, optimistic concurrency)
 builder.Services.AddCommonServices();

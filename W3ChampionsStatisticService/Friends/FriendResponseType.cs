@@ -21,10 +21,6 @@ public class FriendResponseType
     {
         get { return new FriendResponseType("FriendsWithPictures"); }
     }
-    public static FriendResponseType FriendOnlineStatus
-    {
-        get { return new FriendResponseType("FriendOnlineStatus"); }
-    }
 
     public override string ToString()
     {
