@@ -99,4 +99,20 @@ public class ModerationController(IChatServiceClient chatServiceClient) : Contro
         ChatMessage[] chatHistory = await _chatServiceClient.GetChatRoomMessages(chatRoom, authToken);
         return Ok(chatHistory);
     }
+
+    /// <summary>
+    /// Cursor-paged moderation chat history, including deleted/shadow rows (flagged, not hidden).
+    /// Pass the previous page's <c>nextBeforeSeq</c> back as <paramref name="beforeSeq"/> to page
+    /// further back in time; omit it for the newest page. <paramref name="limit"/> is clamped to
+    /// [1, 100] server-side, defaulting to 100 when omitted.
+    /// </summary>
+    [HttpGet("launcher-chat/{chatRoom}/messages")]
+    [NoTrace]
+    [InjectAuthToken]
+    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
+    public async Task<IActionResult> GetChatRoomMessagesPaged([FromRoute] string chatRoom, [FromQuery] long? beforeSeq, [FromQuery] int? limit, string authToken)
+    {
+        ModerationChatHistoryDto history = await _chatServiceClient.GetModerationChannelHistory(chatRoom, beforeSeq, limit, authToken);
+        return Ok(history);
+    }
 }

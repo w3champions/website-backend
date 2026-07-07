@@ -108,14 +108,18 @@ public class ChatServiceClient : IChatServiceClient
     }
 
     [NoTrace]
-    public async Task<ModerationMessagePageDto> GetModerationChannelMessages(string channelId, string authorization)
+    public async Task<ModerationMessagePageDto> GetModerationChannelMessages(string channelId, string authorization, long? beforeSeq = null, int limit = 100)
     {
         // Defensive encode: channelId is expected to always be a server-resolved value (see
         // GetChatRoomMessages), never raw caller input, but this belt-and-suspenders encode keeps
         // the method safe against path-segment injection even if a future caller gets it wrong.
         string encodedChannelId = HttpUtility.UrlEncode(channelId);
-        string url = $"{ChatServiceApiUrl}/api/moderation/channels/{encodedChannelId}/messages?limit=100";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var urlBuilder = new StringBuilder($"{ChatServiceApiUrl}/api/moderation/channels/{encodedChannelId}/messages?limit={limit}");
+        if (beforeSeq.HasValue)
+        {
+            urlBuilder.Append($"&beforeSeq={beforeSeq.Value}");
+        }
+        var request = new HttpRequestMessage(HttpMethod.Get, urlBuilder.ToString());
         request.Headers.Add("Authorization", $"Bearer {authorization}");
         HttpResponseMessage response = await _httpClient.SendAsync(request);
         string content = await response.Content.ReadAsStringAsync();
@@ -128,9 +132,75 @@ public class ChatServiceClient : IChatServiceClient
     }
 
     /// <summary>
-    /// Legacy-parity compatibility shim: resolves the caller-supplied room NAME to a chat-service
-    /// channelId (via the cached moderation channels list), fetches the newest message page for
-    /// that channelId, and projects it into the frozen <see cref="ChatMessage"/> wire shape.
+    /// Cursor-paged moderation chat history, flags included (Decision: moderators must SEE
+    /// deleted/shadow rows, not have them silently dropped). Resolves <paramref name="chatRoom"/>
+    /// to a channelId, fetches one page via <see cref="GetModerationMessagePageForRoom"/>, and
+    /// maps every row -- including deleted/shadow ones -- into <see cref="ModerationChatMessageDto"/>.
+    /// An unresolved room degrades to an empty page (Messages=[], NextBeforeSeq=null) rather than
+    /// throwing, matching <see cref="GetChatRoomMessages"/>'s existing Decision 4 precedent.
+    /// </summary>
+    [NoTrace]
+    public async Task<ModerationChatHistoryDto> GetModerationChannelHistory(string chatRoom, long? beforeSeq, int? limit, [NoTrace] string authorization)
+    {
+        int clampedLimit = Math.Clamp(limit ?? 100, 1, 100);
+
+        ModerationMessagePageDto page = await GetModerationMessagePageForRoom(chatRoom, beforeSeq, clampedLimit, authorization);
+        if (page == null)
+        {
+            return new ModerationChatHistoryDto { Messages = [], NextBeforeSeq = null };
+        }
+
+        return new ModerationChatHistoryDto
+        {
+            Messages = [.. (page.Messages ?? [])
+                .Select(m => new ModerationChatMessageDto
+                {
+                    Id = m.Id,
+                    Seq = m.Seq,
+                    Message = m.Content,
+                    Time = m.SentAt.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+                    BattleTag = m.SenderBattleTag,
+                    SenderName = m.SenderName,
+                    Deleted = m.Deleted,
+                    DeletedBy = m.DeletedBy,
+                    DeletedAt = m.DeletedAt?.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+                    Shadow = m.Shadow
+                })],
+            NextBeforeSeq = page.NextBeforeSeq
+        };
+    }
+
+    /// <summary>
+    /// Legacy-parity compatibility shim: thin adapter over <see cref="GetModerationChannelHistory"/>
+    /// that fetches the newest 100-message page and filters out deleted/shadow rows before
+    /// projecting into the frozen <see cref="ChatMessage"/> wire shape. A flag-blind shape can't
+    /// render moderation flags, so filtering here (rather than surfacing flagged rows) is correct
+    /// for this legacy consumer.
+    /// </summary>
+    [NoTrace]
+    public async Task<ChatMessage[]> GetChatRoomMessages(string chatRoom, [NoTrace] string authorization)
+    {
+        ModerationChatHistoryDto page = await GetModerationChannelHistory(chatRoom, null, 100, authorization);
+
+        return [.. page.Messages
+            .Where(m => !m.Deleted && !m.Shadow)
+            .Select(m => new ChatMessage
+            {
+                Id = m.Id,
+                Message = m.Message,
+                Time = m.Time,
+                BattleTag = m.BattleTag
+            })];
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="chatRoom"/> (a room NAME) to a chat-service channelId via the
+    /// cached moderation channels list, then fetches one message page for that channelId --
+    /// evicting and re-resolving exactly once if the cached channelId 404s (e.g. the channel was
+    /// recreated server-side). Bounded to a single retry so a broken or hostile chat-service can
+    /// never drive an amplification/retry loop from this client. Returns null (never throws) if
+    /// the room name cannot be resolved to any Public channel, or if the channelId still 404s
+    /// after the single re-resolve retry.
     /// </summary>
     /// <remarks>
     /// Security note (channelId provenance): <paramref name="chatRoom"/> is only ever used as a
@@ -138,23 +208,21 @@ public class ChatServiceClient : IChatServiceClient
     /// never concatenated into a URL. The only value ever passed to
     /// <see cref="GetModerationChannelMessages"/> is a channelId that chat-service itself returned
     /// in a prior <see cref="GetModerationChannels"/> response -- an unresolved name always short-
-    /// circuits to an empty array (Decision 4) before any messages request is made.
+    /// circuits to null before any messages request is made.
     /// </remarks>
-    [NoTrace]
-    public async Task<ChatMessage[]> GetChatRoomMessages(string chatRoom, [NoTrace] string authorization)
+    private async Task<ModerationMessagePageDto> GetModerationMessagePageForRoom(string chatRoom, long? beforeSeq, int limit, string authorization)
     {
         string normalizedRoom = chatRoom.ToLowerInvariant();
 
         if (!_chatRoomChannelIdCache.TryGetValue(normalizedRoom, out string channelId))
         {
             channelId = await ResolveChannelId(normalizedRoom, authorization);
-            if (channelId == null) return [];
+            if (channelId == null) return null;
         }
 
-        ModerationMessagePageDto page;
         try
         {
-            page = await GetModerationChannelMessages(channelId, authorization);
+            return await GetModerationChannelMessages(channelId, authorization, beforeSeq, limit);
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -163,27 +231,17 @@ public class ChatServiceClient : IChatServiceClient
             // chat-service can never drive an amplification/retry loop from this client.
             _chatRoomChannelIdCache.TryRemove(normalizedRoom, out _);
             channelId = await ResolveChannelId(normalizedRoom, authorization);
-            if (channelId == null) return [];
+            if (channelId == null) return null;
 
             try
             {
-                page = await GetModerationChannelMessages(channelId, authorization);
+                return await GetModerationChannelMessages(channelId, authorization, beforeSeq, limit);
             }
             catch (HttpRequestException retryEx) when (retryEx.StatusCode == HttpStatusCode.NotFound)
             {
-                return [];
+                return null;
             }
         }
-
-        return [.. (page?.Messages ?? [])
-            .Where(m => !m.Deleted && !m.Shadow)
-            .Select(m => new ChatMessage
-            {
-                Id = m.Id,
-                Message = m.Content,
-                Time = m.SentAt.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
-                BattleTag = m.SenderBattleTag
-            })];
     }
 
     /// <summary>

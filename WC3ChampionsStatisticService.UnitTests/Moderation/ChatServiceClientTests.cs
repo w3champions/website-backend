@@ -614,4 +614,191 @@ public class ChatServiceClientTests
         Assert.That(messages, Is.Empty);
         Assert.That(requests, Has.Count.EqualTo(2));
     }
+
+    [Test]
+    public async Task GetModerationChannelMessages_WithBeforeSeq_AppendsBeforeSeqQueryParam()
+    {
+        const string json = """{ "messages": [], "nextBeforeSeq": null }""";
+        var (factory, requests) = CreateFactory(HttpStatusCode.OK, json);
+        var client = new ChatServiceClient(factory.Object);
+
+        await client.GetModerationChannelMessages("abc123", "token-abc", beforeSeq: 48198);
+
+        Assert.That(requests, Has.Count.EqualTo(1));
+        Assert.That(requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/moderation/channels/abc123/messages?limit=100&beforeSeq=48198"));
+    }
+
+    [Test]
+    public async Task GetModerationChannelMessages_CustomLimitNoBeforeSeq_OmitsBeforeSeqParam()
+    {
+        const string json = """{ "messages": [], "nextBeforeSeq": null }""";
+        var (factory, requests) = CreateFactory(HttpStatusCode.OK, json);
+        var client = new ChatServiceClient(factory.Object);
+
+        await client.GetModerationChannelMessages("abc123", "token-abc", limit: 25);
+
+        Assert.That(requests[0].RequestUri!.PathAndQuery, Is.EqualTo("/api/moderation/channels/abc123/messages?limit=25"));
+    }
+
+    [Test]
+    public async Task GetModerationChannelHistory_SendsBeforeSeqWhenProvided()
+    {
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+        const string messagesJson = """{ "messages": [], "nextBeforeSeq": null }""";
+
+        var (factory, requests) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        await client.GetModerationChannelHistory("W3C Lounge", 48198, null, "token-abc");
+
+        Assert.That(requests, Has.Count.EqualTo(2));
+        Assert.That(requests[1].RequestUri!.PathAndQuery, Is.EqualTo("/api/moderation/channels/ch1/messages?limit=100&beforeSeq=48198"));
+    }
+
+    [Test]
+    public async Task GetModerationChannelHistory_NoBeforeSeq_OmitsBeforeSeqParam()
+    {
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+        const string messagesJson = """{ "messages": [], "nextBeforeSeq": null }""";
+
+        var (factory, requests) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        await client.GetModerationChannelHistory("W3C Lounge", null, null, "token-abc");
+
+        Assert.That(requests[1].RequestUri!.PathAndQuery, Is.EqualTo("/api/moderation/channels/ch1/messages?limit=100"));
+    }
+
+    [TestCase(null, 100)]
+    [TestCase(500, 100)]
+    [TestCase(0, 1)]
+    [TestCase(-5, 1)]
+    [TestCase(42, 42)]
+    public async Task GetModerationChannelHistory_ClampsLimitToOneAndOneHundred(int? requestedLimit, int expectedLimit)
+    {
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+        const string messagesJson = """{ "messages": [], "nextBeforeSeq": null }""";
+
+        var (factory, requests) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        await client.GetModerationChannelHistory("W3C Lounge", null, requestedLimit, "token-abc");
+
+        Assert.That(requests[1].RequestUri!.PathAndQuery, Is.EqualTo($"/api/moderation/channels/ch1/messages?limit={expectedLimit}"));
+    }
+
+    [Test]
+    public async Task GetModerationChannelHistory_IncludesDeletedAndShadowRows_MapsAllFlags()
+    {
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+        // Verbatim from the chat-service README's "REST API for the website-backend" example.
+        const string messagesJson = """
+        {
+          "messages": [
+            {
+              "id": "665f1b3a9a1e4a0012def001",
+              "seq": 48198,
+              "senderBattleTag": "Peter#123",
+              "senderName": "Peter",
+              "content": "gl hf",
+              "sentAt": "2026-07-03T21:10:00.000Z",
+              "deleted": false,
+              "deletedBy": null,
+              "deletedAt": null,
+              "shadow": false
+            },
+            {
+              "id": "665f1b3a9a1e4a0012def002",
+              "seq": 48199,
+              "senderBattleTag": "Spammer#456",
+              "senderName": "Spammer",
+              "content": "buy gold at ...",
+              "sentAt": "2026-07-03T21:10:05.000Z",
+              "deleted": true,
+              "deletedBy": "mod#1",
+              "deletedAt": "2026-07-03T21:11:00.000Z",
+              "shadow": false
+            },
+            {
+              "id": "665f1b3a9a1e4a0012def003",
+              "seq": 48200,
+              "senderBattleTag": "Shadow#789",
+              "senderName": "Shadow",
+              "content": "spam spam spam",
+              "sentAt": "2026-07-03T21:12:00.000Z",
+              "deleted": false,
+              "deletedBy": null,
+              "deletedAt": null,
+              "shadow": true
+            }
+          ],
+          "nextBeforeSeq": 48198
+        }
+        """;
+
+        var (factory, _) = CreateRoutingFactory(request =>
+            request.RequestUri!.AbsolutePath.Contains("/messages")
+                ? JsonResponse(HttpStatusCode.OK, messagesJson)
+                : JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        var history = await client.GetModerationChannelHistory("W3C Lounge", null, null, "token-abc");
+
+        // Deleted + shadow rows are INCLUDED here -- the opposite of the legacy GetChatRoomMessages shim.
+        Assert.That(history.Messages, Has.Length.EqualTo(3));
+        Assert.That(history.NextBeforeSeq, Is.EqualTo(48198));
+
+        var normal = history.Messages[0];
+        Assert.That(normal.Id, Is.EqualTo("665f1b3a9a1e4a0012def001"));
+        Assert.That(normal.Seq, Is.EqualTo(48198));
+        Assert.That(normal.Message, Is.EqualTo("gl hf"));
+        Assert.That(normal.BattleTag, Is.EqualTo("Peter#123"));
+        Assert.That(normal.SenderName, Is.EqualTo("Peter"));
+        Assert.That(normal.Deleted, Is.False);
+        Assert.That(normal.DeletedBy, Is.Null);
+        Assert.That(normal.DeletedAt, Is.Null);
+        Assert.That(normal.Shadow, Is.False);
+
+        var deleted = history.Messages[1];
+        Assert.That(deleted.Deleted, Is.True);
+        Assert.That(deleted.DeletedBy, Is.EqualTo("mod#1"));
+        DateTime deletedAtRoundTrip = DateTime.Parse(deleted.DeletedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        Assert.That(deletedAtRoundTrip, Is.EqualTo(new DateTime(2026, 7, 3, 21, 11, 0, DateTimeKind.Utc)));
+        Assert.That(deleted.Shadow, Is.False);
+
+        var shadow = history.Messages[2];
+        Assert.That(shadow.Deleted, Is.False);
+        Assert.That(shadow.DeletedAt, Is.Null);
+        Assert.That(shadow.Shadow, Is.True);
+        Assert.That(shadow.SenderName, Is.EqualTo("Shadow"));
+    }
+
+    [Test]
+    public async Task GetModerationChannelHistory_UnknownRoom_ReturnsEmptyPageWithNullCursor()
+    {
+        const string channelsJson = """[ { "id": "ch1", "name": "W3C Lounge", "type": 0 } ]""";
+
+        var (factory, requests) = CreateRoutingFactory(_ => JsonResponse(HttpStatusCode.OK, channelsJson));
+
+        var client = new ChatServiceClient(factory.Object);
+
+        var history = await client.GetModerationChannelHistory("does-not-exist", null, null, "token-abc");
+
+        Assert.That(history.Messages, Is.Empty);
+        Assert.That(history.NextBeforeSeq, Is.Null);
+        Assert.That(requests, Has.Count.EqualTo(1));
+    }
 }

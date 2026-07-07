@@ -54,22 +54,30 @@ public class ModerationMessagePageDto()
 
 /// <summary>
 /// Mirrors one row of the <c>messages</c> array in <see cref="ModerationMessagePageDto"/>.
-/// Wire fields with no consumer yet (<c>channelId</c>, <c>seq</c>, <c>senderName</c>,
-/// <c>deletedBy</c>, <c>deletedAt</c>) are intentionally left undeclared — Newtonsoft ignores
-/// extra JSON properties on deserialization, which is the tolerance mechanism for this lean DTO.
+/// The wire also carries a <c>channelId</c> per row, which wb does not need (the caller already
+/// knows which channel it asked for) and is therefore left undeclared — Newtonsoft ignores extra
+/// JSON properties on deserialization, which is the tolerance mechanism for this lean DTO.
 /// </summary>
 public class ModerationMessageDto()
 {
     [JsonProperty("id")]
     public string Id { get; set; }
+    [JsonProperty("seq")]
+    public long Seq { get; set; }
     [JsonProperty("content")]
     public string Content { get; set; }
     [JsonProperty("sentAt")]
     public DateTime SentAt { get; set; }
     [JsonProperty("senderBattleTag")]
     public string SenderBattleTag { get; set; }
+    [JsonProperty("senderName")]
+    public string SenderName { get; set; }
     [JsonProperty("deleted")]
     public bool Deleted { get; set; }
+    [JsonProperty("deletedBy")]
+    public string DeletedBy { get; set; }
+    [JsonProperty("deletedAt")]
+    public DateTime? DeletedAt { get; set; }
     [JsonProperty("shadow")]
     public bool Shadow { get; set; }
 }
