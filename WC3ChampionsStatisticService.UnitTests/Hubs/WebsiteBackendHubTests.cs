@@ -97,7 +97,6 @@ public class FakeFriendRequestCache : IFriendRequestCache
 
 public class WebsiteBackendHubTests
 {
-    private Mock<IW3CAuthenticationService> authService;
     private ConnectionMapping connections;
     private Mock<IHttpContextAccessor> contextAccessor;
     private FakeFriendRequestCache friendRequestCache;
@@ -115,7 +114,6 @@ public class WebsiteBackendHubTests
     [SetUp]
     public void SetUp()
     {
-        authService = new Mock<IW3CAuthenticationService>();
         connections = new ConnectionMapping();
         contextAccessor = new Mock<IHttpContextAccessor>();
         friendRequestCache = new FakeFriendRequestCache();
@@ -141,7 +139,6 @@ public class WebsiteBackendHubTests
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
     {
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCache,
@@ -466,7 +463,6 @@ public class WebsiteBackendHubTests
 
         // Build hub with the mock IFriendRequestCache instead of friendRequestCache
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
@@ -526,7 +522,6 @@ public class WebsiteBackendHubTests
             .ReturnsAsync("Sender#9999");
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
@@ -589,7 +584,6 @@ public class WebsiteBackendHubTests
             .ReturnsAsync("Sender#9999");
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
@@ -647,7 +641,6 @@ public class WebsiteBackendHubTests
             .ReturnsAsync("Receiver#9999");
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
@@ -756,12 +749,10 @@ public class WebsiteBackendHubTests
 
         connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
 
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "User#1234" }, DateTime.UtcNow);
         var httpContext = new DefaultHttpContext();
-        httpContext.Request.QueryString = new QueryString("?access_token=x");
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
-        authService
-            .Setup(a => a.GetUserByToken("x", false))
-            .Returns(new W3CUserAuthenticationDto { BattleTag = "User#1234" });
 
         SetHubContext(hub, "conn1");
 
@@ -1037,7 +1028,6 @@ public class WebsiteBackendHubTests
             .Callback(() => order.Add("ping"));
 
         var hub = new WebsiteBackendHub(
-            authService.Object,
             connections,
             contextAccessor.Object,
             friendRequestCacheMock.Object,
@@ -1087,13 +1077,15 @@ public class WebsiteBackendHubTests
         );
     }
 
-    // --- Dual-accept auth on OnConnectedAsync (WB-1: ticket-first, raw-JWT fallback) -------------
+    // --- Ticket-only auth on OnConnectedAsync (WB-1: hard cutover, no raw-JWT fallback) ----------
+    // The launcher is this hub's SOLE client; browsers use REST + Bearer and never open this
+    // WebSocket. A raw JWT (or any non-ticket string) MUST be rejected — there is no fallback.
 
     [Test]
-    public async Task OnConnectedAsync_ValidTicket_ConnectsWithTicketIdentity_WithoutJwtValidation()
+    public async Task OnConnectedAsync_ValidTicket_ConnectsWithTicketIdentity()
     {
         // Arrange: a one-time ticket is minted into the SHARED store; the hub must consume it and
-        // adopt the ticket's identity — never touching the JWT validator.
+        // adopt the ticket's identity. There is no JWT path at all — the hub is ticket-only.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
 
@@ -1108,54 +1100,25 @@ public class WebsiteBackendHubTests
         // Act
         await hub.OnConnectedAsync();
 
-        // Assert: connected as the TICKET identity, and the JWT path was never exercised.
+        // Assert: connected as the TICKET identity.
         mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
         Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
-        authService.Verify(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
         // Single-use: the ticket must have been burned on consume.
         Assert.IsFalse(ticketStore.TryConsume(ticket, DateTime.UtcNow, out _));
     }
 
     [Test]
-    public async Task OnConnectedAsync_TicketMiss_FallsBackToValidJwt_Connects()
+    public async Task OnConnectedAsync_RawJwtNonTicket_Rejected_NoConnect()
     {
-        // Arrange: access_token is NOT a known ticket (empty store), so the hub must fall back to the
-        // legacy raw-JWT path (validateLifetime:false) — preserving the browser website + old launchers.
+        // Arrange: access_token is a raw W3C JWT (or any string the ticket store does not recognize).
+        // The hub is ticket-only now — there is NO raw-JWT fallback — so this MUST be rejected:
+        // AuthorizationFailed + abort, never registered. This pins the removed dual-accept behavior.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString("?access_token=raw-jwt");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
-        authService
-            .Setup(a => a.GetUserByToken("raw-jwt", false))
-            .Returns(new W3CUserAuthenticationDto { BattleTag = "Jwt#1" });
-
-        SetHubContext(hub, "conn1");
-
-        // Act
-        await hub.OnConnectedAsync();
-
-        // Assert: connected via the JWT fallback with the JWT identity.
-        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
-        Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Jwt#1"));
-        authService.Verify(a => a.GetUserByToken("raw-jwt", false), Times.Once);
-    }
-
-    [Test]
-    public async Task OnConnectedAsync_TicketMissAndBadJwt_AuthorizationFailed_NoConnect()
-    {
-        // Arrange: not a ticket, and the JWT validator THROWS (bad/expired/garbage token). Both paths
-        // fail → AuthorizationFailed + abort, no registration.
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-        var hub = CreateHub(friendCommandHandler);
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.QueryString = new QueryString("?access_token=bad");
-        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
-        authService
-            .Setup(a => a.GetUserByToken("bad", false))
-            .Throws(new Exception("invalid token"));
 
         SetHubContext(hub, "conn1");
 
@@ -1166,6 +1129,56 @@ public class WebsiteBackendHubTests
         mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
         mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Never);
         Assert.That(connections.GetUser("conn1"), Is.Null);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_MissingAccessToken_Rejected_NoConnect()
+    {
+        // Arrange: no access_token on the query string at all. Ticket-only means "no ticket → no
+        // connection": AuthorizationFailed + abort, never registered.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        var httpContext = new DefaultHttpContext();
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn1");
+
+        // Act
+        await hub.OnConnectedAsync();
+
+        // Assert: rejected, never connected, never registered.
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Never);
+        Assert.That(connections.GetUser("conn1"), Is.Null);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_ReplayedTicket_Rejected_NoSecondConnect()
+    {
+        // Arrange: a ticket is consumed by a first successful connect, then the SAME ticket is
+        // replayed on a second connect. Single-use must hold at the hub boundary, so a sniffed /
+        // replayed ticket cannot be reused: the second connect is rejected, never registered.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        // First connect consumes (burns) the ticket.
+        var firstHub = CreateHub(friendCommandHandler);
+        SetHubContext(firstHub, "conn1");
+        await firstHub.OnConnectedAsync();
+        Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
+
+        // Second connect replays the now-burned ticket.
+        var secondHub = CreateHub(friendCommandHandler);
+        SetHubContext(secondHub, "conn2");
+        await secondHub.OnConnectedAsync();
+
+        // Assert: replay rejected — the second connection was never registered.
+        Assert.That(connections.GetUser("conn2"), Is.Null);
     }
 
     // Helper mock for HubCallerContext

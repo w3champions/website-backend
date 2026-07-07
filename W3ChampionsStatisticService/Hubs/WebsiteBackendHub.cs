@@ -21,7 +21,6 @@ namespace W3ChampionsStatisticService.Hubs;
 
 [Trace]
 public class WebsiteBackendHub(
-    IW3CAuthenticationService authenticationService,
     ConnectionMapping connections,
     IHttpContextAccessor contextAccessor,
     IFriendRequestCache friendRequestCache,
@@ -51,7 +50,6 @@ public class WebsiteBackendHub(
         }
     }
 
-    private readonly IW3CAuthenticationService _authenticationService = authenticationService;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHttpContextAccessor _contextAccessor = contextAccessor;
     private readonly IFriendRequestCache _friendRequestCache = friendRequestCache;
@@ -68,34 +66,20 @@ public class WebsiteBackendHub(
     {
         await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
-            // DUAL-ACCEPT auth (WB-1): ticket-first, raw-JWT fallback. This hub serves BOTH the
-            // launcher AND the browser website, so we cannot hard-cutover to tickets the way
-            // chat-service does.
-            //   1. Ticket path (secure, launcher LE-2): access_token is a one-time 60s ticket minted
-            //      by POST /auth/session; TryConsume burns it once and yields the validated identity.
-            //   2. Fallback (browser website + OLD launchers): access_token is a raw W3C JWT. KEEP
-            //      validateLifetime:false here — lifetime enforcement on this legacy path is a
-            //      separate audited concern and must NOT change as part of this ticket work.
-            // A ticket string never validates as a JWT and a JWT is never present in the ticket store,
-            // so the two inputs are unambiguous and TryConsume has no side effect on a JWT input.
+            // TICKET-ONLY auth (WB-1). The launcher is this hub's SOLE client; the browser website
+            // never connects here (it has had zero SignalR since PR #122 — browsers use REST +
+            // Authorization: Bearer <JWT> and never open this WebSocket). So, exactly like
+            // chat-service's hub, this is a HARD CUTOVER to single-use tickets with NO raw-JWT
+            // fallback: access_token MUST be a one-time 60s ticket minted by POST /auth/session;
+            // TryConsume burns it once and yields the validated identity. A missing / invalid /
+            // already-consumed ticket is rejected below. The cutover is lock-step with the forced
+            // launcher update — launchers that have not yet updated lose wb-hub friends/presence
+            // until they update in that coordinated window.
             var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"].ToString();
-            W3CUserAuthenticationDto w3cUserAuthentication;
+            W3CUserAuthenticationDto w3cUserAuthentication = null;
             if (!string.IsNullOrEmpty(accessToken) && _ticketStore.TryConsume(accessToken, DateTime.UtcNow, out var ticketIdentity))
             {
                 w3cUserAuthentication = ticketIdentity;
-            }
-            else
-            {
-                try
-                {
-                    w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
-                }
-                catch (Exception)
-                {
-                    // GetUserByToken THROWS on a bad/expired/missing JWT (it never returns null);
-                    // any validation failure funnels into the AuthorizationFailed rejection below.
-                    w3cUserAuthentication = null;
-                }
             }
             if (w3cUserAuthentication == null)
             {

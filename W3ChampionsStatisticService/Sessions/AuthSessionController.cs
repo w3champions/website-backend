@@ -22,8 +22,10 @@ namespace W3ChampionsStatisticService.Sessions;
 ///   429         : per-battleTag mint rate limit exceeded (10 / minute)
 ///   Ticket      : single-use, 60s TTL. The client hands it to SignalR's accessTokenFactory so it
 ///                 arrives as ?access_token=&lt;ticket&gt; on /websiteBackendHub, where
-///                 WebsiteBackendHub.OnConnectedAsync consumes it exactly once (dual-accept:
-///                 ticket-first, raw-JWT fallback for the browser website + old launchers).
+///                 WebsiteBackendHub.OnConnectedAsync consumes it exactly once. That hub is
+///                 TICKET-ONLY (no raw-JWT fallback): the launcher is its sole client, browsers
+///                 use REST + Bearer and never open the WebSocket, and the cutover is lock-step
+///                 with the forced launcher update.
 /// ====================================================================================
 /// </summary>
 [ApiController]
