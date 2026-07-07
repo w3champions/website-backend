@@ -10,6 +10,7 @@ using Serilog;
 using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Sessions;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3C.Domain.ChatService;
 using W3C.Domain.Tracing;
@@ -29,7 +30,8 @@ public class WebsiteBackendHub(
     TracingService tracingService,
     IBattleTagResolver battleTagResolver,
     PresenceSettings presenceSettings,
-    IRelationshipChangeNotifier relationshipChangeNotifier
+    IRelationshipChangeNotifier relationshipChangeNotifier,
+    ITicketStore ticketStore
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -60,6 +62,7 @@ public class WebsiteBackendHub(
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
     private readonly PresenceSettings _presenceSettings = presenceSettings;
     private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
+    private readonly ITicketStore _ticketStore = ticketStore;
 
 
     [NoTrace]
@@ -67,8 +70,35 @@ public class WebsiteBackendHub(
     {
         await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
-            var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"];
-            W3CUserAuthenticationDto w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
+            // DUAL-ACCEPT auth (WB-1): ticket-first, raw-JWT fallback. This hub serves BOTH the
+            // launcher AND the browser website, so we cannot hard-cutover to tickets the way
+            // chat-service does.
+            //   1. Ticket path (secure, launcher LE-2): access_token is a one-time 60s ticket minted
+            //      by POST /auth/session; TryConsume burns it once and yields the validated identity.
+            //   2. Fallback (browser website + OLD launchers): access_token is a raw W3C JWT. KEEP
+            //      validateLifetime:false here — lifetime enforcement on this legacy path is a
+            //      separate audited concern and must NOT change as part of this ticket work.
+            // A ticket string never validates as a JWT and a JWT is never present in the ticket store,
+            // so the two inputs are unambiguous and TryConsume has no side effect on a JWT input.
+            var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"].ToString();
+            W3CUserAuthenticationDto w3cUserAuthentication;
+            if (!string.IsNullOrEmpty(accessToken) && _ticketStore.TryConsume(accessToken, DateTime.UtcNow, out var ticketIdentity))
+            {
+                w3cUserAuthentication = ticketIdentity;
+            }
+            else
+            {
+                try
+                {
+                    w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
+                }
+                catch (Exception)
+                {
+                    // GetUserByToken THROWS on a bad/expired/missing JWT (it never returns null);
+                    // any validation failure funnels into the AuthorizationFailed rejection below.
+                    w3cUserAuthentication = null;
+                }
+            }
             if (w3cUserAuthentication == null)
             {
                 await Clients.Caller.SendAsync("AuthorizationFailed");

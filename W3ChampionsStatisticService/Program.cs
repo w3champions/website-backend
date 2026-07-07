@@ -43,6 +43,7 @@ using W3ChampionsStatisticService.Rewards.Portraits;
 using W3ChampionsStatisticService.Common.Extensions;
 using W3ChampionsStatisticService.Rewards.Extensions;
 using W3ChampionsStatisticService.Services;
+using W3ChampionsStatisticService.Sessions;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.Authorization;
@@ -228,6 +229,12 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
 builder.Services.AddSingleton(PresenceSettings.FromEnvironment());
+
+// Auth ticket-mint session store + rate limiter (WB-1). SINGLETONS are load-bearing: the REST
+// endpoint (AuthSessionController) MINTS and the hub (WebsiteBackendHub.OnConnectedAsync) CONSUMES
+// against the SAME in-memory instance. Plain AddSingleton (no tracing interception) — infra state.
+builder.Services.AddSingleton<ITicketStore, TicketStore>();
+builder.Services.AddSingleton<MintRateLimiter>();
 
 // Relationship change-pings (fire-and-forget, HMAC-signed notifications to chat-service)
 ChatPingSettings chatPingSettings = ChatPingSettings.FromEnvironment();
