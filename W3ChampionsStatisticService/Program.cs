@@ -162,6 +162,8 @@ builder.Services.AddInterceptedTransient<IMatchRepository, MatchRepository>();
 // Ensure MatchRepository indexes are created at startup
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, MatchRepository>();
 builder.Services.AddInterceptedSingleton<IPlayerRepository, PlayerRepository>();
+// Ensure PlayerRepository-owned PlayerGameModeStatPerGateway indexes are created at startup
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, PlayerRepository>();
 builder.Services.AddInterceptedTransient<IRankRepository, RankRepository>();
 builder.Services.AddInterceptedTransient<IPlayerStatsRepository, PlayerStatsRepository>();
 builder.Services.AddInterceptedTransient<IW3StatsRepo, W3StatsRepo>();
