@@ -230,7 +230,6 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
-builder.Services.AddSingleton(PresenceSettings.FromEnvironment());
 
 // Auth ticket-mint session store + rate limiter (WB-1). SINGLETONS are load-bearing: the REST
 // endpoint (AuthSessionController) MINTS and the hub (WebsiteBackendHub.OnConnectedAsync) CONSUMES

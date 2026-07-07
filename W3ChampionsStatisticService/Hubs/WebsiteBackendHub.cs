@@ -29,7 +29,6 @@ public class WebsiteBackendHub(
     IFriendCommandHandler friendCommandHandler,
     TracingService tracingService,
     IBattleTagResolver battleTagResolver,
-    PresenceSettings presenceSettings,
     IRelationshipChangeNotifier relationshipChangeNotifier,
     ITicketStore ticketStore
 ) : Hub
@@ -60,7 +59,6 @@ public class WebsiteBackendHub(
     private readonly IFriendCommandHandler _friendCommandHandler = friendCommandHandler;
     private readonly TracingService _tracingService = tracingService;
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
-    private readonly PresenceSettings _presenceSettings = presenceSettings;
     private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
     private readonly ITicketStore _ticketStore = ticketStore;
 
@@ -107,7 +105,6 @@ public class WebsiteBackendHub(
             }
             WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
             await LoginAsAuthenticated(user);
-            await NotifyFriendsWithIsOnline(user.BattleTag, true);
         }, forceNewRoot: true);
         await base.OnConnectedAsync();
     }
@@ -648,24 +645,8 @@ public class WebsiteBackendHub(
         if (user != null)
         {
             _connections.Remove(Context.ConnectionId);
-            await NotifyFriendsWithIsOnline(user.BattleTag, false);
         }
 
         await base.OnDisconnectedAsync(exception);
-    }
-
-    private async Task NotifyFriendsWithIsOnline(string battleTag, bool isOnline)
-    {
-        // Cutover-only retirement gate (Decision 10): chat-service's FriendPresenceChanged
-        // fully replaces this broadcast once the launcher fleet cuts over in I2.
-        if (_presenceSettings.RetireFriendOnlineStatus) return;
-
-        var friendList = await _friendCommandHandler.LoadFriendList(battleTag);
-        var onlineFriends = friendList
-            .Friends.Where(tag => _connections.IsUserOnline(tag))
-            .Select(tag => _connections.GetConnectionId(tag))
-            .SelectMany(connection => connection);
-
-        await Clients.Clients(onlineFriends).SendAsync(FriendResponseType.FriendOnlineStatus.ToString(), battleTag, isOnline);
     }
 }

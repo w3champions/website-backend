@@ -109,7 +109,6 @@ public class WebsiteBackendHubTests
     private Mock<ISingleClientProxy> mockCaller;
     private Mock<IClientProxy> mockFriendsProxy;
     private Mock<IBattleTagResolver> _battleTagResolverMock;
-    private PresenceSettings presenceSettings;
     private Mock<IRelationshipChangeNotifier> relationshipNotifier;
     private TicketStore ticketStore;
 
@@ -135,14 +134,11 @@ public class WebsiteBackendHubTests
         _battleTagResolverMock
             .Setup(r => r.ResolveCanonical(It.IsAny<string>()))
             .ReturnsAsync((string input) => input);
-        // Default: flag off (current/keep-emitting behavior). Only presence-specific tests
-        // pass an explicit `new PresenceSettings(true)` to exercise the retirement gate.
-        presenceSettings = new PresenceSettings(false);
         relationshipNotifier = new Mock<IRelationshipChangeNotifier>();
         ticketStore = new TicketStore();
     }
 
-    private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler, PresenceSettings settings = null)
+    private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
     {
         var hub = new WebsiteBackendHub(
             authService.Object,
@@ -153,7 +149,6 @@ public class WebsiteBackendHubTests
             friendCommandHandler,
             tracingService,
             _battleTagResolverMock.Object,
-            settings ?? presenceSettings,
             relationshipNotifier.Object,
             ticketStore
         );
@@ -479,7 +474,6 @@ public class WebsiteBackendHubTests
             friendCommandHandlerMock.Object,
             tracingService,
             _battleTagResolverMock.Object,
-            presenceSettings,
             relationshipNotifier.Object,
             ticketStore
         );
@@ -540,7 +534,6 @@ public class WebsiteBackendHubTests
             friendCommandHandlerMock.Object,
             tracingService,
             _battleTagResolverMock.Object,
-            presenceSettings,
             relationshipNotifier.Object,
             ticketStore
         );
@@ -604,7 +597,6 @@ public class WebsiteBackendHubTests
             friendCommandHandlerMock.Object,
             tracingService,
             _battleTagResolverMock.Object,
-            presenceSettings,
             relationshipNotifier.Object,
             ticketStore
         );
@@ -663,7 +655,6 @@ public class WebsiteBackendHubTests
             friendCommandHandlerMock.Object,
             tracingService,
             _battleTagResolverMock.Object,
-            presenceSettings,
             relationshipNotifier.Object,
             ticketStore
         );
@@ -718,15 +709,17 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
-    public async Task OnDisconnectedAsync_FlagOff_EmitsFriendOnlineStatusFalse_ToOnlineFriends()
+    public async Task OnDisconnectedAsync_NeverEmitsFriendOnlineStatus()
     {
         // Arrange: "User#1234" is connected and has "Friend#5678" (also connected) as a friend.
+        // Presence is now owned entirely by chat-service's FriendPresenceChanged; the hub must
+        // never broadcast the legacy "FriendOnlineStatus" event, on any proxy.
         var friendList = new Friendlist("User#1234");
         friendList.Friends.Add("Friend#5678");
         friendListCache.Upsert(friendList);
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(false));
+        var hub = CreateHub(friendCommandHandler);
 
         connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
         connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
@@ -736,94 +729,30 @@ public class WebsiteBackendHubTests
         // Act
         await hub.OnDisconnectedAsync(null);
 
-        // Assert: exactly one FriendOnlineStatus(battleTag=false) broadcast to the online friend(s).
+        // Assert: no FriendOnlineStatus emission anywhere, but connection-mapping bookkeeping
+        // still happened (ConnectionMapping still drives friends-CRUD push).
         mockFriendsProxy.Verify(
-            p => p.SendCoreAsync(
-                "FriendOnlineStatus",
-                It.Is<object[]>(args => (string)args[0] == "User#1234" && (bool)args[1] == false),
-                default
-            ),
-            Times.Once
-        );
-    }
-
-    [Test]
-    public async Task OnDisconnectedAsync_FlagOn_EmitsNoFriendOnlineStatus_ButStillRemovesConnection()
-    {
-        // Arrange: same topology as the flag-off case, but the retirement gate is on.
-        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
-
-        var hub = CreateHub(friendCommandHandlerMock.Object, new PresenceSettings(true));
-
-        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
-        connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
-
-        SetHubContext(hub, "conn1");
-
-        // Act
-        await hub.OnDisconnectedAsync(null);
-
-        // Assert: zero FriendOnlineStatus emissions anywhere...
-        mockFriendsProxy.Verify(
-            p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default),
+            p => p.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
             Times.Never
         );
         mockCaller.Verify(
             c => c.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
             Times.Never
         );
-        // ...but connection-mapping bookkeeping still happened...
         Assert.That(connections.GetUser("conn1"), Is.Null);
-        // ...and the now-pointless friend-list DB read never happened (pins the early-return placement).
-        friendCommandHandlerMock.Verify(h => h.LoadFriendList(It.IsAny<string>()), Times.Never);
     }
 
     [Test]
-    public async Task OnConnectedAsync_FlagOn_StillSendsConnected_NoFriendOnlineStatus()
+    public async Task OnConnectedAsync_NeverEmitsFriendOnlineStatus()
     {
-        // Arrange
+        // Arrange: "Friend#5678" is already online; "User#1234" (its friend) connects. The
+        // handshake ("Connected") must still fire, but the legacy presence broadcast must not.
         var friendList = new Friendlist("User#1234");
         friendList.Friends.Add("Friend#5678");
         friendListCache.Upsert(friendList);
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(true));
-
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.QueryString = new QueryString("?access_token=x");
-        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
-        authService
-            .Setup(a => a.GetUserByToken("x", false))
-            .Returns(new W3CUserAuthenticationDto { BattleTag = "User#1234" });
-
-        SetHubContext(hub, "conn1");
-
-        // Act
-        await hub.OnConnectedAsync();
-
-        // Assert: handshake still happens...
-        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
-        // ...but no presence broadcast on either proxy.
-        mockFriendsProxy.Verify(
-            p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), default),
-            Times.Never
-        );
-        mockCaller.Verify(
-            c => c.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
-            Times.Never
-        );
-    }
-
-    [Test]
-    public async Task OnConnectedAsync_FlagOff_EmitsFriendOnlineStatusTrue()
-    {
-        // Arrange: "Friend#5678" is already online; "User#1234" (its friend) connects.
-        var friendList = new Friendlist("User#1234");
-        friendList.Friends.Add("Friend#5678");
-        friendListCache.Upsert(friendList);
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(false));
+        var hub = CreateHub(friendCommandHandler);
 
         connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
 
@@ -842,12 +771,12 @@ public class WebsiteBackendHubTests
         // Assert
         mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
         mockFriendsProxy.Verify(
-            p => p.SendCoreAsync(
-                "FriendOnlineStatus",
-                It.Is<object[]>(args => (string)args[0] == "User#1234" && (bool)args[1] == true),
-                default
-            ),
-            Times.Once
+            p => p.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
+            Times.Never
+        );
+        mockCaller.Verify(
+            c => c.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
+            Times.Never
         );
     }
 
@@ -858,7 +787,7 @@ public class WebsiteBackendHubTests
         // Pins the boyscout NRE fix: `user.BattleTag` used to be dereferenced outside the `user != null`
         // guard, so this used to throw a NullReferenceException.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(false));
+        var hub = CreateHub(friendCommandHandler);
 
         SetHubContext(hub, "never-authenticated-conn");
 
@@ -1116,7 +1045,6 @@ public class WebsiteBackendHubTests
             friendCommandHandlerMock.Object,
             tracingService,
             _battleTagResolverMock.Object,
-            presenceSettings,
             relationshipNotifier.Object,
             ticketStore
         );
@@ -1167,7 +1095,7 @@ public class WebsiteBackendHubTests
         // Arrange: a one-time ticket is minted into the SHARED store; the hub must consume it and
         // adopt the ticket's identity — never touching the JWT validator.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(true));
+        var hub = CreateHub(friendCommandHandler);
 
         var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
 
@@ -1194,7 +1122,7 @@ public class WebsiteBackendHubTests
         // Arrange: access_token is NOT a known ticket (empty store), so the hub must fall back to the
         // legacy raw-JWT path (validateLifetime:false) — preserving the browser website + old launchers.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(true));
+        var hub = CreateHub(friendCommandHandler);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString("?access_token=raw-jwt");
@@ -1220,7 +1148,7 @@ public class WebsiteBackendHubTests
         // Arrange: not a ticket, and the JWT validator THROWS (bad/expired/garbage token). Both paths
         // fail → AuthorizationFailed + abort, no registration.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-        var hub = CreateHub(friendCommandHandler, new PresenceSettings(true));
+        var hub = CreateHub(friendCommandHandler);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString("?access_token=bad");

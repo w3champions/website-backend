@@ -3,8 +3,8 @@ using W3C.Domain.ChatService;
 
 namespace WC3ChampionsStatisticService.Tests.Friend;
 
-// Ctor-level tests only (mirrors PresenceSettingsTests style): FromEnvironment() itself is a
-// one-line env read and is intentionally NOT exercised via env-var mutation here.
+// Ctor-level tests only: FromEnvironment() itself is a one-line env read and is
+// intentionally NOT exercised via env-var mutation here.
 [TestFixture]
 public class ChatPingSettingsTests
 {
