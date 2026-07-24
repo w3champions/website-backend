@@ -5,6 +5,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
@@ -138,6 +139,61 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         var mongoCollection = CreateCollection<Matchup>();
         var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, playerIncludeRandom, opponentIncludeRandom);
         return mongoCollection.CountDocumentsAsync(filter);
+    }
+
+    // Finds the players a given player shares finished matches with, filtered by
+    // a (case-insensitive) battleTag fragment and ordered by shared match count.
+    // The aggregation only ever touches the player's own matches of that season,
+    // so it stays cheap even for very active players.
+    public async Task<List<OpponentInfo>> SearchOpponentsFor(
+        string playerId,
+        string search,
+        int season,
+        GateWay gateWay = GateWay.Undefined,
+        int limit = 10)
+    {
+        var mongoCollection = CreateCollection<Matchup>();
+        var builder = Builders<Matchup>.Filter;
+        var playerMatchesFilter = builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == playerId)))
+            & builder.Where(m => m.Season == season)
+            & builder.Where(m => gateWay == GateWay.Undefined || m.GateWay == gateWay);
+
+        // An empty search matches everyone, i.e. returns the most played opponents.
+        var opponentFilter = new BsonDocument
+        {
+            {
+                "Teams.Players.BattleTag", new BsonDocument
+                {
+                    { "$regex", Regex.Escape(search ?? string.Empty) },
+                    { "$options", "i" },
+                    { "$ne", playerId }
+                }
+            }
+        };
+
+        return await mongoCollection.Aggregate()
+            .Match(playerMatchesFilter)
+            // Drop everything but the battleTags before unwinding so the rest of
+            // the pipeline never carries full match documents.
+            .Project(new BsonDocument { { "Teams.Players.BattleTag", 1 } })
+            .Unwind("Teams")
+            .Unwind("Teams.Players")
+            .Match(opponentFilter)
+            .Group(new BsonDocument
+            {
+                { "_id", "$Teams.Players.BattleTag" },
+                { "MatchCount", new BsonDocument("$sum", 1) }
+            })
+            .Sort(new BsonDocument { { "MatchCount", -1 }, { "_id", 1 } })
+            .Limit(limit)
+            .Project(new BsonDocument
+            {
+                { "_id", 0 },
+                { "BattleTag", "$_id" },
+                { "MatchCount", 1 }
+            })
+            .As<OpponentInfo>()
+            .ToListAsync();
     }
 
     private FilterDefinition<Matchup> BuildPlayerMatchupFilter(

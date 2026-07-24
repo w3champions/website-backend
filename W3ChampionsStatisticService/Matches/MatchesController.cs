@@ -168,6 +168,40 @@ public class MatchesController(
     }
 
 
+    /// <summary>
+    /// Searches the players a given player shares finished matches with,
+    /// e.g. to suggest opponents when filtering a player's match history.
+    /// </summary>
+    /// <param name="playerId">The battleTag whose matches are searched.</param>
+    /// <param name="season">The season filter. If less than 0, uses the latest season.</param>
+    /// <param name="search">Case-insensitive battleTag fragment. Empty returns the most played opponents.</param>
+    /// <param name="gateWay">The gateway filter.</param>
+    /// <param name="limit">The maximum number of results (max 50).</param>
+    /// <returns>
+    /// 200 OK: A list of players ordered by shared match count descending.
+    /// [{ battleTag: string, matchCount: long }]
+    /// </returns>
+    [ProducesResponseType(typeof(List<OpponentInfo>), 200)]
+    [HttpGet("search-opponents")]
+    public async Task<IActionResult> SearchOpponents(
+        string playerId,
+        int season = -1,
+        string search = "",
+        GateWay gateWay = GateWay.Undefined,
+        int limit = 10)
+    {
+        if (string.IsNullOrEmpty(playerId)) return BadRequest("playerId is required");
+        if (season < 0)
+        {
+            var lastSeason = await _matchRepository.LoadLastSeason();
+            season = lastSeason.Id;
+        }
+        if (limit > 50) limit = 50;
+
+        var opponents = await _matchService.SearchOpponentsPerPlayer(playerId, search, season, gateWay, limit);
+        return Ok(opponents);
+    }
+
     [HttpGet("ongoing")]
     public async Task<IActionResult> GetOnGoingMatches(
         int offset = 0,

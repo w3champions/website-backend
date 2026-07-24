@@ -801,4 +801,60 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.IsNotNull(result);
         Assert.AreEqual(2, result.Id);
     }
+
+    [Test]
+    public async Task SearchOpponentsFor_MatchesContainedTextSortsByCountAndScopesToPlayerSeasonAndGateway()
+    {
+        var wolfGame1 = TestDtoHelper.CreateFakeEvent();
+        var wolfGame2 = TestDtoHelper.CreateFakeEvent();
+        var wolfmanGame = TestDtoHelper.CreateFakeEvent();
+        var annaGame = TestDtoHelper.CreateFakeEvent();
+        var wolfGameOtherSeason = TestDtoHelper.CreateFakeEvent();
+        var wolfGameWithoutPeter = TestDtoHelper.CreateFakeEvent();
+        // peter#123 and wolf#456 as allies (team 0) vs TEAM2#123/TEAM2#456, on America.
+        var alliedTeamGame = TestDtoHelper.CreateFake2v2AtEvent();
+
+        // Defaults from CreateFakeEvent: peter#123 vs wolf#456, season 0, Europe.
+        wolfmanGame.match.players[1].battleTag = "Wolfman#789";
+        annaGame.match.players[1].battleTag = "anna#111";
+        wolfGameOtherSeason.match.season = 1;
+        wolfGameWithoutPeter.match.players[0].battleTag = "anna#111";
+
+        await matchRepository.Insert(Matchup.Create(wolfGame1));
+        await matchRepository.Insert(Matchup.Create(wolfGame2));
+        await matchRepository.Insert(Matchup.Create(wolfmanGame));
+        await matchRepository.Insert(Matchup.Create(annaGame));
+        await matchRepository.Insert(Matchup.Create(wolfGameOtherSeason));
+        await matchRepository.Insert(Matchup.Create(wolfGameWithoutPeter));
+        await matchRepository.Insert(Matchup.Create(alliedTeamGame));
+
+        // Case-insensitive contains-match, most shared matches first. Allies count
+        // like opponents (wolf: two 1v1s plus the 2v2 played together), while the
+        // season 1 game and the game peter did not play in must not count.
+        var wolfResults = await matchRepository.SearchOpponentsFor("peter#123", "wOlF", 0);
+        Assert.AreEqual(2, wolfResults.Count);
+        Assert.AreEqual("wolf#456", wolfResults[0].BattleTag);
+        Assert.AreEqual(3, wolfResults[0].MatchCount);
+        Assert.AreEqual("Wolfman#789", wolfResults[1].BattleTag);
+        Assert.AreEqual(1, wolfResults[1].MatchCount);
+
+        // Fragments spanning the # separator match too and regex chars are escaped.
+        var tagFragmentResults = await matchRepository.SearchOpponentsFor("peter#123", "lf#4", 0);
+        Assert.AreEqual("wolf#456", tagFragmentResults.Single().BattleTag);
+
+        // An empty search returns everyone peter shared a match with, including the
+        // 2v2 opponents, but never peter himself.
+        var allOpponents = await matchRepository.SearchOpponentsFor("peter#123", "", 0);
+        Assert.AreEqual(5, allOpponents.Count);
+        Assert.IsTrue(allOpponents.Any(opponent => opponent.BattleTag == "TEAM2#123"));
+        Assert.IsFalse(allOpponents.Any(opponent => opponent.BattleTag == "peter#123"));
+
+        // Only the 2v2 was played on America, so only its participants show there.
+        var otherGateway = await matchRepository.SearchOpponentsFor("peter#123", "wolf", 0, GateWay.America);
+        Assert.AreEqual("wolf#456", otherGateway.Single().BattleTag);
+        Assert.AreEqual(1, otherGateway.Single().MatchCount);
+
+        var limited = await matchRepository.SearchOpponentsFor("peter#123", "", 0, GateWay.Undefined, 1);
+        Assert.AreEqual("wolf#456", limited.Single().BattleTag);
+    }
 }
