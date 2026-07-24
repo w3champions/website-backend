@@ -52,6 +52,13 @@ public interface IMatchRepository
         bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false);
 
+    Task<List<OpponentInfo>> SearchOpponentsFor(
+        string playerId,
+        string search,
+        int season,
+        GateWay gateWay = GateWay.Undefined,
+        int limit = 10);
+
     Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);
     Task<MatchupDetail> LoadFinishedMatchDetailsByMatchId(string id);
     Task<MatchFinishedEvent> LoadMatchFinishedEventByGameName(string gameName);

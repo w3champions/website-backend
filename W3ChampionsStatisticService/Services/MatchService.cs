@@ -25,12 +25,14 @@ public class MatchService(
     ICachedDataProvider<List<Matchup>> cachedMatchesProvider,
     ICachedDataProvider<CachedLong> cachedMatchCountProvider,
     ICachedDataProvider<List<string>> cachedMapNamesProvider,
+    ICachedDataProvider<List<OpponentInfo>> cachedOpponentsProvider,
     IPersonalSettingsRepository personalSettingsRepository)
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly ICachedDataProvider<List<Matchup>> _cachedMatchesProvider = cachedMatchesProvider;
     private readonly ICachedDataProvider<CachedLong> _cachedMatchCountProvider = cachedMatchCountProvider;
     private readonly ICachedDataProvider<List<string>> _cachedMapNamesProvider = cachedMapNamesProvider;
+    private readonly ICachedDataProvider<List<OpponentInfo>> _cachedOpponentsProvider = cachedOpponentsProvider;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
 
     public async Task<List<Matchup>> GetMatchesPerPlayer(
@@ -91,6 +93,21 @@ public class MatchService(
                     opponentRace, season, hero, playerIncludeRandom, opponentIncludeRandom)
             }, cacheKeyCount, TimeSpan.FromSeconds(5));
         return count.Value;
+    }
+
+    public async Task<List<OpponentInfo>> SearchOpponentsPerPlayer(
+        string playerId,
+        string search,
+        int season,
+        GateWay gateWay,
+        int limit)
+    {
+        string cacheKey = $"opponents_{playerId}_{season}_{gateWay}_{limit}_{search?.ToLowerInvariant()}";
+
+        return await _cachedOpponentsProvider.GetCachedOrRequestAsync(
+            async () => await _matchRepository.SearchOpponentsFor(playerId, search, season, gateWay, limit),
+            cacheKey,
+            TimeSpan.FromMinutes(1));
     }
 
     public async Task<List<string>> GetMapNames(int season, GameMode gameMode)
