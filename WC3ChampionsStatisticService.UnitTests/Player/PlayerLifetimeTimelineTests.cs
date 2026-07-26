@@ -12,9 +12,12 @@ public class PlayerLifetimeTimelineTests
 {
     private static readonly DateTimeOffset Day = new(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
-    private static SeasonTimeline Season(int season, Race race, int schemaVersion, params MmrRpAtDate[] entries)
+    private static SeasonTimeline Season(int season, Race race, int schemaVersion, params MmrRpAtDate[] entries) =>
+        Season(GameMode.GM_1v1, season, race, schemaVersion, entries);
+
+    private static SeasonTimeline Season(GameMode gameMode, int season, Race race, int schemaVersion, params MmrRpAtDate[] entries)
     {
-        var timeline = new PlayerMmrRpTimeline("peter#123", race, GateWay.Europe, season, GameMode.GM_1v1)
+        var timeline = new PlayerMmrRpTimeline("peter#123", race, GateWay.Europe, season, gameMode)
         {
             SchemaVersion = schemaVersion,
         };
@@ -112,6 +115,36 @@ public class PlayerLifetimeTimelineTests
 
         Assert.IsNull(lifetime.Series.Single().Peak,
             "a peak over the migrated part only would silently ignore the older seasons");
+    }
+
+    [Test]
+    public void Build_MergesRacesOutsideRaceSplitModes()
+    {
+        // Direct Strike carries one rating whatever race is picked, so a race
+        // change mid-season must not split the history in two.
+        var lifetime = PlayerLifetimeTimeline.Build(GameMode.GM_DS,
+        [
+            Season(GameMode.GM_DS, 25, Race.UD, 1, Entry(0, 2800), Entry(1, 3057)),
+            Season(GameMode.GM_DS, 25, Race.RnD, 1, Entry(2, 3103), Entry(3, 3069)),
+        ]);
+
+        Assert.AreEqual(1, lifetime.Series.Count, "one rating means one line");
+        var series = lifetime.Series.Single();
+        Assert.AreEqual(Race.Total, series.Race, "the combined series is not attributed to a race");
+        CollectionAssert.AreEqual(new[] { 2800, 3057, 3103, 3069 }, series.Points.Select(p => p.Mmr).ToList());
+        Assert.AreEqual(3103, series.Peak.Mmr, "the peak spans the race change");
+    }
+
+    [Test]
+    public void Build_KeepsRacesApartInRaceSplitModes()
+    {
+        var lifetime = PlayerLifetimeTimeline.Build(GameMode.GM_1v1,
+        [
+            Season(1, Race.OC, 1, Entry(0, 2000)),
+            Season(1, Race.HU, 1, Entry(1, 1800)),
+        ]);
+
+        Assert.AreEqual(2, lifetime.Series.Count, "1v1 rates each race separately");
     }
 
     [Test]

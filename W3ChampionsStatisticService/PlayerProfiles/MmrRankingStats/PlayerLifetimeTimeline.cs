@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.GameModes;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 
@@ -25,9 +26,16 @@ public class PlayerLifetimeTimeline
     /// </summary>
     public static PlayerLifetimeTimeline Build(GameMode gameMode, IEnumerable<SeasonTimeline> seasonTimelines)
     {
-        var byRace = seasonTimelines
-            .Where(x => x.Timeline?.MmrRpAtDates is { Count: > 0 })
-            .GroupBy(x => x.Race);
+        var withData = seasonTimelines.Where(x => x.Timeline?.MmrRpAtDates is { Count: > 0 });
+
+        // Outside the race-split modes a player has one rating that follows them
+        // across race changes, and the race a match was filed under is incidental.
+        // Grouping by it there would cut one continuous history into unrelated
+        // lines, each with its own bogus peak.
+        var raceSplit = GameModesHelper.IsRaceSplitGameMode(gameMode);
+        var byRace = raceSplit
+            ? withData.GroupBy(x => x.Race)
+            : withData.GroupBy(_ => Race.Total);
 
         var lifetime = new PlayerLifetimeTimeline { GameMode = gameMode };
 
