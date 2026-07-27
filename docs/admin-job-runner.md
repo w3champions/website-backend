@@ -58,8 +58,9 @@ changes.
 
 ## Data model
 
-One document per job key in an `AdminJob` collection — current state, not a run
-log. Per-run history goes to the audit log.
+One document per job key in an `AdminJob` collection — current state plus a
+summary of the most recent run. A re-run overwrites the previous run's details;
+there is deliberately no history (see "Why no run-history collection" below).
 
 ```
 _id              string   job key, e.g. "timeline-backfill"
@@ -67,11 +68,38 @@ Status           enum     Idle | Pending | Running | Completed | Failed | Cancel
 Progress         { Current, Total, Message }
 Checkpoint       BsonDocument   job-defined resume point
 StartedAt        DateTimeOffset?
-FinishedAt       DateTimeOffset?
+FinishedAt       DateTimeOffset?   set on every terminal status, not just Completed
+Duration         TimeSpan?         FinishedAt - StartedAt, denormalised for display
+ItemsProcessed   long              job-defined unit, carried across resumes
 TriggeredBy      string   admin battleTag
 RunCount         int
 Error            string
 ```
+
+`StartedAt`/`Duration`/`ItemsProcessed` describe the latest run only. On a
+resume (`Interrupted` -> `Running`) they continue accumulating rather than
+resetting, so a job that survived a deploy still reports its true total; a
+`reset` or `force` re-run clears them.
+
+### Why no run-history collection
+
+The obvious alternative is to reuse `IAuditLogRepository` for per-run history.
+Worth knowing before choosing that: **the audit log is currently write-only.**
+`IAuditLogRepository` exposes `GetRecent`, `GetByAdmin`, `GetByAffectedUser`,
+`GetByCategory` and `GetByEntity`, and nothing in the solution calls any of
+them. The writers are the rewards controllers and `ApiTokenController`; there is
+no admin page and no API endpoint reading it back, and no TTL index, so entries
+accumulate and are only reachable by querying Mongo directly.
+
+So the audit log is the right place to record *that an admin triggered a job*
+(accountability, consistent with how other admin actions are recorded), but not
+a practical place to read run outcomes from — a reader would have to be built
+from scratch either way. Keeping last-run info on the job document means the
+existing `GET /api/admin/jobs` response already carries everything the UI needs.
+
+If run-over-run history is wanted later, a separate `AdminJobRun` collection can
+be added without changing this document's shape; the fields above become a
+denormalised copy of the latest run.
 
 ## Runner
 
@@ -191,10 +219,15 @@ Other properties:
 - Re-runnable, but requires `force` once completed.
 
 Note the rebuild recomputes each series from matches under today's rules, so it
-may not reproduce existing points exactly — the live handler skipped arranged
+will not reproduce existing points exactly — the live handler skipped arranged
 teams and matches without `updatedMmr`, and applied rules that have changed.
-Mostly that is a fix, but some players' charts will visibly shift. Worth being
-deliberate about rather than surprised by.
+Some players' charts will visibly shift as a result.
+
+**This is intended.** The backfill correcting existing points is a wanted side
+effect, not just a tolerated one: the alternative (add the new fields, leave
+existing `Mmr` values alone) would leave each timeline internally inconsistent,
+with backfilled days computed one way and live-written days another. The job
+should therefore rewrite each day it touches, not merge into it.
 
 ## Later jobs
 
@@ -215,11 +248,17 @@ than sharing `Jobs` with routine backfills.
 **`create-index`** — adding a large index safely, out of band from startup, with
 real progress read from Mongo's `currentOp`.
 
+## Decisions taken
+
+- **Run history**: last-run summary on the job document, no history collection.
+  See "Why no run-history collection".
+- **Chart shift from the backfill**: accepted, and treated as a fix. See the
+  backfill section.
+
 ## Open questions
 
-1. Should `season-reset` have its own permission, separate from routine data
-   jobs? Recommendation: yes.
-2. Is the audit log enough for run history, or is a separate `AdminJobRun`
-   collection wanted for duration/outcome over time? Audit log is less code.
-3. The backfill's rebuild may shift some existing charts (above). Accept, or
-   preserve existing points where they disagree?
+1. Which permission each job should require. Deliberately left open — because
+   `RequiredPermission` is a property of the job rather than of the runner,
+   individual jobs can be moved to a stricter permission later without touching
+   the runner or the API. `season-reset` is the likeliest candidate for one of
+   its own.
