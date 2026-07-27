@@ -275,7 +275,7 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     /// <summary>
     /// The same rows as <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/>,
-    /// projected to ladder position alone. For callers that order by standing and never read the
+    /// projected to ladder standing alone. For callers that order by standing and never read the
     /// player's stats — the search core asks this for an entire match set, so the joined
     /// PlayerOverview would be payload per hit that nothing opens.
     /// </summary>
@@ -301,8 +301,7 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
             .Project(r => new PlayerLadderStanding
             {
                 MemberIds = r.MemberIds,
-                League = r.League,
-                RankNumber = r.RankNumber,
+                RankingPoints = r.RankingPoints,
             })
             .ToListAsync();
     }
