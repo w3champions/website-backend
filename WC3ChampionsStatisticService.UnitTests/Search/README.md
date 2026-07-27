@@ -9,7 +9,7 @@ Run them with:
 dotnet test WC3ChampionsStatisticService.UnitTests --filter "FullyQualifiedName~UnitTests.Search"
 ```
 
-82 tests, ~380 ms.
+104 tests, ~550 ms.
 
 All four search modes are covered:
 

@@ -600,4 +600,92 @@ public class RankTests : IntegrationTestBase
         CollectionAssert.AreEqual(new[] { "aaa#1", "bbb#2" }, stored.MemberIds);
     }
 
+    [Test]
+    public async Task LoadRanksForPlayers_FindsRowsTheBackfillHasNotReached()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_2v2_AT, 13, null));
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — deliberately NO EnsureIndexesAsync: clan and chat sit in front of no rollback flag,
+        // so the query itself must keep finding rows the backfill has not reached
+        var ranks = await rankRepository.LoadRanksForPlayers(new List<string> { "bbb#2" }, 13);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        Assert.AreEqual("aaa#1", ranks[0].Player1Id);
+    }
+
+    [Test]
+    public async Task LoadRanksForPlayers_SeasonOnly_FindsMembersBeyondTheSecond()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2", "ccc#3" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, 13, null));
+
+        // Act — clan and chat resolve members through this overload, and the third member must
+        // reach the team the two stored fields cannot name
+        var ranks = await rankRepository.LoadRanksForPlayers(new List<string> { "ccc#3" }, 13);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        CollectionAssert.AreEqual(team, ranks[0].MemberIds);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfCountry_FindsMembersBeyondTheSecond()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2", "ccc#3" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, 13, null));
+        await personalSettingsRepository.Save(new PersonalSetting("ccc#3") { CountryCode = "NL" });
+
+        // Act
+        var ranks = await rankRepository.LoadPlayersOfCountry("NL", 13, GateWay.Europe, GameMode.GM_4v4_AT);
+
+        // Assert — the third member's country page shows their team
+        Assert.AreEqual(1, ranks.Count);
+        CollectionAssert.AreEqual(team, ranks[0].MemberIds);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfCountry_FindsRowsTheBackfillHasNotReached()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_2v2_AT, 13, null));
+        await personalSettingsRepository.Save(new PersonalSetting("bbb#2") { CountryCode = "NL" });
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — deliberately NO EnsureIndexesAsync: the country page sits in front of no rollback
+        // flag, so its two-field fallback must keep finding rows the backfill has not reached
+        var ranks = await rankRepository.LoadPlayersOfCountry("NL", 13, GateWay.Europe, GameMode.GM_2v2_AT);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        Assert.AreEqual("aaa#1", ranks[0].Player1Id);
+    }
 }
