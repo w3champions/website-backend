@@ -53,6 +53,22 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     [JsonIgnore]
     public int Revision { get; set; }
 
+    /// <summary>
+    /// Set by the backfill on every document it rewrites, and cleared in one pass at
+    /// the end of a successful run as <see cref="SchemaVersion"/> is raised.
+    /// <para>
+    /// The backfill works forwards a day at a time, so a document is only fully
+    /// rebuilt once the run reaches the end. Raising the version as each day is
+    /// written would claim the whole history had the new fields while its later days
+    /// still did not; a blanket update at the end would instead sweep in documents the
+    /// backfill never touched, whose entries genuinely can't be verified. Marking as we
+    /// go and promoting the marks at the end is exact.
+    /// </para>
+    /// </summary>
+    [JsonIgnore]
+    [BsonIgnoreIfNull]
+    public bool? BackfillPending { get; set; }
+
     [Trace]
     public void UpdateTimeline(MmrRpAtDate mmrRpAtDate)
     {

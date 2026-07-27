@@ -19,6 +19,8 @@ public static class AdminJobServiceExtensions
         services.AddHostedService(sp => sp.GetRequiredService<AdminJobRunner>());
 
         // Job registrations. Discovered by the runner and the controller as IAdminJob.
+        services.AddInterceptedScoped<IAdminJob, PlayerMmrRpTimelineBackfillJob>();
+
         return services;
     }
 }
