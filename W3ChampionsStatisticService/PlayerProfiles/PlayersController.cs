@@ -52,6 +52,10 @@ public class PlayersController(
         GateWay? gateWay = null,
         GameMode? gameMode = null)
     {
+        if (string.IsNullOrEmpty(search) || search.Length < 3)
+        {
+            return BadRequest("search parameter must be at least 3 letters.");
+        }
         if (pageSize > 20) pageSize = 20;
         var players = await _playerService.GlobalSearchForPlayer(search, lastRelevanceId, pageSize, season, gateWay, gameMode);
         return Ok(players);
