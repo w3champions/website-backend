@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NUnit.Framework;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 using static WC3ChampionsStatisticService.UnitTests.Search.SearchTestFixtures;
@@ -122,6 +123,39 @@ public class GlobalSearchControllerTests
     public async Task MinLength_DigitsCount()
     {
         var result = await CreateController(50).GlobalSearchPlayer("123");
+
+        Assert.IsInstanceOf<OkObjectResult>(result);
+    }
+
+    // The three ladder-context parameters travel together. A partial context used to be dropped in
+    // silence, which also switched the relevanceId's layout — so a caller paging across the change
+    // compared cursors from two different key namespaces and got an empty page with no error.
+    [TestCase(13, GateWay.Europe, null)]
+    [TestCase(13, null, GameMode.GM_1v1)]
+    [TestCase(null, GateWay.Europe, GameMode.GM_1v1)]
+    [TestCase(13, null, null)]
+    [TestCase(null, null, GameMode.GM_1v1)]
+    public async Task Context_PartialLadderContextIsRejected(int? season, GateWay? gateWay, GameMode? gameMode)
+    {
+        var result = await CreateController(50).GlobalSearchPlayer("moo", "", 20, season, gateWay, gameMode);
+
+        Assert.IsInstanceOf<BadRequestObjectResult>(result);
+    }
+
+    [Test]
+    public async Task Context_TheFullLadderContextIsServed()
+    {
+        var result = await CreateController(50).GlobalSearchPlayer("moo", "", 20, 13, GateWay.Europe, GameMode.GM_1v1);
+
+        Assert.IsInstanceOf<OkObjectResult>(result);
+    }
+
+    [Test]
+    public async Task Context_OmittingItEntirelyIsServed()
+    {
+        // The header, the player picker and launcher-e all search without a ladder; launcher-e never
+        // sends these parameters at all, so no context must stay as valid as a full one.
+        var result = await CreateController(50).GlobalSearchPlayer("moo");
 
         Assert.IsInstanceOf<OkObjectResult>(result);
     }
