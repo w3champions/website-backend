@@ -12,7 +12,9 @@ namespace WC3ChampionsStatisticService.UnitTests.Search;
 // GET api/players/global-search at the controller boundary.
 //
 // GlobalSearchTests covers the search itself; this covers what only the controller does — clamping
-// pageSize. The cap is the guard that stops an anonymous caller from pulling the directory in bulk.
+// pageSize and rejecting short searches. Together they guard the anonymous route: the cap stops
+// pulling the directory in bulk, the minimum length stops near-empty terms from matching most of it
+// (with a ladder context, every match feeds the standings $in query).
 [TestFixture]
 public class GlobalSearchControllerTests
 {
@@ -70,5 +72,26 @@ public class GlobalSearchControllerTests
         var result = await CreateController(3).GlobalSearchPlayer("moon");
 
         Assert.AreEqual(3, ResultOf(result).Count);
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("m")]
+    [TestCase("mo")]
+    public async Task MinLength_SearchesUnderThreeLettersAreRejected(string search)
+    {
+        var result = await CreateController(50).GlobalSearchPlayer(search);
+
+        Assert.IsInstanceOf<BadRequestObjectResult>(result);
+    }
+
+    [Test]
+    public async Task MinLength_ThreeLettersAreServed()
+    {
+        // Every known client gates its input at exactly three characters (website surfaces and
+        // launcher-e alike), so three letters must stay served — the guard must never creep higher.
+        var result = await CreateController(50).GlobalSearchPlayer("moo");
+
+        Assert.AreEqual(PageSizeCap, ResultOf(result).Count);
     }
 }

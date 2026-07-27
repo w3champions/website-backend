@@ -139,8 +139,8 @@ The tests pin the hybrid response: one flat array holding a ranked block scoped 
 fork on via `player.games > 0`. `Hybrid_TailIsNotScopedToTheRequestedContext` records the reason an
 exact-tag search can return the same player twice.
 
-This route is also the only search endpoint that enforces a minimum length server-side (3 characters);
-`global-search` and `players?search=` leave that to the client.
+This route and `global-search` both enforce a minimum length server-side (3 characters);
+`players?search=` leaves that to the client.
 
 The value of pinning behaviour nobody intends to change: when this route is eventually retired, the
 failing tests are the checklist of what retiring it actually breaks.
