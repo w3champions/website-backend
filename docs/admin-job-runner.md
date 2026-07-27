@@ -112,7 +112,40 @@ runner.TryStart(key, battleTag, force, reset)   // false if already running
 runner.Cancel(key)                              // in-process CancellationTokenSource
 ```
 
-Two implementation notes that are easy to get wrong:
+### Back-pressure
+
+Jobs call `context.Pace()` between batches. Rather than holding them to a fixed
+share of wall clock, this reads whether the system actually has headroom and
+runs flat out when it does, doubling the pause while pressure persists and
+halving it once things recover.
+
+Two signals, sampled once a second:
+
+- **Database.** This is a single mongod - no transactions or change streams
+  anywhere in the solution, both of which need a replica set, and every
+  connection string is single-host - so there is no replication lag to watch.
+  The equivalent is WiredTiger eviction pressure: replica lag is really a proxy
+  for "writes are piling up faster than they can be durably absorbed", and on a
+  standalone server that shows up as a growing dirty cache and, past a point, as
+  mongod conscripting query threads into eviction. The two counters
+  (`number of times dirty trigger was reached`,
+  `application threads page write from cache to disk count`) need no threshold -
+  any movement is the server complaining. Dirty-cache fraction, write-ticket
+  utilisation and queued writers are gauges and do have thresholds, which are
+  named constants and want tuning against real load.
+- **CPU.** Jobs run in the same process as the API, so a job that pegs the CPU
+  degrades every request the site serves even when the database is happy.
+
+`FallbackDutyCycle` (25%) applies only when `serverStatus` cannot be read -
+most likely a user without `clusterMonitor`. Running flat out blind is the one
+genuinely dangerous option, so that case pays the fixed pace.
+
+The WiredTiger statistic names are not a stable API and have moved between
+releases; if they move again the probe reports no pressure and jobs run flat
+out. `PressureProbeTests` asserts against a real server rather than a fixture
+for exactly that reason.
+
+Two further implementation notes that are easy to get wrong:
 
 - **The job runs in a DI scope the runner creates**, not the request's. Scoped
   services are disposed when the HTTP response completes, so a job inheriting

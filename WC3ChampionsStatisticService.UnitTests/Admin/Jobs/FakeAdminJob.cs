@@ -19,7 +19,7 @@ public class FakeAdminJob(string key, Func<IAdminJobContext, CancellationToken, 
     public bool RequiresConfirmation { get; set; }
 
     /// <summary>Flat out by default so tests are not paced; overridden where that is the point.</summary>
-    public double MaxDutyCycle { get; set; } = 1.0;
+    public double FallbackDutyCycle { get; set; } = 1.0;
 
     /// <summary>The checkpoint the job was handed, captured so tests can assert on resume.</summary>
     public BsonDocument ObservedCheckpoint { get; private set; }
@@ -30,6 +30,36 @@ public class FakeAdminJob(string key, Func<IAdminJobContext, CancellationToken, 
         ObservedCheckpoint = context.Checkpoint;
         ObservedItemsProcessed = context.ItemsProcessed;
         return body(context, cancellationToken);
+    }
+}
+
+/// <summary>
+/// Pressure readings the test dictates. Counters are cumulative, as the real probe's
+/// are, so a test raises them to simulate the server complaining.
+/// </summary>
+public class FakePressureProbe : IPressureProbe
+{
+    public bool DatabaseAvailable { get; set; } = true;
+    public long DirtyTriggerReached { get; set; }
+    public long ApplicationThreadEvictions { get; set; }
+    public double DirtyCacheFraction { get; set; }
+    public double WriteTicketUtilisation { get; set; }
+    public long QueuedWriters { get; set; }
+    public int Samples { get; private set; }
+
+    public Task<PressureSample> Sample(CancellationToken cancellationToken)
+    {
+        Samples++;
+        return Task.FromResult(new PressureSample(
+            TakenAt: DateTimeOffset.UtcNow,
+            ProcessCpuTime: TimeSpan.Zero,
+            ProcessorCount: 8,
+            DatabaseAvailable: DatabaseAvailable,
+            DirtyTriggerReached: DirtyTriggerReached,
+            ApplicationThreadEvictions: ApplicationThreadEvictions,
+            DirtyCacheFraction: DirtyCacheFraction,
+            WriteTicketUtilisation: WriteTicketUtilisation,
+            QueuedWriters: QueuedWriters));
     }
 }
 

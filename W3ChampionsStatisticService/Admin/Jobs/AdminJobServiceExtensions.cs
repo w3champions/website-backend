@@ -9,6 +9,10 @@ public static class AdminJobServiceExtensions
     {
         services.AddInterceptedScoped<IAdminJobRepository, AdminJobRepository>();
 
+        // Singleton so the "serverStatus is not permitted" warning is logged once for
+        // the process rather than once per job run.
+        services.AddSingleton<IPressureProbe, PressureProbe>();
+
         // Singleton because it owns the cancellation tokens of everything running, and
         // a hosted service resolving to that same instance so shutdown reaches them.
         services.AddSingleton<AdminJobRunner>();

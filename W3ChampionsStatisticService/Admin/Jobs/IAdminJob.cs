@@ -37,14 +37,15 @@ public interface IAdminJob
     bool RequiresConfirmation => false;
 
     /// <summary>
-    /// The largest share of wall-clock time this job may spend working, enforced by
-    /// <see cref="IAdminJobContext.Pace"/>. 1.0 lets it run flat out; the default leaves
-    /// the database idle three quarters of the time.
+    /// Share of wall-clock time this job may spend working <b>when the database pressure
+    /// signals cannot be read</b> - normally it runs as fast as those signals allow and
+    /// this does not apply. 1.0 disables the fallback entirely.
     /// <para>
-    /// Only has an effect if the job actually calls <c>Pace</c> between batches.
+    /// Only has an effect if the job actually calls
+    /// <see cref="IAdminJobContext.Pace"/> between batches.
     /// </para>
     /// </summary>
-    double MaxDutyCycle => 0.25;
+    double FallbackDutyCycle => 0.25;
 
     Task RunAsync(IAdminJobContext context, CancellationToken cancellationToken);
 }
@@ -80,9 +81,10 @@ public interface IAdminJobContext
     void AddItems(long count);
 
     /// <summary>
-    /// Call between batches to keep the job within its <see cref="IAdminJob.MaxDutyCycle"/>.
-    /// Sleeps in proportion to how long the batch just took, and throws if the job has
-    /// been cancelled - so this doubles as the natural cancellation point of a work loop.
+    /// Call between batches. Returns immediately while the database and this service
+    /// have headroom, and pauses in proportion to the last batch when they do not.
+    /// Throws if the job has been cancelled, so this doubles as the natural cancellation
+    /// point of a work loop.
     /// </summary>
     Task Pace(CancellationToken cancellationToken);
 }

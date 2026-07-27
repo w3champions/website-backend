@@ -12,17 +12,20 @@ namespace WC3ChampionsStatisticService.Tests.Admin.Jobs;
 public class AdminJobRunnerTests
 {
     private FakeAdminJobRepository _repository;
+    private FakePressureProbe _probe;
 
     [SetUp]
     public void Setup()
     {
         _repository = new FakeAdminJobRepository();
+        _probe = new FakePressureProbe();
     }
 
     private AdminJobRunner CreateRunner(params IAdminJob[] jobs)
     {
         var services = new ServiceCollection();
         services.AddSingleton<IAdminJobRepository>(_repository);
+        services.AddSingleton<IPressureProbe>(_probe);
         foreach (var job in jobs)
         {
             services.AddSingleton(job);
@@ -187,8 +190,9 @@ public class AdminJobRunnerTests
     }
 
     [Test]
-    public async Task PacingHoldsAJobToItsDutyCycle()
+    public async Task WithNoPressureSignalTheJobFallsBackToItsDutyCycle()
     {
+        _probe.DatabaseAvailable = false;
         var job = new FakeAdminJob("paced", async (context, token) =>
         {
             for (var i = 0; i < 3; i++)
@@ -197,7 +201,7 @@ public class AdminJobRunnerTests
                 await context.Pace(token);
             }
         })
-        { MaxDutyCycle = 0.25 };
+        { FallbackDutyCycle = 0.25 };
         var runner = CreateRunner(job);
 
         var start = DateTimeOffset.UtcNow;
@@ -212,8 +216,33 @@ public class AdminJobRunnerTests
     }
 
     [Test]
+    public async Task AHealthyDatabaseIsNotPacedAtAll()
+    {
+        var job = new FakeAdminJob("unpaced", async (context, token) =>
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                await Task.Delay(50, token);
+                await context.Pace(token);
+            }
+        })
+        { FallbackDutyCycle = 0.25 };
+        var runner = CreateRunner(job);
+
+        var start = DateTimeOffset.UtcNow;
+        await runner.TryStart("unpaced", "peon#1", force: false, reset: false);
+        await runner.WhenFinished("unpaced");
+        var elapsed = DateTimeOffset.UtcNow - start;
+
+        // The whole point of reading pressure: with headroom the duty cycle does not
+        // apply, so 150ms of work takes about 150ms rather than 600ms.
+        Assert.That(elapsed, Is.LessThan(TimeSpan.FromMilliseconds(400)));
+    }
+
+    [Test]
     public async Task PacingObservesCancellation()
     {
+        _probe.DatabaseAvailable = false;
         var started = new TaskCompletionSource();
         var job = new FakeAdminJob("paced-cancel", async (context, token) =>
         {
@@ -224,7 +253,7 @@ public class AdminJobRunnerTests
                 await context.Pace(token);
             }
         })
-        { MaxDutyCycle = 0.01 };
+        { FallbackDutyCycle = 0.01 };
         var runner = CreateRunner(job);
 
         await runner.TryStart("paced-cancel", "peon#1", force: false, reset: false);

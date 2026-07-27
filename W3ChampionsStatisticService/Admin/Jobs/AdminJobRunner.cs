@@ -103,7 +103,12 @@ public class AdminJobRunner(IServiceScopeFactory scopeFactory) : IHostedService
         // is unreachable in practice - TryStart already found it in an identical
         // container - but is handled as a job failure rather than an unobserved throw.
         var job = FindJob(scope.ServiceProvider, key);
-        var context = new AdminJobContext(key, repository, claimed, job?.MaxDutyCycle ?? 1.0);
+        var context = new AdminJobContext(
+            key,
+            repository,
+            claimed,
+            job?.FallbackDutyCycle ?? 1.0,
+            scope.ServiceProvider.GetRequiredService<IPressureProbe>());
 
         var status = AdminJobStatus.Completed;
         string error = null;
