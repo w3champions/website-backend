@@ -52,7 +52,11 @@ public class PlayersController(
         GateWay? gateWay = null,
         GameMode? gameMode = null)
     {
-        if (string.IsNullOrEmpty(search) || search.Length < 3)
+        // Counted over letters and digits, not raw length: matching is culture-sensitive, so a term of
+        // zero-weight characters (U+200B and friends) is contained in every battleTag while still
+        // measuring three long — with a ladder context that turns one request into a standings lookup
+        // for the entire directory.
+        if (string.IsNullOrEmpty(search) || search.Count(char.IsLetterOrDigit) < 3)
         {
             return BadRequest("search parameter must be at least 3 letters.");
         }
