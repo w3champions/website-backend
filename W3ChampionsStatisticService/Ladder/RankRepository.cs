@@ -25,19 +25,21 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
     public string CollectionName => nameof(Rank);
 
     /// <summary>
-    /// Declares the Rank index both consolidated-search rank queries seek on —
-    /// <see cref="LoadLadderStandings"/> (ordering) and <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/>
-    /// (display) ask "which of these battleTags hold a rank here" and would scan the whole
-    /// collection without it. Then backfills <see cref="Rank.MemberIds"/>, since rows written
-    /// before the field existed would otherwise answer "not ranked" forever — a row only rewrites
-    /// itself when its league next syncs, which for a finished season never happens.
+    /// Declares the Rank index the member lookups seek on — <see cref="LoadLadderStandings"/>
+    /// (search ordering) and the context overload of <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/>
+    /// (display). Then backfills <see cref="Rank.MemberIds"/>, since rows written before the field
+    /// existed would otherwise answer "not ranked" forever — a row only rewrites itself when its
+    /// league next syncs, which for a finished season never happens.
     /// </summary>
     /// <remarks>
     /// Creation is idempotent, so redeploys are a no-op. Should prod hold this key under a different
     /// name, createIndexes raises IndexOptionsConflict; MongoIndexInitializationService logs it per
     /// repository and continues — correct results, collection scans, visible only in the startup log.
     /// The index is multikey — one entry per member, which is what lets it answer for every member —
-    /// and Background is inert on MongoDB 4.2+, set to match the sibling repositories.
+    /// and Background is inert on MongoDB 4.2+, set to match the sibling repositories. The
+    /// fallback-carrying queries (<see cref="LoadPlayersOfCountry"/> and the season-only
+    /// <see cref="LoadRanksForPlayers(List{string}, int)"/>) are not member-served by it: their $or
+    /// keeps them on the season index, exactly as before this field existed.
     /// </remarks>
     public async Task EnsureIndexesAsync()
     {
@@ -147,12 +149,15 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
     {
         var personalSettings = await _personalSettingsProvider.GetPersonalSettingsAsync();
 
-        var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id);
+        var battleTags = personalSettings.Where(ps => (ps.CountryCode ?? ps.Location) == countryCode).Select(ps => ps.Id).ToList();
 
+        // The two-field match stays as a fallback: this surface has no rollback flag, so it must keep
+        // working on rows the MemberIds backfill has not reached. Remove with the legacy retirement.
         return await JoinWith(rank => rank.Gateway == gateWay
                 && rank.GameMode == gameMode
                 && rank.Season == season
-                && (battleTags.Contains(rank.Player1Id) || battleTags.Contains(rank.Player2Id)));
+                && (rank.MemberIds.Any(member => battleTags.Contains(member))
+                    || battleTags.Contains(rank.Player1Id) || battleTags.Contains(rank.Player2Id)));
     }
 
     public Task<List<Rank>> SearchPlayerOfLeague(string searchFor, int season, GateWay gateWay, GameMode gameMode)
@@ -254,7 +259,10 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
     public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season)
     {
-        return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
+        // Two-field fallback as in LoadPlayersOfCountry: clan and chat call this with no rollback
+        // flag in front of them, so un-backfilled rows must stay findable.
+        return JoinWith(r => (r.MemberIds.Any(member => list.Contains(member))
+            || list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
     }
 
     // The one definition of "holds a rank on this ladder". Ordering (LoadLadderStandings) and
