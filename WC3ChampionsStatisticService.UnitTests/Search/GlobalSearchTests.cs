@@ -285,14 +285,14 @@ public class GlobalSearchTests
     }
 
     [Test]
-    public async Task Context_RankedBlockIsOrderedByLadderPosition()
+    public async Task Context_RankedBlockIsOrderedByRankingPoints()
     {
         var service = PlayerServiceWith(
             Settings("MoonA#1", "MoonB#2", "MoonC#3"),
             rankRepository: RankRepositoryWith(
-                RankFor("MoonA#1", league: 1, rankNumber: 50),
-                RankFor("MoonB#2", league: 0, rankNumber: 9),
-                RankFor("MoonC#3", league: 1, rankNumber: 7)));
+                RankFor("MoonA#1", rankingPoints: 12.6),
+                RankFor("MoonB#2", rankingPoints: 47.8),
+                RankFor("MoonC#3", rankingPoints: 30.1)));
 
         var result = await service.GlobalSearchForPlayer(
             "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
@@ -303,40 +303,82 @@ public class GlobalSearchTests
     }
 
     [Test]
-    public async Task Context_LeagueOutranksRankNumber()
+    public async Task Context_AppendedDivisionOrdersByStanding_NotLeagueId()
     {
-        // RankNumber restarts at 1 in every league, so rank 1 of league 2 stands below rank 100 of
-        // league 1. Ordering on rank number alone would inspect them.
+        // Divisions created mid-season take the next free league id: prod s13/EU/1v1 files Diamond
+        // division 8 as league 52, behind Grass's 49–51. Ranking points carry the real ordering,
+        // so the Diamond player leads whatever the ids say.
         var service = PlayerServiceWith(
-            Settings("MoonA#1", "MoonB#2"),
+            Settings("MoonDia#1", "MoonGrass#2"),
             rankRepository: RankRepositoryWith(
-                RankFor("MoonA#1", league: 2, rankNumber: 1),
-                RankFor("MoonB#2", league: 1, rankNumber: 100)));
+                RankFor("MoonDia#1", league: 52, rankNumber: 32, rankingPoints: 30.1),
+                RankFor("MoonGrass#2", league: 49, rankNumber: 1, rankingPoints: 5.3)));
 
         var result = await service.GlobalSearchForPlayer(
             "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
 
         Assert.AreEqual(
-            new[] { "MoonB#2", "MoonA#1" },
+            new[] { "MoonDia#1", "MoonGrass#2" },
             result.Select(r => r.BattleTag).ToArray());
     }
 
     [Test]
     public async Task Context_NumericPartsSortNumerically_NotLexically()
     {
-        // The key is compared as a string because it doubles as the cursor, so its numbers are
-        // zero-padded. Unpadded, "10" would sort before "9".
+        // The key is compared as a string because it doubles as the cursor, so the complement is
+        // zero-padded to a fixed five digits. Near the ceiling the complement gets short (999.5
+        // points → 49), and unpadded it would sort behind the longer complement of a lower score.
         var service = PlayerServiceWith(
             Settings("MoonA#1", "MoonB#2"),
             rankRepository: RankRepositoryWith(
-                RankFor("MoonA#1", league: 1, rankNumber: 10),
-                RankFor("MoonB#2", league: 1, rankNumber: 9)));
+                RankFor("MoonA#1", rankingPoints: 999.5),
+                RankFor("MoonB#2", rankingPoints: 960)));
 
         var result = await service.GlobalSearchForPlayer(
             "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
 
         Assert.AreEqual(
-            new[] { "MoonB#2", "MoonA#1" },
+            new[] { "MoonA#1", "MoonB#2" },
+            result.Select(r => r.BattleTag).ToArray());
+    }
+
+    [Test]
+    public async Task Context_RankingPointsOutsideTheKeyRangeAreClamped()
+    {
+        // The complement has exactly five digits, so points past 999.99 or below zero would
+        // otherwise leave the key's namespace and break the string comparison the cursor relies on.
+        // Clamped, the extremes still order correctly and still mint well-formed cursors.
+        var service = PlayerServiceWith(
+            Settings("MoonHigh#1", "MoonMid#2", "MoonNeg#3"),
+            rankRepository: RankRepositoryWith(
+                RankFor("MoonNeg#3", rankingPoints: -5),
+                RankFor("MoonMid#2", rankingPoints: 500),
+                RankFor("MoonHigh#1", rankingPoints: 1200)));
+
+        var result = await service.GlobalSearchForPlayer(
+            "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
+
+        Assert.AreEqual("0_00000_MoonHigh#1", result[0].RelevanceId, "past the ceiling clamps to the best key");
+        Assert.AreEqual("0_49999_MoonMid#2", result[1].RelevanceId);
+        Assert.AreEqual("0_99999_MoonNeg#3", result[2].RelevanceId, "below zero clamps to the worst key");
+    }
+
+    [Test]
+    public async Task Context_EqualRankingPointsFallBackToBattleTagOrder()
+    {
+        // Equal points produce equal complements, so the battleTag suffix is what keeps the key —
+        // and with it the cursor — deterministic between requests.
+        var service = PlayerServiceWith(
+            Settings("MoonA#1", "MoonB#2"),
+            rankRepository: RankRepositoryWith(
+                RankFor("MoonB#2", rankingPoints: 42.5),
+                RankFor("MoonA#1", rankingPoints: 42.5)));
+
+        var result = await service.GlobalSearchForPlayer(
+            "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
+
+        Assert.AreEqual(
+            new[] { "MoonA#1", "MoonB#2" },
             result.Select(r => r.BattleTag).ToArray());
     }
 
@@ -360,12 +402,13 @@ public class GlobalSearchTests
     {
         var service = PlayerServiceWith(
             Settings("Moon#1", "Moonlight#2"),
-            rankRepository: RankRepositoryWith(RankFor("Moonlight#2", league: 3, rankNumber: 42)));
+            rankRepository: RankRepositoryWith(RankFor("Moonlight#2", rankingPoints: 42.5)));
 
         var result = await service.GlobalSearchForPlayer(
             "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
 
-        Assert.AreEqual("0_003_0042_Moonlight#2", result[0].RelevanceId, "ranked: block 0, then ladder position");
+        // 95749 = 99999 - 42.5 * 100: the zero-padded complement, so higher points sort first.
+        Assert.AreEqual("0_95749_Moonlight#2", result[0].RelevanceId, "ranked: block 0, then ladder standing");
         Assert.AreEqual("1_1_Moon#1", result[1].RelevanceId, "unranked: block 1, then name relevance");
     }
 
@@ -428,9 +471,9 @@ public class GlobalSearchTests
         var service = PlayerServiceWith(
             Settings("MoonA#1", "MoonB#2"),
             rankRepository: RankRepositoryWith(
-                RankFor("MoonA#1", league: 4, rankNumber: 1, race: Race.HU),
-                RankFor("MoonA#1", league: 1, rankNumber: 2, race: Race.UD),
-                RankFor("MoonB#2", league: 2, rankNumber: 1)));
+                RankFor("MoonA#1", rankingPoints: 22.1, race: Race.HU),
+                RankFor("MoonA#1", rankingPoints: 47.8, race: Race.UD),
+                RankFor("MoonB#2", rankingPoints: 33.4)));
 
         var result = await service.GlobalSearchForPlayer(
             "moon", season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
@@ -438,7 +481,7 @@ public class GlobalSearchTests
         Assert.AreEqual(
             new[] { "MoonA#1", "MoonB#2" },
             result.Select(r => r.BattleTag).ToArray(),
-            "MoonA's league-1 rank should place them, not their league-4 one");
+            "MoonA's 47.8-point rank should place them, not their 22.1-point one");
     }
 
     [Test]
@@ -447,8 +490,8 @@ public class GlobalSearchTests
         var service = PlayerServiceWith(
             Settings("MoonA#1", "MoonB#2", "MoonC#3", "MoonD#4"),
             rankRepository: RankRepositoryWith(
-                RankFor("MoonC#3", league: 1, rankNumber: 1),
-                RankFor("MoonD#4", league: 1, rankNumber: 2)));
+                RankFor("MoonC#3", rankingPoints: 47.8),
+                RankFor("MoonD#4", rankingPoints: 30.1)));
 
         var page1 = await service.GlobalSearchForPlayer(
             "moon", pageSize: 2, season: 13, gateWay: GateWay.Europe, gameMode: GameMode.GM_1v1);
@@ -530,7 +573,7 @@ public class GlobalSearchTests
     [Test]
     public async Task Context_AsksOnlyForLadderPosition_NotTheFullRankRows()
     {
-        // Ordering reads League and RankNumber and nothing else, so the core takes the projected
+        // Ordering reads RankingPoints and nothing else, so the core takes the projected
         // query. Falling back to LoadRanksForPlayers would hydrate a joined PlayerOverview for every
         // hit in the match set — payload nothing here opens.
         var ranks = RankRepositoryWith(RankFor("Moon#1"));

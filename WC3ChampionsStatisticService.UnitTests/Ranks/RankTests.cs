@@ -475,13 +475,11 @@ public class RankTests : IntegrationTestBase
 
         // Assert
         Assert.AreEqual(1, soloStandings.Count);
-        Assert.AreEqual(1, soloStandings[0].League);
-        Assert.AreEqual(5, soloStandings[0].RankNumber);
+        Assert.AreEqual(100, soloStandings[0].RankingPoints);
         CollectionAssert.AreEqual(new[] { "solo#123" }, soloStandings[0].MemberIds);
 
         Assert.AreEqual(1, teamStandings.Count);
-        Assert.AreEqual(2, teamStandings[0].League);
-        Assert.AreEqual(7, teamStandings[0].RankNumber);
+        Assert.AreEqual(90, teamStandings[0].RankingPoints);
         CollectionAssert.AreEqual(new[] { "first#456", "second#789" }, teamStandings[0].MemberIds);
     }
 
@@ -491,11 +489,12 @@ public class RankTests : IntegrationTestBase
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
-        // The same player ranked on three more ladders, each differing in exactly one dimension
+        // The same player ranked on three more ladders, each differing in exactly one dimension;
+        // distinct ranking points prove which ladder the standing came from.
         var asked = new Rank(new List<string> { "peter#123" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_1v1, 13);
-        var otherSeason = new Rank(new List<string> { "peter#123" }, 2, 9, 100, null, GateWay.Europe, GameMode.GM_1v1, 12);
-        var otherGateway = new Rank(new List<string> { "peter#123" }, 3, 9, 100, null, GateWay.America, GameMode.GM_1v1, 13);
-        var otherMode = new Rank(new List<string> { "peter#123" }, 4, 9, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        var otherSeason = new Rank(new List<string> { "peter#123" }, 2, 9, 90, null, GateWay.Europe, GameMode.GM_1v1, 12);
+        var otherGateway = new Rank(new List<string> { "peter#123" }, 3, 9, 80, null, GateWay.America, GameMode.GM_1v1, 13);
+        var otherMode = new Rank(new List<string> { "peter#123" }, 4, 9, 70, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
         await rankRepository.InsertRanks(new List<Rank> { asked, otherSeason, otherGateway, otherMode });
 
         await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 13, null));
@@ -508,8 +507,7 @@ public class RankTests : IntegrationTestBase
 
         // Assert
         Assert.AreEqual(1, standings.Count);
-        Assert.AreEqual(1, standings[0].League);
-        Assert.AreEqual(5, standings[0].RankNumber);
+        Assert.AreEqual(100, standings[0].RankingPoints);
     }
 
     [Test]
@@ -530,7 +528,8 @@ public class RankTests : IntegrationTestBase
 
         // Assert
         Assert.AreEqual(1, standings.Count);
-        CollectionAssert.AreEqual(new[] { "kept#123" }, standings[0].MemberIds);    }
+        CollectionAssert.AreEqual(new[] { "kept#123" }, standings[0].MemberIds);
+    }
 
     [Test]
     public async Task LoadRanksForPlayers_WithContext_DropsRanksWithoutPlayerOverview()
@@ -600,4 +599,5 @@ public class RankTests : IntegrationTestBase
         var stored = await ranksCollection.Find(FilterDefinition<Rank>.Empty).FirstAsync();
         CollectionAssert.AreEqual(new[] { "aaa#1", "bbb#2" }, stored.MemberIds);
     }
+
 }

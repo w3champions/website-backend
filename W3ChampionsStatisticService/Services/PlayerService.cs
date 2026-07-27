@@ -179,15 +179,13 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
 
     private static bool OutranksHeld(PlayerLadderStanding candidate, PlayerLadderStanding held)
     {
-        return candidate.League != held.League
-            ? candidate.League < held.League
-            : candidate.RankNumber < held.RankNumber;
+        return candidate.RankingPoints > held.RankingPoints;
     }
 
     /// <summary>
     /// The sort key, which doubles as the pagination cursor — so it is compared as a string, and its
-    /// numeric parts are zero-padded to sort numerically. League leads rank number because RankNumber
-    /// restarts at 1 in every league.
+    /// numeric parts are zero-padded to sort numerically. Ranked entries order by ranking points, the
+    /// ladder's own global ordering (see <see cref="PlayerLadderStanding.RankingPoints"/>).
     /// </summary>
     private static string RelevanceId(
         PersonalSetting ps,
@@ -213,8 +211,16 @@ public class PlayerService(IPlayerRepository playerRepository, ICachedDataProvid
         }
 
         return ladderStanding.TryGetValue(ps.Id, out var rank)
-            ? $"0_{rank.League:D3}_{rank.RankNumber:D4}_{ps.Id}"
+            ? $"0_{InvertedRankingPoints(rank):D5}_{ps.Id}"
             : $"1_{nameRelevance}_{ps.Id}";
+    }
+
+    // The key sorts ascending as a string, so higher points must encode smaller: the complement,
+    // scaled to keep the ladder's 0.1-point precision. The clamp pins anything past the 999.99
+    // ceiling to the edge of the range; ladder points top out near 60.
+    private static int InvertedRankingPoints(PlayerLadderStanding standing)
+    {
+        return System.Math.Clamp(99999 - (int)System.Math.Round(standing.RankingPoints * 100), 0, 99999);
     }
 
     [NoTrace]

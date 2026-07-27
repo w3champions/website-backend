@@ -113,8 +113,7 @@ public static class SearchTestFixtures
                     .Select(r => new PlayerLadderStanding
                     {
                         MemberIds = r.MemberIds,
-                        League = r.League,
-                        RankNumber = r.RankNumber,
+                        RankingPoints = r.RankingPoints,
                     })
                     .ToList());
 
@@ -156,11 +155,12 @@ public static class SearchTestFixtures
         string[] members,
         int league = 1,
         int rankNumber = 5,
+        double rankingPoints = 500,
         GateWay gateWay = GateWay.Europe,
         GameMode gameMode = GameMode.GM_2v2_AT,
         int season = 13)
     {
-        return new Rank([.. members], league, rankNumber, 500, null, gateWay, gameMode, season)
+        return new Rank([.. members], league, rankNumber, rankingPoints, null, gateWay, gameMode, season)
         {
             Players =
             [
