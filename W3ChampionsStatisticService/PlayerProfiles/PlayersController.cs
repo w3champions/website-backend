@@ -60,6 +60,13 @@ public class PlayersController(
         {
             return BadRequest("search parameter must be at least 3 letters.");
         }
+        // Rejected rather than partially honoured: the relevanceId doubles as the pagination cursor and
+        // its layout differs between the two modes, so a caller who drops one parameter between pages
+        // would page a context-mode cursor against context-free keys and silently receive nothing.
+        if (season.HasValue != gateWay.HasValue || season.HasValue != gameMode.HasValue)
+        {
+            return BadRequest("season, gateWay and gameMode must be supplied together or not at all.");
+        }
         if (pageSize > 20) pageSize = 20;
         var players = await _playerService.GlobalSearchForPlayer(search, lastRelevanceId, pageSize, season, gateWay, gameMode);
         return Ok(players);
