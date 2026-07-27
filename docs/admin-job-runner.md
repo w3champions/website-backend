@@ -221,6 +221,14 @@ history predates those fields.
 The source is the retained `MatchFinishedEvent` collection, read directly - not
 the read-model pipeline, and not `Matchup`.
 
+That collection goes back to the beginning: it appears in the second day of the
+repository's history (`569f39c`, "saving of raw data working") as the raw store
+the read models were built on, it has no TTL index, nothing deletes from it, and
+`MatchEventRepository.InsertIfNotExisting` exists to *fill in* events synced from
+the matchmaking service. `Matchup` is derived from these events, so it cannot
+have deeper coverage. Worth confirming against prod once by comparing the oldest
+`_id` in each collection.
+
 `Matchup` looked like the obvious source but is subtly wrong for this:
 `PlayerOverviewMatches.OldRankDeviation` is the RD *before* the match
 (`Matchup.cs` sets it from `w.mmr.rd`), whereas the live handler stores the RD
@@ -259,8 +267,15 @@ Other properties:
   `EndTime`, so the `_id` window is padded by two hours at each end and the
   exact day selected on `EndTime`. A day's existing entries are removed before
   the rebuilt one is inserted, so a rerun converges rather than double-counting.
-- **Stops at yesterday.** Today is still being written by the live handler, and
-  rewriting a day underneath it would drop games that land mid-run.
+- **Stops at yesterday**, relative to whenever it runs. Today is still being
+  written by the live handler, and rewriting a day underneath it would drop
+  games that land mid-run.
+
+  **Run it on a later UTC day than the timeline handler was deployed on.** The
+  run day is never rebuilt, so on the deploy day the entries the *old* handler
+  wrote that morning stay as they are while the document is still promoted to
+  the current schema version - claiming games counts and intra-day peaks that
+  were never computed. Any later day is fine; no need to wait beyond that.
 - **Throttle** via `context.Pace()` between days - see Back-pressure above.
 - Re-runnable, but requires `force` once completed.
 

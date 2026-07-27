@@ -33,7 +33,9 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
 
     public string Description =>
         "Recomputes the MMR/RP timeline from match history so lifetime peaks can be shown. " +
-        "Rewrites historical entries, which shifts some existing charts. Resumable; runs for hours.";
+        "Rewrites historical entries, which shifts some existing charts. Resumable; runs for hours. " +
+        "Covers everything up to yesterday (UTC) - do not run this on the same UTC day the " +
+        "timeline handler was deployed, or that day's part-old entries will be marked as rebuilt.";
 
     public bool RequiresConfirmation => true;
 
@@ -59,8 +61,14 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
             return;
         }
 
-        // Yesterday, not today: today is still being written by the live handler, and
-        // rewriting a day underneath it would drop games that land mid-run.
+        // Yesterday relative to whenever this runs, not to any deploy: today is still
+        // being written by the live handler, and rewriting a day underneath it would
+        // drop games that land mid-run.
+        //
+        // The corollary is operational: run this on a later UTC day than the one the
+        // timeline handler was deployed on. Run it on the same day and the entries the
+        // OLD handler wrote earlier that day are never rebuilt, yet the document is
+        // still promoted to the current schema version, claiming they were.
         var lastDay = DateOnly.FromDateTime(DateTime.UtcNow.Date).AddDays(-1);
         var day = ReadCheckpoint(context) ?? firstDay.Value;
 
