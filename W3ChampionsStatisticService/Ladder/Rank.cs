@@ -38,6 +38,7 @@ public class Rank : IIdentifiable
 
         Player1Id = playerIds.FirstOrDefault();
         Player2Id = playerIds.Skip(1).FirstOrDefault();
+        MemberIds = playerIds;
     }
 
     public GateWay Gateway { get; set; }
@@ -50,6 +51,13 @@ public class Rank : IIdentifiable
     public double RankingPoints { get; set; }
     public Race? Race { get; set; }
     public string PlayerId { get; set; }
+
+    // Every member of the ranked entry. Player1Id/Player2Id hold the first two of these; looking a
+    // player up by battleTag goes through this list, so members past the second are findable too.
+    // JsonIgnore keeps it out of API responses: it exists for the lookup, and serializing it would
+    // change the wire shape of every legacy endpoint that returns ranks.
+    [JsonIgnore]
+    public List<string> MemberIds { get; set; } = [];
     public string Player1Id { get; set; }
     public string Player2Id { get; set; }
     [JsonIgnore]

@@ -1,3 +1,4 @@
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using System.Collections.Generic;
@@ -450,5 +451,23 @@ public class RankTests : IntegrationTestBase
 
         // Assert
         Assert.AreEqual(2, playerLoaded2.Count);
+    }
+    [Test]
+    public async Task EnsureIndexes_BackfillFallsBackToTheStoredMembers_WhenTheOverviewIsMissing()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+
+        var rank = new Rank(new List<string> { "aaa#1", "bbb#2" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — no PlayerOverview exists, so the backfill only has Player1Id/Player2Id to go on
+        await rankRepository.EnsureIndexesAsync();
+
+        // Assert on the stored document: an orphan rank is invisible to the joined queries either way
+        var stored = await ranksCollection.Find(FilterDefinition<Rank>.Empty).FirstAsync();
+        CollectionAssert.AreEqual(new[] { "aaa#1", "bbb#2" }, stored.MemberIds);
     }
 }
