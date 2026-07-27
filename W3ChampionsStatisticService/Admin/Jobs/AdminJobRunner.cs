@@ -98,14 +98,23 @@ public class AdminJobRunner(IServiceScopeFactory scopeFactory) : IHostedService
         // runs, and the job may hold its dependencies for hours.
         using var scope = scopeFactory.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IAdminJobRepository>();
-        var context = new AdminJobContext(key, repository, claimed);
+
+        // Resolved before the context so the context knows the job's duty cycle. Null
+        // is unreachable in practice - TryStart already found it in an identical
+        // container - but is handled as a job failure rather than an unobserved throw.
+        var job = FindJob(scope.ServiceProvider, key);
+        var context = new AdminJobContext(key, repository, claimed, job?.MaxDutyCycle ?? 1.0);
 
         var status = AdminJobStatus.Completed;
         string error = null;
 
         try
         {
-            var job = FindJob(scope.ServiceProvider, key);
+            if (job == null)
+            {
+                throw new InvalidOperationException($"Admin job '{key}' is no longer registered.");
+            }
+
             Log.Information("Admin job {JobKey} starting (run {RunCount})", key, claimed.RunCount);
 
             await job.RunAsync(context, running.Cancellation.Token);

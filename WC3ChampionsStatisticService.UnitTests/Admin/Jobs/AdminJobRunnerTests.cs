@@ -187,6 +187,57 @@ public class AdminJobRunnerTests
     }
 
     [Test]
+    public async Task PacingHoldsAJobToItsDutyCycle()
+    {
+        var job = new FakeAdminJob("paced", async (context, token) =>
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                await Task.Delay(50, token);
+                await context.Pace(token);
+            }
+        })
+        { MaxDutyCycle = 0.25 };
+        var runner = CreateRunner(job);
+
+        var start = DateTimeOffset.UtcNow;
+        await runner.TryStart("paced", "peon#1", force: false, reset: false);
+        await runner.WhenFinished("paced");
+        var elapsed = DateTimeOffset.UtcNow - start;
+
+        // 150ms of work at a 25% duty cycle owes roughly 450ms of pause. Asserting well
+        // under that only proves it paced at all, without depending on timer accuracy.
+        Assert.That(elapsed, Is.GreaterThan(TimeSpan.FromMilliseconds(300)));
+        Assert.That(_repository.Finishes[0].Status, Is.EqualTo(AdminJobStatus.Completed));
+    }
+
+    [Test]
+    public async Task PacingObservesCancellation()
+    {
+        var started = new TaskCompletionSource();
+        var job = new FakeAdminJob("paced-cancel", async (context, token) =>
+        {
+            started.SetResult();
+            while (true)
+            {
+                await Task.Delay(20, token);
+                await context.Pace(token);
+            }
+        })
+        { MaxDutyCycle = 0.01 };
+        var runner = CreateRunner(job);
+
+        await runner.TryStart("paced-cancel", "peon#1", force: false, reset: false);
+        await started.Task;
+        runner.Cancel("paced-cancel");
+        await runner.WhenFinished("paced-cancel");
+
+        // A job asleep inside Pace must still stop promptly rather than serving out its
+        // pause, or cancel would take up to MaxPause to take effect.
+        Assert.That(_repository.Finishes[0].Status, Is.EqualTo(AdminJobStatus.Cancelled));
+    }
+
+    [Test]
     public async Task ProgressWritesAreThrottled()
     {
         var job = new FakeAdminJob("chatty", async (context, _) =>

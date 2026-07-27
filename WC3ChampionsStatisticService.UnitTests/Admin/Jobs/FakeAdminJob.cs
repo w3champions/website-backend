@@ -18,6 +18,9 @@ public class FakeAdminJob(string key, Func<IAdminJobContext, CancellationToken, 
     public EPermission RequiredPermission { get; set; } = EPermission.Jobs;
     public bool RequiresConfirmation { get; set; }
 
+    /// <summary>Flat out by default so tests are not paced; overridden where that is the point.</summary>
+    public double MaxDutyCycle { get; set; } = 1.0;
+
     /// <summary>The checkpoint the job was handed, captured so tests can assert on resume.</summary>
     public BsonDocument ObservedCheckpoint { get; private set; }
     public long ObservedItemsProcessed { get; private set; }

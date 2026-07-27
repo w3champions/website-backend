@@ -36,6 +36,16 @@ public interface IAdminJob
     /// <summary>When true the UI makes the admin type the job name before running it.</summary>
     bool RequiresConfirmation => false;
 
+    /// <summary>
+    /// The largest share of wall-clock time this job may spend working, enforced by
+    /// <see cref="IAdminJobContext.Pace"/>. 1.0 lets it run flat out; the default leaves
+    /// the database idle three quarters of the time.
+    /// <para>
+    /// Only has an effect if the job actually calls <c>Pace</c> between batches.
+    /// </para>
+    /// </summary>
+    double MaxDutyCycle => 0.25;
+
     Task RunAsync(IAdminJobContext context, CancellationToken cancellationToken);
 }
 
@@ -68,4 +78,11 @@ public interface IAdminJobContext
 
     /// <summary>Adds to <see cref="ItemsProcessed"/>.</summary>
     void AddItems(long count);
+
+    /// <summary>
+    /// Call between batches to keep the job within its <see cref="IAdminJob.MaxDutyCycle"/>.
+    /// Sleeps in proportion to how long the batch just took, and throws if the job has
+    /// been cancelled - so this doubles as the natural cancellation point of a work loop.
+    /// </summary>
+    Task Pace(CancellationToken cancellationToken);
 }
