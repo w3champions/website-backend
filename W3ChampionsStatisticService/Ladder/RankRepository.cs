@@ -1,5 +1,9 @@
-﻿using MongoDB.Driver;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -13,9 +17,122 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Ladder;
 
 [Trace]
-public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : MongoDbRepositoryBase(mongoClient), IRankRepository
+public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider, ILogger<RankRepository> logger = null) : MongoDbRepositoryBase(mongoClient), IRankRepository, IRequiresIndexes
 {
     private PersonalSettingsProvider _personalSettingsProvider = personalSettingsProvider;
+    private readonly ILogger<RankRepository> _logger = logger ?? NullLogger<RankRepository>.Instance;
+
+    public string CollectionName => nameof(Rank);
+
+    /// <summary>
+    /// Declares the Rank index the consolidated-search rank lookup seeks on —
+    /// <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/> asks "which of these
+    /// battleTags hold a rank here" and would scan the whole collection without it. Then backfills
+    /// <see cref="Rank.MemberIds"/>, since rows written before the field existed would otherwise
+    /// answer "not ranked" forever — a row only rewrites itself when its league next syncs, which
+    /// for a finished season never happens.
+    /// </summary>
+    /// <remarks>
+    /// Creation is idempotent, so redeploys are a no-op. Should prod hold this key under a different
+    /// name, createIndexes raises IndexOptionsConflict; MongoIndexInitializationService logs it per
+    /// repository and continues — correct results, collection scans, visible only in the startup log.
+    /// The index is multikey — one entry per member, which is what lets it answer for every member —
+    /// and Background is inert on MongoDB 4.2+, set to match the sibling repositories.
+    /// </remarks>
+    public async Task EnsureIndexesAsync()
+    {
+        var ranks = CreateCollection<Rank>();
+        var indexes = new List<CreateIndexModel<Rank>>
+        {
+            // Keyed lookup for "rank for this battleTag in {season, gateway, gameMode}". Leading with
+            // the member lets the bounded $in jump straight to the matching rows instead of scanning
+            // the season/mode bucket.
+            new(
+                Builders<Rank>.IndexKeys
+                    .Ascending(r => r.MemberIds)
+                    .Ascending(r => r.Season)
+                    .Ascending(r => r.Gateway)
+                    .Ascending(r => r.GameMode),
+                new CreateIndexOptions { Name = "MemberIds_Season_Gateway_GameMode", Background = true }),
+        };
+
+        await ranks.Indexes.CreateManyAsync(indexes);
+
+        // After the index, and isolated: a backfill failure must not cost the lookups their index,
+        // and it reports under its own identity rather than as an index-creation error.
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var filled = await BackfillMemberIdsAsync(ranks);
+            if (filled > 0)
+            {
+                _logger.LogInformation("Rank MemberIds backfill filled {Count} row(s) in {ElapsedMs}ms", filled, stopwatch.ElapsedMilliseconds);
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Rank MemberIds backfill failed; rows written before the field existed stay invisible to the member lookups until a later startup succeeds");
+        }
+    }
+
+    /// <summary>
+    /// Fills <see cref="Rank.MemberIds"/> on rows written before the field existed and returns how
+    /// many rows were missing it.
+    /// </summary>
+    /// <remarks>
+    /// Members come from the joined PlayerOverview, which carries the whole team as structured data,
+    /// so teams of three and four are repaired rather than left at the two members the old fields
+    /// held. Rows with no PlayerOverview fall back to those two fields; they are the orphan ranks the
+    /// lookup drops anyway, so no query can return them either way. Reading the row id instead would
+    /// be guesswork — a battleTag may itself contain the separator.
+    /// </remarks>
+    private static async Task<long> BackfillMemberIdsAsync(IMongoCollection<Rank> ranks)
+    {
+        var missingField = Builders<Rank>.Filter.Exists(r => r.MemberIds, false);
+        var missing = await ranks.CountDocumentsAsync(missingField);
+        if (missing == 0)
+        {
+            return 0;
+        }
+
+        var pipeline = new[]
+        {
+            new BsonDocument("$match", new BsonDocument("MemberIds", new BsonDocument("$exists", false))),
+            new BsonDocument("$lookup", new BsonDocument
+            {
+                { "from", nameof(PlayerOverview) },
+                { "localField", "_id" },
+                { "foreignField", "_id" },
+                { "as", "overview" },
+            }),
+            // $project keeps _id + MemberIds alone, and $merge whenMatched:merge writes only those.
+            new BsonDocument("$project", new BsonDocument("MemberIds", new BsonDocument("$cond", new BsonArray
+            {
+                new BsonDocument("$gt", new BsonArray { new BsonDocument("$size", "$overview"), 0 }),
+                new BsonDocument("$map", new BsonDocument
+                {
+                    { "input", new BsonDocument("$arrayElemAt", new BsonArray { "$overview.PlayerIds", 0 }) },
+                    { "as", "member" },
+                    { "in", "$$member.BattleTag" },
+                }),
+                new BsonDocument("$filter", new BsonDocument
+                {
+                    { "input", new BsonArray { "$Player1Id", "$Player2Id" } },
+                    { "cond", new BsonDocument("$ne", new BsonArray { "$$this", BsonNull.Value }) },
+                }),
+            }))),
+            new BsonDocument("$merge", new BsonDocument
+            {
+                { "into", nameof(Rank) },
+                { "on", "_id" },
+                { "whenMatched", "merge" },
+                { "whenNotMatched", "discard" },
+            }),
+        };
+
+        await ranks.AggregateAsync<BsonDocument>(pipeline);
+        return missing;
+    }
 
     public Task<List<Rank>> LoadPlayersOfLeague(int leagueId, int season, GateWay gateWay, GameMode gameMode)
     {
@@ -138,6 +255,20 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
     public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season)
     {
         return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
+    }
+
+    // The one definition of "holds a rank on this ladder".
+    private static Expression<Func<Rank, bool>> OnLadder(List<string> list, int season, GateWay gateWay, GameMode gameMode)
+    {
+        return r => r.MemberIds.Any(member => list.Contains(member))
+            && r.Season == season
+            && r.Gateway == gateWay
+            && r.GameMode == gameMode;
+    }
+
+    public Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season, GateWay gateWay, GameMode gameMode)
+    {
+        return JoinWith(OnLadder(list, season, gateWay, gameMode));
     }
 
 }

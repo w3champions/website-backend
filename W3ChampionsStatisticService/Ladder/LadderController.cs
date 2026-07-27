@@ -44,6 +44,21 @@ public class LadderController(
         return Ok(playerRanks);
     }
 
+    [HttpPost("ranks-for-players")]
+    public async Task<IActionResult> GetRanksForPlayers([FromBody] RanksForPlayersRequest request)
+    {
+        if (request?.BattleTags == null || request.BattleTags.Count == 0)
+        {
+            return Ok(new List<RankInContext>());
+        }
+        if (request.BattleTags.Count > RanksForPlayersRequest.MaxBattleTags)
+        {
+            return BadRequest($"battleTags must contain at most {RanksForPlayersRequest.MaxBattleTags} entries.");
+        }
+        var ranks = await _rankRepository.LoadRanksForPlayers(request.BattleTags, request.Season, request.GateWay, request.GameMode);
+        return Ok(ranks.Select(r => r.ToRankInContext()).ToList());
+    }
+
     [HttpGet("{leagueId}")]
     public async Task<IActionResult> GetLadder([FromRoute] int leagueId, int season, GateWay gateWay = GateWay.Europe, GameMode gameMode = GameMode.GM_1v1)
     {
