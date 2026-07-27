@@ -94,4 +94,35 @@ public class GlobalSearchControllerTests
 
         Assert.AreEqual(PageSizeCap, ResultOf(result).Count);
     }
+
+    // Zero-weight characters are found inside every string by culture-sensitive matching, so a term
+    // made of them measures three long and matches the whole directory. Counting letters and digits
+    // is what keeps the guard's promise.
+    [TestCase("​​​", Description = "zero-width spaces")]
+    [TestCase("­­­", Description = "soft hyphens")]
+    [TestCase("﻿﻿﻿", Description = "byte-order marks")]
+    [TestCase("m​​o", Description = "two letters padded to four characters")]
+    public async Task MinLength_TermsWithoutThreeSearchableCharactersAreRejected(string search)
+    {
+        var result = await CreateController(50).GlobalSearchPlayer(search);
+
+        Assert.IsInstanceOf<BadRequestObjectResult>(result);
+    }
+
+    [Test]
+    public async Task MinLength_NonLatinLettersCount()
+    {
+        // BattleTags carry Cyrillic, CJK and accented names; those letters are searchable characters.
+        var result = await CreateController(50).GlobalSearchPlayer("Гоб");
+
+        Assert.IsInstanceOf<OkObjectResult>(result);
+    }
+
+    [Test]
+    public async Task MinLength_DigitsCount()
+    {
+        var result = await CreateController(50).GlobalSearchPlayer("123");
+
+        Assert.IsInstanceOf<OkObjectResult>(result);
+    }
 }
