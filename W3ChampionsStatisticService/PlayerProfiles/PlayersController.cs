@@ -40,11 +40,20 @@ public class PlayersController(
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
     private readonly ChatDetailsQueryHandler _chatDetailsQueryHandler = chatDetailsQueryHandler;
 
+    // season + gateWay + gameMode are optional and travel together: supplying all three searches in a
+    // ladder context, where standing on that ladder is part of relevance. Callers with no ladder
+    // (the header, the player picker, launcher-e) omit them and get name relevance alone.
     [HttpGet("global-search")]
-    public async Task<IActionResult> GlobalSearchPlayer(string search, string lastRelevanceId = "", int pageSize = 20)
+    public async Task<IActionResult> GlobalSearchPlayer(
+        string search,
+        string lastRelevanceId = "",
+        int pageSize = 20,
+        int? season = null,
+        GateWay? gateWay = null,
+        GameMode? gameMode = null)
     {
         if (pageSize > 20) pageSize = 20;
-        var players = await _playerService.GlobalSearchForPlayer(search, lastRelevanceId, pageSize);
+        var players = await _playerService.GlobalSearchForPlayer(search, lastRelevanceId, pageSize, season, gateWay, gameMode);
         return Ok(players);
     }
 

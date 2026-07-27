@@ -25,12 +25,12 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
     public string CollectionName => nameof(Rank);
 
     /// <summary>
-    /// Declares the Rank index the consolidated-search rank lookup seeks on —
-    /// <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/> asks "which of these
-    /// battleTags hold a rank here" and would scan the whole collection without it. Then backfills
-    /// <see cref="Rank.MemberIds"/>, since rows written before the field existed would otherwise
-    /// answer "not ranked" forever — a row only rewrites itself when its league next syncs, which
-    /// for a finished season never happens.
+    /// Declares the Rank index both consolidated-search rank queries seek on —
+    /// <see cref="LoadLadderStandings"/> (ordering) and <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/>
+    /// (display) ask "which of these battleTags hold a rank here" and would scan the whole
+    /// collection without it. Then backfills <see cref="Rank.MemberIds"/>, since rows written
+    /// before the field existed would otherwise answer "not ranked" forever — a row only rewrites
+    /// itself when its league next syncs, which for a finished season never happens.
     /// </summary>
     /// <remarks>
     /// Creation is idempotent, so redeploys are a no-op. Should prod hold this key under a different
@@ -257,7 +257,9 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
         return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
     }
 
-    // The one definition of "holds a rank on this ladder".
+    // The one definition of "holds a rank on this ladder". Ordering (LoadLadderStandings) and
+    // display (LoadRanksForPlayers) both match on it, so the two stages of a search cannot disagree
+    // about who is ranked.
     private static Expression<Func<Rank, bool>> OnLadder(List<string> list, int season, GateWay gateWay, GameMode gameMode)
     {
         return r => r.MemberIds.Any(member => list.Contains(member))
@@ -271,4 +273,37 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
         return JoinWith(OnLadder(list, season, gateWay, gameMode));
     }
 
+    /// <summary>
+    /// The same rows as <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/>,
+    /// projected to ladder position alone. For callers that order by standing and never read the
+    /// player's stats — the search core asks this for an entire match set, so the joined
+    /// PlayerOverview would be payload per hit that nothing opens.
+    /// </summary>
+    public async Task<List<PlayerLadderStanding>> LoadLadderStandings(
+        List<string> list,
+        int season,
+        GateWay gateWay,
+        GameMode gameMode)
+    {
+        var ranks = CreateCollection<Rank>();
+        var players = CreateCollection<PlayerOverview>();
+        return await ranks
+            .Aggregate()
+            .Match(OnLadder(list, season, gateWay, gameMode))
+            // The join stays: dropping ranks with no PlayerOverview is what keeps this in agreement
+            // with LoadRanksForPlayers about who is ranked. Those orphans are real — 379 in
+            // season 13 / 2v2 AT alone.
+            .Lookup<Rank, PlayerOverview, Rank>(players,
+                rank => rank.PlayerId,
+                player => player.Id,
+                rank => rank.Players)
+            .Match(r => r.Players.Any())
+            .Project(r => new PlayerLadderStanding
+            {
+                MemberIds = r.MemberIds,
+                League = r.League,
+                RankNumber = r.RankNumber,
+            })
+            .ToListAsync();
+    }
 }
