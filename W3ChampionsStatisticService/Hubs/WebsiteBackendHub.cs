@@ -29,7 +29,8 @@ public class WebsiteBackendHub(
     TracingService tracingService,
     IBattleTagResolver battleTagResolver,
     IRelationshipChangeNotifier relationshipChangeNotifier,
-    ITicketStore ticketStore
+    ITicketStore ticketStore,
+    IW3CAuthenticationService authenticationService
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -59,6 +60,7 @@ public class WebsiteBackendHub(
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
     private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
     private readonly ITicketStore _ticketStore = ticketStore;
+    private readonly IW3CAuthenticationService _authenticationService = authenticationService;
 
 
     [NoTrace]
@@ -66,20 +68,44 @@ public class WebsiteBackendHub(
     {
         await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
-            // TICKET-ONLY auth (WB-1). The launcher is this hub's SOLE client; the browser website
-            // never connects here (it has had zero SignalR since PR #122 — browsers use REST +
-            // Authorization: Bearer <JWT> and never open this WebSocket). So, exactly like
-            // chat-service's hub, this is a HARD CUTOVER to single-use tickets with NO raw-JWT
-            // fallback: access_token MUST be a one-time 60s ticket minted by POST /auth/session;
-            // TryConsume burns it once and yields the validated identity. A missing / invalid /
-            // already-consumed ticket is rejected below. The cutover is lock-step with the forced
-            // launcher update — launchers that have not yet updated lose wb-hub friends/presence
-            // until they update in that coordinated window.
+            // Ticket-first auth (WB-1) with a TEMPORARY raw-JWT fallback.
+            //
+            // The original plan was a hard cutover to single-use tickets, lock-step with a forced
+            // launcher update. That update never shipped: the last launcher release (v1.6.5,
+            // 2026-06-16) predates the ticket flow entirely, so from the moment this hub's cutover
+            // deployed, every player on the released launcher presented a raw JWT, was rejected
+            // here, and lost friends/presence — a fleet-wide outage, not a coordinated window.
+            //
+            // Bridge: try the ticket path first (updated launchers), then fall back to validating
+            // access_token as a raw JWT (released launchers), exactly as this hub did before the
+            // cutover. validateLifetime: false mirrors the pre-cutover behavior.
+            //
+            // REMOVE the fallback once a launcher release containing the ticket mint
+            // (launcher-e #833) has shipped AND its forced-update rollout has completed.
             var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"].ToString();
             W3CUserAuthenticationDto w3cUserAuthentication = null;
-            if (!string.IsNullOrEmpty(accessToken) && _ticketStore.TryConsume(accessToken, DateTime.UtcNow, out var ticketIdentity))
+            if (!string.IsNullOrEmpty(accessToken))
             {
-                w3cUserAuthentication = ticketIdentity;
+                if (_ticketStore.TryConsume(accessToken, DateTime.UtcNow, out var ticketIdentity))
+                {
+                    w3cUserAuthentication = ticketIdentity;
+                }
+                else
+                {
+                    // GetUserByToken THROWS on a malformed/invalid token (FromJWT validates bare);
+                    // every REST filter that calls it wraps in try/catch and 401s. Mirror that here:
+                    // an updated launcher whose single-use ticket was already consumed lands on this
+                    // path with a hex ticket, which must reject cleanly (AuthorizationFailed below),
+                    // not surface as a hub exception.
+                    try
+                    {
+                        w3cUserAuthentication = _authenticationService.GetUserByToken(accessToken, false);
+                    }
+                    catch (Exception)
+                    {
+                        w3cUserAuthentication = null;
+                    }
+                }
             }
             if (w3cUserAuthentication == null)
             {

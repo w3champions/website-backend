@@ -110,6 +110,7 @@ public class WebsiteBackendHubTests
     private Mock<IBattleTagResolver> _battleTagResolverMock;
     private Mock<IRelationshipChangeNotifier> relationshipNotifier;
     private TicketStore ticketStore;
+    private Mock<IW3CAuthenticationService> authService;
 
     [SetUp]
     public void SetUp()
@@ -134,6 +135,13 @@ public class WebsiteBackendHubTests
             .ReturnsAsync((string input) => input);
         relationshipNotifier = new Mock<IRelationshipChangeNotifier>();
         ticketStore = new TicketStore();
+        // Default mirrors the REAL service contract: GetUserByToken THROWS on any invalid token
+        // (FromJWT validates bare — see W3CAuthenticationService). Fallback-accept tests override
+        // per-token; rejection tests exercise the hub's catch via this throwing default.
+        authService = new Mock<IW3CAuthenticationService>();
+        authService
+            .Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()))
+            .Throws(new Microsoft.IdentityModel.Tokens.SecurityTokenException("invalid token"));
     }
 
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
@@ -147,7 +155,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            authService.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         return hub;
@@ -471,7 +480,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            authService.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -530,7 +540,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            authService.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -592,7 +603,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            authService.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -649,7 +661,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            authService.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -769,6 +782,73 @@ public class WebsiteBackendHubTests
             c => c.SendCoreAsync("FriendOnlineStatus", It.IsAny<object[]>(), default),
             Times.Never
         );
+    }
+
+    // --- Raw-JWT fallback bridge (released launchers predating the ticket flow) ---------------
+
+    [Test]
+    public async Task OnConnectedAsync_RawJwtFallback_ConnectsLegacyLauncher()
+    {
+        // A v1.6.5-era launcher sends its raw JWT as access_token — no ticket was ever minted.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        authService
+            .Setup(a => a.GetUserByToken("legacy-jwt", false))
+            .Returns(new W3CUserAuthenticationDto { BattleTag = "Legacy#1234" });
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString("?access_token=legacy-jwt");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn-legacy");
+
+        await hub.OnConnectedAsync();
+
+        Assert.That(connections.GetUser("conn-legacy")?.BattleTag, Is.EqualTo("Legacy#1234"));
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
+        // The pre-cutover behavior is mirrored exactly: lifetime NOT validated on this path.
+        authService.Verify(a => a.GetUserByToken("legacy-jwt", false), Times.Once);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_ValidTicket_NeverConsultsJwtFallback()
+    {
+        // Pins ordering: ticket path first; the fallback must not run for updated launchers.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1234" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn-ticket");
+
+        await hub.OnConnectedAsync();
+
+        Assert.That(connections.GetUser("conn-ticket")?.BattleTag, Is.EqualTo("Ticket#1234"));
+        authService.Verify(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_TokenInvalidOnBothPaths_Rejected()
+    {
+        // Not a ticket, and the JWT fallback rejects it too (SetUp default returns null).
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString("?access_token=garbage");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        SetHubContext(hub, "conn-bad");
+
+        await hub.OnConnectedAsync();
+
+        Assert.That(connections.GetUser("conn-bad"), Is.Null);
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Never);
     }
 
     [Test]
@@ -1036,7 +1116,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            authService.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
