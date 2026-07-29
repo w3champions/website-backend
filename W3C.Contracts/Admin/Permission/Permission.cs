@@ -23,4 +23,5 @@ public enum EPermission
     SmurfCheckerQueryExplanation = 9,
     SmurfCheckerAdministration = 10,
     Warnings = 11,
+    Jobs = 12,
 }
