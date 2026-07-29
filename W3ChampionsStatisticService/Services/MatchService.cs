@@ -100,12 +100,13 @@ public class MatchService(
         string search,
         int season,
         GateWay gateWay,
+        GameMode gameMode,
         int limit)
     {
-        string cacheKey = $"opponents_{playerId}_{season}_{gateWay}_{limit}_{search?.ToLowerInvariant()}";
+        string cacheKey = $"opponents_{playerId}_{season}_{gateWay}_{gameMode}_{limit}_{search?.ToLowerInvariant()}";
 
         return await _cachedOpponentsProvider.GetCachedOrRequestAsync(
-            async () => await _matchRepository.SearchOpponentsFor(playerId, search, season, gateWay, limit),
+            async () => await _matchRepository.SearchOpponentsFor(playerId, search, season, gateWay, gameMode, limit),
             cacheKey,
             TimeSpan.FromMinutes(1));
     }

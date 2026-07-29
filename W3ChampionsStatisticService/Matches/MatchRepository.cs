@@ -145,11 +145,16 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
     // a (case-insensitive) battleTag fragment and ordered by shared match count.
     // The aggregation only ever touches the player's own matches of that season,
     // so it stays cheap even for very active players.
+    //
+    // MatchCount is scoped to the given game mode (all modes when Undefined), but
+    // opponents are still suggested from every mode: the mode-scoped count can be 0
+    // and the client says so, instead of the opponent silently becoming unfindable.
     public async Task<List<OpponentInfo>> SearchOpponentsFor(
         string playerId,
         string search,
         int season,
         GateWay gateWay = GateWay.Undefined,
+        GameMode gameMode = GameMode.Undefined,
         int limit = 10)
     {
         var mongoCollection = CreateCollection<Matchup>();
@@ -171,20 +176,31 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             }
         };
 
+        var inModeCount = gameMode == GameMode.Undefined
+            ? (BsonValue)1
+            : new BsonDocument("$cond", new BsonArray
+            {
+                new BsonDocument("$eq", new BsonArray { "$GameMode", (int)gameMode }),
+                1,
+                0
+            });
+
         return await mongoCollection.Aggregate()
             .Match(playerMatchesFilter)
-            // Drop everything but the battleTags before unwinding so the rest of
-            // the pipeline never carries full match documents.
-            .Project(new BsonDocument { { "Teams.Players.BattleTag", 1 } })
+            // Drop everything but the battleTags and mode before unwinding so the
+            // rest of the pipeline never carries full match documents.
+            .Project(new BsonDocument { { "Teams.Players.BattleTag", 1 }, { "GameMode", 1 } })
             .Unwind("Teams")
             .Unwind("Teams.Players")
             .Match(opponentFilter)
             .Group(new BsonDocument
             {
                 { "_id", "$Teams.Players.BattleTag" },
-                { "MatchCount", new BsonDocument("$sum", 1) }
+                { "MatchCount", new BsonDocument("$sum", inModeCount) },
+                { "TotalCount", new BsonDocument("$sum", 1) }
             })
-            .Sort(new BsonDocument { { "MatchCount", -1 }, { "_id", 1 } })
+            // In-mode opponents first, then whoever shares the most matches overall.
+            .Sort(new BsonDocument { { "MatchCount", -1 }, { "TotalCount", -1 }, { "_id", 1 } })
             .Limit(limit)
             .Project(new BsonDocument
             {

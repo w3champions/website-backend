@@ -57,6 +57,7 @@ public interface IMatchRepository
         string search,
         int season,
         GateWay gateWay = GateWay.Undefined,
+        GameMode gameMode = GameMode.Undefined,
         int limit = 10);
 
     Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);

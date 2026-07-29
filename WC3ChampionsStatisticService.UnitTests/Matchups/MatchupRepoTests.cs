@@ -854,7 +854,21 @@ public class MatchupRepoTests : IntegrationTestBase
         Assert.AreEqual("wolf#456", otherGateway.Single().BattleTag);
         Assert.AreEqual(1, otherGateway.Single().MatchCount);
 
-        var limited = await matchRepository.SearchOpponentsFor("peter#123", "", 0, GateWay.Undefined, 1);
+        // A game-mode scope only affects the count, not who is listed: wolf's
+        // 2v2 with peter counts, Wolfman's 1v1 does not, but he stays findable.
+        var scopedToMode = await matchRepository.SearchOpponentsFor("peter#123", "wolf", 0, GateWay.Undefined, GameMode.GM_2v2);
+        Assert.AreEqual(2, scopedToMode.Count);
+        Assert.AreEqual("wolf#456", scopedToMode[0].BattleTag);
+        Assert.AreEqual(1, scopedToMode[0].MatchCount);
+        Assert.AreEqual("Wolfman#789", scopedToMode[1].BattleTag);
+        Assert.AreEqual(0, scopedToMode[1].MatchCount);
+
+        // With zero in-mode matches everywhere, total shared matches break the tie.
+        var noneInMode = await matchRepository.SearchOpponentsFor("peter#123", "wolf", 0, GateWay.Undefined, GameMode.GM_4v4);
+        Assert.AreEqual("wolf#456", noneInMode[0].BattleTag);
+        Assert.AreEqual(0, noneInMode[0].MatchCount);
+
+        var limited = await matchRepository.SearchOpponentsFor("peter#123", "", 0, GateWay.Undefined, limit: 1);
         Assert.AreEqual("wolf#456", limited.Single().BattleTag);
     }
 }
