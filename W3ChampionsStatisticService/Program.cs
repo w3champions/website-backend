@@ -19,6 +19,7 @@ using W3C.Domain.Repositories;
 using W3C.Domain.UpdateService;
 
 using W3ChampionsStatisticService.Admin;
+using W3ChampionsStatisticService.Admin.Jobs;
 using W3ChampionsStatisticService.Admin.Logs;
 using W3ChampionsStatisticService.Cache;
 using W3ChampionsStatisticService.Clans;
@@ -259,6 +260,9 @@ builder.Services.AddCommonServices();
 
 // Rewards services
 builder.Services.AddRewardServices();
+
+// Manually-triggered operational jobs (see docs/admin-job-runner.md)
+builder.Services.AddAdminJobs();
 
 // MongoDB index initialization service - runs once at startup
 builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();
