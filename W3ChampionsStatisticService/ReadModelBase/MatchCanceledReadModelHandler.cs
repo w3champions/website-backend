@@ -1,5 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Serilog;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Ports;
@@ -18,12 +18,18 @@ public class MatchCanceledReadModelHandler<T>(
 {
     private readonly T _innerHandler = innerHandler;
 
-    protected override void ValidateMatchState(MatchCanceledEvent matchEvent)
+    protected override bool ShouldProcessEvent(MatchCanceledEvent matchEvent)
     {
-        if (matchEvent.match.state != EMatchState.CANCELED)
+        if (matchEvent.match.state == EMatchState.CANCELED)
         {
-            throw new InvalidOperationException($"Received match with illegal state {matchEvent.match.state} within the MatchCanceledReadModelHandler");
+            return true;
         }
+
+        // A match never changes its state again, so this event will never become processable - retrying
+        // it would wedge the handler forever. Skip it and let the watermark move on.
+        Log.Warning("Skipping match {MatchId} with illegal state {MatchState} in event {EventId} within the MatchCanceledReadModelHandler",
+            matchEvent.match.id, matchEvent.match.state, matchEvent.Id);
+        return false;
     }
 
     protected override Match GetMatch(MatchCanceledEvent matchEvent)

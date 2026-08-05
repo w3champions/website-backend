@@ -1,6 +1,6 @@
-using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Serilog;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
@@ -19,12 +19,26 @@ public class MatchFinishedReadModelHandler<T>(
 {
     private readonly T _innerHandler = innerHandler;
 
-    protected override void ValidateMatchState(MatchFinishedEvent matchEvent)
+    protected override bool ShouldProcessEvent(MatchFinishedEvent matchEvent)
     {
-        if (!matchEvent.WasFakeEvent && matchEvent.match.state != EMatchState.FINISHED)
+        if (matchEvent.WasFakeEvent || matchEvent.match.state == EMatchState.FINISHED)
         {
-            throw new InvalidOperationException($"Received match with illegal state {matchEvent.match.state} within the MatchFinishedReadModelHandler");
+            return true;
         }
+
+        if (matchEvent.match.state == EMatchState.CANCELED)
+        {
+            // A canceled match is simply not this handler's business, and it will never become FINISHED
+            // later, so there is nothing to retry. Logged at information level because this is a known
+            // and potentially frequent situation that must not drown out the real warnings.
+            Log.Information("Skipping canceled match {MatchId} in event {EventId} within the MatchFinishedReadModelHandler",
+                matchEvent.match.id, matchEvent.Id);
+            return false;
+        }
+
+        Log.Warning("Skipping match {MatchId} with illegal state {MatchState} in event {EventId} within the MatchFinishedReadModelHandler",
+            matchEvent.match.id, matchEvent.match.state, matchEvent.Id);
+        return false;
     }
 
     protected override Match GetMatch(MatchFinishedEvent matchEvent)

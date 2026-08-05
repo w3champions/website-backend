@@ -47,7 +47,24 @@ public class UnfinishedMatchPlayer : IMatchPlayerServerInfo
     public string id { get; set; }
     public string battleTag { get; set; }
     public string inviteName { get; set; }
-    public Race race { get; set; }
+
+    [BsonElement("race")]
+    private Race? _raceNullable { get; set; }
+
+    [BsonIgnore]
+    public Race race
+    {
+        // Old documents written by the matchmaking service store an explicit null for the race, which
+        // the driver refuses to deserialize into the non-nullable Race enum. Since that failure happens
+        // while loading the event - before any per-event guard in the read model handlers can run - a
+        // single such document wedges a handler permanently, so it has to be tolerated at the model level.
+        // This mirrors the Match.endTime proxy below and maps both a missing and a null race to RnD (0).
+        // Marking the property as actually nullable would incur actual logic changes across the ~20
+        // handlers that consume it - the value is not nullable in JavaScript though.
+        get => _raceNullable ?? Race.RnD;
+        set => _raceNullable = value;
+    }
+
     public Mmr mmr { get; set; }
     public Ranking ranking { get; set; }
     public QueueQuantiles quantiles { get; set; }

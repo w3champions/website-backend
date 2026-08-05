@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Matches;
@@ -47,13 +49,18 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), wasFakeEvent ? Times.Never : Times.Once);
     }
 
-    [Test]
-    public void InsertMatchesFail1()
+    [TestCase(EMatchState.CANCELED)]
+    [TestCase(EMatchState.INIT)]
+    [TestCase(EMatchState.STARTED)]
+    public async Task IllegalMatchState_IsSkippedAndWatermarkAdvances(EMatchState illegalState)
     {
+        // A match's state never changes after the fact, so an event that does not belong to this
+        // handler is a permanent condition. Retrying it forever wedges the whole handler, so it is
+        // logged and skipped instead - and the watermark still has to move past it.
         var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
-        fakeEvent.match.state = EMatchState.CANCELED;
+        fakeEvent.match.state = illegalState;
         var mockEvents = new Mock<IMatchEventRepository>();
         mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
@@ -70,9 +77,13 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             new MatchReadModelHandler(mockMatchRepo.Object, mockMatchService.Object),
             mockTrackingService.Object);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.Update());
+        Assert.DoesNotThrowAsync(() => handler.Update());
+
         mockMatchRepo.Verify(m => m.Insert(It.IsAny<Matchup>()), Times.Never);
-        mockTrackingService.Verify(m => m.TrackException(It.IsAny<InvalidOperationException>(), It.IsAny<string>()), Times.Once);
+        mockTrackingService.Verify(m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
+
+        var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
+        Assert.AreEqual(fakeEvent.Id.ToString(), version.Version);
     }
 
     [Test]
@@ -180,5 +191,197 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             "Human players must be preserved in result.players after stripping");
         Assert.That(receivedEvent.match.players.Count, Is.EqualTo(2),
             "Human players must be preserved in match.players after stripping");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Poison event guard. AsyncServiceBase creates a fresh handler instance and re-enters Update()
+    // every 5 seconds, so the retry budget only works if it lives in the HandlerVersions store.
+    // ---------------------------------------------------------------------------------------------
+
+    // Mirrors the production budget; asserted to stay in sync in MaxAttemptsMatchesTheProductionBudget.
+    private const int MaxAttempts = 60;
+
+    private const string FinishedHandlerName = nameof(IMatchFinishedReadModelHandler);
+
+    /// <summary>Behaves like the real MatchEventRepository.Load: everything after the watermark, in id order.</summary>
+    private static Mock<IMatchEventRepository> CreatePagingEventRepository(List<MatchFinishedEvent> events)
+    {
+        var mockEvents = new Mock<IMatchEventRepository>();
+        mockEvents
+            .Setup(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync((string lastObjectId, int pageSize) => events
+                .Where(e => e.Id > ObjectId.Parse(lastObjectId ?? ObjectId.Empty.ToString()))
+                .OrderBy(e => e.Id)
+                .Take(pageSize)
+                .ToList());
+        return mockEvents;
+    }
+
+    private static MatchFinishedEvent CreateFinishedEvent()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        fakeEvent.match.state = EMatchState.FINISHED;
+        return fakeEvent;
+    }
+
+    /// <summary>Reads the raw handler version document, so the persisted field names are pinned too.</summary>
+    private async Task<BsonDocument> LoadHandlerVersionDocument()
+    {
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<BsonDocument>("HandlerVersions");
+        return await collection
+            .Find(Builders<BsonDocument>.Filter.Eq("HandlerName", FinishedHandlerName))
+            .FirstOrDefaultAsync();
+    }
+
+    // A cleared budget may be stored as an absent field or an explicit zero/null - both mean "no
+    // failure recorded", so the assertions below read through that rather than pinning the shape.
+    private async Task<int> LoadFailureCount()
+    {
+        var document = await LoadHandlerVersionDocument();
+        return document.GetValue("FailureCount", 0).ToInt32();
+    }
+
+    private async Task<string> LoadFailingEventId()
+    {
+        var document = await LoadHandlerVersionDocument();
+        var failingEventId = document.GetValue("FailingEventId", BsonNull.Value);
+        return failingEventId.IsBsonNull ? null : failingEventId.AsString;
+    }
+
+    [Test]
+    public void MaxAttemptsMatchesTheProductionBudget()
+    {
+        Assert.AreEqual(
+            MatchEventReadModelHandler<MatchFinishedEvent, IMatchFinishedReadModelHandler>.MaxEventFailuresBeforeSkip,
+            MaxAttempts);
+    }
+
+    [Test]
+    public async Task TransientFailure_IsRetriedAndDoesNotAdvanceTheWatermark()
+    {
+        var fakeEvent = CreateFinishedEvent();
+        var mockEvents = CreatePagingEventRepository([fakeEvent]);
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
+        var versionRepository = new VersionRepository(MongoClient);
+
+        var shouldFail = true;
+        var innerHandlerMock = new Mock<IMatchFinishedReadModelHandler>();
+        innerHandlerMock
+            .Setup(h => h.Update(It.IsAny<MatchFinishedEvent>()))
+            .Returns(() => shouldFail
+                ? Task.FromException(new IOException("transient mongo blip"))
+                : Task.CompletedTask);
+
+        var handler = new MatchFinishedReadModelHandler<IMatchFinishedReadModelHandler>(
+            mockEvents.Object,
+            versionRepository,
+            innerHandlerMock.Object,
+            mockTrackingService.Object);
+
+        // Below the budget the exception must still bubble up, so AsyncServiceBase retries in 5s.
+        Assert.ThrowsAsync<IOException>(() => handler.Update());
+
+        var afterFailure = await versionRepository.GetLastVersion<IMatchFinishedReadModelHandler>();
+        Assert.AreEqual(ObjectId.Empty.ToString(), afterFailure.Version,
+            "A retryable failure must not advance the watermark - the event would be lost");
+
+        shouldFail = false;
+        await handler.Update();
+
+        var afterSuccess = await versionRepository.GetLastVersion<IMatchFinishedReadModelHandler>();
+        Assert.AreEqual(fakeEvent.Id.ToString(), afterSuccess.Version,
+            "Once the transient error clears, the very same event must be processed and committed");
+    }
+
+    [Test]
+    public async Task SuccessResetsTheFailureCounter()
+    {
+        var fakeEvent = CreateFinishedEvent();
+        var mockEvents = CreatePagingEventRepository([fakeEvent]);
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
+        var versionRepository = new VersionRepository(MongoClient);
+
+        var shouldFail = true;
+        var innerHandlerMock = new Mock<IMatchFinishedReadModelHandler>();
+        innerHandlerMock
+            .Setup(h => h.Update(It.IsAny<MatchFinishedEvent>()))
+            .Returns(() => shouldFail
+                ? Task.FromException(new IOException("transient mongo blip"))
+                : Task.CompletedTask);
+
+        var handler = new MatchFinishedReadModelHandler<IMatchFinishedReadModelHandler>(
+            mockEvents.Object,
+            versionRepository,
+            innerHandlerMock.Object,
+            mockTrackingService.Object);
+
+        Assert.ThrowsAsync<IOException>(() => handler.Update());
+        Assert.ThrowsAsync<IOException>(() => handler.Update());
+
+        Assert.AreEqual(2, await LoadFailureCount(),
+            "Repeated failures on the same event must accumulate across handler instances");
+        Assert.AreEqual(fakeEvent.Id.ToString(), await LoadFailingEventId());
+
+        shouldFail = false;
+        await handler.Update();
+
+        Assert.AreEqual(0, await LoadFailureCount(), "Forward progress must reset the retry budget");
+        Assert.That(await LoadFailingEventId(), Is.Null);
+    }
+
+    [Test]
+    public async Task PersistentlyFailingEvent_IsSkippedAfterMaxAttempts_AndProcessingContinues()
+    {
+        var poisonEvent = CreateFinishedEvent();
+        var healthyEvent = CreateFinishedEvent();
+        // ObjectIds are monotonic, so the poison event is the first one the handler sees.
+        Assert.That(poisonEvent.Id, Is.LessThan(healthyEvent.Id));
+
+        var mockEvents = CreatePagingEventRepository([poisonEvent, healthyEvent]);
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
+        var versionRepository = new VersionRepository(MongoClient);
+
+        var processed = new List<ObjectId>();
+        var innerHandlerMock = new Mock<IMatchFinishedReadModelHandler>();
+        innerHandlerMock
+            .Setup(h => h.Update(It.IsAny<MatchFinishedEvent>()))
+            .Returns((MatchFinishedEvent e) =>
+            {
+                if (e.Id == poisonEvent.Id)
+                {
+                    return Task.FromException(new IOException("this event can never be processed"));
+                }
+                processed.Add(e.Id);
+                return Task.CompletedTask;
+            });
+
+        var handler = new MatchFinishedReadModelHandler<IMatchFinishedReadModelHandler>(
+            mockEvents.Object,
+            versionRepository,
+            innerHandlerMock.Object,
+            mockTrackingService.Object);
+
+        // Every cycle up to the budget keeps retrying and keeps the stream blocked.
+        for (var attempt = 1; attempt < MaxAttempts; attempt++)
+        {
+            Assert.ThrowsAsync<IOException>(() => handler.Update());
+        }
+        Assert.That(processed, Is.Empty, "Nothing may be processed while the poison event still blocks the stream");
+
+        // The cycle that hits the budget gives up on the poison event and drains the rest.
+        Assert.DoesNotThrowAsync(() => handler.Update());
+
+        Assert.That(processed, Is.EqualTo(new List<ObjectId> { healthyEvent.Id }),
+            "Subsequent events must be processed once the poison event is skipped");
+
+        var version = await versionRepository.GetLastVersion<IMatchFinishedReadModelHandler>();
+        Assert.AreEqual(healthyEvent.Id.ToString(), version.Version);
+
+        // One tracked exception per attempt, plus the distinct one for the skip itself.
+        mockTrackingService.Verify(
+            m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()),
+            Times.Exactly(MaxAttempts + 1));
     }
 }
