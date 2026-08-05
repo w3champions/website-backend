@@ -63,10 +63,97 @@ nothing else — no reason, no `endTime`, no `lengthSeconds`. A rich
 and metrics, never onto the `Match` entity, so it cannot ride along on the
 event. The page therefore cannot show *why* a match was cancelled.
 
+The reason is not simply discarded, though: `gameCreationFailed` passes it to
+`sendGameCancelledDialog(cancellationData)` (`game-creation.flow.ts:255-257`),
+and the launcher has translated strings for every one of the 23 values
+(`launcher-e/src/translations/*.ts`, e.g. `"Game cancelled: PLAYER_CAUSED_JOINBUG"`).
+So the reason exists and is already transmitted to clients at the moment of
+failure — it is only the stats hook that never receives it. That makes adding it
+to the event a small change, should it be wanted later.
+
+### `MatchLogs` exist but are not reachable from this backend
+
+There is a per-match event log: collection `MatchLogs`
+(`matchmaking-service/src/app/data/models/match-event-log.ts:23-24`), keyed by
+`matchId`, written via `MatchCreationLogsRepo.findOrCreateMatchLog`. It captures
+the whole creation state machine — system events, per-player game-creation
+events, host commands, client-submitted events — including the explicit
+`game creation failure reason: <EGameCreationResult>` line
+(`game-creation.flow.ts:253`).
+
+It is, however, **not exposed over HTTP**: there is no route referencing match
+logs anywhere in `src/app/apis/`, and it lives in the matchmaking database, not
+the statistic-service one. Surfacing it would need a new matchmaking-service
+endpoint plus a `MatchmakingServiceClient` proxy method.
+
+Deliberately **out of scope for v1**, per review: the logs are not intended for
+human consumption and carry a very large volume per match. Reconciling them
+against the cancelled-match list is a plausible follow-up, and the join key
+(`matchId`) is already on the `CanceledMatch` read model, so nothing in this
+design blocks it.
+
 ### There are four `EMatchState` values and no draw state
 
 `INIT`, `STARTED`, `FINISHED`, `CANCELED` (`match.ts:44-49`). A draw is
 indistinguishable from "nobody reported a win".
+
+### Every path that can cancel a match
+
+This was challenged in review as likely incomplete, so it was re-verified
+exhaustively rather than trusted. The enumeration below is what the code
+actually supports.
+
+`MatchCanceledEvent` has **exactly one producer and one call site**:
+
+- `grep -rn "pushMatchCanceled" src/` → the definition at `stats-hook.ts:106`
+  and a single call at `matches.manager.ts:319`.
+- `grep -rn "MATCH_CANCELED\|MatchCanceledEvent" src/` → only the enum member,
+  the `uniqueQueueTypes` list, and that one push.
+- `cancelMatch` has exactly two call sites: `matches.manager.ts:168`
+  (creation failure, **no** push) and `:317` (the sweeper, followed by the push
+  at `:319`).
+- No other repository writes the collection: grepping `MatchCanceledEvent` and
+  `W3Champions-Statistic-Service` across `flo`, `launcher-e` and `w3c-replay`
+  returns nothing. The launcher only *receives* cancellations — its
+  `cancelMatchmaking` (`backend.service.ts:290`) cancels queue search, not a
+  match, and clients never report a match as cancelled.
+
+So the paths are:
+
+| Path | Emits `MatchCanceledEvent`? |
+| --- | --- |
+| `INIT` older than 2 min (sweeper) | **Yes**, ladder only |
+| `STARTED` older than 6 h (sweeper — the draw bucket) | **Yes**, ladder only |
+| Game-creation failure (flo error, join bug, disbanded team, leaver, every per-state timeout) | **No** |
+| 1v1 disconnect-forfeit | No — becomes `FINISHED` with a 0-second duration |
+| `FINISHED` older than 6 h | No — evicted from memory only |
+| Tournament cancellations | No — ladder-gated, and a winner is still assigned |
+| Custom matches | No — ladder-gated |
+| Client/launcher report | Does not exist |
+
+Two clarifications that came out of re-checking, both of which make the
+creation-failure gap worse than first described:
+
+1. **A failed creation emits no `MatchStartedEvent` either.**
+   `statsHook.pushMatchStart` is called only from `gameCreationSuccess()`
+   (`game-creation.flow.ts:175`); `gameCreationFailed()` never calls it. So these
+   matches are not merely missing a *cancellation* — they are entirely invisible
+   to this backend, with no record of the attempt at all. That is precisely the
+   data wanted for match-creation abuse scenarios.
+2. **The sweeper cannot pick them up as a fallback.**
+   `decideMatchOutcomeDuringFailedGameCreation` calls `removeCurrentMatch` at
+   `:169`, evicting the match from the in-memory map that `cleanUpMatches`
+   iterates. And `processLeavers` calls that method **unconditionally**, even
+   when the leavers array is empty (`game-creation.flow.ts:524-531`), so every
+   creation failure takes this path.
+
+For completeness, one hypothesis raised in review that the code does not support:
+there is no "joining a new game cancels the old one" path. `latestMatch` is used
+only to route a disconnect to the right in-flight creation flow
+(`game-creation.manager.ts:79-87`), never to cancel a prior match. Matches are
+also rehydrated from the database on startup for any non-`FINISHED` state
+(`matches.manager.ts:26-32`), so a process restart does not orphan `STARTED`
+matches.
 
 ## Scope
 
@@ -74,15 +161,27 @@ indistinguishable from "nobody reported a win".
 2 minutes, and `STARTED` older than 6 hours (the bucket that swallows draws).
 These are the only cancellations that reach this backend today.
 
+Also in scope, as a drive-by fix: **adding `GM_FOOTMEN_FRENZY` to
+`GameModesHelper.FfaGameModes`**. Its matchmaking-service definition sets
+`isAnonymous = true`, so flo masks names in-game, but the backend was not
+treating it as an FFA mode — meaning ongoing Footmen Frenzy matches leaked real
+battletags through `/api/matches/ongoing` and were lookupable by player. Anon-FFA
+Footmen Frenzy is returning, so this needs to be correct. The three call sites
+(`MatchesController.cs:201`, `PlayersObfuscator.cs:12`, `Matchup.cs:160`) are all
+anonymization behaviours, which is exactly what the mode should now get.
+`GM_LTW_FFA` remains correctly absent — `gm-ltw-ffa.ts:30` sets
+`isAnonymous = false`.
+
 **Out of scope, to be raised at PR review:**
 
-1. **Game-creation-failure cancellations emit no event at all.**
-   `decideMatchOutcomeDuringFailedGameCreation` (`matches.manager.ts:148-171`)
-   calls `cancelMatch` directly and, unlike `:319`, never calls
-   `statsHook.pushMatchCanceled`. This silently drops flo create-game errors,
-   join bugs, disbanded teams, leavers, and every per-state timeout. This looks
-   like a genuine inconsistency rather than a design decision, and the page will
-   not show any of these matches until it is fixed.
+1. **Game-creation failures are invisible — no event of any kind.** Not just the
+   missing `pushMatchCanceled` at `matches.manager.ts:168`, but no
+   `MatchStartedEvent` either, since `pushMatchStart` fires only on success. See
+   "Every path that can cancel a match" above for the full trace. This is the
+   highest-value follow-up: it covers flo create-game errors, join bugs,
+   disbanded teams, leavers and every per-state timeout, and it is exactly the
+   population relevant to match-creation abuse. It looks like a genuine
+   inconsistency rather than a design decision.
 2. **`LeaveDraw` is not treated as a first-class outcome** — see above. Would
    remove the ~6h delay.
 3. **Tournament and custom matches never reach the stats hook** (the
@@ -90,9 +189,8 @@ These are the only cancellations that reach this backend today.
    `CANCELED` as an outcome marker while still assigning a winner
    (`tournament.manager.ts:306-365`), so including them needs semantics
    untangled first.
-4. **`GM_FOOTMEN_FRENZY` mismatch.** It sets `isAnonymous = true` upstream but is
-   absent from `GameModesHelper.FfaGameModes` in the backend. (`GM_LTW_FFA` being
-   absent is correct — `gm-ltw-ffa.ts:30` sets `isAnonymous = false`.)
+4. **Displaying `MatchLogs`** alongside each cancelled match — see the
+   `MatchLogs` section above for why this is deferred and what it would take.
 
 ## Backend design
 
@@ -135,24 +233,50 @@ the handler walks `_id` order, so a fresh handler replays the entire historical
 | `GameMode`, `GameName` | `match` | |
 | `Map`, `MapId`, `MapName` | `match` | |
 | `Gateway`, `Season`, `ServerProvider`, `FloNode` | `match` | |
-| `StartTime` | `match.startTime` | unix ms |
-| `CanceledAt` | **event `ObjectId` timestamp** | see below |
-| `Players` | `match.players` | dedicated DTO, see below |
+| `StartTime` | `match.startTime` | unix ms; the sort key |
+| `CanceledAt` | none available | **nullable, left null** — see below |
+| `Players` | `match.players` | dedicated DTO, see below; includes `SlotIndex` if the upstream change lands |
 
-**`CanceledAt` must derive from the event ObjectId's timestamp, not `endTime`.**
-`endTime` is never set upstream on a cancellation and the C# `Match` DTO coerces
-the null to `0` (`MatchEventDtos.cs:124-136`), so it cannot be used as a sort
-key. `StartTime` is a viable alternative but is further from "when did this get
-cancelled".
+**`CanceledAt` is nullable and stays null.** `endTime` is never set upstream on a
+cancellation and the C# `Match` DTO coerces the null to `0`
+(`MatchEventDtos.cs:124-136`), so it cannot be used. An earlier draft proposed
+deriving the timestamp from the event `ObjectId`; that is rejected — ObjectIds
+should not be inspected for their embedded timestamp, and the value would in any
+case be "when the sweeper ran", not when the match actually ended. Since the
+sweeper only runs every 5 minutes and fires on a 6-hour threshold, that number
+would be misleading by up to hours.
 
-**Use a dedicated `CanceledMatchPlayer` DTO — do not reuse `PlayerOverviewMatches`.**
-Fields: `BattleTag`, `Name`, `Race`, `Team`, `OldMmr`, `Ranking`, `Country`,
-`InviteName`. Deliberately **no** `Won`, `CurrentMmr`, `MmrGain` or
-`MatchRanking`. Reusing the existing DTO would be actively harmful:
-`PlayerOverviewMatches.Won` is a non-nullable `bool` and `Team.Won` is a computed
-getter, so `won: false` would always be on the wire, and
-`PlayerMatchInfo.vue:135-143` would paint every player as a loser. Omitting the
-field is cleaner than shipping a falsy value and suppressing it downstream.
+An honest null beats an inferred value. Recovering a real cancellation time would
+require parsing replays or `MatchLogs`, both explicitly out of scope.
+
+**Sort by `StartTime` descending instead.** `startTime` is set at match creation
+and is always present, so it is a reliable ordering key. It is also the more
+useful one for a moderator: "which matches started most recently".
+
+**Player DTO: extract a shared base rather than a standalone type.** The
+direction of a dedicated type is right — `PlayerOverviewMatches.Won` is a
+non-nullable `bool` and `Team.Won` is a computed getter, so reusing it as-is would
+put `won: false` on the wire and `PlayerMatchInfo.vue:135-143` would paint every
+player as a loser. But it should not be built from scratch: the event DTOs already
+demonstrate this pattern (`PlayerMMrChange : UnfinishedMatchPlayer :
+IMatchPlayerServerInfo`, `MatchEventDtos.cs:24,44`), while the read-model
+`PlayerOverviewMatches` is a flat standalone class.
+
+Introduce a base holding the identity and pre-match fields, and derive both:
+
+- **Base** (`MatchPlayerBase` or similar): `Race`, `RndRace`, `OldMmr`,
+  `OldMmrQuantile`, `OldRankDeviation`, `BattleTag`, `InviteName`, `Name`,
+  `Location`, `CountryCode`, `Country`, `Twitch`, `Ranking`.
+- **`PlayerOverviewMatches : base`** adds the result fields: `CurrentMmr`,
+  `MmrGain`, `Won`, `MatchRanking`, `Heroes`.
+- **`CanceledMatchPlayer : base`** adds only `Team`, plus `SlotIndex` if the
+  upstream change below lands.
+
+Confirm the exact split against `Matchup.CreatePlayerArray` during
+implementation — anything sourced from the Blizzard result (`Heroes` in
+particular) belongs on the derived result type, not the base. This is a
+refactor of a serialized public DTO, so it changes JSON property *order* but not
+names or semantics; verify no consumer depends on ordering.
 
 #### Indexes and dedup
 
@@ -161,8 +285,8 @@ dedup, and the producer's 300-entry queue can re-send on failure, so the same
 match can legitimately arrive twice.
 
 - unique `MatchId`
-- `{ GameMode: 1, CanceledAt: -1 }` — the by-mode listing
-- `{ CanceledAt: -1 }` — the all-modes listing
+- `{ GameMode: 1, StartTime: -1 }` — the by-mode listing
+- `{ StartTime: -1 }` — the all-modes listing
 - `{ "Players.BattleTag": 1 }` — battletag filter
 
 Follow the existing `IRequiresIndexes` pattern (see `MatchRepository.EnsureIndexesAsync`).
@@ -184,15 +308,21 @@ affects the genuine cancel-then-finish race.)
 
 ### 3. New endpoint
 
-New `AdminCanceledMatchesController`. Every action carries
-`[BearerHasPermissionFilter(Permission = EPermission.Moderation)]` — the
-attribute is `AttributeTargets.Method`, so it cannot be applied at controller
-level and must be repeated per action.
+New `AdminMatchesController` with route prefix **`api/admin/matches`**. Every
+action carries `[BearerHasPermissionFilter(Permission = EPermission.Moderation)]`
+— the attribute is `AttributeTargets.Method`, so it cannot be applied at
+controller level and must be repeated per action.
 
 ```
-GET api/admin/canceled-matches?gameMode=&battleTag=&offset=&pageSize=
+GET api/admin/matches/canceled?gameMode=&battleTag=&offset=&pageSize=
     -> { matches, count }
 ```
+
+The extra layer is deliberate and has precedent: `api/admin` already sub-layers
+into `api/admin/permissions`, `api/admin/logs`, `api/admin/storage` and
+`api/admin/api-tokens` (only `AdminController` itself sits at the bare
+`api/admin`). Grouping under `api/admin/matches` leaves room for further
+match-related admin endpoints without another controller prefix.
 
 - Envelope `{ matches, count }` matches the match-domain convention the frontend
   already consumes (`MatchesController` uses it for `/api/matches` and
@@ -204,7 +334,11 @@ GET api/admin/canceled-matches?gameMode=&battleTag=&offset=&pageSize=
 - `battleTag` is an optional filter; moderation workflows usually start from a
   player.
 - Clamp `pageSize` to 100, consistent with `MatchesController`.
-- Sort `CanceledAt` descending.
+- Sort `StartTime` descending.
+
+**This endpoint must not call the replay service.** Listing is a pure Mongo read.
+See the note under FFA de-anonymization — replay-service calls cost money and must
+stay out of the list path.
 
 Do **not** apply `PlayersObfuscator`. It exists for ongoing FFA matches and for
 MMR/rank-deviation masking on public endpoints; this is a Moderation-gated admin
@@ -272,17 +406,25 @@ pattern, and the daily ceiling still holds.
 
 Unauthenticated and non-moderator behaviour is unchanged.
 
-#### 4b. Make a missing chat log return 404
+#### 4b. Handle unavailable replays and chat logs properly
 
-`ReplayServiceClient.GetChatLogs` (`ReplayServiceClient.cs:29-33`) uses
-`GetAsync` + `ReadAsStringAsync` with **no status check**, so an upstream 404
-deserializes to null and surfaces as HTTP 200 with a null body. This page will
-hit missing chat logs routinely (pre-flo cancels, unarchived replays), so it
-should return a clean 404.
+Both directions are currently wrong, and both must be fixed — a replay being
+unavailable is a normal, expected outcome, not an error. It may never have been
+recorded, or it may have aged into DeepArchive.
 
-(`GenerateReplay` does not have this problem — `GetStreamAsync` applies
-`EnsureSuccessStatusCode` internally. It has the opposite one: an upstream 404
-becomes an unhandled exception → 500. Worth tidying while in there.)
+- **`GetChatLogs`** (`ReplayServiceClient.cs:29-33`) uses `GetAsync` +
+  `ReadAsStringAsync` with **no status check**, so an upstream 404 deserializes to
+  null and surfaces as HTTP 200 with a null body. Must map a non-success status to
+  a clean 404.
+- **`GenerateReplay`** (`:18-25`) has the opposite problem: `GetStreamAsync`
+  applies `EnsureSuccessStatusCode` internally, so an upstream 404 becomes an
+  unhandled exception → HTTP 500. Must map upstream 404 (and the
+  archived/unavailable case) to a 404 the client can render as "replay
+  unavailable" rather than a generic failure.
+
+The frontend already distinguishes 404 from other failures
+(`DownloadReplayIcon.vue` has separate `notFound` and `unavailable` strings), so
+correct status codes are immediately usable.
 
 #### 4c. Never return `playerScores: []`
 
@@ -296,7 +438,10 @@ score screen, and unlocks the unguarded FFA dereferences at `:335` and `:487-499
 ## FFA de-anonymization
 
 The requirement is to reconcile who is who in modes that hide names in-game.
-**This works with no new mapping table and no upstream change.**
+**No new mapping table is needed.** Real battletags are already available for the
+list, and the chat log already resolves `Player N` → real name. One small upstream
+change is recommended so the list can show slot numbers without paying for a
+replay-service call per row.
 
 ### Where "Player N" comes from
 
@@ -334,19 +479,64 @@ matches (`PlayersObfuscator.cs:18-19`, called from `MatchesController.cs:190,206
    `AdminReplayChatLogMessages.vue:157-167` does
    `log.value.players.find(x => x.id == playerId)?.name` on `message.fromPlayer`.
 
-So the entire FFA requirement reduces to **making the chat log reachable by flo
-game id**, which 4a–4b above already cover.
+So the chat log, once reachable by flo game id, resolves `Player N` → battletag.
 
-### The one thing that is not recoverable
+### Requirement: show both the battletag and the slot number
 
-If no replay/chat log exists (pre-flo-creation cancels), there is no way to map a
-slot number to a battletag. Matchmaking computes slot assignment transiently in
-`player-slots.helper.ts:14-29` for the flo `CreateGame` request and discards it;
-it is never written to the `Match` object. `LagReport.ServerSidePing[].PlayerName`
-is no help — it stores flo's *masked* `Player N` strings, and the backend has no
-flo-player-id → battletag mapping anywhere. Fixing this properly would mean
-persisting the slot map on the `Match` object upstream. Not needed for v1, since
-the participant set is always available from the list.
+Moderators need to map a report ("Player 3 was toxic") onto a battletag, so the UI
+must present **both identifiers together**, not just real names. Where the slot
+number is known, render it beside the battletag (e.g. `Player 3 — <battletag>`) in
+both the list row and the chat log view.
+
+### Constraint: never call the replay service in the list path
+
+Replay-service calls incur real cost, so they must be strictly on-demand:
+
+- The list endpoint does a Mongo read only. No replay or chat call, ever — not to
+  enrich names, not to check replay availability, not to resolve slots.
+- Chat logs are fetched only when a moderator explicitly opens one for a single
+  match. No prefetching, no fetch-on-hover, no batch resolution across the page.
+- Availability is inferred from `FloGameId` being non-null, which is free. Do not
+  probe the replay service to find out whether a replay exists.
+
+This constraint is what makes the upstream change below worth doing: without a
+persisted slot map, the *only* source of slot numbers is the chat log — which
+would mean a paid call per row to populate the list.
+
+### Recommended upstream change: persist the slot index
+
+Verified as a genuinely small change. `setPlayersToSlots`
+(`player-slots.helper.ts:14-29`) already computes exactly the needed mapping — it
+walks `allPlayers`, obtains each player's slot via
+`getNextAvailableSlot(slots, team, map)`, and assigns
+`slot.player_id = x.playerInstance.floPlayer.id`. At that moment the slot array
+index, the flo player id and `x.matchPlayer` (the persisted player object) are all
+in hand. The same flow already builds a `playerBattleTagsByFloPlayerId` map for
+custom-game colours (`flo-game-creation.flow.ts:137-144`), so the concept exists.
+
+The change is to write the slot index onto the match player so it rides along on
+every event:
+
+1. In `setPlayersToSlots`, set `x.matchPlayer.slotIndex = slots.indexOf(slot)`.
+2. Add `slotIndex?: number` to `IMatchPlayer` (`match.ts`).
+3. Add the matching property to the C# `UnfinishedMatchPlayer` DTO
+   (`MatchEventDtos.cs:44`), which `PlayerMMrChange` already inherits from.
+
+`CanceledMatch` then carries `SlotIndex` per player, and the list can render
+`Player N` alongside the battletag with **no replay-service call at all**.
+
+Caveat: this only helps matches that reached flo game creation. For `INIT` timeout
+cancels, `createGame` never ran, so there are no slots — but those matches also
+have no replay and no chat log, so there is nothing to reconcile against.
+
+Note the numbering: flo's mask is `slot_index + 1` and replay-service's
+`PlayerInfo.id` is likewise `idx + 1`, so if `slotIndex` is stored 0-based it must
+be displayed as `slotIndex + 1` to match what players saw in-game. Pick one
+convention and document it on the field.
+
+Without this change, v1 still works — the participant set with real battletags is
+always available from the list, and the slot mapping appears when a moderator opens
+the chat log — but the list itself cannot show slot numbers.
 
 ### PII
 
@@ -433,6 +623,18 @@ Everything else degrades safely already, verified by reading the components:
 - `mmrGain` from the backend is dead on the frontend — the delta is always
   recomputed client-side. Another reason to omit it from the DTO.
 
+### Slot number display
+
+For anonymizing modes, render the slot number next to the battletag so a report
+naming "Player 3" can be matched to an account — `Player 3 — <battletag>`. Source
+it from the per-player `SlotIndex` on the list payload (remember the `+ 1`
+convention). When `SlotIndex` is absent — either because the upstream change has
+not landed or because the match never reached flo game creation — show the
+battletag alone and let the chat log supply the mapping on demand.
+
+Do **not** fetch chat logs to populate slot numbers in the list. See the
+replay-service cost constraint under FFA de-anonymization.
+
 ### Replay and chat buttons
 
 `DownloadReplayIcon` currently hardcodes `${API_URL}api/replays/${gameId}` and
@@ -489,11 +691,16 @@ Cover:
 - Handler is idempotent — same match twice yields one row.
 - `FloGameId == null` is persisted without error.
 - Repository: gameMode filter, `Undefined` = all modes, battleTag filter, paging,
-  `CanceledAt` descending.
+  `StartTime` descending.
 - `CanceledMatchRemovalOnFinishHandler` deletes the row on a matching finish.
 - `ReplayRateLimitAttribute`: moderator token → hourly 50, daily unchanged,
   battleTag partition key; non-moderator and API-token paths unchanged.
-- `GetChatLogs` maps an upstream non-success status to 404.
+- `GetChatLogs` maps an upstream non-success status to 404; `GenerateReplay` maps
+  an upstream 404 to 404 rather than throwing.
+- `GameModesHelper.IsFfaGameMode(GameMode.GM_FOOTMEN_FRENZY)` is true, and the
+  existing FFA modes still are. `GM_LTW_FFA` is still false.
+- The list endpoint issues **no** replay-service call — assert against a mock
+  `ReplayServiceClient` that it is never invoked.
 
 **Frontend.** vitest runs in `environment: "node"` with no vue plugin
 (`vitest.config.ts:13-19`), so **`.vue` files cannot be unit tested** without
