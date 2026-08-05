@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-05
 **Status:** Approved design, ready for implementation planning
-**Repos affected:** `w3c-backend`, `w3c-website`
+**Repos affected:** `website-backend`, `website` (frontend)
 **Permission gate:** `EPermission.Moderation` (existing — no new permission)
 
 ## Problem
@@ -513,10 +513,3 @@ backfill until that is set correctly in the target environment.
 
 Per `CLAUDE.md`: read model handling is off by default locally, and connecting to
 the wrong database can overwrite prod/test data.
-
-## Correction to `CLAUDE.md`
-
-`CLAUDE.md` names `../website` as the Vue 3 frontend. In this checkout
-`../website` is the **Caddy web server's site** (remote:
-`git@github.com:caddyserver/website.git`). The actual frontend is
-`../w3c-website`. Worth fixing in the same PR.
