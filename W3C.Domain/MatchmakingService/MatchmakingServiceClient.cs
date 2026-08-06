@@ -114,6 +114,32 @@ public class MatchmakingServiceClient
         return null;
     }
 
+    public async Task<CanceledMatchesResponse> GetCanceledMatches(CanceledMatchesGetRequest req)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/canceled-matches?page={req.Page}&itemsPerPage={req.ItemsPerPage}";
+
+        if (req.GameMode != GameMode.Undefined)
+        {
+            url += $"&gameMode={(int)req.GameMode}";
+        }
+
+        if (!string.IsNullOrEmpty(req.BattleTag))
+        {
+            url += $"&battleTag={HttpUtility.UrlEncode(req.BattleTag)}";
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<CanceledMatchesResponse>(response);
+        }
+
+        return null;
+    }
+
     public async Task<List<PlayerWarningDefinition>> GetPlayerWarningDefinitions(bool includeDisabled = false)
     {
         var url = $"{MatchmakingApiUrl}/admin/warning-definitions";
@@ -761,6 +787,22 @@ public class PlayerWarningsGetRequest
     public int ItemsPerPage { get; set; } = 25;
     public string BattleTag { get; set; }
     public string Status { get; set; }
+}
+
+public class CanceledMatchesGetRequest
+{
+    public int Page { get; set; } = 1;
+    public int ItemsPerPage { get; set; } = 25;
+
+    // GameMode.Undefined (0) means "all game modes" and is not sent upstream.
+    public GameMode GameMode { get; set; }
+    public string BattleTag { get; set; }
+}
+
+public class CanceledMatchesResponse
+{
+    public int total { get; set; }
+    public List<Match> matches { get; set; }
 }
 
 public class PlayerWarningsResponse
