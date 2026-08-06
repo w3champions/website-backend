@@ -39,9 +39,12 @@ public class ReplayRateLimitAttribute : RateLimitAttribute
     public int MatchAgeThresholdDays { get; set; } = 7;
 
     /// <summary>
-    /// Hourly limit for authenticated moderators. The daily limit deliberately stays
-    /// at the strict/relaxed value, so a moderator can spend a day's allowance in one
-    /// burst but not exceed it.
+    /// Hourly limit for authenticated moderators. The daily NUMBER deliberately stays
+    /// at the strict/relaxed value - but authenticating moves the caller onto a
+    /// separate "moderator:{battleTag}:{scope}" partition, which is counted
+    /// independently from the anonymous "ip:{ip}:{scope}" bucket. A moderator can
+    /// therefore spend the daily allowance once anonymously and again once
+    /// authenticated; the daily ceiling is not a hard cap across both identities.
     /// </summary>
     public int ModeratorHourlyLimit { get; set; } = 50;
 
@@ -118,7 +121,10 @@ public class ReplayRateLimitAttribute : RateLimitAttribute
         var moderatorBattleTag = TryGetModeratorBattleTag(context, logger);
         if (moderatorBattleTag != null)
         {
-            rateLimitContext.HourlyLimit = ModeratorHourlyLimit;
+            // Only ever raise the limit - never let the moderator override undercut
+            // whatever the strict/relaxed policy already granted (e.g. a recent match's
+            // relaxed hourly limit may already exceed ModeratorHourlyLimit).
+            rateLimitContext.HourlyLimit = Math.Max(rateLimitContext.HourlyLimit, ModeratorHourlyLimit);
             rateLimitContext.PolicyName = "replay-moderator";
             // Partition per moderator rather than per IP so colleagues behind one
             // address do not consume each other's budget.
@@ -133,7 +139,7 @@ public class ReplayRateLimitAttribute : RateLimitAttribute
         try
         {
             string authHeader = context.HttpContext.Request.Headers["Authorization"];
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.Ordinal))
             {
                 return null;
             }

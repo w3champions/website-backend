@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ using NUnit.Framework;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 using W3C.Contracts.Admin.Permission;
+using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.RateLimiting.Models;
 using W3ChampionsStatisticService.RateLimiting.Services;
@@ -187,6 +189,84 @@ public class ReplayRateLimitTests
         Assert.That(result.HourlyLimit, Is.EqualTo(10));
         Assert.That(result.DailyLimit, Is.EqualTo(50));
         Assert.That(result.PartitionKey, Is.EqualTo("ip:192.168.1.1:replay"));
+    }
+
+    [Test]
+    public async Task NonAdminWithModerationPermission_LeavesLimitsUnchanged()
+    {
+        // Regression coverage: holding EPermission.Moderation is not sufficient on its
+        // own. BearerHasPermissionFilter's own check requires IsAdmin == true as well,
+        // and ReplayRateLimitAttribute must copy that exactly.
+        SetupBaseContext();
+
+        _httpContext.Request.Headers["Authorization"] = "Bearer valid-non-admin-token";
+        _authServiceMock
+            .Setup(a => a.GetUserByToken("valid-non-admin-token", true))
+            .Returns(new W3CUserAuthenticationDto
+            {
+                BattleTag = "NotAnAdmin#789",
+                IsAdmin = false,
+                Permissions = new HashSet<EPermission> { EPermission.Moderation }
+            });
+
+        var result = await Invoke();
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result.HourlyLimit, Is.EqualTo(10));
+        Assert.That(result.DailyLimit, Is.EqualTo(50));
+        Assert.That(result.PolicyName, Is.EqualTo(StrictPolicy));
+        Assert.That(result.PartitionKey, Is.EqualTo("ip:192.168.1.1:replay"));
+    }
+
+    [Test]
+    public async Task ModeratorOnRecentMatch_KeepsHigherRelaxedLimit()
+    {
+        // The relaxed policy can already grant an hourly limit higher than
+        // ModeratorHourlyLimit. The override must raise, never lower, the limit.
+        const int relaxedHourlyLimit = 100;
+        const int relaxedDailyLimit = 150;
+        _attribute.RelaxedHourlyLimit = relaxedHourlyLimit;
+        _attribute.RelaxedDailyLimit = relaxedDailyLimit;
+
+        _context.ActionArguments["gameId"] = "recent-game-id";
+        _matchRepositoryMock
+            .Setup(m => m.LoadFinishedMatchDetailsByMatchId("recent-game-id"))
+            .ReturnsAsync(new MatchupDetail
+            {
+                Match = new Matchup { EndTime = DateTimeOffset.UtcNow.AddDays(-1) }
+            });
+
+        var relaxedContext = new RateLimitContext
+        {
+            PolicyName = "replay-relaxed",
+            HourlyLimit = relaxedHourlyLimit,
+            DailyLimit = relaxedDailyLimit,
+            HasValidApiToken = false,
+            PartitionKey = "ip:192.168.1.1:replay"
+        };
+        _rateLimitServiceMock
+            .Setup(s => s.DetermineRateLimitContext(_httpContext, "replay", "replay-relaxed", relaxedHourlyLimit, relaxedDailyLimit))
+            .ReturnsAsync(relaxedContext);
+
+        const string battleTag = "Moderator#123";
+        _httpContext.Request.Headers["Authorization"] = "Bearer valid-moderator-token";
+        _authServiceMock
+            .Setup(a => a.GetUserByToken("valid-moderator-token", true))
+            .Returns(new W3CUserAuthenticationDto
+            {
+                BattleTag = battleTag,
+                IsAdmin = true,
+                Permissions = new HashSet<EPermission> { EPermission.Moderation }
+            });
+
+        var result = await Invoke();
+
+        Assert.That(result, Is.Not.Null);
+        // Must stay at the relaxed 100, NOT be pulled down to ModeratorHourlyLimit (50).
+        Assert.That(result.HourlyLimit, Is.EqualTo(relaxedHourlyLimit));
+        Assert.That(result.DailyLimit, Is.EqualTo(relaxedDailyLimit));
+        Assert.That(result.PolicyName, Is.EqualTo(ModeratorPolicy));
+        Assert.That(result.PartitionKey, Is.EqualTo($"moderator:{battleTag}:replay"));
     }
 
     [Test]
