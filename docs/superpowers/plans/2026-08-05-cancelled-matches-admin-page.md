@@ -813,7 +813,14 @@ git commit -m "Proxy the matchmaking cancelled-matches endpoint"
 
 **Interfaces:**
 - Consumes: `MatchmakingServiceClient.GetCanceledMatches` from Task 5.
-- Produces: `GET api/admin/matches/canceled?gameMode=&battleTag=&page=&itemsPerPage=` returning `{ total, matches }`. Phase 3 calls this.
+- Produces: `GET api/admin/matches/canceled?gameMode=&playerBattleTag=&page=&itemsPerPage=` returning `{ total, matches }`. Phase 3 calls this.
+
+> **The search parameter MUST NOT be named `battleTag`.** `BearerHasPermissionFilter.cs:33`
+> does `context.ActionArguments["battleTag"] = res.BattleTag;` unconditionally, so on any
+> action it guards, a parameter with that exact name is silently overwritten with the acting
+> moderator's own battletag. A `battleTag` search filter would quietly return only the
+> moderator's own matches. Unit tests calling the controller method directly cannot see this,
+> because they bypass filters.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -981,7 +988,9 @@ public class AdminMatchesController(MatchmakingServiceClient matchmakingServiceC
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetCanceledMatches(
         [FromQuery] GameMode gameMode = GameMode.Undefined,
-        [FromQuery] string battleTag = null,
+        // NOT named battleTag: BearerHasPermissionFilter overwrites an argument
+        // with that exact name with the acting moderator's own tag.
+        [FromQuery] string playerBattleTag = null,
         [FromQuery] int page = 1,
         [FromQuery] int itemsPerPage = 25)
     {
@@ -994,7 +1003,7 @@ public class AdminMatchesController(MatchmakingServiceClient matchmakingServiceC
             Page = page,
             ItemsPerPage = itemsPerPage,
             GameMode = gameMode,
-            BattleTag = battleTag,
+            BattleTag = playerBattleTag,
         });
 
         if (result == null)
@@ -1400,7 +1409,7 @@ test("getCancelledMatches omits an all-modes filter and an empty battle tag", as
   await service.getCancelledMatches("tok", { gameMode: 0, page: 1, itemsPerPage: 25, battleTag: "" });
 
   assert.ok(!calls[0].url.includes("gameMode="));
-  assert.ok(!calls[0].url.includes("battleTag="));
+  assert.ok(!calls[0].url.includes("playerBattleTag="));
 });
 
 test("getCancelledMatches sends the selected mode and encodes the battle tag", async () => {
@@ -1409,7 +1418,7 @@ test("getCancelledMatches sends the selected mode and encodes the battle tag", a
   await service.getCancelledMatches("tok", { gameMode: 5, page: 1, itemsPerPage: 25, battleTag: "Tester#1234" });
 
   assert.ok(calls[0].url.includes("gameMode=5"));
-  assert.ok(calls[0].url.includes("battleTag=Tester%231234"));
+  assert.ok(calls[0].url.includes("playerBattleTag=Tester%231234"));
 });
 
 test("getCancelledMatches surfaces a failure rather than an empty page", async () => {
@@ -1537,8 +1546,12 @@ export class CancelledMatchService {
       params.set("gameMode", String(query.gameMode));
     }
 
+    // The backend parameter is deliberately NOT called "battleTag":
+    // BearerHasPermissionFilter overwrites an action argument of that exact name
+    // with the acting moderator's own tag, which would silently turn this search
+    // into "matches I played in".
     if (query.battleTag) {
-      params.set("battleTag", query.battleTag);
+      params.set("playerBattleTag", query.battleTag);
     }
 
     return await this.client.getJson<CancelledMatchesPage>(
