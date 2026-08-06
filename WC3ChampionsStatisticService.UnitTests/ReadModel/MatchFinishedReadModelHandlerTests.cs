@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
@@ -47,13 +48,18 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
         mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), wasFakeEvent ? Times.Never : Times.Once);
     }
 
-    [Test]
-    public void InsertMatchesFail1()
+    [TestCase(EMatchState.CANCELED)]
+    [TestCase(EMatchState.INIT)]
+    [TestCase(EMatchState.STARTED)]
+    public async Task IllegalMatchState_IsSkippedAndWatermarkAdvances(EMatchState illegalState)
     {
+        // A match's state never changes after the fact, so an event that does not belong to this
+        // handler is a permanent condition. Retrying it forever wedges the whole handler, so it is
+        // logged and skipped instead - and the watermark still has to move past it.
         var fakeEvent = TestDtoHelper.CreateFakeEvent();
 
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
-        fakeEvent.match.state = EMatchState.CANCELED;
+        fakeEvent.match.state = illegalState;
         var mockEvents = new Mock<IMatchEventRepository>();
         mockEvents.SetupSequence(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
             .ReturnsAsync(new List<MatchFinishedEvent>() { fakeEvent })
@@ -70,9 +76,13 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             new MatchReadModelHandler(mockMatchRepo.Object, mockMatchService.Object),
             mockTrackingService.Object);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.Update());
+        Assert.DoesNotThrowAsync(() => handler.Update());
+
         mockMatchRepo.Verify(m => m.Insert(It.IsAny<Matchup>()), Times.Never);
-        mockTrackingService.Verify(m => m.TrackException(It.IsAny<InvalidOperationException>(), It.IsAny<string>()), Times.Once);
+        mockTrackingService.Verify(m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
+
+        var version = await versionRepository.GetLastVersion<MatchReadModelHandler>();
+        Assert.AreEqual(fakeEvent.Id.ToString(), version.Version);
     }
 
     [Test]
@@ -180,5 +190,70 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
             "Human players must be preserved in result.players after stripping");
         Assert.That(receivedEvent.match.players.Count, Is.EqualTo(2),
             "Human players must be preserved in match.players after stripping");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Failure handling. A failing event is retried forever on purpose - AsyncServiceBase re-enters
+    // Update() every 5 seconds until a human resolves the cause - and the watermark must stay put so
+    // the event is never lost.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Behaves like the real MatchEventRepository.Load: everything after the watermark, in id order.</summary>
+    private static Mock<IMatchEventRepository> CreatePagingEventRepository(List<MatchFinishedEvent> events)
+    {
+        var mockEvents = new Mock<IMatchEventRepository>();
+        mockEvents
+            .Setup(m => m.Load<MatchFinishedEvent>(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync((string lastObjectId, int pageSize) => events
+                .Where(e => e.Id > ObjectId.Parse(lastObjectId ?? ObjectId.Empty.ToString()))
+                .OrderBy(e => e.Id)
+                .Take(pageSize)
+                .ToList());
+        return mockEvents;
+    }
+
+    private static MatchFinishedEvent CreateFinishedEvent()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
+        fakeEvent.match.state = EMatchState.FINISHED;
+        return fakeEvent;
+    }
+
+    [Test]
+    public async Task FailingEvent_IsRetriedAndDoesNotAdvanceTheWatermark()
+    {
+        var fakeEvent = CreateFinishedEvent();
+        var mockEvents = CreatePagingEventRepository([fakeEvent]);
+        var mockTrackingService = TestDtoHelper.CreateMockTrackingService();
+        var versionRepository = new VersionRepository(MongoClient);
+
+        var shouldFail = true;
+        var innerHandlerMock = new Mock<IMatchFinishedReadModelHandler>();
+        innerHandlerMock
+            .Setup(h => h.Update(It.IsAny<MatchFinishedEvent>()))
+            .Returns(() => shouldFail
+                ? Task.FromException(new IOException("transient mongo blip"))
+                : Task.CompletedTask);
+
+        var handler = new MatchFinishedReadModelHandler<IMatchFinishedReadModelHandler>(
+            mockEvents.Object,
+            versionRepository,
+            innerHandlerMock.Object,
+            mockTrackingService.Object);
+
+        // The exception must bubble up so AsyncServiceBase re-enters Update() in 5s and retries the
+        // very same event. There is no attempt limit - a failure keeps being retried until it is fixed.
+        Assert.ThrowsAsync<IOException>(() => handler.Update());
+
+        var afterFailure = await versionRepository.GetLastVersion<IMatchFinishedReadModelHandler>();
+        Assert.AreEqual(ObjectId.Empty.ToString(), afterFailure.Version,
+            "A retryable failure must not advance the watermark - the event would be lost");
+
+        shouldFail = false;
+        await handler.Update();
+
+        var afterSuccess = await versionRepository.GetLastVersion<IMatchFinishedReadModelHandler>();
+        Assert.AreEqual(fakeEvent.Id.ToString(), afterSuccess.Version,
+            "Once the transient error clears, the very same event must be processed and committed");
     }
 }

@@ -70,8 +70,11 @@ public class MatchCanceledReadModelHandlerTests : IntegrationTestBase
 
 
     [Test]
-    public void CanceledMatchIllegalState()
+    public async Task CanceledMatchIllegalState_IsSkippedAndWatermarkAdvances()
     {
+        // A match's state never changes after the fact, so an event that does not belong to this
+        // handler is a permanent condition. Retrying it forever wedges the whole handler, so it is
+        // logged and skipped instead - and the watermark still has to move past it.
         var fakeEvent = TestDtoHelper.CreateFakeMatchCanceledEvent();
 
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
@@ -92,9 +95,13 @@ public class MatchCanceledReadModelHandlerTests : IntegrationTestBase
             new OngoingRemovalMatchCanceledHandler(mockMatchRepo.Object),
             mockTrackingService.Object);
 
-        Assert.ThrowsAsync<InvalidOperationException>(() => handler.Update());
+        Assert.DoesNotThrowAsync(() => handler.Update());
+
         mockMatchRepo.Verify(m => m.DeleteOnGoingMatch(It.IsAny<Matchup>()), Times.Never);
-        mockTrackingService.Verify(m => m.TrackException(It.IsAny<InvalidOperationException>(), It.IsAny<string>()), Times.Once);
+        mockTrackingService.Verify(m => m.TrackException(It.IsAny<Exception>(), It.IsAny<string>()), Times.Never);
+
+        var version = await versionRepository.GetLastVersion<OngoingRemovalMatchCanceledHandler>();
+        Assert.AreEqual(fakeEvent.Id.ToString(), version.Version);
     }
 
     [Test]

@@ -54,14 +54,30 @@ public abstract class MatchEventReadModelHandler<TEvent, THandler>(
 
     private async Task<HandlerVersion> ProcessMatchEvent(TEvent matchEvent, HandlerVersion lastVersion)
     {
-        ValidateMatchState(matchEvent);
+        if (!ShouldProcessEvent(matchEvent))
+        {
+            // The implementation already logged why. Skipping conditions are permanent (a match never
+            // changes its state again), so the watermark still has to advance or the stream stalls here.
+            return await AdvancePast(matchEvent, lastVersion);
+        }
 
         lastVersion = await UpdateSeasonIfNeeded(matchEvent, lastVersion);
 
         await ProcessEventForCurrentSeason(matchEvent, lastVersion);
 
+        return await AdvancePast(matchEvent, lastVersion);
+    }
+
+    /// <summary>
+    /// Commits the watermark past <paramref name="matchEvent"/> and returns the version the rest of the
+    /// batch continues from. Carrying the new version forward matters because
+    /// <see cref="UpdateSeasonIfNeeded"/> writes it back verbatim, so a stale value there would
+    /// momentarily roll the watermark backwards and re-deliver already handled events after a crash.
+    /// </summary>
+    private async Task<HandlerVersion> AdvancePast(TEvent matchEvent, HandlerVersion lastVersion)
+    {
         await _versionRepository.SaveLastVersion<THandler>(matchEvent.Id.ToString(), lastVersion.Season);
-        return lastVersion;
+        return new HandlerVersion(matchEvent.Id.ToString(), lastVersion.Season, lastVersion.IsStopped);
     }
 
     private async Task<HandlerVersion> UpdateSeasonIfNeeded(TEvent matchEvent, HandlerVersion lastVersion)
@@ -92,7 +108,13 @@ public abstract class MatchEventReadModelHandler<TEvent, THandler>(
     }
 
     // Abstract methods that derived classes must implement
-    protected abstract void ValidateMatchState(TEvent matchEvent);
+
+    /// <summary>
+    /// Decides whether this event is the handler's business at all. Returning false skips the inner
+    /// handler and advances the watermark past the event, so implementations must only reject on
+    /// permanent conditions and are responsible for logging why they did.
+    /// </summary>
+    protected abstract bool ShouldProcessEvent(TEvent matchEvent);
     protected abstract Match GetMatch(TEvent matchEvent);
     protected abstract Task UpdateInnerHandler(TEvent matchEvent);
 }
