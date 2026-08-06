@@ -19,17 +19,6 @@ public abstract class MatchEventReadModelHandler<TEvent, THandler>(
     where TEvent : MatchmakingEvent
     where THandler : class
 {
-    /// <summary>
-    /// How often the same event may fail before it is written off as poisonous and skipped.
-    /// <see cref="AsyncServiceBase{T}"/> re-enters <see cref="Update"/> every 5 seconds, so this is
-    /// roughly 5 minutes of tolerance for transient errors (Mongo failover, network blips, a
-    /// downstream service restarting) before the handler gives up on an event.
-    /// The budget is deliberately generous: skipping a *good* event because of a transient outage
-    /// causes silent, permanent data loss, so we err towards retrying. Wedging the handler forever is
-    /// the worse failure though, which is why we always eventually advance.
-    /// </summary>
-    public const int MaxEventFailuresBeforeSkip = 60;
-
     private readonly IMatchEventRepository _eventRepository = eventRepository;
     private readonly IVersionRepository _versionRepository = versionRepository;
     private readonly THandler _innerHandler = innerHandler;
@@ -55,21 +44,7 @@ public abstract class MatchEventReadModelHandler<TEvent, THandler>(
                     Log.Error(e, "Error processing {EventType} {EventId} within the {HandlerType}",
                         typeof(TEvent).Name, matchEvent.Id, typeof(THandler).Name);
                     _trackingService.TrackException(e, $"ReadmodelHandler: {typeof(THandler).Name} died on event {matchEvent.Id}");
-
-                    var failureCount = await _versionRepository.RecordEventFailure<THandler>(matchEvent.Id.ToString());
-                    if (failureCount < MaxEventFailuresBeforeSkip)
-                    {
-                        throw; // rethrow the exception so the event is not lost
-                    }
-
-                    Log.Error(e, "POISON EVENT SKIPPED: {HandlerType} failed {FailureCount} times in a row on {EventType} {EventId} and is now skipping it to unblock the read model. This event is never processed - investigate it and backfill manually if the data matters.",
-                        typeof(THandler).Name, failureCount, typeof(TEvent).Name, matchEvent.Id);
-                    _trackingService.TrackException(e, $"POISON EVENT SKIPPED: ReadmodelHandler {typeof(THandler).Name} gave up on event {matchEvent.Id} after {failureCount} attempts");
-
-                    // The event may have bumped the season before it threw, so advance from the persisted
-                    // state rather than the possibly stale local one - skipping must not roll the season back.
-                    lastVersion = await AdvancePast(matchEvent, await _versionRepository.GetLastVersion<THandler>());
-                    continue;
+                    throw; // rethrow the exception so the event is not lost
                 }
             }
 
