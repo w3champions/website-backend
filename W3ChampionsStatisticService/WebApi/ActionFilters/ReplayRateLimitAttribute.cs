@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.RateLimiting.Services;
 
@@ -36,6 +37,13 @@ public class ReplayRateLimitAttribute : RateLimitAttribute
     /// Threshold in days to determine if a match is recent
     /// </summary>
     public int MatchAgeThresholdDays { get; set; } = 7;
+
+    /// <summary>
+    /// Hourly limit for authenticated moderators. The daily limit deliberately stays
+    /// at the strict/relaxed value, so a moderator can spend a day's allowance in one
+    /// burst but not exceed it.
+    /// </summary>
+    public int ModeratorHourlyLimit { get; set; } = 50;
 
     public ReplayRateLimitAttribute()
     {
@@ -94,12 +102,58 @@ public class ReplayRateLimitAttribute : RateLimitAttribute
         }
 
         // Get the rate limit context (checks for API tokens, gets IP, etc.)
-        return await rateLimitService.DetermineRateLimitContext(
+        var rateLimitContext = await rateLimitService.DetermineRateLimitContext(
             context.HttpContext,
             Scope,
             policyName,
             hourlyLimit,
             dailyLimit);
+
+        // An API token already carries its own negotiated limits; never override them.
+        if (rateLimitContext.HasValidApiToken)
+        {
+            return rateLimitContext;
+        }
+
+        var moderatorBattleTag = TryGetModeratorBattleTag(context, logger);
+        if (moderatorBattleTag != null)
+        {
+            rateLimitContext.HourlyLimit = ModeratorHourlyLimit;
+            rateLimitContext.PolicyName = "replay-moderator";
+            // Partition per moderator rather than per IP so colleagues behind one
+            // address do not consume each other's budget.
+            rateLimitContext.PartitionKey = $"moderator:{moderatorBattleTag}:{Scope}";
+        }
+
+        return rateLimitContext;
+    }
+
+    private static string TryGetModeratorBattleTag(ActionExecutingContext context, ILogger logger)
+    {
+        try
+        {
+            string authHeader = context.HttpContext.Request.Headers["Authorization"];
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            {
+                return null;
+            }
+
+            var token = authHeader["Bearer ".Length..].Trim();
+            var authService = context.HttpContext.RequestServices.GetRequiredService<IW3CAuthenticationService>();
+            var user = authService.GetUserByToken(token, true);
+
+            if (user == null || string.IsNullOrEmpty(user.BattleTag)) return null;
+            if (!user.IsAdmin) return null;
+            if (user.Permissions == null || !user.Permissions.Contains(EPermission.Moderation)) return null;
+
+            return user.BattleTag;
+        }
+        catch (Exception ex)
+        {
+            // A bad token must not break the request; fall through to the IP-based limit.
+            logger.LogDebug(ex, "Could not resolve a moderator identity for replay rate limiting");
+            return null;
+        }
     }
 
     private async Task<bool?> CheckMatchAge(IMatchRepository matchRepository, string gameId, int? floMatchId, int thresholdDays, ILogger logger)
