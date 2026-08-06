@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -31,6 +32,25 @@ public class AdminMatchesControllerTests
 
         Assert.That(attribute, Is.Not.Null);
         Assert.That(attribute!.Permission, Is.EqualTo(EPermission.Moderation));
+    }
+
+    // Regression guard: BearerHasPermissionFilter.OnActionExecutionAsync (BearerHasPermissionFilter.cs:33)
+    // unconditionally does `context.ActionArguments["battleTag"] = res.BattleTag;` on every action it
+    // guards, overwriting that argument with the acting admin's own tag. That is intentional for
+    // audit-style parameters (e.g. AdminController.CreateWarningDefinition's trailing `battleTag`), but
+    // GetCanceledMatches's battle tag argument is a caller-supplied search filter, not an audit field. If
+    // a parameter here is ever named exactly "battleTag" again, the filter would silently replace the
+    // moderator's search value with their own battletag through the real HTTP pipeline -- invisible to
+    // the other tests in this file because they call the controller method directly and never run
+    // BearerHasPermissionFilter. Do not "clean up" this parameter name back to "battleTag".
+    [Test]
+    public void GetCanceledMatchesHasNoParameterNamedBattleTag()
+    {
+        var method = typeof(AdminMatchesController).GetMethod(nameof(AdminMatchesController.GetCanceledMatches))!;
+
+        Assert.That(method.GetCustomAttribute<BearerHasPermissionFilter>(), Is.Not.Null,
+            "This guard only matters while the action is BearerHasPermissionFilter-decorated.");
+        Assert.That(method.GetParameters().Select(p => p.Name), Has.None.EqualTo("battleTag"));
     }
 
     [Test]

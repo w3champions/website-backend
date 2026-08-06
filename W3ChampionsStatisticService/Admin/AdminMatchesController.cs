@@ -26,11 +26,19 @@ public class AdminMatchesController(MatchmakingServiceClient matchmakingServiceC
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
 
     /// <param name="gameMode">GameMode.Undefined (0) lists every mode.</param>
+    /// <param name="playerBattleTag">
+    /// The player to filter matches by. Deliberately NOT named "battleTag": BearerHasPermissionFilter
+    /// unconditionally overwrites an action argument named exactly "battleTag" with the acting admin's
+    /// own tag (see BearerHasPermissionFilter.cs:33), which is the intended behaviour for endpoints that
+    /// use "battleTag" purely to capture who performed the action. Here it is a caller-supplied search
+    /// filter, so it must use a different name or the filter would silently clobber it. Do not rename
+    /// this back to "battleTag".
+    /// </param>
     [HttpGet("canceled")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     public async Task<IActionResult> GetCanceledMatches(
         [FromQuery] GameMode gameMode = GameMode.Undefined,
-        [FromQuery] string battleTag = null,
+        [FromQuery] string playerBattleTag = null,
         [FromQuery] int page = 1,
         [FromQuery] int itemsPerPage = 25)
     {
@@ -43,7 +51,7 @@ public class AdminMatchesController(MatchmakingServiceClient matchmakingServiceC
             Page = page,
             ItemsPerPage = itemsPerPage,
             GameMode = gameMode,
-            BattleTag = battleTag,
+            BattleTag = playerBattleTag,
         });
 
         if (result == null)
