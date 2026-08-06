@@ -17,7 +17,7 @@
 - **`dotnet` was not available in the environment where this plan was written.** Every C# task's verification step must actually be run by the implementer; do not assume the code compiles.
 - **Permission gate is `EPermission.Moderation`** on every new backend endpoint. `BearerHasPermissionFilter` is `AttributeTargets.Method`, so it must be repeated on every action — it cannot be applied at controller level.
 - **Never call the replay service from a list endpoint or during list rendering.** Replay-service calls cost money. Chat logs and replays are fetched only on an explicit per-match user action. Replay availability is inferred from `floGameId != null`, never by probing.
-- **PII:** this page exposes real battletags for modes anonymised in-game. Do not log battletags, do not commit fixtures containing real battletags, and keep the Moderation gate server-side.
+- **Disclosure:** battletags are public information and are not PII — they may be logged and traced freely, and no tracing exclusions are warranted on their account. What this page does that is sensitive is *linking* flo's anonymised `Player N` back to an account in modes that deliberately hide names in-game. That linkage is what the Moderation gate protects, and the gate must be enforced server-side on every action; a client-side flag is not sufficient.
 - **Never enable read model handlers locally** (`CLAUDE.md`) and never point local runs at the production database.
 - **`GameMode.Undefined` (0) means "all game modes"** everywhere in this feature.
 - **`slotIndex` is 0-based** (matches the `CreateGameSlot[]` index). Flo renders the mask as `Player {index + 1}`, so all user-facing display must add 1.

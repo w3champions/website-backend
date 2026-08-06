@@ -493,13 +493,19 @@ Replay-service calls incur real cost, so they must be strictly on-demand:
 Persisting `slotIndex` upstream is what makes this satisfiable: without it, the
 only source of slot numbers would be the chat log, meaning a paid call per row.
 
-### PII
+### Disclosure
+
+Battletags are public information, not PII, so exposing them carries no special
+handling burden — they can be logged and traced like any other field.
+
+What this page does that warrants a gate is *linking* flo's anonymised
+`Player N` back to an account, in modes that deliberately hide names in-game.
+The sensitivity is the linkage, not the identifier.
 
 Per decision, the Moderation permission gate is the only control — no audit
-logging in v1. Worth stating plainly in the PR: this page shows real battletags
-for game modes that deliberately hide names in-game, so the Moderation gate is the
-sole thing standing between an admin without Moderation and that data. Enforce it
-server-side on every action; a client-side flag would be insufficient.
+logging in v1. Enforce it server-side on every action; a client-side flag would
+be insufficient, since on the masked paths the real value must never be sent to
+an unauthorised client in the first place.
 
 ## Frontend design
 
