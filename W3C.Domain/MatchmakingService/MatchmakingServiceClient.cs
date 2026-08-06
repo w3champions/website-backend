@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -137,6 +138,9 @@ public class MatchmakingServiceClient
             return await GetResult<CanceledMatchesResponse>(response);
         }
 
+        var errorContent = await response.Content.ReadAsStringAsync();
+        Log.Error("Matchmaking service returned {StatusCode} fetching canceled matches (page {Page}, itemsPerPage {ItemsPerPage}, gameMode {GameMode}): {Content}",
+            response.StatusCode, req.Page, req.ItemsPerPage, req.GameMode, errorContent);
         return null;
     }
 
