@@ -41,6 +41,35 @@ public class ReplayServiceClientTests
         Assert.That(replay, Is.Null);
     }
 
+    [Test]
+    public async Task AnArchivedChatLogComesBackAsNull()
+    {
+        var client = ClientReturning(HttpStatusCode.Gone, "archived");
+
+        var chats = await client.GetChatLogs(4242);
+
+        Assert.That(chats, Is.Null);
+    }
+
+    // A 5xx (or any other non-2xx that isn't NotFound/Gone) is a genuine upstream
+    // failure, not "no replay". It must not be swallowed into a null -- a moderator
+    // seeing "replay unavailable" for an outage instead of an error is worse than a 500.
+    [Test]
+    public void AnUpstreamOutageGeneratingAReplayThrowsRatherThanReturningNull()
+    {
+        var client = ClientReturning(HttpStatusCode.InternalServerError, "boom");
+
+        Assert.ThrowsAsync<HttpRequestException>(() => client.GenerateReplay(4242));
+    }
+
+    [Test]
+    public void AnUpstreamOutageFetchingChatLogsThrowsRatherThanReturningNull()
+    {
+        var client = ClientReturning(HttpStatusCode.BadGateway, "boom");
+
+        Assert.ThrowsAsync<HttpRequestException>(() => client.GetChatLogs(4242));
+    }
+
     private static ReplayServiceClient ClientReturning(HttpStatusCode status, string body)
     {
         var handler = new StubHandler(status, body);
