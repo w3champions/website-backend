@@ -114,6 +114,36 @@ public class MatchesController(
         return Ok(new { matches, count });
     }
 
+    /// <summary>
+    /// Gets the ladder entries (player + race) that gained the most MMR from matches
+    /// finished within the past <paramref name="days"/> days.
+    /// </summary>
+    /// <param name="season">The season filter. Defaults to the latest season.</param>
+    /// <param name="gameMode">The game mode filter.</param>
+    /// <param name="days">Window size in days (1-30).</param>
+    /// <param name="top">Number of risers to return (1-25).</param>
+    /// <returns>
+    /// 200 OK: The array of top risers, biggest MMR gain first
+    /// </returns>
+    [ProducesResponseType(typeof(List<MmrRiser>), 200)]
+    [HttpGet("mmr-risers")]
+    public async Task<IActionResult> GetMmrRisers(
+        int season = -1,
+        GameMode gameMode = GameMode.GM_1v1,
+        int days = 7,
+        int top = 5)
+    {
+        days = Math.Clamp(days, 1, 30);
+        top = Math.Clamp(top, 1, 25);
+        if (season < 0)
+        {
+            var lastSeason = await _matchRepository.LoadLastSeason();
+            season = lastSeason.Id;
+        }
+        var risers = await _matchService.GetMmrRisers(season, gameMode, days, top);
+        return Ok(risers);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMatchDetails(string id)
     {
@@ -180,8 +210,9 @@ public class MatchesController(
     /// Opponents without matches in that mode are still listed, with matchCount 0.</param>
     /// <param name="limit">The maximum number of results (max 50).</param>
     /// <returns>
-    /// 200 OK: A list of players ordered by shared match count descending.
-    /// [{ battleTag: string, matchCount: long }]
+    /// 200 OK: A list of players ordered by shared match count descending, with the
+    /// searched player's record across those matches (allies share the same result).
+    /// [{ battleTag: string, matchCount: long, wins: long, losses: long }]
     /// </returns>
     [ProducesResponseType(typeof(List<OpponentInfo>), 200)]
     [HttpGet("search-opponents")]

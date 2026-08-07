@@ -814,7 +814,10 @@ public class MatchupRepoTests : IntegrationTestBase
         // peter#123 and wolf#456 as allies (team 0) vs TEAM2#123/TEAM2#456, on America.
         var alliedTeamGame = TestDtoHelper.CreateFake2v2AtEvent();
 
-        // Defaults from CreateFakeEvent: peter#123 vs wolf#456, season 0, Europe.
+        // Defaults from CreateFakeEvent: peter#123 beats wolf#456, season 0, Europe.
+        // Flip one wolf game so peter's record against him is 2-1, not all wins.
+        wolfGame2.match.players[0].won = false;
+        wolfGame2.match.players[1].won = true;
         wolfmanGame.match.players[1].battleTag = "Wolfman#789";
         annaGame.match.players[1].battleTag = "anna#111";
         wolfGameOtherSeason.match.season = 1;
@@ -831,44 +834,130 @@ public class MatchupRepoTests : IntegrationTestBase
         // Case-insensitive contains-match, most shared matches first. Allies count
         // like opponents (wolf: two 1v1s plus the 2v2 played together), while the
         // season 1 game and the game peter did not play in must not count.
+        // Wins/Losses are peter's record across those matches: he lost one 1v1
+        // to wolf but won the 2v2 with him as ally.
         var wolfResults = await matchRepository.SearchOpponentsFor("peter#123", "wOlF", 0);
         Assert.AreEqual(2, wolfResults.Count);
         Assert.AreEqual("wolf#456", wolfResults[0].BattleTag);
         Assert.AreEqual(3, wolfResults[0].MatchCount);
+        Assert.AreEqual(2, wolfResults[0].Wins);
+        Assert.AreEqual(1, wolfResults[0].Losses);
         Assert.AreEqual("Wolfman#789", wolfResults[1].BattleTag);
         Assert.AreEqual(1, wolfResults[1].MatchCount);
+        Assert.AreEqual(1, wolfResults[1].Wins);
+        Assert.AreEqual(0, wolfResults[1].Losses);
 
         // Fragments spanning the # separator match too and regex chars are escaped.
         var tagFragmentResults = await matchRepository.SearchOpponentsFor("peter#123", "lf#4", 0);
         Assert.AreEqual("wolf#456", tagFragmentResults.Single().BattleTag);
 
         // An empty search returns everyone peter shared a match with, including the
-        // 2v2 opponents, but never peter himself.
+        // 2v2 opponents, but never peter himself. The beaten 2v2 opponents carry
+        // peter's win against them.
         var allOpponents = await matchRepository.SearchOpponentsFor("peter#123", "", 0);
         Assert.AreEqual(5, allOpponents.Count);
-        Assert.IsTrue(allOpponents.Any(opponent => opponent.BattleTag == "TEAM2#123"));
+        var teamTwoOpponent = allOpponents.Single(opponent => opponent.BattleTag == "TEAM2#123");
+        Assert.AreEqual(1, teamTwoOpponent.Wins);
+        Assert.AreEqual(0, teamTwoOpponent.Losses);
         Assert.IsFalse(allOpponents.Any(opponent => opponent.BattleTag == "peter#123"));
 
         // Only the 2v2 was played on America, so only its participants show there.
         var otherGateway = await matchRepository.SearchOpponentsFor("peter#123", "wolf", 0, GateWay.America);
         Assert.AreEqual("wolf#456", otherGateway.Single().BattleTag);
         Assert.AreEqual(1, otherGateway.Single().MatchCount);
+        Assert.AreEqual(1, otherGateway.Single().Wins);
+        Assert.AreEqual(0, otherGateway.Single().Losses);
 
-        // A game-mode scope only affects the count, not who is listed: wolf's
-        // 2v2 with peter counts, Wolfman's 1v1 does not, but he stays findable.
+        // A game-mode scope only affects the counts, not who is listed: wolf's
+        // 2v2 with peter counts (a win together), Wolfman's 1v1 does not, but
+        // he stays findable.
         var scopedToMode = await matchRepository.SearchOpponentsFor("peter#123", "wolf", 0, GateWay.Undefined, GameMode.GM_2v2);
         Assert.AreEqual(2, scopedToMode.Count);
         Assert.AreEqual("wolf#456", scopedToMode[0].BattleTag);
         Assert.AreEqual(1, scopedToMode[0].MatchCount);
+        Assert.AreEqual(1, scopedToMode[0].Wins);
+        Assert.AreEqual(0, scopedToMode[0].Losses);
         Assert.AreEqual("Wolfman#789", scopedToMode[1].BattleTag);
         Assert.AreEqual(0, scopedToMode[1].MatchCount);
+        Assert.AreEqual(0, scopedToMode[1].Wins);
+        Assert.AreEqual(0, scopedToMode[1].Losses);
 
-        // With zero in-mode matches everywhere, total shared matches break the tie.
+        // With zero in-mode matches everywhere, total shared matches break the
+        // tie, and the record stays zeroed like the count.
         var noneInMode = await matchRepository.SearchOpponentsFor("peter#123", "wolf", 0, GateWay.Undefined, GameMode.GM_4v4);
         Assert.AreEqual("wolf#456", noneInMode[0].BattleTag);
         Assert.AreEqual(0, noneInMode[0].MatchCount);
+        Assert.AreEqual(0, noneInMode[0].Wins);
+        Assert.AreEqual(0, noneInMode[0].Losses);
 
         var limited = await matchRepository.SearchOpponentsFor("peter#123", "", 0, GateWay.Undefined, limit: 1);
         Assert.AreEqual("wolf#456", limited.Single().BattleTag);
+    }
+
+    private static MatchFinishedEvent CreateRiserEvent(
+        string tag1, int oldMmr1, int newMmr1, Race race1,
+        string tag2, int oldMmr2, int newMmr2, Race race2)
+    {
+        var ev = TestDtoHelper.CreateFakeEvent();
+        var p1 = ev.match.players[0];
+        var p2 = ev.match.players[1];
+        p1.battleTag = tag1;
+        p1.race = race1;
+        p1.mmr = new Mmr { rating = oldMmr1, rd = 30 };
+        p1.updatedMmr = new Mmr { rating = newMmr1, rd = 30 };
+        p1.won = newMmr1 > oldMmr1;
+        p2.battleTag = tag2;
+        p2.race = race2;
+        p2.mmr = new Mmr { rating = oldMmr2, rd = 30 };
+        p2.updatedMmr = new Mmr { rating = newMmr2, rd = 30 };
+        p2.won = newMmr2 > oldMmr2;
+        return ev;
+    }
+
+    [Test]
+    public async Task LoadMmrRisers_SumsGainsPerPlayerAndRace_SkipsUncalibratedAndNetLosers()
+    {
+        // climber#111 wins twice on HU: +30 then +25 => net +55, latest MMR 2055.
+        var ev1 = CreateRiserEvent("climber#111", 2000, 2030, Race.HU, "steady#222", 1800, 1785, Race.OC);
+        var ev2 = CreateRiserEvent("climber#111", 2030, 2055, Race.HU, "steady#222", 1785, 1770, Race.OC);
+        // smallfry#333 gains a little; his opponent gains on a *different race*,
+        // which must stay a separate ladder entry rather than merge with ev1's OC.
+        var ev3 = CreateRiserEvent("smallfry#333", 1500, 1510, Race.UD, "steady#222", 1600, 1620, Race.NE);
+        // A huge gain that doesn't count: rank deviation at the obfuscation
+        // threshold means the site wouldn't even show this player's MMR.
+        var ev4 = CreateRiserEvent("uncalibrated#444", 1500, 1900, Race.NE, "victim#555", 1900, 1880, Race.UD);
+        ev4.match.players[0].mmr.rd = PlayersObfuscator.RankDeviationObfuscationThreshold;
+
+        foreach (var ev in new[] { ev1, ev2, ev3, ev4 })
+        {
+            await matchRepository.Insert(Matchup.Create(ev));
+        }
+
+        var risers = await matchRepository.LoadMmrRisers(0, GameMode.GM_1v1, DateTimeOffset.UtcNow.AddDays(-7), 5);
+
+        Assert.AreEqual(3, risers.Count);
+
+        Assert.AreEqual("climber#111", risers[0].BattleTag);
+        Assert.AreEqual("climber", risers[0].Name);
+        Assert.AreEqual(Race.HU, risers[0].Race);
+        Assert.AreEqual(55, risers[0].MmrGain);
+        Assert.AreEqual(2, risers[0].Games);
+        Assert.AreEqual(2055, risers[0].CurrentMmr);
+
+        Assert.AreEqual("steady#222", risers[1].BattleTag);
+        Assert.AreEqual(Race.NE, risers[1].Race);
+        Assert.AreEqual(20, risers[1].MmrGain);
+        Assert.AreEqual(1, risers[1].Games);
+
+        Assert.AreEqual("smallfry#333", risers[2].BattleTag);
+        Assert.AreEqual(10, risers[2].MmrGain);
+
+        // The cutoff excludes everything: no matches, no risers.
+        var outsideWindow = await matchRepository.LoadMmrRisers(0, GameMode.GM_1v1, DateTimeOffset.UtcNow.AddHours(1), 5);
+        Assert.AreEqual(0, outsideWindow.Count);
+
+        // Top-limit trims from the bottom of the list.
+        var topOne = await matchRepository.LoadMmrRisers(0, GameMode.GM_1v1, DateTimeOffset.UtcNow.AddDays(-7), 1);
+        Assert.AreEqual("climber#111", topOne.Single().BattleTag);
     }
 }

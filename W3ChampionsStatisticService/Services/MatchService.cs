@@ -26,6 +26,7 @@ public class MatchService(
     ICachedDataProvider<CachedLong> cachedMatchCountProvider,
     ICachedDataProvider<List<string>> cachedMapNamesProvider,
     ICachedDataProvider<List<OpponentInfo>> cachedOpponentsProvider,
+    ICachedDataProvider<List<MmrRiser>> cachedMmrRisersProvider,
     IPersonalSettingsRepository personalSettingsRepository)
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
@@ -33,6 +34,7 @@ public class MatchService(
     private readonly ICachedDataProvider<CachedLong> _cachedMatchCountProvider = cachedMatchCountProvider;
     private readonly ICachedDataProvider<List<string>> _cachedMapNamesProvider = cachedMapNamesProvider;
     private readonly ICachedDataProvider<List<OpponentInfo>> _cachedOpponentsProvider = cachedOpponentsProvider;
+    private readonly ICachedDataProvider<List<MmrRiser>> _cachedMmrRisersProvider = cachedMmrRisersProvider;
     private readonly IPersonalSettingsRepository _personalSettingsRepository = personalSettingsRepository;
 
     public async Task<List<Matchup>> GetMatchesPerPlayer(
@@ -96,17 +98,17 @@ public class MatchService(
     }
 
     public async Task<List<OpponentInfo>> SearchOpponentsPerPlayer(
-        string playerId,
+        string battleTag,
         string search,
         int season,
         GateWay gateWay,
         GameMode gameMode,
         int limit)
     {
-        string cacheKey = $"opponents_{playerId}_{season}_{gateWay}_{gameMode}_{limit}_{search?.ToLowerInvariant()}";
+        string cacheKey = $"opponents_{battleTag}_{season}_{gateWay}_{gameMode}_{limit}_{search?.ToLowerInvariant()}";
 
         return await _cachedOpponentsProvider.GetCachedOrRequestAsync(
-            async () => await _matchRepository.SearchOpponentsFor(playerId, search, season, gateWay, gameMode, limit),
+            async () => await _matchRepository.SearchOpponentsFor(battleTag, search, season, gateWay, gameMode, limit),
             cacheKey,
             TimeSpan.FromMinutes(1));
     }
@@ -117,6 +119,16 @@ public class MatchService(
 
         return await _cachedMapNamesProvider.GetCachedOrRequestAsync(
             async () => await _matchRepository.LoadMapNames(season, gameMode),
+            cacheKey,
+            TimeSpan.FromMinutes(10));
+    }
+
+    public async Task<List<MmrRiser>> GetMmrRisers(int season, GameMode gameMode, int days, int top)
+    {
+        string cacheKey = $"mmr_risers_{season}_{gameMode}_{days}_{top}";
+
+        return await _cachedMmrRisersProvider.GetCachedOrRequestAsync(
+            async () => await _matchRepository.LoadMmrRisers(season, gameMode, DateTimeOffset.UtcNow.AddDays(-days), top),
             cacheKey,
             TimeSpan.FromMinutes(10));
     }

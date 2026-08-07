@@ -17,6 +17,8 @@ public interface IMatchRepository
 
     Task<List<string>> LoadMapNames(int season, GameMode gameMode);
 
+    Task<List<MmrRiser>> LoadMmrRisers(int season, GameMode gameMode, DateTimeOffset since, int top);
+
     Task<long> Count(
         int season,
         GameMode gameMode,
@@ -53,7 +55,7 @@ public interface IMatchRepository
         bool opponentIncludeRandom = false);
 
     Task<List<OpponentInfo>> SearchOpponentsFor(
-        string playerId,
+        string battleTag,
         string search,
         int season,
         GateWay gateWay = GateWay.Undefined,
