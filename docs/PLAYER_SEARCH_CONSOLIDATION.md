@@ -207,12 +207,13 @@ has no flag; it serves both endpoint sets and lets the frontend choose.
 
 **Verifying the backend deploy.** Three checks against the freshly rolled backend:
 
-- The startup log. The first boot prints `Rank MemberIds backfill filled <n> row(s) in <ms>ms`;
-  later boots print nothing, because nothing is missing. The two error shapes to watch for are a
-  logged `IndexOptionsConflict` — the failure mode described under
-  [Rank storage and lookup](#rank-storage-and-lookup) — and `Rank MemberIds backfill failed`.
-- `db.Rank.getIndexes()` lists `MemberIds_Season_Gateway_GameMode`.
-- `db.Rank.countDocuments({ MemberIds: { $exists: false } })` returns 0.
+- `db.Rank.getIndexes()` lists `MemberIds_Season_Gateway_GameMode`. The startup-log failure shape
+  to watch for is `IndexOptionsConflict`, described under
+  [Rank storage and lookup](#rank-storage-and-lookup).
+- The backfill job, run once per environment: `POST api/admin/jobs/rank-member-ids-backfill/run`
+  (admin runner, `docs/admin-job-runner.md`) reaches `Completed`, its progress trail naming each
+  season and the rows it filled.
+- `db.Rank.countDocuments({ MemberIds: { $exists: false } })` returns 0 once the job has completed.
 
 The backend stays additive at the API surface. `POST ladder/ranks-for-players` is a new route,
 verb-disjoint from the `GET {leagueId}` it sits beside. `LoadRanksForPlayers` gains the ladder
@@ -222,8 +223,8 @@ season-only original. Every legacy route keeps its path, verb, request and respo
 ## Rank storage and lookup
 
 This design changes one existing production collection, `Rank`, in three ways: the row gains a list
-of its members, the collection gains one multikey index over that list, and a startup backfill
-brings the existing rows up to the new shape.
+of its members, the collection gains one multikey index over that list, and an admin-triggered
+backfill job brings the existing rows up to the new shape.
 
 A rank row is one ladder entry. The new `MemberIds` field (`Rank.cs:60`) lists every member of that
 entry; the long-standing `Player1Id` and `Player2Id` keep holding the first two. The list exists for
@@ -252,23 +253,27 @@ is held in memory.
 
 **The backfill.** A row written before the field existed would answer "not ranked" forever: a row
 only rewrites itself when its league next syncs, which for a finished season never happens.
-`RankRepository.EnsureIndexesAsync`, run at startup by `MongoIndexInitializationService`, creates
-the index first, then backfills in an isolated step, so a failure there cannot cost the lookups
-their index and is logged as a backfill error, not an index error. Members come from the joined
-`PlayerOverview`, which carries the whole team as structured data — teams of three and four are
-repaired rather than left at the two members the old fields held, 829 three-member and 293
-four-member rows on the season-13 snapshot. Rows with no `PlayerOverview` fall back to the two
-fields; they are the orphan ranks the lookup drops anyway. The run logs a count-and-duration line
-when it fills anything, and deciding whether there is work is a single `$exists` count, free once
-the collection is filled. The probe is also what makes rollback safe: if an older image runs for a
-while and writes rows without the field, the next startup finds and fills them — there is no marker
-to reset.
+`RankMemberIdsBackfillJob` fills those rows through the admin job runner
+(`docs/admin-job-runner.md`): triggered once per environment via
+`POST api/admin/jobs/rank-member-ids-backfill/run`, it works one season per batch, paces between
+seasons against database and CPU pressure, and checkpoints the last completed season, so an
+interrupted run resumes where it died. Members come from the joined `PlayerOverview`, which
+carries the whole team as structured data — teams of three and four are repaired rather than left
+at the two members the old fields held: 829 such rows on the 2022 prod dump (536 three-member,
+293 four-member, all in seasons 9–13). Rows with no `PlayerOverview` fall back to the two fields;
+they are the orphan ranks the lookup drops anyway. Deciding whether a season holds work is a single `$exists` count on the
+missing field, which is also what makes the job safe to re-run: a filled row no longer matches, so
+a redo finds nothing. The same property makes rollback safe: if an older image runs for a while
+and writes rows without the field, re-running the job finds and fills them — there is no marker to
+reset. The index stays a startup concern — `RankRepository.EnsureIndexesAsync`, run by
+`MongoIndexInitializationService` — so the lookups have their index whether or not the job has
+run, and a backfill failure cannot cost them it.
 
 **Who reads the list.** The search pair — `LoadLadderStandings` and the context overload of
 `LoadRanksForPlayers` — match on the member list alone, through the shared `OnLadder` predicate,
 and the index serves them. `LoadPlayersOfCountry` and the season-only `LoadRanksForPlayers` (clan
 and chat) also read the list but keep the two-field match beside it in an `$or`: they sit outside
-the rollout flag, so they must keep working on rows a failed backfill has not reached. The `$or`
+the rollout flag, so they must keep working on rows the backfill job has not reached. The `$or`
 keeps them on the season index they have always used, and the fallback is removed with the legacy
 retirement.
 

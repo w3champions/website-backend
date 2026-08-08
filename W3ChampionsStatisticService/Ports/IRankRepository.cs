@@ -20,4 +20,6 @@ public interface IRankRepository
     Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season, GateWay gateWay, GameMode gameMode);
     Task<List<PlayerLadderStanding>> LoadLadderStandings(List<string> list, int season, GateWay gateWay, GameMode gameMode);
     Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string tagSearch);
+    Task<List<int>> LoadRankSeasons();
+    Task<long> BackfillMemberIds(int season);
 }

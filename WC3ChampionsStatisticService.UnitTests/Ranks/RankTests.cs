@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
@@ -554,50 +555,79 @@ public class RankTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task EnsureIndexes_BackfillsMemberIdsFromThePlayerOverview()
+    public async Task BackfillMemberIds_FillsFromThePlayerOverview()
     {
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
         var playerRepository = new PlayerRepository(MongoClient);
 
         // A three-player team: the member the two stored fields cannot hold is what the backfill
         // must recover, and only the PlayerOverview still knows them.
+        const int season = 13;
         var team = new List<string> { "aaa#1", "bbb#2", "ccc#3" };
-        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, 13);
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, season);
         await rankRepository.InsertRanks(new List<Rank> { rank });
-        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, 13, null));
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, season, null));
 
         // Strip the field to the shape of rows written before it existed
         var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
         await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
 
         // Act — twice: the second run must find nothing left to fill and change nothing
-        await rankRepository.EnsureIndexesAsync();
-        await rankRepository.EnsureIndexesAsync();
+        var filled = await rankRepository.BackfillMemberIds(season);
+        var refilled = await rankRepository.BackfillMemberIds(season);
 
-        var standings = await rankRepository.LoadLadderStandings(new List<string> { "ccc#3" }, 13, GateWay.Europe, GameMode.GM_4v4_AT);
+        var standings = await rankRepository.LoadLadderStandings(new List<string> { "ccc#3" }, season, GateWay.Europe, GameMode.GM_4v4_AT);
 
-        // Assert — the third member finds the team again
+        // Assert — the third member finds the team again, and the redo found nothing left
+        Assert.AreEqual(1, filled);
+        Assert.AreEqual(0, refilled);
         Assert.AreEqual(1, standings.Count);
         CollectionAssert.AreEqual(team, standings[0].MemberIds);
     }
 
     [Test]
-    public async Task EnsureIndexes_BackfillFallsBackToTheStoredMembers_WhenTheOverviewIsMissing()
+    public async Task BackfillMemberIds_FallsBackToTheStoredMembers_WhenTheOverviewIsMissing()
     {
         var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
 
-        var rank = new Rank(new List<string> { "aaa#1", "bbb#2" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        const int season = 13;
+        var rank = new Rank(new List<string> { "aaa#1", "bbb#2" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, season);
         await rankRepository.InsertRanks(new List<Rank> { rank });
 
         var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
         await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
 
         // Act — no PlayerOverview exists, so the backfill only has Player1Id/Player2Id to go on
-        await rankRepository.EnsureIndexesAsync();
+        await rankRepository.BackfillMemberIds(season);
 
         // Assert on the stored document: an orphan rank is invisible to the joined queries either way
         var stored = await ranksCollection.Find(FilterDefinition<Rank>.Empty).FirstAsync();
         CollectionAssert.AreEqual(new[] { "aaa#1", "bbb#2" }, stored.MemberIds);
+    }
+
+    [Test]
+    public async Task BackfillMemberIds_TouchesOnlyTheRequestedSeason()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+
+        const int season = 13;
+        const int otherSeason = 12;
+        var thisSeasonRank = new Rank(new List<string> { "aaa#1", "bbb#2" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, season);
+        var otherSeasonRank = new Rank(new List<string> { "ccc#3", "ddd#4" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, otherSeason);
+        await rankRepository.InsertRanks(new List<Rank> { thisSeasonRank, otherSeasonRank });
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — a season is one batch; the other season is the next batch's work, not this one's
+        var filled = await rankRepository.BackfillMemberIds(season);
+
+        // Assert — on the raw document: an absent field deserializes to the model's empty-list
+        // initializer, which a filled-but-empty row would also show
+        Assert.AreEqual(1, filled);
+        var rawRanks = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<BsonDocument>(nameof(Rank));
+        var untouched = await rawRanks.Find(new BsonDocument("Season", otherSeason)).FirstAsync();
+        Assert.IsFalse(untouched.Contains("MemberIds"));
     }
 
     [Test]
