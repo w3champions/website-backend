@@ -47,5 +47,11 @@ public class RankMemberIdsBackfillJob(IRankRepository rankRepository) : IAdminJo
                 new BsonDocument("LastCompletedSeason", season));
             await context.Pace(cancellationToken);
         }
+
+        // Rest on a whole-run summary rather than the last season's line. The runner flushes
+        // the final report past the write throttle, so this is what the jobs page shows once
+        // the run has completed.
+        await context.Report(seasons.Count, seasons.Count,
+            $"{seasons.Count} season(s) done, {context.ItemsProcessed} row(s) filled");
     }
 }
