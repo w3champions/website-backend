@@ -29,6 +29,8 @@ public class RankMemberIdsBackfillJobTests
         Assert.AreEqual(5, context.ItemsProcessed);
         Assert.AreEqual(2, context.Reports[^1].Current);
         Assert.AreEqual(2, context.Reports[^1].Total);
+        // The resting message summarises the run rather than naming the last season
+        Assert.AreEqual("2 season(s) done, 5 row(s) filled", context.Reports[^1].Message);
         Assert.AreEqual(13, context.LastCheckpoint["LastCompletedSeason"].AsInt32);
         // Paced after every season, so cancellation and back-pressure reach the job between batches
         Assert.AreEqual(2, context.Paces);
