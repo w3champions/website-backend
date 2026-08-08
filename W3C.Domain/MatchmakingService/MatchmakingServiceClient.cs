@@ -643,45 +643,48 @@ public class MatchmakingServiceClient
         return null;
     }
 
-    public async Task<object> GetGamemodeParams(int id)
+    public async Task<GameModeParamsResponse> GetGamemodeParams(int id)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/getGamemodeParams/{id}";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
         {
-            var url = $"{MatchmakingApiUrl}/admin/getGamemodeParams/{id}";
-
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Add("x-admin-secret", AdminSecret);
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return await GetResult<object>(response);
-            }
-
-            await HandleMMError(response);
-            return null;
+            return await GetResult<GameModeParamsResponse>(response);
         }
 
-    public async Task<object> PostGamemodeParams(int id, object _params)
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<HttpResponseMessage> SetGamemodeParams(int id, GameModeParams gameModeParams)
+    {
+        var payload = new
         {
-            var payload = new
-            {
-                gmId = id,
-                newParams = _params
-            };
-            var url = $"{MatchmakingApiUrl}/setGamemodeParams";
-            var httpcontent = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Add("x-admin-secret", AdminSecret);
-            request.Content = httpcontent;
-            var response = await _httpClient.SendAsync(request);
+            gmId = id,
+            newParams = gameModeParams
+        };
+        // Same /admin prefix as every other admin route on that service - without it
+        // this 404s, since the route is registered on the admin router.
+        var url = $"{MatchmakingApiUrl}/admin/setGamemodeParams";
+        var httpcontent = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = httpcontent;
+        var response = await _httpClient.SendAsync(request);
 
-            if (response.IsSuccessStatusCode)
-            {
-                return await GetResult<object>(response);
-            }
-
-            await HandleMMError(response);
-            return null;
+        if (response.IsSuccessStatusCode)
+        {
+            // The service answers 201 with an empty body, so there is nothing to parse.
+            return response;
         }
+
+        await HandleMMError(response);
+        return null;
+    }
 
     private async Task HandleMMError(HttpResponseMessage response)
     {

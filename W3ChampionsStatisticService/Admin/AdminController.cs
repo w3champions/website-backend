@@ -518,14 +518,23 @@ public class AdminController(
 
     [HttpGet("gamemode-params/{gmId}")]
     [BearerHasPermissionFilter(Permission = EPermission.GameModeSettings)]
-    public async Task<IActionResult> GetGmParameters(int gmId) {
-        return Ok(await _matchmakingServiceRepository.GetGamemodeParams(gmId));
+    public async Task<IActionResult> GetGameModeParams(int gmId)
+    {
+        var gameModeParams = await _matchmakingServiceRepository.GetGamemodeParams(gmId);
+        if (gameModeParams?.Params == null)
+        {
+            // Modes without tunable parameters are a normal answer, not a failure.
+            return NotFound(new { error = "gamemode_has_no_params", gmId });
+        }
+
+        return Ok(gameModeParams.Params);
     }
 
     [HttpPost("gamemode-params/{gmId}")]
     [BearerHasPermissionFilter(Permission = EPermission.GameModeSettings)]
-    public async Task<IActionResult> GetGmParameters(int gmId, [FromBody] object _params) {
-        var res = await _matchmakingServiceRepository.PostGamemodeParams(gmId, _params);
-        return Ok(res);
+    public async Task<IActionResult> SetGameModeParams(int gmId, [FromBody] GameModeParams gameModeParams)
+    {
+        await _matchmakingServiceRepository.SetGamemodeParams(gmId, gameModeParams);
+        return Ok();
     }
 }
