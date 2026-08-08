@@ -1,9 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using MongoDB.Bson;
+﻿using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -17,19 +14,19 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Ladder;
 
 [Trace]
-public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider, ILogger<RankRepository> logger = null) : MongoDbRepositoryBase(mongoClient), IRankRepository, IRequiresIndexes
+public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider personalSettingsProvider) : MongoDbRepositoryBase(mongoClient), IRankRepository, IRequiresIndexes
 {
     private PersonalSettingsProvider _personalSettingsProvider = personalSettingsProvider;
-    private readonly ILogger<RankRepository> _logger = logger ?? NullLogger<RankRepository>.Instance;
 
     public string CollectionName => nameof(Rank);
 
     /// <summary>
     /// Declares the Rank index the member lookups seek on — <see cref="LoadLadderStandings"/>
     /// (search ordering) and the context overload of <see cref="LoadRanksForPlayers(List{string}, int, GateWay, GameMode)"/>
-    /// (display). Then backfills <see cref="Rank.MemberIds"/>, since rows written before the field
-    /// existed would otherwise answer "not ranked" forever — a row only rewrites itself when its
-    /// league next syncs, which for a finished season never happens.
+    /// (display). Rows written before <see cref="Rank.MemberIds"/> existed stay invisible to those
+    /// lookups until the rank-member-ids-backfill admin job (<see cref="RankMemberIdsBackfillJob"/>)
+    /// has run — a row only rewrites itself when its league next syncs, which for a finished season
+    /// never happens.
     /// </summary>
     /// <remarks>
     /// Creation is idempotent, so redeploys are a no-op. Should prod hold this key under a different
@@ -59,38 +56,39 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
         };
 
         await ranks.Indexes.CreateManyAsync(indexes);
-
-        // After the index, and isolated: a backfill failure must not cost the lookups their index,
-        // and it reports under its own identity rather than as an index-creation error.
-        try
-        {
-            var stopwatch = Stopwatch.StartNew();
-            var filled = await BackfillMemberIdsAsync(ranks);
-            if (filled > 0)
-            {
-                _logger.LogInformation("Rank MemberIds backfill filled {Count} row(s) in {ElapsedMs}ms", filled, stopwatch.ElapsedMilliseconds);
-            }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Rank MemberIds backfill failed; rows written before the field existed stay invisible to the member lookups until a later startup succeeds");
-        }
     }
 
     /// <summary>
-    /// Fills <see cref="Rank.MemberIds"/> on rows written before the field existed and returns how
-    /// many rows were missing it.
+    /// Every season that holds rank rows, ascending — the work list of the
+    /// rank-member-ids-backfill admin job.
+    /// </summary>
+    public async Task<List<int>> LoadRankSeasons()
+    {
+        var ranks = CreateCollection<Rank>();
+        var seasons = await ranks.DistinctAsync(r => r.Season, FilterDefinition<Rank>.Empty);
+        var list = await seasons.ToListAsync();
+        list.Sort();
+        return list;
+    }
+
+    /// <summary>
+    /// Fills <see cref="Rank.MemberIds"/> on the season's rows written before the field existed and
+    /// returns how many rows were missing it. One season is one batch of the
+    /// rank-member-ids-backfill admin job, which paces between calls.
     /// </summary>
     /// <remarks>
     /// Members come from the joined PlayerOverview, which carries the whole team as structured data,
     /// so teams of three and four are repaired rather than left at the two members the old fields
     /// held. Rows with no PlayerOverview fall back to those two fields; they are the orphan ranks the
     /// lookup drops anyway, so no query can return them either way. Reading the row id instead would
-    /// be guesswork — a battleTag may itself contain the separator.
+    /// be guesswork — a battleTag may itself contain the separator. The missing-field match makes a
+    /// season safe to redo: a filled row no longer matches, so re-running finds nothing.
     /// </remarks>
-    private static async Task<long> BackfillMemberIdsAsync(IMongoCollection<Rank> ranks)
+    public async Task<long> BackfillMemberIds(int season)
     {
-        var missingField = Builders<Rank>.Filter.Exists(r => r.MemberIds, false);
+        var ranks = CreateCollection<Rank>();
+        var missingField = Builders<Rank>.Filter.Eq(r => r.Season, season)
+            & Builders<Rank>.Filter.Exists(r => r.MemberIds, false);
         var missing = await ranks.CountDocumentsAsync(missingField);
         if (missing == 0)
         {
@@ -99,7 +97,11 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
 
         var pipeline = new[]
         {
-            new BsonDocument("$match", new BsonDocument("MemberIds", new BsonDocument("$exists", false))),
+            new BsonDocument("$match", new BsonDocument
+            {
+                { "Season", season },
+                { "MemberIds", new BsonDocument("$exists", false) },
+            }),
             new BsonDocument("$lookup", new BsonDocument
             {
                 { "from", nameof(PlayerOverview) },
