@@ -22,14 +22,11 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
     // other non-success status is a genuine upstream failure (outage, timeout) and must
     // not be mistaken for "no replay".
     //
-    // Caveat, checked against the replay service rather than assumed: it does not
-    // currently distinguish the two. Every variant of its error enum - including
-    // GetGameArchiveFailed, which is what an absent or archived replay produces - goes
-    // through one IntoResponse that sets 500 (replay-service error.rs). So the branch
-    // below never fires today and a missing replay surfaces as a server error.
-    // Distinguishing them has to be fixed in the replay service, by mapping
-    // GetGameInfoFailed/GetGameArchiveFailed to 404; the branch is kept so that this
-    // side needs no change when that lands.
+    // Checked against the replay service rather than assumed. It used to answer 500
+    // for everything, so the two were indistinguishable; replay-service#12 splits them:
+    // a game or object that was never there is 404, an object aged into DeepArchive
+    // (S3 InvalidObjectState) is 410, and storage failures stay 500. Both 4xx are
+    // handled below. Deploy that before relying on a 404 here meaning "no replay".
     public async Task<Stream> GenerateReplay(int gameId)
     {
         using var response = await _httpClient.GetAsync($"{ReplayServiceUrl}/generate/{gameId}?secret={AdminSecret}", HttpCompletionOption.ResponseHeadersRead);
@@ -57,8 +54,7 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
     {
         using var response = await _httpClient.GetAsync($"{ReplayServiceUrl}/chats/{gameId}?secret={AdminSecret}");
 
-        // See GenerateReplay: the replay service returns 500 for an absent replay today,
-        // so this branch is forward-looking rather than currently reachable.
+        // See GenerateReplay for how the replay service distinguishes these.
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
         {
             return null;
