@@ -20,7 +20,7 @@ namespace WC3ChampionsStatisticService.Tests.Admin;
 public class AdminMatchesControllerTests
 {
     private const string CanceledMatchesJson = """
-    {"total":3,"matches":[{"_id":"abc1234567","state":3,"gameMode":5,"floGameId":4242,
+    {"nextCursor":"eyJmIjoiYWJjIn0.sig","matches":[{"_id":"abc1234567","state":3,"gameMode":5,"floGameId":4242,
     "players":[{"battleTag":"Tester#1234","team":0,"slotIndex":2}]}]}
     """;
 
@@ -59,13 +59,13 @@ public class AdminMatchesControllerTests
         var handler = new CapturingHandler(CanceledMatchesJson);
         var controller = CreateController(handler);
 
-        var result = await controller.GetCanceledMatches(GameMode.FFA, "Tester#1234", 2, 10);
+        var result = await controller.GetCanceledMatches(GameMode.FFA, "Tester#1234", "prev-cursor", 10);
 
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
         Assert.That(handler.Requests, Has.Count.EqualTo(1));
         var uri = handler.Requests[0].RequestUri!;
         Assert.That(uri.AbsolutePath, Does.EndWith("/admin/canceled-matches"));
-        Assert.That(uri.Query, Does.Contain("page=2"));
+        Assert.That(uri.Query, Does.Contain("cursor=prev-cursor"));
         Assert.That(uri.Query, Does.Contain("itemsPerPage=10"));
         Assert.That(uri.Query, Does.Contain("gameMode=5"));
         Assert.That(uri.Query, Does.Contain("battleTag=Tester"));
@@ -78,8 +78,10 @@ public class AdminMatchesControllerTests
         var handler = new CapturingHandler(CanceledMatchesJson);
         var controller = CreateController(handler);
 
-        await controller.GetCanceledMatches(GameMode.Undefined, null, 1, 25);
+        await controller.GetCanceledMatches(null, null, null, 25);
 
+        // Null rather than GameMode.Undefined: "no filter" is now its own value instead
+        // of enum member 0 doing double duty.
         Assert.That(handler.Requests[0].RequestUri!.Query, Does.Not.Contain("gameMode="));
     }
 
@@ -89,24 +91,53 @@ public class AdminMatchesControllerTests
         var handler = new CapturingHandler(CanceledMatchesJson);
         var controller = CreateController(handler);
 
-        await controller.GetCanceledMatches(GameMode.Undefined, null, 1, 5000);
+        await controller.GetCanceledMatches(null, null, null, 5000);
 
         Assert.That(handler.Requests[0].RequestUri!.Query, Does.Contain("itemsPerPage=100"));
     }
 
     [Test]
-    public async Task TheProxiedPayloadKeepsIdsSlotIndexesAndTotal()
+    public async Task TheProxiedPayloadKeepsIdsSlotIndexesAndTheCursor()
     {
         var handler = new CapturingHandler(CanceledMatchesJson);
         var controller = CreateController(handler);
 
-        var result = (OkObjectResult)await controller.GetCanceledMatches(GameMode.Undefined, null, 1, 25);
+        var result = (OkObjectResult)await controller.GetCanceledMatches(null, null, null, 25);
         var payload = (CanceledMatchesResponse)result.Value!;
 
-        Assert.That(payload.total, Is.EqualTo(3));
+        Assert.That(payload.nextCursor, Is.EqualTo("eyJmIjoiYWJjIn0.sig"));
         Assert.That(payload.matches[0].id, Is.EqualTo("abc1234567"));
         Assert.That(payload.matches[0].floGameId, Is.EqualTo(4242));
         Assert.That(payload.matches[0].players[0].slotIndex, Is.EqualTo(2));
+    }
+
+
+    [Test]
+    public async Task AnUnreachableMatchmakingServiceIsABadGatewayRatherThanANotFound()
+    {
+        var handler = new CapturingHandler("upstream exploded", HttpStatusCode.InternalServerError);
+        var controller = CreateController(handler);
+
+        var result = (ObjectResult)await controller.GetCanceledMatches(null, null, null, 25);
+
+        // Not 404: the request was fine and the collection exists, we just could not
+        // reach the service that knows about it. A 404 would read as "there are no
+        // cancelled matches", which a moderator might act on.
+        Assert.That(result.StatusCode, Is.EqualTo(502));
+    }
+
+    [Test]
+    public void ARejectedCursorSurfacesAsABadRequestNotABadGateway()
+    {
+        var handler = new CapturingHandler("{\"errors\":[{\"msg\":\"Pagination cursor failed signature validation.\"}]}", HttpStatusCode.BadRequest);
+        var controller = CreateController(handler);
+
+        // Matchmaking validates the cursor and the game mode, so its 400 is the caller's
+        // fault. HttpRequestExceptionFilter turns this exception back into a 400.
+        var exception = Assert.ThrowsAsync<HttpRequestException>(
+            () => controller.GetCanceledMatches(null, null, "tampered", 25));
+
+        Assert.That(exception!.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     private static AdminMatchesController CreateController(CapturingHandler handler)
@@ -120,7 +151,7 @@ public class AdminMatchesControllerTests
         public HttpClient CreateClient(string name) => client;
     }
 
-    private class CapturingHandler(string responseBody) : HttpMessageHandler
+    private class CapturingHandler(string responseBody, HttpStatusCode status = HttpStatusCode.OK) : HttpMessageHandler
     {
         public List<HttpRequestMessage> Requests { get; } = [];
 
@@ -128,7 +159,7 @@ public class AdminMatchesControllerTests
         {
             Requests.Add(request);
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return Task.FromResult(new HttpResponseMessage(status)
             {
                 Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
             });

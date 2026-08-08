@@ -17,11 +17,19 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
-    // A replay legitimately may not exist: it was never recorded, or it has aged
-    // into DeepArchive (NotFound/Gone). Callers turn a null stream into a 404 rather
-    // than a 500. Any other non-success status is a genuine upstream failure (outage,
-    // timeout, etc.) and must not be mistaken for "no replay" -- it is logged and thrown
-    // so it surfaces as a server error instead of a misleading 404.
+    // A replay legitimately may not exist: it was never recorded, or it has aged into
+    // DeepArchive. Callers turn a null stream into a 404 rather than a 500, while any
+    // other non-success status is a genuine upstream failure (outage, timeout) and must
+    // not be mistaken for "no replay".
+    //
+    // Caveat, checked against the replay service rather than assumed: it does not
+    // currently distinguish the two. Every variant of its error enum - including
+    // GetGameArchiveFailed, which is what an absent or archived replay produces - goes
+    // through one IntoResponse that sets 500 (replay-service error.rs). So the branch
+    // below never fires today and a missing replay surfaces as a server error.
+    // Distinguishing them has to be fixed in the replay service, by mapping
+    // GetGameInfoFailed/GetGameArchiveFailed to 404; the branch is kept so that this
+    // side needs no change when that lands.
     public async Task<Stream> GenerateReplay(int gameId)
     {
         using var response = await _httpClient.GetAsync($"{ReplayServiceUrl}/generate/{gameId}?secret={AdminSecret}", HttpCompletionOption.ResponseHeadersRead);
@@ -49,6 +57,8 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
     {
         using var response = await _httpClient.GetAsync($"{ReplayServiceUrl}/chats/{gameId}?secret={AdminSecret}");
 
+        // See GenerateReplay: the replay service returns 500 for an absent replay today,
+        // so this branch is forward-looking rather than currently reachable.
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
         {
             return null;

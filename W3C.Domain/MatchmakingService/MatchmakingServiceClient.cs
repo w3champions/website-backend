@@ -117,11 +117,16 @@ public class MatchmakingServiceClient
 
     public async Task<CanceledMatchesResponse> GetCanceledMatches(CanceledMatchesGetRequest req)
     {
-        var url = $"{MatchmakingApiUrl}/admin/canceled-matches?page={req.Page}&itemsPerPage={req.ItemsPerPage}";
+        var url = $"{MatchmakingApiUrl}/admin/canceled-matches?itemsPerPage={req.ItemsPerPage}";
 
-        if (req.GameMode != GameMode.Undefined)
+        if (req.Cursor != null)
         {
-            url += $"&gameMode={(int)req.GameMode}";
+            url += $"&cursor={HttpUtility.UrlEncode(req.Cursor)}";
+        }
+
+        if (req.GameMode.HasValue)
+        {
+            url += $"&gameMode={(int)req.GameMode.Value}";
         }
 
         if (!string.IsNullOrEmpty(req.BattleTag))
@@ -139,8 +144,18 @@ public class MatchmakingServiceClient
         }
 
         var errorContent = await response.Content.ReadAsStringAsync();
-        Log.Error("Matchmaking service returned {StatusCode} fetching canceled matches (page {Page}, itemsPerPage {ItemsPerPage}, gameMode {GameMode}): {Content}",
-            response.StatusCode, req.Page, req.ItemsPerPage, req.GameMode, errorContent);
+        Log.Error("Matchmaking service returned {StatusCode} fetching canceled matches (itemsPerPage {ItemsPerPage}, gameMode {GameMode}, cursor {HasCursor}): {Content}",
+            response.StatusCode, req.ItemsPerPage, req.GameMode, req.Cursor != null, errorContent);
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            // Matchmaking validates the game mode and the cursor, so a 400 is the
+            // caller's error - a stale or tampered cursor, or an unknown mode. Passing
+            // it back as a 502 would blame the upstream for a bad request.
+            // HttpRequestExceptionFilter turns this back into a 400 response.
+            throw new HttpRequestException(errorContent, null, HttpStatusCode.BadRequest);
+        }
+
         return null;
     }
 
@@ -795,18 +810,28 @@ public class PlayerWarningsGetRequest
 
 public class CanceledMatchesGetRequest
 {
-    public int Page { get; set; } = 1;
     public int ItemsPerPage { get; set; } = 25;
 
-    // GameMode.Undefined (0) means "all game modes" and is not sent upstream.
-    public GameMode GameMode { get; set; }
+    /// <summary>
+    /// Opaque cursor from a previous response's <c>nextCursor</c>. Null for the first
+    /// page. It is signed and bound to the filter it was issued under, so it must not
+    /// be reused after changing <see cref="GameMode"/> or <see cref="BattleTag"/> -
+    /// matchmaking rejects that with a 400 rather than silently skipping rows.
+    /// </summary>
+    public string Cursor { get; set; }
+
+    /// <summary>Null means every game mode. Not sent upstream when null.</summary>
+    public GameMode? GameMode { get; set; }
+
     public string BattleTag { get; set; }
 }
 
 public class CanceledMatchesResponse
 {
-    public int total { get; set; }
     public List<Match> matches { get; set; }
+
+    /// <summary>Cursor for the following page, or null when this was the last one.</summary>
+    public string nextCursor { get; set; }
 }
 
 public class PlayerWarningsResponse
