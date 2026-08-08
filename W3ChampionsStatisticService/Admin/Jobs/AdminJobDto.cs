@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using W3C.Contracts.Admin.Permission;
 
 namespace W3ChampionsStatisticService.Admin.Jobs;
@@ -12,6 +13,8 @@ public class AdminJobDto
     public EPermission RequiredPermission { get; set; }
     public bool RequiresConfirmation { get; set; }
 
+    // As a name, not an index: the admin UI's status enum mirrors these as strings.
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public AdminJobStatus Status { get; set; }
     public AdminJobProgress Progress { get; set; }
     public DateTimeOffset? StartedAt { get; set; }
