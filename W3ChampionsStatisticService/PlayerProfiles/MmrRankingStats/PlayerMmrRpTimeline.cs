@@ -27,6 +27,24 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     /// <summary>Entries written by the current handler carry this version.</summary>
     public const int CurrentSchemaVersion = 1;
 
+    /// <summary>
+    /// Id of the last match folded into this timeline, so the same match is never
+    /// counted twice.
+    ///
+    /// The read-model pipeline delivers at least once. A handler that throws part
+    /// way through a match leaves the players it already wrote committed, and the
+    /// event is then retried every few seconds until it succeeds; a crash between
+    /// the handler succeeding and the watermark being saved replays the event once
+    /// on restart. Both replay the SAME event, which is why remembering only the
+    /// last id is sufficient - the watermark cannot advance past a failing event,
+    /// so an older one is never replayed after a newer one.
+    ///
+    /// Without this, <see cref="MmrRpAtDate.MergeSameDay"/> would accumulate the
+    /// games count again on every replay, without bound.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public string LastProcessedMatchId { get; set; }
+
     [Trace]
     public void UpdateTimeline(MmrRpAtDate mmrRpAtDate)
     {
@@ -164,6 +182,11 @@ public class MmrRpAtDate(int mmr, double? rp, DateTimeOffset date, double? rd = 
     /// Order-independent: games accumulate, the peak is the highest close seen,
     /// and the latest entry defines the day's closing state.
     /// </summary>
+    /// <remarks>
+    /// Assumes each match is folded in exactly once - the games count accumulates
+    /// and has no way to recognise a repeat. The caller is responsible for that;
+    /// see <see cref="PlayerMmrRpTimeline.LastProcessedMatchId"/>.
+    /// </remarks>
     public void MergeSameDay(MmrRpAtDate other)
     {
         var games = (Games ?? 1) + (other.Games ?? 1);

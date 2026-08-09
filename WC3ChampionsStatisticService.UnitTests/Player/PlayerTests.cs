@@ -494,6 +494,70 @@ public class PlayerTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Player_UpdateMmrRpTimeline_IsIdempotentWhenAnEventIsReplayed()
+    {
+        // The read-model pipeline delivers at least once: a handler that throws part
+        // way through a match leaves the players it already wrote committed and the
+        // event is retried every few seconds, and a crash between the handler
+        // succeeding and the watermark saving replays it once on restart. The games
+        // count accumulates, so without a guard each replay would add another game.
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var ev = TestDtoHelper.CreateFakeEvent();
+        ev.match.endTime = 1585692047363L;
+        ev.match.players[0].race = Race.OC;
+        ev.match.players[1].race = Race.NE;
+        ev.match.players[0].updatedMmr.rating = 120;
+        ev.match.players.ForEach(p => p.atTeamId = null);
+
+        await handler.Update(ev);
+        await handler.Update(ev);
+        await handler.Update(ev);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+
+        Assert.IsNotNull(timeline);
+        Assert.AreEqual(1, timeline.MmrRpAtDates.Count);
+        var day = timeline.MmrRpAtDates[0];
+        Assert.IsNull(day.Games, "a single game stays at the omitted default rather than counting the replays");
+        Assert.AreEqual(1, day.GamesOrDefault(timeline.SchemaVersion));
+        Assert.AreEqual(120, day.Mmr);
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_ReplayingTheLatestEventDoesNotInflateTheDay()
+    {
+        // The same invariant on a day that legitimately has more than one game:
+        // replaying only the most recent event must leave the count at two, not three.
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var events = new[] { (1585692047363L, 120), (1585695047363L, 150) }
+            .Select(x =>
+            {
+                var ev = TestDtoHelper.CreateFakeEvent();
+                ev.match.endTime = x.Item1;
+                ev.match.players[0].race = Race.OC;
+                ev.match.players[1].race = Race.NE;
+                ev.match.players[0].updatedMmr.rating = x.Item2;
+                ev.match.players.ForEach(p => p.atTeamId = null);
+                return ev;
+            })
+            .ToList();
+
+        await handler.Update(events[0]);
+        await handler.Update(events[1]);
+        await handler.Update(events[1]);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+
+        Assert.AreEqual(1, timeline.MmrRpAtDates.Count);
+        Assert.AreEqual(2, timeline.MmrRpAtDates[0].Games, "the replayed match is not counted twice");
+        Assert.AreEqual(150, timeline.MmrRpAtDates[0].Mmr);
+    }
+
+    [Test]
     public async Task Player_UpdateMmrRpTimeline_OmitsRedundantFields()
     {
         var playerRepository = new PlayerRepository(MongoClient);
