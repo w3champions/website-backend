@@ -38,6 +38,19 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
                 continue;
             }
             var existing = await _playerRepository.LoadPlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
+
+            // The event pipeline delivers at least once, and this loop commits one
+            // player at a time - so a throw on a later player leaves the earlier ones
+            // written and the whole event is retried. Re-folding a match that is
+            // already in the timeline would inflate its games count on every retry,
+            // without bound. Skipping is also what makes the retry cheap: the players
+            // that already succeeded are no longer rewritten.
+            if (existing?.LastProcessedMatchId == match.id)
+            {
+                Log.Information("Match {FinishedMatchId} is already in {Player}'s timeline, skipping", match.id, player.battleTag);
+                continue;
+            }
+
             var mmrRpTimeline = existing ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
             {
                 // A timeline starting now is fully populated from its first entry.
@@ -55,6 +68,7 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
                 rp: player.ranking?.rp,
                 date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime),
                 rd: player.updatedMmr.rd >= PlayersObfuscator.RankDeviationObfuscationThreshold ? player.updatedMmr.rd : null));
+            mmrRpTimeline.LastProcessedMatchId = match.id;
             await _playerRepository.UpsertPlayerMmrRpTimeline(mmrRpTimeline);
         }
     }
