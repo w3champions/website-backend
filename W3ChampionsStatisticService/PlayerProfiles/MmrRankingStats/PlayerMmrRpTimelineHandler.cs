@@ -14,6 +14,9 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
 {
     private readonly IPlayerRepository _playerRepository = playerRepository;
 
+    /// <summary>How many times to reload and reapply before handing the event back to the pipeline.</summary>
+    private const int MaxWriteAttempts = 5;
+
     public async Task Update(MatchFinishedEvent nextEvent)
     {
         var match = nextEvent.match;
@@ -37,9 +40,27 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
                 Log.Information("Player {Player} in finished match {FinishedMatchId} has no updated MMR, skipping processing", player.battleTag);
                 continue;
             }
+            await UpdateTimelineForPlayer(match, player);
+        }
+    }
+
+    /// <summary>
+    /// Folds one player's result into their timeline, retrying if the document moves
+    /// underneath us.
+    ///
+    /// The whole read-modify-write repeats rather than just the write: the merge
+    /// depends on what the day already holds, so reapplying it to a stale copy would
+    /// reinstate the state the other writer replaced. The backfill job rewrites these
+    /// same documents whole while this handler is live, which is what makes the
+    /// conflict real rather than theoretical.
+    /// </summary>
+    private async Task UpdateTimelineForPlayer(Match match, PlayerMMrChange player)
+    {
+        for (var attempt = 1; attempt <= MaxWriteAttempts; attempt++)
+        {
             var existing = await _playerRepository.LoadPlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
 
-            // The event pipeline delivers at least once, and this loop commits one
+            // The event pipeline delivers at least once, and the caller commits one
             // player at a time - so a throw on a later player leaves the earlier ones
             // written and the whole event is retried. Re-folding a match that is
             // already in the timeline would inflate its games count on every retry,
@@ -48,7 +69,7 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
             if (existing?.LastProcessedMatchId == match.id)
             {
                 Log.Information("Match {FinishedMatchId} is already in {Player}'s timeline, skipping", match.id, player.battleTag);
-                continue;
+                return;
             }
 
             var mmrRpTimeline = existing ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
@@ -69,7 +90,19 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
                 date: DateTimeOffset.FromUnixTimeMilliseconds(match.endTime),
                 rd: player.updatedMmr.rd >= PlayersObfuscator.RankDeviationObfuscationThreshold ? player.updatedMmr.rd : null));
             mmrRpTimeline.LastProcessedMatchId = match.id;
-            await _playerRepository.UpsertPlayerMmrRpTimeline(mmrRpTimeline);
+
+            if (await _playerRepository.TryUpsertPlayerMmrRpTimeline(mmrRpTimeline, existing?.Revision))
+            {
+                return;
+            }
+
+            Log.Information("Timeline {TimelineId} changed while folding in match {FinishedMatchId}, retrying ({Attempt}/{MaxAttempts})",
+                mmrRpTimeline.Id, match.id, attempt, MaxWriteAttempts);
         }
+
+        // Give up and let the pipeline retry the whole event. That is safe now that
+        // LastProcessedMatchId makes re-folding a no-op for players already written.
+        throw new InvalidOperationException(
+            $"Could not write {player.battleTag}'s MMR timeline for match {match.id} after {MaxWriteAttempts} attempts; it kept being modified concurrently.");
     }
 }

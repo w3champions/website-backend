@@ -558,6 +558,61 @@ public class PlayerTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task Player_UpdateMmrRpTimeline_RejectsAWriteAgainstAStaleRevision()
+    {
+        // The backfill job rewrites these documents whole while the handler is live.
+        // Without a revision check the later write silently reverts the earlier one -
+        // and if the reverted write was the backfill's, its BackfillPending marker goes
+        // with it, after which SchemaVersion can be promoted over entries that were
+        // never rebuilt.
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var ev = TestDtoHelper.CreateFakeEvent();
+        ev.match.endTime = 1585692047363L;
+        ev.match.players[0].race = Race.OC;
+        ev.match.players[1].race = Race.NE;
+        ev.match.players.ForEach(p => p.atTeamId = null);
+        await handler.Update(ev);
+
+        var stale = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        var staleRevision = stale.Revision;
+
+        // Somebody else writes in between - the backfill, in production.
+        var concurrent = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        concurrent.LastProcessedMatchId = "written-by-someone-else";
+        Assert.IsTrue(await playerRepository.TryUpsertPlayerMmrRpTimeline(concurrent, concurrent.Revision));
+
+        // The stale copy must now be refused rather than clobbering that write.
+        stale.SchemaVersion = 99;
+        Assert.IsFalse(await playerRepository.TryUpsertPlayerMmrRpTimeline(stale, staleRevision), "a write against a stale revision must not land");
+
+        var stored = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        Assert.AreEqual("written-by-someone-else", stored.LastProcessedMatchId, "the concurrent write survives");
+        Assert.AreNotEqual(99, stored.SchemaVersion, "the stale write did not land");
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_TreatsAConcurrentCreationAsAConflict()
+    {
+        // A revision of 0 is ambiguous: every document written before the field existed
+        // deserializes as 0, so "no document" has to be passed as null or a racing
+        // creator would be overwritten instead of detected.
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var first = new PlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        first.UpdateTimeline(new MmrRpAtDate(100, 0, System.DateTimeOffset.FromUnixTimeMilliseconds(1585692047363L)));
+        Assert.IsTrue(await playerRepository.TryUpsertPlayerMmrRpTimeline(first, null));
+
+        var racing = new PlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        racing.UpdateTimeline(new MmrRpAtDate(200, 0, System.DateTimeOffset.FromUnixTimeMilliseconds(1585692047363L)));
+        Assert.IsFalse(await playerRepository.TryUpsertPlayerMmrRpTimeline(racing, null), "a second creation must be reported as a conflict");
+
+        var stored = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        Assert.AreEqual(100, stored.MmrRpAtDates.Single().Mmr);
+    }
+
+    [Test]
     public async Task Player_UpdateMmrRpTimeline_OmitsRedundantFields()
     {
         var playerRepository = new PlayerRepository(MongoClient);
