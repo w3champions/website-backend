@@ -45,6 +45,26 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     [BsonIgnoreIfNull]
     public string LastProcessedMatchId { get; set; }
 
+    /// <summary>
+    /// Optimistic concurrency token, bumped on every write.
+    /// <para>
+    /// This document is written by two independent producers - the live match
+    /// handler and the backfill job - and both replace it whole. Without a token
+    /// they silently destroy each other's writes: a live write landing second
+    /// reverts a rebuilt day AND clears <see cref="BackfillPending"/>, after which
+    /// the backfill can promote <see cref="SchemaVersion"/> over entries that were
+    /// never rebuilt. A promoted timeline is exactly what the lifetime endpoint
+    /// trusts, so that failure publishes a peak it cannot substantiate.
+    /// </para>
+    /// <para>
+    /// Writers filter on the revision they read and retry when it has moved.
+    /// Documents predating this field deserialize as 0, which is a valid starting
+    /// revision - no migration is needed.
+    /// </para>
+    /// </summary>
+    [JsonIgnore]
+    public int Revision { get; set; }
+
     [Trace]
     public void UpdateTimeline(MmrRpAtDate mmrRpAtDate)
     {
