@@ -160,6 +160,8 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
                 .Include(e => e.Id)
                 .Include("match.players")
                 .Include("match.endTime")
+                .Include("match.state")
+                .Include(e => e.WasFakeEvent)
                 .Include("match.season")
                 .Include("match.gameMode")
                 .Include("match.gateway"),
@@ -176,6 +178,15 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
                     continue;
                 }
 
+                // The live handler never sees these: MatchFinishedReadModelHandler
+                // filters them out before the timeline handler runs. This job reads the
+                // collection raw, so it has to repeat the filter or backfilled history
+                // gains games the live history never had - permanently, and promoted.
+                if (!finished.WasFakeEvent && match.state != EMatchState.FINISHED)
+                {
+                    continue;
+                }
+
                 var endTime = DateTimeOffset.FromUnixTimeMilliseconds(match.endTime);
                 if (endTime < dayStart || endTime >= dayEnd)
                 {
@@ -187,6 +198,15 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
                 {
                     // Same exclusions the live handler applies, so a rebuilt timeline
                     // matches what the handler would have produced.
+                    //
+                    // The null and empty-battleTag checks mirror the pipeline's
+                    // StripComputerPlayers, which runs before the live handler. Without
+                    // the null check this dereferences and fails the job, and because a
+                    // resume retries the same day it would fail on that day forever.
+                    if (player == null || string.IsNullOrEmpty(player.battleTag))
+                    {
+                        continue;
+                    }
                     if (player.IsAt || player.updatedMmr == null)
                     {
                         continue;

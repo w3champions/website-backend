@@ -41,28 +41,39 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
         double rd = 100,
         Race race = Race.HU,
         string battleTag = Player,
-        string atTeamId = null)
+        string atTeamId = null,
+        EMatchState state = EMatchState.FINISHED,
+        bool nullPlayerEntry = false)
     {
+        var players = new List<PlayerMMrChange>
+        {
+            new()
+            {
+                battleTag = battleTag,
+                race = race,
+                atTeamId = atTeamId,
+                updatedMmr = new Mmr { rating = mmr, rd = rd },
+            },
+        };
+        if (nullPlayerEntry)
+        {
+            players.Insert(0, null);
+        }
+
         var finished = new MatchFinishedEvent
         {
             Id = ObjectId.GenerateNewId(endTime.UtcDateTime),
             match = new Match
             {
+                // EMatchState defaults to INIT, which the live pipeline discards - so a
+                // match must say FINISHED to be part of anyone's history.
+                state = state,
                 id = Guid.NewGuid().ToString(),
                 endTime = endTime.ToUnixTimeMilliseconds(),
                 season = 1,
                 gameMode = GameMode.GM_1v1,
                 gateway = GateWay.Europe,
-                players =
-                [
-                    new PlayerMMrChange
-                    {
-                        battleTag = battleTag,
-                        race = race,
-                        atTeamId = atTeamId,
-                        updatedMmr = new Mmr { rating = mmr, rd = rd },
-                    },
-                ],
+                players = players,
             },
         };
 
@@ -235,6 +246,56 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
 
         var dates = (await LoadTimeline()).MmrRpAtDates.Select(e => e.Date.Date).ToList();
         Assert.That(dates, Is.EquivalentTo(new[] { Yesterday.Date }), "the skipped day should not have been rebuilt");
+    }
+
+    [Test]
+    [TestCase(EMatchState.CANCELED, TestName = "CanceledMatchesAreNotRebuilt")]
+    [TestCase(EMatchState.INIT, TestName = "UnfinishedMatchesAreNotRebuilt")]
+    public async Task OnlyFinishedMatchesAreRebuilt(EMatchState state)
+    {
+        // The live handler never sees these - MatchFinishedReadModelHandler discards
+        // them before the timeline handler runs. This job reads the collection raw, so
+        // without the same filter a backfilled timeline would contain games the live
+        // one never had, and then be promoted as authoritative.
+        await GivenMatch(Yesterday.AddHours(1), mmr: 1500, state: state);
+
+        await _job.RunAsync(_context, CancellationToken.None);
+
+        Assert.That(await LoadTimeline(), Is.Null, "a match the live pipeline discards must not be backfilled");
+    }
+
+    [Test]
+    public async Task ComputerPlayersAreSkipped()
+    {
+        // The pipeline's StripComputerPlayers removes empty-battleTag entries before
+        // the live handler runs. Without the same guard this writes a timeline whose
+        // id has an empty battleTag, which then gets marked and promoted.
+        await GivenMatch(Yesterday.AddHours(1), mmr: 1500, battleTag: "");
+        await GivenMatch(Yesterday.AddHours(2), mmr: 1600);
+
+        await _job.RunAsync(_context, CancellationToken.None);
+
+        var timeline = await LoadTimeline();
+        Assert.That(timeline, Is.Not.Null);
+        Assert.That(timeline.MmrRpAtDates.Single().Mmr, Is.EqualTo(1600));
+
+        var empties = await Timelines.CountDocumentsAsync(t => t.Id.Contains("__@"));
+        Assert.That(empties, Is.Zero, "an empty battleTag must not produce a timeline");
+    }
+
+    [Test]
+    public async Task ANullPlayerEntryDoesNotFailTheDay()
+    {
+        // The pipeline guards against null player entries, so this job must too: an
+        // unhandled dereference fails the job, and because a resume retries the same
+        // day it would fail on that day forever.
+        await GivenMatch(Yesterday.AddHours(1), mmr: 1500, nullPlayerEntry: true);
+
+        await _job.RunAsync(_context, CancellationToken.None);
+
+        var timeline = await LoadTimeline();
+        Assert.That(timeline, Is.Not.Null, "the real player in the match should still be rebuilt");
+        Assert.That(timeline.MmrRpAtDates.Single().Mmr, Is.EqualTo(1500));
     }
 
     [Test]
