@@ -96,11 +96,46 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
         await PromoteSchemaVersion(context, cancellationToken);
     }
 
+    /// <summary>How many times to redo a day whose documents moved underneath it.</summary>
+    private const int MaxRebuildAttempts = 5;
+
     /// <summary>
     /// Rebuilds every timeline that has a match on this day, and returns how many were
     /// written.
+    /// <para>
+    /// The live handler writes these same documents while this job runs, and both
+    /// replace them whole - so every write is conditional on the revision it was read
+    /// at. On a clash the whole day is redone rather than the individual document
+    /// retried: rebuilding a day is idempotent (the day is cleared and re-derived from
+    /// the events), so redoing it is both simpler and exactly equivalent.
+    /// </para>
     /// </summary>
     private async Task<int> RebuildDay(DateOnly day, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            var written = await TryRebuildDay(day, cancellationToken);
+            if (written.HasValue)
+            {
+                return written.Value;
+            }
+
+            if (attempt >= MaxRebuildAttempts)
+            {
+                throw new InvalidOperationException(
+                    $"Could not rebuild {day:yyyy-MM-dd} after {MaxRebuildAttempts} attempts; its timelines kept being written concurrently.");
+            }
+
+            Log.Information("Timelines for {Day} changed while rebuilding, redoing the day ({Attempt}/{MaxAttempts})",
+                day, attempt, MaxRebuildAttempts);
+        }
+    }
+
+    /// <summary>
+    /// One rebuild pass. Returns the number of documents written, or null if any of
+    /// them had moved since it was read.
+    /// </summary>
+    private async Task<int?> TryRebuildDay(DateOnly day, CancellationToken cancellationToken)
     {
         var entries = await CollectDay(day, cancellationToken);
         if (entries.Count == 0)
@@ -110,10 +145,12 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
 
         var existing = await LoadTimelines(entries.Keys, cancellationToken);
         var writes = new List<WriteModel<PlayerMmrRpTimeline>>(entries.Count);
+        var inserts = 0;
 
         foreach (var (id, rebuilt) in entries)
         {
-            var timeline = existing.GetValueOrDefault(id) ?? rebuilt.NewTimeline();
+            var current = existing.GetValueOrDefault(id);
+            var timeline = current ?? rebuilt.NewTimeline();
 
             // Drop whatever the day previously held before inserting the rebuilt entry,
             // so a rerun converges instead of double-counting games.
@@ -121,14 +158,38 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
             timeline.UpdateTimeline(rebuilt.Entry);
             timeline.BackfillPending = true;
 
+            if (current == null)
+            {
+                // Not an upsert: a document appearing between the read and the write is
+                // a conflict, not something to overwrite. The duplicate key surfaces it.
+                timeline.Revision = 1;
+                writes.Add(new InsertOneModel<PlayerMmrRpTimeline>(timeline));
+                inserts++;
+                continue;
+            }
+
+            var expectedRevision = current.Revision;
+            timeline.Revision = expectedRevision + 1;
             writes.Add(new ReplaceOneModel<PlayerMmrRpTimeline>(
-                Builders<PlayerMmrRpTimeline>.Filter.Eq(t => t.Id, id),
-                timeline)
-            { IsUpsert = true });
+                Builders<PlayerMmrRpTimeline>.Filter.And(
+                    Builders<PlayerMmrRpTimeline>.Filter.Eq(t => t.Id, id),
+                    Builders<PlayerMmrRpTimeline>.Filter.Eq(t => t.Revision, expectedRevision)),
+                timeline));
         }
 
-        await Timelines.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }, cancellationToken);
-        return writes.Count;
+        try
+        {
+            var result = await Timelines.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false }, cancellationToken);
+
+            // A replace that matched nothing means that document's revision moved.
+            return result.MatchedCount + result.InsertedCount == writes.Count ? writes.Count : null;
+        }
+        catch (MongoBulkWriteException<PlayerMmrRpTimeline> e)
+            when (e.WriteErrors.All(w => w.Category == ServerErrorCategory.DuplicateKey))
+        {
+            // Somebody created a timeline we had read as absent.
+            return null;
+        }
     }
 
     /// <summary>

@@ -299,6 +299,30 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task AConcurrentWriteIsRetriedRatherThanClobbered()
+    {
+        // The live handler writes these documents while the job runs, and both replace
+        // them whole. Bumping the revision behind the job's back must make its write
+        // miss, so it redoes the day instead of reverting the other writer - and, worse,
+        // reverting BackfillPending so the day is later promoted unrebuilt.
+        await GivenMatch(Yesterday.AddHours(1), mmr: 1500);
+        var id = $"1_{Player}_@{GateWay.Europe}_{Race.HU}_{GameMode.GM_1v1}";
+
+        await Timelines.InsertOneAsync(new PlayerMmrRpTimeline(Player, Race.HU, GateWay.Europe, 1, GameMode.GM_1v1)
+        {
+            Revision = 7,
+            LastProcessedMatchId = "written-by-the-live-handler",
+        });
+
+        await _job.RunAsync(_context, CancellationToken.None);
+
+        var stored = await Timelines.Find(t => t.Id == id).SingleAsync();
+        Assert.That(stored.Revision, Is.GreaterThan(7), "the rebuild should have landed on top of the concurrent write");
+        Assert.That(stored.MmrRpAtDates.Single().Mmr, Is.EqualTo(1500));
+        Assert.That(stored.SchemaVersion, Is.EqualTo(PlayerMmrRpTimeline.CurrentSchemaVersion));
+    }
+
+    [Test]
     public async Task NoMatchHistoryIsNotAnError()
     {
         await _job.RunAsync(_context, CancellationToken.None);
