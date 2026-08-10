@@ -207,7 +207,7 @@ public class FlairChangeNotifierTests
     }
 
     [Test]
-    public void NotifyChanged_HandlerThrows_NeverPropagates()
+    public async Task NotifyChanged_HandlerThrows_NeverPropagates()
     {
         // Enabled settings (real url AND real secret) so NotifyChanged actually reaches Task.Run ->
         // SendAllAsync -> SendWithRetryAsync, and every SendAsync call throws -- this is what
@@ -219,7 +219,7 @@ public class FlairChangeNotifierTests
 
         notifier.NotifyChanged(new[] { "Foo#1234" });
 
-        Assert.DoesNotThrowAsync(async () => await notifier.LastDispatch);
+        await notifier.LastDispatch;
 
         // MaxAttempts == 2: proves both the retry AND the give-up branch actually ran, not a
         // short-circuit on Enabled.
