@@ -76,7 +76,7 @@ public class FlairChangeNotifier(IHttpClientFactory httpClientFactory, ChatPingS
                     ChatInternalApiSigner.CreateSignatureHeaderValue(_settings.Secret, timestamp, body));
 
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(TimeoutSecondsPerAttempt));
-                var response = await _httpClientFactory.CreateClient().SendAsync(request, cts.Token);
+                using var response = await _httpClientFactory.CreateClient().SendAsync(request, cts.Token);
                 if (response.IsSuccessStatusCode) return;
                 // Non-2xx: fall out of the loop body (no throw, no return) and let the for-loop
                 // either retry or -- on the last attempt -- fall through to the post-loop log.
