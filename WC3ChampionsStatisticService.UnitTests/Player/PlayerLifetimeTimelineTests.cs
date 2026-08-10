@@ -15,14 +15,17 @@ public class PlayerLifetimeTimelineTests
     private static SeasonTimeline Season(int season, Race race, int schemaVersion, params MmrRpAtDate[] entries) =>
         Season(GameMode.GM_1v1, season, race, schemaVersion, entries);
 
-    private static SeasonTimeline Season(GameMode gameMode, int season, Race race, int schemaVersion, params MmrRpAtDate[] entries)
+    private static SeasonTimeline Season(GameMode gameMode, int season, Race race, int schemaVersion, params MmrRpAtDate[] entries) =>
+        Season(gameMode, season, race, GateWay.Europe, schemaVersion, entries);
+
+    private static SeasonTimeline Season(GameMode gameMode, int season, Race race, GateWay gateWay, int schemaVersion, params MmrRpAtDate[] entries)
     {
-        var timeline = new PlayerMmrRpTimeline("peter#123", race, GateWay.Europe, season, gameMode)
+        var timeline = new PlayerMmrRpTimeline("peter#123", race, gateWay, season, gameMode)
         {
             SchemaVersion = schemaVersion,
         };
         timeline.MmrRpAtDates.AddRange(entries);
-        return new SeasonTimeline(season, race, timeline);
+        return new SeasonTimeline(season, race, gateWay, timeline);
     }
 
     private static MmrRpAtDate Entry(int dayOffset, int mmr, double? rd = null, int? dailyMax = null) =>
@@ -159,5 +162,60 @@ public class PlayerLifetimeTimelineTests
         Assert.AreEqual(1, lifetime.Series.Count);
         Assert.AreEqual(1, lifetime.Seasons.Count);
         Assert.AreEqual(2, lifetime.Seasons.Single().Season);
+    }
+
+    [Test]
+    public void Build_KeepsOneSeriesWhenOnlyOneGatewayWasPlayed()
+    {
+        // The ordinary case: nothing to disambiguate, so no gateway split.
+        var lifetime = PlayerLifetimeTimeline.Build(GameMode.GM_1v1,
+        [
+            Season(GameMode.GM_1v1, 1, Race.HU, GateWay.Europe, 1, Entry(0, 1500), Entry(1, 1600)),
+        ]);
+
+        Assert.That(lifetime.Series, Has.Count.EqualTo(1));
+        Assert.That(lifetime.Series[0].GateWay, Is.EqualTo(GateWay.Europe));
+        Assert.That(lifetime.Series[0].Points, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void Build_SplitsGatewaysIntoSeparateSeries()
+    {
+        // Up to season 5 the two gateways were independent ratings. Interleaving them
+        // draws one line zigzagging between two unrelated histories, and the peak would
+        // be taken across both ladders as though it were one.
+        var lifetime = PlayerLifetimeTimeline.Build(GameMode.GM_1v1,
+        [
+            Season(GameMode.GM_1v1, 1, Race.HU, GateWay.Europe, 1, Entry(0, 1500), Entry(2, 1600)),
+            Season(GameMode.GM_1v1, 1, Race.HU, GateWay.America, 1, Entry(1, 900), Entry(3, 1000)),
+        ]);
+
+        Assert.That(lifetime.Series, Has.Count.EqualTo(2));
+
+        var europe = lifetime.Series.Single(s => s.GateWay == GateWay.Europe);
+        var america = lifetime.Series.Single(s => s.GateWay == GateWay.America);
+
+        Assert.That(europe.Points.Select(p => p.Mmr), Is.EqualTo(new[] { 1500, 1600 }));
+        Assert.That(america.Points.Select(p => p.Mmr), Is.EqualTo(new[] { 900, 1000 }));
+        Assert.That(europe.Peak.Mmr, Is.EqualTo(1600), "each ladder peaks on its own rating");
+        Assert.That(america.Peak.Mmr, Is.EqualTo(1000));
+    }
+
+    [Test]
+    public void Build_SplitsGatewaysWithinARaceMergedMode()
+    {
+        // The two groupings are independent: a non-race-split mode still separates
+        // gateways, and both races collapse into Race.Total on each side.
+        var lifetime = PlayerLifetimeTimeline.Build(GameMode.GM_DOTA_5ON5,
+        [
+            Season(GameMode.GM_DOTA_5ON5, 1, Race.HU, GateWay.Europe, 1, Entry(0, 1500)),
+            Season(GameMode.GM_DOTA_5ON5, 1, Race.UD, GateWay.Europe, 1, Entry(1, 1550)),
+            Season(GameMode.GM_DOTA_5ON5, 1, Race.HU, GateWay.America, 1, Entry(2, 900)),
+        ]);
+
+        Assert.That(lifetime.Series, Has.Count.EqualTo(2));
+        Assert.That(lifetime.Series.All(s => s.Race == Race.Total));
+        Assert.That(lifetime.Series.Single(s => s.GateWay == GateWay.Europe).Points, Has.Count.EqualTo(2));
+        Assert.That(lifetime.Series.Single(s => s.GateWay == GateWay.America).Points, Has.Count.EqualTo(1));
     }
 }

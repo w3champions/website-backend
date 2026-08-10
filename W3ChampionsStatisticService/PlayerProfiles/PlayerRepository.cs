@@ -273,14 +273,14 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         // The id encodes every coordinate, so the whole set can be fetched with
         // one $in on _id rather than a request per season and race. There is no
         // index on the individual values to query them any other way.
-        var wanted = new Dictionary<string, (int Season, Race Race)>();
+        var wanted = new Dictionary<string, (int Season, Race Race, GateWay GateWay)>();
         foreach (var season in seasons)
         {
             foreach (var race in races)
             {
                 foreach (var gateWay in gateWays)
                 {
-                    wanted[$"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}"] = (season, race);
+                    wanted[$"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}"] = (season, race, gateWay);
                 }
             }
         }
@@ -288,7 +288,7 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         var timelines = await LoadAll<PlayerMmrRpTimeline>(t => wanted.Keys.Contains(t.Id));
 
         return timelines
-            .Select(t => new SeasonTimeline(wanted[t.Id].Season, wanted[t.Id].Race, t))
+            .Select(t => new SeasonTimeline(wanted[t.Id].Season, wanted[t.Id].Race, wanted[t.Id].GateWay, t))
             .ToList();
     }
 

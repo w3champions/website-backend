@@ -33,24 +33,32 @@ public class PlayerLifetimeTimeline
         // Grouping by it there would cut one continuous history into unrelated
         // lines, each with its own bogus peak.
         var raceSplit = GameModesHelper.IsRaceSplitGameMode(gameMode);
-        var byRace = raceSplit
-            ? withData.GroupBy(x => x.Race)
-            : withData.GroupBy(_ => Race.Total);
+
+        // Europe and America were separate ladders up to season 5, so a player who
+        // ranked on both has two unrelated ratings for the same season and race.
+        // Interleaving them by date draws one line zigzagging between two histories.
+        // Split only when there is genuinely more than one, so the ordinary
+        // single-gateway player still gets a single series.
+        var gateWays = withData.Select(x => x.GateWay).Distinct().ToList();
+        var splitByGateWay = gateWays.Count > 1;
+
+        var grouped = withData.GroupBy(x => (
+            Race: raceSplit ? x.Race : Race.Total,
+            GateWay: splitByGateWay ? x.GateWay : gateWays.FirstOrDefault()));
 
         var lifetime = new PlayerLifetimeTimeline { GameMode = gameMode };
 
-        foreach (var raceGroup in byRace)
+        foreach (var group in grouped)
         {
-            // A player can appear on both gateways in the seasons that had them,
-            // so order by date across the whole set rather than by season.
-            var entries = raceGroup
+            var entries = group
                 .SelectMany(x => x.Timeline.MmrRpAtDates.Select(entry => (Season: x.Season, SchemaVersion: x.Timeline.SchemaVersion, Entry: entry)))
                 .OrderBy(x => x.Entry.Date)
                 .ToList();
 
             lifetime.Series.Add(new LifetimeRaceSeries
             {
-                Race = raceGroup.Key,
+                Race = group.Key.Race,
+                GateWay = group.Key.GateWay,
                 Points = entries.Select(x => new LifetimePoint
                 {
                     Date = x.Entry.Date,
@@ -62,7 +70,7 @@ public class PlayerLifetimeTimeline
             });
         }
 
-        lifetime.Series = [.. lifetime.Series.OrderBy(s => s.Race)];
+        lifetime.Series = [.. lifetime.Series.OrderBy(s => s.Race).ThenBy(s => s.GateWay)];
         lifetime.Seasons = BuildSeasons(seasonTimelines);
         return lifetime;
     }
@@ -115,11 +123,18 @@ public class PlayerLifetimeTimeline
 }
 
 /// <summary>One stored timeline together with the coordinates it was loaded for.</summary>
-public record SeasonTimeline(int Season, Race Race, PlayerMmrRpTimeline Timeline);
+public record SeasonTimeline(int Season, Race Race, GateWay GateWay, PlayerMmrRpTimeline Timeline);
 
 public class LifetimeRaceSeries
 {
     public Race Race { get; set; }
+
+    /// <summary>
+    /// Which ladder this line belongs to. Up to and including season 5 Europe and
+    /// America were separate ratings, so a player active on both has two unrelated
+    /// histories and gets one series each. Everyone else gets a single series.
+    /// </summary>
+    public GateWay GateWay { get; set; }
     public List<LifetimePoint> Points { get; set; } = [];
 
     /// <summary>Null when the history is too old to tell placement games apart.</summary>
