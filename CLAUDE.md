@@ -33,6 +33,9 @@ dotnet test WC3ChampionsStatisticService.UnitTests
 
 # Run with verbosity
 dotnet test --logger "console;verbosity=detailed"
+
+# Run against a local MongoDB (see MongoDB Safety)
+TEST_MONGO_CONNECTION_STRING=mongodb://127.0.0.1:27017/ dotnet test
 ```
 
 ### Code Quality
@@ -118,6 +121,7 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - Default connection uses test database
 - **Never enable read model handlers locally** unless you know what you're doing
 - Can overwrite prod/test data if connected to wrong database
+- **`IntegrationTestBase` drops the whole database before every test.** Redirect it with `TEST_MONGO_CONNECTION_STRING`; don't edit the source, since a rebase or checkout silently restores the shared default
 
 ### Integration Points
 - WebsiteBackendHub provides SignalR connection for real-time updates
