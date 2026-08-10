@@ -117,6 +117,7 @@ public class FlairNotifyingRepositoryTests
         {
             new() { BattleTag = "peter#123" },
         }));
+        _clanInner.Verify(r => r.SaveMemberShips(It.IsAny<List<ClanMembership>>()), Times.Once);
     }
 
     [Test]
