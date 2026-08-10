@@ -44,6 +44,19 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
     /// guaranteed order, so a day's <c>_id</c> window is widened at both ends and the
     /// exact day is then selected on <c>endTime</c>.
     /// </summary>
+    /// <summary>
+    /// Slack around a day's <c>_id</c> range, covering the gap between a match ending
+    /// and its event being written. That is normally seconds; two hours is generous.
+    ///
+    /// It does NOT cover a match whose event carries an end time far older than its
+    /// insert - which matchmaking's healMatches produces, since it finishes a match
+    /// using the result log's timestamp and can run up to ~2.5 days later. Those
+    /// matches are missed by both the day they belong to and the day they were written
+    /// on. Accepted deliberately: healMatches has been inoperative since 2025-06-14
+    /// (see matchmaking-service#869), so the affected set is small and historical, and
+    /// closing the gap properly means an index on endTime that nothing else needs.
+    /// Revisit if healMatches is repaired rather than removed.
+    /// </summary>
     private static readonly TimeSpan IdRangePadding = TimeSpan.FromHours(2);
 
     private const string CheckpointField = "nextDay";
@@ -93,7 +106,6 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
             day = day.AddDays(1);
         }
 
-        await PromoteSchemaVersion(context, cancellationToken);
     }
 
     /// <summary>How many times to redo a day whose documents moved underneath it.</summary>
@@ -156,7 +168,6 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
             // so a rerun converges instead of double-counting games.
             timeline.MmrRpAtDates.RemoveAll(e => e.HasSameYearMonthDayAs(rebuilt.Entry));
             timeline.UpdateTimeline(rebuilt.Entry);
-            timeline.BackfillPending = true;
 
             if (current == null)
             {
@@ -314,28 +325,6 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
             .ToListAsync(cancellationToken);
 
         return loaded.ToDictionary(t => t.Id);
-    }
-
-    /// <summary>
-    /// Raises the schema version on everything this backfill rewrote, in one pass, once
-    /// the whole range is done. See <see cref="PlayerMmrRpTimeline.BackfillPending"/>
-    /// for why it happens here rather than as each day is written.
-    /// </summary>
-    private async Task PromoteSchemaVersion(IAdminJobContext context, CancellationToken cancellationToken)
-    {
-        await context.Report(0, 0, "Marking rebuilt timelines as current");
-
-        var result = await Timelines.UpdateManyAsync(
-            Builders<PlayerMmrRpTimeline>.Filter.Eq(t => t.BackfillPending, true),
-            Builders<PlayerMmrRpTimeline>.Update
-                .Set(t => t.SchemaVersion, PlayerMmrRpTimeline.CurrentSchemaVersion)
-                .Unset(t => t.BackfillPending),
-            cancellationToken: cancellationToken);
-
-        Log.Information("Timeline backfill promoted {Count} timelines to schema version {Version}",
-            result.ModifiedCount, PlayerMmrRpTimeline.CurrentSchemaVersion);
-
-        await context.Report(0, 0, $"Done - {result.ModifiedCount} timelines rebuilt");
     }
 
     /// <summary>
