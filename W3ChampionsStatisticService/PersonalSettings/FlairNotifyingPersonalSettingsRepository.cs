@@ -30,7 +30,30 @@ public class FlairNotifyingPersonalSettingsRepository(
     IFlairChangeNotifier notifier) : IPersonalSettingsRepository
 {
     public Task<PersonalSetting> Load(string battletag) => inner.Load(battletag);
-    public Task<PersonalSetting> LoadOrCreate(string battletag) => inner.LoadOrCreate(battletag);
+
+    // PersonalSettingsRepository.LoadOrCreate persists the new document itself (via the protected
+    // Upsert it inherits from MongoDbRepositoryBase), bypassing this decorator's Save/SaveMany, so the
+    // create-path write is otherwise invisible here. We only want to notify when a document is
+    // actually created — not on the far more common load-of-an-existing-document path — and without
+    // paying for a second read on that hot path.
+    //
+    // inner.LoadOrCreate's existing-document branch is just LoadFirst + a RaceWins merge from
+    // PlayerOverallStats, which is exactly what inner.Load does. So loading first costs the same as
+    // today's LoadOrCreate when the document already exists, and only falls through to
+    // inner.LoadOrCreate (one extra read, once per battleTag ever) when it must create.
+    public async Task<PersonalSetting> LoadOrCreate(string battletag)
+    {
+        var existing = await inner.Load(battletag);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var created = await inner.LoadOrCreate(battletag);
+        Notify(new[] { created?.Id });
+        return created;
+    }
+
     public Task<PersonalSetting> Find(string battletag) => inner.Find(battletag);
     public Task<List<PersonalSetting>> LoadSince(DateTimeOffset from) => inner.LoadSince(from);
     public Task<List<PersonalSetting>> LoadMany(string[] battletags) => inner.LoadMany(battletags);

@@ -133,6 +133,33 @@ public class FlairNotifyingRepositoryTests
     }
 
     [Test]
+    public async Task LoadOrCreate_WhenNoSettingsExist_CreatesAndNotifiesTheBattleTag()
+    {
+        _settingsInner.Setup(r => r.Load("peter#123")).ReturnsAsync((PersonalSetting)null);
+        _settingsInner.Setup(r => r.LoadOrCreate("peter#123")).ReturnsAsync(new PersonalSetting("peter#123"));
+
+        var created = await Settings().LoadOrCreate("peter#123");
+
+        Assert.That(created.Id, Is.EqualTo("peter#123"));
+        _settingsInner.Verify(r => r.Load("peter#123"), Times.Once);
+        _settingsInner.Verify(r => r.LoadOrCreate("peter#123"), Times.Once);
+        Assert.That(_notified, Is.EqualTo(new[] { "peter#123" }));
+    }
+
+    [Test]
+    public async Task LoadOrCreate_WhenSettingsAlreadyExist_LoadsWithoutCreatingOrNotifying()
+    {
+        _settingsInner.Setup(r => r.Load("peter#123")).ReturnsAsync(new PersonalSetting("peter#123"));
+
+        var loaded = await Settings().LoadOrCreate("peter#123");
+
+        Assert.That(loaded.Id, Is.EqualTo("peter#123"));
+        _settingsInner.Verify(r => r.Load("peter#123"), Times.Once);
+        _settingsInner.Verify(r => r.LoadOrCreate(It.IsAny<string>()), Times.Never);
+        Assert.That(_notified, Is.Empty);
+    }
+
+    [Test]
     public async Task DeleteClan_IsForwardedButDoesNotNotifyOnItsOwn()
     {
         // DeleteClan carries no battleTags. Its callers persist the affected memberships through
