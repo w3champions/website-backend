@@ -101,7 +101,7 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
         var entry = timeline.MmrRpAtDates.Single();
         Assert.That(entry.Mmr, Is.EqualTo(1550), "the entry should close on the day's last game");
         Assert.That(entry.PeakMmr, Is.EqualTo(1600));
-        Assert.That(entry.GamesOrDefault(timeline.SchemaVersion), Is.EqualTo(3));
+        Assert.That(entry.GamesOrDefault, Is.EqualTo(3));
     }
 
     [Test]
@@ -149,7 +149,7 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
         await _job.RunAsync(new FakeAdminJobContext(), CancellationToken.None);
 
         var entry = (await LoadTimeline()).MmrRpAtDates.Single();
-        Assert.That(entry.GamesOrDefault(1), Is.EqualTo(2), "a rerun must rebuild the day, not add to it");
+        Assert.That(entry.GamesOrDefault, Is.EqualTo(2), "a rerun must rebuild the day, not add to it");
         Assert.That(entry.PeakMmr, Is.EqualTo(1600));
     }
 
@@ -171,7 +171,6 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
         var timeline = await LoadTimeline();
         Assert.That(timeline.MmrRpAtDates, Has.Count.EqualTo(1), "the stale entry should be replaced, not joined");
         Assert.That(timeline.MmrRpAtDates.Single().PeakMmr, Is.EqualTo(1600));
-        Assert.That(timeline.SchemaVersion, Is.EqualTo(PlayerMmrRpTimeline.CurrentSchemaVersion));
     }
 
     [Test]
@@ -207,8 +206,8 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
     [Test]
     public async Task UntouchedTimelinesAreNotClaimedToBeRebuilt()
     {
-        // No match events behind it at all, so its entries can't be verified and its
-        // version must stay where it is.
+        // No match events behind it at all. The job walks days that have events, so it
+        // must not touch a timeline it has nothing to rebuild from.
         await Timelines.InsertOneAsync(new PlayerMmrRpTimeline("ghost#1", Race.HU, GateWay.Europe, 1, GameMode.GM_1v1)
         {
             MmrRpAtDates = [new MmrRpAtDate(1200, null, Yesterday)],
@@ -218,18 +217,8 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
         await _job.RunAsync(_context, CancellationToken.None);
 
         var ghost = await Timelines.Find(t => t.Id.StartsWith("1_ghost#1")).FirstAsync();
-        Assert.That(ghost.SchemaVersion, Is.Zero);
-        Assert.That((await LoadTimeline()).SchemaVersion, Is.EqualTo(PlayerMmrRpTimeline.CurrentSchemaVersion));
-    }
-
-    [Test]
-    public async Task TheMarkerIsClearedSoItNeverReachesClients()
-    {
-        await GivenMatch(Yesterday.AddHours(1), mmr: 1500);
-
-        await _job.RunAsync(_context, CancellationToken.None);
-
-        Assert.That((await LoadTimeline()).BackfillPending, Is.Null);
+        Assert.That(ghost.MmrRpAtDates.Single().Mmr, Is.EqualTo(1200), "an unrelated timeline must be left exactly as it was");
+        Assert.That(ghost.Revision, Is.Zero, "and must not even be written to");
     }
 
     [Test]
@@ -253,7 +242,7 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
     {
         // MatchFinishedReadModelHandler discards these before the timeline handler runs,
         // so a backfill that kept them would give history games the live pipeline never
-        // recorded - permanently, and promoted as authoritative.
+        // recorded - permanently.
         await GivenMatch(Yesterday.AddHours(1), mmr: 1500, state: EMatchState.CANCELED);
 
         await _job.RunAsync(_context, CancellationToken.None);
@@ -282,7 +271,7 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
     {
         // The pipeline's StripComputerPlayers removes empty-battleTag entries before
         // the live handler runs. Without the same guard this writes a timeline whose
-        // id has an empty battleTag, which then gets marked and promoted.
+        // id has an empty battleTag.
         await GivenMatch(Yesterday.AddHours(1), mmr: 1500, battleTag: "");
         await GivenMatch(Yesterday.AddHours(2), mmr: 1600);
 
@@ -316,8 +305,8 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
     {
         // The live handler writes these documents while the job runs, and both replace
         // them whole. Bumping the revision behind the job's back must make its write
-        // miss, so it redoes the day instead of reverting the other writer - and, worse,
-        // reverting BackfillPending so the day is later promoted unrebuilt.
+        // miss, so it redoes the day instead of
+        // silently reverting it.
         await GivenMatch(Yesterday.AddHours(1), mmr: 1500);
         var id = $"1_{Player}_@{GateWay.Europe}_{Race.HU}_{GameMode.GM_1v1}";
 
@@ -332,7 +321,6 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
         var stored = await Timelines.Find(t => t.Id == id).SingleAsync();
         Assert.That(stored.Revision, Is.GreaterThan(7), "the rebuild should have landed on top of the concurrent write");
         Assert.That(stored.MmrRpAtDates.Single().Mmr, Is.EqualTo(1500));
-        Assert.That(stored.SchemaVersion, Is.EqualTo(PlayerMmrRpTimeline.CurrentSchemaVersion));
     }
 
     [Test]
