@@ -21,8 +21,20 @@ namespace W3ChampionsStatisticService.LagReports;
 /// </summary>
 public interface IFloStatsService
 {
-    Task<List<ServerSidePingData>> FetchGamePingData(int floGameId);
-    Task FetchAndStoreIfNeeded(int floGameId, LagReportRepository repo);
+    Task<FloGameSnapshotResult> FetchGameSnapshot(int floGameId);
+    Task FetchAndStoreIfNeeded(int floGameId, LagReportRepository repo, FloGameLeaveRepository leaveRepo, EFloLeaveCaptureTrigger trigger);
+}
+
+/// <summary>
+/// One flo-stats snapshot read. <see cref="Available"/> is false when the game was
+/// not in flo's LRU or the fetch failed; both payload lists are then empty. The
+/// distinction matters downstream - see FloGameLeaveReport.SnapshotAvailable.
+/// </summary>
+public class FloGameSnapshotResult
+{
+    public bool Available { get; set; }
+    public List<ServerSidePingData> Ping { get; set; } = [];
+    public List<FloPlayerLeave> PlayerLeaves { get; set; } = [];
 }
 
 [Trace]
@@ -34,14 +46,16 @@ public class FloStatsService : IFloStatsService
 
     // Coalesce concurrent fetches for the same game — avoids duplicate WebSocket connections.
     // Entries are removed on completion, so size is bounded by concurrent game endings.
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, Task<List<ServerSidePingData>>>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, Task<FloGameSnapshotResult>>
         _inflightFetches = new();
 
     /// <summary>
-    /// Fetch accumulated ping data for a game from flo-stats via WebSocket subscription.
-    /// Returns null if the game is not found (evicted from LRU) or on any error.
+    /// Fetch the accumulated snapshot for a game from flo-stats via WebSocket
+    /// subscription. Returns a result with Available = false if the game is not found
+    /// (evicted from flo's LRU) or on any error - never null, so callers can record
+    /// "we asked and got nothing" as a fact rather than losing it.
     /// </summary>
-    public async Task<List<ServerSidePingData>> FetchGamePingData(int floGameId)
+    public async Task<FloGameSnapshotResult> FetchGameSnapshot(int floGameId)
     {
         try
         {
@@ -59,7 +73,7 @@ public class FloStatsService : IFloStatsService
             if (ack?.GetProperty("type").GetString() != "connection_ack")
             {
                 Log.Warning("FloStatsService: expected connection_ack, got {Type}", ack?.GetProperty("type").GetString());
-                return null;
+                return new FloGameSnapshotResult();
             }
 
             // 3. Subscribe to GameUpdateSub
@@ -74,7 +88,7 @@ public class FloStatsService : IFloStatsService
                             __typename
                             ... on GameSnapshotWithStats {
                                 stats { ping { time data { playerId min max avg } } }
-                                game { players { id name } }
+                                game { players { id name leftAt leaveReason } }
                             }
                         }
                     }",
@@ -90,13 +104,13 @@ public class FloStatsService : IFloStatsService
             if (msgType == "error" || msgType == "complete")
             {
                 Log.Information("FloStatsService: game {GameId} not found in flo-stats (type={Type})", floGameId, msgType);
-                return null;
+                return new FloGameSnapshotResult();
             }
 
             if (msgType != "next")
             {
                 Log.Warning("FloStatsService: unexpected message type {Type} for game {GameId}", msgType, floGameId);
-                return null;
+                return new FloGameSnapshotResult();
             }
 
             // 5. Parse the snapshot
@@ -106,63 +120,75 @@ public class FloStatsService : IFloStatsService
             if (typeName != "GameSnapshotWithStats")
             {
                 Log.Information("FloStatsService: first event for game {GameId} was {Type}, not snapshot", floGameId, typeName);
-                return null;
+                return new FloGameSnapshotResult();
             }
 
-            return ParsePingData(payload);
+            return new FloGameSnapshotResult
+            {
+                Available = true,
+                Ping = ParsePingData(payload),
+                PlayerLeaves = ParsePlayerLeaves(payload),
+            };
         }
         catch (OperationCanceledException)
         {
             Log.Warning("FloStatsService: timeout fetching ping data for game {GameId}", floGameId);
-            return null;
+            return new FloGameSnapshotResult();
         }
         catch (WebSocketException ex)
         {
             Log.Warning(ex, "FloStatsService: WebSocket error for game {GameId}", floGameId);
-            return null;
+            return new FloGameSnapshotResult();
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "FloStatsService: failed to fetch ping data for game {GameId}", floGameId);
-            return null;
+            return new FloGameSnapshotResult();
         }
     }
 
     /// <summary>
-    /// Fetch ping data and store it on the lag report if not already populated.
-    /// Concurrent calls for the same game share a single WebSocket fetch and a single write.
+    /// Fetch the flo-stats snapshot once and store both halves: ping data onto the lag
+    /// report (only when one exists and is unpopulated), and leave reasons into
+    /// FloGameLeaveReport.
+    ///
+    /// The leave half is written UNCONDITIONALLY. The old ping-only logic bailed when
+    /// no lag report existed, which is precisely the case for a cancelled or abandoned
+    /// game - so the games most worth explaining were the ones guaranteed to record
+    /// nothing. Concurrent callers for the same game share one WebSocket fetch.
     /// </summary>
-    public async Task FetchAndStoreIfNeeded(int floGameId, LagReportRepository repo)
+    public async Task FetchAndStoreIfNeeded(int floGameId, LagReportRepository repo, FloGameLeaveRepository leaveRepo, EFloLeaveCaptureTrigger trigger)
     {
         var report = await repo.GetByFloGameId(floGameId);
-        if (report == null || report.ServerSidePing != null)
+        var existingLeaves = await leaveRepo.GetByFloGameId(floGameId);
+
+        var needsPing = report != null && report.ServerSidePing == null;
+        var needsLeaves = existingLeaves == null || !existingLeaves.SnapshotAvailable;
+        if (!needsPing && !needsLeaves)
         {
             return;
         }
 
-        // Coalesce: all concurrent callers for the same game share one fetch+store task
-        var task = _inflightFetches.GetOrAdd(floGameId, id => FetchAndStore(id, repo));
+        // Coalesce: all concurrent callers for the same game share one fetch
+        var task = _inflightFetches.GetOrAdd(floGameId, FetchGameSnapshot);
+        FloGameSnapshotResult snapshot;
         try
         {
-            await task;
+            snapshot = await task;
         }
         finally
         {
             _inflightFetches.TryRemove(floGameId, out _);
         }
-    }
 
-    private async Task<List<ServerSidePingData>> FetchAndStore(int floGameId, LagReportRepository repo)
-    {
-        var pingData = await FetchGamePingData(floGameId);
+        await leaveRepo.Upsert(floGameId, trigger, snapshot.Available, snapshot.PlayerLeaves);
 
-        var report = await repo.GetByFloGameId(floGameId);
+        // Re-read: another caller may have populated the ping data while we were fetching.
+        report = await repo.GetByFloGameId(floGameId);
         if (report != null && report.ServerSidePing == null)
         {
-            await repo.UpdateServerSidePing(report.Id, pingData ?? []);
+            await repo.UpdateServerSidePing(report.Id, snapshot.Ping);
         }
-
-        return pingData;
     }
 
     internal static List<ServerSidePingData> ParsePingData(JsonElement payload)
@@ -230,6 +256,74 @@ public class FloStatsService : IFloStatsService
         value.TryGetDouble(out var number)
             ? (int)Math.Round(number)
             : null;
+
+    /// <summary>
+    /// Reads per-player leave reasons out of the snapshot's game.players array.
+    ///
+    /// Emits EVERY player, including those with no leave record: a null reason for a
+    /// player who was in the game is itself the signal, since flo records no PlayerLeft
+    /// at all when a started game's stream simply closes.
+    /// </summary>
+    internal static List<FloPlayerLeave> ParsePlayerLeaves(JsonElement payload)
+    {
+        var leaves = new List<FloPlayerLeave>();
+
+        if (!payload.TryGetProperty("game", out var game) ||
+            !game.TryGetProperty("players", out var players) ||
+            players.ValueKind != JsonValueKind.Array)
+        {
+            return leaves;
+        }
+
+        foreach (var p in players.EnumerateArray())
+        {
+            if (!p.TryGetProperty("id", out var idElement) ||
+                idElement.ValueKind != JsonValueKind.Number ||
+                !idElement.TryGetInt32(out var playerId))
+            {
+                continue;
+            }
+
+            var raw = p.TryGetProperty("leaveReason", out var reason) && reason.ValueKind == JsonValueKind.String
+                ? reason.GetString()
+                : null;
+
+            leaves.Add(new FloPlayerLeave
+            {
+                PlayerId = playerId,
+                PlayerName = p.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String
+                    ? name.GetString()
+                    : null,
+                LeaveReasonRaw = raw,
+                LeaveReason = MapLeaveReason(raw),
+                LeftAtMs = p.TryGetProperty("leftAt", out var leftAt) &&
+                           leftAt.ValueKind == JsonValueKind.Number &&
+                           leftAt.TryGetInt64(out var ms)
+                    ? ms
+                    : null,
+            });
+        }
+
+        return leaves;
+    }
+
+    /// <summary>
+    /// Maps flo's SCREAMING_SNAKE_CASE PlayerLeaveReason wire strings. Returns null both
+    /// for an absent reason and for a variant added to flo after this switch was written;
+    /// FloPlayerLeave.LeaveReasonRaw preserves the original either way, so an unmapped
+    /// variant is visible in the data instead of silently becoming "no record".
+    /// </summary>
+    internal static EFloLeaveReason? MapLeaveReason(string wire) => wire switch
+    {
+        "LEAVE_DISCONNECT" => EFloLeaveReason.LeaveDisconnect,
+        "LEAVE_LOST" => EFloLeaveReason.LeaveLost,
+        "LEAVE_LOST_BUILDINGS" => EFloLeaveReason.LeaveLostBuildings,
+        "LEAVE_WON" => EFloLeaveReason.LeaveWon,
+        "LEAVE_DRAW" => EFloLeaveReason.LeaveDraw,
+        "LEAVE_OBSERVER" => EFloLeaveReason.LeaveObserver,
+        "LEAVE_UNKNOWN" => EFloLeaveReason.LeaveUnknown,
+        _ => null,
+    };
 
     private static async Task SendJson<T>(ClientWebSocket ws, T obj, CancellationToken ct)
     {

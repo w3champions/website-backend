@@ -12,9 +12,13 @@ namespace W3ChampionsStatisticService.LagReports;
 [ApiController]
 [Route("api/lag-reports")]
 [Trace]
-public class LagReportController(LagReportRepository lagReportRepository, IFloStatsService floStatsService) : ControllerBase
+public class LagReportController(
+    LagReportRepository lagReportRepository,
+    FloGameLeaveRepository floGameLeaveRepository,
+    IFloStatsService floStatsService) : ControllerBase
 {
     private readonly LagReportRepository _lagReportRepository = lagReportRepository;
+    private readonly FloGameLeaveRepository _floGameLeaveRepository = floGameLeaveRepository;
     private readonly IFloStatsService _floStatsService = floStatsService;
 
     // ── Submission validation caps ────────────────────────────────────
@@ -70,7 +74,8 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
 
         // Fire-and-forget: fetch server-side ping from flo-stats while data is still in LRU.
         // The match-finished handler is a fallback, but often runs before any player submits.
-        _ = _floStatsService.FetchAndStoreIfNeeded(dto.GameMetadata.FloGameId, _lagReportRepository);
+        _ = _floStatsService.FetchAndStoreIfNeeded(
+            dto.GameMetadata.FloGameId, _lagReportRepository, _floGameLeaveRepository, EFloLeaveCaptureTrigger.Submission);
 
         return Ok(new LagReportSubmissionResponse { ReportId = reportId });
     }
