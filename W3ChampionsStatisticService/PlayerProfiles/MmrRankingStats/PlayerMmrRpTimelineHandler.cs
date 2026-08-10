@@ -72,14 +72,7 @@ public class PlayerMmrRpTimelineHandler(IPlayerRepository playerRepository) : IM
                 return;
             }
 
-            var mmrRpTimeline = existing ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode)
-            {
-                // A timeline starting now is fully populated from its first entry.
-                // An existing one is only as complete as its oldest entry, so its
-                // version is left alone for the backfill to raise; bumping it here
-                // would claim the whole history has Rd when only the tail does.
-                SchemaVersion = PlayerMmrRpTimeline.CurrentSchemaVersion,
-            };
+            var mmrRpTimeline = existing ?? new PlayerMmrRpTimeline(player.battleTag, player.race, match.gateway, match.season, match.gameMode);
 
             // Games and DailyMaxMmr are left null: a single game on a day means
             // one game whose close is also its peak, which is what absence

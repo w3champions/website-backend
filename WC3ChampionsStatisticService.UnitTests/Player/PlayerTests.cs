@@ -490,7 +490,6 @@ public class PlayerTests : IntegrationTestBase
         Assert.AreEqual(150, day.DailyMaxMmr, "the intra-day peak survives the later losses");
         Assert.AreEqual(3, day.Games);
         Assert.AreEqual(260.0, day.Rd, "rd comes from the last game of the day");
-        Assert.AreEqual(PlayerMmrRpTimeline.CurrentSchemaVersion, timeline.SchemaVersion);
     }
 
     [Test]
@@ -521,7 +520,7 @@ public class PlayerTests : IntegrationTestBase
         Assert.AreEqual(1, timeline.MmrRpAtDates.Count);
         var day = timeline.MmrRpAtDates[0];
         Assert.IsNull(day.Games, "a single game stays at the omitted default rather than counting the replays");
-        Assert.AreEqual(1, day.GamesOrDefault(timeline.SchemaVersion));
+        Assert.AreEqual(1, day.GamesOrDefault);
         Assert.AreEqual(120, day.Mmr);
     }
 
@@ -561,10 +560,8 @@ public class PlayerTests : IntegrationTestBase
     public async Task Player_UpdateMmrRpTimeline_RejectsAWriteAgainstAStaleRevision()
     {
         // The backfill job rewrites these documents whole while the handler is live.
-        // Without a revision check the later write silently reverts the earlier one -
-        // and if the reverted write was the backfill's, its BackfillPending marker goes
-        // with it, after which SchemaVersion can be promoted over entries that were
-        // never rebuilt.
+        // Without a revision check the later write silently reverts the earlier one,
+        // and neither writer ever finds out - both believe they succeeded.
         var playerRepository = new PlayerRepository(MongoClient);
         var handler = new PlayerMmrRpTimelineHandler(playerRepository);
 
@@ -584,12 +581,12 @@ public class PlayerTests : IntegrationTestBase
         Assert.IsTrue(await playerRepository.TryUpsertPlayerMmrRpTimeline(concurrent, concurrent.Revision));
 
         // The stale copy must now be refused rather than clobbering that write.
-        stale.SchemaVersion = 99;
+        stale.LastProcessedMatchId = "stale-write";
         Assert.IsFalse(await playerRepository.TryUpsertPlayerMmrRpTimeline(stale, staleRevision), "a write against a stale revision must not land");
 
         var stored = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
         Assert.AreEqual("written-by-someone-else", stored.LastProcessedMatchId, "the concurrent write survives");
-        Assert.AreNotEqual(99, stored.SchemaVersion, "the stale write did not land");
+        Assert.AreNotEqual("stale-write", stored.LastProcessedMatchId, "the stale write did not land");
     }
 
     [Test]
@@ -637,7 +634,7 @@ public class PlayerTests : IntegrationTestBase
         Assert.IsNull(day.Rd, "a settled rd says nothing about calibration");
 
         // Absence still reads back as the intended value.
-        Assert.AreEqual(1, day.GamesOrDefault(timeline.SchemaVersion));
+        Assert.AreEqual(1, day.GamesOrDefault);
         Assert.AreEqual(1500, day.PeakMmr);
         Assert.IsFalse(day.WasCalibrating);
     }
