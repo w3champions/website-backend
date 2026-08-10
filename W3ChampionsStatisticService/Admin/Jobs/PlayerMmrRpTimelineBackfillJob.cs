@@ -222,7 +222,6 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
                 .Include("match.players")
                 .Include("match.endTime")
                 .Include("match.state")
-                .Include(e => e.WasFakeEvent)
                 .Include("match.season")
                 .Include("match.gameMode")
                 .Include("match.gateway"),
@@ -239,11 +238,18 @@ public class PlayerMmrRpTimelineBackfillJob(MongoClient mongoClient) : IAdminJob
                     continue;
                 }
 
-                // The live handler never sees these: MatchFinishedReadModelHandler
-                // filters them out before the timeline handler runs. This job reads the
-                // collection raw, so it has to repeat the filter or backfilled history
-                // gains games the live history never had - permanently, and promoted.
-                if (!finished.WasFakeEvent && match.state != EMatchState.FINISHED)
+                // Cancelled matches are not this job's business, exactly as they are not
+                // MatchFinishedReadModelHandler's - it discards them before the timeline
+                // handler runs, calling them "known and potentially frequent".
+                //
+                // Only CANCELED is rejected, deliberately. `state` was an untyped int
+                // with no filter at all until #405 (2025-05-26), so events stored before
+                // then WERE folded into timelines whatever their state, and an absent
+                // field deserializes as INIT - indistinguishable from a real INIT. Since
+                // RebuildDay clears a day before rewriting it, rejecting those would
+                // delete history the handler of the day legitimately wrote. Old data is
+                // accepted as-is; only the case the current handler would reject is.
+                if (match.state == EMatchState.CANCELED)
                 {
                     continue;
                 }

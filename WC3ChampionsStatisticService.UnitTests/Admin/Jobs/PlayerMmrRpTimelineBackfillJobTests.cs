@@ -249,19 +249,32 @@ public class PlayerMmrRpTimelineBackfillJobTests : IntegrationTestBase
     }
 
     [Test]
-    [TestCase(EMatchState.CANCELED, TestName = "CanceledMatchesAreNotRebuilt")]
-    [TestCase(EMatchState.INIT, TestName = "UnfinishedMatchesAreNotRebuilt")]
-    public async Task OnlyFinishedMatchesAreRebuilt(EMatchState state)
+    public async Task CanceledMatchesAreNotRebuilt()
     {
-        // The live handler never sees these - MatchFinishedReadModelHandler discards
-        // them before the timeline handler runs. This job reads the collection raw, so
-        // without the same filter a backfilled timeline would contain games the live
-        // one never had, and then be promoted as authoritative.
-        await GivenMatch(Yesterday.AddHours(1), mmr: 1500, state: state);
+        // MatchFinishedReadModelHandler discards these before the timeline handler runs,
+        // so a backfill that kept them would give history games the live pipeline never
+        // recorded - permanently, and promoted as authoritative.
+        await GivenMatch(Yesterday.AddHours(1), mmr: 1500, state: EMatchState.CANCELED);
 
         await _job.RunAsync(_context, CancellationToken.None);
 
-        Assert.That(await LoadTimeline(), Is.Null, "a match the live pipeline discards must not be backfilled");
+        Assert.That(await LoadTimeline(), Is.Null, "a cancelled match must not be backfilled");
+    }
+
+    [Test]
+    public async Task MatchesPredatingTheStateFilterAreStillRebuilt()
+    {
+        // `state` was an untyped int with no filter until #405 (2025-05-26), so events
+        // stored before then were folded into timelines whatever their state, and an
+        // absent field reads as INIT. RebuildDay clears a day before rewriting it, so
+        // rejecting these would delete history rather than reproduce it.
+        await GivenMatch(Yesterday.AddHours(1), mmr: 1500, state: EMatchState.INIT);
+
+        await _job.RunAsync(_context, CancellationToken.None);
+
+        var timeline = await LoadTimeline();
+        Assert.That(timeline, Is.Not.Null, "old events must not be dropped by the new filter");
+        Assert.That(timeline.MmrRpAtDates.Single().Mmr, Is.EqualTo(1500));
     }
 
     [Test]
