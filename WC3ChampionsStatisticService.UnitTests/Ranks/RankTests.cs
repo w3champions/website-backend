@@ -1,3 +1,5 @@
+using MongoDB.Bson;
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using System.Collections.Generic;
@@ -450,5 +452,270 @@ public class RankTests : IntegrationTestBase
 
         // Assert
         Assert.AreEqual(2, playerLoaded2.Count);
+    }
+
+    [Test]
+    public async Task LoadLadderStandings_ReturnsPositions_MatchingEitherTeamMember()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var soloRank = new Rank(new List<string> { "solo#123" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_1v1, 13);
+        var teamRank = new Rank(new List<string> { "first#456", "second#789" }, 2, 7, 90, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { soloRank, teamRank });
+
+        var solo = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("solo#123") }, GateWay.Europe, GameMode.GM_1v1, 13, null);
+        var team = PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("first#456"), PlayerId.Create("second#789") }, GateWay.Europe, GameMode.GM_2v2_AT, 13, null);
+        await playerRepository.UpsertPlayerOverview(solo);
+        await playerRepository.UpsertPlayerOverview(team);
+
+        // Act
+        var soloStandings = await rankRepository.LoadLadderStandings(new List<string> { "solo#123" }, 13, GateWay.Europe, GameMode.GM_1v1);
+        // second#789 is the team's second member — a standing must be found through any member
+        var teamStandings = await rankRepository.LoadLadderStandings(new List<string> { "second#789" }, 13, GateWay.Europe, GameMode.GM_2v2_AT);
+
+        // Assert
+        Assert.AreEqual(1, soloStandings.Count);
+        Assert.AreEqual(100, soloStandings[0].RankingPoints);
+        CollectionAssert.AreEqual(new[] { "solo#123" }, soloStandings[0].MemberIds);
+
+        Assert.AreEqual(1, teamStandings.Count);
+        Assert.AreEqual(90, teamStandings[0].RankingPoints);
+        CollectionAssert.AreEqual(new[] { "first#456", "second#789" }, teamStandings[0].MemberIds);
+    }
+
+    [Test]
+    public async Task LoadLadderStandings_ScopesToTheLadderAskedFor()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        // The same player ranked on three more ladders, each differing in exactly one dimension;
+        // distinct ranking points prove which ladder the standing came from.
+        var asked = new Rank(new List<string> { "peter#123" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_1v1, 13);
+        var otherSeason = new Rank(new List<string> { "peter#123" }, 2, 9, 90, null, GateWay.Europe, GameMode.GM_1v1, 12);
+        var otherGateway = new Rank(new List<string> { "peter#123" }, 3, 9, 80, null, GateWay.America, GameMode.GM_1v1, 13);
+        var otherMode = new Rank(new List<string> { "peter#123" }, 4, 9, 70, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { asked, otherSeason, otherGateway, otherMode });
+
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 13, null));
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_1v1, 12, null));
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.America, GameMode.GM_1v1, 13, null));
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("peter#123") }, GateWay.Europe, GameMode.GM_2v2_AT, 13, null));
+
+        // Act
+        var standings = await rankRepository.LoadLadderStandings(new List<string> { "peter#123" }, 13, GateWay.Europe, GameMode.GM_1v1);
+
+        // Assert
+        Assert.AreEqual(1, standings.Count);
+        Assert.AreEqual(100, standings[0].RankingPoints);
+    }
+
+    [Test]
+    public async Task LoadLadderStandings_DropsRanksWithoutPlayerOverview()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var joined = new Rank(new List<string> { "kept#123" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_1v1, 13);
+        var orphan = new Rank(new List<string> { "orphan#456" }, 1, 6, 90, null, GateWay.Europe, GameMode.GM_1v1, 13);
+        await rankRepository.InsertRanks(new List<Rank> { joined, orphan });
+        // Only kept#123 gets a PlayerOverview — the orphan rank must be dropped, keeping this
+        // method in agreement with LoadRanksForPlayers about who counts as ranked
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("kept#123") }, GateWay.Europe, GameMode.GM_1v1, 13, null));
+
+        // Act
+        var standings = await rankRepository.LoadLadderStandings(new List<string> { "kept#123", "orphan#456" }, 13, GateWay.Europe, GameMode.GM_1v1);
+
+        // Assert
+        Assert.AreEqual(1, standings.Count);
+        CollectionAssert.AreEqual(new[] { "kept#123" }, standings[0].MemberIds);
+    }
+
+    [Test]
+    public async Task LoadRanksForPlayers_WithContext_DropsRanksWithoutPlayerOverview()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var joined = new Rank(new List<string> { "kept#123" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_1v1, 13);
+        var orphan = new Rank(new List<string> { "orphan#456" }, 1, 6, 90, null, GateWay.Europe, GameMode.GM_1v1, 13);
+        await rankRepository.InsertRanks(new List<Rank> { joined, orphan });
+        // Only kept#123 gets a PlayerOverview — the display half of the agreement the test above
+        // pins for the ordering half. Both calls must drop the orphan, or the search would order a
+        // player its enrichment then reports as unranked.
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(new List<PlayerId> { PlayerId.Create("kept#123") }, GateWay.Europe, GameMode.GM_1v1, 13, null));
+
+        // Act
+        var ranks = await rankRepository.LoadRanksForPlayers(new List<string> { "kept#123", "orphan#456" }, 13, GateWay.Europe, GameMode.GM_1v1);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        Assert.AreEqual("kept#123", ranks[0].Player1Id);
+    }
+
+    [Test]
+    public async Task BackfillMemberIds_FillsFromThePlayerOverview()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        // A three-player team: the member the two stored fields cannot hold is what the backfill
+        // must recover, and only the PlayerOverview still knows them.
+        const int season = 13;
+        var team = new List<string> { "aaa#1", "bbb#2", "ccc#3" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, season);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, season, null));
+
+        // Strip the field to the shape of rows written before it existed
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — twice: the second run must find nothing left to fill and change nothing
+        var filled = await rankRepository.BackfillMemberIds(season);
+        var refilled = await rankRepository.BackfillMemberIds(season);
+
+        var standings = await rankRepository.LoadLadderStandings(new List<string> { "ccc#3" }, season, GateWay.Europe, GameMode.GM_4v4_AT);
+
+        // Assert — the third member finds the team again, and the redo found nothing left
+        Assert.AreEqual(1, filled);
+        Assert.AreEqual(0, refilled);
+        Assert.AreEqual(1, standings.Count);
+        CollectionAssert.AreEqual(team, standings[0].MemberIds);
+    }
+
+    [Test]
+    public async Task BackfillMemberIds_FallsBackToTheStoredMembers_WhenTheOverviewIsMissing()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+
+        const int season = 13;
+        var rank = new Rank(new List<string> { "aaa#1", "bbb#2" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, season);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — no PlayerOverview exists, so the backfill only has Player1Id/Player2Id to go on
+        await rankRepository.BackfillMemberIds(season);
+
+        // Assert on the stored document: an orphan rank is invisible to the joined queries either way
+        var stored = await ranksCollection.Find(FilterDefinition<Rank>.Empty).FirstAsync();
+        CollectionAssert.AreEqual(new[] { "aaa#1", "bbb#2" }, stored.MemberIds);
+    }
+
+    [Test]
+    public async Task BackfillMemberIds_TouchesOnlyTheRequestedSeason()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+
+        const int season = 13;
+        const int otherSeason = 12;
+        var thisSeasonRank = new Rank(new List<string> { "aaa#1", "bbb#2" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, season);
+        var otherSeasonRank = new Rank(new List<string> { "ccc#3", "ddd#4" }, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, otherSeason);
+        await rankRepository.InsertRanks(new List<Rank> { thisSeasonRank, otherSeasonRank });
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — a season is one batch; the other season is the next batch's work, not this one's
+        var filled = await rankRepository.BackfillMemberIds(season);
+
+        // Assert — on the raw document: an absent field deserializes to the model's empty-list
+        // initializer, which a filled-but-empty row would also show
+        Assert.AreEqual(1, filled);
+        var rawRanks = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<BsonDocument>(nameof(Rank));
+        var untouched = await rawRanks.Find(new BsonDocument("Season", otherSeason)).FirstAsync();
+        Assert.IsFalse(untouched.Contains("MemberIds"));
+    }
+
+    [Test]
+    public async Task LoadRanksForPlayers_FindsRowsTheBackfillHasNotReached()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_2v2_AT, 13, null));
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — deliberately NO EnsureIndexesAsync: clan and chat sit in front of no rollback flag,
+        // so the query itself must keep finding rows the backfill has not reached
+        var ranks = await rankRepository.LoadRanksForPlayers(new List<string> { "bbb#2" }, 13);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        Assert.AreEqual("aaa#1", ranks[0].Player1Id);
+    }
+
+    [Test]
+    public async Task LoadRanksForPlayers_SeasonOnly_FindsMembersBeyondTheSecond()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2", "ccc#3" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, 13, null));
+
+        // Act — clan and chat resolve members through this overload, and the third member must
+        // reach the team the two stored fields cannot name
+        var ranks = await rankRepository.LoadRanksForPlayers(new List<string> { "ccc#3" }, 13);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        CollectionAssert.AreEqual(team, ranks[0].MemberIds);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfCountry_FindsMembersBeyondTheSecond()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2", "ccc#3" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_4v4_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_4v4_AT, 13, null));
+        await personalSettingsRepository.Save(new PersonalSetting("ccc#3") { CountryCode = "NL" });
+
+        // Act
+        var ranks = await rankRepository.LoadPlayersOfCountry("NL", 13, GateWay.Europe, GameMode.GM_4v4_AT);
+
+        // Assert — the third member's country page shows their team
+        Assert.AreEqual(1, ranks.Count);
+        CollectionAssert.AreEqual(team, ranks[0].MemberIds);
+    }
+
+    [Test]
+    public async Task LoadPlayersOfCountry_FindsRowsTheBackfillHasNotReached()
+    {
+        var rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        var playerRepository = new PlayerRepository(MongoClient);
+        var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
+
+        var team = new List<string> { "aaa#1", "bbb#2" };
+        var rank = new Rank(team, 1, 5, 100, null, GateWay.Europe, GameMode.GM_2v2_AT, 13);
+        await rankRepository.InsertRanks(new List<Rank> { rank });
+        await playerRepository.UpsertPlayerOverview(PlayerOverview.Create(team.Select(PlayerId.Create).ToList(), GateWay.Europe, GameMode.GM_2v2_AT, 13, null));
+        await personalSettingsRepository.Save(new PersonalSetting("bbb#2") { CountryCode = "NL" });
+
+        var ranksCollection = MongoClient.GetDatabase("W3Champions-Statistic-Service").GetCollection<Rank>(nameof(Rank));
+        await ranksCollection.UpdateManyAsync(FilterDefinition<Rank>.Empty, Builders<Rank>.Update.Unset(r => r.MemberIds));
+
+        // Act — deliberately NO EnsureIndexesAsync: the country page sits in front of no rollback
+        // flag, so its two-field fallback must keep finding rows the backfill has not reached
+        var ranks = await rankRepository.LoadPlayersOfCountry("NL", 13, GateWay.Europe, GameMode.GM_2v2_AT);
+
+        // Assert
+        Assert.AreEqual(1, ranks.Count);
+        Assert.AreEqual("aaa#1", ranks[0].Player1Id);
     }
 }
