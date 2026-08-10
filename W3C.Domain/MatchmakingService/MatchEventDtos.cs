@@ -1,9 +1,11 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using JsonProperty = Newtonsoft.Json.JsonPropertyAttribute;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Contracts.Matchmaking.Queue;
@@ -70,6 +72,10 @@ public class UnfinishedMatchPlayer : IMatchPlayerServerInfo
     public QueueQuantiles quantiles { get; set; }
     public string country { get; set; }
     public FloPing[] floPings { get; set; }
+
+    // 0-based FLO lobby slot. Flo masks anonymised names as "Player {slotIndex + 1}",
+    // so display must add one. Null for matches that never reached game creation.
+    public int? slotIndex { get; set; }
 }
 
 [BsonIgnoreExtraElements]
@@ -134,9 +140,25 @@ public class Match : IMatchServerInfo
     public bool publicGame { get; set; }
     public string gamename { get; set; }
 
+    // BsonElement covers reads from the raw event collections; JsonProperty covers
+    // the matchmaking admin API responses, which MatchmakingServiceClient
+    // deserialises with Newtonsoft. Newtonsoft ignores BsonElement, so without
+    // this the id silently comes back null.
     [BsonElement("_id")]
+    [JsonProperty("_id")]
     public string id { get; set; }
     public int? floGameId { get; set; }
+
+    [BsonElement("_created_at")]
+    [JsonProperty("_created_at")]
+    public DateTimeOffset? createdAt { get; set; }
+
+    // EntityRepo.save stamps _updated_at immediately before the write, and
+    // cancelMatch goes through save. For a match still in the CANCELED state this
+    // is when it was cancelled; a heal would move it to FINISHED.
+    [BsonElement("_updated_at")]
+    [JsonProperty("_updated_at")]
+    public DateTimeOffset? canceledAt { get; set; }
 
     [BsonElement("endTime")]
     private long? _endTimeNullable { get; set; }
