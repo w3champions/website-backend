@@ -190,6 +190,14 @@ builder.Services.AddInterceptedTransient<IPortraitRepository, PortraitRepository
 builder.Services.AddInterceptedTransient<IInformationMessagesRepository, InformationMessagesRepository>();
 builder.Services.AddInterceptedTransient<ClanCommandHandler>();
 
+// Flair change-pings hang off the persistence boundary rather than the five separate command paths
+// that write flair — see FlairNotifyingPersonalSettingsRepository's class doc. Decorate MUST run
+// after the AddInterceptedTransient registrations above: it wraps whatever is registered at the time
+// it is called, and building the inner instance from that captured registration is what keeps the
+// Castle tracing proxy alive underneath the decorator.
+builder.Services.Decorate<IPersonalSettingsRepository, FlairNotifyingPersonalSettingsRepository>();
+builder.Services.Decorate<IClanRepository, FlairNotifyingClanRepository>();
+
 // Actionfilters
 builder.Services.AddInterceptedTransient<BearerCheckIfBattleTagBelongsToAuthFilter>();
 builder.Services.AddInterceptedTransient<CheckIfBattleTagIsAdminFilter>();
@@ -246,6 +254,7 @@ Log.Information(chatPingSettings.Enabled
     chatPingSettings.ChatApiUrl); // the single startup line (AC5); never logs the secret
 builder.Services.AddSingleton(chatPingSettings);
 builder.Services.AddSingleton<IRelationshipChangeNotifier, RelationshipChangeNotifier>();
+builder.Services.AddSingleton<IFlairChangeNotifier, FlairChangeNotifier>();
 
 // Inbound fail-closed auth guard for the friends/blocked-lists endpoint chat-service calls
 ChatRelationshipsAuthSettings chatRelationshipsAuthSettings = ChatRelationshipsAuthSettings.FromEnvironment();
