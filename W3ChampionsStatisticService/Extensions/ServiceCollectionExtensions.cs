@@ -117,6 +117,63 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Wraps the LAST existing registration of <typeparamref name="TInterface"/> in
+    /// <typeparamref name="TDecorator"/>, in place — same position in the collection, same lifetime.
+    /// <para>
+    /// This exists because <see cref="AddInterceptedTransient{TInterface,TImplementation}"/> registers
+    /// the interface as a Castle DynamicProxy over the concrete type. A decorator cannot be layered by
+    /// re-registering the interface: that helper resolves constructor arguments straight from the
+    /// container by type, so a decorator taking <typeparamref name="TInterface"/> would resolve to
+    /// ITSELF and recurse. Building the inner instance from the CAPTURED descriptor is what keeps the
+    /// tracing proxy alive underneath the decorator.
+    /// </para>
+    /// <para>
+    /// Must be called AFTER the registration it wraps. Decorating twice nests in call order:
+    /// the second decorator wraps the first.
+    /// </para>
+    /// </summary>
+    public static IServiceCollection Decorate<TInterface, TDecorator>(this IServiceCollection services)
+        where TInterface : class
+        where TDecorator : class, TInterface
+    {
+        var index = -1;
+        for (var i = services.Count - 1; i >= 0; i--)
+        {
+            if (services[i].ServiceType == typeof(TInterface))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot decorate {typeof(TInterface).Name} with {typeof(TDecorator).Name}: it has no existing "
+                + "registration. Decorate must be called AFTER the registration it wraps.");
+        }
+
+        var inner = services[index];
+
+        services[index] = new ServiceDescriptor(
+            typeof(TInterface),
+            serviceProvider => ActivatorUtilities.CreateInstance<TDecorator>(
+                serviceProvider,
+                CreateInner(serviceProvider, inner)),
+            inner.Lifetime);
+
+        return services;
+    }
+
+    // Rebuilds the captured registration by whichever of the three ServiceDescriptor forms it used.
+    private static object CreateInner(IServiceProvider serviceProvider, ServiceDescriptor descriptor)
+    {
+        if (descriptor.ImplementationInstance != null) return descriptor.ImplementationInstance;
+        if (descriptor.ImplementationFactory != null) return descriptor.ImplementationFactory(serviceProvider);
+        return ActivatorUtilities.CreateInstance(serviceProvider, descriptor.ImplementationType);
+    }
+
     // AddInterceptedSingleton for a concrete type (TImplementation is the service type)
     public static IServiceCollection AddInterceptedSingleton<TImplementation>(
         this IServiceCollection services)
