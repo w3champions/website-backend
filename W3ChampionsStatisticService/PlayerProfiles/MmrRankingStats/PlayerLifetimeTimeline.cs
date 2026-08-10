@@ -51,7 +51,7 @@ public class PlayerLifetimeTimeline
         foreach (var group in grouped)
         {
             var entries = group
-                .SelectMany(x => x.Timeline.MmrRpAtDates.Select(entry => (Season: x.Season, SchemaVersion: x.Timeline.SchemaVersion, Entry: entry)))
+                .SelectMany(x => x.Timeline.MmrRpAtDates.Select(entry => (Season: x.Season, Entry: entry)))
                 .OrderBy(x => x.Entry.Date)
                 .ToList();
 
@@ -64,7 +64,7 @@ public class PlayerLifetimeTimeline
                     Date = x.Entry.Date,
                     Mmr = x.Entry.Mmr,
                     Rp = x.Entry.Rp,
-                    Games = x.Entry.GamesOrDefault(x.SchemaVersion),
+                    Games = x.Entry.GamesOrDefault,
                 }).ToList(),
                 Peak = FindPeak(entries),
             });
@@ -78,18 +78,17 @@ public class PlayerLifetimeTimeline
     /// <summary>
     /// The highest rating the player held once the system was confident in it.
     ///
-    /// Null when any of the underlying documents predates the fields this needs.
-    /// Reporting an ungated peak for those would be worse than reporting none:
-    /// ratings start at 1500, so a player whose true rating is below that would
-    /// show 1500 as their lifetime best forever.
+    /// Placement entries are excluded via <see cref="MmrRpAtDate.WasCalibrating"/>,
+    /// which reads the stored Rd. Entries written before Rd was recorded have none and
+    /// so read as settled - they can therefore contribute a placement-era rating to the
+    /// peak. The backfill rebuilds every day from the events and restores Rd, so this
+    /// only affects days a completed run never reached; the tab is not shown until it
+    /// has run.
+    ///
+    /// Null when the player has no settled entries at all.
     /// </summary>
-    private static LifetimePeak FindPeak(List<(int Season, int SchemaVersion, MmrRpAtDate Entry)> entries)
+    private static LifetimePeak FindPeak(List<(int Season, MmrRpAtDate Entry)> entries)
     {
-        if (entries.Any(x => x.SchemaVersion < PlayerMmrRpTimeline.CurrentSchemaVersion))
-        {
-            return null;
-        }
-
         var settled = entries.Where(x => !x.Entry.WasCalibrating).ToList();
         if (settled.Count == 0) return null;
 
@@ -137,7 +136,7 @@ public class LifetimeRaceSeries
     public GateWay GateWay { get; set; }
     public List<LifetimePoint> Points { get; set; } = [];
 
-    /// <summary>Null when the history is too old to tell placement games apart.</summary>
+    /// <summary>Null when the player has no settled entries in this series.</summary>
     public LifetimePeak Peak { get; set; }
 }
 
@@ -147,8 +146,8 @@ public class LifetimePoint
     public int Mmr { get; set; }
     public double? Rp { get; set; }
 
-    /// <summary>Null on entries recorded before games were counted.</summary>
-    public int? Games { get; set; }
+    /// <summary>Games played that day.</summary>
+    public int Games { get; set; }
 }
 
 public class LifetimePeak
