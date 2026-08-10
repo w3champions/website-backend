@@ -17,17 +17,6 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     public List<MmrRpAtDate> MmrRpAtDates { get; set; } = new List<MmrRpAtDate>();
 
     /// <summary>
-    /// Bumped whenever the shape of the entries changes. Documents written
-    /// before this field existed deserialize as 0, which is how the lifetime
-    /// endpoint knows their Rd/Games/DailyMaxMmr are missing and that a
-    /// calibration-aware peak can't be computed for them yet.
-    /// </summary>
-    public int SchemaVersion { get; set; }
-
-    /// <summary>Entries written by the current handler carry this version.</summary>
-    public const int CurrentSchemaVersion = 1;
-
-    /// <summary>
     /// Id of the last match folded into this timeline, so the same match is never
     /// counted twice.
     ///
@@ -51,10 +40,9 @@ public class PlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, i
     /// This document is written by two independent producers - the live match
     /// handler and the backfill job - and both replace it whole. Without a token
     /// they silently destroy each other's writes: a live write landing second
-    /// reverts a rebuilt day AND clears <see cref="BackfillPending"/>, after which
-    /// the backfill can promote <see cref="SchemaVersion"/> over entries that were
-    /// never rebuilt. A promoted timeline is exactly what the lifetime endpoint
-    /// trusts, so that failure publishes a peak it cannot substantiate.
+    /// reverts a day the backfill had just rebuilt, and a backfill write landing
+    /// second drops the day the handler had just recorded. Neither is repaired
+    /// afterwards, because both writers believe they succeeded.
     /// </para>
     /// <para>
     /// Writers filter on the revision they read and retry when it has moved.
@@ -153,7 +141,6 @@ public class MmrRpAtDate(int mmr, double? rp, DateTimeOffset date, double? rd = 
     // these would otherwise cost a few hundred MB across the collection for
     // values that are usually redundant. Absence has a defined meaning, so
     // reads must go through the accessors rather than the raw properties.
-    // SchemaVersion 0 predates all of them, where absence means "unknown".
 
     /// <summary>
     /// The highest rating reached during the day, stored only when it differs
@@ -179,8 +166,16 @@ public class MmrRpAtDate(int mmr, double? rp, DateTimeOffset date, double? rd = 
     [BsonIgnoreIfNull]
     public double? Rd { get; set; } = rd;
 
-    /// <summary>Games that day, resolving the stored default. Null when unknown (SchemaVersion 0).</summary>
-    public int? GamesOrDefault(int schemaVersion) => Games ?? (schemaVersion >= PlayerMmrRpTimeline.CurrentSchemaVersion ? 1 : null);
+    /// <summary>
+    /// Games that day, resolving the stored default. Absence means one game, which is
+    /// what the omit-when-default rule encodes.
+    ///
+    /// On entries written before the field existed this reads as one game rather than
+    /// as unknown. That is deliberately optimistic: the backfill rebuilds every day
+    /// from the events, so the only entries it can be wrong about are ones a completed
+    /// run never reached.
+    /// </summary>
+    public int GamesOrDefault => Games ?? 1;
 
     /// <summary>The day's peak, falling back to its closing rating.</summary>
     public int PeakMmr => DailyMaxMmr ?? Mmr;
