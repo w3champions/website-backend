@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using W3C.Domain.Repositories;
@@ -44,6 +45,16 @@ public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
     public async Task DeleteFriendRequest(FriendRequest request)
     {
         await Delete<FriendRequest>(r => r.Sender == request.Sender && r.Receiver == request.Receiver);
+    }
+
+    public async Task MarkReceivedFriendRequestsSeen(string receiver, DateTime seenAt)
+    {
+        // Only unseen requests: SeenAt records the FIRST acknowledgement and
+        // never moves after that.
+        var collection = CreateCollection<FriendRequest>();
+        await collection.UpdateManyAsync(
+            r => r.Receiver == receiver && r.SeenAt == null,
+            Builders<FriendRequest>.Update.Set(r => r.SeenAt, seenAt));
     }
 
     public async Task<bool> FriendRequestExists(FriendRequest request)

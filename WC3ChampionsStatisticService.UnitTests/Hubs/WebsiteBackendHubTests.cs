@@ -51,6 +51,11 @@ public class TestFriendCommandHandler(TestFriendRepository repo, TestFriendListC
     }
 
     public Task CreateFriendRequest(FriendRequest request) => Task.CompletedTask;
+    public Task MarkIncomingFriendRequestsSeen(string receiver)
+    {
+        _friendRequestCache.MarkReceivedSeen(receiver, DateTime.UtcNow);
+        return Task.CompletedTask;
+    }
     public Task DeleteFriendRequest(FriendRequest request)
     {
         _friendRequestCache.Delete(request);
@@ -92,6 +97,13 @@ public class FakeFriendRequestCache : IFriendRequestCache
     public Task<bool> FriendRequestExists(FriendRequest req) => Task.FromResult(_requests.Exists(r => r.Sender == req.Sender && r.Receiver == req.Receiver));
     public void Insert(FriendRequest req) { _requests.Add(req); }
     public void Delete(FriendRequest req) { _requests.RemoveAll(r => r.Sender == req.Sender && r.Receiver == req.Receiver); }
+    public void MarkReceivedSeen(string receiver, DateTime seenAt)
+    {
+        foreach (var request in _requests.FindAll(r => r.Receiver == receiver && r.SeenAt == null))
+        {
+            request.SeenAt = seenAt;
+        }
+    }
     public void AddRequest(FriendRequest req) => _requests.Add(req); // For test setup
 }
 
@@ -165,6 +177,37 @@ public class WebsiteBackendHubTests
     private void SetHubContext(Hub hub, string connectionId)
     {
         typeof(Hub).GetProperty("Context").SetValue(hub, new HubCallerContextMock(connectionId));
+    }
+
+    [Test]
+    public async Task MarkIncomingFriendRequestsSeen_StampsOnlyUnseenReceivedRequests()
+    {
+        var alreadySeen = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var unseenIncoming = new FriendRequest("Sender#1111", "User#1234");
+        var seenIncoming = new FriendRequest("Sender#2222", "User#1234") { SeenAt = alreadySeen };
+        var someoneElses = new FriendRequest("Sender#1111", "Other#9999");
+        friendRequestCache.AddRequest(unseenIncoming);
+        friendRequestCache.AddRequest(seenIncoming);
+        friendRequestCache.AddRequest(someoneElses);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.MarkIncomingFriendRequestsSeen();
+
+        Assert.That(unseenIncoming.SeenAt, Is.Not.Null);
+        Assert.That(seenIncoming.SeenAt, Is.EqualTo(alreadySeen), "SeenAt records the first acknowledgement and never moves");
+        Assert.That(someoneElses.SeenAt, Is.Null, "another receiver's requests are untouched");
+        mockCaller.Verify(
+            c => c.SendCoreAsync(
+                It.Is<string>(s => s.Contains("FriendResponseData")),
+                It.IsAny<object[]>(),
+                default
+            ),
+            Times.Once
+        );
     }
 
     [Test]

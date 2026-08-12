@@ -37,7 +37,7 @@ public class WebsiteBackendHub(
     {
         // Check if any of the public handlers have no arguments, as we need them to have at least one argument due to tracing requirements.
         var methods = typeof(WebsiteBackendHub).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        var allowedZeroArgMethods = new HashSet<string> { "LoadFriendListAndRequests", "LoadFriendsWithPictures" };
+        var allowedZeroArgMethods = new HashSet<string> { "LoadFriendListAndRequests", "LoadFriendsWithPictures", "MarkIncomingFriendRequestsSeen" };
         foreach (var methodInfo in methods)
         {
             if (methodInfo.IsSpecialName) continue;
@@ -142,6 +142,26 @@ public class WebsiteBackendHub(
         List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
         List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
         await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
+    }
+
+    public async Task MarkIncomingFriendRequestsSeen()
+    {
+        await this.MarkIncomingFriendRequestsSeenTraced(new PreventZeroArgumentHandler());
+    }
+
+    // The receiver acknowledges having seen their incoming friend requests
+    // (e.g. opened the list). Stamps SeenAt on every not-yet-seen request, then
+    // returns the refreshed received list so the caller's state stays in sync.
+    public async Task MarkIncomingFriendRequestsSeenTraced(PreventZeroArgumentHandler _)
+    {
+        var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (currentUser == null)
+        {
+            return;
+        }
+        await _friendCommandHandler.MarkIncomingFriendRequestsSeen(currentUser);
+        List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
+        await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), null, null, receivedRequests);
     }
 
     // Required for backwards compatibility

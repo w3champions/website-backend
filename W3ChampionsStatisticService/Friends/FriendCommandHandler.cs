@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -9,6 +10,7 @@ public interface IFriendCommandHandler
 {
     Task<Friendlist> LoadFriendList(string battleTag);
     Task CreateFriendRequest(FriendRequest request);
+    Task MarkIncomingFriendRequestsSeen(string receiver);
     Task DeleteFriendRequest(FriendRequest request);
     Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag);
     Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag);
@@ -39,8 +41,19 @@ public class FriendCommandHandler(
 
     public virtual async Task CreateFriendRequest(FriendRequest request)
     {
+        // Server-authoritative: FriendRequest is also a SignalR argument type,
+        // so whatever a client put in these fields is overwritten here.
+        request.CreatedAt = DateTime.UtcNow;
+        request.SeenAt = null;
         await _friendRepository.CreateFriendRequest(request);
         _friendRequestCache.Insert(request);
+    }
+
+    public virtual async Task MarkIncomingFriendRequestsSeen(string receiver)
+    {
+        var seenAt = DateTime.UtcNow;
+        await _friendRepository.MarkReceivedFriendRequestsSeen(receiver, seenAt);
+        _friendRequestCache.MarkReceivedSeen(receiver, seenAt);
     }
 
     public virtual async Task DeleteFriendRequest(FriendRequest request)

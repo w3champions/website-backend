@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ public interface IFriendRequestCache
     Task<bool> FriendRequestExists(FriendRequest req);
     void Insert(FriendRequest req);
     void Delete(FriendRequest req);
+    void MarkReceivedSeen(string receiver, DateTime seenAt);
 }
 
 [Trace]
@@ -68,6 +70,17 @@ public class FriendRequestCache(MongoClient mongoClient) : MongoDbRepositoryBase
         lock (_lock)
         {
             _requests.RemoveAll(r => r.Sender == request.Sender && r.Receiver == request.Receiver);
+        }
+    }
+
+    public virtual void MarkReceivedSeen(string receiver, DateTime seenAt)
+    {
+        lock (_lock)
+        {
+            foreach (var request in _requests.Where(r => r.Receiver == receiver && r.SeenAt == null))
+            {
+                request.SeenAt = seenAt;
+            }
         }
     }
 
