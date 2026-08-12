@@ -305,6 +305,67 @@ public class WebsiteBackendHubTests
         );
     }
 
+    [Test]
+    public async Task MakeFriendRequest_PushesFriendChangeEventToConnectedReceiver()
+    {
+        personalSettingsRepo.Setup(r => r.Find(It.IsAny<string>())).ReturnsAsync(new PersonalSetting("Receiver#1"));
+        friendListCache.Upsert(new Friendlist("Sender#1"));
+        friendListCache.Upsert(new Friendlist("Receiver#1"));
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "Sender#1", ConnectionId = "conn1" });
+        connections.Add("conn2", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn2" });
+        var receiverProxy = new Mock<ISingleClientProxy>();
+        mockClients.Setup(c => c.Client("conn2")).Returns(receiverProxy.Object);
+        SetHubContext(hub, "conn1");
+
+        await hub.MakeFriendRequest(new FriendRequest("Sender#1", "Receiver#1"));
+
+        receiverProxy.Verify(
+            c => c.SendCoreAsync(
+                "FriendChangeEvent",
+                It.Is<object[]>(args => args.Length == 1
+                    && ((FriendChange)args[0]).ChangeType == FriendChangeType.RequestReceived
+                    && ((FriendChange)args[0]).Actor == "Sender#1"),
+                default
+            ),
+            Times.Once
+        );
+    }
+
+    [Test]
+    public async Task DenyIncomingFriendRequest_SendsNoFriendChangeEventToSender()
+    {
+        // Deliberate: deny and block push the same shape to the sender and must
+        // stay indistinguishable, so neither carries a change event.
+        friendRequestCache.AddRequest(new FriendRequest("Sender#1", "Receiver#1"));
+        friendListCache.Upsert(new Friendlist("Receiver#1"));
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
+        connections.Add("conn2", new WebSocketUser { BattleTag = "Sender#1", ConnectionId = "conn2" });
+        var senderProxy = new Mock<ISingleClientProxy>();
+        mockClients.Setup(c => c.Client("conn2")).Returns(senderProxy.Object);
+        SetHubContext(hub, "conn1");
+
+        await hub.DenyIncomingFriendRequest(new FriendRequest("Sender#1", "Receiver#1"));
+
+        senderProxy.Verify(
+            c => c.SendCoreAsync(
+                It.Is<string>(s => s.Contains("FriendResponseData")),
+                It.IsAny<object[]>(),
+                default
+            ),
+            Times.Once
+        );
+        senderProxy.Verify(
+            c => c.SendCoreAsync("FriendChangeEvent", It.IsAny<object[]>(), default),
+            Times.Never
+        );
+    }
+
     [TestCase("AcceptIncomingFriendRequest", "Receiver#1")]
     [TestCase("DenyIncomingFriendRequest", "Receiver#1")]
     [TestCase("DeleteOutgoingFriendRequest", "Sender#1")]

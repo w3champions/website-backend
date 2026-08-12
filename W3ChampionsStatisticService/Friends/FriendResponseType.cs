@@ -21,6 +21,10 @@ public class FriendResponseType
     {
         get { return new FriendResponseType("FriendsWithPictures"); }
     }
+    public static FriendResponseType FriendChangeEvent
+    {
+        get { return new FriendResponseType("FriendChangeEvent"); }
+    }
 
     public override string ToString()
     {

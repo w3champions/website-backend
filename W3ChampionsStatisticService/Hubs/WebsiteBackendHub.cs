@@ -214,6 +214,7 @@ public class WebsiteBackendHub(
 
             var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await PushFriendResponseDataToPlayer(req.Receiver, null, null, requestsReceivedByOtherPlayer);
+            await PushFriendChangeToPlayer(req.Receiver, new FriendChange(FriendChangeType.RequestReceived, req.Sender));
         }
         catch (Exception ex)
         {
@@ -260,6 +261,7 @@ public class WebsiteBackendHub(
 
             var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await PushFriendResponseDataToPlayer(req.Receiver, null, null, requestsReceivedByOtherPlayer);
+            await PushFriendChangeToPlayer(req.Receiver, new FriendChange(FriendChangeType.RequestRetracted, req.Sender));
         }
         catch (Exception ex)
         {
@@ -321,6 +323,7 @@ public class WebsiteBackendHub(
             await PushFriendsWithPicturesToPlayer(req.Sender);
             var requestsSentByOtherPlayer = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
             await PushFriendResponseDataToPlayer(req.Sender, senderFriendlist, requestsSentByOtherPlayer);
+            await PushFriendChangeToPlayer(req.Sender, new FriendChange(FriendChangeType.RequestAccepted, req.Receiver));
         }
         catch (Exception ex)
         {
@@ -365,6 +368,10 @@ public class WebsiteBackendHub(
                 $"Friend request from {req.Sender} denied!"
             );
 
+            // No FriendChangeEvent on purpose: deny and block must stay
+            // indistinguishable to the sender (block pushes this same shape),
+            // and "your request was denied" is not an event worth announcing —
+            // the request just disappears from the sender's sent list.
             var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
             await PushFriendResponseDataToPlayer(req.Sender, null, sentRequests);
         }
@@ -600,6 +607,20 @@ public class WebsiteBackendHub(
         await Clients
             .Client(player.ConnectionId)
             .SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests, message);
+    }
+
+    // Additive discriminated push for live friend events. FriendResponseData
+    // stays the state carrier; this names WHAT changed and WHO did it, which
+    // the null-shape of the state push only implies. Clients that do not
+    // subscribe to FriendChangeEvent are unaffected.
+    private async Task PushFriendChangeToPlayer(string battleTag, FriendChange change)
+    {
+        var player = _connections.GetUsers().FirstOrDefault(x => x.BattleTag == battleTag);
+        if (player?.ConnectionId == null)
+            return;
+        await Clients
+            .Client(player.ConnectionId)
+            .SendAsync(FriendResponseType.FriendChangeEvent.ToString(), change);
     }
 
     private async Task PushFriendsWithPicturesToPlayer(string battleTag)
