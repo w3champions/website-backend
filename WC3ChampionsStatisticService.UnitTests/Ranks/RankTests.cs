@@ -23,7 +23,7 @@ public class RankTests : IntegrationTestBase
     {
         var matchEventRepository = new MatchEventRepository(MongoClient);
         var rankRepository = new Mock<IRankRepository>();
-        var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository);
+        var rankHandler = new RankSyncHandler(rankRepository.Object, matchEventRepository, new Mock<IFriendRankPromotionNotifier>().Object);
 
         await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
 
@@ -42,7 +42,7 @@ public class RankTests : IntegrationTestBase
     public async Task EmptyRanksDoesNotThrwoBulkWriteException()
     {
         var matchEventRepository = new MatchEventRepository(MongoClient);
-        var rankHandler = new RankSyncHandler(new RankRepository(MongoClient, personalSettingsProvider), matchEventRepository);
+        var rankHandler = new RankSyncHandler(new RankRepository(MongoClient, personalSettingsProvider), matchEventRepository, new Mock<IFriendRankPromotionNotifier>().Object);
 
         await InsertRankChangedEvent(TestDtoHelper.CreateRankChangedEvent("peter#123"));
 
@@ -153,7 +153,7 @@ public class RankTests : IntegrationTestBase
         var playOverviewHandler = new PlayOverviewHandler(playerRepository);
         await playOverviewHandler.Update(matchFinishedEvent);
 
-        var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
+        var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository, new Mock<IFriendRankPromotionNotifier>().Object);
 
         await playOverviewHandler.Update(matchFinishedEvent);
         await rankHandler.Update();
@@ -191,7 +191,7 @@ public class RankTests : IntegrationTestBase
         var playOverviewHandler = new PlayOverviewHandler(playerRepository);
         await playOverviewHandler.Update(matchFinishedEvent);
 
-        var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
+        var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository, new Mock<IFriendRankPromotionNotifier>().Object);
 
         await playOverviewHandler.Update(matchFinishedEvent);
         await rankHandler.Update();
@@ -228,7 +228,7 @@ public class RankTests : IntegrationTestBase
         var playOverviewHandler = new PlayOverviewHandler(playerRepository);
         await playOverviewHandler.Update(matchFinishedEvent);
 
-        var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository);
+        var rankHandler = new RankSyncHandler(rankRepository, matchEventRepository, new Mock<IFriendRankPromotionNotifier>().Object);
 
         await playOverviewHandler.Update(matchFinishedEvent);
         await rankHandler.Update();

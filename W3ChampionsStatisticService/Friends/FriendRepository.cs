@@ -64,4 +64,9 @@ public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         var requests = await LoadAll<FriendRequest>(r => r.Receiver == receiver);
         return requests;
     }
+
+    public Task<List<Friendlist>> LoadFriendlistsContaining(string battleTag)
+    {
+        return LoadAll<Friendlist>(f => f.Friends.Contains(battleTag));
+    }
 }

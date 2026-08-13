@@ -17,5 +17,6 @@ public interface IRankRepository
     Task UpsertSeason(Season season);
     Task<List<Season>> LoadSeasons();
     Task<List<Rank>> LoadRanksForPlayers(List<string> list, int season);
+    Task<List<Rank>> LoadRanksByIds(List<string> ids);
     Task<List<PlayerInfoForProxy>> SearchAllPlayersForProxy(string tagSearch);
 }

@@ -10,11 +10,13 @@ namespace W3ChampionsStatisticService.Ladder;
 [Trace]
 public class RankSyncHandler(
     IRankRepository rankRepository,
-    IMatchEventRepository matchEventRepository
+    IMatchEventRepository matchEventRepository,
+    IFriendRankPromotionNotifier friendRankPromotionNotifier
         ) : IAsyncUpdatable
 {
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IMatchEventRepository _matchEventRepository = matchEventRepository;
+    private readonly IFriendRankPromotionNotifier _friendRankPromotionNotifier = friendRankPromotionNotifier;
 
     public async Task Update()
     {
@@ -34,6 +36,12 @@ public class RankSyncHandler(
             .ToList())
             .ToList();
 
+        // Snapshot the standings this batch replaces, BEFORE the upsert overwrites them.
+        // The notifier swallows its own failures; InsertRanks stays unconditional.
+        var oldRanks = await _friendRankPromotionNotifier.CaptureOldRanks(ranks);
+
         await _rankRepository.InsertRanks(ranks);
+
+        await _friendRankPromotionNotifier.NotifyPromotions(ranks, oldRanks);
     }
 }

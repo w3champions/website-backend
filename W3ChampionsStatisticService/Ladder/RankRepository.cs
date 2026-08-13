@@ -140,4 +140,11 @@ public class RankRepository(MongoClient mongoClient, PersonalSettingsProvider pe
         return JoinWith(r => (list.Contains(r.Player1Id) || list.Contains(r.Player2Id)) && r.Season == season);
     }
 
+    // Raw document read (no PlayerOverview join): callers diffing stored standings need the
+    // documents whether or not the player overview exists yet.
+    public Task<List<Rank>> LoadRanksByIds(List<string> ids)
+    {
+        return LoadAll<Rank>(r => ids.Contains(r.Id));
+    }
+
 }

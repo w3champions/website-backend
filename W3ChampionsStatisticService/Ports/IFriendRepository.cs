@@ -18,4 +18,8 @@ public interface IFriendRepository
     Task DeleteFriendRequest(FriendRequest request);
     Task<List<FriendRequest>> LoadAllFriendRequestsSentByPlayer(string sender);
     Task<List<FriendRequest>> LoadAllFriendRequestsSentToPlayer(string receiver);
+
+    /// <summary>Friend lists that contain the given battle tag — i.e. everyone who considers
+    /// that player a friend. Receiver-side truth for fanning out friend-related pushes.</summary>
+    Task<List<Friendlist>> LoadFriendlistsContaining(string battleTag);
 }

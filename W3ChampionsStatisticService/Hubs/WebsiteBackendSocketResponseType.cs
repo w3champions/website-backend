@@ -8,6 +8,8 @@ public class WebsiteBackendSocketResponseType
 
     public static WebsiteBackendSocketResponseType Connected { get { return new WebsiteBackendSocketResponseType("Connected"); } }
 
+    public static WebsiteBackendSocketResponseType FriendRankPromoted { get { return new WebsiteBackendSocketResponseType("FriendRankPromoted"); } }
+
     public override string ToString()
     {
         return Value;
