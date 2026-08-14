@@ -24,10 +24,10 @@ base branch. Nothing in this area depends on `lastDelta`,
 
 The port is bounded and known:
 
-1. **Detection substrate.** The promotion diff moves from `Rank` documents
-   (the RankingChanged sync) to `PlayerProgression` / `updatedProgression`
-   (match-finished events) — the same two-phase shape against a different
-   collection. If upstream ships explicit `promoted` / `divisionUp` flags,
+1. **Detection substrate.** The promotion diff's input moves from
+   RankingChanged sync batches to `PlayerProgression` / `updatedProgression`
+   (match-finished events); the self-owned `LeagueBaseline` diff keeps its
+   shape. If upstream ships explicit `promoted` / `divisionUp` flags,
    diffing reduces to flag reads.
 2. **League vocabulary.** `LeagueConstellation` order today; the progression
    league/division fields then.
