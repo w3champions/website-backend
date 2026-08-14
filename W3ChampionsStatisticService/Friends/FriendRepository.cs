@@ -8,8 +8,21 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Friends;
 
 [Trace]
-public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IFriendRepository
+public class FriendRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IFriendRepository, IRequiresIndexes
 {
+    public string CollectionName => "Friendlist";
+
+    public async Task EnsureIndexesAsync()
+    {
+        var collection = CreateCollection<Friendlist>();
+
+        // Multikey index over the Friends array: LoadFriendlistsContaining answers "whose
+        // friend list holds this player" (one query per promotion push); without the index
+        // that reverse lookup scans every friend list.
+        await collection.Indexes.CreateOneAsync(new CreateIndexModel<Friendlist>(
+            Builders<Friendlist>.IndexKeys.Ascending(f => f.Friends)));
+    }
+
     public async Task<Friendlist> LoadFriendlist(string battleTag)
     {
         var friendlist = await LoadFirst<Friendlist>(battleTag);

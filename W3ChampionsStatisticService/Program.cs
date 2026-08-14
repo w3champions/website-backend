@@ -236,6 +236,8 @@ builder.Services.AddInterceptedTransient<IFriendCommandHandler, FriendCommandHan
 builder.Services.AddInterceptedSingleton<IFriendRequestCache, FriendRequestCache>();
 builder.Services.AddInterceptedSingleton<FriendListCache>();
 builder.Services.AddInterceptedTransient<FriendRepository>();
+// Ensure the Friendlist Friends index exists at startup (reverse friend-list lookup)
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();

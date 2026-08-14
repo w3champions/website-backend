@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using System;
@@ -203,6 +204,31 @@ public class FriendRankPromotionTests : IntegrationTestBase
         _throwOnSend = false;
         await SyncLeague(eventId: 3, league: 0);
         Assert.AreEqual(0, _sends.Count);
+    }
+
+    // Lives here rather than in FriendRepositoryTests because that fixture runs on Mongo2Go,
+    // and index assertions belong on the same Mongo the promotion pipeline tests use.
+    [Test]
+    public async Task EnsureFriendlistIndexes_CreateTheFriendsMultikeyIndex_Idempotently()
+    {
+        SetupHarness();
+
+        await _friendRepository.EnsureIndexesAsync();
+        // Re-running must be a no-op, not a conflict (startup runs this on every deploy).
+        Assert.DoesNotThrowAsync(async () => await _friendRepository.EnsureIndexesAsync());
+
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<MongoDB.Bson.BsonDocument>("Friendlist");
+        var names = new List<string>();
+        using (var cursor = await collection.Indexes.ListAsync())
+        {
+            foreach (var index in await cursor.ToListAsync())
+            {
+                names.Add(index["name"].AsString);
+            }
+        }
+        Assert.Contains("Friends_1", names);
     }
 
     [Test]
