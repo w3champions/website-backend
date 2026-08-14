@@ -239,6 +239,7 @@ builder.Services.AddInterceptedTransient<FriendRepository>();
 
 // Websocket services
 builder.Services.AddInterceptedSingleton<ConnectionMapping>();
+builder.Services.AddInterceptedTransient<ILeagueBaselineRepository, LeagueBaselineRepository>();
 builder.Services.AddInterceptedTransient<IFriendRankPromotionNotifier, FriendRankPromotionNotifier>();
 
 // Auth ticket-mint session store + rate limiter (WB-1). SINGLETONS are load-bearing: the REST

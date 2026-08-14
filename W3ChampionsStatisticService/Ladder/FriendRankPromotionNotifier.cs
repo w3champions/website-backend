@@ -13,63 +13,69 @@ namespace W3ChampionsStatisticService.Ladder;
 
 public interface IFriendRankPromotionNotifier
 {
-    Task<List<Rank>> CaptureOldRanks(List<Rank> newRanks);
-    Task NotifyPromotions(List<Rank> newRanks, List<Rank> oldRanks);
+    Task ObserveSyncedRanks(List<Rank> ranks);
 }
 
-/// <summary>Detects league promotions of single-member standings during rank syncing and pushes
-/// a <see cref="FriendRankPromotedEvent"/> to the promoted player's online friends.
+/// <summary>Detects league promotions of single-member standings and pushes a
+/// <see cref="FriendRankPromotedEvent"/> to the promoted player's online friends.
+///
+/// Detection state is self-owned: each synced batch is diffed against the
+/// <see cref="LeagueBaseline"/> collection (last league seen per standing, id mirroring
+/// <see cref="Rank"/>'s), then the baselines advance. A standing without a baseline —
+/// season start, or the first batch after deploy — records silently. Baselines advance
+/// BEFORE any push, so delivery is at most once: a failed push never resurfaces as a
+/// stale diff on a later batch.
 ///
 /// Only single-member standings (1v1, solo ranked-teams, FFA) are announced: a team is the
 /// ranked entity of its standing, so a team promotion is not a fact about one friend alone.
-/// Promotions only; demotions and same-tier division shuffles stay silent.
+/// Promotions only; demotions and same-tier division shuffles stay silent (but still
+/// advance the baseline).
 ///
-/// Both entry points swallow their own failures: rank syncing must never depend on
+/// The entry point swallows its own failures: rank syncing must never depend on
 /// promotion detection.</summary>
 [Trace]
 public class FriendRankPromotionNotifier(
+    ILeagueBaselineRepository baselineRepository,
     IRankRepository rankRepository,
     IFriendRepository friendRepository,
     ConnectionMapping connections,
     IHubContext<WebsiteBackendHub> hubContext) : IFriendRankPromotionNotifier
 {
+    private readonly ILeagueBaselineRepository _baselineRepository = baselineRepository;
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IFriendRepository _friendRepository = friendRepository;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHubContext<WebsiteBackendHub> _hubContext = hubContext;
 
-    /// <summary>Snapshots the stored single-member standings that the coming
-    /// <see cref="IRankRepository.InsertRanks"/> will replace. One indexed _id read per batch.</summary>
-    public async Task<List<Rank>> CaptureOldRanks(List<Rank> newRanks)
+    public async Task ObserveSyncedRanks(List<Rank> ranks)
     {
         try
         {
-            var ids = newRanks.Where(IsSingleMemberStanding).Select(r => r.Id).Distinct().ToList();
-            if (ids.Count == 0) return [];
-            return await _rankRepository.LoadRanksByIds(ids);
-        }
-        catch (Exception e)
-        {
-            Log.Warning(e, "Friend rank promotion: capturing pre-sync ranks failed");
-            return [];
-        }
-    }
-
-    public async Task NotifyPromotions(List<Rank> newRanks, List<Rank> oldRanks)
-    {
-        try
-        {
-            if (oldRanks == null || oldRanks.Count == 0) return;
-            var oldById = oldRanks.ToDictionary(r => r.Id);
-
             // A backlogged batch can carry the same standing several times; the bulk upsert
-            // makes the last occurrence win, so the diff compares against that one.
-            var changed = newRanks
+            // makes the last occurrence win, so detection considers only that one.
+            var latest = ranks
                 .Where(IsSingleMemberStanding)
                 .GroupBy(r => r.Id)
                 .Select(g => g.Last())
-                .Where(r => oldById.TryGetValue(r.Id, out var old) && old.League != r.League)
                 .ToList();
+            if (latest.Count == 0) return;
+
+            var baselineById = (await _baselineRepository.LoadByIds(latest.Select(r => r.Id).ToList()))
+                .ToDictionary(b => b.Id);
+
+            var changed = latest
+                .Where(r => baselineById.TryGetValue(r.Id, out var baseline) && baseline.League != r.League)
+                .ToList();
+
+            // Advance new and changed baselines only — write cost tracks transitions and
+            // first sightings, not roster size.
+            var moved = latest
+                .Where(r => !baselineById.TryGetValue(r.Id, out var baseline) || baseline.League != r.League)
+                .Select(r => new LeagueBaseline(r.Id, r.League))
+                .ToList();
+            if (moved.Count == 0) return;
+            await _baselineRepository.UpsertMany(moved);
+
             if (changed.Count == 0) return;
 
             var leaguesByConstellation = await LoadLeagues(changed);
@@ -79,9 +85,9 @@ public class FriendRankPromotionNotifier(
 
             foreach (var rank in changed)
             {
-                var old = oldById[rank.Id];
+                var baseline = baselineById[rank.Id];
                 if (!leaguesByConstellation.TryGetValue((rank.Season, rank.Gateway, rank.GameMode), out var leagues)) continue;
-                if (!leagues.TryGetValue(old.League, out var oldLeague)) continue;
+                if (!leagues.TryGetValue(baseline.League, out var oldLeague)) continue;
                 if (!leagues.TryGetValue(rank.League, out var newLeague)) continue;
                 // League order counts down toward the top (0 = highest league).
                 if (newLeague.Order >= oldLeague.Order) continue;
@@ -91,7 +97,7 @@ public class FriendRankPromotionNotifier(
         }
         catch (Exception e)
         {
-            Log.Warning(e, "Friend rank promotion: notification pass failed");
+            Log.Warning(e, "Friend rank promotion: observing synced ranks failed");
         }
     }
 

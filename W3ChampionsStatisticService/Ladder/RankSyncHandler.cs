@@ -36,12 +36,10 @@ public class RankSyncHandler(
             .ToList())
             .ToList();
 
-        // Snapshot the standings this batch replaces, BEFORE the upsert overwrites them.
-        // The notifier swallows its own failures; InsertRanks stays unconditional.
-        var oldRanks = await _friendRankPromotionNotifier.CaptureOldRanks(ranks);
-
         await _rankRepository.InsertRanks(ranks);
 
-        await _friendRankPromotionNotifier.NotifyPromotions(ranks, oldRanks);
+        // Promotion detection diffs against its own baseline collection and swallows
+        // its own failures; rank syncing never depends on it.
+        await _friendRankPromotionNotifier.ObserveSyncedRanks(ranks);
     }
 }

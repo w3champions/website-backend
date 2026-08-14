@@ -19,14 +19,17 @@ namespace WC3ChampionsStatisticService.Tests.Ranks;
 public class FriendRankPromotionTests : IntegrationTestBase
 {
     private List<(string ConnectionId, string Method, object[] Args)> _sends;
+    private bool _throwOnSend;
     private ConnectionMapping _connections;
     private RankRepository _rankRepository;
+    private LeagueBaselineRepository _baselineRepository;
     private FriendRepository _friendRepository;
     private RankSyncHandler _handler;
 
     private void SetupHarness(bool throwOnSend = false)
     {
         _sends = [];
+        _throwOnSend = throwOnSend;
         var clients = new Mock<IHubClients>();
         clients.Setup(c => c.Client(It.IsAny<string>())).Returns((string connectionId) =>
         {
@@ -34,7 +37,7 @@ public class FriendRankPromotionTests : IntegrationTestBase
             proxy.Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
                 .Callback((string method, object[] args, CancellationToken _) =>
                 {
-                    if (throwOnSend) throw new InvalidOperationException("hub send failed");
+                    if (_throwOnSend) throw new InvalidOperationException("hub send failed");
                     _sends.Add((connectionId, method, args));
                 })
                 .Returns(Task.CompletedTask);
@@ -45,8 +48,10 @@ public class FriendRankPromotionTests : IntegrationTestBase
 
         _connections = new ConnectionMapping();
         _rankRepository = new RankRepository(MongoClient, personalSettingsProvider);
+        _baselineRepository = new LeagueBaselineRepository(MongoClient);
         _friendRepository = new FriendRepository(MongoClient);
-        var notifier = new FriendRankPromotionNotifier(_rankRepository, _friendRepository, _connections, hubContext.Object);
+        var notifier = new FriendRankPromotionNotifier(
+            _baselineRepository, _rankRepository, _friendRepository, _connections, hubContext.Object);
         _handler = new RankSyncHandler(_rankRepository, new MatchEventRepository(MongoClient), notifier);
     }
 
@@ -83,6 +88,11 @@ public class FriendRankPromotionTests : IntegrationTestBase
         await _handler.Update();
     }
 
+    private async Task<LeagueBaseline> LoadBaseline(string id)
+    {
+        return (await _baselineRepository.LoadByIds([id])).SingleOrDefault();
+    }
+
     [Test]
     public async Task Promotion_PushesToEveryConnectionOfOnlineFriendsOnly()
     {
@@ -91,7 +101,7 @@ public class FriendRankPromotionTests : IntegrationTestBase
         await BefriendAndConnect();
 
         await SyncLeague(eventId: 1, league: 1);
-        Assert.AreEqual(0, _sends.Count); // first placement is not a promotion
+        Assert.AreEqual(0, _sends.Count); // first sighting records the baseline silently
 
         await SyncLeague(eventId: 2, league: 0);
 
@@ -110,7 +120,7 @@ public class FriendRankPromotionTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task DemotionAndSameTierShuffle_StaySilent()
+    public async Task DemotionAndSameTierShuffle_StaySilent_ButAdvanceTheBaseline()
     {
         SetupHarness();
         await SeedOneVsOneConstellation();
@@ -121,12 +131,14 @@ public class FriendRankPromotionTests : IntegrationTestBase
         await SyncLeague(eventId: 3, league: 2); // Master -> Diamond: demotion
 
         Assert.AreEqual(0, _sends.Count);
-        var doc = (await _rankRepository.LoadRanksByIds(["0_peTer#123@10_GM_1v1"])).Single();
-        Assert.AreEqual(2, doc.League);
+        // Silent transitions still advance the baseline: a later promotion must diff
+        // against Diamond, not against the long-gone Master standing.
+        var baseline = await LoadBaseline("0_peTer#123@10_GM_1v1");
+        Assert.AreEqual(2, baseline.League);
     }
 
     [Test]
-    public async Task TeamStandings_AreNotAnnounced()
+    public async Task TeamStandings_AreNotAnnounced_AndGetNoBaseline()
     {
         SetupHarness();
         await _rankRepository.InsertLeagues([
@@ -152,10 +164,11 @@ public class FriendRankPromotionTests : IntegrationTestBase
         }
 
         Assert.AreEqual(0, _sends.Count);
+        Assert.IsNull(await LoadBaseline("0_peTer#123@10_wolf#456@10_GM_2v2_AT"));
     }
 
     [Test]
-    public async Task MissingLeagueConstellation_IsSilentButStillSyncs()
+    public async Task MissingLeagueConstellation_IsSilentButAdvancesTheBaseline()
     {
         SetupHarness();
         await BefriendAndConnect();
@@ -164,12 +177,14 @@ public class FriendRankPromotionTests : IntegrationTestBase
         await SyncLeague(eventId: 2, league: 0);
 
         Assert.AreEqual(0, _sends.Count);
-        var doc = (await _rankRepository.LoadRanksByIds(["0_peTer#123@10_GM_1v1"])).Single();
-        Assert.AreEqual(0, doc.League);
+        // The baseline advances even when the transition cannot be announced — it must
+        // not resurface as a promotion once the constellation appears later.
+        var baseline = await LoadBaseline("0_peTer#123@10_GM_1v1");
+        Assert.AreEqual(0, baseline.League);
     }
 
     [Test]
-    public async Task PushFailure_DoesNotBreakRankSync()
+    public async Task PushFailure_IsSwallowed_AndNeverReannounced()
     {
         SetupHarness(throwOnSend: true);
         await SeedOneVsOneConstellation();
@@ -179,8 +194,15 @@ public class FriendRankPromotionTests : IntegrationTestBase
         await SyncLeague(eventId: 2, league: 0);
 
         Assert.AreEqual(0, _sends.Count);
-        var doc = (await _rankRepository.LoadRanksByIds(["0_peTer#123@10_GM_1v1"])).Single();
-        Assert.AreEqual(0, doc.League);
+        // Baselines advance BEFORE pushes: delivery is at most once.
+        var baseline = await LoadBaseline("0_peTer#123@10_GM_1v1");
+        Assert.AreEqual(0, baseline.League);
+
+        // Had the failed push left a stale baseline (Master), this re-sync of the same
+        // Grandmaster standing would announce Master -> Grandmaster again.
+        _throwOnSend = false;
+        await SyncLeague(eventId: 3, league: 0);
+        Assert.AreEqual(0, _sends.Count);
     }
 
     [Test]
