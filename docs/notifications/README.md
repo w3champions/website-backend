@@ -50,11 +50,14 @@ receivers; each connection gets the additive hub message `FriendRankPromoted`
 (battleTag, season, gateway, gameMode, race, new + old league
 name/order/division). Clients that do not know the message ignore it.
 
-The notifier swallows its own failures: rank sync never depends on the push.
+The notifier swallows its own failures — per standing, so one dead push
+cannot abort the rest of a batch's fan-out — and reports each to exception
+tracking: rank sync never depends on the push, and a persistently dead push
+path is visible to operators rather than only to the log.
 
-Tests: `FriendRankPromotionTests` (7) — event batch in, `SendCoreAsync`
-capture out; baseline assertions pin the at-most-once and silent-advance
-rules.
+Tests: `FriendRankPromotionTests` (8) — event batch in, `SendCoreAsync`
+capture out; baseline assertions pin the at-most-once, silent-advance and
+batch-isolation rules.
 
 ## Blast radius
 

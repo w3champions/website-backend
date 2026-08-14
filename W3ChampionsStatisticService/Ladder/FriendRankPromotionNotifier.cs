@@ -8,6 +8,7 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Ladder;
 
@@ -32,20 +33,25 @@ public interface IFriendRankPromotionNotifier
 /// advance the baseline).
 ///
 /// The entry point swallows its own failures: rank syncing must never depend on
-/// promotion detection.</summary>
+/// promotion detection. Fan-out is additionally isolated per standing — one failed
+/// push cannot abort the batch's remaining announcements — and every swallowed
+/// failure reaches exception tracking, so a persistently dead push path is visible
+/// to operators rather than only to the log.</summary>
 [Trace]
 public class FriendRankPromotionNotifier(
     ILeagueBaselineRepository baselineRepository,
     IRankRepository rankRepository,
     IFriendRepository friendRepository,
     ConnectionMapping connections,
-    IHubContext<WebsiteBackendHub> hubContext) : IFriendRankPromotionNotifier
+    IHubContext<WebsiteBackendHub> hubContext,
+    ITrackingService trackingService) : IFriendRankPromotionNotifier
 {
     private readonly ILeagueBaselineRepository _baselineRepository = baselineRepository;
     private readonly IRankRepository _rankRepository = rankRepository;
     private readonly IFriendRepository _friendRepository = friendRepository;
     private readonly ConnectionMapping _connections = connections;
     private readonly IHubContext<WebsiteBackendHub> _hubContext = hubContext;
+    private readonly ITrackingService _trackingService = trackingService;
 
     public async Task ObserveSyncedRanks(List<Rank> ranks)
     {
@@ -92,11 +98,23 @@ public class FriendRankPromotionNotifier(
                 // League order counts down toward the top (0 = highest league).
                 if (newLeague.Order >= oldLeague.Order) continue;
 
-                await PushToOnlineFriends(rank, oldLeague, newLeague, onlineConnectionsByBattleTag);
+                try
+                {
+                    await PushToOnlineFriends(rank, oldLeague, newLeague, onlineConnectionsByBattleTag);
+                }
+                catch (Exception e)
+                {
+                    // The baseline already advanced, so this promotion's push is
+                    // spent either way (at-most-once) — but one bad send must not
+                    // abort the fan-out for the batch's other promotions.
+                    _trackingService.TrackException(e, $"Friend rank promotion: push failed for standing {rank.Id}");
+                    Log.Warning(e, "Friend rank promotion: push failed for standing {RankId}", rank.Id);
+                }
             }
         }
         catch (Exception e)
         {
+            _trackingService.TrackException(e, "Friend rank promotion: observing synced ranks failed");
             Log.Warning(e, "Friend rank promotion: observing synced ranks failed");
         }
     }

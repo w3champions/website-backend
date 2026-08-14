@@ -13,6 +13,7 @@ using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Services;
 
 namespace WC3ChampionsStatisticService.Tests.Ranks;
 
@@ -21,6 +22,7 @@ public class FriendRankPromotionTests : IntegrationTestBase
 {
     private List<(string ConnectionId, string Method, object[] Args)> _sends;
     private bool _throwOnSend;
+    private HashSet<string> _throwForConnections;
     private ConnectionMapping _connections;
     private RankRepository _rankRepository;
     private LeagueBaselineRepository _baselineRepository;
@@ -31,6 +33,7 @@ public class FriendRankPromotionTests : IntegrationTestBase
     {
         _sends = [];
         _throwOnSend = throwOnSend;
+        _throwForConnections = [];
         var clients = new Mock<IHubClients>();
         clients.Setup(c => c.Client(It.IsAny<string>())).Returns((string connectionId) =>
         {
@@ -38,7 +41,7 @@ public class FriendRankPromotionTests : IntegrationTestBase
             proxy.Setup(p => p.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
                 .Callback((string method, object[] args, CancellationToken _) =>
                 {
-                    if (_throwOnSend) throw new InvalidOperationException("hub send failed");
+                    if (_throwOnSend || _throwForConnections.Contains(connectionId)) throw new InvalidOperationException("hub send failed");
                     _sends.Add((connectionId, method, args));
                 })
                 .Returns(Task.CompletedTask);
@@ -52,7 +55,8 @@ public class FriendRankPromotionTests : IntegrationTestBase
         _baselineRepository = new LeagueBaselineRepository(MongoClient);
         _friendRepository = new FriendRepository(MongoClient);
         var notifier = new FriendRankPromotionNotifier(
-            _baselineRepository, _rankRepository, _friendRepository, _connections, hubContext.Object);
+            _baselineRepository, _rankRepository, _friendRepository, _connections, hubContext.Object,
+            new Mock<ITrackingService>().Object);
         _handler = new RankSyncHandler(_rankRepository, new MatchEventRepository(MongoClient), notifier);
     }
 
@@ -204,6 +208,48 @@ public class FriendRankPromotionTests : IntegrationTestBase
         _throwOnSend = false;
         await SyncLeague(eventId: 3, league: 0);
         Assert.AreEqual(0, _sends.Count);
+    }
+
+    [Test]
+    public async Task OneFailingPush_DoesNotAbortTheRestOfTheBatch()
+    {
+        SetupHarness();
+        await SeedOneVsOneConstellation();
+        await BefriendAndConnect();
+        // wolf promotes in the same batch as peTer; erin is wolf's online friend.
+        await _friendRepository.UpsertFriendlist(new Friendlist("erin#4") { Friends = ["wolf#456"] });
+        _connections.Add("conn-erin", new WebSocketUser { BattleTag = "erin#4", ConnectionId = "conn-erin" });
+
+        // Baselines for both standings (Master), silently.
+        foreach (var (eventId, battleTag) in new[] { (1, "peTer#123"), (2, "wolf#456") })
+        {
+            var baselineEvent = TestDtoHelper.CreateRankChangedEvent(battleTag);
+            baselineEvent.id = eventId;
+            baselineEvent.league = 1;
+            await InsertRankChangedEvent(baselineEvent);
+        }
+        await _handler.Update();
+        Assert.AreEqual(0, _sends.Count);
+
+        // Both promote to Grandmaster in ONE batch; every send to peTer's friend
+        // bob dies. peTer is processed first (event order), so without per-rank
+        // isolation the thrown send would abort wolf's fan-out too.
+        _throwForConnections = ["conn-bob-1", "conn-bob-2"];
+        foreach (var (eventId, battleTag) in new[] { (3, "peTer#123"), (4, "wolf#456") })
+        {
+            var promotionEvent = TestDtoHelper.CreateRankChangedEvent(battleTag);
+            promotionEvent.id = eventId;
+            promotionEvent.league = 0;
+            await InsertRankChangedEvent(promotionEvent);
+        }
+        await _handler.Update();
+
+        // wolf's promotion still reached erin, and peTer's baseline advanced
+        // regardless — the failed push is spent (at-most-once), never retried.
+        Assert.AreEqual(1, _sends.Count);
+        Assert.AreEqual("conn-erin", _sends[0].ConnectionId);
+        Assert.AreEqual("wolf#456", ((FriendRankPromotedEvent)_sends[0].Args[0]).BattleTag);
+        Assert.AreEqual(0, (await LoadBaseline("0_peTer#123@10_GM_1v1")).League);
     }
 
     // Lives here rather than in FriendRepositoryTests because that fixture runs on Mongo2Go,
