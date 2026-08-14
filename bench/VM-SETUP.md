@@ -2,6 +2,9 @@
 
 Bench material: this folder never merges into the eventual PR.
 
+Run end-to-end on 2026-08-14: both trigger runs behaved as documented and the
+in-game toast + bell row rendered off the real push.
+
 The rig: this backend + its mongo run in docker ON the VM; the dev launcher's
 website-backend URLs point at `127.0.0.1:6123`; promotions are triggered by
 inserting matchmaking-shaped events into the mongo. Everything between the
@@ -45,7 +48,8 @@ statisticServiceBackendWebSocketUrl: "ws://127.0.0.1:6123/",
 ```
 
 Keep the trailing slashes (both values are string-concatenated). Leave every
-other endpoint untouched. Run in PTR mode: sign-in then goes through the TEST
+other endpoint untouched — that is load-bearing, see Troubleshooting. Run in
+PTR mode: sign-in then goes through the TEST
 identification-service, whose JWTs this backend's baked-in public key
 validates. Relaunch after the edit — the URLs are read once at module load.
 
@@ -74,9 +78,21 @@ docker exec -i mongodb-website-backend-local-compose \
 - Baseline never appears in `LeagueBaseline` (db `W3Champions-Statistic-Service`):
   handlers are off — `docker exec w3champions-statistic-service-dev env | grep START_HANDLERS`
   must say `true` (the override file was skipped).
-- Baseline advances but no toast: the push side — check
-  `docker logs w3champions-statistic-service-dev` for "Friend rank promotion"
-  warnings, and the launcher's hub connection state.
+- Baseline advances but no toast: check the LAUNCHER side first. The handler
+  resolves the mode name from `backendStore.gameModes`, populated by the
+  MATCHMAKING handshake — not by this backend. Without it the launcher logs
+  `Skipping friend rank-up notification: no name for game mode 1` and drops
+  the toast, which from the backend looks identical to success. This is why
+  the environment edit above repoints only the two statistic URLs: PTR keeps
+  matchmaking on test, where the modes come from. (Hence also: `useLocal=1`
+  is NOT a shortcut around the edit — LocalEnvironment already carries the
+  `:6123` URLs, but repoints matchmaking and chat at local stacks this rig
+  doesn't run, so the toast never renders.)
+- Only then the push side — `docker logs w3champions-statistic-service-dev`
+  for "Friend rank promotion" warnings, and the launcher's hub connection
+  state. A successful hub connect logs NOTHING, so a silent auth rejection
+  and a healthy connection look the same from the backend; confirm receipt
+  from the launcher.
 
 ## Teardown
 
