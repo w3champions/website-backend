@@ -1,0 +1,11 @@
+# Bench override: turns the read-model handler loop ON so RankSyncHandler and
+# LeagueSyncHandler poll for the seeded events (bench/*.mongosh.js).
+#
+#   docker compose -f docker-compose.yml -f bench/compose.handlers.yml up -d --build
+#
+# Safe ONLY because docker-compose.yml pairs the service with its own isolated
+# mongo container. Never point a handlers-on instance at a shared database.
+services:
+  w3champions-statistic-service-dev:
+    environment:
+      - START_HANDLERS=true
