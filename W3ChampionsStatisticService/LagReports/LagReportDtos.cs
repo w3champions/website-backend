@@ -314,10 +314,11 @@ public static class LagReportQueryValidation
 public static class LagReportAggregateDimensions
 {
     public const string Day = "day";
+    public const string NodeDay = "node-day";
     public const string Category = "category";
     public const string Server = "server";
     public const string Proxy = "proxy";
-    public static readonly string[] All = [Day, Category, Server, Proxy];
+    public static readonly string[] All = [Day, NodeDay, Category, Server, Proxy];
 }
 
 /// <summary>
@@ -351,6 +352,21 @@ public class LagReportAggregateBucket
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string ProxyName { get; set; }
 
+    public long Count { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? ExplicitCount { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DistinctPlayers { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<LagReportCategoryCount> TopCategories { get; set; }
+}
+
+public class LagReportCategoryCount
+{
+    public string Category { get; set; }
     public long Count { get; set; }
 }
 

@@ -217,12 +217,17 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         return req.GroupBy switch
         {
             LagReportAggregateDimensions.Day => await AggregateByDay(collection, match),
+            LagReportAggregateDimensions.NodeDay => await AggregateByNodeDay(collection, match),
             LagReportAggregateDimensions.Category => await AggregateByCategory(collection, match),
             LagReportAggregateDimensions.Server => await AggregateByServer(collection, match),
             LagReportAggregateDimensions.Proxy => await AggregateByProxy(collection, match),
             _ => throw new ArgumentException($"Unsupported groupBy '{req.GroupBy}'", nameof(req)),
         };
     }
+
+    // How many category chips a node-day bucket carries; mirrors what the grouped
+    // view's headers display.
+    private const int NodeDayTopCategories = 4;
 
     /// <summary>$dateToString runs in UTC when no timezone is given — the same reading
     /// of "day" the date filters use for bare dates.</summary>
@@ -271,6 +276,107 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         {
             Day = d["_id"].AsString,
             Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByNodeDay(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        // Core buckets: count, submitted count, and distinct players per node × day.
+        // "$Players.BattleTag" expands to the array of tags per report; $push makes an
+        // array of those arrays, and the $reduce/$setUnion collapses it to a set.
+        // Grouped by (day, nodeId) only — a node rename mid-window must not split the
+        // bucket, and the categories join below is keyed the same way. The display name
+        // rides along as $first.
+        var coreTask = collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("CreatedAt", "ServerNodeId", "ServerNodeName", "HasExplicitReport", "Players.BattleTag"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                {
+                    "_id",
+                    new BsonDocument
+                    {
+                        { "day", DayOfCreatedAt() },
+                        { "nodeId", "$ServerNodeId" },
+                    }
+                },
+                { "nodeName", new BsonDocument("$first", "$ServerNodeName") },
+                { "count", new BsonDocument("$sum", 1) },
+                { "explicitCount", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { "$HasExplicitReport", 1, 0 })) },
+                { "playerSets", new BsonDocument("$push", "$Players.BattleTag") },
+            }))
+            .AppendStage<BsonDocument>(Stage("$project", new BsonDocument
+            {
+                { "nodeName", 1 },
+                { "count", 1 },
+                { "explicitCount", 1 },
+                {
+                    "distinctPlayers",
+                    new BsonDocument("$size", new BsonDocument("$reduce", new BsonDocument
+                    {
+                        { "input", "$playerSets" },
+                        { "initialValue", new BsonArray() },
+                        { "in", new BsonDocument("$setUnion", new BsonArray { "$$value", "$$this" }) },
+                    }))
+                },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "_id.day", 1 }, { "count", -1 }, { "_id.nodeId", 1 } }))
+            .ToListAsync();
+
+        // Category occurrence counts per node × day, stitched onto the core buckets
+        // afterwards — a per-group top-N inside one pipeline needs operators newer
+        // than the deployment guarantees, and this second pass is just as cheap.
+        var categoriesTask = collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("CreatedAt", "ServerNodeId", "Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                {
+                    "_id",
+                    new BsonDocument
+                    {
+                        { "day", DayOfCreatedAt() },
+                        { "nodeId", "$ServerNodeId" },
+                        { "category", "$Players.IssueCategories" },
+                    }
+                },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .ToListAsync();
+
+        await Task.WhenAll(coreTask, categoriesTask);
+
+        var topCategories = categoriesTask.Result
+            .GroupBy(d => (Day: d["_id"]["day"].AsString, NodeId: IntOrZero(d["_id"]["nodeId"])))
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(d => d["count"].ToInt64())
+                    .ThenBy(d => d["_id"]["category"].ToInt32())
+                    .Take(NodeDayTopCategories)
+                    .Select(d => new LagReportCategoryCount
+                    {
+                        Category = CategoryName(d["_id"]["category"]),
+                        Count = d["count"].ToInt64(),
+                    })
+                    .ToList());
+
+        return coreTask.Result.Select(d =>
+        {
+            var day = d["_id"]["day"].AsString;
+            var nodeId = IntOrZero(d["_id"]["nodeId"]);
+            return new LagReportAggregateBucket
+            {
+                Day = day,
+                ServerNodeId = nodeId,
+                ServerNodeName = StringOrEmpty(d["nodeName"]),
+                Count = d["count"].ToInt64(),
+                ExplicitCount = d["explicitCount"].ToInt64(),
+                DistinctPlayers = d["distinctPlayers"].ToInt32(),
+                TopCategories = topCategories.GetValueOrDefault((day, nodeId)) ?? [],
+            };
         }).ToList();
     }
 
