@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -235,12 +236,12 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Regex("Players.ProxyIpSearch", PrefixPattern(req.ProxyIp)));
         }
 
-        if (!string.IsNullOrEmpty(req.DateFrom) && DateTimeOffset.TryParse(req.DateFrom, out var dateFrom))
+        if (!string.IsNullOrEmpty(req.DateFrom) && TryParseFilterDate(req.DateFrom, out var dateFrom))
         {
             filters.Add(builder.Gte(r => r.CreatedAt, dateFrom));
         }
 
-        if (!string.IsNullOrEmpty(req.DateTo) && DateTimeOffset.TryParse(req.DateTo, out var dateTo))
+        if (!string.IsNullOrEmpty(req.DateTo) && TryParseFilterDate(req.DateTo, out var dateTo))
         {
             filters.Add(builder.Lte(r => r.CreatedAt, dateTo));
         }
@@ -263,6 +264,21 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         }
 
         return filters;
+    }
+
+    /// <summary>
+    /// Parses a date filter to UTC. The result must be a DateTime because CreatedAt is one:
+    /// comparing it against a DateTimeOffset compiles via the implicit conversion, but
+    /// leaves the field expression a Convert node the driver cannot translate, so every
+    /// date-filtered query throws instead of running.
+    /// AssumeUniversal fixes a bare date to the same window whatever the server's timezone;
+    /// a value carrying its own offset keeps it.
+    /// </summary>
+    private static bool TryParseFilterDate(string value, out DateTime parsed)
+    {
+        const DateTimeStyles styles = DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal;
+
+        return DateTime.TryParse(value, CultureInfo.InvariantCulture, styles, out parsed);
     }
 
     /// <summary>
