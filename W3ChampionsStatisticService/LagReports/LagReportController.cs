@@ -35,6 +35,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     private const int MaxAnnotationTextLength = 1000;
 
     private const int MaxPageSize = 100;
+    private const int MaxBattleTagBuckets = 500;
 
     /// <summary>
     /// Submit a lag report — called by the launcher for each player (explicit or auto).
@@ -136,6 +137,12 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             return BadRequest($"groupBy must be one of: {string.Join(", ", LagReportAggregateDimensions.All)}");
         }
         req.GroupBy = groupBy;
+        // Ceiling for the one dimension that uses Limit (battleTag — the others return
+        // all their buckets and ignore it). Raise it if full-cap responses become routine:
+        // exactly 500 buckets back means the ranking truncated, and real submitters may be
+        // missing from badges and leaderboards (missing, never wrong — returned buckets
+        // stay exact). Lower it only if payload or latency ever becomes a concern.
+        req.Limit = Math.Clamp(req.Limit, 1, MaxBattleTagBuckets);
 
         var buckets = await _lagReportRepository.GetAggregate(req);
         return Ok(new { Buckets = buckets });

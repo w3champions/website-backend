@@ -318,7 +318,8 @@ public static class LagReportAggregateDimensions
     public const string Category = "category";
     public const string Server = "server";
     public const string Proxy = "proxy";
-    public static readonly string[] All = [Day, NodeDay, Category, Server, Proxy];
+    public const string BattleTag = "battleTag";
+    public static readonly string[] All = [Day, NodeDay, Category, Server, Proxy, BattleTag];
 }
 
 /// <summary>
@@ -329,6 +330,9 @@ public static class LagReportAggregateDimensions
 public class LagReportAggregateRequest : LagReportQueryRequest
 {
     public string GroupBy { get; set; }
+
+    /// <summary>Bucket cap for the unbounded-cardinality dimension (battleTag).</summary>
+    public int Limit { get; set; } = 50;
 }
 
 /// <summary>
@@ -352,6 +356,9 @@ public class LagReportAggregateBucket
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string ProxyName { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string BattleTag { get; set; }
+
     public long Count { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -362,6 +369,14 @@ public class LagReportAggregateBucket
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<LagReportCategoryCount> TopCategories { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DistinctNodes { get; set; }
+
+    /// <summary>battleTag dimension: reports this player submitted themselves
+    /// (their own IsExplicit entry), as opposed to Count = reports they appear in.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? SubmittedCount { get; set; }
 }
 
 public class LagReportCategoryCount

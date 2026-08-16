@@ -221,6 +221,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             LagReportAggregateDimensions.Category => await AggregateByCategory(collection, match),
             LagReportAggregateDimensions.Server => await AggregateByServer(collection, match),
             LagReportAggregateDimensions.Proxy => await AggregateByProxy(collection, match),
+            LagReportAggregateDimensions.BattleTag => await AggregateByBattleTag(collection, match, req.Limit),
             _ => throw new ArgumentException($"Unsupported groupBy '{req.GroupBy}'", nameof(req)),
         };
     }
@@ -449,6 +450,43 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             ProxyName = d["_id"].AsString,
             Count = d["count"].ToInt64(),
         }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByBattleTag(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match, int limit)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.BattleTag", "Players.IsExplicit", "ServerNodeId"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.BattleTag" },
+                { "count", new BsonDocument("$sum", 1) },
+                { "submittedCount", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { "$Players.IsExplicit", 1, 0 })) },
+                { "nodes", new BsonDocument("$addToSet", "$ServerNodeId") },
+            }))
+            .AppendStage<BsonDocument>(Stage("$project", new BsonDocument
+            {
+                { "count", 1 },
+                { "submittedCount", 1 },
+                { "distinctNodes", new BsonDocument("$size", "$nodes") },
+            }))
+            // Submissions first: appearance count tracks activity, not distress, so
+            // the ranking (and the Limit cap) must protect actual submitters.
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "submittedCount", -1 }, { "count", -1 }, { "_id", 1 } }))
+            .AppendStage<BsonDocument>(Stage("$limit", limit))
+            .ToListAsync();
+
+        return docs
+            .Where(d => !d["_id"].IsBsonNull)
+            .Select(d => new LagReportAggregateBucket
+            {
+                BattleTag = d["_id"].AsString,
+                Count = d["count"].ToInt64(),
+                SubmittedCount = d["submittedCount"].ToInt64(),
+                DistinctNodes = d["distinctNodes"].ToInt32(),
+            }).ToList();
     }
 
     /// <summary>Enums live in BSON as ints (no BsonRepresentation on the model); map
