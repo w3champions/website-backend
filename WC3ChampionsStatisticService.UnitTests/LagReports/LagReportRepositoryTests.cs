@@ -218,6 +218,83 @@ public class LagReportRepositoryTests : IntegrationTestBase
         Assert.AreEqual(1, items.Count);
     }
 
+    /// <summary>
+    /// Seeds a report and forces its CreatedAt. UpsertPlayerData always stamps DateTime.UtcNow,
+    /// and the stamp is precisely what the date filters are tested against.
+    /// </summary>
+    private async Task SeedReportCreatedAt(int floGameId, DateTime createdAt)
+    {
+        var template = CreateTemplate(floGameId: floGameId, gameId: floGameId);
+        await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer($"P{floGameId}#1"), template);
+
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<LagReport>("LagReport");
+        await collection.UpdateOneAsync(
+            Builders<LagReport>.Filter.Eq(r => r.FloGameId, floGameId),
+            Builders<LagReport>.Update.Set(r => r.CreatedAt, createdAt));
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByDateFrom()
+    {
+        await SeedReportCreatedAt(20001, new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(20002, new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(20003, new DateTime(2026, 3, 9, 12, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05" });
+
+        Assert.AreEqual(2, total);
+        CollectionAssert.AreEquivalent(new[] { 20003, 20002 }, items.ConvertAll(r => r.FloGameId));
+    }
+
+    [Test]
+    public async Task GetReports_DateFiltersAcceptFullTimestamps()
+    {
+        // Clients that need sub-day precision (or a timezone other than UTC) send a full
+        // timestamp, which is then honoured to the instant rather than widened to a day.
+        await SeedReportCreatedAt(23001, new DateTime(2026, 3, 5, 9, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(23002, new DateTime(2026, 3, 5, 15, 0, 0, DateTimeKind.Utc));
+
+        var (utc, _) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05T12:00:00Z" });
+        Assert.AreEqual(1, utc.Count);
+        Assert.AreEqual(23002, utc[0].FloGameId);
+
+        // 14:00+02:00 is 12:00 UTC — the offset must be applied, not discarded.
+        var (offset, _) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05T14:00:00+02:00" });
+        Assert.AreEqual(1, offset.Count);
+        Assert.AreEqual(23002, offset[0].FloGameId);
+    }
+
+    [Test]
+    public async Task GetReports_DateFiltersReadBareDatesAsUtcRegardlessOfServerTimezone()
+    {
+        // A bare date must mean the same window on every host: parsing it in the server's
+        // local time would shift the boundary by that host's UTC offset.
+        await SeedReportCreatedAt(24001, new DateTime(2026, 3, 4, 23, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(24002, new DateTime(2026, 3, 5, 1, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05" });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(24002, items[0].FloGameId);
+    }
+
+    [Test]
+    public async Task GetReports_IgnoresUnparseableDates()
+    {
+        await SeedReportCreatedAt(25001, new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            DateFrom = "not-a-date",
+            DateTo = "also-not-a-date",
+        });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(1, items.Count);
+    }
+
     [Test]
     public async Task GetReports_Pagination()
     {
