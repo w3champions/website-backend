@@ -309,6 +309,51 @@ public static class LagReportQueryValidation
     }
 }
 
+// ── Admin aggregate ───────────────────────────────────────────────────
+
+public static class LagReportAggregateDimensions
+{
+    public const string Day = "day";
+    public const string Category = "category";
+    public const string Server = "server";
+    public const string Proxy = "proxy";
+    public static readonly string[] All = [Day, Category, Server, Proxy];
+}
+
+/// <summary>
+/// Counts over the report corpus grouped by one dimension. Inherits the list
+/// endpoint's filter surface, so every filter narrows the aggregation exactly
+/// as it narrows the list; Page/PageSize are ignored.
+/// </summary>
+public class LagReportAggregateRequest : LagReportQueryRequest
+{
+    public string GroupBy { get; set; }
+}
+
+/// <summary>
+/// One aggregation bucket. Which key/extra fields are set depends on the
+/// dimension; unset ones are omitted from the JSON.
+/// </summary>
+public class LagReportAggregateBucket
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Day { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ServerNodeId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string ServerNodeName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Category { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string ProxyName { get; set; }
+
+    public long Count { get; set; }
+}
+
 // ── Admin list item ───────────────────────────────────────────────────
 
 public class LagReportListItem

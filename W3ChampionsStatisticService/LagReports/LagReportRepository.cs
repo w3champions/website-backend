@@ -201,6 +201,161 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         return (itemsTask.Result, totalTask.Result);
     }
 
+    /// <summary>
+    /// Counts grouped by one dimension (see LagReportAggregateDimensions), honoring
+    /// the same filters as GetReports. Everything runs inside Mongo as a single
+    /// aggregation per dimension (node-day runs two, concurrently) — no per-bucket
+    /// queries. The corpus is TTL-bounded to 90 days, so even the unwind-heavy
+    /// dimensions stay small.
+    /// </summary>
+    public async Task<List<LagReportAggregateBucket>> GetAggregate(LagReportAggregateRequest req)
+    {
+        var collection = CreateCollection<LagReport>();
+        var filters = BuildFilters(req);
+        var match = filters.Count > 0 ? Builders<LagReport>.Filter.And(filters) : Builders<LagReport>.Filter.Empty;
+
+        return req.GroupBy switch
+        {
+            LagReportAggregateDimensions.Day => await AggregateByDay(collection, match),
+            LagReportAggregateDimensions.Category => await AggregateByCategory(collection, match),
+            LagReportAggregateDimensions.Server => await AggregateByServer(collection, match),
+            LagReportAggregateDimensions.Proxy => await AggregateByProxy(collection, match),
+            _ => throw new ArgumentException($"Unsupported groupBy '{req.GroupBy}'", nameof(req)),
+        };
+    }
+
+    /// <summary>$dateToString runs in UTC when no timezone is given — the same reading
+    /// of "day" the date filters use for bare dates.</summary>
+    private static BsonDocument DayOfCreatedAt() =>
+        new("$dateToString", new BsonDocument { { "format", "%Y-%m-%d" }, { "date", "$CreatedAt" } });
+
+    private static BsonDocument Stage(string name, BsonValue body) => new(name, body);
+
+    /// <summary>
+    /// Thin the documents down to the fields a pipeline actually groups on, immediately
+    /// after the $match. Storage still reads whole documents — a projection cannot change
+    /// that — but the unwind/group stages then carry ~1KB per report instead of the full
+    /// ~77KB diagnostics payload.
+    /// </summary>
+    private static BsonDocument ThinProject(params string[] fields)
+    {
+        var body = new BsonDocument();
+        foreach (var field in fields)
+        {
+            body[field] = 1;
+        }
+        return new BsonDocument("$project", body);
+    }
+
+    /// <summary>Legacy documents can miss ServerNodeId/ServerNodeName — read them null-safely
+    /// so one old document cannot 500 the whole aggregation.</summary>
+    private static int IntOrZero(BsonValue value) => value == null || value.IsBsonNull ? 0 : value.ToInt32();
+
+    private static string StringOrEmpty(BsonValue value) => value == null || value.IsBsonNull ? "" : value.AsString;
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByDay(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("CreatedAt"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", DayOfCreatedAt() },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument("_id", 1)))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            Day = d["_id"].AsString,
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    /// <summary>Counts category occurrences per player per report — the same semantics
+    /// as the admin UI's facet counts, where two players reporting Desync in one game
+    /// count twice.</summary>
+    private static async Task<List<LagReportAggregateBucket>> AggregateByCategory(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.IssueCategories" },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "count", -1 }, { "_id", 1 } }))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            Category = CategoryName(d["_id"]),
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByServer(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("ServerNodeId", "ServerNodeName"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", new BsonDocument { { "nodeId", "$ServerNodeId" }, { "nodeName", "$ServerNodeName" } } },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "count", -1 }, { "_id.nodeId", 1 } }))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            ServerNodeId = IntOrZero(d["_id"]["nodeId"]),
+            ServerNodeName = StringOrEmpty(d["_id"]["nodeName"]),
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByProxy(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.ProxyName"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$match", new BsonDocument("Players.ProxyName", new BsonDocument("$ne", BsonNull.Value))))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.ProxyName" },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "count", -1 }, { "_id", 1 } }))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            ProxyName = d["_id"].AsString,
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    /// <summary>Enums live in BSON as ints (no BsonRepresentation on the model); map
+    /// them to names here so the wire format matches the list endpoint's strings.</summary>
+    private static string CategoryName(BsonValue value)
+    {
+        if (value.IsString) return value.AsString;
+        var i = value.ToInt32();
+        return Enum.IsDefined(typeof(EIssueCategory), i)
+            ? ((EIssueCategory)i).ToString()
+            : i.ToString(CultureInfo.InvariantCulture);
+    }
+
     private static List<FilterDefinition<LagReport>> BuildFilters(LagReportQueryRequest req)
     {
         var builder = Builders<LagReport>.Filter;

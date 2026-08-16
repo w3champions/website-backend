@@ -118,6 +118,29 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         return Ok(new { Items = listItems, Total = total });
     }
 
+    /// <summary>Admin: counts grouped by one dimension, honoring the list filters.</summary>
+    [HttpGet("aggregate")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
+    public async Task<IActionResult> GetAggregate([FromQuery] LagReportAggregateRequest req)
+    {
+        var validationError = LagReportQueryValidation.FirstError(req);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
+        var groupBy = LagReportAggregateDimensions.All.FirstOrDefault(d =>
+            string.Equals(d, req.GroupBy, StringComparison.OrdinalIgnoreCase));
+        if (groupBy == null)
+        {
+            return BadRequest($"groupBy must be one of: {string.Join(", ", LagReportAggregateDimensions.All)}");
+        }
+        req.GroupBy = groupBy;
+
+        var buckets = await _lagReportRepository.GetAggregate(req);
+        return Ok(new { Buckets = buckets });
+    }
+
     /// <summary>Admin: get a single lag report with full diagnostics data.</summary>
     [HttpGet("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]

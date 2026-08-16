@@ -506,6 +506,101 @@ public class LagReportRepositoryTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetAggregate_ByDay_CountsPerUtcDay()
+    {
+        // 23:30 and 00:30 straddle a UTC midnight — each must land in its own bucket.
+        await SeedReportOnNode(30001, new DateTime(2026, 3, 1, 23, 30, 0, DateTimeKind.Utc), 1, "EU West");
+        await SeedReportOnNode(30002, new DateTime(2026, 3, 2, 0, 30, 0, DateTimeKind.Utc), 1, "EU West");
+        await SeedReportOnNode(30003, new DateTime(2026, 3, 2, 12, 0, 0, DateTimeKind.Utc), 1, "EU West");
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Day });
+
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual("2026-03-01", buckets[0].Day);
+        Assert.AreEqual(1, buckets[0].Count);
+        Assert.AreEqual("2026-03-02", buckets[1].Day);
+        Assert.AreEqual(2, buckets[1].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_HonorsListFilters()
+    {
+        await SeedReportOnNode(31001, new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc), 1, "EU West");
+        await SeedReportOnNode(31002, new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc), 2, "US East");
+        await SeedReportOnNode(31003, new DateTime(2026, 3, 2, 12, 0, 0, DateTimeKind.Utc), 1, "EU West");
+
+        var byServer = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            ServerName = ["EU"],
+        });
+        Assert.AreEqual(2, byServer.Count);
+        Assert.IsTrue(byServer.TrueForAll(b => b.Count == 1));
+
+        var byDate = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            DateFrom = "2026-03-02",
+        });
+        Assert.AreEqual(1, byDate.Count);
+        Assert.AreEqual("2026-03-02", byDate[0].Day);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByCategory_CountsOccurrencesPerPlayer()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        var p1 = CreatePlayer("P1#1");
+        p1.IssueCategories = [EIssueCategory.Desync];
+        var p2 = CreatePlayer("P2#2");
+        p2.IssueCategories = [EIssueCategory.Desync, EIssueCategory.SpikeLag];
+        await SeedReportOnNode(33001, noon, 1, "EU West", p1, p2);
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Category });
+
+        // Two players naming Desync in one report count twice — occurrence semantics,
+        // matching the admin UI's facet counts.
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual("Desync", buckets[0].Category);
+        Assert.AreEqual(2, buckets[0].Count);
+        Assert.AreEqual("SpikeLag", buckets[1].Category);
+        Assert.AreEqual(1, buckets[1].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByServer_CountsReportsPerNode()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(34001, noon, 1, "EU West");
+        await SeedReportOnNode(34002, noon, 1, "EU West");
+        await SeedReportOnNode(34003, noon, 2, "US East");
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Server });
+
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual(1, buckets[0].ServerNodeId);
+        Assert.AreEqual("EU West", buckets[0].ServerNodeName);
+        Assert.AreEqual(2, buckets[0].Count);
+        Assert.AreEqual(2, buckets[1].ServerNodeId);
+        Assert.AreEqual(1, buckets[1].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByProxy_SkipsDirectPlayers()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        var proxied = CreatePlayer("P1#1");
+        proxied.ProxyName = "EU-Proxy-1";
+        await SeedReportOnNode(35001, noon, 1, "EU West", proxied, CreatePlayer("P2#2"));
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Proxy });
+
+        Assert.AreEqual(1, buckets.Count);
+        Assert.AreEqual("EU-Proxy-1", buckets[0].ProxyName);
+        Assert.AreEqual(1, buckets[0].Count);
+    }
+
+    [Test]
     public async Task UpsertPlayerData_MaintainsPlayerCount()
     {
         // Two players added one at a time via UpsertPlayerData; the stored PlayerCount
