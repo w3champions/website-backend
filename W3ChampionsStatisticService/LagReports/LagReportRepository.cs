@@ -52,6 +52,9 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             // Explicit filter — most reports are auto-submitted, admins typically filter to explicit only
             new(Builders<LagReport>.IndexKeys.Ascending(r => r.HasExplicitReport)),
 
+            // Player-count filter (materialized Players.Count)
+            new(Builders<LagReport>.IndexKeys.Ascending(r => r.PlayerCount)),
+
             // Default list sort + date range filter
             new(Builders<LagReport>.IndexKeys.Descending(r => r.CreatedAt)),
 
@@ -104,6 +107,9 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         // $setOnInsert the template fields only when creating a new document.
         var update = Builders<LagReport>.Update
             .Push(r => r.Players, playerData)
+            // Materialized Players.Count, atomic with the push — Mongo cannot filter on
+            // an array's length, so the min/maxPlayers filters read this field instead.
+            .Inc(r => r.PlayerCount, 1)
             .Set(r => r.UpdatedAt, DateTime.UtcNow)
             .SetOnInsert(r => r.Id, template.Id)
             .SetOnInsert(r => r.GameId, template.GameId)
@@ -290,6 +296,16 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         if (req.ExplicitOnly == true)
         {
             filters.Add(builder.Eq(r => r.HasExplicitReport, true));
+        }
+
+        if (req.MinPlayers is > 0)
+        {
+            filters.Add(builder.Gte(r => r.PlayerCount, req.MinPlayers.Value));
+        }
+
+        if (req.MaxPlayers is > 0)
+        {
+            filters.Add(builder.Lte(r => r.PlayerCount, req.MaxPlayers.Value));
         }
 
         return filters;

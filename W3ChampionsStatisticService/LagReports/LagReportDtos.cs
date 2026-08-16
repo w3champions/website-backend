@@ -270,6 +270,12 @@ public class LagReportQueryRequest
     public List<string> ConnectionIssueTag { get; set; }
 
     public bool? ExplicitOnly { get; set; }
+
+    /// <summary>Bounds on the game's player count (the materialized PlayerCount field).
+    /// Null or non-positive means unbounded on that end.</summary>
+    public int? MinPlayers { get; set; }
+    public int? MaxPlayers { get; set; }
+
     public int Page { get; set; } = 0;
     public int PageSize { get; set; } = 20;
 }

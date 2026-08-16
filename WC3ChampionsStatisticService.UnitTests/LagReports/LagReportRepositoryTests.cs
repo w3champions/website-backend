@@ -506,6 +506,42 @@ public class LagReportRepositoryTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task UpsertPlayerData_MaintainsPlayerCount()
+    {
+        // Two players added one at a time via UpsertPlayerData; the stored PlayerCount
+        // must keep step with the Players array on its own.
+        var template = CreateTemplate(floGameId: 37001, gameId: 37001);
+
+        var id = await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer("P1#1"), template);
+        await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer("P2#2"), template);
+
+        var report = await _repo.GetById(id);
+        Assert.AreEqual(2, report.Players.Count);
+        Assert.AreEqual(2, report.PlayerCount, "PlayerCount must track Players.Count through the $inc");
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByPlayerCountBounds()
+    {
+        // One solo report and one three-player report; the lower bound, the upper
+        // bound, and the two combined must each pick out the right one.
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(37101, noon, 1, "EU West", CreatePlayer("Solo#1"));
+        await SeedReportOnNode(37102, noon, 1, "EU West",
+            CreatePlayer("A#1"), CreatePlayer("B#2"), CreatePlayer("C#3"));
+
+        var (bigGames, bigTotal) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 2 });
+        Assert.AreEqual(1, bigTotal);
+        Assert.AreEqual(3, bigGames[0].Players.Count);
+
+        var (_, soloTotal) = await _repo.GetReports(new LagReportQueryRequest { MaxPlayers = 1 });
+        Assert.AreEqual(1, soloTotal);
+
+        var (_, bandTotal) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 2, MaxPlayers = 3 });
+        Assert.AreEqual(1, bandTotal);
+    }
+
+    [Test]
     public async Task GetReports_FiltersByMultipleCategoriesAsOr()
     {
         var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
