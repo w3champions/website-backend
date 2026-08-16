@@ -80,6 +80,12 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> GetReports([FromQuery] LagReportQueryRequest req)
     {
+        var validationError = LagReportQueryValidation.FirstError(req);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
         req.PageSize = Math.Clamp(req.PageSize, 1, MaxPageSize);
         req.Page = Math.Max(req.Page, 0);
 

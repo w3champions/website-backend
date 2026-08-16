@@ -553,4 +553,26 @@ public class LagReportRepositoryTests : IntegrationTestBase
         var (_, total) = await _repo.GetReports(new LagReportQueryRequest { ServerNodeId = [1, 3] });
         Assert.AreEqual(2, total);
     }
+
+    [Test]
+    public void QueryValidation_RejectsUnknownValuesAndAcceptsKnownOnes()
+    {
+        // No filters sent — nothing to validate, no error.
+        Assert.IsNull(LagReportQueryValidation.FirstError(new LagReportQueryRequest()));
+
+        // Real values pass. "lan" in lowercase also passes: tag casing is forgiving
+        // on purpose (the enum member is spelled LAN).
+        Assert.IsNull(LagReportQueryValidation.FirstError(new LagReportQueryRequest
+        {
+            IssueCategory = ["Desync", "SpikeLag"],
+            ConnectionIssueTag = ["lan"],
+        }));
+
+        // Made-up values come back as an error that names the offending value,
+        // so the caller sees exactly what to correct.
+        StringAssert.Contains("Nope", LagReportQueryValidation.FirstError(
+            new LagReportQueryRequest { IssueCategory = ["Nope"] }));
+        StringAssert.Contains("wifi", LagReportQueryValidation.FirstError(
+            new LagReportQueryRequest { ConnectionIssueTag = ["wifi"] }));
+    }
 }

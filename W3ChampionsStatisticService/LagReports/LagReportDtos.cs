@@ -274,6 +274,35 @@ public class LagReportQueryRequest
     public int PageSize { get; set; } = 20;
 }
 
+public static class LagReportQueryValidation
+{
+    /// <summary>
+    /// First problem with the request's filter values, or null. Unknown values turn into a
+    /// 400 rather than silently matching nothing (or dropping the condition and matching
+    /// everything) — a stale link or a typo should say so.
+    /// </summary>
+    public static string FirstError(LagReportQueryRequest req)
+    {
+        foreach (var category in req.IssueCategory ?? [])
+        {
+            if (!Enum.TryParse<EIssueCategory>(category, out _))
+            {
+                return $"Unknown issueCategory '{category}'.";
+            }
+        }
+
+        foreach (var tag in req.ConnectionIssueTag ?? [])
+        {
+            if (!Enum.TryParse<ELagReportTag>(tag, ignoreCase: true, out _))
+            {
+                return $"Unknown connection_issue_tag '{tag}'.";
+            }
+        }
+
+        return null;
+    }
+}
+
 // ── Admin list item ───────────────────────────────────────────────────
 
 public class LagReportListItem
