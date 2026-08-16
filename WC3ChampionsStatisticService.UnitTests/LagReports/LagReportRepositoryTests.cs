@@ -249,6 +249,38 @@ public class LagReportRepositoryTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetReports_DateToCoversTheWholeDayItNames()
+    {
+        // A bare date carries no time, so an inclusive upper bound read literally is midnight —
+        // which excludes every report of the very day the admin asked for.
+        await SeedReportCreatedAt(21001, new DateTime(2026, 3, 5, 14, 30, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(21002, new DateTime(2026, 3, 6, 0, 30, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { DateTo = "2026-03-05" });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(21001, items[0].FloGameId);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByDateRange()
+    {
+        await SeedReportCreatedAt(22001, new DateTime(2026, 3, 1, 23, 59, 59, DateTimeKind.Utc));
+        await SeedReportCreatedAt(22002, new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(22003, new DateTime(2026, 3, 3, 23, 59, 59, DateTimeKind.Utc));
+        await SeedReportCreatedAt(22004, new DateTime(2026, 3, 4, 0, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            DateFrom = "2026-03-02",
+            DateTo = "2026-03-03",
+        });
+
+        Assert.AreEqual(2, total);
+        CollectionAssert.AreEquivalent(new[] { 22003, 22002 }, items.ConvertAll(r => r.FloGameId));
+    }
+
+    [Test]
     public async Task GetReports_DateFiltersAcceptFullTimestamps()
     {
         // Clients that need sub-day precision (or a timezone other than UTC) send a full

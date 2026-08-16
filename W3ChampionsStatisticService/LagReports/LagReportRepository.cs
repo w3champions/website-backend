@@ -236,14 +236,18 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Regex("Players.ProxyIpSearch", PrefixPattern(req.ProxyIp)));
         }
 
-        if (!string.IsNullOrEmpty(req.DateFrom) && TryParseFilterDate(req.DateFrom, out var dateFrom))
+        if (!string.IsNullOrEmpty(req.DateFrom) && TryParseFilterDate(req.DateFrom, out var dateFrom, out _))
         {
             filters.Add(builder.Gte(r => r.CreatedAt, dateFrom));
         }
 
-        if (!string.IsNullOrEmpty(req.DateTo) && TryParseFilterDate(req.DateTo, out var dateTo))
+        if (!string.IsNullOrEmpty(req.DateTo) && TryParseFilterDate(req.DateTo, out var dateTo, out var toIsBareDate))
         {
-            filters.Add(builder.Lte(r => r.CreatedAt, dateTo));
+            // A bare date names a whole day, so its upper bound is the start of the next one.
+            // Taken literally it is midnight, which excludes every report of the day asked for.
+            filters.Add(toIsBareDate
+                ? builder.Lt(r => r.CreatedAt, dateTo.AddDays(1))
+                : builder.Lte(r => r.CreatedAt, dateTo));
         }
 
         if (!string.IsNullOrEmpty(req.IssueCategory) && Enum.TryParse<EIssueCategory>(req.IssueCategory, out var category))
@@ -267,18 +271,21 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
     }
 
     /// <summary>
-    /// Parses a date filter to UTC. The result must be a DateTime because CreatedAt is one:
-    /// comparing it against a DateTimeOffset compiles via the implicit conversion, but
-    /// leaves the field expression a Convert node the driver cannot translate, so every
-    /// date-filtered query throws instead of running.
+    /// Parses a date filter to UTC, reporting whether it named a bare day (yyyy-MM-dd, what
+    /// an &lt;input type="date"&gt; sends) or an instant. The result must be a DateTime because
+    /// CreatedAt is one: comparing it against a DateTimeOffset compiles via the implicit
+    /// conversion, but leaves the field expression a Convert node the driver cannot translate,
+    /// so every date-filtered query throws instead of running.
     /// AssumeUniversal fixes a bare date to the same window whatever the server's timezone;
     /// a value carrying its own offset keeps it.
     /// </summary>
-    private static bool TryParseFilterDate(string value, out DateTime parsed)
+    private static bool TryParseFilterDate(string value, out DateTime parsed, out bool isBareDate)
     {
         const DateTimeStyles styles = DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal;
 
-        return DateTime.TryParse(value, CultureInfo.InvariantCulture, styles, out parsed);
+        isBareDate = DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, styles, out parsed);
+
+        return isBareDate || DateTime.TryParse(value, CultureInfo.InvariantCulture, styles, out parsed);
     }
 
     /// <summary>
