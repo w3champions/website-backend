@@ -542,6 +542,48 @@ public class LagReportRepositoryTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task BackfillPlayerCounts_SetsSizeAndIsIdempotent()
+    {
+        // Simulate a document written before PlayerCount existed (field absent, not zero).
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<BsonDocument>("LagReport");
+        await collection.InsertOneAsync(new BsonDocument
+        {
+            { "_id", Guid.NewGuid().ToString() },
+            { "GameId", 38001 },
+            { "FloGameId", 38001 },
+            { "GameName", "Legacy Count Game" },
+            { "ServerNodeId", 1 },
+            { "ServerNodeName", "EU West" },
+            { "HasExplicitReport", false },
+            {
+                "Players",
+                new BsonArray
+                {
+                    new BsonDocument { { "BattleTag", "L1#1" } },
+                    new BsonDocument { { "BattleTag", "L2#2" } },
+                }
+            },
+            { "CreatedAt", DateTime.UtcNow },
+            { "UpdatedAt", DateTime.UtcNow },
+        });
+
+        // Before backfill the missing field matches no bound.
+        var (_, before) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 1 });
+        Assert.AreEqual(0, before);
+
+        Assert.AreEqual(1, await _repo.BackfillPlayerCounts());
+
+        var (after, afterTotal) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 2 });
+        Assert.AreEqual(1, afterTotal);
+        Assert.AreEqual(2, after[0].PlayerCount);
+
+        // Re-running is a no-op (idempotent guard).
+        Assert.AreEqual(0, await _repo.BackfillPlayerCounts());
+    }
+
+    [Test]
     public async Task GetReports_FiltersByMultipleCategoriesAsOr()
     {
         var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);

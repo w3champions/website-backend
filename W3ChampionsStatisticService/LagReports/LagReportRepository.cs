@@ -388,4 +388,23 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         var result = await collection.UpdateManyAsync(filter, pipeline, cancellationToken: ct);
         return result.ModifiedCount;
     }
+
+    /// <summary>
+    /// One-shot backfill of PlayerCount onto documents written before the field existed —
+    /// BackfillSearchFields' pattern: idempotent via the exists guard, one server-side
+    /// pipeline UpdateMany. Returns documents updated.
+    /// </summary>
+    public async Task<long> BackfillPlayerCounts(CancellationToken ct = default)
+    {
+        var collection = CreateCollection<LagReport>();
+
+        var filter = Builders<LagReport>.Filter.Exists(r => r.PlayerCount, false);
+
+        var setStage = new BsonDocument("$set", new BsonDocument("PlayerCount",
+            new BsonDocument("$size", new BsonDocument("$ifNull", new BsonArray { "$Players", new BsonArray() }))));
+
+        var pipeline = new BsonDocumentStagePipelineDefinition<LagReport, LagReport>(new[] { setStage });
+        var result = await collection.UpdateManyAsync(filter, pipeline, cancellationToken: ct);
+        return result.ModifiedCount;
+    }
 }
