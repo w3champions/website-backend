@@ -165,6 +165,10 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
     {
         var collection = CreateCollection<LagReport>();
         var filters = BuildFilters(req);
+        if (req.MinRepeat is >= 2)
+        {
+            filters.Add(await ResolveRepeatFilter(collection, req));
+        }
         var hasFilter = filters.Count > 0;
         var filter = hasFilter ? Builders<LagReport>.Filter.And(filters) : Builders<LagReport>.Filter.Empty;
 
@@ -212,6 +216,10 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
     {
         var collection = CreateCollection<LagReport>();
         var filters = BuildFilters(req);
+        if (req.MinRepeat is >= 2)
+        {
+            filters.Add(await ResolveRepeatFilter(collection, req));
+        }
         var match = filters.Count > 0 ? Builders<LagReport>.Filter.And(filters) : Builders<LagReport>.Filter.Empty;
 
         return req.GroupBy switch
@@ -498,6 +506,58 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         return Enum.IsDefined(typeof(EIssueCategory), i)
             ? ((EIssueCategory)i).ToString()
             : i.ToString(CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// The repeat filter needs a round-trip of its own: qualifying players are found by the
+    /// battleTag aggregation over the same filtered window (BuildFilters never consults
+    /// MinRepeat, so reusing it here cannot recurse), then pinned onto the main query as an
+    /// indexed condition on the lowercased BattleTagSearch shadow field. Zero qualifiers
+    /// yields a match-nothing filter — the honest result is an empty page, not an
+    /// unfiltered one.
+    /// </summary>
+    private static async Task<FilterDefinition<LagReport>> ResolveRepeatFilter(
+        IMongoCollection<LagReport> collection, LagReportQueryRequest req)
+    {
+        var baseFilters = BuildFilters(req);
+        var match = baseFilters.Count > 0 ? Builders<LagReport>.Filter.And(baseFilters) : Builders<LagReport>.Filter.Empty;
+
+        var submittedOnly = !string.Equals(req.RepeatMode, LagReportRepeatModes.Involved, StringComparison.OrdinalIgnoreCase);
+
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.BattleTag", "Players.IsExplicit"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.BattleTag" },
+                { "count", new BsonDocument("$sum", 1) },
+                { "submittedCount", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { "$Players.IsExplicit", 1, 0 })) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$match",
+                new BsonDocument(submittedOnly ? "submittedCount" : "count", new BsonDocument("$gte", req.MinRepeat.Value))))
+            .ToListAsync();
+
+        var qualifying = docs
+            .Where(d => !d["_id"].IsBsonNull)
+            .Select(d => d["_id"].AsString.ToLowerInvariant())
+            .ToList();
+
+        var builder = Builders<LagReport>.Filter;
+        if (qualifying.Count == 0)
+        {
+            return builder.In(r => r.Id, Array.Empty<string>());
+        }
+
+        // submitted: the qualifying player personally submitted THIS report too;
+        // involved: appearing in it is enough. Plain $in on the dotted path is the
+        // multikey form — AnyIn would demand the terminal field itself be an array,
+        // and BattleTagSearch is a scalar inside one.
+        return submittedOnly
+            ? builder.ElemMatch(r => r.Players, Builders<LagReportPlayer>.Filter.And(
+                Builders<LagReportPlayer>.Filter.In(p => p.BattleTagSearch, qualifying),
+                Builders<LagReportPlayer>.Filter.Eq(p => p.IsExplicit, true)))
+            : builder.In("Players.BattleTagSearch", qualifying);
     }
 
     private static List<FilterDefinition<LagReport>> BuildFilters(LagReportQueryRequest req)

@@ -796,6 +796,63 @@ public class LagReportRepositoryTests : IntegrationTestBase
         Assert.AreEqual(2, total);
     }
 
+    /// <summary>Alice submits games A and B herself; in game C she appears without
+    /// submitting (Bob submitted it). The two repeat modes must read that differently.</summary>
+    private async Task SeedRepeatScenario()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(41001, noon, 1, "EU West", CreatePlayer("Alice#1", isExplicit: true));
+        await SeedReportOnNode(41002, noon.AddHours(1), 1, "EU West", CreatePlayer("Alice#1", isExplicit: true));
+        await SeedReportOnNode(41003, noon.AddHours(2), 1, "EU West",
+            CreatePlayer("Alice#1"), CreatePlayer("Bob#2", isExplicit: true));
+    }
+
+    [Test]
+    public async Task GetReports_MinRepeatSubmittedKeepsOnlyReportsTheChronicSubmitted()
+    {
+        await SeedRepeatScenario();
+
+        // Alice has 2 submissions, Bob 1 — only Alice qualifies at ≥2, and in the
+        // default submitted mode game C doesn't count: she appears there, but Bob
+        // submitted it.
+        var (submitted, submittedTotal) = await _repo.GetReports(new LagReportQueryRequest { MinRepeat = 2 });
+        Assert.AreEqual(2, submittedTotal);
+        Assert.IsTrue(submitted.TrueForAll(r => r.Players.Exists(p => p.BattleTag == "Alice#1" && p.IsExplicit)));
+
+        var (_, involvedTotal) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            MinRepeat = 2,
+            RepeatMode = LagReportRepeatModes.Involved,
+        });
+        Assert.AreEqual(3, involvedTotal);
+
+        // Nobody reaches 3 — the honest result is an empty page, not an unfiltered one.
+        var (_, nobodyTotal) = await _repo.GetReports(new LagReportQueryRequest { MinRepeat = 3 });
+        Assert.AreEqual(0, nobodyTotal);
+    }
+
+    [Test]
+    public async Task GetAggregate_HonorsMinRepeat()
+    {
+        await SeedRepeatScenario();
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            MinRepeat = 2,
+        });
+        Assert.AreEqual(1, buckets.Count);
+        Assert.AreEqual(2, buckets[0].Count);
+
+        var involved = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            MinRepeat = 2,
+            RepeatMode = LagReportRepeatModes.Involved,
+        });
+        Assert.AreEqual(3, involved[0].Count);
+    }
+
     [Test]
     public async Task GetAggregate_ByNodeDay_GroupsRenamedNodeOnce()
     {
@@ -864,6 +921,7 @@ public class LagReportRepositoryTests : IntegrationTestBase
         {
             IssueCategory = ["Desync", "SpikeLag"],
             ConnectionIssueTag = ["lan"],
+            RepeatMode = "Submitted",
         }));
 
         // Made-up values come back as an error that names the offending value,
@@ -872,5 +930,7 @@ public class LagReportRepositoryTests : IntegrationTestBase
             new LagReportQueryRequest { IssueCategory = ["Nope"] }));
         StringAssert.Contains("wifi", LagReportQueryValidation.FirstError(
             new LagReportQueryRequest { ConnectionIssueTag = ["wifi"] }));
+        StringAssert.Contains("repeatMode", LagReportQueryValidation.FirstError(
+            new LagReportQueryRequest { RepeatMode = "sometimes" }));
     }
 }

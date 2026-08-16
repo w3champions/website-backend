@@ -276,8 +276,22 @@ public class LagReportQueryRequest
     public int? MinPlayers { get; set; }
     public int? MaxPlayers { get; set; }
 
+    /// <summary>Keep only reports tied to players with at least this many submissions
+    /// (or appearances, see RepeatMode) inside the filtered window. Below 2 = off.</summary>
+    public int? MinRepeat { get; set; }
+
+    /// <summary>"submitted" (default): the qualifying player personally submitted the report.
+    /// "involved": appearing in it is enough.</summary>
+    public string RepeatMode { get; set; }
+
     public int Page { get; set; } = 0;
     public int PageSize { get; set; } = 20;
+}
+
+public static class LagReportRepeatModes
+{
+    public const string Submitted = "submitted";
+    public const string Involved = "involved";
 }
 
 public static class LagReportQueryValidation
@@ -303,6 +317,13 @@ public static class LagReportQueryValidation
             {
                 return $"Unknown connection_issue_tag '{tag}'.";
             }
+        }
+
+        if (req.RepeatMode != null
+            && !string.Equals(req.RepeatMode, LagReportRepeatModes.Submitted, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(req.RepeatMode, LagReportRepeatModes.Involved, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"repeatMode must be '{LagReportRepeatModes.Submitted}' or '{LagReportRepeatModes.Involved}'.";
         }
 
         return null;
