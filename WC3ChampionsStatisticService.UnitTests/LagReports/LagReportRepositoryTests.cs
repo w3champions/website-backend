@@ -491,6 +491,21 @@ public class LagReportRepositoryTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetReports_FiltersByServerNodeId()
+    {
+        // Reports live on nodes 1 and 2; asking for node 2 returns exactly the one
+        // report from that node.
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(29001, noon, nodeId: 1, nodeName: "EU West");
+        await SeedReportOnNode(29002, noon, nodeId: 2, nodeName: "US East");
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { ServerNodeId = [2] });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(2, items[0].ServerNodeId);
+    }
+
+    [Test]
     public async Task GetReports_FiltersByMultipleCategoriesAsOr()
     {
         var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
@@ -522,6 +537,20 @@ public class LagReportRepositoryTests : IntegrationTestBase
         await SeedReportOnNode(40003, noon, 3, "Korea Central");
 
         var (_, total) = await _repo.GetReports(new LagReportQueryRequest { ServerName = ["eu", "us"] });
+        Assert.AreEqual(2, total);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByMultipleServerNodeIds()
+    {
+        // Asking for several node ids returns the reports from any of them —
+        // here nodes 1 and 3, leaving node 2's report out.
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(40101, noon, 1, "EU West");
+        await SeedReportOnNode(40102, noon, 2, "US East");
+        await SeedReportOnNode(40103, noon, 3, "Korea Central");
+
+        var (_, total) = await _repo.GetReports(new LagReportQueryRequest { ServerNodeId = [1, 3] });
         Assert.AreEqual(2, total);
     }
 }

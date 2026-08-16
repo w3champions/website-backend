@@ -232,6 +232,11 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
                 builder.Regex(r => r.ServerNodeNameSearch, PrefixPattern(n)))));
         }
 
+        if (req.ServerNodeId is { Count: > 0 })
+        {
+            filters.Add(builder.In(r => r.ServerNodeId, req.ServerNodeId));
+        }
+
         if (!string.IsNullOrEmpty(req.ProxyName))
         {
             filters.Add(builder.Regex("Players.ProxyNameSearch", PrefixPattern(req.ProxyName)));

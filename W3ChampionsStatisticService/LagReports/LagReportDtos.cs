@@ -254,6 +254,9 @@ public class LagReportQueryRequest
     /// A single value binds the same way, so existing callers are unaffected.</summary>
     public List<string> ServerName { get; set; }
 
+    /// <summary>Exact node ids, OR'd together — repeat the query param to send several.</summary>
+    public List<int> ServerNodeId { get; set; }
+
     public string ProxyName { get; set; }
     public string ProxyIp { get; set; }
     public string DateFrom { get; set; }
