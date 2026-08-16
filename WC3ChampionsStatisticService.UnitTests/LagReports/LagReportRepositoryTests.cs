@@ -157,7 +157,7 @@ public class LagReportRepositoryTests : IntegrationTestBase
         await _repo.UpsertPlayerData(t1.FloGameId, CreatePlayer("P1#1"), t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("P2#2"), t2);
 
-        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ServerName = "EU" });
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ServerName = ["EU"] });
         Assert.AreEqual(1, items.Count);
         Assert.AreEqual("EU West", items[0].ServerNodeName);
     }
@@ -214,7 +214,7 @@ public class LagReportRepositoryTests : IntegrationTestBase
         await _repo.UpsertPlayerData(t1.FloGameId, player1, t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("P2#2"), t2);
 
-        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { IssueCategory = "Reconnecting" });
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { IssueCategory = ["Reconnecting"] });
         Assert.AreEqual(1, items.Count);
     }
 
@@ -464,5 +464,64 @@ public class LagReportRepositoryTests : IntegrationTestBase
 
         Assert.IsFalse(names.Contains("Players.BattleTag_1"), "superseded raw-field index should be dropped");
         Assert.IsTrue(names.Contains("Players.BattleTagSearch_1"), "new shadow-field index should exist");
+    }
+
+    /// <summary>
+    /// Seeds a report on a chosen node with chosen players and a forced CreatedAt —
+    /// the three axes every aggregation dimension groups or counts over.
+    /// </summary>
+    private async Task SeedReportOnNode(int floGameId, DateTime createdAt, int nodeId, string nodeName, params LagReportPlayer[] players)
+    {
+        var template = CreateTemplate(floGameId: floGameId, gameId: floGameId);
+        template.ServerNodeId = nodeId;
+        template.ServerNodeName = nodeName;
+
+        var seedPlayers = players.Length > 0 ? players : [CreatePlayer($"P{floGameId}#1")];
+        foreach (var player in seedPlayers)
+        {
+            await _repo.UpsertPlayerData(template.FloGameId, player, template);
+        }
+
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<LagReport>("LagReport");
+        await collection.UpdateOneAsync(
+            Builders<LagReport>.Filter.Eq(r => r.FloGameId, floGameId),
+            Builders<LagReport>.Update.Set(r => r.CreatedAt, createdAt));
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByMultipleCategoriesAsOr()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        var desync = CreatePlayer("P1#1");
+        desync.IssueCategories = [EIssueCategory.Desync];
+        var reconnecting = CreatePlayer("P2#2");
+        reconnecting.IssueCategories = [EIssueCategory.Reconnecting];
+        var spike = CreatePlayer("P3#3");
+        spike.IssueCategories = [EIssueCategory.SpikeLag];
+
+        await SeedReportOnNode(39001, noon, 1, "EU West", desync);
+        await SeedReportOnNode(39002, noon, 1, "EU West", reconnecting);
+        await SeedReportOnNode(39003, noon, 1, "EU West", spike);
+
+        // OR semantics: any player carrying any selected category qualifies the report.
+        var (_, total) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            IssueCategory = ["Desync", "Reconnecting"],
+        });
+        Assert.AreEqual(2, total);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByMultipleServerNamesAsOr()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(40001, noon, 1, "EU West");
+        await SeedReportOnNode(40002, noon, 2, "US East");
+        await SeedReportOnNode(40003, noon, 3, "Korea Central");
+
+        var (_, total) = await _repo.GetReports(new LagReportQueryRequest { ServerName = ["eu", "us"] });
+        Assert.AreEqual(2, total);
     }
 }

@@ -249,14 +249,23 @@ public class LagReportQueryRequest
 {
     public string BattleTag { get; set; }
     public string GameSearch { get; set; }
-    public string ServerName { get; set; }
+
+    /// <summary>Server-name prefixes, OR'd together — repeat the query param to send several.
+    /// A single value binds the same way, so existing callers are unaffected.</summary>
+    public List<string> ServerName { get; set; }
+
     public string ProxyName { get; set; }
     public string ProxyIp { get; set; }
     public string DateFrom { get; set; }
     public string DateTo { get; set; }
-    public string IssueCategory { get; set; }
+
+    /// <summary>Issue categories, OR'd together: a report matches when any player carries any
+    /// of them — players self-report one incident inconsistently, and OR sees it whole.</summary>
+    public List<string> IssueCategory { get; set; }
+
     [Microsoft.AspNetCore.Mvc.FromQuery(Name = "connection_issue_tag")]
-    public string ConnectionIssueTag { get; set; }
+    public List<string> ConnectionIssueTag { get; set; }
+
     public bool? ExplicitOnly { get; set; }
     public int Page { get; set; } = 0;
     public int PageSize { get; set; } = 20;

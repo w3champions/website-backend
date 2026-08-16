@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -221,9 +222,14 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Or(gameFilters));
         }
 
-        if (!string.IsNullOrEmpty(req.ServerName))
+        // A report matches when its server name starts with any of the given values.
+        // Each value stays a starts-with match, which MongoDB can answer from the
+        // index on ServerNodeNameSearch instead of checking every report.
+        var serverNames = (req.ServerName ?? []).Where(n => !string.IsNullOrEmpty(n)).ToList();
+        if (serverNames.Count > 0)
         {
-            filters.Add(builder.Regex(r => r.ServerNodeNameSearch, PrefixPattern(req.ServerName)));
+            filters.Add(builder.Or(serverNames.Select(n =>
+                builder.Regex(r => r.ServerNodeNameSearch, PrefixPattern(n)))));
         }
 
         if (!string.IsNullOrEmpty(req.ProxyName))
@@ -250,16 +256,30 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
                 : builder.Lte(r => r.CreatedAt, dateTo));
         }
 
-        if (!string.IsNullOrEmpty(req.IssueCategory) && Enum.TryParse<EIssueCategory>(req.IssueCategory, out var category))
+        // A report matches when any of its players reports any of the given categories.
+        // Values that don't name a known category are skipped, as before. The string
+        // field path makes this a plain "value in list" query that the index on
+        // Players.IssueCategories answers directly.
+        var categories = (req.IssueCategory ?? [])
+            .Select(c => Enum.TryParse<EIssueCategory>(c, out var parsed) ? parsed : (EIssueCategory?)null)
+            .Where(c => c.HasValue)
+            .Select(c => c.Value)
+            .ToList();
+        if (categories.Count > 0)
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.IssueCategories.Contains(category)));
+            filters.Add(builder.AnyIn("Players.IssueCategories", categories));
         }
 
         // ignoreCase: true — ELagReportTag has mixed-case members (LAN, LastMile); URL query params
         // shouldn't need exact casing (matches the wire converter's case-insensitive read).
-        if (!string.IsNullOrEmpty(req.ConnectionIssueTag) && Enum.TryParse<ELagReportTag>(req.ConnectionIssueTag, ignoreCase: true, out var tag))
+        var tags = (req.ConnectionIssueTag ?? [])
+            .Select(t => Enum.TryParse<ELagReportTag>(t, ignoreCase: true, out var parsed) ? parsed : (ELagReportTag?)null)
+            .Where(t => t.HasValue)
+            .Select(t => t.Value)
+            .ToList();
+        if (tags.Count > 0)
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.ConnectionIssueTags.Contains(tag)));
+            filters.Add(builder.AnyIn("Players.ConnectionIssueTags", tags));
         }
 
         if (req.ExplicitOnly == true)
