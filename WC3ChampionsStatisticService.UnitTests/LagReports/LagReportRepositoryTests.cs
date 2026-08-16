@@ -640,6 +640,36 @@ public class LagReportRepositoryTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetAggregate_ByBattleTag_CountsDistinctNodesAndHonorsLimit()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        // Alice appears twice without submitting; Bob appears once but pressed
+        // submit — submissions outrank appearances.
+        await SeedReportOnNode(36001, noon, 1, "EU West", CreatePlayer("Alice#1"));
+        await SeedReportOnNode(36002, noon, 2, "US East", CreatePlayer("Alice#1"), CreatePlayer("Bob#2", isExplicit: true));
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.BattleTag });
+
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual("Bob#2", buckets[0].BattleTag);
+        Assert.AreEqual(1, buckets[0].Count);
+        Assert.AreEqual(1, buckets[0].SubmittedCount);
+        Assert.AreEqual(1, buckets[0].DistinctNodes);
+        Assert.AreEqual("Alice#1", buckets[1].BattleTag);
+        Assert.AreEqual(2, buckets[1].Count);
+        Assert.AreEqual(0, buckets[1].SubmittedCount);
+        Assert.AreEqual(2, buckets[1].DistinctNodes);
+
+        var limited = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.BattleTag,
+            Limit = 1,
+        });
+        Assert.AreEqual(1, limited.Count);
+        Assert.AreEqual("Bob#2", limited[0].BattleTag);
+    }
+
+    [Test]
     public async Task UpsertPlayerData_MaintainsPlayerCount()
     {
         // Two players added one at a time via UpsertPlayerData; the stored PlayerCount
