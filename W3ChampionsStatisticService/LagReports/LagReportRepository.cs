@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,6 +51,9 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
 
             // Explicit filter — most reports are auto-submitted, admins typically filter to explicit only
             new(Builders<LagReport>.IndexKeys.Ascending(r => r.HasExplicitReport)),
+
+            // Player-count filter (materialized Players.Count)
+            new(Builders<LagReport>.IndexKeys.Ascending(r => r.PlayerCount)),
 
             // Default list sort + date range filter
             new(Builders<LagReport>.IndexKeys.Descending(r => r.CreatedAt)),
@@ -102,6 +107,9 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         // $setOnInsert the template fields only when creating a new document.
         var update = Builders<LagReport>.Update
             .Push(r => r.Players, playerData)
+            // Materialized Players.Count, atomic with the push — Mongo cannot filter on
+            // an array's length, so the min/maxPlayers filters read this field instead.
+            .Inc(r => r.PlayerCount, 1)
             .Set(r => r.UpdatedAt, DateTime.UtcNow)
             .SetOnInsert(r => r.Id, template.Id)
             .SetOnInsert(r => r.GameId, template.GameId)
@@ -157,6 +165,10 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
     {
         var collection = CreateCollection<LagReport>();
         var filters = BuildFilters(req);
+        if (req.MinRepeat is >= 2)
+        {
+            filters.Add(await ResolveRepeatFilter(collection, req));
+        }
         var hasFilter = filters.Count > 0;
         var filter = hasFilter ? Builders<LagReport>.Filter.And(filters) : Builders<LagReport>.Filter.Empty;
 
@@ -193,6 +205,361 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         return (itemsTask.Result, totalTask.Result);
     }
 
+    /// <summary>
+    /// Counts grouped by one dimension (see LagReportAggregateDimensions), honoring
+    /// the same filters as GetReports. Everything runs inside Mongo as a single
+    /// aggregation per dimension (node-day runs two, concurrently) — no per-bucket
+    /// queries. The corpus is TTL-bounded to 90 days, so even the unwind-heavy
+    /// dimensions stay small.
+    /// </summary>
+    public async Task<List<LagReportAggregateBucket>> GetAggregate(LagReportAggregateRequest req)
+    {
+        var collection = CreateCollection<LagReport>();
+        var filters = BuildFilters(req);
+        if (req.MinRepeat is >= 2)
+        {
+            filters.Add(await ResolveRepeatFilter(collection, req));
+        }
+        var match = filters.Count > 0 ? Builders<LagReport>.Filter.And(filters) : Builders<LagReport>.Filter.Empty;
+
+        return req.GroupBy switch
+        {
+            LagReportAggregateDimensions.Day => await AggregateByDay(collection, match),
+            LagReportAggregateDimensions.NodeDay => await AggregateByNodeDay(collection, match),
+            LagReportAggregateDimensions.Category => await AggregateByCategory(collection, match),
+            LagReportAggregateDimensions.Server => await AggregateByServer(collection, match),
+            LagReportAggregateDimensions.Proxy => await AggregateByProxy(collection, match),
+            LagReportAggregateDimensions.BattleTag => await AggregateByBattleTag(collection, match, req.Limit),
+            _ => throw new ArgumentException($"Unsupported groupBy '{req.GroupBy}'", nameof(req)),
+        };
+    }
+
+    // How many category chips a node-day bucket carries; mirrors what the grouped
+    // view's headers display.
+    private const int NodeDayTopCategories = 4;
+
+    /// <summary>$dateToString runs in UTC when no timezone is given — the same reading
+    /// of "day" the date filters use for bare dates.</summary>
+    private static BsonDocument DayOfCreatedAt() =>
+        new("$dateToString", new BsonDocument { { "format", "%Y-%m-%d" }, { "date", "$CreatedAt" } });
+
+    private static BsonDocument Stage(string name, BsonValue body) => new(name, body);
+
+    /// <summary>
+    /// Thin the documents down to the fields a pipeline actually groups on, immediately
+    /// after the $match. Storage still reads whole documents — a projection cannot change
+    /// that — but the unwind/group stages then carry ~1KB per report instead of the full
+    /// ~77KB diagnostics payload.
+    /// </summary>
+    private static BsonDocument ThinProject(params string[] fields)
+    {
+        var body = new BsonDocument();
+        foreach (var field in fields)
+        {
+            body[field] = 1;
+        }
+        return new BsonDocument("$project", body);
+    }
+
+    /// <summary>Legacy documents can miss ServerNodeId/ServerNodeName — read them null-safely
+    /// so one old document cannot 500 the whole aggregation.</summary>
+    private static int IntOrZero(BsonValue value) => value == null || value.IsBsonNull ? 0 : value.ToInt32();
+
+    private static string StringOrEmpty(BsonValue value) => value == null || value.IsBsonNull ? "" : value.AsString;
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByDay(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("CreatedAt"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", DayOfCreatedAt() },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument("_id", 1)))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            Day = d["_id"].AsString,
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByNodeDay(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        // Core buckets: count, submitted count, and distinct players per node × day.
+        // "$Players.BattleTag" expands to the array of tags per report; $push makes an
+        // array of those arrays, and the $reduce/$setUnion collapses it to a set.
+        // Grouped by (day, nodeId) only — a node rename mid-window must not split the
+        // bucket, and the categories join below is keyed the same way. The display name
+        // rides along as $first.
+        var coreTask = collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("CreatedAt", "ServerNodeId", "ServerNodeName", "HasExplicitReport", "Players.BattleTag"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                {
+                    "_id",
+                    new BsonDocument
+                    {
+                        { "day", DayOfCreatedAt() },
+                        { "nodeId", "$ServerNodeId" },
+                    }
+                },
+                { "nodeName", new BsonDocument("$first", "$ServerNodeName") },
+                { "count", new BsonDocument("$sum", 1) },
+                { "explicitCount", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { "$HasExplicitReport", 1, 0 })) },
+                { "playerSets", new BsonDocument("$push", "$Players.BattleTag") },
+            }))
+            .AppendStage<BsonDocument>(Stage("$project", new BsonDocument
+            {
+                { "nodeName", 1 },
+                { "count", 1 },
+                { "explicitCount", 1 },
+                {
+                    "distinctPlayers",
+                    new BsonDocument("$size", new BsonDocument("$reduce", new BsonDocument
+                    {
+                        { "input", "$playerSets" },
+                        { "initialValue", new BsonArray() },
+                        { "in", new BsonDocument("$setUnion", new BsonArray { "$$value", "$$this" }) },
+                    }))
+                },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "_id.day", 1 }, { "count", -1 }, { "_id.nodeId", 1 } }))
+            .ToListAsync();
+
+        // Category occurrence counts per node × day, stitched onto the core buckets
+        // afterwards — a per-group top-N inside one pipeline needs operators newer
+        // than the deployment guarantees, and this second pass is just as cheap.
+        var categoriesTask = collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("CreatedAt", "ServerNodeId", "Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                {
+                    "_id",
+                    new BsonDocument
+                    {
+                        { "day", DayOfCreatedAt() },
+                        { "nodeId", "$ServerNodeId" },
+                        { "category", "$Players.IssueCategories" },
+                    }
+                },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .ToListAsync();
+
+        await Task.WhenAll(coreTask, categoriesTask);
+
+        var topCategories = categoriesTask.Result
+            .GroupBy(d => (Day: d["_id"]["day"].AsString, NodeId: IntOrZero(d["_id"]["nodeId"])))
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(d => d["count"].ToInt64())
+                    .ThenBy(d => d["_id"]["category"].ToInt32())
+                    .Take(NodeDayTopCategories)
+                    .Select(d => new LagReportCategoryCount
+                    {
+                        Category = CategoryName(d["_id"]["category"]),
+                        Count = d["count"].ToInt64(),
+                    })
+                    .ToList());
+
+        return coreTask.Result.Select(d =>
+        {
+            var day = d["_id"]["day"].AsString;
+            var nodeId = IntOrZero(d["_id"]["nodeId"]);
+            return new LagReportAggregateBucket
+            {
+                Day = day,
+                ServerNodeId = nodeId,
+                ServerNodeName = StringOrEmpty(d["nodeName"]),
+                Count = d["count"].ToInt64(),
+                ExplicitCount = d["explicitCount"].ToInt64(),
+                DistinctPlayers = d["distinctPlayers"].ToInt32(),
+                TopCategories = topCategories.GetValueOrDefault((day, nodeId)) ?? [],
+            };
+        }).ToList();
+    }
+
+    /// <summary>Counts category occurrences per player per report — the same semantics
+    /// as the admin UI's facet counts, where two players reporting Desync in one game
+    /// count twice.</summary>
+    private static async Task<List<LagReportAggregateBucket>> AggregateByCategory(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players.IssueCategories"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.IssueCategories" },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "count", -1 }, { "_id", 1 } }))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            Category = CategoryName(d["_id"]),
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByServer(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("ServerNodeId", "ServerNodeName"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", new BsonDocument { { "nodeId", "$ServerNodeId" }, { "nodeName", "$ServerNodeName" } } },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "count", -1 }, { "_id.nodeId", 1 } }))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            ServerNodeId = IntOrZero(d["_id"]["nodeId"]),
+            ServerNodeName = StringOrEmpty(d["_id"]["nodeName"]),
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByProxy(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.ProxyName"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$match", new BsonDocument("Players.ProxyName", new BsonDocument("$ne", BsonNull.Value))))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.ProxyName" },
+                { "count", new BsonDocument("$sum", 1) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "count", -1 }, { "_id", 1 } }))
+            .ToListAsync();
+
+        return docs.Select(d => new LagReportAggregateBucket
+        {
+            ProxyName = d["_id"].AsString,
+            Count = d["count"].ToInt64(),
+        }).ToList();
+    }
+
+    private static async Task<List<LagReportAggregateBucket>> AggregateByBattleTag(
+        IMongoCollection<LagReport> collection, FilterDefinition<LagReport> match, int limit)
+    {
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.BattleTag", "Players.IsExplicit", "ServerNodeId"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.BattleTag" },
+                { "count", new BsonDocument("$sum", 1) },
+                { "submittedCount", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { "$Players.IsExplicit", 1, 0 })) },
+                { "nodes", new BsonDocument("$addToSet", "$ServerNodeId") },
+            }))
+            .AppendStage<BsonDocument>(Stage("$project", new BsonDocument
+            {
+                { "count", 1 },
+                { "submittedCount", 1 },
+                { "distinctNodes", new BsonDocument("$size", "$nodes") },
+            }))
+            // Submissions first: appearance count tracks activity, not distress, so
+            // the ranking (and the Limit cap) must protect actual submitters.
+            .AppendStage<BsonDocument>(Stage("$sort", new BsonDocument { { "submittedCount", -1 }, { "count", -1 }, { "_id", 1 } }))
+            .AppendStage<BsonDocument>(Stage("$limit", limit))
+            .ToListAsync();
+
+        return docs
+            .Where(d => !d["_id"].IsBsonNull)
+            .Select(d => new LagReportAggregateBucket
+            {
+                BattleTag = d["_id"].AsString,
+                Count = d["count"].ToInt64(),
+                SubmittedCount = d["submittedCount"].ToInt64(),
+                DistinctNodes = d["distinctNodes"].ToInt32(),
+            }).ToList();
+    }
+
+    /// <summary>Enums live in BSON as ints (no BsonRepresentation on the model); map
+    /// them to names here so the wire format matches the list endpoint's strings.</summary>
+    private static string CategoryName(BsonValue value)
+    {
+        if (value.IsString) return value.AsString;
+        var i = value.ToInt32();
+        return Enum.IsDefined(typeof(EIssueCategory), i)
+            ? ((EIssueCategory)i).ToString()
+            : i.ToString(CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// The repeat filter needs a round-trip of its own: qualifying players are found by the
+    /// battleTag aggregation over the same filtered window (BuildFilters never consults
+    /// MinRepeat, so reusing it here cannot recurse), then pinned onto the main query as an
+    /// indexed condition on the lowercased BattleTagSearch shadow field. Zero qualifiers
+    /// yields a match-nothing filter — the honest result is an empty page, not an
+    /// unfiltered one.
+    /// </summary>
+    private static async Task<FilterDefinition<LagReport>> ResolveRepeatFilter(
+        IMongoCollection<LagReport> collection, LagReportQueryRequest req)
+    {
+        var baseFilters = BuildFilters(req);
+        var match = baseFilters.Count > 0 ? Builders<LagReport>.Filter.And(baseFilters) : Builders<LagReport>.Filter.Empty;
+
+        var submittedOnly = !string.Equals(req.RepeatMode, LagReportRepeatModes.Involved, StringComparison.OrdinalIgnoreCase);
+
+        var docs = await collection.Aggregate()
+            .Match(match)
+            .AppendStage<BsonDocument>(ThinProject("Players.BattleTag", "Players.IsExplicit"))
+            .AppendStage<BsonDocument>(Stage("$unwind", "$Players"))
+            .AppendStage<BsonDocument>(Stage("$group", new BsonDocument
+            {
+                { "_id", "$Players.BattleTag" },
+                { "count", new BsonDocument("$sum", 1) },
+                { "submittedCount", new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { "$Players.IsExplicit", 1, 0 })) },
+            }))
+            .AppendStage<BsonDocument>(Stage("$match",
+                new BsonDocument(submittedOnly ? "submittedCount" : "count", new BsonDocument("$gte", req.MinRepeat.Value))))
+            .ToListAsync();
+
+        var qualifying = docs
+            .Where(d => !d["_id"].IsBsonNull)
+            .Select(d => d["_id"].AsString.ToLowerInvariant())
+            .ToList();
+
+        var builder = Builders<LagReport>.Filter;
+        if (qualifying.Count == 0)
+        {
+            return builder.In(r => r.Id, Array.Empty<string>());
+        }
+
+        // submitted: the qualifying player personally submitted THIS report too;
+        // involved: appearing in it is enough. Plain $in on the dotted path is the
+        // multikey form — AnyIn would demand the terminal field itself be an array,
+        // and BattleTagSearch is a scalar inside one.
+        return submittedOnly
+            ? builder.ElemMatch(r => r.Players, Builders<LagReportPlayer>.Filter.And(
+                Builders<LagReportPlayer>.Filter.In(p => p.BattleTagSearch, qualifying),
+                Builders<LagReportPlayer>.Filter.Eq(p => p.IsExplicit, true)))
+            : builder.In("Players.BattleTagSearch", qualifying);
+    }
+
     private static List<FilterDefinition<LagReport>> BuildFilters(LagReportQueryRequest req)
     {
         var builder = Builders<LagReport>.Filter;
@@ -220,9 +587,19 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Or(gameFilters));
         }
 
-        if (!string.IsNullOrEmpty(req.ServerName))
+        // A report matches when its server name starts with any of the given values.
+        // Each value stays a starts-with match, which MongoDB can answer from the
+        // index on ServerNodeNameSearch instead of checking every report.
+        var serverNames = (req.ServerName ?? []).Where(n => !string.IsNullOrEmpty(n)).ToList();
+        if (serverNames.Count > 0)
         {
-            filters.Add(builder.Regex(r => r.ServerNodeNameSearch, PrefixPattern(req.ServerName)));
+            filters.Add(builder.Or(serverNames.Select(n =>
+                builder.Regex(r => r.ServerNodeNameSearch, PrefixPattern(n)))));
+        }
+
+        if (req.ServerNodeId is { Count: > 0 })
+        {
+            filters.Add(builder.In(r => r.ServerNodeId, req.ServerNodeId));
         }
 
         if (!string.IsNullOrEmpty(req.ProxyName))
@@ -235,26 +612,44 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Regex("Players.ProxyIpSearch", PrefixPattern(req.ProxyIp)));
         }
 
-        if (!string.IsNullOrEmpty(req.DateFrom) && DateTimeOffset.TryParse(req.DateFrom, out var dateFrom))
+        if (!string.IsNullOrEmpty(req.DateFrom) && TryParseFilterDate(req.DateFrom, out var dateFrom, out _))
         {
             filters.Add(builder.Gte(r => r.CreatedAt, dateFrom));
         }
 
-        if (!string.IsNullOrEmpty(req.DateTo) && DateTimeOffset.TryParse(req.DateTo, out var dateTo))
+        if (!string.IsNullOrEmpty(req.DateTo) && TryParseFilterDate(req.DateTo, out var dateTo, out var toIsBareDate))
         {
-            filters.Add(builder.Lte(r => r.CreatedAt, dateTo));
+            // A bare date names a whole day, so its upper bound is the start of the next one.
+            // Taken literally it is midnight, which excludes every report of the day asked for.
+            filters.Add(toIsBareDate
+                ? builder.Lt(r => r.CreatedAt, dateTo.AddDays(1))
+                : builder.Lte(r => r.CreatedAt, dateTo));
         }
 
-        if (!string.IsNullOrEmpty(req.IssueCategory) && Enum.TryParse<EIssueCategory>(req.IssueCategory, out var category))
+        // A report matches when any of its players reports any of the given categories.
+        // Values that don't name a known category are skipped, as before. The string
+        // field path makes this a plain "value in list" query that the index on
+        // Players.IssueCategories answers directly.
+        var categories = (req.IssueCategory ?? [])
+            .Select(c => Enum.TryParse<EIssueCategory>(c, out var parsed) ? parsed : (EIssueCategory?)null)
+            .Where(c => c.HasValue)
+            .Select(c => c.Value)
+            .ToList();
+        if (categories.Count > 0)
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.IssueCategories.Contains(category)));
+            filters.Add(builder.AnyIn("Players.IssueCategories", categories));
         }
 
         // ignoreCase: true — ELagReportTag has mixed-case members (LAN, LastMile); URL query params
         // shouldn't need exact casing (matches the wire converter's case-insensitive read).
-        if (!string.IsNullOrEmpty(req.ConnectionIssueTag) && Enum.TryParse<ELagReportTag>(req.ConnectionIssueTag, ignoreCase: true, out var tag))
+        var tags = (req.ConnectionIssueTag ?? [])
+            .Select(t => Enum.TryParse<ELagReportTag>(t, ignoreCase: true, out var parsed) ? parsed : (ELagReportTag?)null)
+            .Where(t => t.HasValue)
+            .Select(t => t.Value)
+            .ToList();
+        if (tags.Count > 0)
         {
-            filters.Add(builder.ElemMatch(r => r.Players, p => p.ConnectionIssueTags.Contains(tag)));
+            filters.Add(builder.AnyIn("Players.ConnectionIssueTags", tags));
         }
 
         if (req.ExplicitOnly == true)
@@ -262,7 +657,35 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             filters.Add(builder.Eq(r => r.HasExplicitReport, true));
         }
 
+        if (req.MinPlayers is > 0)
+        {
+            filters.Add(builder.Gte(r => r.PlayerCount, req.MinPlayers.Value));
+        }
+
+        if (req.MaxPlayers is > 0)
+        {
+            filters.Add(builder.Lte(r => r.PlayerCount, req.MaxPlayers.Value));
+        }
+
         return filters;
+    }
+
+    /// <summary>
+    /// Parses a date filter to UTC, reporting whether it named a bare day (yyyy-MM-dd, what
+    /// an &lt;input type="date"&gt; sends) or an instant. The result must be a DateTime because
+    /// CreatedAt is one: comparing it against a DateTimeOffset compiles via the implicit
+    /// conversion, but leaves the field expression a Convert node the driver cannot translate,
+    /// so every date-filtered query throws instead of running.
+    /// AssumeUniversal fixes a bare date to the same window whatever the server's timezone;
+    /// a value carrying its own offset keeps it.
+    /// </summary>
+    private static bool TryParseFilterDate(string value, out DateTime parsed, out bool isBareDate)
+    {
+        const DateTimeStyles styles = DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal;
+
+        isBareDate = DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, styles, out parsed);
+
+        return isBareDate || DateTime.TryParse(value, CultureInfo.InvariantCulture, styles, out parsed);
     }
 
     /// <summary>
@@ -319,6 +742,25 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
                 })
             },
         });
+
+        var pipeline = new BsonDocumentStagePipelineDefinition<LagReport, LagReport>(new[] { setStage });
+        var result = await collection.UpdateManyAsync(filter, pipeline, cancellationToken: ct);
+        return result.ModifiedCount;
+    }
+
+    /// <summary>
+    /// One-shot backfill of PlayerCount onto documents written before the field existed —
+    /// BackfillSearchFields' pattern: idempotent via the exists guard, one server-side
+    /// pipeline UpdateMany. Returns documents updated.
+    /// </summary>
+    public async Task<long> BackfillPlayerCounts(CancellationToken ct = default)
+    {
+        var collection = CreateCollection<LagReport>();
+
+        var filter = Builders<LagReport>.Filter.Exists(r => r.PlayerCount, false);
+
+        var setStage = new BsonDocument("$set", new BsonDocument("PlayerCount",
+            new BsonDocument("$size", new BsonDocument("$ifNull", new BsonArray { "$Players", new BsonArray() }))));
 
         var pipeline = new BsonDocumentStagePipelineDefinition<LagReport, LagReport>(new[] { setStage });
         var result = await collection.UpdateManyAsync(filter, pipeline, cancellationToken: ct);

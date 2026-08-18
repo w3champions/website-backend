@@ -35,6 +35,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     private const int MaxAnnotationTextLength = 1000;
 
     private const int MaxPageSize = 100;
+    private const int MaxBattleTagBuckets = 500;
 
     /// <summary>
     /// Submit a lag report — called by the launcher for each player (explicit or auto).
@@ -80,6 +81,12 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public async Task<IActionResult> GetReports([FromQuery] LagReportQueryRequest req)
     {
+        var validationError = LagReportQueryValidation.FirstError(req);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
         req.PageSize = Math.Clamp(req.PageSize, 1, MaxPageSize);
         req.Page = Math.Max(req.Page, 0);
 
@@ -110,6 +117,35 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         }).ToList();
 
         return Ok(new { Items = listItems, Total = total });
+    }
+
+    /// <summary>Admin: counts grouped by one dimension, honoring the list filters.</summary>
+    [HttpGet("aggregate")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
+    public async Task<IActionResult> GetAggregate([FromQuery] LagReportAggregateRequest req)
+    {
+        var validationError = LagReportQueryValidation.FirstError(req);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
+        var groupBy = LagReportAggregateDimensions.All.FirstOrDefault(d =>
+            string.Equals(d, req.GroupBy, StringComparison.OrdinalIgnoreCase));
+        if (groupBy == null)
+        {
+            return BadRequest($"groupBy must be one of: {string.Join(", ", LagReportAggregateDimensions.All)}");
+        }
+        req.GroupBy = groupBy;
+        // Ceiling for the one dimension that uses Limit (battleTag — the others return
+        // all their buckets and ignore it). Raise it if full-cap responses become routine:
+        // exactly 500 buckets back means the ranking truncated, and real submitters may be
+        // missing from badges and leaderboards (missing, never wrong — returned buckets
+        // stay exact). Lower it only if payload or latency ever becomes a concern.
+        req.Limit = Math.Clamp(req.Limit, 1, MaxBattleTagBuckets);
+
+        var buckets = await _lagReportRepository.GetAggregate(req);
+        return Ok(new { Buckets = buckets });
     }
 
     /// <summary>Admin: get a single lag report with full diagnostics data.</summary>

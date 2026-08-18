@@ -249,17 +249,161 @@ public class LagReportQueryRequest
 {
     public string BattleTag { get; set; }
     public string GameSearch { get; set; }
-    public string ServerName { get; set; }
+
+    /// <summary>Server-name prefixes, OR'd together — repeat the query param to send several.
+    /// A single value binds the same way, so existing callers are unaffected.</summary>
+    public List<string> ServerName { get; set; }
+
+    /// <summary>Exact node ids, OR'd together — repeat the query param to send several.</summary>
+    public List<int> ServerNodeId { get; set; }
+
     public string ProxyName { get; set; }
     public string ProxyIp { get; set; }
     public string DateFrom { get; set; }
     public string DateTo { get; set; }
-    public string IssueCategory { get; set; }
+
+    /// <summary>Issue categories, OR'd together: a report matches when any player carries any
+    /// of them — players self-report one incident inconsistently, and OR sees it whole.</summary>
+    public List<string> IssueCategory { get; set; }
+
     [Microsoft.AspNetCore.Mvc.FromQuery(Name = "connection_issue_tag")]
-    public string ConnectionIssueTag { get; set; }
+    public List<string> ConnectionIssueTag { get; set; }
+
     public bool? ExplicitOnly { get; set; }
+
+    /// <summary>Bounds on the game's player count (the materialized PlayerCount field).
+    /// Null or non-positive means unbounded on that end.</summary>
+    public int? MinPlayers { get; set; }
+    public int? MaxPlayers { get; set; }
+
+    /// <summary>Keep only reports tied to players with at least this many submissions
+    /// (or appearances, see RepeatMode) inside the filtered window. Below 2 = off.</summary>
+    public int? MinRepeat { get; set; }
+
+    /// <summary>"submitted" (default): the qualifying player personally submitted the report.
+    /// "involved": appearing in it is enough.</summary>
+    public string RepeatMode { get; set; }
+
     public int Page { get; set; } = 0;
     public int PageSize { get; set; } = 20;
+}
+
+public static class LagReportRepeatModes
+{
+    public const string Submitted = "submitted";
+    public const string Involved = "involved";
+}
+
+public static class LagReportQueryValidation
+{
+    /// <summary>
+    /// First problem with the request's filter values, or null. Unknown values turn into a
+    /// 400 rather than silently matching nothing (or dropping the condition and matching
+    /// everything) — a stale link or a typo should say so.
+    /// </summary>
+    public static string FirstError(LagReportQueryRequest req)
+    {
+        foreach (var category in req.IssueCategory ?? [])
+        {
+            if (!Enum.TryParse<EIssueCategory>(category, out _))
+            {
+                return $"Unknown issueCategory '{category}'.";
+            }
+        }
+
+        foreach (var tag in req.ConnectionIssueTag ?? [])
+        {
+            if (!Enum.TryParse<ELagReportTag>(tag, ignoreCase: true, out _))
+            {
+                return $"Unknown connection_issue_tag '{tag}'.";
+            }
+        }
+
+        if (req.RepeatMode != null
+            && !string.Equals(req.RepeatMode, LagReportRepeatModes.Submitted, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(req.RepeatMode, LagReportRepeatModes.Involved, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"repeatMode must be '{LagReportRepeatModes.Submitted}' or '{LagReportRepeatModes.Involved}'.";
+        }
+
+        return null;
+    }
+}
+
+// ── Admin aggregate ───────────────────────────────────────────────────
+
+public static class LagReportAggregateDimensions
+{
+    public const string Day = "day";
+    public const string NodeDay = "node-day";
+    public const string Category = "category";
+    public const string Server = "server";
+    public const string Proxy = "proxy";
+    public const string BattleTag = "battleTag";
+    public static readonly string[] All = [Day, NodeDay, Category, Server, Proxy, BattleTag];
+}
+
+/// <summary>
+/// Counts over the report corpus grouped by one dimension. Inherits the list
+/// endpoint's filter surface, so every filter narrows the aggregation exactly
+/// as it narrows the list; Page/PageSize are ignored.
+/// </summary>
+public class LagReportAggregateRequest : LagReportQueryRequest
+{
+    public string GroupBy { get; set; }
+
+    /// <summary>Bucket cap for the unbounded-cardinality dimension (battleTag).</summary>
+    public int Limit { get; set; } = 50;
+}
+
+/// <summary>
+/// One aggregation bucket. Which key/extra fields are set depends on the
+/// dimension; unset ones are omitted from the JSON.
+/// </summary>
+public class LagReportAggregateBucket
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Day { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ServerNodeId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string ServerNodeName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Category { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string ProxyName { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string BattleTag { get; set; }
+
+    public long Count { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? ExplicitCount { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DistinctPlayers { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<LagReportCategoryCount> TopCategories { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? DistinctNodes { get; set; }
+
+    /// <summary>battleTag dimension: reports this player submitted themselves
+    /// (their own IsExplicit entry), as opposed to Count = reports they appear in.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? SubmittedCount { get; set; }
+}
+
+public class LagReportCategoryCount
+{
+    public string Category { get; set; }
+    public long Count { get; set; }
 }
 
 // ── Admin list item ───────────────────────────────────────────────────

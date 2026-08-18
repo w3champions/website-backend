@@ -157,7 +157,7 @@ public class LagReportRepositoryTests : IntegrationTestBase
         await _repo.UpsertPlayerData(t1.FloGameId, CreatePlayer("P1#1"), t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("P2#2"), t2);
 
-        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ServerName = "EU" });
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { ServerName = ["EU"] });
         Assert.AreEqual(1, items.Count);
         Assert.AreEqual("EU West", items[0].ServerNodeName);
     }
@@ -214,7 +214,116 @@ public class LagReportRepositoryTests : IntegrationTestBase
         await _repo.UpsertPlayerData(t1.FloGameId, player1, t1);
         await _repo.UpsertPlayerData(t2.FloGameId, CreatePlayer("P2#2"), t2);
 
-        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { IssueCategory = "Reconnecting" });
+        var (items, _) = await _repo.GetReports(new LagReportQueryRequest { IssueCategory = ["Reconnecting"] });
+        Assert.AreEqual(1, items.Count);
+    }
+
+    /// <summary>
+    /// Seeds a report and forces its CreatedAt. UpsertPlayerData always stamps DateTime.UtcNow,
+    /// and the stamp is precisely what the date filters are tested against.
+    /// </summary>
+    private async Task SeedReportCreatedAt(int floGameId, DateTime createdAt)
+    {
+        var template = CreateTemplate(floGameId: floGameId, gameId: floGameId);
+        await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer($"P{floGameId}#1"), template);
+
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<LagReport>("LagReport");
+        await collection.UpdateOneAsync(
+            Builders<LagReport>.Filter.Eq(r => r.FloGameId, floGameId),
+            Builders<LagReport>.Update.Set(r => r.CreatedAt, createdAt));
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByDateFrom()
+    {
+        await SeedReportCreatedAt(20001, new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(20002, new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(20003, new DateTime(2026, 3, 9, 12, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05" });
+
+        Assert.AreEqual(2, total);
+        CollectionAssert.AreEquivalent(new[] { 20003, 20002 }, items.ConvertAll(r => r.FloGameId));
+    }
+
+    [Test]
+    public async Task GetReports_DateToCoversTheWholeDayItNames()
+    {
+        // A bare date carries no time, so an inclusive upper bound read literally is midnight —
+        // which excludes every report of the very day the admin asked for.
+        await SeedReportCreatedAt(21001, new DateTime(2026, 3, 5, 14, 30, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(21002, new DateTime(2026, 3, 6, 0, 30, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { DateTo = "2026-03-05" });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(21001, items[0].FloGameId);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByDateRange()
+    {
+        await SeedReportCreatedAt(22001, new DateTime(2026, 3, 1, 23, 59, 59, DateTimeKind.Utc));
+        await SeedReportCreatedAt(22002, new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(22003, new DateTime(2026, 3, 3, 23, 59, 59, DateTimeKind.Utc));
+        await SeedReportCreatedAt(22004, new DateTime(2026, 3, 4, 0, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            DateFrom = "2026-03-02",
+            DateTo = "2026-03-03",
+        });
+
+        Assert.AreEqual(2, total);
+        CollectionAssert.AreEquivalent(new[] { 22003, 22002 }, items.ConvertAll(r => r.FloGameId));
+    }
+
+    [Test]
+    public async Task GetReports_DateFiltersAcceptFullTimestamps()
+    {
+        // Clients that need sub-day precision (or a timezone other than UTC) send a full
+        // timestamp, which is then honoured to the instant rather than widened to a day.
+        await SeedReportCreatedAt(23001, new DateTime(2026, 3, 5, 9, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(23002, new DateTime(2026, 3, 5, 15, 0, 0, DateTimeKind.Utc));
+
+        var (utc, _) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05T12:00:00Z" });
+        Assert.AreEqual(1, utc.Count);
+        Assert.AreEqual(23002, utc[0].FloGameId);
+
+        // 14:00+02:00 is 12:00 UTC — the offset must be applied, not discarded.
+        var (offset, _) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05T14:00:00+02:00" });
+        Assert.AreEqual(1, offset.Count);
+        Assert.AreEqual(23002, offset[0].FloGameId);
+    }
+
+    [Test]
+    public async Task GetReports_DateFiltersReadBareDatesAsUtcRegardlessOfServerTimezone()
+    {
+        // A bare date must mean the same window on every host: parsing it in the server's
+        // local time would shift the boundary by that host's UTC offset.
+        await SeedReportCreatedAt(24001, new DateTime(2026, 3, 4, 23, 0, 0, DateTimeKind.Utc));
+        await SeedReportCreatedAt(24002, new DateTime(2026, 3, 5, 1, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { DateFrom = "2026-03-05" });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(24002, items[0].FloGameId);
+    }
+
+    [Test]
+    public async Task GetReports_IgnoresUnparseableDates()
+    {
+        await SeedReportCreatedAt(25001, new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc));
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            DateFrom = "not-a-date",
+            DateTo = "also-not-a-date",
+        });
+
+        Assert.AreEqual(1, total);
         Assert.AreEqual(1, items.Count);
     }
 
@@ -355,5 +464,473 @@ public class LagReportRepositoryTests : IntegrationTestBase
 
         Assert.IsFalse(names.Contains("Players.BattleTag_1"), "superseded raw-field index should be dropped");
         Assert.IsTrue(names.Contains("Players.BattleTagSearch_1"), "new shadow-field index should exist");
+    }
+
+    /// <summary>
+    /// Seeds a report on a chosen node with chosen players and a forced CreatedAt —
+    /// the three axes every aggregation dimension groups or counts over.
+    /// </summary>
+    private async Task SeedReportOnNode(int floGameId, DateTime createdAt, int nodeId, string nodeName, params LagReportPlayer[] players)
+    {
+        var template = CreateTemplate(floGameId: floGameId, gameId: floGameId);
+        template.ServerNodeId = nodeId;
+        template.ServerNodeName = nodeName;
+
+        var seedPlayers = players.Length > 0 ? players : [CreatePlayer($"P{floGameId}#1")];
+        foreach (var player in seedPlayers)
+        {
+            await _repo.UpsertPlayerData(template.FloGameId, player, template);
+        }
+
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<LagReport>("LagReport");
+        await collection.UpdateOneAsync(
+            Builders<LagReport>.Filter.Eq(r => r.FloGameId, floGameId),
+            Builders<LagReport>.Update.Set(r => r.CreatedAt, createdAt));
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByServerNodeId()
+    {
+        // Reports live on nodes 1 and 2; asking for node 2 returns exactly the one
+        // report from that node.
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(29001, noon, nodeId: 1, nodeName: "EU West");
+        await SeedReportOnNode(29002, noon, nodeId: 2, nodeName: "US East");
+
+        var (items, total) = await _repo.GetReports(new LagReportQueryRequest { ServerNodeId = [2] });
+
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(2, items[0].ServerNodeId);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByDay_CountsPerUtcDay()
+    {
+        // 23:30 and 00:30 straddle a UTC midnight — each must land in its own bucket.
+        await SeedReportOnNode(30001, new DateTime(2026, 3, 1, 23, 30, 0, DateTimeKind.Utc), 1, "EU West");
+        await SeedReportOnNode(30002, new DateTime(2026, 3, 2, 0, 30, 0, DateTimeKind.Utc), 1, "EU West");
+        await SeedReportOnNode(30003, new DateTime(2026, 3, 2, 12, 0, 0, DateTimeKind.Utc), 1, "EU West");
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Day });
+
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual("2026-03-01", buckets[0].Day);
+        Assert.AreEqual(1, buckets[0].Count);
+        Assert.AreEqual("2026-03-02", buckets[1].Day);
+        Assert.AreEqual(2, buckets[1].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_HonorsListFilters()
+    {
+        await SeedReportOnNode(31001, new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc), 1, "EU West");
+        await SeedReportOnNode(31002, new DateTime(2026, 3, 1, 12, 0, 0, DateTimeKind.Utc), 2, "US East");
+        await SeedReportOnNode(31003, new DateTime(2026, 3, 2, 12, 0, 0, DateTimeKind.Utc), 1, "EU West");
+
+        var byServer = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            ServerName = ["EU"],
+        });
+        Assert.AreEqual(2, byServer.Count);
+        Assert.IsTrue(byServer.TrueForAll(b => b.Count == 1));
+
+        var byDate = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            DateFrom = "2026-03-02",
+        });
+        Assert.AreEqual(1, byDate.Count);
+        Assert.AreEqual("2026-03-02", byDate[0].Day);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByNodeDay_CountsExplicitDistinctPlayersAndTopCategories()
+    {
+        var day = new DateTime(2026, 3, 5, 10, 0, 0, DateTimeKind.Utc);
+        var aliceAgain = CreatePlayer("Alice#1");
+        aliceAgain.IssueCategories = [EIssueCategory.SpikeLag, EIssueCategory.Reconnecting];
+
+        // Node 1: two reports; Alice appears in both (distinct players must dedupe her),
+        // one report is explicit, SpikeLag occurs twice vs Reconnecting once.
+        await SeedReportOnNode(32001, day, 1, "EU West",
+            CreatePlayer("Alice#1", isExplicit: true), CreatePlayer("Bob#2"));
+        await SeedReportOnNode(32002, day.AddHours(1), 1, "EU West", aliceAgain);
+        await SeedReportOnNode(32003, day.AddHours(2), 2, "US East", CreatePlayer("Carol#3"));
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.NodeDay });
+
+        Assert.AreEqual(2, buckets.Count);
+
+        var eu = buckets[0]; // higher count sorts first within the day
+        Assert.AreEqual("2026-03-05", eu.Day);
+        Assert.AreEqual(1, eu.ServerNodeId);
+        Assert.AreEqual("EU West", eu.ServerNodeName);
+        Assert.AreEqual(2, eu.Count);
+        Assert.AreEqual(1, eu.ExplicitCount);
+        Assert.AreEqual(2, eu.DistinctPlayers);
+        Assert.AreEqual(2, eu.TopCategories.Count);
+        Assert.AreEqual("SpikeLag", eu.TopCategories[0].Category);
+        Assert.AreEqual(2, eu.TopCategories[0].Count);
+        Assert.AreEqual("Reconnecting", eu.TopCategories[1].Category);
+        Assert.AreEqual(1, eu.TopCategories[1].Count);
+
+        var us = buckets[1];
+        Assert.AreEqual(2, us.ServerNodeId);
+        Assert.AreEqual(1, us.Count);
+        Assert.AreEqual(0, us.ExplicitCount);
+        Assert.AreEqual(1, us.DistinctPlayers);
+        Assert.IsEmpty(us.TopCategories);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByCategory_CountsOccurrencesPerPlayer()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        var p1 = CreatePlayer("P1#1");
+        p1.IssueCategories = [EIssueCategory.Desync];
+        var p2 = CreatePlayer("P2#2");
+        p2.IssueCategories = [EIssueCategory.Desync, EIssueCategory.SpikeLag];
+        await SeedReportOnNode(33001, noon, 1, "EU West", p1, p2);
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Category });
+
+        // Two players naming Desync in one report count twice — occurrence semantics,
+        // matching the admin UI's facet counts.
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual("Desync", buckets[0].Category);
+        Assert.AreEqual(2, buckets[0].Count);
+        Assert.AreEqual("SpikeLag", buckets[1].Category);
+        Assert.AreEqual(1, buckets[1].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByServer_CountsReportsPerNode()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(34001, noon, 1, "EU West");
+        await SeedReportOnNode(34002, noon, 1, "EU West");
+        await SeedReportOnNode(34003, noon, 2, "US East");
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Server });
+
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual(1, buckets[0].ServerNodeId);
+        Assert.AreEqual("EU West", buckets[0].ServerNodeName);
+        Assert.AreEqual(2, buckets[0].Count);
+        Assert.AreEqual(2, buckets[1].ServerNodeId);
+        Assert.AreEqual(1, buckets[1].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByProxy_SkipsDirectPlayers()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        var proxied = CreatePlayer("P1#1");
+        proxied.ProxyName = "EU-Proxy-1";
+        await SeedReportOnNode(35001, noon, 1, "EU West", proxied, CreatePlayer("P2#2"));
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Proxy });
+
+        Assert.AreEqual(1, buckets.Count);
+        Assert.AreEqual("EU-Proxy-1", buckets[0].ProxyName);
+        Assert.AreEqual(1, buckets[0].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByBattleTag_CountsDistinctNodesAndHonorsLimit()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        // Alice appears twice without submitting; Bob appears once but pressed
+        // submit — submissions outrank appearances.
+        await SeedReportOnNode(36001, noon, 1, "EU West", CreatePlayer("Alice#1"));
+        await SeedReportOnNode(36002, noon, 2, "US East", CreatePlayer("Alice#1"), CreatePlayer("Bob#2", isExplicit: true));
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.BattleTag });
+
+        Assert.AreEqual(2, buckets.Count);
+        Assert.AreEqual("Bob#2", buckets[0].BattleTag);
+        Assert.AreEqual(1, buckets[0].Count);
+        Assert.AreEqual(1, buckets[0].SubmittedCount);
+        Assert.AreEqual(1, buckets[0].DistinctNodes);
+        Assert.AreEqual("Alice#1", buckets[1].BattleTag);
+        Assert.AreEqual(2, buckets[1].Count);
+        Assert.AreEqual(0, buckets[1].SubmittedCount);
+        Assert.AreEqual(2, buckets[1].DistinctNodes);
+
+        var limited = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.BattleTag,
+            Limit = 1,
+        });
+        Assert.AreEqual(1, limited.Count);
+        Assert.AreEqual("Bob#2", limited[0].BattleTag);
+    }
+
+    [Test]
+    public async Task UpsertPlayerData_MaintainsPlayerCount()
+    {
+        // Two players added one at a time via UpsertPlayerData; the stored PlayerCount
+        // must keep step with the Players array on its own.
+        var template = CreateTemplate(floGameId: 37001, gameId: 37001);
+
+        var id = await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer("P1#1"), template);
+        await _repo.UpsertPlayerData(template.FloGameId, CreatePlayer("P2#2"), template);
+
+        var report = await _repo.GetById(id);
+        Assert.AreEqual(2, report.Players.Count);
+        Assert.AreEqual(2, report.PlayerCount, "PlayerCount must track Players.Count through the $inc");
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByPlayerCountBounds()
+    {
+        // One solo report and one three-player report; the lower bound, the upper
+        // bound, and the two combined must each pick out the right one.
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(37101, noon, 1, "EU West", CreatePlayer("Solo#1"));
+        await SeedReportOnNode(37102, noon, 1, "EU West",
+            CreatePlayer("A#1"), CreatePlayer("B#2"), CreatePlayer("C#3"));
+
+        var (bigGames, bigTotal) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 2 });
+        Assert.AreEqual(1, bigTotal);
+        Assert.AreEqual(3, bigGames[0].Players.Count);
+
+        var (_, soloTotal) = await _repo.GetReports(new LagReportQueryRequest { MaxPlayers = 1 });
+        Assert.AreEqual(1, soloTotal);
+
+        var (_, bandTotal) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 2, MaxPlayers = 3 });
+        Assert.AreEqual(1, bandTotal);
+    }
+
+    [Test]
+    public async Task BackfillPlayerCounts_SetsSizeAndIsIdempotent()
+    {
+        // Simulate a document written before PlayerCount existed (field absent, not zero).
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<BsonDocument>("LagReport");
+        await collection.InsertOneAsync(new BsonDocument
+        {
+            { "_id", Guid.NewGuid().ToString() },
+            { "GameId", 38001 },
+            { "FloGameId", 38001 },
+            { "GameName", "Legacy Count Game" },
+            { "ServerNodeId", 1 },
+            { "ServerNodeName", "EU West" },
+            { "HasExplicitReport", false },
+            {
+                "Players",
+                new BsonArray
+                {
+                    new BsonDocument { { "BattleTag", "L1#1" } },
+                    new BsonDocument { { "BattleTag", "L2#2" } },
+                }
+            },
+            { "CreatedAt", DateTime.UtcNow },
+            { "UpdatedAt", DateTime.UtcNow },
+        });
+
+        // Before backfill the missing field matches no bound.
+        var (_, before) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 1 });
+        Assert.AreEqual(0, before);
+
+        Assert.AreEqual(1, await _repo.BackfillPlayerCounts());
+
+        var (after, afterTotal) = await _repo.GetReports(new LagReportQueryRequest { MinPlayers = 2 });
+        Assert.AreEqual(1, afterTotal);
+        Assert.AreEqual(2, after[0].PlayerCount);
+
+        // Re-running is a no-op (idempotent guard).
+        Assert.AreEqual(0, await _repo.BackfillPlayerCounts());
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByMultipleCategoriesAsOr()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        var desync = CreatePlayer("P1#1");
+        desync.IssueCategories = [EIssueCategory.Desync];
+        var reconnecting = CreatePlayer("P2#2");
+        reconnecting.IssueCategories = [EIssueCategory.Reconnecting];
+        var spike = CreatePlayer("P3#3");
+        spike.IssueCategories = [EIssueCategory.SpikeLag];
+
+        await SeedReportOnNode(39001, noon, 1, "EU West", desync);
+        await SeedReportOnNode(39002, noon, 1, "EU West", reconnecting);
+        await SeedReportOnNode(39003, noon, 1, "EU West", spike);
+
+        // OR semantics: any player carrying any selected category qualifies the report.
+        var (_, total) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            IssueCategory = ["Desync", "Reconnecting"],
+        });
+        Assert.AreEqual(2, total);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByMultipleServerNamesAsOr()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(40001, noon, 1, "EU West");
+        await SeedReportOnNode(40002, noon, 2, "US East");
+        await SeedReportOnNode(40003, noon, 3, "Korea Central");
+
+        var (_, total) = await _repo.GetReports(new LagReportQueryRequest { ServerName = ["eu", "us"] });
+        Assert.AreEqual(2, total);
+    }
+
+    [Test]
+    public async Task GetReports_FiltersByMultipleServerNodeIds()
+    {
+        // Asking for several node ids returns the reports from any of them —
+        // here nodes 1 and 3, leaving node 2's report out.
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(40101, noon, 1, "EU West");
+        await SeedReportOnNode(40102, noon, 2, "US East");
+        await SeedReportOnNode(40103, noon, 3, "Korea Central");
+
+        var (_, total) = await _repo.GetReports(new LagReportQueryRequest { ServerNodeId = [1, 3] });
+        Assert.AreEqual(2, total);
+    }
+
+    /// <summary>Alice submits games A and B herself; in game C she appears without
+    /// submitting (Bob submitted it). The two repeat modes must read that differently.</summary>
+    private async Task SeedRepeatScenario()
+    {
+        var noon = new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc);
+        await SeedReportOnNode(41001, noon, 1, "EU West", CreatePlayer("Alice#1", isExplicit: true));
+        await SeedReportOnNode(41002, noon.AddHours(1), 1, "EU West", CreatePlayer("Alice#1", isExplicit: true));
+        await SeedReportOnNode(41003, noon.AddHours(2), 1, "EU West",
+            CreatePlayer("Alice#1"), CreatePlayer("Bob#2", isExplicit: true));
+    }
+
+    [Test]
+    public async Task GetReports_MinRepeatSubmittedKeepsOnlyReportsTheChronicSubmitted()
+    {
+        await SeedRepeatScenario();
+
+        // Alice has 2 submissions, Bob 1 — only Alice qualifies at ≥2, and in the
+        // default submitted mode game C doesn't count: she appears there, but Bob
+        // submitted it.
+        var (submitted, submittedTotal) = await _repo.GetReports(new LagReportQueryRequest { MinRepeat = 2 });
+        Assert.AreEqual(2, submittedTotal);
+        Assert.IsTrue(submitted.TrueForAll(r => r.Players.Exists(p => p.BattleTag == "Alice#1" && p.IsExplicit)));
+
+        var (_, involvedTotal) = await _repo.GetReports(new LagReportQueryRequest
+        {
+            MinRepeat = 2,
+            RepeatMode = LagReportRepeatModes.Involved,
+        });
+        Assert.AreEqual(3, involvedTotal);
+
+        // Nobody reaches 3 — the honest result is an empty page, not an unfiltered one.
+        var (_, nobodyTotal) = await _repo.GetReports(new LagReportQueryRequest { MinRepeat = 3 });
+        Assert.AreEqual(0, nobodyTotal);
+    }
+
+    [Test]
+    public async Task GetAggregate_HonorsMinRepeat()
+    {
+        await SeedRepeatScenario();
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            MinRepeat = 2,
+        });
+        Assert.AreEqual(1, buckets.Count);
+        Assert.AreEqual(2, buckets[0].Count);
+
+        var involved = await _repo.GetAggregate(new LagReportAggregateRequest
+        {
+            GroupBy = LagReportAggregateDimensions.Day,
+            MinRepeat = 2,
+            RepeatMode = LagReportRepeatModes.Involved,
+        });
+        Assert.AreEqual(3, involved[0].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_ByNodeDay_GroupsRenamedNodeOnce()
+    {
+        var day = new DateTime(2026, 3, 5, 10, 0, 0, DateTimeKind.Utc);
+        var p1 = CreatePlayer("P1#1");
+        p1.IssueCategories = [EIssueCategory.Desync];
+        var p2 = CreatePlayer("P2#2");
+        p2.IssueCategories = [EIssueCategory.Desync];
+
+        // Same node id under two display names (renamed mid-window): one bucket,
+        // and the category join must attach once, not once per name.
+        await SeedReportOnNode(43001, day, 5, "Old Name", p1);
+        await SeedReportOnNode(43002, day.AddHours(1), 5, "New Name", p2);
+
+        var buckets = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.NodeDay });
+
+        Assert.AreEqual(1, buckets.Count);
+        Assert.AreEqual(5, buckets[0].ServerNodeId);
+        Assert.AreEqual(2, buckets[0].Count);
+        Assert.That(buckets[0].ServerNodeName, Is.AnyOf("Old Name", "New Name"));
+        Assert.AreEqual(1, buckets[0].TopCategories.Count);
+        Assert.AreEqual("Desync", buckets[0].TopCategories[0].Category);
+        Assert.AreEqual(2, buckets[0].TopCategories[0].Count);
+    }
+
+    [Test]
+    public async Task GetAggregate_SurvivesNullServerNodeName()
+    {
+        // A legacy document with a null node name must not 500 the aggregation.
+        var collection = MongoClient
+            .GetDatabase("W3Champions-Statistic-Service")
+            .GetCollection<BsonDocument>("LagReport");
+        await collection.InsertOneAsync(new BsonDocument
+        {
+            { "_id", Guid.NewGuid().ToString() },
+            { "GameId", 44001 },
+            { "FloGameId", 44001 },
+            { "GameName", "Null Node Game" },
+            { "ServerNodeId", 7 },
+            { "ServerNodeName", BsonNull.Value },
+            { "HasExplicitReport", false },
+            { "Players", new BsonArray { new BsonDocument { { "BattleTag", "N#1" } } } },
+            { "CreatedAt", DateTime.UtcNow },
+            { "UpdatedAt", DateTime.UtcNow },
+        });
+
+        var nodeDay = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.NodeDay });
+        Assert.AreEqual(1, nodeDay.Count);
+        Assert.AreEqual(7, nodeDay[0].ServerNodeId);
+        Assert.AreEqual("", nodeDay[0].ServerNodeName);
+
+        var servers = await _repo.GetAggregate(new LagReportAggregateRequest { GroupBy = LagReportAggregateDimensions.Server });
+        Assert.AreEqual(1, servers.Count);
+        Assert.AreEqual("", servers[0].ServerNodeName);
+    }
+
+    [Test]
+    public void QueryValidation_RejectsUnknownValuesAndAcceptsKnownOnes()
+    {
+        // No filters sent — nothing to validate, no error.
+        Assert.IsNull(LagReportQueryValidation.FirstError(new LagReportQueryRequest()));
+
+        // Real values pass. "lan" in lowercase also passes: tag casing is forgiving
+        // on purpose (the enum member is spelled LAN).
+        Assert.IsNull(LagReportQueryValidation.FirstError(new LagReportQueryRequest
+        {
+            IssueCategory = ["Desync", "SpikeLag"],
+            ConnectionIssueTag = ["lan"],
+            RepeatMode = "Submitted",
+        }));
+
+        // Made-up values come back as an error that names the offending value,
+        // so the caller sees exactly what to correct.
+        StringAssert.Contains("Nope", LagReportQueryValidation.FirstError(
+            new LagReportQueryRequest { IssueCategory = ["Nope"] }));
+        StringAssert.Contains("wifi", LagReportQueryValidation.FirstError(
+            new LagReportQueryRequest { ConnectionIssueTag = ["wifi"] }));
+        StringAssert.Contains("repeatMode", LagReportQueryValidation.FirstError(
+            new LagReportQueryRequest { RepeatMode = "sometimes" }));
     }
 }
