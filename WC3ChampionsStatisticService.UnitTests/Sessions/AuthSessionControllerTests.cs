@@ -42,7 +42,7 @@ public class AuthSessionControllerTests
     private static Mock<IW3CAuthenticationService> AuthReturning(string battleTag)
     {
         var mock = new Mock<IW3CAuthenticationService>();
-        mock.Setup(a => a.GetUserByToken(It.IsAny<string>(), true))
+        mock.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()))
             .Returns(new W3CUserAuthenticationDto { BattleTag = battleTag, Name = battleTag.Split('#')[0] });
         return mock;
     }
@@ -77,7 +77,7 @@ public class AuthSessionControllerTests
     public void InvalidJwt_Returns401()
     {
         var authService = new Mock<IW3CAuthenticationService>();
-        authService.Setup(a => a.GetUserByToken(It.IsAny<string>(), true))
+        authService.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()))
             .Throws(new SecurityTokenException("bad signature"));
         var ticketStore = new TicketStore();
         var controller = BuildController(authService.Object, ticketStore, new MintRateLimiter(), "Bearer garbage");
@@ -89,18 +89,23 @@ public class AuthSessionControllerTests
     }
 
     [Test]
-    public void ExpiredJwt_Returns401()
+    public void ExpiredJwt_StillMintsTicket()
     {
+        // Minting is not an admin path, so JWT expiry is not enforced - same as the other non-admin
+        // filters and the hub's raw-JWT path. Models the real service: an expired but validly-signed
+        // token only throws when lifetime validation is requested.
         var authService = new Mock<IW3CAuthenticationService>();
         authService.Setup(a => a.GetUserByToken(It.IsAny<string>(), true))
             .Throws(new SecurityTokenExpiredException("expired"));
+        authService.Setup(a => a.GetUserByToken(It.IsAny<string>(), false))
+            .Returns(new W3CUserAuthenticationDto { BattleTag = "peter#123", Name = "peter" });
         var ticketStore = new TicketStore();
         var controller = BuildController(authService.Object, ticketStore, new MintRateLimiter(), "Bearer expired-jwt");
 
         var result = controller.MintTicket();
 
-        Assert.IsInstanceOf<UnauthorizedResult>(result, "An expired JWT must be rejected with 401.");
-        Assert.AreEqual(0, ticketStore.Count);
+        Assert.IsInstanceOf<OkObjectResult>(result, "An expired but validly-signed JWT must still mint a ticket.");
+        Assert.AreEqual(1, ticketStore.Count);
     }
 
     [Test]

@@ -15,10 +15,10 @@ namespace W3ChampionsStatisticService.Sessions;
 ///
 /// ===== CLIENT CONTRACT (pinned — launcher LE-2 builds against this exact shape) =====
 ///   Verb / path : POST /auth/session
-///   Auth header : Authorization: Bearer &lt;W3C JWT&gt;   (signature + expiry enforced)
+///   Auth header : Authorization: Bearer &lt;W3C JWT&gt;   (signature enforced, expiry is not)
 ///   Request body: EMPTY
 ///   200 OK      : { "ticket": "&lt;64 hex chars&gt;", "expiresInSeconds": 60 }
-///   401         : missing / non-Bearer / invalid / expired JWT
+///   401         : missing / non-Bearer / invalid JWT
 ///   429         : per-battleTag mint rate limit exceeded (10 / minute)
 ///   Ticket      : single-use, 60s TTL. The client hands it to SignalR's accessTokenFactory so it
 ///                 arrives as ?access_token=&lt;ticket&gt; on /websiteBackendHub, where
@@ -56,12 +56,14 @@ public class AuthSessionController(
             return Unauthorized();
         }
 
-        // Validate signature + lifetime. GetUserByToken THROWS on bad/expired/garbage tokens (it never
-        // returns null) — treat any failure as 401. No ticket is minted for an unvalidated caller.
+        // Validate the signature only. Expiry is deliberately NOT enforced: this is not an admin path, and
+        // players keep using old tokens - same as the other non-admin filters and the hub's raw-JWT path.
+        // GetUserByToken THROWS on bad/garbage tokens (it never returns null) — treat any failure as 401.
+        // No ticket is minted for an unvalidated caller.
         W3CUserAuthenticationDto identity;
         try
         {
-            identity = _authService.GetUserByToken(token, validateLifetime: true);
+            identity = _authService.GetUserByToken(token, validateLifetime: false);
         }
         catch (Exception)
         {

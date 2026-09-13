@@ -41,7 +41,8 @@ public class JwtTests
     /// element on read. Returns the token plus the matching public-key PEM that
     /// <see cref="W3CUserAuthenticationDto.FromJWT"/> validates against.
     /// </summary>
-    private static (string jwt, string publicKeyPem) CreateSignedJwt(string battleTag, bool isAdmin, IEnumerable<string> permissions)
+    private static (string jwt, string publicKeyPem) CreateSignedJwt(string battleTag, bool isAdmin, IEnumerable<string> permissions,
+        DateTime? expires = null)
     {
         using var rsa = RSA.Create(2048);
         var publicKeyPem = rsa.ExportSubjectPublicKeyInfoPem();
@@ -60,9 +61,24 @@ public class JwtTests
                 new Claim("permissions", JsonSerializer.Serialize(permissions.ToList()), JsonClaimValueTypes.JsonArray),
             },
             signingCredentials: signingCredentials,
-            expires: DateTime.UtcNow.AddDays(7));
+            expires: expires ?? DateTime.UtcNow.AddDays(7));
 
         return (new JwtSecurityTokenHandler().WriteToken(token), publicKeyPem);
+    }
+
+    [Test]
+    public void FromJWT_ExpiredToken_AuthenticatesOnlyWhenLifetimeIsNotValidated()
+    {
+        // Non-admin paths pass validateLifetime: false so players holding old tokens stay signed in;
+        // admin paths pass true and must keep rejecting them.
+        var (jwt, publicKeyPem) = CreateSignedJwt("peter#123", isAdmin: false, Array.Empty<string>(),
+            expires: DateTime.UtcNow.AddDays(-1));
+
+        var result = W3CUserAuthenticationDto.FromJWT(jwt, publicKeyPem, validateLifetime: false);
+
+        Assert.AreEqual("peter#123", result.BattleTag);
+        Assert.Throws<SecurityTokenExpiredException>(() =>
+            W3CUserAuthenticationDto.FromJWT(jwt, publicKeyPem, validateLifetime: true));
     }
 
     [Test]
