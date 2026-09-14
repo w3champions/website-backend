@@ -224,8 +224,10 @@ public static class TemporaryMapUploadReader
             isLink = directory.LinkTarget != null;
             if (!isLink && !OperatingSystem.IsWindows())
             {
-                // CreateDirectory leaves an existing directory's mode alone. Only the owner may chmod,
-                // so this also refuses a directory another user created first.
+                // CreateDirectory applies its mode only to a directory it creates, so a leftover one needs this
+                // chmod. It runs every time because a "did this call create it" check would race another creator.
+                // Only the owner or root may chmod: as a non-root process this refuses a directory another user
+                // created (a spool fault), but as root it tightens that directory rather than refusing it.
                 File.SetUnixFileMode(path, OwnerOnlyDirectoryMode);
             }
         }
