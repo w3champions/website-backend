@@ -10,8 +10,10 @@ namespace W3ChampionsStatisticService.RateLimiting.Services;
 
 public interface IApiTokenService
 {
-    Task<ApiToken> ValidateToken(string token, string ipAddress, string scope = null);
-    Task<(int hourlyLimit, int dailyLimit)?> GetRateLimitsForScope(string token, string scope);
+    // [NoTrace]: this is an interface proxy, so TracingInterceptor reads parameter attributes here; a raw API token
+    // must never become a "param.token" activity tag.
+    Task<ApiToken> ValidateToken([NoTrace] string token, string ipAddress, string scope = null);
+    Task<(int hourlyLimit, int dailyLimit)?> GetRateLimitsForScope([NoTrace] string token, string scope);
 }
 
 public class ApiTokenService(

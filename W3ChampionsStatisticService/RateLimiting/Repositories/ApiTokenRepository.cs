@@ -10,13 +10,15 @@ namespace W3ChampionsStatisticService.RateLimiting.Repositories;
 
 public interface IApiTokenRepository
 {
-    Task<ApiToken> GetByToken(string token);
+    // [NoTrace]: this is an interface proxy, so TracingInterceptor reads parameter attributes here; a raw API token
+    // must never become a "param.token" activity tag.
+    Task<ApiToken> GetByToken([NoTrace] string token);
     Task<ApiToken> GetById(string id);
     Task<List<ApiToken>> GetAll();
     Task Create(ApiToken apiToken);
     Task Update(ApiToken apiToken);
     Task Delete(string id);
-    Task UpdateLastUsed(string token);
+    Task UpdateLastUsed([NoTrace] string token);
 }
 
 public class ApiTokenRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IApiTokenRepository

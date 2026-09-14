@@ -8,7 +8,9 @@ namespace W3ChampionsStatisticService.Services;
 
 public interface ITrackingService
 {
-    void TrackUnauthorizedRequest(string authorization, ControllerBase controller);
+    // [NoTrace]: this is an interface proxy of a [Trace] class, so TracingInterceptor reads parameter attributes here;
+    // the raw Authorization header must never become a "param.authorization" activity tag.
+    void TrackUnauthorizedRequest([NoTrace] string authorization, ControllerBase controller);
     void TrackException(Exception ex, string message);
 }
 
