@@ -16,6 +16,12 @@ public sealed class TemporaryMapUpload(
     long sizeBytes,
     string extension) : IDisposable
 {
+    /// <summary>
+    /// Buffer size for reading and writing spool files: the <see cref="Stream.CopyToAsync(Stream)"/> default,
+    /// which keeps a FileStream's own buffer under the 85 000-byte large-object-heap threshold.
+    /// </summary>
+    internal const int FileBufferBytes = 81920;
+
     public TemporaryMapUploadMetadata Metadata { get; } = metadata;
 
     public string TempFilePath { get; } = tempFilePath;
@@ -35,7 +41,7 @@ public sealed class TemporaryMapUpload(
     public string Extension { get; } = extension;
 
     public Stream OpenRead()
-        => new FileStream(TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920,
+        => new FileStream(TempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, FileBufferBytes,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
     public void Dispose() => DeleteTempFile(TempFilePath);

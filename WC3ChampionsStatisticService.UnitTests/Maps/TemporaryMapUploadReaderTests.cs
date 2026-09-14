@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -162,6 +163,40 @@ public class TemporaryMapUploadReaderTests
     }
 
     [Test]
+    public void RejectsAFileOverTheCapInTotal_EvenWhenEveryReadIsUnderIt()
+    {
+        // Each read is at most 80 KiB, so only the running total can cross a 200 000-byte cap.
+        var (body, contentType) = BuildMultipart(MinimalMetadata("big.w3x"), new byte[300_000]);
+        string spoolPath = null;
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Read(body, contentType, maxFileBytes: 200_000,
+            openSpoolFile: path => File.Create(spoolPath = path)));
+
+        Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status413PayloadTooLarge));
+        Assert.That(ex.Code, Is.EqualTo("FILE_TOO_LARGE"));
+        Assert.That(spoolPath, Is.Not.Null, "the spool file must have been created before the cap was crossed");
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
+    [Test]
+    public async Task TheCopyBuffer_HoldsNoMapBytes_OnceItIsBackInThePool()
+    {
+        // The buffer comes from the process-wide ArrayPool, so whoever rents it next must not see map bytes.
+        var fileBytes = Enumerable.Repeat((byte)0xAB, 100_000).ToArray();
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), fileBytes);
+        var spool = new BufferRecordingSpoolStream();
+
+        using var upload = await Read(body, contentType, openSpoolFile: _ => spool);
+
+        Assert.That(upload.SizeBytes, Is.EqualTo(fileBytes.Length));
+        Assert.That(spool.SourceArrays, Is.Not.Empty, "the reader must write straight from its pooled buffer");
+        foreach (var array in spool.SourceArrays)
+        {
+            Assert.That(array.All(b => b == 0), Is.True, "the pooled buffer must be cleared when it is returned");
+        }
+    }
+
+    [Test]
     public void TheProductionFileCap_IsMaxFileBytes()
     {
         var capParameter = typeof(TemporaryMapUploadReader)
@@ -296,6 +331,60 @@ public class TemporaryMapUploadReaderTests
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
+    }
+
+    [Test]
+    public async Task AcceptsMetadataNestedToTheDepthLimit()
+    {
+        var (body, contentType) = BuildMultipart(MetadataNestedTo(32), Encoding.UTF8.GetBytes("abc"));
+
+        using var upload = await Read(body, contentType);
+
+        Assert.That(upload.Metadata.OriginalFileName, Is.EqualTo("x.w3x"));
+    }
+
+    [Test]
+    public void RejectsMetadataNestedPastTheDepthLimit_With400Metadata()
+    {
+        var (body, contentType) = BuildMultipart(MetadataNestedTo(33), Encoding.UTF8.GetBytes("abc"));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Read(body, contentType));
+
+        Assert.That(ex.Code, Is.EqualTo("METADATA"));
+    }
+
+    [TestCase("{\"$ref\":\"1\",\"originalFileName\":\"x.w3x\"}")]
+    [TestCase("{\"$type\":\"System.Uri, System.Private.Uri\",\"originalFileName\":\"x.w3x\"}")]
+    public async Task JsonReferenceAndTypeProperties_AreIgnoredLikeAnyUnknownMember(string metadataJson)
+    {
+        var (body, contentType) = BuildMultipart(metadataJson, Encoding.UTF8.GetBytes("abc"));
+
+        using var upload = await Read(body, contentType);
+
+        Assert.That(upload.Metadata, Is.TypeOf<TemporaryMapUploadMetadata>());
+        Assert.That(upload.Metadata.OriginalFileName, Is.EqualTo("x.w3x"));
+    }
+
+    [Test]
+    public async Task GlobalJsonDefaults_DoNotReachTheMetadataParser()
+    {
+        var previousDefaults = Newtonsoft.Json.JsonConvert.DefaultSettings;
+        Newtonsoft.Json.JsonConvert.DefaultSettings = () => new Newtonsoft.Json.JsonSerializerSettings
+        {
+            Converters = { new RefusingMetadataConverter() },
+        };
+        try
+        {
+            var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+            using var upload = await Read(body, contentType);
+
+            Assert.That(upload.Metadata.OriginalFileName, Is.EqualTo("x.w3x"));
+        }
+        finally
+        {
+            Newtonsoft.Json.JsonConvert.DefaultSettings = previousDefaults;
+        }
     }
 
     [TestCase("application/json")]
@@ -568,6 +657,10 @@ public class TemporaryMapUploadReaderTests
     private static string MinimalMetadata(string originalFileName)
         => "{\"sha1\":\"" + AbcSha1 + "\",\"originalFileName\":\"" + originalFileName + "\",\"fileSize\":3}";
 
+    /// <summary>Valid metadata whose deepest value sits inside <paramref name="containers"/> JSON containers, the root object included.</summary>
+    private static string MetadataNestedTo(int containers)
+        => "{\"originalFileName\":\"x.w3x\",\"pad\":" + new string('[', containers - 1) + new string(']', containers - 1) + "}";
+
     /// <summary>A valid metadata JSON document of exactly <paramref name="byteCount"/> UTF-8 bytes.</summary>
     private static string MetadataOfExactly(int byteCount)
     {
@@ -631,6 +724,35 @@ public class TemporaryMapUploadReaderTests
         public List<LogEvent> Events { get; } = [];
 
         public void Emit(LogEvent logEvent) => Events.Add(logEvent);
+    }
+
+    /// <summary>An in-memory spool that records which arrays the reader's writes were backed by.</summary>
+    private sealed class BufferRecordingSpoolStream : MemoryStream
+    {
+        public HashSet<byte[]> SourceArrays { get; } = new(ReferenceEqualityComparer.Instance);
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (MemoryMarshal.TryGetArray(buffer, out var segment))
+            {
+                SourceArrays.Add(segment.Array);
+            }
+
+            return base.WriteAsync(buffer, cancellationToken);
+        }
+    }
+
+    /// <summary>Stands in for a global Json.NET default that would change how metadata is read.</summary>
+    private sealed class RefusingMetadataConverter : Newtonsoft.Json.JsonConverter
+    {
+        public override bool CanConvert(Type objectType) => objectType == typeof(TemporaryMapUploadMetadata);
+
+        public override object ReadJson(
+            Newtonsoft.Json.JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
+            => throw new Newtonsoft.Json.JsonSerializationException("A global default converter reached the metadata parser.");
+
+        public override void WriteJson(Newtonsoft.Json.JsonWriter writer, object value, Newtonsoft.Json.JsonSerializer serializer)
+            => throw new NotSupportedException();
     }
 
     private enum SpoolFailurePoint

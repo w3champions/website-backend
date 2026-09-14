@@ -20,13 +20,26 @@ namespace W3ChampionsStatisticService.Maps;
 /// </summary>
 public static class TemporaryMapUploadReader
 {
-    private const int CopyBufferBytes = 81920;
-
     /// <summary>RFC 2046 §5.1.1: a boundary is 1 to 70 characters.</summary>
     private const int MaxBoundaryLength = 70;
 
     private const UnixFileMode OwnerOnlyDirectoryMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
     private const UnixFileMode OwnerOnlyFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
+    /// <summary>
+    /// Closed settings for the client's metadata JSON. They are applied through
+    /// <see cref="JsonSerializer.Create(JsonSerializerSettings)"/>, which ignores
+    /// <see cref="JsonConvert.DefaultSettings"/>, so no global default can widen what an untrusted part
+    /// may do: no type names, <c>$id</c>/<c>$ref</c>/<c>$type</c> read as ordinary (ignored) members,
+    /// bounded nesting, and nothing allowed after the document.
+    /// </summary>
+    private static readonly JsonSerializerSettings MetadataJsonSettings = new()
+    {
+        TypeNameHandling = TypeNameHandling.None,
+        MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
+        MaxDepth = 32,
+        CheckAdditionalContent = true,
+    };
 
     /// <summary>
     /// Validates the body's shape and spools the map file into <see cref="TemporaryMapLimits.TempUploadDir"/>.
@@ -130,7 +143,7 @@ public static class TemporaryMapUploadReader
         CancellationToken cancellationToken)
     {
         using var hasher = new MapProofHasher();
-        var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferBytes);
+        var buffer = ArrayPool<byte>.Shared.Rent(TemporaryMapUpload.FileBufferBytes);
 
         try
         {
@@ -147,7 +160,7 @@ public static class TemporaryMapUploadReader
             try
             {
                 int read;
-                while ((read = await source.ReadAsync(buffer.AsMemory(0, CopyBufferBytes), cancellationToken)) > 0)
+                while ((read = await source.ReadAsync(buffer.AsMemory(0, TemporaryMapUpload.FileBufferBytes), cancellationToken)) > 0)
                 {
                     if (hasher.BytesHashed + read > maxFileBytes)
                     {
@@ -184,7 +197,8 @@ public static class TemporaryMapUploadReader
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            // The pool is process-wide: clear the map bytes before another renter can see them.
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
         }
 
         var (sha1, mapProof) = hasher.Finish();
@@ -228,7 +242,7 @@ public static class TemporaryMapUploadReader
             Mode = FileMode.CreateNew,
             Access = FileAccess.Write,
             Share = FileShare.None,
-            BufferSize = CopyBufferBytes,
+            BufferSize = TemporaryMapUpload.FileBufferBytes,
             Options = FileOptions.Asynchronous,
         };
         if (!OperatingSystem.IsWindows())
@@ -292,8 +306,8 @@ public static class TemporaryMapUploadReader
         TemporaryMapUploadMetadata metadata;
         try
         {
-            metadata = JsonConvert.DeserializeObject<TemporaryMapUploadMetadata>(
-                Encoding.UTF8.GetString(buffer, 0, total));
+            using var json = new JsonTextReader(new StringReader(Encoding.UTF8.GetString(buffer, 0, total)));
+            metadata = JsonSerializer.Create(MetadataJsonSettings).Deserialize<TemporaryMapUploadMetadata>(json);
         }
         catch (JsonException)
         {
