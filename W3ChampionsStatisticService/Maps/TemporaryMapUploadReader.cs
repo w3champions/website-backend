@@ -212,8 +212,9 @@ public static class TemporaryMapUploadReader
     /// </summary>
     private static string PrepareSpoolDirectory(string spoolDirectory)
     {
-        // A trailing separator would make the link check follow the link instead of inspecting it.
-        var path = Path.TrimEndingDirectorySeparator(spoolDirectory);
+        // Any trailing separator would make the link check follow the link instead of inspecting it.
+        // GetFullPath collapses repeated separators, so the trim then removes the last one.
+        var path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(spoolDirectory));
         bool isLink;
         try
         {

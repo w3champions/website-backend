@@ -640,9 +640,10 @@ public class TemporaryMapUploadReaderTests
         AssertSpoolDirectoryHasNoFiles();
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
-    public void ASpoolDirectoryThatIsALink_IsRefused(bool withTrailingSeparator)
+    [TestCase("")]
+    [TestCase("/")]
+    [TestCase("//")]
+    public void ASpoolDirectoryThatIsALink_IsRefused(string trailingSeparators)
     {
         if (OperatingSystem.IsWindows())
         {
@@ -654,7 +655,8 @@ public class TemporaryMapUploadReaderTests
         Directory.CreateDirectory(target);
         File.SetUnixFileMode(target, WorldReadableDirectoryMode);
         Directory.CreateSymbolicLink(_spoolDirectory, target);
-        var spoolDirectory = withTrailingSeparator ? _spoolDirectory + Path.DirectorySeparatorChar : _spoolDirectory;
+        // Trailing separators make a link check resolve through the link, however many there are.
+        var spoolDirectory = _spoolDirectory + trailingSeparators;
         var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
 
         Assert.ThrowsAsync<TemporaryMapSpoolException>(() => TemporaryMapUploadReader.ReadAsync(
