@@ -206,6 +206,7 @@ builder.Services.AddInterceptedTransient<BearerHasPermissionFilter>();
 builder.Services.AddInterceptedTransient<InjectAuthTokenFilter>();
 builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
 builder.Services.AddInterceptedTransient<ChatServiceSecretAuthFilter>();
+builder.Services.AddInterceptedTransient<BearerRequiresPlayerAuthFilter>();
 
 // Turnstile service for captcha verification
 builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
