@@ -1,22 +1,16 @@
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Net.Http.Headers;
 using Moq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using static WC3ChampionsStatisticService.Tests.AuthFilterTestHelper;
 
 namespace WC3ChampionsStatisticService.Tests.Auth;
 
-// Hand-built ActionExecutingContext over a DefaultHttpContext, mirroring
-// Friend/ChatServiceSecretAuthFilterTests.cs (no TestServer/WebApplicationFactory in this repo).
 [TestFixture]
 public class CheckIfBattleTagIsAdminFilterTests
 {
@@ -24,7 +18,7 @@ public class CheckIfBattleTagIsAdminFilterTests
     public async Task Admin_InvokesNext_AndInjectsBattleTag()
     {
         var filter = new CheckIfBattleTagIsAdminFilter(AuthReturning("admin#123", isAdmin: true).Object);
-        var (context, invoked) = CreateContext("Bearer good-token");
+        var (context, invoked) = CreateActionExecutingContext("Bearer good-token");
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
@@ -37,24 +31,24 @@ public class CheckIfBattleTagIsAdminFilterTests
     public async Task NonAdmin_Returns401_NextNotInvoked()
     {
         var filter = new CheckIfBattleTagIsAdminFilter(AuthReturning("peter#123", isAdmin: false).Object);
-        var (context, invoked) = CreateContext("Bearer good-token");
+        var (context, invoked) = CreateActionExecutingContext("Bearer good-token");
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
         Assert.That(invoked[0], Is.False);
-        AssertUnauthorized(context);
+        AssertUnauthorizedWithError(context.Result, LegacyUnauthorizedError);
     }
 
     [Test]
     public async Task AdminTokenWithoutBattleTag_Returns401_NextNotInvoked()
     {
         var filter = new CheckIfBattleTagIsAdminFilter(AuthReturning("", isAdmin: true).Object);
-        var (context, invoked) = CreateContext("Bearer good-token");
+        var (context, invoked) = CreateActionExecutingContext("Bearer good-token");
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
         Assert.That(invoked[0], Is.False);
-        AssertUnauthorized(context);
+        AssertUnauthorizedWithError(context.Result, LegacyUnauthorizedError);
     }
 
     [TestCase(null)]
@@ -63,12 +57,12 @@ public class CheckIfBattleTagIsAdminFilterTests
     {
         var auth = new Mock<IW3CAuthenticationService>(MockBehavior.Strict);
         var filter = new CheckIfBattleTagIsAdminFilter(auth.Object);
-        var (context, invoked) = CreateContext(authorizationHeader);
+        var (context, invoked) = CreateActionExecutingContext(authorizationHeader);
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
         Assert.That(invoked[0], Is.False);
-        AssertUnauthorized(context);
+        AssertUnauthorizedWithError(context.Result, LegacyUnauthorizedError);
         auth.Verify(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
@@ -79,15 +73,21 @@ public class CheckIfBattleTagIsAdminFilterTests
         auth.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()))
             .Throws(new SecurityTokenExpiredException("expired"));
         var filter = new CheckIfBattleTagIsAdminFilter(auth.Object);
-        var (context, invoked) = CreateContext("Bearer stale");
+        var (context, invoked) = CreateActionExecutingContext("Bearer stale");
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
+        // The website admin panel keys its re-login prompt off this exact body.
         Assert.That(invoked[0], Is.False);
         Assert.That(context.Result, Is.TypeOf<UnauthorizedObjectResult>());
-        Assert.That(((UnauthorizedObjectResult)context.Result).Value, Is.Not.TypeOf<ErrorResult>(),
-            "an expired admin token keeps its AUTH_TOKEN_EXPIRED body so clients can prompt a re-login");
+        var body = ((UnauthorizedObjectResult)context.Result).Value;
+        Assert.That(PropertyOf(body, "StatusCode"), Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(PropertyOf(body, "Error"), Is.EqualTo("AUTH_TOKEN_EXPIRED"));
+        Assert.That(PropertyOf(body, "Message"), Is.EqualTo("Token expired."));
     }
+
+    private static object PropertyOf(object anonymousBody, string name) =>
+        anonymousBody.GetType().GetProperty(name)?.GetValue(anonymousBody);
 
     private static Mock<IW3CAuthenticationService> AuthReturning(string battleTag, bool isAdmin)
     {
@@ -104,39 +104,4 @@ public class CheckIfBattleTagIsAdminFilterTests
             });
         return auth;
     }
-
-    private static void AssertUnauthorized(ActionExecutingContext context)
-    {
-        Assert.That(context.Result, Is.TypeOf<UnauthorizedObjectResult>());
-        var value = ((UnauthorizedObjectResult)context.Result).Value;
-        Assert.That(value, Is.TypeOf<ErrorResult>());
-        Assert.That(((ErrorResult)value).Error, Is.EqualTo("Sorry H4ckerb0i"));
-    }
-
-    private static (ActionExecutingContext context, bool[] invoked) CreateContext(string authorizationHeader)
-    {
-        var httpContext = new DefaultHttpContext();
-        if (authorizationHeader != null)
-        {
-            httpContext.Request.Headers[HeaderNames.Authorization] = authorizationHeader;
-        }
-
-        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
-        var context = new ActionExecutingContext(
-            actionContext,
-            new List<IFilterMetadata>(),
-            new Dictionary<string, object>(),
-            Mock.Of<Controller>());
-        return (context, new bool[1]);
-    }
-
-    private static ActionExecutionDelegate NextDelegate(bool[] invoked, ActionExecutingContext context) =>
-        () =>
-        {
-            invoked[0] = true;
-            return Task.FromResult(new ActionExecutedContext(
-                new ActionContext(context.HttpContext, new RouteData(), new ActionDescriptor()),
-                new List<IFilterMetadata>(),
-                Mock.Of<Controller>()));
-        };
 }

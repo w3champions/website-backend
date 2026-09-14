@@ -1,22 +1,14 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Net.Http.Headers;
 using Moq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using static WC3ChampionsStatisticService.Tests.AuthFilterTestHelper;
 
 namespace WC3ChampionsStatisticService.Tests.Auth;
 
-// Hand-built ActionExecutingContext over a DefaultHttpContext, mirroring
-// Friend/ChatServiceSecretAuthFilterTests.cs (no TestServer/WebApplicationFactory in this repo).
 [TestFixture]
 public class BearerCheckIfBattleTagBelongsToAuthFilterTests
 {
@@ -26,7 +18,7 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     public async Task MatchingBattleTag_InvokesNext_AndInjectsBattleTag()
     {
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(AuthReturning(OwnBattleTag).Object);
-        var (context, invoked) = CreateContext("Bearer good-token", OwnBattleTag);
+        var (context, invoked) = CreateActionExecutingContext("Bearer good-token", OwnBattleTag);
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
@@ -40,12 +32,12 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     public async Task BattleTagNotBelongingToToken_Returns401_NextNotInvoked(string routeBattleTag)
     {
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(AuthReturning(OwnBattleTag).Object);
-        var (context, invoked) = CreateContext("Bearer good-token", routeBattleTag);
+        var (context, invoked) = CreateActionExecutingContext("Bearer good-token", routeBattleTag);
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
         Assert.That(invoked[0], Is.False);
-        AssertUnauthorized(context);
+        AssertUnauthorizedWithError(context.Result, LegacyUnauthorizedError);
     }
 
     [TestCase(null)]
@@ -54,12 +46,12 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     {
         var auth = new Mock<IW3CAuthenticationService>(MockBehavior.Strict);
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(auth.Object);
-        var (context, invoked) = CreateContext(authorizationHeader, OwnBattleTag);
+        var (context, invoked) = CreateActionExecutingContext(authorizationHeader, OwnBattleTag);
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
         Assert.That(invoked[0], Is.False);
-        AssertUnauthorized(context);
+        AssertUnauthorizedWithError(context.Result, LegacyUnauthorizedError);
         auth.Verify(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
     }
 
@@ -70,12 +62,12 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
         auth.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()))
             .Throws(new SecurityTokenValidationException("bad signature"));
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(auth.Object);
-        var (context, invoked) = CreateContext("Bearer garbage", OwnBattleTag);
+        var (context, invoked) = CreateActionExecutingContext("Bearer garbage", OwnBattleTag);
 
         await filter.OnActionExecutionAsync(context, NextDelegate(invoked, context));
 
         Assert.That(invoked[0], Is.False);
-        AssertUnauthorized(context);
+        AssertUnauthorizedWithError(context.Result, LegacyUnauthorizedError);
     }
 
     private static Mock<IW3CAuthenticationService> AuthReturning(string battleTag)
@@ -93,45 +85,4 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
             });
         return auth;
     }
-
-    private static void AssertUnauthorized(ActionExecutingContext context)
-    {
-        Assert.That(context.Result, Is.TypeOf<UnauthorizedObjectResult>());
-        var value = ((UnauthorizedObjectResult)context.Result).Value;
-        Assert.That(value, Is.TypeOf<ErrorResult>());
-        Assert.That(((ErrorResult)value).Error, Is.EqualTo("Sorry H4ckerb0i"));
-    }
-
-    private static (ActionExecutingContext context, bool[] invoked) CreateContext(string authorizationHeader, string routeBattleTag)
-    {
-        var httpContext = new DefaultHttpContext();
-        if (authorizationHeader != null)
-        {
-            httpContext.Request.Headers[HeaderNames.Authorization] = authorizationHeader;
-        }
-
-        var routeData = new RouteData();
-        if (routeBattleTag != null)
-        {
-            routeData.Values["battleTag"] = routeBattleTag;
-        }
-
-        var actionContext = new ActionContext(httpContext, routeData, new ActionDescriptor());
-        var context = new ActionExecutingContext(
-            actionContext,
-            new List<IFilterMetadata>(),
-            new Dictionary<string, object>(),
-            Mock.Of<Controller>());
-        return (context, new bool[1]);
-    }
-
-    private static ActionExecutionDelegate NextDelegate(bool[] invoked, ActionExecutingContext context) =>
-        () =>
-        {
-            invoked[0] = true;
-            return Task.FromResult(new ActionExecutedContext(
-                new ActionContext(context.HttpContext, new RouteData(), new ActionDescriptor()),
-                new List<IFilterMetadata>(),
-                Mock.Of<Controller>()));
-        };
 }
