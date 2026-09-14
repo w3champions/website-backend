@@ -613,6 +613,28 @@ public class TemporaryMapUploadReaderTests
         AssertASpoolExistedAndWasDeleted(body);
     }
 
+    [TestCase("body-failure")]
+    [TestCase("file-too-large")]
+    [TestCase("spool-write-fault")]
+    public void AnAbandonedSpoolFile_IsClosedExactlyOnce(string failureKind)
+    {
+        // Unix unlinks an open file without complaint, so only the close count shows a leaked handle.
+        var (full, contentType) = BuildMultipartBytes(MinimalMetadata("x.w3x"), new byte[100_000]);
+        Stream body = failureKind == "body-failure"
+            ? new InterruptedBodyStream(full, interruptAtByte: 60_000, _spoolDirectory,
+                failure: () => new IOException("The client reset the request stream."))
+            : new MemoryStream(full);
+        var failAt = failureKind == "spool-write-fault" ? SpoolFailurePoint.Write : SpoolFailurePoint.None;
+        FaultingSpoolStream spool = null;
+
+        Assert.CatchAsync(() => Read(body, contentType, maxFileBytes: failureKind == "file-too-large" ? 50_000 : 100_000,
+            openSpoolFile: path => spool = new FaultingSpoolStream(File.Create(path), failAt, SpoolFailure("disk"))));
+
+        Assert.That(spool, Is.Not.Null, "the spool file must have been opened");
+        Assert.That(spool.CloseCount, Is.EqualTo(1));
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public void ASpoolDirectoryThatIsALink_IsRefused(bool withTrailingSeparator)
@@ -757,13 +779,19 @@ public class TemporaryMapUploadReaderTests
 
     private enum SpoolFailurePoint
     {
+        None,
         Write,
         Close,
     }
 
-    /// <summary>A spool file that fails on its first write, or when it is closed, with the given exception.</summary>
+    /// <summary>
+    /// A spool file that fails on its first write, when it is closed, or never, with the given exception,
+    /// and counts how often it is closed.
+    /// </summary>
     private sealed class FaultingSpoolStream(Stream inner, SpoolFailurePoint failAt, Exception failure) : Stream
     {
+        public int CloseCount { get; private set; }
+
         public override bool CanRead => false;
         public override bool CanSeek => false;
         public override bool CanWrite => true;
@@ -797,6 +825,7 @@ public class TemporaryMapUploadReaderTests
 
         public override async ValueTask DisposeAsync()
         {
+            CloseCount++;
             await inner.DisposeAsync();
             ThrowIfFailingAt(SpoolFailurePoint.Close);
         }
@@ -805,6 +834,7 @@ public class TemporaryMapUploadReaderTests
         {
             if (disposing)
             {
+                CloseCount++;
                 inner.Dispose();
             }
 
