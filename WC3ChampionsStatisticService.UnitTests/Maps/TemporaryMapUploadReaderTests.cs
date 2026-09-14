@@ -25,6 +25,11 @@ public class TemporaryMapUploadReaderTests
     private const string AbcSha1 = "a9993e364706816aba3e25717850c26c9cd0d89d";
     private const string Boundary = "boundary-1";
 
+    /// <summary>0755, a directory's mode under the common 022 umask.</summary>
+    private const UnixFileMode WorldReadableDirectoryMode = UnixFileMode.UserRead | UnixFileMode.UserWrite |
+        UnixFileMode.UserExecute | UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead |
+        UnixFileMode.OtherExecute;
+
     private string _testRoot;
     private string _spoolDirectory;
 
@@ -647,6 +652,7 @@ public class TemporaryMapUploadReaderTests
 
         var target = Path.Combine(_testRoot, "elsewhere");
         Directory.CreateDirectory(target);
+        File.SetUnixFileMode(target, WorldReadableDirectoryMode);
         Directory.CreateSymbolicLink(_spoolDirectory, target);
         var spoolDirectory = withTrailingSeparator ? _spoolDirectory + Path.DirectorySeparatorChar : _spoolDirectory;
         var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
@@ -655,6 +661,28 @@ public class TemporaryMapUploadReaderTests
             body, contentType, spoolDirectory, TemporaryMapLimits.MaxFileBytes, CancellationToken.None));
 
         Assert.That(FilesIn(target), Is.Empty, "nothing may be spooled through the link");
+        Assert.That(File.GetUnixFileMode(target), Is.EqualTo(WorldReadableDirectoryMode), "the link target must be left untouched");
+    }
+
+    [Test]
+    public async Task AnExistingSpoolDirectory_IsTightenedToOwnerOnly()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Unix permission bits only.");
+            return;
+        }
+
+        // Left over from an earlier run with default permissions; chmod, unlike mkdir, ignores the umask.
+        Directory.CreateDirectory(_spoolDirectory);
+        File.SetUnixFileMode(_spoolDirectory, WorldReadableDirectoryMode);
+        Assert.That(File.GetUnixFileMode(_spoolDirectory), Is.EqualTo(WorldReadableDirectoryMode), "precondition");
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        using var upload = await Read(body, contentType);
+
+        Assert.That(File.GetUnixFileMode(_spoolDirectory),
+            Is.EqualTo(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute));
     }
 
     [Test]

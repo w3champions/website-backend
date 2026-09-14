@@ -60,8 +60,8 @@ public static class TemporaryMapUploadReader
     /// 400), a client reset or abort, or a body that ends before its closing boundary (including an
     /// empty body). The reader cannot tell these apart; the caller can.</item>
     /// <item><see cref="TemporaryMapSpoolException"/>: a local disk fault while spooling — the spool
-    /// directory cannot be created or is a link, or the spool file cannot be created, written or
-    /// closed. Already logged at Error. The client did nothing wrong: a bare 500.</item>
+    /// directory cannot be created or made owner-only, or is a link, or the spool file cannot be
+    /// created, written or closed. Already logged at Error. The client did nothing wrong: a bare 500.</item>
     /// <item><see cref="OperationCanceledException"/>, propagated unchanged, from the body or the spool.</item>
     /// </list>
     /// Disk faults are never surfaced as an <see cref="IOException"/>, so that type always means the body.
@@ -206,9 +206,9 @@ public static class TemporaryMapUploadReader
     }
 
     /// <summary>
-    /// Creates the spool directory owner-only (0700) where the OS has Unix modes, and refuses one that is
-    /// a link: a pre-planted link in a shared temp directory would redirect the map bytes elsewhere.
-    /// Returns the directory path without a trailing separator. An existing directory keeps its mode.
+    /// Makes the spool directory owner-only (0700) where the OS has Unix modes, and refuses one that is a
+    /// link: a pre-planted link in a shared temp directory would redirect the map bytes elsewhere.
+    /// Returns the directory path without a trailing separator.
     /// </summary>
     private static string PrepareSpoolDirectory(string spoolDirectory)
     {
@@ -221,10 +221,16 @@ public static class TemporaryMapUploadReader
                 ? Directory.CreateDirectory(path)
                 : Directory.CreateDirectory(path, OwnerOnlyDirectoryMode);
             isLink = directory.LinkTarget != null;
+            if (!isLink && !OperatingSystem.IsWindows())
+            {
+                // CreateDirectory leaves an existing directory's mode alone. Only the owner may chmod,
+                // so this also refuses a directory another user created first.
+                File.SetUnixFileMode(path, OwnerOnlyDirectoryMode);
+            }
         }
         catch (Exception ex) when (IsDiskFault(ex))
         {
-            throw SpoolFault("The spool directory could not be created.", path, ex);
+            throw SpoolFault("The spool directory could not be prepared.", path, ex);
         }
 
         if (isLink)
