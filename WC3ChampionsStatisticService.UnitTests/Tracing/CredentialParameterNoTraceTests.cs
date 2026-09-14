@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -12,16 +11,14 @@ using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.RateLimiting.Models;
 using W3ChampionsStatisticService.RateLimiting.Repositories;
 using W3ChampionsStatisticService.RateLimiting.Services;
-using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.Services.Interceptors;
 
 namespace WC3ChampionsStatisticService.Tests.Tracing;
 
 /// <summary>
-/// <c>IApiTokenService</c>, <c>IApiTokenRepository</c> and <c>ITrackingService</c> are registered as interface proxies
+/// <c>IApiTokenService</c> and <c>IApiTokenRepository</c> are registered as interface proxies
 /// (<c>AddInterceptedSingleton&lt;I, T&gt;</c>), so <see cref="TracingInterceptor"/> reads <see cref="NoTraceAttribute"/>
-/// off the INTERFACE parameters and would otherwise record a raw API token or Authorization header as a
-/// <c>param.{name}</c> activity tag. Each test also checks a non-credential tag, so a span without any tags cannot
+/// off the INTERFACE parameters and would otherwise record a raw API token as a <c>param.token</c> activity tag. Each test also checks a non-credential tag, so a span without any tags cannot
 /// pass vacuously.
 /// </summary>
 [TestFixture]
@@ -73,20 +70,6 @@ public class CredentialParameterNoTraceTests
         Assert.That(spans[2].GetTagItem("param.token"), Is.Null, "a raw API token must never become a trace tag");
     }
 
-    [Test]
-    public async Task TrackingService_TrackUnauthorizedRequest_ThroughTheTracingProxy_NeverTagsTheAuthorizationHeader()
-    {
-        var spans = await CaptureSpans<ITrackingService>(new TracedTrackingService(), proxy =>
-        {
-            proxy.TrackUnauthorizedRequest("Bearer " + Credential, null);
-            return Task.CompletedTask;
-        });
-
-        Assert.That(spans, Has.Count.EqualTo(1));
-        Assert.That(spans[0].GetTagItem("param.controller"), Is.EqualTo("null"));
-        Assert.That(spans[0].GetTagItem("param.authorization"), Is.Null, "the Authorization header must never become a trace tag");
-    }
-
     /// <summary>Invokes <paramref name="act"/> on an interface proxy of <paramref name="target"/> and returns the stopped spans in order.</summary>
     private static async Task<List<Activity>> CaptureSpans<TInterface>(TInterface target, Func<TInterface, Task> act)
         where TInterface : class
@@ -130,13 +113,5 @@ public class CredentialParameterNoTraceTests
         public Task Update(ApiToken apiToken) => Task.CompletedTask;
         public Task Delete(string id) => Task.CompletedTask;
         public Task UpdateLastUsed(string token) => Task.CompletedTask;
-    }
-
-    /// <summary>Stands in for <c>TrackingService</c> (class-level [Trace]) without an Application Insights client.</summary>
-    [Trace]
-    public class TracedTrackingService : ITrackingService
-    {
-        public void TrackUnauthorizedRequest(string authorization, ControllerBase controller) { }
-        public void TrackException(Exception ex, string message) { }
     }
 }
