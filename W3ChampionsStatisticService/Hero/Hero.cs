@@ -202,6 +202,7 @@ public enum HeroType
     TaurenChieftain,
     Tinker,
     Warden,
+    ForsakenPaladin,
 
     // Reforged
     JainaSea = 100,
