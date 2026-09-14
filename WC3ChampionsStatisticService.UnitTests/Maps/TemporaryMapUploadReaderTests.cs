@@ -16,6 +16,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using NUnit.Framework;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using W3ChampionsStatisticService.Maps;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
@@ -27,6 +30,27 @@ public class TemporaryMapUploadReaderTests
     private const string AbcSha1 = "a9993e364706816aba3e25717850c26c9cd0d89d";
     private const string Boundary = "boundary-1";
 
+    private string _testRoot;
+    private string _spoolDirectory;
+
+    [SetUp]
+    public void SetUp()
+    {
+        // A unique spool directory per test: the machine-wide TempUploadDir is shared with every other
+        // process, so assertions about its contents would be neither reliable nor meaningful.
+        _testRoot = Path.Combine(Path.GetTempPath(), "w3c-map-upload-tests", Guid.NewGuid().ToString("N"));
+        _spoolDirectory = Path.Combine(_testRoot, "spool");
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (Directory.Exists(_testRoot))
+        {
+            Directory.Delete(_testRoot, recursive: true);
+        }
+    }
+
     [Test]
     public async Task ReadsMetadataAndSpoolsFile_ComputingSha1AndProofInOnePass()
     {
@@ -36,7 +60,7 @@ public class TemporaryMapUploadReaderTests
             "\"launcherVersion\":\"3.4.0\",\"capturedAt\":\"2026-09-14T09:10:39Z\"}}",
             Encoding.UTF8.GetBytes("abc"));
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        using var upload = await Read(body, contentType);
 
         Assert.That(upload.Sha1, Is.EqualTo(AbcSha1));
         Assert.That(upload.MapProof, Is.EqualTo(AbcMapProof));
@@ -59,7 +83,7 @@ public class TemporaryMapUploadReaderTests
         new Random(42).NextBytes(fileBytes);
         var (body, contentType) = BuildMultipart(MinimalMetadata("big.w3m"), fileBytes);
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        using var upload = await Read(body, contentType);
 
         var expectedProof = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(MapProof.Prefix).Concat(fileBytes).ToArray())).ToLowerInvariant();
@@ -74,7 +98,7 @@ public class TemporaryMapUploadReaderTests
     {
         var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
 
-        var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        var upload = await Read(body, contentType);
         var path = upload.TempFilePath;
         upload.Dispose();
 
@@ -87,7 +111,7 @@ public class TemporaryMapUploadReaderTests
         // The tracing interceptor tags intercepted-method arguments with arg.ToString().
         var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        using var upload = await Read(body, contentType);
 
         Assert.That(upload.ToString(), Does.Not.Contain(AbcMapProof));
     }
@@ -100,7 +124,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = BuildMultipart(MinimalMetadata(originalFileName), Encoding.UTF8.GetBytes("abc"));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(ex.Code, Is.EqualTo("EXTENSION"));
@@ -112,7 +136,7 @@ public class TemporaryMapUploadReaderTests
     {
         var (body, contentType) = BuildMultipart(MinimalMetadata(originalFileName), Encoding.UTF8.GetBytes("abc"));
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        using var upload = await Read(body, contentType);
 
         Assert.That(upload.Extension, Is.EqualTo(originalFileName.EndsWith("m", StringComparison.OrdinalIgnoreCase) ? ".w3m" : ".w3x"));
     }
@@ -123,15 +147,14 @@ public class TemporaryMapUploadReaderTests
         var oversized = new byte[1024];
         var (body, contentType) = BuildMultipart(MinimalMetadata("big.w3x"), oversized);
 
-        var before = SnapshotTempFiles();
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None, maxFileBytes: 512));
+            () => Read(body, contentType, maxFileBytes: 512));
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status413PayloadTooLarge));
         Assert.That(ex.Code, Is.EqualTo("FILE_TOO_LARGE"));
         Assert.That(ex.Message, Is.EqualTo("FILE_TOO_LARGE"));
         Assert.That(JsonSerializer.Serialize(ex.Body), Is.EqualTo("{\"code\":\"FILE_TOO_LARGE\"}"));
-        AssertNoNewTempFiles(before);
+        AssertSpoolDirectoryHasNoFiles();
     }
 
     [Test]
@@ -139,7 +162,7 @@ public class TemporaryMapUploadReaderTests
     {
         var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None, maxFileBytes: 3);
+        using var upload = await Read(body, contentType, maxFileBytes: 3);
 
         Assert.That(upload.SizeBytes, Is.EqualTo(3));
     }
@@ -163,7 +186,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = BuildMultipart(huge, Encoding.UTF8.GetBytes("abc"));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
     }
@@ -176,7 +199,7 @@ public class TemporaryMapUploadReaderTests
             MetadataOfExactly(TemporaryMapLimits.MaxMetadataBytes) + " ", Encoding.UTF8.GetBytes("abc"));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
@@ -189,7 +212,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = BuildMultipart(
             MetadataOfExactly(TemporaryMapLimits.MaxMetadataBytes), Encoding.UTF8.GetBytes("abc"));
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        using var upload = await Read(body, contentType);
 
         Assert.That(upload.Metadata.OriginalFileName, Is.EqualTo("x.w3x"));
     }
@@ -203,7 +226,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = Materialise(content);
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
     }
@@ -217,7 +240,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = Materialise(content);
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
     }
@@ -228,7 +251,7 @@ public class TemporaryMapUploadReaderTests
         var body = new MemoryStream(Encoding.ASCII.GetBytes("--" + Boundary + "--\r\n"));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, $"multipart/form-data; boundary={Boundary}", CancellationToken.None));
+            () => Read(body, $"multipart/form-data; boundary={Boundary}"));
 
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
     }
@@ -240,12 +263,11 @@ public class TemporaryMapUploadReaderTests
         content.Add(new StringContent(MinimalMetadata("x.w3x"), Encoding.UTF8, "application/json"), "metadata");
         var (body, contentType) = Materialise(content);
 
-        var before = SnapshotTempFiles();
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
-        AssertNoNewTempFiles(before);
+        AssertSpoolDirectoryHasNoFiles();
     }
 
     [Test]
@@ -257,7 +279,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = Materialise(content);
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
     }
@@ -276,7 +298,7 @@ public class TemporaryMapUploadReaderTests
         var (body, contentType) = BuildMultipart(metadataJson, Encoding.UTF8.GetBytes("abc"));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
@@ -292,7 +314,7 @@ public class TemporaryMapUploadReaderTests
     public void RejectsANonMultipartContentType_With400Metadata(string contentType)
     {
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(new MemoryStream(), contentType, CancellationToken.None));
+            () => Read(new MemoryStream(), contentType));
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
@@ -307,7 +329,7 @@ public class TemporaryMapUploadReaderTests
         content.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("abc")), "mapFile", "upload.bin");
         var (body, contentType) = Materialise(content);
 
-        using var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None);
+        using var upload = await Read(body, contentType);
 
         Assert.That(upload.Sha1, Is.EqualTo(AbcSha1));
     }
@@ -329,8 +351,8 @@ public class TemporaryMapUploadReaderTests
             "--" + Boundary + "--\r\n";
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
-            () => TemporaryMapUploadReader.ReadAsync(
-                new MemoryStream(Encoding.ASCII.GetBytes(raw)), $"multipart/form-data; boundary={Boundary}", CancellationToken.None));
+            () => Read(
+                new MemoryStream(Encoding.ASCII.GetBytes(raw)), $"multipart/form-data; boundary={Boundary}"));
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(ex.Code, Is.EqualTo("METADATA"));
@@ -340,13 +362,12 @@ public class TemporaryMapUploadReaderTests
     public void ABodyThatEndsMidFile_SurfacesTheReadError_AndLeavesNoTempFile()
     {
         var (full, contentType) = BuildMultipartBytes(MinimalMetadata("x.w3x"), new byte[100_000]);
-        var body = new InterruptedBodyStream(full, interruptAtByte: 60_000, failure: null);
+        var body = new InterruptedBodyStream(full, interruptAtByte: 60_000, _spoolDirectory, failure: null);
 
-        var before = SnapshotTempFiles();
         Assert.ThrowsAsync<IOException>(
-            () => TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None));
+            () => Read(body, contentType));
 
-        AssertASpoolExistedAndWasDeleted(before, body);
+        AssertASpoolExistedAndWasDeleted(body);
     }
 
     [TestCase("connection-reset")]
@@ -362,7 +383,7 @@ public class TemporaryMapUploadReaderTests
             _ => new OperationCanceledException(cts.Token),
         };
         var (full, contentType) = BuildMultipartBytes(MinimalMetadata("x.w3x"), new byte[100_000]);
-        var body = new InterruptedBodyStream(full, interruptAtByte: 60_000, failure: () =>
+        var body = new InterruptedBodyStream(full, interruptAtByte: 60_000, _spoolDirectory, failure: () =>
         {
             if (thrown is OperationCanceledException)
             {
@@ -372,11 +393,182 @@ public class TemporaryMapUploadReaderTests
             return thrown;
         });
 
-        var before = SnapshotTempFiles();
-        var ex = Assert.CatchAsync(() => TemporaryMapUploadReader.ReadAsync(body, contentType, cts.Token));
+        var ex = Assert.CatchAsync(() => Read(body, contentType, cancellationToken: cts.Token));
 
         Assert.That(ex, Is.SameAs(thrown), "the reader must not reclassify transport failures; the controller does");
-        AssertASpoolExistedAndWasDeleted(before, body);
+        AssertASpoolExistedAndWasDeleted(body);
+    }
+
+    [Test]
+    public async Task ThePublicOverload_SpoolsIntoTempUploadDir_WithTheCallersCap()
+    {
+        // Production wiring only; nothing here asserts on the shared directory's other contents.
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+        using (var upload = await TemporaryMapUploadReader.ReadAsync(body, contentType, CancellationToken.None, maxFileBytes: 3))
+        {
+            Assert.That(Path.GetDirectoryName(upload.TempFilePath), Is.EqualTo(TemporaryMapLimits.TempUploadDir));
+        }
+
+        var (oversizedBody, oversizedContentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(
+            () => TemporaryMapUploadReader.ReadAsync(oversizedBody, oversizedContentType, CancellationToken.None, maxFileBytes: 2));
+
+        Assert.That(ex.Code, Is.EqualTo("FILE_TOO_LARGE"));
+    }
+
+    [Test]
+    public void ASpoolDirectoryPathHeldByAFile_IsASpoolFault_NotAnIOException()
+    {
+        Directory.CreateDirectory(_testRoot);
+        File.WriteAllText(_spoolDirectory, "a regular file where the spool directory should be");
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapSpoolException>(() => Read(body, contentType));
+
+        Assert.That(ex.InnerException, Is.InstanceOf<IOException>());
+        Assert.That(FilesIn(_testRoot), Is.EqualTo(new[] { _spoolDirectory }), "nothing may be spooled");
+    }
+
+    [TestCase("disk")]
+    [TestCase("access-denied")]
+    public void ASpoolFileThatCannotBeCreated_IsASpoolFault(string failureKind)
+    {
+        var thrown = SpoolFailure(failureKind);
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapSpoolException>(
+            () => Read(body, contentType, openSpoolFile: _ => throw thrown));
+
+        Assert.That(ex.InnerException, Is.SameAs(thrown));
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
+    [TestCase("disk")]
+    [TestCase("access-denied")]
+    public void ASpoolWriteFailure_IsASpoolFault_AndLeavesNoTempFile(string failureKind)
+    {
+        var thrown = SpoolFailure(failureKind);
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), new byte[100_000]);
+        var opened = 0;
+
+        var ex = Assert.ThrowsAsync<TemporaryMapSpoolException>(() => Read(body, contentType, openSpoolFile: path =>
+        {
+            opened++;
+            return new FaultingSpoolStream(File.Create(path), SpoolFailurePoint.Write, thrown);
+        }));
+
+        Assert.That(ex.InnerException, Is.SameAs(thrown));
+        Assert.That(opened, Is.EqualTo(1), "the spool file must have been created before the write failed");
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
+    [Test]
+    public void ASpoolCloseFailure_IsASpoolFault_AndLeavesNoTempFile()
+    {
+        // A buffered FileStream reports a full disk when it flushes on close.
+        var thrown = SpoolFailure("disk");
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapSpoolException>(() => Read(body, contentType,
+            openSpoolFile: path => new FaultingSpoolStream(File.Create(path), SpoolFailurePoint.Close, thrown)));
+
+        Assert.That(ex.InnerException, Is.SameAs(thrown));
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
+    [Test]
+    public void ASpoolFault_IsLoggedOnceAtError_WithItsCause_AndNeverWithTheProof()
+    {
+        var thrown = SpoolFailure("disk");
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+        var sink = new CapturingSink();
+        var previousLogger = Log.Logger;
+        Log.Logger = new LoggerConfiguration().MinimumLevel.Verbose().WriteTo.Sink(sink).CreateLogger();
+        try
+        {
+            // A close failure comes after every byte was hashed: the latest point a proof could leak.
+            Assert.ThrowsAsync<TemporaryMapSpoolException>(() => Read(body, contentType,
+                openSpoolFile: path => new FaultingSpoolStream(File.Create(path), SpoolFailurePoint.Close, thrown)));
+        }
+        finally
+        {
+            Log.Logger = previousLogger;
+        }
+
+        var logEvent = sink.Events.Single();
+        Assert.That(logEvent.Level, Is.EqualTo(LogEventLevel.Error));
+        Assert.That(logEvent.Exception, Is.SameAs(thrown));
+        var logged = logEvent.RenderMessage() + string.Join(",", logEvent.Properties.Values);
+        Assert.That(logged, Does.Not.Contain(AbcMapProof));
+        Assert.That(logged, Does.Not.Contain(MapProof.Hash(AbcMapProof)));
+    }
+
+    [Test]
+    public void ACancelledSpoolWrite_PropagatesUnchanged_AndIsNotASpoolFault()
+    {
+        var thrown = new OperationCanceledException();
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), new byte[100_000]);
+
+        var ex = Assert.CatchAsync(() => Read(body, contentType,
+            openSpoolFile: path => new FaultingSpoolStream(File.Create(path), SpoolFailurePoint.Write, thrown)));
+
+        Assert.That(ex, Is.SameAs(thrown));
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
+    [Test]
+    public void ABodyFailureMidFile_WinsOverASpoolThatAlsoFailsToClose()
+    {
+        var bodyFailure = new IOException("The client reset the request stream.");
+        var (full, contentType) = BuildMultipartBytes(MinimalMetadata("x.w3x"), new byte[100_000]);
+        var body = new InterruptedBodyStream(full, interruptAtByte: 60_000, _spoolDirectory, failure: () => bodyFailure);
+
+        var ex = Assert.CatchAsync(() => Read(body, contentType,
+            openSpoolFile: path => new FaultingSpoolStream(File.Create(path), SpoolFailurePoint.Close, SpoolFailure("disk"))));
+
+        Assert.That(ex, Is.SameAs(bodyFailure), "a close failure while abandoning the spool must not hide the body failure");
+        AssertASpoolExistedAndWasDeleted(body);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ASpoolDirectoryThatIsALink_IsRefused(bool withTrailingSeparator)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Creating a directory symbolic link needs elevation on Windows.");
+            return;
+        }
+
+        var target = Path.Combine(_testRoot, "elsewhere");
+        Directory.CreateDirectory(target);
+        Directory.CreateSymbolicLink(_spoolDirectory, target);
+        var spoolDirectory = withTrailingSeparator ? _spoolDirectory + Path.DirectorySeparatorChar : _spoolDirectory;
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        Assert.ThrowsAsync<TemporaryMapSpoolException>(() => TemporaryMapUploadReader.ReadAsync(
+            body, contentType, spoolDirectory, TemporaryMapLimits.MaxFileBytes, CancellationToken.None));
+
+        Assert.That(FilesIn(target), Is.Empty, "nothing may be spooled through the link");
+    }
+
+    [Test]
+    public async Task TheSpoolDirectoryAndFile_AreOwnerOnly()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Ignore("Unix permission bits only.");
+            return;
+        }
+
+        var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        using var upload = await Read(body, contentType);
+
+        Assert.That(File.GetUnixFileMode(_spoolDirectory),
+            Is.EqualTo(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute));
+        Assert.That(File.GetUnixFileMode(upload.TempFilePath),
+            Is.EqualTo(UnixFileMode.UserRead | UnixFileMode.UserWrite));
     }
 
     [Test]
@@ -478,25 +670,36 @@ public class TemporaryMapUploadReaderTests
             new List<IFilterMetadata>(),
             valueProviderFactories);
 
-    private static HashSet<string> SnapshotTempFiles()
-        => Directory.Exists(TemporaryMapLimits.TempUploadDir)
-            ? new HashSet<string>(Directory.GetFiles(TemporaryMapLimits.TempUploadDir))
-            : new HashSet<string>();
+    private Task<TemporaryMapUpload> Read(
+        Stream body,
+        string contentType,
+        long maxFileBytes = TemporaryMapLimits.MaxFileBytes,
+        Func<string, Stream> openSpoolFile = null,
+        CancellationToken cancellationToken = default)
+        => TemporaryMapUploadReader.ReadAsync(body, contentType, _spoolDirectory, maxFileBytes, cancellationToken, openSpoolFile);
 
-    private static void AssertNoNewTempFiles(HashSet<string> before)
+    private static Exception SpoolFailure(string failureKind)
+        => failureKind == "disk"
+            ? new IOException("No space left on device")
+            : new UnauthorizedAccessException("Access to the path is denied.");
+
+    private static string[] FilesIn(string directory)
+        => Directory.Exists(directory) ? Directory.GetFiles(directory) : [];
+
+    private void AssertSpoolDirectoryHasNoFiles()
+        => Assert.That(FilesIn(_spoolDirectory), Is.Empty, "the partial spool must be cleaned up");
+
+    private void AssertASpoolExistedAndWasDeleted(InterruptedBodyStream body)
     {
-        var residual = SnapshotTempFiles();
-        residual.ExceptWith(before);
-        Assert.That(residual, Is.Empty, "the partial spool must be cleaned up");
+        Assert.That(body.TempFilesAtInterruption, Is.Not.Empty, "the interruption must hit while a spool file exists");
+        AssertSpoolDirectoryHasNoFiles();
     }
 
-    private static void AssertASpoolExistedAndWasDeleted(HashSet<string> before, InterruptedBodyStream body)
+    private sealed class CapturingSink : ILogEventSink
     {
-        var spooledAtInterruption = new HashSet<string>(body.TempFilesAtInterruption ?? []);
-        spooledAtInterruption.ExceptWith(before);
-        Assert.That(spooledAtInterruption, Is.Not.Empty, "the interruption must hit while a spool file exists");
-        Assert.That(spooledAtInterruption.Where(File.Exists), Is.Empty, "the partial spool must be cleaned up");
-        AssertNoNewTempFiles(before);
+        public List<LogEvent> Events { get; } = [];
+
+        public void Emit(LogEvent logEvent) => Events.Add(logEvent);
     }
 
     private sealed class FakeMaxBodySizeFeature : IHttpMaxRequestBodySizeFeature
@@ -516,15 +719,81 @@ public class TemporaryMapUploadReaderTests
         }
     }
 
+    private enum SpoolFailurePoint
+    {
+        Write,
+        Close,
+    }
+
+    /// <summary>A spool file that fails on its first write, or when it is closed, with the given exception.</summary>
+    private sealed class FaultingSpoolStream(Stream inner, SpoolFailurePoint failAt, Exception failure) : Stream
+    {
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            ThrowIfFailingAt(SpoolFailurePoint.Write);
+            inner.Write(buffer, offset, count);
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            ThrowIfFailingAt(SpoolFailurePoint.Write);
+            return inner.WriteAsync(buffer, cancellationToken);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await inner.DisposeAsync();
+            ThrowIfFailingAt(SpoolFailurePoint.Close);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void ThrowIfFailingAt(SpoolFailurePoint point)
+        {
+            if (failAt == point)
+            {
+                throw failure;
+            }
+        }
+    }
+
     /// <summary>
     /// Serves <c>data</c> up to <c>interruptAtByte</c>, then either ends cleanly (<c>failure</c> null) or
     /// throws the exception <c>failure</c> returns — a truncated body or a transport failure mid-read.
+    /// It records the spool directory's files at that moment, so cleanup assertions cannot pass vacuously.
     /// </summary>
-    private sealed class InterruptedBodyStream(byte[] data, int interruptAtByte, Func<Exception> failure) : Stream
+    private sealed class InterruptedBodyStream(byte[] data, int interruptAtByte, string spoolDirectory, Func<Exception> failure) : Stream
     {
         private int _position;
 
-        public HashSet<string> TempFilesAtInterruption { get; private set; }
+        public string[] TempFilesAtInterruption { get; private set; }
 
         public override bool CanRead => true;
         public override bool CanSeek => false;
@@ -554,7 +823,7 @@ public class TemporaryMapUploadReaderTests
         {
             if (_position >= interruptAtByte)
             {
-                TempFilesAtInterruption ??= SnapshotTempFiles();
+                TempFilesAtInterruption ??= FilesIn(spoolDirectory);
                 if (failure == null)
                 {
                     return 0;

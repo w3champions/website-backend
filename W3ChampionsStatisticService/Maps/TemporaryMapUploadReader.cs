@@ -8,12 +8,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace W3ChampionsStatisticService.Maps;
 
 /// <summary>
 /// Reads the two-part upload body of design spec Appendix A.3 straight off the wire: the JSON
-/// `metadata` part (capped at 64 KiB) then the `mapFile` part, spooled to
+/// `metadata` part (capped at 64 KiB) then the `mapFile` part, spooled to an owner-only file in
 /// <see cref="TemporaryMapLimits.TempUploadDir"/> while sha1 and mapProof are computed incrementally.
 /// Nothing is ever held in memory, and a partial spool is deleted before the exception escapes.
 /// </summary>
@@ -24,33 +25,57 @@ public static class TemporaryMapUploadReader
     /// <summary>RFC 2046 §5.1.1: a boundary is 1 to 70 characters.</summary>
     private const int MaxBoundaryLength = 70;
 
+    private const UnixFileMode OwnerOnlyDirectoryMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
+    private const UnixFileMode OwnerOnlyFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+
     /// <summary>
-    /// Validates the body's shape and spools the map file. On success the caller owns the returned
-    /// handle and must dispose it; on any failure no spool file is left behind.
+    /// Validates the body's shape and spools the map file into <see cref="TemporaryMapLimits.TempUploadDir"/>.
+    /// On success the caller owns the returned handle and must dispose it; on any failure no spool file
+    /// is left behind.
     /// </summary>
-    /// <exception cref="TemporaryMapUploadException">
-    /// <c>400 METADATA</c> for a malformed body: no multipart content type or boundary, a missing or
-    /// misnamed or misordered part, multipart headers the <see cref="MultipartReader"/> refuses, or a
-    /// metadata part over 64 KiB, not valid JSON, or without an original file name.
-    /// <c>400 EXTENSION</c> when the original file name is not a .w3x/.w3m map.
-    /// <c>413 FILE_TOO_LARGE</c> when the map file exceeds <paramref name="maxFileBytes"/>.
-    /// </exception>
     /// <remarks>
-    /// Failures of the body stream itself propagate unchanged: an <see cref="IOException"/> (including
-    /// Kestrel's <see cref="BadHttpRequestException"/> for its body-size limit, a client reset, and a
-    /// body that ends before the closing boundary) or an <see cref="OperationCanceledException"/>.
-    /// The reader cannot tell a transport limit or a client abort from a truncated body; the caller
-    /// can, so it maps them.
+    /// Every failure is exactly one of four kinds, and each needs a different answer:
+    /// <list type="number">
+    /// <item><see cref="TemporaryMapUploadException"/>: the client sent something A.3 rejects —
+    /// <c>400 METADATA</c> for a malformed body (no multipart content type or boundary, a missing,
+    /// misnamed or misordered part, multipart headers the <see cref="MultipartReader"/> refuses, or
+    /// a metadata part over 64 KiB, not valid JSON, or without an original file name),
+    /// <c>400 EXTENSION</c> for a name that is not a .w3x/.w3m map, and <c>413 FILE_TOO_LARGE</c>
+    /// for a file over <paramref name="maxFileBytes"/>. Answer with its status and body.</item>
+    /// <item><see cref="IOException"/> from the request body itself, propagated unchanged: Kestrel's
+    /// <see cref="BadHttpRequestException"/> (its body-size limit is 413, other request errors are
+    /// 400), a client reset or abort, or a body that ends before its closing boundary (including an
+    /// empty body). The reader cannot tell these apart; the caller can.</item>
+    /// <item><see cref="TemporaryMapSpoolException"/>: a local disk fault while spooling — the spool
+    /// directory cannot be created or is a link, or the spool file cannot be created, written or
+    /// closed. Already logged at Error. The client did nothing wrong: a bare 500.</item>
+    /// <item><see cref="OperationCanceledException"/>, propagated unchanged, from the body or the spool.</item>
+    /// </list>
+    /// Disk faults are never surfaced as an <see cref="IOException"/>, so that type always means the body.
     /// </remarks>
-    public static async Task<TemporaryMapUpload> ReadAsync(
+    public static Task<TemporaryMapUpload> ReadAsync(
         Stream body,
         string contentType,
         CancellationToken cancellationToken,
         long maxFileBytes = TemporaryMapLimits.MaxFileBytes)
+        => ReadAsync(body, contentType, TemporaryMapLimits.TempUploadDir, maxFileBytes, cancellationToken);
+
+    /// <summary>
+    /// The same read with the spool location made explicit, so tests can use a private directory
+    /// and a failing spool file. <paramref name="openSpoolFile"/> defaults to the owner-only file.
+    /// </summary>
+    internal static async Task<TemporaryMapUpload> ReadAsync(
+        Stream body,
+        string contentType,
+        string spoolDirectory,
+        long maxFileBytes,
+        CancellationToken cancellationToken,
+        Func<string, Stream> openSpoolFile = null)
     {
         try
         {
-            return await ReadPartsAsync(body, contentType, maxFileBytes, cancellationToken);
+            return await ReadPartsAsync(
+                body, contentType, spoolDirectory, maxFileBytes, openSpoolFile ?? OpenSpoolFile, cancellationToken);
         }
         catch (InvalidDataException)
         {
@@ -61,7 +86,12 @@ public static class TemporaryMapUploadReader
     }
 
     private static async Task<TemporaryMapUpload> ReadPartsAsync(
-        Stream body, string contentType, long maxFileBytes, CancellationToken cancellationToken)
+        Stream body,
+        string contentType,
+        string spoolDirectory,
+        long maxFileBytes,
+        Func<string, Stream> openSpoolFile,
+        CancellationToken cancellationToken)
     {
         var reader = new MultipartReader(GetBoundary(contentType), body);
 
@@ -77,12 +107,12 @@ public static class TemporaryMapUploadReader
             throw Malformed();
         }
 
-        Directory.CreateDirectory(TemporaryMapLimits.TempUploadDir);
-        var tempFilePath = Path.Combine(TemporaryMapLimits.TempUploadDir, $"{Guid.NewGuid():N}.tmp");
+        var tempFilePath = Path.Combine(PrepareSpoolDirectory(spoolDirectory), $"{Guid.NewGuid():N}.tmp");
 
         try
         {
-            var (sha1, mapProof, sizeBytes) = await SpoolAsync(fileSection.Body, tempFilePath, maxFileBytes, cancellationToken);
+            var (sha1, mapProof, sizeBytes) = await SpoolAsync(
+                fileSection.Body, tempFilePath, maxFileBytes, openSpoolFile, cancellationToken);
             return new TemporaryMapUpload(metadata, tempFilePath, sha1, mapProof, sizeBytes, extension);
         }
         catch
@@ -93,26 +123,63 @@ public static class TemporaryMapUploadReader
     }
 
     private static async Task<(string Sha1, string MapProof, long SizeBytes)> SpoolAsync(
-        Stream source, string tempFilePath, long maxFileBytes, CancellationToken cancellationToken)
+        Stream source,
+        string tempFilePath,
+        long maxFileBytes,
+        Func<string, Stream> openSpoolFile,
+        CancellationToken cancellationToken)
     {
         using var hasher = new MapProofHasher();
         var buffer = ArrayPool<byte>.Shared.Rent(CopyBufferBytes);
 
         try
         {
-            await using var file = new FileStream(tempFilePath, FileMode.CreateNew, FileAccess.Write,
-                FileShare.None, CopyBufferBytes, FileOptions.Asynchronous);
-
-            int read;
-            while ((read = await source.ReadAsync(buffer.AsMemory(0, CopyBufferBytes), cancellationToken)) > 0)
+            Stream spool;
+            try
             {
-                if (hasher.BytesHashed + read > maxFileBytes)
-                {
-                    throw new TemporaryMapUploadException(StatusCodes.Status413PayloadTooLarge, "FILE_TOO_LARGE");
-                }
+                spool = openSpoolFile(tempFilePath);
+            }
+            catch (Exception ex) when (IsDiskFault(ex))
+            {
+                throw SpoolFault("The spool file could not be created.", tempFilePath, ex);
+            }
 
-                hasher.Append(buffer.AsSpan(0, read));
-                await file.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            try
+            {
+                int read;
+                while ((read = await source.ReadAsync(buffer.AsMemory(0, CopyBufferBytes), cancellationToken)) > 0)
+                {
+                    if (hasher.BytesHashed + read > maxFileBytes)
+                    {
+                        throw new TemporaryMapUploadException(StatusCodes.Status413PayloadTooLarge, "FILE_TOO_LARGE");
+                    }
+
+                    hasher.Append(buffer.AsSpan(0, read));
+                    try
+                    {
+                        await spool.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    }
+                    catch (Exception ex) when (IsDiskFault(ex))
+                    {
+                        throw SpoolFault("The spool file could not be written.", tempFilePath, ex);
+                    }
+                }
+            }
+            catch
+            {
+                await AbandonSpoolAsync(spool, tempFilePath);
+                throw;
+            }
+
+            try
+            {
+                // Closing flushes the stream's buffer, so a full disk can surface here too. The handle is
+                // released even when the flush fails, and the caller then deletes the file.
+                await spool.DisposeAsync();
+            }
+            catch (Exception ex) when (IsDiskFault(ex))
+            {
+                throw SpoolFault("The spool file could not be closed.", tempFilePath, ex);
             }
         }
         finally
@@ -122,6 +189,80 @@ public static class TemporaryMapUploadReader
 
         var (sha1, mapProof) = hasher.Finish();
         return (sha1, mapProof, hasher.BytesHashed);
+    }
+
+    /// <summary>
+    /// Creates the spool directory owner-only (0700) where the OS has Unix modes, and refuses one that is
+    /// a link: a pre-planted link in a shared temp directory would redirect the map bytes elsewhere.
+    /// Returns the directory path without a trailing separator. An existing directory keeps its mode.
+    /// </summary>
+    private static string PrepareSpoolDirectory(string spoolDirectory)
+    {
+        // A trailing separator would make the link check follow the link instead of inspecting it.
+        var path = Path.TrimEndingDirectorySeparator(spoolDirectory);
+        bool isLink;
+        try
+        {
+            var directory = OperatingSystem.IsWindows()
+                ? Directory.CreateDirectory(path)
+                : Directory.CreateDirectory(path, OwnerOnlyDirectoryMode);
+            isLink = directory.LinkTarget != null;
+        }
+        catch (Exception ex) when (IsDiskFault(ex))
+        {
+            throw SpoolFault("The spool directory could not be created.", path, ex);
+        }
+
+        if (isLink)
+        {
+            throw SpoolFault("The spool directory is a link; refusing to spool through it.", path, null);
+        }
+
+        return path;
+    }
+
+    private static Stream OpenSpoolFile(string path)
+    {
+        var options = new FileStreamOptions
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            BufferSize = CopyBufferBytes,
+            Options = FileOptions.Asynchronous,
+        };
+        if (!OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = OwnerOnlyFileMode;
+        }
+
+        return new FileStream(path, options);
+    }
+
+    /// <summary>
+    /// Closes a spool that is being abandoned because of another failure. That failure must win, so a
+    /// close error here is logged, not thrown; the file is deleted next either way.
+    /// </summary>
+    private static async Task AbandonSpoolAsync(Stream spool, string tempFilePath)
+    {
+        try
+        {
+            await spool.DisposeAsync();
+        }
+        catch (Exception ex) when (IsDiskFault(ex))
+        {
+            Log.Warning(ex, "Could not close an abandoned temporary map spool file {SpoolPath}", tempFilePath);
+        }
+    }
+
+    private static bool IsDiskFault(Exception exception)
+        => exception is IOException or UnauthorizedAccessException;
+
+    private static TemporaryMapSpoolException SpoolFault(string message, string path, Exception cause)
+    {
+        // The path is a server-chosen directory or a random file name: no proof, token or client data.
+        Log.Error(cause, "Temporary map upload spool fault at {SpoolPath}: {SpoolFault}", path, message);
+        return new TemporaryMapSpoolException(message, cause);
     }
 
     private static async Task<TemporaryMapUploadMetadata> ReadMetadataAsync(
