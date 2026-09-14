@@ -43,9 +43,10 @@ public class InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService auth
                 await next.Invoke();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            context.Result = new UnauthorizedObjectResult(new ErrorResult(ex.Message));
+            // Fixed body: exception messages (e.g. IdentityModel IDX diagnostics) never reach clients.
+            context.Result = new UnauthorizedObjectResult(new ErrorResult("Unauthorized"));
         }
     }
 

@@ -10,7 +10,7 @@ namespace WC3ChampionsStatisticService.Tests.Auth;
 public class BearerHasPermissionFilterTests
 {
     // The filter constructs the real W3CAuthenticationService itself, so these requests exercise real
-    // IdentityModel failures whose messages (IDX codes, token fragments) must never reach the response body.
+    // IdentityModel failures whose messages (IDX diagnostics) must never reach the response body.
     [TestCase(null)]
     [TestCase("Basic aGk6dGhlcmU=")]
     [TestCase("Bearer garbage")] // SecurityTokenMalformedException

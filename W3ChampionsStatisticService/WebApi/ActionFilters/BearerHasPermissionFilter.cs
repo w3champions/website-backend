@@ -52,7 +52,7 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
             catch (Exception)
             {
                 Log.Information($"Permission {Permission} missing.");
-                // Fixed body: exception messages (IdentityModel IDX texts can quote the token) never reach clients.
+                // Fixed body: exception messages (e.g. IdentityModel IDX diagnostics) never reach clients.
                 var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Unauthorized"));
                 context.Result = unauthorizedResult;
             }
