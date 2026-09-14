@@ -7,6 +7,10 @@ namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 /// <summary>
 /// DI-resolving marker for <see cref="BearerRequiresPlayerAuthFilter"/>, mirroring
 /// <c>BearerCheckIfBattleTagBelongsToAuthAttribute</c>.
+/// <para>
+/// Token lifetime is NOT validated (spec §6.1): an expired but correctly signed player token passes. Do not
+/// use this attribute on a route that must enforce token expiry.
+/// </para>
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public class BearerRequiresPlayerAuthAttribute : Attribute, IFilterFactory
