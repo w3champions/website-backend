@@ -1,5 +1,6 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -66,15 +67,14 @@ public class BearerRequiresPlayerAuthFilter(
         }
         catch (Exception ex) when (IsTokenRejection(ex))
         {
-            // The client's token is unusable: expected, client-controlled noise, so nothing is logged.
+            // IdentityModel rejected the client's token: expected, client-controlled noise, so nothing is logged.
             return Deny(context);
         }
         catch (Exception ex)
         {
-            // Anything else is a server-side fault that would otherwise look exactly like a bad token, e.g. a
-            // claim-shape change (InvalidOperationException, FormatException) or an unreadable JWT_PUBLIC_KEY
-            // (ArgumentException from the key import). Log the exception TYPE only: never the token, and never
-            // the message, which can quote it.
+            // Thrown outside IdentityModel: a server-side fault that would otherwise look exactly like a bad token,
+            // e.g. a claim-shape change (InvalidOperationException, FormatException) or an unreadable JWT_PUBLIC_KEY
+            // (ArgumentException from the key import). Log the exception TYPE only, never the token or the message.
             _logger.LogWarning(
                 "Player JWT could not be verified for a reason other than a rejected token: {ExceptionType}",
                 ex.GetType().FullName);
@@ -92,21 +92,26 @@ public class BearerRequiresPlayerAuthFilter(
     }
 
     /// <summary>
-    /// True when IdentityModel rejected the client's token itself. Verified against
-    /// System.IdentityModel.Tokens.Jwt 8.10.0:
-    /// <list type="bullet">
-    /// <item>bad signature, unknown signing key or <c>alg: none</c>: <see cref="SecurityTokenException"/>
-    /// subclasses (<see cref="SecurityTokenInvalidSignatureException"/>,
-    /// <see cref="SecurityTokenSignatureKeyNotFoundException"/>);</item>
-    /// <item>not a JWT, or segments that are not base64url JSON: <see cref="SecurityTokenMalformedException"/>
-    /// or a plain <see cref="ArgumentException"/> (IDX12729). Neither is a <see cref="SecurityTokenException"/>,
-    /// and the plain type is shared with <c>RSA.ImportFromPem</c> rejecting a broken public key, so an
-    /// <see cref="ArgumentException"/> counts only when the JWT handler's own assembly threw it.</item>
-    /// </list>
+    /// True when IdentityModel rejected the client's token itself: any <see cref="SecurityTokenException"/>, or any
+    /// exception thrown from inside an IdentityModel assembly, whatever its type. The exception type alone cannot
+    /// decide this. Verified against System.IdentityModel.Tokens.Jwt 8.10.0, a malformed client token also surfaces
+    /// as <see cref="SecurityTokenMalformedException"/> or a plain <see cref="ArgumentException"/> (not a JWT,
+    /// undecodable segments), and five-segment (JWE-shaped) tokens throw <see cref="NullReferenceException"/> or
+    /// <see cref="FormatException"/>. Meanwhile, server-side faults reuse those same types from outside IdentityModel:
+    /// <c>RSA.ImportFromPem</c> rejecting a broken JWT_PUBLIC_KEY (<see cref="ArgumentException"/>, from
+    /// System.Security.Cryptography), or a claim-shape change failing in <c>FromJWT</c> (for example
+    /// <see cref="FormatException"/> from <c>bool.Parse</c>).
     /// </summary>
     private static bool IsTokenRejection(Exception ex) =>
-        ex is SecurityTokenException
-        || (ex is ArgumentException && ex.TargetSite?.DeclaringType?.Assembly == typeof(JwtSecurityTokenHandler).Assembly);
+        ex is SecurityTokenException || IsIdentityModelAssembly(ex.TargetSite?.DeclaringType?.Assembly);
+
+    private static bool IsIdentityModelAssembly(Assembly assembly)
+    {
+        var name = assembly?.GetName().Name;
+        return name != null
+            && (name == typeof(JwtSecurityTokenHandler).Assembly.GetName().Name
+                || name.StartsWith("Microsoft.IdentityModel.", StringComparison.Ordinal));
+    }
 
     private static Task Deny(AuthorizationFilterContext context)
     {

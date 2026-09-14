@@ -6,6 +6,7 @@ using System.IO;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -123,8 +124,9 @@ public class BearerRequiresPlayerAuthFilterTests
     }
 
     // Tokens the REAL service rejects, covering each exception family IdentityModel 8.10 raises for a bad
-    // client token. This doubles as an upgrade canary: if a future IdentityModel reports a malformed token
-    // through a different exception or assembly, the filter would start logging it and this test fails.
+    // client token, including the non-security types its JWE branch throws. This doubles as an upgrade canary:
+    // if a future IdentityModel reports a malformed token from outside its own assemblies, the filter would
+    // start logging it and this test fails.
     [TestCaseSource(nameof(TokensTheRealServiceRejects))]
     public async Task TokenRejectedByTheRealService_Returns401_Quietly(string token)
     {
@@ -175,6 +177,47 @@ public class BearerRequiresPlayerAuthFilterTests
         AssertUnauthorizedWithError(context.Result, DenyError);
         Assert.That(context.HttpContext.Items.ContainsKey(BearerRequiresPlayerAuthFilter.BattleTagItemKey), Is.False);
         AssertLoggedOnlyTheExceptionType(typeof(InvalidOperationException));
+    }
+
+    [Test]
+    public async Task CorrectlySignedTokenWithANonBooleanIsAdminClaim_Returns401_AndLogsOnlyTheExceptionType()
+    {
+        // FormatException is also what IdentityModel's JWE branch throws for a malformed client token (quiet). Here
+        // it comes from our own claim parsing (bool.Parse) after the signature verified, so it is a server-side fault
+        // and must still be logged: the classification goes by where the exception was thrown, not by its type.
+        using var rsa = RSA.Create(2048);
+        var publicKeyPem = rsa.ExportSubjectPublicKeyInfoPem();
+        var token = SignedToken(rsa, [new Claim("battleTag", "peter#123"), new Claim("isAdmin", "maybe"), new Claim("name", "peter")]);
+        var auth = new Mock<IW3CAuthenticationService>();
+        auth.Setup(a => a.GetUserByToken(token, false))
+            .Returns((string jwt, bool validateLifetime) => W3CUserAuthenticationDto.FromJWT(jwt, publicKeyPem, validateLifetime));
+        var context = CreateContext("Bearer " + token, out _);
+
+        await CreateFilter(auth.Object).OnAuthorizationAsync(context);
+
+        AssertUnauthorizedWithError(context.Result, DenyError);
+        Assert.That(context.HttpContext.Items.ContainsKey(BearerRequiresPlayerAuthFilter.BattleTagItemKey), Is.False);
+        AssertLoggedOnlyTheExceptionType(typeof(FormatException));
+    }
+
+    [Test]
+    public async Task FaultThrownFromAnotherMicrosoftAssembly_Returns401_AndLogsOnlyTheExceptionType()
+    {
+        // Only IdentityModel's own assemblies speak for the client's token. A fault thrown from any other Microsoft
+        // library (here ASP.NET Core's PathString rejecting its input) is a server-side fault and must still be logged.
+        static W3CUserAuthenticationDto ThrowFromAspNetCore() => new() { Name = new PathString("no-leading-slash").Value };
+        var thrown = Assert.Throws<ArgumentException>(() => ThrowFromAspNetCore());
+        Assert.That(thrown.TargetSite?.DeclaringType?.Assembly.GetName().Name,
+            Does.StartWith("Microsoft.").And.Not.StartWith("Microsoft.IdentityModel."),
+            "precondition: the fault must be thrown from a non-IdentityModel Microsoft assembly");
+        var auth = new Mock<IW3CAuthenticationService>();
+        auth.Setup(a => a.GetUserByToken("token", false)).Returns(ThrowFromAspNetCore);
+        var context = CreateContext("Bearer token", out _);
+
+        await CreateFilter(auth.Object).OnAuthorizationAsync(context);
+
+        AssertUnauthorizedWithError(context.Result, DenyError);
+        AssertLoggedOnlyTheExceptionType(typeof(ArgumentException));
     }
 
     [Test]
@@ -288,6 +331,13 @@ public class BearerRequiresPlayerAuthFilterTests
         using var foreignKey = RSA.Create(2048);
         yield return new TestCaseData(SignedToken(foreignKey, PlayerClaims()))
             .SetName("{m}(signed by a foreign key: SecurityTokenSignatureKeyNotFoundException)");
+
+        // Five segments take IdentityModel's JWE branch, which fails with non-security exception types before any key
+        // is consulted. Both are client-controlled and must stay quiet.
+        yield return new TestCaseData(Base64UrlEncoder.Encode("{\"enc\":\"A256GCM\"}") + ".AAAA.AAAA.AAAA.AAAA")
+            .SetName("{m}(JWE header without alg: NullReferenceException from the JWT handler)");
+        yield return new TestCaseData(Base64UrlEncoder.Encode("{\"alg\":\"dir\",\"enc\":\"A256GCM\"}") + ".AAAA.A.AAAA.AAAA")
+            .SetName("{m}(JWE with a 1-character IV: FormatException from Base64UrlEncoder)");
     }
 
     private static Claim[] PlayerClaims() =>
