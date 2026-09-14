@@ -28,6 +28,12 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
                 context.ActionArguments["battleTag"] = res.BattleTag;
                 await next.Invoke();
             }
+            else
+            {
+                // Without a Result, MVC treats the un-invoked pipeline as short-circuited and writes an
+                // empty 200.
+                context.Result = InvalidAuthResult();
+            }
         }
         catch (SecurityTokenExpiredException)
         {
@@ -41,10 +47,11 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
         }
         catch (Exception)
         {
-            var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
-            context.Result = unauthorizedResult;
+            context.Result = InvalidAuthResult();
         }
     }
+
+    private static UnauthorizedObjectResult InvalidAuthResult() => new(new ErrorResult("Sorry H4ckerb0i"));
 
     public static string GetToken(StringValues authorization)
     {
