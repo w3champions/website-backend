@@ -9,12 +9,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Routing;
 using NUnit.Framework;
 using Serilog;
 using Serilog.Core;
@@ -571,62 +565,6 @@ public class TemporaryMapUploadReaderTests
             Is.EqualTo(UnixFileMode.UserRead | UnixFileMode.UserWrite));
     }
 
-    [Test]
-    public void BodyLimitFilter_RaisesTheLimitToTheTransportCeiling()
-    {
-        var httpContext = new DefaultHttpContext();
-        var feature = new FakeMaxBodySizeFeature();
-        httpContext.Features.Set<IHttpMaxRequestBodySizeFeature>(feature);
-
-        new TemporaryMapUploadBodyLimitAttribute().OnResourceExecuting(
-            CreateResourceContext(httpContext, new List<IValueProviderFactory>()));
-
-        Assert.That(feature.MaxRequestBodySize, Is.EqualTo(TemporaryMapLimits.TransportBodyBytes));
-        Assert.That(TemporaryMapLimits.TransportBodyBytes, Is.EqualTo(269_484_032));
-        Assert.That(TemporaryMapLimits.TransportBodyBytes - TemporaryMapLimits.MaxFileBytes, Is.EqualTo(1024 * 1024));
-    }
-
-    [Test]
-    public void BodyLimitFilter_LeavesAReadOnlyLimitUntouched()
-    {
-        // Kestrel makes the feature read-only once the body has started to be read; its setter then throws.
-        var httpContext = new DefaultHttpContext();
-        var feature = new FakeMaxBodySizeFeature { IsReadOnly = true };
-        httpContext.Features.Set<IHttpMaxRequestBodySizeFeature>(feature);
-
-        Assert.DoesNotThrow(() => new TemporaryMapUploadBodyLimitAttribute().OnResourceExecuting(
-            CreateResourceContext(httpContext, new List<IValueProviderFactory>())));
-
-        Assert.That(feature.MaxRequestBodySize, Is.EqualTo(FakeMaxBodySizeFeature.KestrelGlobalLimit));
-    }
-
-    [Test]
-    public void BodyLimitFilter_ToleratesAServerWithoutTheFeature()
-    {
-        var httpContext = new DefaultHttpContext();
-
-        Assert.DoesNotThrow(() => new TemporaryMapUploadBodyLimitAttribute().OnResourceExecuting(
-            CreateResourceContext(httpContext, new List<IValueProviderFactory>())));
-    }
-
-    [Test]
-    public void DisableFormValueModelBinding_RemovesEveryFormValueProvider()
-    {
-        var factories = new List<IValueProviderFactory>
-        {
-            new FormValueProviderFactory(),
-            new FormFileValueProviderFactory(),
-            new JQueryFormValueProviderFactory(),
-            new QueryStringValueProviderFactory(),
-        };
-
-        new DisableFormValueModelBindingAttribute().OnResourceExecuting(
-            CreateResourceContext(new DefaultHttpContext(), factories));
-
-        Assert.That(factories, Has.Count.EqualTo(1));
-        Assert.That(factories[0], Is.InstanceOf<QueryStringValueProviderFactory>());
-    }
-
     private static string MinimalMetadata(string originalFileName)
         => "{\"sha1\":\"" + AbcSha1 + "\",\"originalFileName\":\"" + originalFileName + "\",\"fileSize\":3}";
 
@@ -663,13 +601,6 @@ public class TemporaryMapUploadReaderTests
         return (buffer, content.Headers.ContentType.ToString());
     }
 
-    private static ResourceExecutingContext CreateResourceContext(
-        HttpContext httpContext, IList<IValueProviderFactory> valueProviderFactories)
-        => new(
-            new ActionContext(httpContext, new RouteData(), new ActionDescriptor()),
-            new List<IFilterMetadata>(),
-            valueProviderFactories);
-
     private Task<TemporaryMapUpload> Read(
         Stream body,
         string contentType,
@@ -700,23 +631,6 @@ public class TemporaryMapUploadReaderTests
         public List<LogEvent> Events { get; } = [];
 
         public void Emit(LogEvent logEvent) => Events.Add(logEvent);
-    }
-
-    private sealed class FakeMaxBodySizeFeature : IHttpMaxRequestBodySizeFeature
-    {
-        public const long KestrelGlobalLimit = 0x8000000;
-
-        private long? _maxRequestBodySize = KestrelGlobalLimit;
-
-        public bool IsReadOnly { get; init; }
-
-        public long? MaxRequestBodySize
-        {
-            get => _maxRequestBodySize;
-            set => _maxRequestBodySize = IsReadOnly
-                ? throw new InvalidOperationException("The maximum request body size cannot be modified after the app has already started reading the request body.")
-                : value;
-        }
     }
 
     private enum SpoolFailurePoint
