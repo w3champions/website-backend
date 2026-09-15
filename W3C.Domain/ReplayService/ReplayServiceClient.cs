@@ -17,7 +17,7 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
 
     public async Task<Stream> GenerateReplay(int gameId)
     {
-        var stream = await _httpClient.GetStreamAsync($"{ReplayServiceUrl}/generate/{gameId}?secret={AdminSecret}");
+        var stream = await _httpClient.GetStreamAsync(SecretUrl($"generate/{gameId}", AdminSecret));
         var memStream = new MemoryStream();
         await stream.CopyToAsync(memStream);
         memStream.Seek(0, SeekOrigin.Begin);
@@ -26,10 +26,17 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
 
     public async Task<ReplayChatsData> GetChatLogs(int gameId)
     {
-        var response = await _httpClient.GetAsync($"{ReplayServiceUrl}/chats/{gameId}?secret={AdminSecret}");
+        var response = await _httpClient.GetAsync(SecretUrl($"chats/{gameId}", AdminSecret));
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<ReplayChatsData>(content);
         return result;
     }
+
+    /// <summary>
+    /// The replay-service URL for <paramref name="path"/> with <paramref name="secret"/> as its query value, escaped
+    /// once, so no character of the secret can end the value or fall outside the query.
+    /// </summary>
+    internal static string SecretUrl(string path, string secret)
+        => $"{ReplayServiceUrl}/{path}?secret={Uri.EscapeDataString(secret)}";
 }
