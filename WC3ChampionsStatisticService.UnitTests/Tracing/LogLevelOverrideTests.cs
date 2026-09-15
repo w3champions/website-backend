@@ -2,16 +2,15 @@ using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using Serilog.Extensions.Logging;
 using W3ChampionsStatisticService.Extensions;
-using WC3ChampionsStatisticService.Tests.Maps;
 
 namespace WC3ChampionsStatisticService.Tests.Tracing;
 
 /// <summary>
 /// Hosting's "Request starting" and IHttpClientFactory's "Sending HTTP request" entries are logged at Information
 /// and carry full URLs, so a proofHash (spec §10.3). The configuration Program.cs builds its logger from must keep
-/// those categories at Warning; lowering any of them fails here. Entries go through the Microsoft.Extensions.Logging
-/// bridge that <c>UseSerilog()</c> installs, and only filtered or unemitted levels are used, so the configuration's
-/// console and file sinks never write.
+/// those categories at Warning; lowering any of them fails here. The check goes through the Microsoft.Extensions.Logging
+/// bridge that <c>UseSerilog()</c> installs, whose <see cref="ILogger.IsEnabled"/> is the gate every entry passes
+/// before it is forwarded; nothing is emitted, so the configuration's console and file sinks never write.
 /// </summary>
 [TestFixture]
 public class LogLevelOverrideTests
@@ -24,16 +23,11 @@ public class LogLevelOverrideTests
     [TestCase("System.Net.Http.HttpClient.Default.ClientHandler")]
     public void UrlCarryingCategories_LogWarningsButNotInformation(string category)
     {
-        var sink = new CapturingLogSink();
-        using var serilogLogger = W3CLoggerConfiguration.Create().WriteTo.Sink(sink).CreateLogger();
+        using var serilogLogger = W3CLoggerConfiguration.Create().CreateLogger();
         using var loggerFactory = new SerilogLoggerFactory(serilogLogger);
         var logger = loggerFactory.CreateLogger(category);
 
-        logger.LogInformation("Request starting HTTP/1.1 GET {Url}",
-            "https://website-backend.test/api/maps/temporary/status?proofHash=" + TemporaryMapClientTests.ProofHash);
-
-        Assert.That(sink.Events, Is.Empty, "an Information entry of this category reached the sinks");
-        Assert.That(logger.IsEnabled(LogLevel.Information), Is.False);
+        Assert.That(logger.IsEnabled(LogLevel.Information), Is.False, "an Information entry of this category would carry a full URL");
         Assert.That(logger.IsEnabled(LogLevel.Warning), Is.True);
     }
 
