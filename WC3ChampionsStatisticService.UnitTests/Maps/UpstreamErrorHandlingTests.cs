@@ -6,12 +6,16 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Maps;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using WC3ChampionsStatisticService.Tests.WebApi;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
@@ -87,20 +91,50 @@ public class UpstreamErrorHandlingTests
     [TestCaseSource(nameof(ControllerActionNames))]
     public async Task MapsControllerAction_WhenTheUpstreamIsUnreachable_AnswersLikeTheGlobalExceptionFilter(string action)
     {
-        // A transport failure (connection refused, DNS, TLS) is an HttpRequestException WITHOUT a status code.
-        var handler = new ScriptedHttpHandler().On(_ => true, _ => throw new HttpRequestException("upstream unreachable"));
-        var factory = new ScriptedHttpHandler.Factory(handler);
-        var controller = new MapsController(new MatchmakingServiceClient(factory), new UpdateServiceClient(factory))
-        {
-            ControllerContext = new ControllerContext { HttpContext = AdminRequest() },
-        };
+        // A transport failure (connection refused, DNS, TLS) is an HttpRequestException WITHOUT a status code, and
+        // its message names the upstream host and port.
+        var transportFailure = new HttpRequestException("Connection refused (mm.internal.example:3000)");
+        var handler = new ScriptedHttpHandler().On(_ => true, _ => throw transportFailure);
+        var logger = new Mock<ILogger<MapsController>>();
 
-        var result = await ControllerActions[action](controller);
+        var result = await ControllerActions[action](CreateController(handler, logger));
 
         Assert.That(result, Is.InstanceOf<ObjectResult>());
         Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError),
             "HttpRequestExceptionFilter answers 500 for a status-less HttpRequestException; the per-action catch must agree");
+        Assert.That(((ObjectResult)result).Value, Is.EqualTo(HttpRequestExceptionFilter.TransportFailureMessage),
+            "the transport failure's own text names an internal host");
         Assert.That(handler.Requests.Any(), Is.True, action + " never reached the upstream");
+        var entry = HttpRequestExceptionFilterTests.LogEntries(logger).Single();
+        Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
+        Assert.That(entry.Exception, Is.SameAs(transportFailure));
+        Assert.That(entry.Message, Does.Contain(action));
+    }
+
+    [TestCaseSource(nameof(ControllerActionNames))]
+    public async Task MapsControllerAction_WhenTheUpstreamAnswersAnError_KeepsStatusAndMessage_AndLogsActionAndStatus(string action)
+    {
+        var handler = new ScriptedHttpHandler().On(_ => true, _ => ScriptedHttpHandler.Json(HttpStatusCode.BadGateway, HtmlGatewayPage));
+        var logger = new Mock<ILogger<MapsController>>();
+
+        var result = await ControllerActions[action](CreateController(handler, logger));
+
+        var objectResult = (ObjectResult)result;
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(objectResult.Value, Is.InstanceOf<string>().And.Not.Empty.And.Not.EqualTo(HttpRequestExceptionFilter.TransportFailureMessage));
+        var entry = HttpRequestExceptionFilterTests.LogEntries(logger).Single();
+        Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
+        Assert.That(entry.Exception, Is.Null, "a status-bearing exception's message can hold an upstream body");
+        Assert.That(entry.Message, Does.Contain(action).And.Contain("502"));
+    }
+
+    private static MapsController CreateController(ScriptedHttpHandler handler, Mock<ILogger<MapsController>> logger)
+    {
+        var factory = new ScriptedHttpHandler.Factory(handler);
+        return new MapsController(new MatchmakingServiceClient(factory), new UpdateServiceClient(factory), logger.Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = AdminRequest() },
+        };
     }
 
     private static DefaultHttpContext AdminRequest()

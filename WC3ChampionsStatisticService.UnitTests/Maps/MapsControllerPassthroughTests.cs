@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
@@ -218,6 +219,7 @@ public class MapsControllerPassthroughTests
     private static MapsController CreateController(ScriptedHttpHandler handler)
     {
         var factory = new ScriptedHttpHandler.Factory(handler);
-        return new MapsController(new MatchmakingServiceClient(factory), new UpdateServiceClient(factory));
+        return new MapsController(
+            new MatchmakingServiceClient(factory), new UpdateServiceClient(factory), NullLogger<MapsController>.Instance);
     }
 }

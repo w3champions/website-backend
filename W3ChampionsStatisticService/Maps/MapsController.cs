@@ -5,8 +5,10 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
-using System.Net;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
 
@@ -17,10 +19,12 @@ namespace W3ChampionsStatisticService.Maps;
 [Trace]
 public class MapsController(
     MatchmakingServiceClient matchmakingServiceClient,
-    UpdateServiceClient updateServiceClient) : ControllerBase
+    UpdateServiceClient updateServiceClient,
+    ILogger<MapsController> logger) : ControllerBase
 {
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly UpdateServiceClient _updateServiceClient = updateServiceClient;
+    private readonly ILogger<MapsController> _logger = logger;
 
     [HttpGet("")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
@@ -43,7 +47,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(StatusCodeOf(ex), ex.Message);
+            return UpstreamFailure(ex);
         }
     }
 
@@ -60,7 +64,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(StatusCodeOf(ex), ex.Message);
+            return UpstreamFailure(ex);
         }
     }
 
@@ -75,7 +79,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(StatusCodeOf(ex), ex.Message);
+            return UpstreamFailure(ex);
         }
     }
 
@@ -91,7 +95,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(StatusCodeOf(ex), ex.Message);
+            return UpstreamFailure(ex);
         }
     }
 
@@ -106,7 +110,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(StatusCodeOf(ex), ex.Message);
+            return UpstreamFailure(ex);
         }
     }
 
@@ -121,15 +125,19 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode(StatusCodeOf(ex), ex.Message);
+            return UpstreamFailure(ex);
         }
     }
 
     /// <summary>
-    /// A transport failure (connection refused, DNS, TLS) has no status code; answer 500 for it, as
-    /// HttpRequestExceptionFilter does, instead of throwing on the null.
+    /// Answers and logs like HttpRequestExceptionFilter (the status, or 500 for a transport failure, whose own message
+    /// names the upstream host and is replaced) while keeping these actions' plain-text body.
     /// </summary>
-    private static int StatusCodeOf(HttpRequestException ex) => (int)(ex.StatusCode ?? HttpStatusCode.InternalServerError);
+    private ObjectResult UpstreamFailure(HttpRequestException ex, [CallerMemberName] string action = "")
+    {
+        HttpRequestExceptionFilter.LogFailure(_logger, ex, action);
+        return StatusCode(HttpRequestExceptionFilter.StatusCodeOf(ex), HttpRequestExceptionFilter.ClientMessageOf(ex));
+    }
 
     [HttpGet("tournaments")]
     public async Task<IActionResult> GetTournamentMaps()
