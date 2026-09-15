@@ -83,12 +83,15 @@ public class TemporaryMapClientContractTests
             h => Us(h).GetMapFile("f1"), []),
         new("CreateMapFromFormAsync", HttpMethod.Post, "/api/content/maps", HttpStatusCode.OK,
             h => Us(h).CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1"), []),
+        // A null row is no map, so a listing holding one breaks the contract like a listing without its items.
         new("GetMaps", HttpMethod.Get, "/maps?filter=x", HttpStatusCode.OK,
             h => Mm(h).GetMaps(new GetMapsRequest { Filter = "x" }),
-            ["{}", "{\"total\":0}", "{\"total\":0,\"items\":null}", "{\"total\":0,\"items\":{}}"]),
+            ["{}", "{\"total\":0}", "{\"total\":0,\"items\":null}", "{\"total\":0,\"items\":{}}",
+             "{\"total\":1,\"items\":[null]}", "{\"total\":2,\"items\":[{\"id\":7,\"name\":\"Echo Isles\"},null]}"]),
         new("GetTournamentMaps", HttpMethod.Get, "/maps/tournaments", HttpStatusCode.OK,
             h => Mm(h).GetTournamentMaps(),
-            ["{}", "{\"total\":0}", "{\"total\":0,\"items\":null}", "{\"total\":0,\"items\":{}}"]),
+            ["{}", "{\"total\":0}", "{\"total\":0,\"items\":null}", "{\"total\":0,\"items\":{}}",
+             "{\"total\":1,\"items\":[null]}", "{\"total\":2,\"items\":[{\"id\":7,\"name\":\"Echo Isles\"},null]}"]),
     ];
 
     private static IEnumerable<TestCaseData> ContractViolations()

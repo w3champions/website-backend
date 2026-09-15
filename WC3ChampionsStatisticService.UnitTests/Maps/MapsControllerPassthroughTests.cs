@@ -181,13 +181,15 @@ public class MapsControllerPassthroughTests
     [TestCase("GetTournamentMaps", HttpStatusCode.ProxyAuthenticationRequired, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     [TestCase("GetMaps", HttpStatusCode.OK, "{\"total\":0}", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.OK, "{\"total\":0}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetMaps", HttpStatusCode.OK, "{\"total\":1,\"items\":[null]}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.OK, "{\"total\":1,\"items\":[null]}", StatusCodes.Status502BadGateway)]
     public void MapListingActions_WhenMatchmakingFails_AnswerAnUpstreamFailure_NeverAnEmptyList(
         string action, HttpStatusCode upstreamStatus, string body, int expectedStatus)
     {
         // Neither action catches: the global HttpRequestExceptionFilter answers the failure. This includes the
-        // anonymous tournaments route, which used to answer 200 with an empty listing. A matchmaking 401/403 is
-        // website-backend's own admin-secret configuration failing, so neither caller may read it as their own.
-        // A 200 whose listing has no items array is a contract violation, never an empty listing.
+        // anonymous tournaments route, which used to answer 200 with an empty listing. A matchmaking 401/403/407 is
+        // website-backend's own admin-secret or proxy configuration failing, so neither caller may read it as their
+        // own. A 200 whose listing has no items array, or holds a null row, is a contract violation, never a listing.
         var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps", upstreamStatus, body);
         var controller = CreateController(handler);
 

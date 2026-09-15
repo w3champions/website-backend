@@ -324,8 +324,9 @@ public partial class MatchmakingServiceClient
 
     /// <summary>
     /// Both map listings are relayed to callers as a list, so a failure must never read as one. An error status throws
-    /// with that status, and a success whose body is not a listing throws a contract violation (see UpstreamContract).
-    /// Neither message quotes the body or the URL. A 401 or 403 from matchmaking means website-backend's own
+    /// with that status, and a success whose body is not a listing, or whose listing holds a null row (no map, yet it
+    /// would be re-served as one), throws a contract violation (see UpstreamContract). Neither message quotes the body
+    /// or the URL. A 401 or 403 from matchmaking means website-backend's own
     /// admin-secret configuration is wrong, and a 407 that a proxy on the way demands credentials: never the caller's
     /// authentication, so each surfaces as 502 (the message still names the upstream status), because relayed as-is
     /// the website would treat it as the caller's own auth failure. The global filter then logs only the 502 it
@@ -346,8 +347,9 @@ public partial class MatchmakingServiceClient
             throw new HttpRequestException($"{ServiceName} answered {(int)response.StatusCode}", null, status);
         }
 
-        return UpstreamContract.Deserialize<GetMapsResponse>(
+        var maps = UpstreamContract.Deserialize<GetMapsResponse>(
             await response.Content.ReadAsStringAsync(), response.StatusCode, ServiceName);
+        return Array.TrueForAll(maps.Items, row => row is not null) ? maps : throw UpstreamContract.Violation(response.StatusCode, ServiceName);
     }
 
     public async Task<MessageOfTheDay> GetMotd()
