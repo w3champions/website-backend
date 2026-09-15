@@ -79,9 +79,11 @@ public class TemporaryMapClientContractTests
         new("CreateMapFromFormAsync", HttpMethod.Post, "/api/content/maps", HttpStatusCode.OK,
             h => Us(h).CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1"), []),
         new("GetMaps", HttpMethod.Get, "/maps?filter=x", HttpStatusCode.OK,
-            h => Mm(h).GetMaps(new GetMapsRequest { Filter = "x" }), []),
+            h => Mm(h).GetMaps(new GetMapsRequest { Filter = "x" }),
+            ["{}", "{\"total\":0}", "{\"total\":0,\"items\":null}", "{\"total\":0,\"items\":{}}"]),
         new("GetTournamentMaps", HttpMethod.Get, "/maps/tournaments", HttpStatusCode.OK,
-            h => Mm(h).GetTournamentMaps(), []),
+            h => Mm(h).GetTournamentMaps(),
+            ["{}", "{\"total\":0}", "{\"total\":0,\"items\":null}", "{\"total\":0,\"items\":{}}"]),
     ];
 
     private static IEnumerable<TestCaseData> ContractViolations()

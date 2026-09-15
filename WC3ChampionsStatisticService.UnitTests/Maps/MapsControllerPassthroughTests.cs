@@ -177,12 +177,15 @@ public class MapsControllerPassthroughTests
     [TestCase("GetMaps", HttpStatusCode.Forbidden, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetMaps", HttpStatusCode.OK, "{\"total\":0}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.OK, "{\"total\":0}", StatusCodes.Status502BadGateway)]
     public void MapListingActions_WhenMatchmakingFails_AnswerAnUpstreamFailure_NeverAnEmptyList(
         string action, HttpStatusCode upstreamStatus, string body, int expectedStatus)
     {
         // Neither action catches: the global HttpRequestExceptionFilter answers the failure. This includes the
         // anonymous tournaments route, which used to answer 200 with an empty listing. A matchmaking 401/403 is
         // website-backend's own admin-secret configuration failing, so neither caller may read it as their own.
+        // A 200 whose listing has no items array is a contract violation, never an empty listing.
         var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps", upstreamStatus, body);
         var controller = CreateController(handler);
 
@@ -191,6 +194,23 @@ public class MapsControllerPassthroughTests
             : controller.GetTournamentMaps());
 
         Assert.That(HttpRequestExceptionFilter.StatusCodeOf(ex!), Is.EqualTo(expectedStatus));
+    }
+
+    [TestCase("GetMaps")]
+    [TestCase("GetTournamentMaps")]
+    public async Task MapListingActions_WithAWellFormedEmptyListing_Answer200(string action)
+    {
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps", HttpStatusCode.OK, "{\"total\":0,\"items\":[]}");
+        var controller = CreateController(handler);
+
+        var result = action == "GetMaps"
+            ? await controller.GetMaps(new GetMapsRequest())
+            : await controller.GetTournamentMaps();
+
+        var json = JsonSerializer.Serialize(((OkObjectResult)result).Value, WebJson);
+        using var document = JsonDocument.Parse(json);
+        Assert.That(document.RootElement.GetProperty("total").GetInt32(), Is.EqualTo(0));
+        Assert.That(document.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(0));
     }
 
     [Test]
