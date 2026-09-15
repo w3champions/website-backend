@@ -9,8 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
-using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
@@ -293,18 +291,12 @@ public class TemporaryMapClientContractTests
         .GetField("AdminSecret", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
 
     /// <summary>The Serilog events a call that must throw an HttpRequestException writes to the static logger.</summary>
-    private static List<LogEvent> LogEventsWhile(AsyncTestDelegate call)
+    private static IReadOnlyList<LogEvent> LogEventsWhile(AsyncTestDelegate call)
     {
-        var sink = new CapturingSink();
-        var previousLogger = Log.Logger;
-        Log.Logger = new LoggerConfiguration().MinimumLevel.Verbose().WriteTo.Sink(sink).CreateLogger();
-        try
+        var sink = new CapturingLogSink();
+        using (sink.CaptureStaticLogger())
         {
             Assert.ThrowsAsync<HttpRequestException>(call);
-        }
-        finally
-        {
-            Log.Logger = previousLogger;
         }
 
         return sink.Events;
@@ -312,11 +304,4 @@ public class TemporaryMapClientContractTests
 
     private static object Scalar(LogEvent logEvent, string property)
         => ((ScalarValue)logEvent.Properties[property]).Value;
-
-    private sealed class CapturingSink : ILogEventSink
-    {
-        public List<LogEvent> Events { get; } = [];
-
-        public void Emit(LogEvent logEvent) => Events.Add(logEvent);
-    }
 }

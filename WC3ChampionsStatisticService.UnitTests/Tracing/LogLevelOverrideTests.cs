@@ -1,8 +1,5 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
-using Serilog.Core;
-using Serilog.Events;
 using Serilog.Extensions.Logging;
 using W3ChampionsStatisticService.Extensions;
 using WC3ChampionsStatisticService.Tests.Maps;
@@ -27,7 +24,7 @@ public class LogLevelOverrideTests
     [TestCase("System.Net.Http.HttpClient.Default.ClientHandler")]
     public void UrlCarryingCategories_LogWarningsButNotInformation(string category)
     {
-        var sink = new CollectingSink();
+        var sink = new CapturingLogSink();
         using var serilogLogger = W3CLoggerConfiguration.Create().WriteTo.Sink(sink).CreateLogger();
         using var loggerFactory = new SerilogLoggerFactory(serilogLogger);
         var logger = loggerFactory.CreateLogger(category);
@@ -49,12 +46,5 @@ public class LogLevelOverrideTests
 
         Assert.That(logger.IsEnabled(LogLevel.Debug), Is.True);
         Assert.That(logger.IsEnabled(LogLevel.Trace), Is.False);
-    }
-
-    private sealed class CollectingSink : ILogEventSink
-    {
-        public ConcurrentQueue<LogEvent> Events { get; } = new();
-
-        public void Emit(LogEvent logEvent) => Events.Enqueue(logEvent);
     }
 }

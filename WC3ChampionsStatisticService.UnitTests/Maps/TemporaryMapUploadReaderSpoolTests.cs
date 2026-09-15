@@ -8,8 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using NUnit.Framework;
-using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 using W3ChampionsStatisticService.Maps;
 
@@ -151,18 +149,12 @@ public class TemporaryMapUploadReaderSpoolTests : TemporaryMapUploadReaderTestBa
     {
         var thrown = SpoolFailure("disk");
         var (body, contentType) = BuildMultipart(MinimalMetadata("x.w3x"), Encoding.UTF8.GetBytes("abc"));
-        var sink = new CapturingSink();
-        var previousLogger = Log.Logger;
-        Log.Logger = new LoggerConfiguration().MinimumLevel.Verbose().WriteTo.Sink(sink).CreateLogger();
-        try
+        var sink = new CapturingLogSink();
+        using (sink.CaptureStaticLogger())
         {
             // A close failure comes after every byte was hashed: the latest point a proof could leak.
             Assert.ThrowsAsync<TemporaryMapSpoolException>(() => Read(body, contentType,
                 openSpoolFile: path => new FaultingSpoolStream(File.Create(path), SpoolFailurePoint.Close, thrown)));
-        }
-        finally
-        {
-            Log.Logger = previousLogger;
         }
 
         var logEvent = sink.Events.Single();
@@ -297,13 +289,6 @@ public class TemporaryMapUploadReaderSpoolTests : TemporaryMapUploadReaderTestBa
     {
         Assert.That(body.TempFilesAtInterruption, Is.Not.Empty, "the interruption must hit while a spool file exists");
         AssertSpoolDirectoryHasNoFiles();
-    }
-
-    private sealed class CapturingSink : ILogEventSink
-    {
-        public List<LogEvent> Events { get; } = [];
-
-        public void Emit(LogEvent logEvent) => Events.Add(logEvent);
     }
 
     /// <summary>An in-memory spool that records which arrays the reader's writes were backed by.</summary>
