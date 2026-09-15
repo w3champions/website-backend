@@ -173,11 +173,16 @@ public class MapsControllerPassthroughTests
     [TestCase("GetTournamentMaps", HttpStatusCode.InternalServerError, "{\"total\":0}", StatusCodes.Status500InternalServerError)]
     [TestCase("GetMaps", HttpStatusCode.OK, "<html>maintenance</html>", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.OK, "", StatusCodes.Status502BadGateway)]
+    [TestCase("GetMaps", HttpStatusCode.Unauthorized, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetMaps", HttpStatusCode.Forbidden, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     public void MapListingActions_WhenMatchmakingFails_AnswerAnUpstreamFailure_NeverAnEmptyList(
         string action, HttpStatusCode upstreamStatus, string body, int expectedStatus)
     {
         // Neither action catches: the global HttpRequestExceptionFilter answers the failure. This includes the
-        // anonymous tournaments route, which used to answer 200 with an empty listing.
+        // anonymous tournaments route, which used to answer 200 with an empty listing. A matchmaking 401/403 is
+        // website-backend's own admin-secret configuration failing, so neither caller may read it as their own.
         var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps", upstreamStatus, body);
         var controller = CreateController(handler);
 

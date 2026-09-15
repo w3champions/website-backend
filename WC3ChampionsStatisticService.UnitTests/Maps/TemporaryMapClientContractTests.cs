@@ -136,6 +136,26 @@ public class TemporaryMapClientContractTests
         Assert.That(ex.InnerException, Is.Null);
     }
 
+    [TestCase("GetMaps", HttpStatusCode.Unauthorized)]
+    [TestCase("GetMaps", HttpStatusCode.Forbidden)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden)]
+    public void MapListing_WhenMatchmakingRefusesWebsiteBackend_ThrowsBadGateway_NamingTheUpstreamStatus(string listing, HttpStatusCode upstreamStatus)
+    {
+        // A 401 or 403 from matchmaking means website-backend's own admin-secret configuration is wrong, never the
+        // caller's authentication. Relayed as-is, the website would treat it as the caller's own auth failure.
+        var route = Routes.Single(r => r.Name == listing);
+        var handler = new ScriptedHttpHandler().On(route.Method, route.Path, upstreamStatus,
+            "{\"message\":\"refused behind " + BodyMarker + "\"}");
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(() => route.Call(handler));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+        Assert.That(ex.Message, Does.Contain(((int)upstreamStatus).ToString()), "the upstream status is the diagnostic");
+        Assert.That(ex.Message, Does.Not.Contain(BodyMarker).And.Not.Contain("://").And.Not.Contain("/maps").And.Not.Contain("{"));
+        Assert.That(ex.InnerException, Is.Null);
+    }
+
     [Test]
     public async Task MapListings_StillReadWellFormedBodies()
     {

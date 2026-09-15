@@ -324,13 +324,18 @@ public partial class MatchmakingServiceClient
     /// <summary>
     /// Both map listings are relayed to callers as a list, so a failure must never read as one. An error status throws
     /// with that status, and a success whose body is not a listing throws a contract violation (see UpstreamContract).
-    /// Neither message quotes the body or the URL.
+    /// Neither message quotes the body or the URL. A 401 or 403 from matchmaking means website-backend's own
+    /// admin-secret configuration is wrong, never the caller's authentication, so it surfaces as 502 (the message
+    /// still names the upstream status): relayed as-is, the website would treat it as the caller's own auth failure.
     /// </summary>
     private static async Task<GetMapsResponse> ReadMapListing(HttpResponseMessage response)
     {
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"{ServiceName} answered {(int)response.StatusCode}", null, response.StatusCode);
+            var status = response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
+                ? HttpStatusCode.BadGateway
+                : response.StatusCode;
+            throw new HttpRequestException($"{ServiceName} answered {(int)response.StatusCode}", null, status);
         }
 
         return UpstreamContract.Deserialize<GetMapsResponse>(
