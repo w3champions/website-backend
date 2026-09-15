@@ -498,8 +498,6 @@ public class TemporaryMapUploadService(
     private static bool IsCancellation(Exception ex, CancellationToken cancellationToken)
         => ex is OperationCanceledException && cancellationToken.IsCancellationRequested;
 
-    private static int? StatusOf(Exception ex) => (int?)(ex as HttpRequestException)?.StatusCode;
-
     private TemporaryMapUploadException UnknownFileState(int mapId, string fileState)
         => Upstream("matchmaking answered temporary map {MapId} with fileState {FileState}, which this step cannot act on",
             mapId, LoggableFileState(fileState));

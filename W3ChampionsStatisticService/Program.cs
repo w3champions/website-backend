@@ -27,6 +27,7 @@ using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -196,7 +197,6 @@ builder.Services.AddInterceptedTransient<BearerHasPermissionFilter>();
 builder.Services.AddInterceptedTransient<InjectAuthTokenFilter>();
 builder.Services.AddInterceptedTransient<TurnstileVerificationFilter>();
 builder.Services.AddInterceptedTransient<ChatServiceSecretAuthFilter>();
-builder.Services.AddInterceptedTransient<BearerRequiresPlayerAuthFilter>();
 
 // Turnstile service for captcha verification
 builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
@@ -263,6 +263,10 @@ builder.Services.AddRewardServices();
 
 // Manually-triggered operational jobs (see docs/admin-job-runner.md)
 builder.Services.AddAdminJobs();
+
+// Self-provided (temporary) custom maps: the player auth filter, the upload orchestration and the in-flight gate.
+// After the clients, MintRateLimiter and IW3CAuthenticationService above, which they depend on.
+builder.Services.AddMapServices();
 
 // MongoDB index initialization service - runs once at startup
 builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();

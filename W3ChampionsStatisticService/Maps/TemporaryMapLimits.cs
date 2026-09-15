@@ -26,6 +26,16 @@ public static class TemporaryMapLimits
     public const int UploadsPerHourPerBattleTag = 10;
     public const int PrecheckPerBattleTagPerMinute = 60;
 
+    /// <summary>
+    /// Uploads in flight per process, across all accounts (Task 2 security H1): bounds the spooled temp disk to
+    /// 8 × <see cref="MaxFileBytes"/>. One upload per battleTag is enforced at the same point (D7); both refusals answer
+    /// 429 QUOTA_EXCEEDED with <see cref="ConcurrentUploadRetryAfterSeconds"/>.
+    /// </summary>
+    public const int MaxConcurrentUploads = 8;
+
+    /// <summary>retryAfterSeconds of the 429 for an upload refused by <see cref="TemporaryMapUploadGate"/>.</summary>
+    public const int ConcurrentUploadRetryAfterSeconds = 30;
+
     /// <summary>Days since the last game START after which a temporary map's file is deleted.</summary>
     public const int TtlDays = 30;
 

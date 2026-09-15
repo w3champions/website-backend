@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Maps;
@@ -154,6 +156,9 @@ internal static class TemporaryMapUploadRules
     /// </summary>
     public static string LoggablePath(string path)
         => TemporaryMapKeys.IsFilePath(path) && !TemporaryMapNaming.ContainsControlCharacter(path) ? path : InvalidForLog;
+
+    /// <summary>The upstream status an exception carries, for log lines that may not carry the exception itself (S-L3).</summary>
+    public static int? StatusOf(Exception ex) => (int?)(ex as HttpRequestException)?.StatusCode;
 
     /// <summary>
     /// 1..32 ASCII letters, digits or <paramref name="punctuation"/>. A character loop rather than a regex: .NET's "$"

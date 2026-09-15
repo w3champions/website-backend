@@ -220,12 +220,13 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
     {
         private readonly Dictionary<string, double> _before = Snapshot();
 
-        public void AssertCountedOnceAs(string result)
+        /// <summary>Each of <paramref name="results"/> was counted exactly once since the snapshot, every other label not at all.</summary>
+        public void AssertCountedOnceAs(params string[] results)
         {
             var after = Snapshot();
             foreach (var label in AllResults)
             {
-                Assert.That(after[label] - _before[label], Is.EqualTo(label == result ? 1 : 0),
+                Assert.That(after[label] - _before[label], Is.EqualTo(results.Contains(label) ? 1 : 0),
                     $"website_temporary_map_uploads_total{{result=\"{label}\"}} delta");
             }
         }
@@ -266,6 +267,9 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         public CapturingLogSink Sink { get; } = new();
 
         public ILogger<TemporaryMapUploadService> Logger { get; }
+
+        /// <summary>A logger of another category over the same sink, e.g. for the controller in front of the service.</summary>
+        public ILogger<T> CreateLogger<T>() => _factory.CreateLogger<T>();
 
         /// <summary>Every event as one line: level, rendered message, every property value and the exception text.</summary>
         public string[] Lines()
