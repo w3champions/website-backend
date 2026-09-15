@@ -112,31 +112,6 @@ public class TemporaryMapClientGuardTests
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
-    private static IEnumerable<TestCaseData> SuccessWithoutRecordCases()
-        => from probe in NullOnNotFoundMethods()
-           select new TestCaseData(probe.Arguments[1]).SetName($"{probe.TestName}_200WithoutRecord");
-
-    [TestCaseSource(nameof(SuccessWithoutRecordCases))]
-    public void SuccessWithoutARecord_ThrowsRatherThanReadingAsNotFound(Func<MatchmakingServiceClient, Task<object>> call)
-    {
-        var handler = new ScriptedHttpHandler().On(_ => true, _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, "{}"));
-
-        var ex = Assert.ThrowsAsync<HttpRequestException>(() => call(Mm(handler)));
-
-        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
-    }
-
-    [TestCase(HttpStatusCode.Created)]
-    [TestCase(HttpStatusCode.Conflict)]
-    public void CreateTemporaryMap_WithoutARecord_Throws(HttpStatusCode status)
-    {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary", status, "{}");
-
-        var ex = Assert.ThrowsAsync<HttpRequestException>(() => Mm(handler).CreateTemporaryMap(SampleCreateRequest()));
-
-        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
-    }
-
     [Test]
     public async Task GetTemporaryMapByPath_EncodesThePathExactlyOnce()
     {

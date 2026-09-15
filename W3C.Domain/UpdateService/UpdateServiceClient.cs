@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using W3C.Domain.Common;
 using W3C.Domain.UpdateService.Contracts;
 using W3C.Domain.Tracing;
 
@@ -19,6 +20,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+    private const string ServiceName = "update-service";
 
     /// <summary>
     /// update-service can spend minutes writing and parsing a 256 MiB map, well past HttpClient's
@@ -58,8 +60,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
             url += $"?uploadedBy={HttpUtility.UrlEncode(uploadedBy)}";
         }
 
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        var request = AdminRequest(HttpMethod.Post, url);
         request.Content = req.Content;
         var response = await _httpClient.SendAsync(request);
 
@@ -93,8 +94,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     public async Task DeleteMapFile(string fileId)
     {
         var url = $"{UpdateServiceUrl}/api/content/maps/{fileId}";
-        var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        var request = AdminRequest(HttpMethod.Delete, url);
         var response = await _httpClient.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
@@ -107,7 +107,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     /// Streams a self-provided map into update-service. <paramref name="fileName"/> is the fileKey
     /// minus the "W3Champions/" prefix, e.g. "CustomGames/Legion TD-94ec3bda.w3x". update-service
     /// computes the mapProof from these bytes itself and stores only its hash — a client-provided
-    /// value is never accepted. A duplicate target path surfaces as HttpStatusCode.Conflict.
+    /// value is never accepted. A duplicate target path surfaces as HttpStatusCode.Conflict; a success whose body is
+    /// empty or not the stored-file JSON throws with that success status.
     /// <paramref name="mapFile"/> is consumed and disposed with the request, so open a fresh stream
     /// for every attempt.
     /// </summary>
@@ -129,8 +130,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         form.Add(fileContent, "mapFile", Path.GetFileName(fileName));
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{UpdateServiceUrl}/api/content/maps");
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        var request = AdminRequest(HttpMethod.Post, $"{UpdateServiceUrl}/api/content/maps");
         request.Content = form;
 
         var response = await uploadClient.SendAsync(request, cancellationToken);
@@ -139,17 +139,15 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         {
             ThrowUpstream(content, response.StatusCode);
         }
-        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Map upload failed!", null, HttpStatusCode.ServiceUnavailable);
 
-        return JsonConvert.DeserializeObject<MapFileData>(content);
+        return UpstreamContract.Deserialize<MapFileData>(content, response.StatusCode, ServiceName);
     }
 
     /// <summary>Idempotent: update-service answers 204 whether or not the file existed.</summary>
     public async Task DeleteMapFileByPathAsync(string filePath, CancellationToken cancellationToken)
     {
         var url = $"{UpdateServiceUrl}/api/content/maps/file?filePath={HttpUtility.UrlEncode(filePath)}";
-        var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        var request = AdminRequest(HttpMethod.Delete, url);
         var response = await _httpClient.SendAsync(request, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -158,7 +156,10 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         }
     }
 
-    /// <summary>Lists stored files under a prefix, oldest-first, for orphan reconciliation.</summary>
+    /// <summary>
+    /// Lists stored files under a prefix, oldest-first, for orphan reconciliation. A page without its files array
+    /// throws rather than reading as empty.
+    /// </summary>
     public async Task<MapFileListingResponse> ListMapFilesAsync(
         string prefix, int olderThanHours, string after, int limit, CancellationToken cancellationToken)
     {
@@ -174,8 +175,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         }
 
         var url = $"{UpdateServiceUrl}/api/content/maps/files?{string.Join("&", query)}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        var request = AdminRequest(HttpMethod.Get, url);
         var response = await _httpClient.SendAsync(request, cancellationToken);
 
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -184,8 +184,14 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
             ThrowUpstream(content, response.StatusCode);
         }
 
-        var listing = JsonConvert.DeserializeObject<MapFileListingResponse>(content);
-        return listing?.Files == null ? new MapFileListingResponse() : listing;
+        return UpstreamContract.Deserialize<MapFileListingResponse>(content, response.StatusCode, ServiceName);
+    }
+
+    private static HttpRequestMessage AdminRequest(HttpMethod method, string url)
+    {
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        return request;
     }
 
     /// <summary>

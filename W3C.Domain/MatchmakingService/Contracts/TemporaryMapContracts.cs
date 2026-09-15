@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 
@@ -74,8 +75,10 @@ public class CreateTemporaryMapResult
     public MapContract Map { get; set; }
 }
 
+/// <summary>GET /maps/temporary/expired. <c>items</c> is required: a page without it is a contract violation, never empty.</summary>
 public class ExpiredTemporaryMapsResponse
 {
+    [JsonProperty(Required = Required.Always)]
     public List<ExpiredTemporaryMap> Items { get; set; } = [];
 }
 

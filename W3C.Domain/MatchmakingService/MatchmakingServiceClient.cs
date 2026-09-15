@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Dynamic;
@@ -662,12 +663,12 @@ public partial class MatchmakingServiceClient
     /// proxy's error page) or without an errors array gets a status-only message instead of escaping as a
     /// NullReferenceException or JsonReaderException.
     /// </summary>
-    private async Task HandleMMError(HttpResponseMessage response)
+    private async Task HandleMMError(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
         string message = null;
         try
         {
-            var errors = (await GetResult<ErrorResponse>(response))?.Errors;
+            var errors = (await GetResult<ErrorResponse>(response, cancellationToken))?.Errors;
             if (errors != null)
             {
                 message = string.Join(",", errors.Select(x => $"{x?.Param} {x?.Message}"));
@@ -681,10 +682,10 @@ public partial class MatchmakingServiceClient
         throw new HttpRequestException(message ?? $"matchmaking-service returned {(int)response.StatusCode}", null, response.StatusCode);
     }
 
-    private async Task<T> GetResult<T>(HttpResponseMessage response)
+    private async Task<T> GetResult<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)
         where T : class
     {
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<T>(content);
         return result;
@@ -693,6 +694,20 @@ public partial class MatchmakingServiceClient
     private string SerializeData(object data)
     {
         return JsonConvert.SerializeObject(data, _jsonSerializerSettings);
+    }
+
+    /// <summary>Sends a request carrying x-admin-secret and, when given, a JSON body.</summary>
+    private Task<HttpResponseMessage> SendWithSecret(
+        HttpMethod method, string url, string jsonBody = null, CancellationToken cancellationToken = default)
+    {
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        if (jsonBody != null)
+        {
+            request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+        }
+
+        return _httpClient.SendAsync(request, cancellationToken);
     }
 
     private List<MappedQueue> FormatQueueData(List<Queue> allQueues)
