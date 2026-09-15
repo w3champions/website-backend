@@ -24,6 +24,10 @@ public class TelemetryRedactionTests
     private const string Sha1 = TemporaryMapClientTests.Sha1;
     private const string HubToken = "raw-hub-token-under-test";
 
+    /// <summary>Placeholders for the outbound credentials; never the real values.</summary>
+    internal const string OutboundSecret = "placeholder-admin-secret-under-test";
+    internal const string OutboundJwt = "placeholder.caller-jwt.under-test";
+
     [TestCase("https://mm.test/maps/temporary/by-proof-hash/HASH", "https://mm.test/maps/temporary/by-proof-hash/Redacted")]
     [TestCase("/maps/temporary/by-proof-hash/HASH", "/maps/temporary/by-proof-hash/Redacted")]
     [TestCase("https://mm.test/api/maps/temporary/by-proof-hash/HASH?trace=1", "https://mm.test/api/maps/temporary/by-proof-hash/Redacted?trace=1")]
@@ -49,6 +53,43 @@ public class TelemetryRedactionTests
     {
         // The SignalR hub takes its JWT or ticket as ?access_token= (browsers cannot set headers on WebSockets).
         Assert.That(TelemetryRedaction.RedactUrl(input.Replace("TOKEN", HubToken)), Is.EqualTo(expected));
+    }
+
+    [TestCase("https://replay.test/generate/42?secret=SECRET", "https://replay.test/generate/42?secret=Redacted")]
+    [TestCase("https://identity.test/api/permissions?id=Peter%23123&Authorization=JWT", "https://identity.test/api/permissions?id=Peter%23123&Authorization=Redacted")]
+    public void RedactUrl_RedactsOutboundCredentialKeys(string input, string expected)
+    {
+        // ReplayServiceClient sends the admin secret as ?secret= and IdentityServiceClient the caller's JWT as
+        // ?authorization=. The HttpClient instrumentation's own query redaction can be switched off by configuration.
+        var url = input.Replace("SECRET", OutboundSecret).Replace("JWT", OutboundJwt);
+
+        Assert.That(TelemetryRedaction.RedactUrl(url), Is.EqualTo(expected));
+    }
+
+    [TestCase("https://replay.test/generate/42?secret=SECRET", "https://replay.test/generate/42?secret=Redacted")]
+    [TestCase("https://replay.test/chats/42?secret=SECRET", "https://replay.test/chats/42?secret=Redacted")]
+    [TestCase("https://identity.test/api/permissions?authorization=JWT", "https://identity.test/api/permissions?authorization=Redacted")]
+    [TestCase("https://identity.test/api/permissions?id=Peter%23123&authorization=JWT", "https://identity.test/api/permissions?id=Redacted&authorization=Redacted")]
+    [TestCase("https://any.test/x?season=22&gateway=20", "https://any.test/x?season=Redacted&gateway=Redacted")]
+    [TestCase("https://any.test/x?flag&a=1#part", "https://any.test/x?flag&a=Redacted#part")]
+    [TestCase("https://any.test/x?a=&b=Redacted", "https://any.test/x?a=&b=Redacted")]
+    [TestCase("https://mm.test/maps/temporary/by-proof-hash/HASH?trace=1", "https://mm.test/maps/temporary/by-proof-hash/Redacted?trace=Redacted")]
+    public void RedactUrlQueryValues_RedactsEveryValue_AndKeepsTheKeys(string input, string expected)
+    {
+        var url = input.Replace("SECRET", OutboundSecret).Replace("JWT", OutboundJwt).Replace("HASH", Hash);
+
+        Assert.That(TelemetryRedaction.RedactUrlQueryValues(url), Is.EqualTo(expected));
+    }
+
+    [TestCase("https://mm.test/maps/temporary/by-sha1/SHA1")]
+    [TestCase("https://any.test/x?")]
+    [TestCase("")]
+    [TestCase(null)]
+    public void RedactUrlQueryValues_LeavesUrlsWithoutValuesUntouched(string input)
+    {
+        var url = input?.Replace("SHA1", Sha1);
+
+        Assert.That(TelemetryRedaction.RedactUrlQueryValues(url), Is.SameAs(url));
     }
 
     [TestCase("https://mm.test/maps/temporary/by-sha1/SHA1")]
@@ -164,6 +205,36 @@ public class TelemetryRedactionTests
         Assert.That(request.Name, Is.EqualTo("GET TemporaryMaps/GetStatus"));
         Assert.That(dependency.Name, Is.EqualTo("GET /maps/temporary/by-proof-hash/Redacted"));
         Assert.That(dependency.Data, Is.EqualTo("https://mm.test/maps/temporary/by-proof-hash/Redacted"));
+    }
+
+    [Test]
+    public void AppInsightsDependency_RedactsEveryQueryValueOfTheOutboundUrl()
+    {
+        // The HTTP dependency collector stores the full request URI in Data and "METHOD /path" in Name.
+        var replay = new DependencyTelemetry
+        {
+            Type = "Http",
+            Target = "replay.test",
+            Name = "GET /generate/42",
+            Data = $"https://replay.test/generate/42?secret={OutboundSecret}",
+        };
+        var identity = new DependencyTelemetry
+        {
+            Type = "Http",
+            Target = "identity.test",
+            Name = "DELETE /api/permissions",
+            Data = $"https://identity.test/api/permissions?id=Peter%23123&authorization={OutboundJwt}",
+        };
+        var initializer = new TelemetryRedactionInitializer();
+
+        initializer.Initialize(replay);
+        initializer.Initialize(identity);
+
+        Assert.That(replay.Data, Is.EqualTo("https://replay.test/generate/42?secret=Redacted"));
+        Assert.That(identity.Data, Is.EqualTo("https://identity.test/api/permissions?id=Redacted&authorization=Redacted"));
+        Assert.That(replay.Name, Is.EqualTo("GET /generate/42"));
+        Assert.That(identity.Name, Is.EqualTo("DELETE /api/permissions"));
+        Assert.That(identity.Target, Is.EqualTo("identity.test"));
     }
 
     [Test]

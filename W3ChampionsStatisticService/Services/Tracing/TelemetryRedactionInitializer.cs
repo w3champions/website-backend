@@ -8,7 +8,8 @@ namespace W3ChampionsStatisticService.Services.Tracing;
 /// <summary>
 /// Application Insights counterpart of <see cref="TelemetryRedactionProcessor"/>: request telemetry records the
 /// full request URL including its query, and HTTP dependency telemetry records the outbound path in its name and
-/// the full URL in its data. Initializers run again when the telemetry is tracked, after those fields are set.
+/// the full URL in its data. Every query value of that data is redacted, keys kept, because outbound clients send
+/// credentials as query parameters. Initializers run again when the telemetry is tracked, after those fields are set.
 /// </summary>
 public sealed class TelemetryRedactionInitializer : ITelemetryInitializer
 {
@@ -26,7 +27,7 @@ public sealed class TelemetryRedactionInitializer : ITelemetryInitializer
                 break;
             case DependencyTelemetry dependency:
                 dependency.Name = TelemetryRedaction.RedactUrl(dependency.Name);
-                dependency.Data = TelemetryRedaction.RedactUrl(dependency.Data);
+                dependency.Data = TelemetryRedaction.RedactUrlQueryValues(dependency.Data);
                 break;
         }
     }

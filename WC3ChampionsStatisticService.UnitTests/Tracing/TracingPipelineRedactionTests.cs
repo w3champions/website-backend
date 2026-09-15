@@ -50,6 +50,20 @@ public class TracingPipelineRedactionTests
     }
 
     [Test]
+    public async Task OutboundCredentialQueryValues_NeverReachTheOtlpExporter()
+    {
+        // ReplayServiceClient's ?secret= and IdentityServiceClient's ?authorization= shapes.
+        var exported = await ExportedBytesOfOutboundCalls(
+            $"generate/42?secret={TelemetryRedactionTests.OutboundSecret}",
+            $"api/permissions?id=Peter%23123&authorization={TelemetryRedactionTests.OutboundJwt}");
+
+        Assert.That(exported, Does.Contain("/generate/42?secret=Redacted"));
+        Assert.That(exported, Does.Contain("authorization=Redacted"));
+        Assert.That(exported, Does.Not.Contain(TelemetryRedactionTests.OutboundSecret));
+        Assert.That(exported, Does.Not.Contain(TelemetryRedactionTests.OutboundJwt));
+    }
+
+    [Test]
     public void RedactionProcessor_RunsBeforeTheExporter()
     {
         // A simple export processor exports synchronously in OnEnd, so a redaction registered after it would edit

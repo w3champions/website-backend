@@ -7,8 +7,9 @@ namespace W3ChampionsStatisticService.Services.Tracing;
 /// Removes secrets from URL-shaped telemetry values. Temporary-map secrets (design spec §10.3: never log a mapProof or
 /// a proofHash) reach telemetry in two shapes: matchmaking's <c>/maps/temporary/by-proof-hash/{proofHash}</c> route
 /// carries the proofHash as a path segment, and website-backend's own routes take it as a query parameter. The
-/// SignalR hub takes its token as the <c>access_token</c> query parameter. Values become "Redacted", the
-/// placeholder OpenTelemetry's own query redaction uses.
+/// SignalR hub takes its token as the <c>access_token</c> query parameter, and two outbound clients send credentials
+/// as query parameters: the replay-service admin secret as <c>secret</c> and the caller's JWT to identification-service
+/// as <c>authorization</c>. Values become "Redacted", the placeholder OpenTelemetry's own query redaction uses.
 /// </summary>
 public static class TelemetryRedaction
 {
@@ -16,13 +17,22 @@ public static class TelemetryRedaction
 
     private const string ProofHashPathPrefix = "/maps/temporary/by-proof-hash/";
 
-    private static readonly string[] SecretQueryKeys = ["proofHash", "mapProof", "access_token"];
+    private static readonly string[] SecretQueryKeys = ["proofHash", "mapProof", "access_token", "secret", "authorization"];
 
     /// <summary>
     /// Redacts a full URL, a bare path, or text embedding one (e.g. "GET /path"). Returns the same instance when
     /// there is nothing to redact.
     /// </summary>
-    public static string RedactUrl(string url)
+    public static string RedactUrl(string url) => RedactUrl(url, everyQueryValue: false);
+
+    /// <summary>
+    /// Like <see cref="RedactUrl(string)"/>, but redacts the value of every query parameter and keeps the keys, as
+    /// OpenTelemetry's HttpClient instrumentation does by default: for outbound URLs, whose query can carry a
+    /// credential under any key. Returns the same instance when there is nothing to redact.
+    /// </summary>
+    public static string RedactUrlQueryValues(string url) => RedactUrl(url, everyQueryValue: true);
+
+    private static string RedactUrl(string url, bool everyQueryValue)
     {
         if (string.IsNullOrEmpty(url))
         {
@@ -36,7 +46,7 @@ public static class TelemetryRedaction
 
         var redactedPath = RedactProofHashSegments(url, pathEnd);
         var query = url[pathEnd..queryEnd];
-        var redactedQuery = RedactQuery(query);
+        var redactedQuery = RedactQuery(query, everyQueryValue);
         if (redactedPath == null && ReferenceEquals(redactedQuery, query))
         {
             return url;
@@ -50,7 +60,9 @@ public static class TelemetryRedaction
     /// the way ASP.NET Core binds them: case-insensitively, after decoding. Returns the same instance when there
     /// is nothing to redact.
     /// </summary>
-    public static string RedactQuery(string query)
+    public static string RedactQuery(string query) => RedactQuery(query, everyValue: false);
+
+    private static string RedactQuery(string query, bool everyValue)
     {
         if (string.IsNullOrEmpty(query))
         {
@@ -69,7 +81,7 @@ public static class TelemetryRedaction
             }
 
             var separator = query.IndexOf('=', pairStart, pairEnd - pairStart);
-            if (separator > pairStart && IsSecretKey(query.AsSpan(pairStart, separator - pairStart)))
+            if (separator > pairStart && (everyValue || IsSecretKey(query.AsSpan(pairStart, separator - pairStart))))
             {
                 var valueStart = separator + 1;
                 if (NeedsRedaction(query.AsSpan(valueStart, pairEnd - valueStart)))
