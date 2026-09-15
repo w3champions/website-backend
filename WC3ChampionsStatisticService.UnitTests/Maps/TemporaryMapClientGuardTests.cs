@@ -183,24 +183,88 @@ public class TemporaryMapClientGuardTests
         Assert.That(handler.Requests.Single().RequestUri!.Query, Is.Empty);
     }
 
-    [TestCase("GetTemporaryMapBySha1", "/maps/temporary/by-sha1/")]
-    [TestCase("GetTemporaryMapStateByProofHash", "/maps/temporary/by-proof-hash/")]
-    public async Task PathSegmentKeys_AreEncodedExactlyOnce(string method, string route)
+    private static IEnumerable<TestCaseData> MalformedDigestKeys()
     {
-        const string hostileKey = "a/../b%2Fc?d#e f";
+        var methods = new (string Name, string Valid, Func<MatchmakingServiceClient, string, Task> Call)[]
+        {
+            ("GetTemporaryMapBySha1", Sha1, (c, key) => c.GetTemporaryMapBySha1(key)),
+            ("GetTemporaryMapStateByProofHash", ProofHash, (c, key) => c.GetTemporaryMapStateByProofHash(key)),
+            ("VerifyTemporaryMapProof", ProofHash, (c, key) => c.VerifyTemporaryMapProof(key)),
+        };
+
+        foreach (var (name, valid, call) in methods)
+        {
+            var shapes = new (string Label, string Key)[]
+            {
+                ("Dot", "."),
+                ("DotDot", ".."),
+                ("Null", null),
+                ("Empty", ""),
+                ("Uppercase", valid.ToUpperInvariant()),
+                ("OneShort", valid[..^1]),
+                ("OneLong", valid + "0"),
+                ("NonHex", valid[..^1] + "g"),
+                ("OtherDigestLength", valid == Sha1 ? ProofHash : Sha1),
+                ("Traversal", "a/../b%2Fc?d#e f"),
+            };
+            foreach (var (label, key) in shapes)
+            {
+                yield return new TestCaseData(call, key).SetName($"{name}_Refuses{label}");
+            }
+        }
+    }
+
+    [TestCaseSource(nameof(MalformedDigestKeys))]
+    public void DigestKeys_ThatAreNotLowercaseHexOfTheirLength_AreRefusedBeforeAnyRequest(
+        Func<MatchmakingServiceClient, string, Task> call, string key)
+    {
+        // sha1 and proofHash are URL path segments on two of these routes: a "." or ".." key would be collapsed
+        // by System.Uri into another route that still carries x-admin-secret.
         var handler = AllRoutesHandler();
-        var client = Mm(handler);
 
-        await (method == "GetTemporaryMapBySha1"
-            ? client.GetTemporaryMapBySha1(hostileKey)
-            : (Task)client.GetTemporaryMapStateByProofHash(hostileKey));
+        var ex = Assert.ThrowsAsync<ArgumentException>(() => call(Mm(handler), key));
 
-        var uri = handler.Requests.Single().RequestUri!;
-        Assert.That(uri.Query, Is.Empty, "the key must not leak into the query");
-        var escapedPath = uri.AbsolutePath;
-        var segment = escapedPath[(escapedPath.IndexOf(route, StringComparison.Ordinal) + route.Length)..];
-        Assert.That(segment, Does.Not.Contain("/"), "the key must stay a single path segment");
-        Assert.That(Uri.UnescapeDataString(segment), Is.EqualTo(hostileKey));
+        Assert.That(handler.Requests, Is.Empty);
+        if (key?.Length > 8)
+        {
+            Assert.That(ex!.Message, Does.Not.Contain(key), "a proofHash must never be echoed");
+        }
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("W3Champions/v10/EchoIsles.w3x")]
+    [TestCase("w3champions/customgames/x-94ec3bda.w3x")]
+    [TestCase("/W3Champions/CustomGames/x-94ec3bda.w3x")]
+    [TestCase("W3Champions/CustomGames")]
+    [TestCase("W3Champions/CustomGames/")]
+    [TestCase("W3Champions/CustomGames/..")]
+    [TestCase("W3Champions/CustomGames/../v10/EchoIsles.w3x")]
+    [TestCase("W3Champions/CustomGames/.")]
+    [TestCase("W3Champions/CustomGames/./x-94ec3bda.w3x")]
+    [TestCase("W3Champions/CustomGames//x-94ec3bda.w3x")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.w3x/")]
+    [TestCase("W3Champions/CustomGames/a\\..\\..\\v10\\EchoIsles.w3x")]
+    public void DeleteMapFileByPathAsync_RefusesAnythingButACustomGamesFileBeforeAnyRequest(string filePath)
+    {
+        var handler = AllRoutesHandler();
+
+        Assert.ThrowsAsync<ArgumentException>(() => Us(handler).DeleteMapFileByPathAsync(filePath, CancellationToken.None));
+
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [TestCase(FileKey)]
+    [TestCase(HostileFileKey)]
+    [TestCase("W3Champions/CustomGames/a..b...c-94ec3bda.w3m")]
+    public async Task DeleteMapFileByPathAsync_AcceptsFileKeysWhoseNamesContainDots(string filePath)
+    {
+        // §6.4 keeps inner dots and "%2F", so only a whole "." or ".." segment is refused.
+        var handler = AllRoutesHandler();
+
+        await Us(handler).DeleteMapFileByPathAsync(filePath, CancellationToken.None);
+
+        Assert.That(DecodedQuery(handler.Requests.Single()), Is.EqualTo(new Dictionary<string, string> { ["filePath"] = filePath }));
     }
 
     [Test]

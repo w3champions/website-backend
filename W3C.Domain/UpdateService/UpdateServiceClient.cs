@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -21,6 +22,12 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
     private const string ServiceName = "update-service";
+
+    /// <summary>
+    /// The only stored-file prefix <see cref="DeleteMapFileByPathAsync"/> may delete under. Duplicates
+    /// TemporaryMapLimits.TempMapPathPrefix, which lives in the web project that W3C.Domain cannot reference.
+    /// </summary>
+    private const string TemporaryMapPathPrefix = "W3Champions/CustomGames/";
 
     /// <summary>
     /// update-service can spend minutes writing and parsing a 256 MiB map, well past HttpClient's
@@ -143,9 +150,14 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         return UpstreamContract.Deserialize<MapFileData>(content, response.StatusCode, ServiceName);
     }
 
-    /// <summary>Idempotent: update-service answers 204 whether or not the file existed.</summary>
+    /// <summary>
+    /// Idempotent: update-service answers 204 whether or not the file existed. Only a file under
+    /// W3Champions/CustomGames/ can be deleted: any other path, or one with a backslash or an empty, "." or ".."
+    /// segment, throws ArgumentException before a request is built.
+    /// </summary>
     public async Task DeleteMapFileByPathAsync(string filePath, CancellationToken cancellationToken)
     {
+        RequireTemporaryMapFilePath(filePath);
         var url = $"{UpdateServiceUrl}/api/content/maps/file?filePath={HttpUtility.UrlEncode(filePath)}";
         var request = AdminRequest(HttpMethod.Delete, url);
         var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -185,6 +197,19 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         }
 
         return UpstreamContract.Deserialize<MapFileListingResponse>(content, response.StatusCode, ServiceName);
+    }
+
+    private static void RequireTemporaryMapFilePath(string filePath)
+    {
+        // Inner dots stay legal: the §6.4 names keep them (e.g. "a..b-94ec3bda.w3x"), so only whole segments are checked.
+        if (filePath == null
+            || !filePath.StartsWith(TemporaryMapPathPrefix, StringComparison.Ordinal)
+            || filePath.Contains('\\')
+            || filePath.Split('/').Any(segment => segment is "" or "." or ".."))
+        {
+            throw new ArgumentException(
+                $"must be a file under {TemporaryMapPathPrefix} without backslashes or empty, '.' or '..' segments", nameof(filePath));
+        }
     }
 
     private static HttpRequestMessage AdminRequest(HttpMethod method, string url)
