@@ -16,7 +16,8 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 /// <summary>
 /// A body that breaks the Appendix A.5/A.7 contract on an otherwise expected status (2xx, or 409 on create) is an
 /// upstream fault. It must surface as an HttpRequestException carrying that status, never as a JsonException, a
-/// null record or an empty page, and its message must quote neither the body nor a URI.
+/// null record or an empty page, and its message must quote neither the body nor a URI. The pre-existing
+/// update-service map-file reads behind the admin Maps page follow the same rule.
 /// </summary>
 [TestFixture]
 public class TemporaryMapClientContractTests
@@ -40,7 +41,8 @@ public class TemporaryMapClientContractTests
         string Path,
         HttpStatusCode Status,
         Func<ScriptedHttpHandler, Task> Call,
-        string[] BodiesWithoutTheRecord);
+        string[] BodiesWithoutTheRecord,
+        bool ReadsAnArray = false);
 
     private static readonly Route[] Routes =
     [
@@ -69,6 +71,12 @@ public class TemporaryMapClientContractTests
         new("ListMapFilesAsync", HttpMethod.Get, "/api/content/maps/files", HttpStatusCode.OK,
             h => Us(h).ListMapFilesAsync("W3Champions/CustomGames/", 24, null, 500, CancellationToken.None),
             ["{}", "{\"files\":null}", "{\"next\":\"W3Champions/CustomGames/z.w3x\"}"]),
+        new("GetMapFiles", HttpMethod.Get, "/api/content/maps?mapId=7", HttpStatusCode.OK,
+            h => Us(h).GetMapFiles(7), [], ReadsAnArray: true),
+        new("GetMapFile", HttpMethod.Get, "/api/content/maps/f1", HttpStatusCode.OK,
+            h => Us(h).GetMapFile("f1"), []),
+        new("CreateMapFromFormAsync", HttpMethod.Post, "/api/content/maps", HttpStatusCode.OK,
+            h => Us(h).CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1"), []),
     ];
 
     private static IEnumerable<TestCaseData> ContractViolations()
@@ -77,7 +85,9 @@ public class TemporaryMapClientContractTests
         {
             foreach (var (label, body) in UnreadableBodies)
             {
-                yield return new TestCaseData(route.Name, body).SetName($"{route.Name}_{(int)route.Status}Body{label}");
+                // An array is the right root type for an array read, so an object stands in for it there.
+                var wrongRoot = label == "WrongRootType" && route.ReadsAnArray ? "{}" : body;
+                yield return new TestCaseData(route.Name, wrongRoot).SetName($"{route.Name}_{(int)route.Status}Body{label}");
             }
 
             for (var i = 0; i < route.BodiesWithoutTheRecord.Length; i++)
@@ -100,6 +110,24 @@ public class TemporaryMapClientContractTests
         Assert.That(ex!.StatusCode, Is.EqualTo(route.Status));
         Assert.That(ex.Message, Does.Not.Contain(BodyMarker).And.Not.Contain("://").And.Not.Contain("/maps").And.Not.Contain("/api"));
         Assert.That(ex.InnerException, Is.Null, "a parser exception can quote the body");
+    }
+
+    [Test]
+    public async Task UpdateServiceMapFileReads_StillReadWellFormedBodies()
+    {
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, "/api/content/maps?mapId=7", HttpStatusCode.OK, "[]")
+            .On(HttpMethod.Get, "/api/content/maps/f1", HttpStatusCode.OK, "{\"id\":\"f1\",\"mapId\":7}")
+            .On(HttpMethod.Post, "/api/content/maps", HttpStatusCode.OK, "{\"id\":\"f2\",\"mapId\":7}");
+        var client = Us(handler);
+
+        var files = await client.GetMapFiles(7);
+        var file = await client.GetMapFile("f1");
+        var created = await client.CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1");
+
+        Assert.That(files, Is.Empty);
+        Assert.That(file.Id, Is.EqualTo("f1"));
+        Assert.That(created.Id, Is.EqualTo("f2"));
     }
 
     [Test]

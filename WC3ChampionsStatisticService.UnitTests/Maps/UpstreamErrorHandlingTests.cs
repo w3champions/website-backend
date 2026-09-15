@@ -136,6 +136,23 @@ public class UpstreamErrorHandlingTests
         Assert.That(entry.Message, Does.Contain(action).And.Contain("502").And.Contain(((int)status).ToString()));
     }
 
+    [TestCase("GetMapFiles")]
+    [TestCase("CreateMapFile")]
+    [TestCase("GetMapFile")]
+    public async Task MapsControllerMapFileAction_WhenUpdateServiceAnswersAnUnreadableSuccess_AnswersBadGateway(string action)
+    {
+        // Before, such a body escaped as a JsonReaderException and became an unexplained 500.
+        var handler = new ScriptedHttpHandler().On(_ => true, _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, HtmlGatewayPage));
+        var logger = new Mock<ILogger<MapsController>>();
+
+        var result = await ControllerActions[action](CreateController(handler, logger));
+
+        var objectResult = (ObjectResult)result;
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That((string)objectResult.Value, Does.Not.Contain("html").And.Not.Contain("://"));
+        Assert.That(HttpRequestExceptionFilterTests.LogEntries(logger).Single().Level, Is.EqualTo(LogLevel.Error));
+    }
+
     [TestCaseSource(nameof(ControllerActionNames))]
     public async Task MapsControllerAction_WhenTheUpstreamAnswersAnError_KeepsStatusAndMessage_AndLogsActionAndStatus(string action)
     {

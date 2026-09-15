@@ -33,6 +33,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
+    /// <summary>A success whose body is empty or not a JSON array of stored files throws with that success status.</summary>
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {
         var url = $"{UpdateServiceUrl}/api/content/maps?mapId={mapId}";
@@ -44,12 +45,11 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         {
             ThrowUpstream(content, response.StatusCode);
         }
-        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Unable to get map files!", null, HttpStatusCode.ServiceUnavailable);
 
-        var deserializeObject = JsonConvert.DeserializeObject<MapFileData[]>(content);
-        return deserializeObject;
+        return UpstreamContract.Deserialize<MapFileData[]>(content, response.StatusCode, ServiceName);
     }
 
+    /// <summary>A success whose body is empty or not the stored-file JSON throws with that success status.</summary>
     public async Task<MapFileData> CreateMapFromFormAsync(HttpRequestMessage req, string uploadedBy)
     {
         // The admin upload is an opaque body pass-through (the multipart content object is moved onto
@@ -71,12 +71,11 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         {
             ThrowUpstream(content, response.StatusCode);
         }
-        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Map creation failed!", null, HttpStatusCode.ServiceUnavailable);
 
-        var deserializeObject = JsonConvert.DeserializeObject<MapFileData>(content);
-        return deserializeObject;
+        return UpstreamContract.Deserialize<MapFileData>(content, response.StatusCode, ServiceName);
     }
 
+    /// <summary>A success whose body is empty or not the stored-file JSON throws with that success status.</summary>
     public async Task<MapFileData> GetMapFile(string fileId)
     {
         var url = $"{UpdateServiceUrl}/api/content/maps/{Uri.EscapeDataString(fileId)}";
@@ -88,9 +87,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         {
             ThrowUpstream(content, response.StatusCode);
         }
-        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Unable to get map file!", null, HttpStatusCode.ServiceUnavailable);
-        var deserializeObject = JsonConvert.DeserializeObject<MapFileData>(content);
-        return deserializeObject;
+
+        return UpstreamContract.Deserialize<MapFileData>(content, response.StatusCode, ServiceName);
     }
 
     public async Task DeleteMapFile(string fileId)
