@@ -56,9 +56,10 @@ public class TemporaryMapNamingTests
     [Test]
     public void Sanitise_RemovesExactlyTheSpecControlRanges()
     {
-        // U+001F and U+009F are the last removed code points of the two §6.4 ranges; U+0020, U+007E
-        // and U+00A0 (which then collapses to a space) are the first kept ones.
-        Assert.That(TemporaryMapNaming.Sanitise("a\u001fb c~d\u00a0e.w3x"), Is.EqualTo("ab c~d e"));
+        // Every bound of both §6.4 ranges beside its kept neighbour: U+001F (last removed) and U+0020
+        // (first kept) around "< U+0020"; U+007E (last kept) and U+007F (first removed), then U+009F
+        // (last removed) and U+00A0 (first kept, then collapsed to a space) around U+007F-U+009F.
+        Assert.That(TemporaryMapNaming.Sanitise("a\u001fb\u0020c~\u007fd\u009f\u00a0e.w3x"), Is.EqualTo("ab c~d e"));
     }
 
     [Test]
