@@ -1,8 +1,14 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using W3C.Domain.UpdateService.Contracts;
 using W3C.Domain.Tracing;
 
@@ -14,6 +20,13 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
+    /// <summary>
+    /// update-service can spend minutes writing and parsing a 256 MiB map, well past HttpClient's
+    /// 100 s default. Timeout is per-client, not per-request, so the upload path uses its own client.
+    /// </summary>
+    private static readonly TimeSpan UploadTimeout = TimeSpan.FromMinutes(10);
+
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
     public async Task<MapFileData[]> GetMapFiles(int mapId)
@@ -34,9 +47,18 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         return deserializeObject;
     }
 
-    public async Task<MapFileData> CreateMapFromFormAsync(HttpRequestMessage req)
+    public async Task<MapFileData> CreateMapFromFormAsync(HttpRequestMessage req, string uploadedBy)
     {
+        // The admin upload is an opaque body pass-through (the multipart content object is moved onto
+        // the outbound message verbatim), so the uploader cannot be injected as a form field without
+        // buffering and re-encoding up to 128 MiB. It travels as a query parameter instead;
+        // update-service accepts uploadedBy from either the form or the query string.
         var url = $"{UpdateServiceUrl}/api/content/maps";
+        if (!string.IsNullOrEmpty(uploadedBy))
+        {
+            url += $"?uploadedBy={HttpUtility.UrlEncode(uploadedBy)}";
+        }
+
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Add("x-admin-secret", AdminSecret);
         request.Content = req.Content;
@@ -45,8 +67,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
-            throw new HttpRequestException(errMessage.message, null, response.StatusCode);
+            ThrowUpstream(content, response.StatusCode);
         }
         if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Map creation failed!", null, HttpStatusCode.ServiceUnavailable);
 
@@ -82,5 +103,110 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         {
             throw new HttpRequestException($"Unable to delete map file with id {fileId}", null, response.StatusCode);
         }
+    }
+
+    /// <summary>
+    /// Streams a self-provided map into update-service. <paramref name="fileName"/> is the fileKey
+    /// minus the "W3Champions/" prefix, e.g. "CustomGames/Legion TD-94ec3bda.w3x". update-service
+    /// computes the mapProof from these bytes itself and stores only its hash — a client-provided
+    /// value is never accepted. A duplicate target path surfaces as HttpStatusCode.Conflict.
+    /// <paramref name="mapFile"/> is consumed and disposed with the request, so open a fresh stream
+    /// for every attempt.
+    /// </summary>
+    public async Task<MapFileData> UploadTemporaryMapAsync(
+        Stream mapFile, string fileName, int mapId, string uploadedBy, CancellationToken cancellationToken)
+    {
+        using var uploadClient = _httpClientFactory.CreateClient();
+        uploadClient.Timeout = UploadTimeout;
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(mapId.ToString(CultureInfo.InvariantCulture)), "mapId");
+        form.Add(new StringContent(fileName), "fileName");
+        if (!string.IsNullOrEmpty(uploadedBy))
+        {
+            form.Add(new StringContent(uploadedBy), "uploadedBy");
+        }
+
+        var fileContent = new StreamContent(mapFile);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(fileContent, "mapFile", Path.GetFileName(fileName));
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{UpdateServiceUrl}/api/content/maps");
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = form;
+
+        var response = await uploadClient.SendAsync(request, cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            ThrowUpstream(content, response.StatusCode);
+        }
+        if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Map upload failed!", null, HttpStatusCode.ServiceUnavailable);
+
+        return JsonConvert.DeserializeObject<MapFileData>(content);
+    }
+
+    /// <summary>Idempotent: update-service answers 204 whether or not the file existed.</summary>
+    public async Task DeleteMapFileByPathAsync(string filePath, CancellationToken cancellationToken)
+    {
+        var url = $"{UpdateServiceUrl}/api/content/maps/file?filePath={HttpUtility.UrlEncode(filePath)}";
+        var request = new HttpRequestMessage(HttpMethod.Delete, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Unable to delete map file at {filePath}", null, response.StatusCode);
+        }
+    }
+
+    /// <summary>Lists stored files under a prefix, oldest-first, for orphan reconciliation.</summary>
+    public async Task<MapFileListingResponse> ListMapFilesAsync(
+        string prefix, int olderThanHours, string after, int limit, CancellationToken cancellationToken)
+    {
+        var query = new List<string>
+        {
+            $"prefix={HttpUtility.UrlEncode(prefix)}",
+            $"olderThanHours={olderThanHours.ToString(CultureInfo.InvariantCulture)}",
+            $"limit={limit.ToString(CultureInfo.InvariantCulture)}",
+        };
+        if (!string.IsNullOrEmpty(after))
+        {
+            query.Add($"after={HttpUtility.UrlEncode(after)}");
+        }
+
+        var url = $"{UpdateServiceUrl}/api/content/maps/files?{string.Join("&", query)}";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            ThrowUpstream(content, response.StatusCode);
+        }
+
+        var listing = JsonConvert.DeserializeObject<MapFileListingResponse>(content);
+        return listing?.Files == null ? new MapFileListingResponse() : listing;
+    }
+
+    /// <summary>
+    /// Turns an update-service error body into an HttpRequestException carrying its status code, and
+    /// survives a body that is empty, not JSON, or has no message (deserialising ErrorData and
+    /// dereferencing it unguarded throws NullReferenceException or JsonException instead).
+    /// </summary>
+    private static void ThrowUpstream(string content, HttpStatusCode statusCode)
+    {
+        string message = null;
+        try
+        {
+            message = JsonConvert.DeserializeObject<ErrorData>(content)?.message;
+        }
+        catch (JsonException)
+        {
+            // Not JSON (e.g. a proxy error page): fall back to the status code below.
+        }
+
+        throw new HttpRequestException(message ?? $"update-service returned {(int)statusCode}", null, statusCode);
     }
 }

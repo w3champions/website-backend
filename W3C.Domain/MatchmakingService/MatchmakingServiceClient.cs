@@ -21,7 +21,7 @@ using W3C.Domain.Tracing;
 namespace W3C.Domain.MatchmakingService;
 
 [Trace]
-public class MatchmakingServiceClient
+public partial class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
@@ -251,11 +251,25 @@ public class MatchmakingServiceClient
 
         if (!string.IsNullOrEmpty(request.Filter))
         {
-            queryParams.Add($"filter={request.Filter}");
+            queryParams.Add($"filter={HttpUtility.UrlEncode(request.Filter)}");
+        }
+
+        // Admin-only by the caller's [BearerHasPermissionFilter]; matchmaking additionally honours it
+        // only for admin-secret callers and strips mapProof/proofHash from every row.
+        if (request.IncludeTemporary)
+        {
+            queryParams.Add("includeTemporary=true");
         }
 
         var url = $"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}";
-        var response = await _httpClient.GetAsync(url);
+
+        // The admin secret is LOAD-BEARING here, not decoration. matchmaking gates includeTemporary on
+        // isAdminRequest(req) -> presentedSecrets(req).some(matchesSecret), which is false when no
+        // secret is presented AND false when none is configured — it never falls open. Without this
+        // header mm answers 200 with the permanent-only list, so the website's "Show temporary maps"
+        // checkbox becomes a silent permanent no-op: nothing fails and nothing logs. Sending it on a
+        // permanent-only listing is behaviour-neutral.
+        var response = await SendWithSecret(HttpMethod.Get, url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);

@@ -31,10 +31,12 @@ public class MapsController(
 
     [HttpPost("")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
-    public async Task<IActionResult> CreateMap([FromBody] MapContract request)
+    public async Task<IActionResult> CreateMap([FromBody] MapContract request, [NoTrace] string battleTag)
     {
         try
         {
+            // The admin who uploaded/edited the map, for the Uploader column on the admin Maps page.
+            request.Uploader = battleTag;
             var map = await _matchmakingServiceClient.CreateMap(request);
             return Ok(map);
         }
@@ -46,10 +48,12 @@ public class MapsController(
 
     [HttpPut("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
-    public async Task<IActionResult> UpdateMap(int id, [FromBody] MapContract request)
+    public async Task<IActionResult> UpdateMap(int id, [FromBody] MapContract request, [NoTrace] string battleTag)
     {
         try
         {
+            // The admin who uploaded/edited the map, for the Uploader column on the admin Maps page.
+            request.Uploader = battleTag;
             var map = await _matchmakingServiceClient.UpdateMap(id, request);
             return Ok(map);
         }
@@ -76,12 +80,12 @@ public class MapsController(
 
     [HttpPost("{id}/files")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
-    public async Task<IActionResult> CreateMapFile()
+    public async Task<IActionResult> CreateMapFile([NoTrace] string battleTag)
     {
         try
         {
             HttpRequestMessageFeature hreqmf = new(Request.HttpContext);
-            var map = await _updateServiceClient.CreateMapFromFormAsync(hreqmf.HttpRequestMessage);
+            var map = await _updateServiceClient.CreateMapFromFormAsync(hreqmf.HttpRequestMessage, battleTag);
             return Ok(map);
         }
         catch (HttpRequestException ex)
@@ -124,6 +128,7 @@ public class MapsController(
     public async Task<IActionResult> GetTournamentMaps()
     {
         var maps = await _matchmakingServiceClient.GetTournamentMaps();
-        return Ok(maps);
+        // Anonymous route: re-serve only the public map fields, never the admin-only ones MapContract carries.
+        return Ok(PublicMapsResponse.From(maps));
     }
 }
