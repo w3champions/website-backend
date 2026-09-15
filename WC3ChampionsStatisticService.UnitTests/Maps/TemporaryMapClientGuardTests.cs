@@ -51,7 +51,7 @@ public class TemporaryMapClientGuardTests
     private static IEnumerable<string> AdminSecretRouteNames() => AdminSecretRoutes.Keys;
 
     [TestCaseSource(nameof(AdminSecretRouteNames))]
-    public async Task EveryRoute_SendsTheConfiguredAdminSecret(string route)
+    public async Task EveryRoute_SendsTheConfiguredAdminSecretOnlyToTheConfiguredService(string route)
     {
         var (clientType, call) = AdminSecretRoutes[route];
         var handler = AllRoutesHandler();
@@ -64,6 +64,9 @@ public class TemporaryMapClientGuardTests
         // Compared as a boolean so a failure never prints the secret.
         Assert.That(values!.SequenceEqual([ConfiguredAdminSecret(clientType)]), Is.True,
             "x-admin-secret must carry exactly the client's configured secret");
+        Assert.That(request.RequestUri!.GetLeftPart(UriPartial.Authority),
+            Is.EqualTo(new Uri(ConfiguredBaseUrl(clientType)).GetLeftPart(UriPartial.Authority)),
+            "x-admin-secret may only travel to the client's configured base URL");
     }
 
     private static IEnumerable<TestCaseData> NullOnNotFoundMethods()
@@ -295,6 +298,11 @@ public class TemporaryMapClientGuardTests
 
     private static string ConfiguredAdminSecret(Type clientType)
         => (string)clientType.GetField("AdminSecret", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null);
+
+    private static string ConfiguredBaseUrl(Type clientType)
+        => (string)clientType.GetField(
+            clientType == typeof(MatchmakingServiceClient) ? "MatchmakingApiUrl" : "UpdateServiceUrl",
+            BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null);
 
     private static Dictionary<string, string> DecodedQuery(HttpRequestMessage request)
         => QueryHelpers.ParseQuery(request.RequestUri!.Query).ToDictionary(p => p.Key, p => p.Value.ToString());

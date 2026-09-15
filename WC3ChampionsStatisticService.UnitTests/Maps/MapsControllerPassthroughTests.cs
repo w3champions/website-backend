@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -5,6 +7,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +19,7 @@ using W3C.Contracts.Admin.Permission;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
+using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.UpdateService;
 using W3C.Domain.UpdateService.Contracts;
 using W3ChampionsStatisticService.Maps;
@@ -183,6 +187,111 @@ public class MapsControllerPassthroughTests
 
         Assert.That(json, Does.Not.Contain(TemporaryMapClientTests.ProofHash));
         Assert.That(json, Does.Contain("W3Champions/CustomGames/x-94ec3bda.w3x"));
+    }
+
+    [Test]
+    public async Task GetMaps_ReServesTheTemporaryMapFields_ButNoProofMember()
+    {
+        // The admin listing must keep reading every temporary-map field matchmaking returns, and must never
+        // re-serve a credential-bearing member, even if matchmaking's row carries one.
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps", HttpStatusCode.OK,
+            "{\"total\":1,\"items\":[{\"id\":5811,\"name\":\"Legion TD\",\"path\":\"" + TemporaryMapClientTests.FileKey + "\"," +
+            "\"temporary\":true,\"fileState\":\"present\",\"uploader\":\"peter#123\",\"lastHostedAt\":1757840000000," +
+            "\"slotCount\":16,\"originalFileName\":\"Legion TD.w3x\"," +
+            "\"mapProof\":\"" + TemporaryMapClientTests.MapProof + "\",\"proofHash\":\"" + TemporaryMapClientTests.ProofHash + "\"," +
+            "\"gameMap\":{\"sha1\":\"" + TemporaryMapClientTests.Sha1 + "\",\"mapProof\":\"" + TemporaryMapClientTests.MapProof + "\"," +
+            "\"proofHash\":\"" + TemporaryMapClientTests.ProofHash + "\"}}]}");
+
+        var result = await CreateController(handler).GetMaps(new GetMapsRequest { IncludeTemporary = true });
+
+        var json = JsonSerializer.Serialize(((OkObjectResult)result).Value, WebJson);
+        Assert.That(json, Does.Not.Contain(TemporaryMapClientTests.MapProof).And.Not.Contain(TemporaryMapClientTests.ProofHash));
+        Assert.That(json, Does.Not.Contain("proof").IgnoreCase);
+        using var document = JsonDocument.Parse(json);
+        var item = document.RootElement.GetProperty("items")[0];
+        Assert.That(item.GetProperty("path").GetString(), Is.EqualTo(TemporaryMapClientTests.FileKey));
+        Assert.That(item.GetProperty("temporary").GetBoolean(), Is.True);
+        Assert.That(item.GetProperty("fileState").GetString(), Is.EqualTo("present"));
+        Assert.That(item.GetProperty("uploader").GetString(), Is.EqualTo("peter#123"));
+        Assert.That(item.GetProperty("lastHostedAt").GetInt64(), Is.EqualTo(1757840000000));
+        Assert.That(item.GetProperty("slotCount").GetInt32(), Is.EqualTo(16));
+        Assert.That(item.GetProperty("originalFileName").GetString(), Is.EqualTo("Legion TD.w3x"));
+        Assert.That(item.GetProperty("gameMap").GetProperty("sha1").GetString(), Is.EqualTo(TemporaryMapClientTests.Sha1));
+    }
+
+    private static IEnumerable<TestCaseData> ReServedTypes()
+    {
+        // Every type website-backend writes into a response on the map routes, including the pre-check state
+        // that is relayed to players verbatim.
+        yield return new TestCaseData(typeof(MapContract));
+        yield return new TestCaseData(typeof(GetMapsResponse));
+        yield return new TestCaseData(typeof(PublicMapsResponse));
+        yield return new TestCaseData(typeof(MapFileData));
+        yield return new TestCaseData(typeof(TemporaryMapStateResponse));
+    }
+
+    [TestCaseSource(nameof(ReServedTypes))]
+    public void ReServedType_SerialisesNoProofMember(Type root)
+    {
+        var members = SerialisedMembers(root).ToList();
+
+        Assert.That(members, Is.Not.Empty);
+        Assert.That(members.Where(m => m.JsonName.Contains("proof", StringComparison.OrdinalIgnoreCase)).Select(m => m.Path), Is.Empty,
+            "a credential-bearing member must never be re-served; model it as [JsonIgnore] if it must be read");
+    }
+
+    [Test]
+    public void SerialisedMemberWalk_ReachesNestedTypesAndSkipsIgnoredMembers()
+    {
+        var paths = SerialisedMembers(typeof(GetMapsResponse)).Select(m => m.Path).ToList();
+
+        Assert.That(paths, Does.Contain("GetMapsResponse.Items.GameMap.Sha1"));
+        Assert.That(paths, Does.Contain("GetMapsResponse.Items.MappedForces.Slots.Index"));
+        Assert.That(SerialisedMembers(typeof(MapFileData)).Select(m => m.Path), Does.Not.Contain("MapFileData.MapProofHash"),
+            "MapFileData.MapProofHash is read from update-service and must stay [JsonIgnore] for website-backend's own responses");
+    }
+
+    /// <summary>Every property System.Text.Json writes for <paramref name="root"/>, walking W3C types, arrays and lists.</summary>
+    private static IEnumerable<(string Path, string JsonName)> SerialisedMembers(Type root)
+    {
+        var visited = new HashSet<Type>();
+        var pending = new Stack<(Type Type, string Path)>();
+        pending.Push((root, root.Name));
+        while (pending.TryPop(out var current))
+        {
+            if (!visited.Add(current.Type))
+            {
+                continue;
+            }
+
+            foreach (var property in current.Type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (property.GetCustomAttribute<JsonIgnoreAttribute>() is { Condition: JsonIgnoreCondition.Always })
+                {
+                    continue;
+                }
+
+                var path = current.Path + "." + property.Name;
+                yield return (path, property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name);
+
+                var memberType = ElementTypeOf(property.PropertyType);
+                if (memberType.Namespace?.StartsWith("W3C", StringComparison.Ordinal) == true
+                    || memberType.Namespace?.StartsWith("W3ChampionsStatisticService", StringComparison.Ordinal) == true)
+                {
+                    pending.Push((memberType, path));
+                }
+            }
+        }
+    }
+
+    private static Type ElementTypeOf(Type type)
+    {
+        if (type.IsArray)
+        {
+            return type.GetElementType()!;
+        }
+
+        return type.IsGenericType ? type.GetGenericArguments()[0] : type;
     }
 
     private static MapContract MapWithEveryField() => new()
