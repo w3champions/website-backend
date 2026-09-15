@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
+using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
@@ -62,6 +63,37 @@ public class MapsControllerPassthroughTests
 
         Assert.That(JObject.Parse(handler.LastBody(HttpMethod.Put, "/maps/7"))["uploader"]!.Value<string>(),
             Is.EqualTo("Admin#1"));
+    }
+
+    [TestCase("CreateMap")]
+    [TestCase("UpdateMap")]
+    public async Task AdminMapWrites_ForwardOnlyTheAdminEditableFields(string action)
+    {
+        // Path, Temporary, FileState, LastHostedAt, SlotCount and OriginalFileName are matchmaking-owned: read for
+        // the admin listing, never written back through the permanent-map routes.
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Post, "/maps", HttpStatusCode.OK, "{\"id\":7}")
+            .On(HttpMethod.Put, "/maps/7", HttpStatusCode.OK, "{\"id\":7}");
+        var controller = CreateController(handler);
+
+        _ = action == "CreateMap"
+            ? await controller.CreateMap(MapWithEveryField(), "Admin#1")
+            : await controller.UpdateMap(7, MapWithEveryField(), "Admin#1");
+
+        var body = JObject.Parse(handler.RequestBodies.Single());
+        Assert.That(body.Properties().Select(p => p.Name), Is.EquivalentTo(new[]
+        {
+            "id", "name", "category", "maxTeams", "mappedForces", "gameMap", "teamSize", "disabled", "uploader",
+        }));
+        Assert.That(body["id"]!.Value<int>(), Is.EqualTo(7));
+        Assert.That(body["name"]!.Value<string>(), Is.EqualTo("Echo Isles"));
+        Assert.That(body["category"]!.Value<string>(), Is.EqualTo("1v1"));
+        Assert.That(body["maxTeams"]!.Value<int>(), Is.EqualTo(2));
+        Assert.That(body["teamSize"]!.Value<int>(), Is.EqualTo(1));
+        Assert.That(body["disabled"]!.Value<bool>(), Is.True);
+        Assert.That(body["mappedForces"]![0]!["slots"]![0]!["index"]!.Value<int>(), Is.EqualTo(1));
+        Assert.That(body["gameMap"]!["path"]!.Value<string>(), Is.EqualTo(@"maps\W3Champions\EchoIsles.w3x"));
+        Assert.That(body["uploader"]!.Value<string>(), Is.EqualTo("Admin#1"));
     }
 
     [Test]
@@ -151,6 +183,25 @@ public class MapsControllerPassthroughTests
         Assert.That(json, Does.Not.Contain(TemporaryMapClientTests.ProofHash));
         Assert.That(json, Does.Contain("W3Champions/CustomGames/x-94ec3bda.w3x"));
     }
+
+    private static MapContract MapWithEveryField() => new()
+    {
+        Id = 7,
+        Name = "Echo Isles",
+        Category = "1v1",
+        MaxTeams = 2,
+        MappedForces = [new MapForce { Team = 0, Slots = [new MapForceSlot { Index = 1, Color = 3 }] }],
+        GameMap = new GameMap { Sha1 = "abc", Path = @"maps\W3Champions\EchoIsles.w3x" },
+        teamSize = 1,
+        Disabled = true,
+        Uploader = "Spoofed#1",
+        Path = "W3Champions/CustomGames/Echo Isles-94ec3bda.w3x",
+        Temporary = true,
+        FileState = "present",
+        LastHostedAt = 1757840000000,
+        SlotCount = 2,
+        OriginalFileName = "Echo Isles.w3x",
+    };
 
     private static DefaultHttpContext MultipartRequest(string body)
     {

@@ -15,6 +15,7 @@ using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking.Tournaments;
 using W3C.Contracts.Matchmaking;
 using W3C.Contracts.Matchmaking.Queue;
+using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.Repositories;
 using System.Net.Http.Json;
 using W3C.Domain.Tracing;
@@ -290,11 +291,7 @@ public partial class MatchmakingServiceClient
     public async Task<MapContract> CreateMap(MapContract newMap)
     {
         var url = $"{MatchmakingApiUrl}/maps";
-        var httpcontent = new StringContent(SerializeData(newMap), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        request.Content = httpcontent;
-        var response = await _httpClient.SendAsync(request);
+        var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(AdminMapWriteRequest.From(newMap)));
 
         if (response.IsSuccessStatusCode)
         {
@@ -308,11 +305,7 @@ public partial class MatchmakingServiceClient
     public async Task<MapContract> UpdateMap(int id, MapContract map)
     {
         var url = $"{MatchmakingApiUrl}/maps/{id}";
-        var httpcontent = new StringContent(SerializeData(map), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Put, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        request.Content = httpcontent;
-        var response = await _httpClient.SendAsync(request);
+        var response = await SendWithSecret(HttpMethod.Put, url, SerializeData(AdminMapWriteRequest.From(map)));
 
         if (response.IsSuccessStatusCode)
         {
