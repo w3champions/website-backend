@@ -269,6 +269,44 @@ public class MintRateLimiterTests
     }
 
     [Test]
+    public void AWindowThatOverflowsADate_NeverMakesTheLimiterThrow()
+    {
+        var limiter = new MintRateLimiter();
+        var now = DateTime.UtcNow;
+        Assert.IsTrue(limiter.TryAcquire("tm-upload:peter#123", 1, now, TimeSpan.MaxValue, out _));
+
+        var anHourLater = now + TimeSpan.FromHours(1);
+        Assert.IsFalse(limiter.TryAcquire("tm-upload:peter#123", 1, anHourLater, TimeSpan.MaxValue, out var retryAfter),
+            "the huge window is still live an hour later");
+        Assert.AreEqual(TimeSpan.MaxValue - TimeSpan.FromHours(1), retryAfter, "non-negative and exact, not overflowed");
+
+        Assert.IsTrue(limiter.TryAcquire("bt:hans#456", 1, anHourLater), "the ticket-mint overload on another key still works");
+        Assert.IsTrue(limiter.TryAcquire("tm-precheck:hans#456", 1, anHourLater, TimeSpan.FromMinutes(1), out _),
+            "an explicit window on another key still works");
+        Assert.AreEqual(3, limiter.Count, "every purge ran without throwing and kept the live huge window");
+
+        Assert.IsTrue(limiter.TryAcquire("bt:greta#789", 1, DateTime.MaxValue), "a purge at the end of time does not throw either");
+        Assert.AreEqual(2, limiter.Count, "only the huge window and the new key survive that purge");
+    }
+
+    [Test]
+    public void AStaleNow_ReportsTheTimeUntilTheWindowEnds_SaturatingForAHugeWindow()
+    {
+        var limiter = new MintRateLimiter();
+        var now = DateTime.UtcNow;
+        limiter.TryAcquire("tm-upload:peter#123", 1, now, TimeSpan.FromHours(1), out _);
+        limiter.TryAcquire("tm-upload:hans#456", 1, now, TimeSpan.MaxValue, out _);
+
+        // A caller that read the clock before another caller opened the window passes an older `now`.
+        var fourMinutesEarlier = now - TimeSpan.FromMinutes(4);
+        Assert.IsFalse(limiter.TryAcquire("tm-upload:peter#123", 1, fourMinutesEarlier, TimeSpan.FromHours(1), out var retryAfter));
+        Assert.AreEqual(TimeSpan.FromMinutes(64), retryAfter, "the full distance to the end of the window");
+
+        Assert.IsFalse(limiter.TryAcquire("tm-upload:hans#456", 1, fourMinutesEarlier, TimeSpan.MaxValue, out retryAfter));
+        Assert.AreEqual(TimeSpan.MaxValue, retryAfter, "saturates instead of overflowing TimeSpan");
+    }
+
+    [Test]
     public void ConcurrentAcquires_NeverExceedTheLimitPerKey()
     {
         const int keys = 4;

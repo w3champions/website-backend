@@ -47,11 +47,16 @@ public class MintRateLimiter
     /// if a later call passes a different one — it is neither shortened nor extended — and the next
     /// window takes the length passed when it opens. Purges stale windows (across all keys, each
     /// against its own length) opportunistically on every call so keys can't grow unbounded.
+    /// <para>
+    /// Every comparison subtracts two dates (a difference that always fits in a TimeSpan) instead of
+    /// adding the window to a date, so no stored window — up to TimeSpan.MaxValue — can make this or any
+    /// later call throw.
+    /// </para>
     /// </summary>
     /// <param name="window">Must be positive: a window that is already over would disable the limit.</param>
     /// <param name="retryAfter">
-    /// Time left in the live window when the call is denied (always positive); <see cref="TimeSpan.Zero"/>
-    /// otherwise.
+    /// Time left in the live window when the call is denied (always positive, saturating at
+    /// <see cref="TimeSpan.MaxValue"/>); <see cref="TimeSpan.Zero"/> otherwise.
     /// </param>
     public bool TryAcquire(string key, int limit, DateTime now, TimeSpan window, out TimeSpan retryAfter)
     {
@@ -62,11 +67,11 @@ public class MintRateLimiter
             PurgeStaleNoLock(now);
             retryAfter = TimeSpan.Zero;
 
-            if (_windows.TryGetValue(key, out var live) && live.WindowStart + live.Window > now)
+            if (_windows.TryGetValue(key, out var live) && now - live.WindowStart < live.Window)
             {
                 if (live.Count >= limit)
                 {
-                    retryAfter = live.WindowStart + live.Window - now;
+                    retryAfter = Remaining(live.Window, now - live.WindowStart);
                     return false;
                 }
 
@@ -79,13 +84,18 @@ public class MintRateLimiter
         }
     }
 
+    // window - elapsed, saturating: elapsed is negative only when a caller passes a `now` older than the
+    // window start, and adding that back to a near-TimeSpan.MaxValue window would overflow.
+    private static TimeSpan Remaining(TimeSpan window, TimeSpan elapsed)
+        => elapsed < TimeSpan.Zero && window > TimeSpan.MaxValue + elapsed ? TimeSpan.MaxValue : window - elapsed;
+
     // Caller must already hold _lock.
     private void PurgeStaleNoLock(DateTime now)
     {
         var staleKeys = new List<string>();
         foreach (var kvp in _windows)
         {
-            if (kvp.Value.WindowStart + kvp.Value.Window <= now)
+            if (now - kvp.Value.WindowStart >= kvp.Value.Window)
             {
                 staleKeys.Add(kvp.Key);
             }
