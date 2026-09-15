@@ -130,8 +130,9 @@ public class MapsController(
     }
 
     /// <summary>
-    /// Answers and logs like HttpRequestExceptionFilter (the status, or 500 for a transport failure, whose own message
-    /// names the upstream host and is replaced) while keeping these actions' plain-text body.
+    /// Answers and logs like HttpRequestExceptionFilter (the error status, or 502 when there is none or it is below 400;
+    /// a transport failure's own message names the upstream host and is replaced) while keeping these actions'
+    /// plain-text body.
     /// </summary>
     private ObjectResult UpstreamFailure(HttpRequestException ex, [CallerMemberName] string action = "")
     {

@@ -100,15 +100,40 @@ public class UpstreamErrorHandlingTests
         var result = await ControllerActions[action](CreateController(handler, logger));
 
         Assert.That(result, Is.InstanceOf<ObjectResult>());
-        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError),
-            "HttpRequestExceptionFilter answers 500 for a status-less HttpRequestException; the per-action catch must agree");
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway),
+            "HttpRequestExceptionFilter answers 502 for a status-less HttpRequestException; the per-action catch must agree");
         Assert.That(((ObjectResult)result).Value, Is.EqualTo(HttpRequestExceptionFilter.TransportFailureMessage),
             "the transport failure's own text names an internal host");
         Assert.That(handler.Requests.Any(), Is.True, action + " never reached the upstream");
         var entry = HttpRequestExceptionFilterTests.LogEntries(logger).Single();
         Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
         Assert.That(entry.Exception, Is.SameAs(transportFailure));
-        Assert.That(entry.Message, Does.Contain(action));
+        Assert.That(entry.Message, Does.Contain(action).And.Contain("502"));
+    }
+
+    private static IEnumerable<TestCaseData> ActionsWithSuccessStatuses()
+        => from action in ControllerActions.Keys
+           from status in new[] { HttpStatusCode.OK, HttpStatusCode.Created }
+           select new TestCaseData(action, status).SetName($"MapsControllerAction_{action}_FailureCarrying{(int)status}_AnswersBadGateway");
+
+    [TestCaseSource(nameof(ActionsWithSuccessStatuses))]
+    public async Task MapsControllerAction_WhenTheFailureCarriesASuccessStatus_AnswersBadGateway(string action, HttpStatusCode status)
+    {
+        // A contract violation carries the upstream's own success status (UpstreamContract); relaying it would answer
+        // an error body with 200 or 201.
+        const string violation = "update-service answered with a body that breaks its contract";
+        var handler = new ScriptedHttpHandler().On(_ => true, _ => throw new HttpRequestException(violation, null, status));
+        var logger = new Mock<ILogger<MapsController>>();
+
+        var result = await ControllerActions[action](CreateController(handler, logger));
+
+        var objectResult = (ObjectResult)result;
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(objectResult.Value, Is.EqualTo(violation));
+        var entry = HttpRequestExceptionFilterTests.LogEntries(logger).Single();
+        Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
+        Assert.That(entry.Exception, Is.Null);
+        Assert.That(entry.Message, Does.Contain(action).And.Contain("502").And.Contain(((int)status).ToString()));
     }
 
     [TestCaseSource(nameof(ControllerActionNames))]

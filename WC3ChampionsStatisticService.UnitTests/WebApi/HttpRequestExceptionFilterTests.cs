@@ -18,10 +18,11 @@ using WC3ChampionsStatisticService.Tests.Maps;
 namespace WC3ChampionsStatisticService.Tests.WebApi;
 
 /// <summary>
-/// The global answer to an HttpRequestException: its status (500 without one) and an ErrorResult, logged server-side.
-/// A status-less one is a transport failure whose message names the upstream host and port, so a fixed text replaces
-/// it. Log entries carry the action and the status only: an exception message can hold an upstream body, and the
-/// request URL can hold a proofHash.
+/// The global answer to an HttpRequestException: its error status (400 or above), otherwise 502, and an ErrorResult,
+/// logged server-side. A status-less one is a transport failure whose message names the upstream host and port, so a
+/// fixed text replaces it; one carrying a status below 400 (an upstream success whose body breaks its contract, an
+/// unfollowed redirect) is never relayed as that status. Log entries carry the action and the statuses only: an
+/// exception message can hold an upstream body, and the request URL can hold a proofHash.
 /// </summary>
 [TestFixture]
 public class HttpRequestExceptionFilterTests
@@ -41,20 +42,47 @@ public class HttpRequestExceptionFilterTests
 
         Assert.That(context.ExceptionHandled, Is.True);
         var result = (ObjectResult)context.Result!;
-        Assert.That(result.StatusCode, Is.EqualTo(StatusCodes.Status500InternalServerError));
+        Assert.That(result.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
         Assert.That(((ErrorResult)result.Value!).Error, Is.EqualTo(HttpRequestExceptionFilter.TransportFailureMessage));
         Assert.That(HttpRequestExceptionFilter.TransportFailureMessage, Does.Not.Contain("internal"));
         var entry = LogEntries(logger).Single();
         Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
         Assert.That(entry.Exception, Is.SameAs(exception), "a transport failure's text is diagnostic and holds no upstream body");
-        Assert.That(entry.Message, Does.Contain(Action));
+        Assert.That(entry.Message, Does.Contain(Action).And.Contain("502"));
+    }
+
+    [TestCase(HttpStatusCode.OK)]
+    [TestCase(HttpStatusCode.Created)]
+    [TestCase(HttpStatusCode.NoContent)]
+    [TestCase((HttpStatusCode)399)]
+    [TestCase(HttpStatusCode.Found)]
+    [TestCase(HttpStatusCode.Continue)]
+    public void StatusBelow400_IsAnsweredAsBadGateway_WithItsMessage_AndLogsBothStatuses(HttpStatusCode status)
+    {
+        // UpstreamContract throws with the upstream's own success status when its body breaks the contract, and an
+        // unfollowed redirect reaches the error branch of a client: neither may reach a caller as a success or redirect.
+        var logger = new Mock<ILogger<HttpRequestExceptionFilter>>();
+        var context = ExceptionContextFor(new HttpRequestException(UpstreamText, null, status));
+
+        new HttpRequestExceptionFilter(logger.Object).OnException(context);
+
+        Assert.That(context.ExceptionHandled, Is.True);
+        var result = (ObjectResult)context.Result!;
+        Assert.That(result.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(((ErrorResult)result.Value!).Error, Is.EqualTo(UpstreamText));
+        var entry = LogEntries(logger).Single();
+        Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
+        Assert.That(entry.Exception, Is.Null);
+        Assert.That(entry.Message, Does.Contain(Action).And.Contain("502").And.Contain(((int)status).ToString()));
+        Assert.That(entry.Message, Does.Not.Contain(UpstreamText));
     }
 
     [TestCase(HttpStatusCode.BadGateway, LogLevel.Error)]
     [TestCase(HttpStatusCode.InternalServerError, LogLevel.Error)]
-    [TestCase(HttpStatusCode.OK, LogLevel.Error)]
     [TestCase(HttpStatusCode.Forbidden, LogLevel.Warning)]
     [TestCase(HttpStatusCode.NotFound, LogLevel.Warning)]
+    [TestCase(HttpStatusCode.BadRequest, LogLevel.Warning)]
+    [TestCase(HttpStatusCode.Conflict, LogLevel.Warning)]
     public void StatusBearingFailure_KeepsItsStatusAndMessage_AndLogsOnlyTheActionAndStatus(HttpStatusCode status, LogLevel level)
     {
         var logger = new Mock<ILogger<HttpRequestExceptionFilter>>();
