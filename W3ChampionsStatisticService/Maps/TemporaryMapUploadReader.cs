@@ -52,7 +52,8 @@ public static class TemporaryMapUploadReader
     /// <item><see cref="TemporaryMapUploadException"/>: the client sent something A.3 rejects —
     /// <c>400 METADATA</c> for a malformed body (no multipart content type or boundary, a missing,
     /// misnamed or misordered part, multipart headers the <see cref="MultipartReader"/> refuses, or
-    /// a metadata part over 64 KiB, not valid JSON, or without an original file name),
+    /// a metadata part over 64 KiB, not valid JSON, or without an original file name of at most
+    /// <see cref="TemporaryMapLimits.MaxOriginalFileNameLength"/> UTF-16 code units),
     /// <c>400 EXTENSION</c> for a name that is not a .w3x/.w3m map, and <c>413 FILE_TOO_LARGE</c>
     /// for a file over <paramref name="maxFileBytes"/>. Answer with its status and body.</item>
     /// <item><see cref="IOException"/> from the request body itself, propagated unchanged: Kestrel's
@@ -323,7 +324,9 @@ public static class TemporaryMapUploadReader
             throw Malformed();
         }
 
-        if (metadata == null || string.IsNullOrWhiteSpace(metadata.OriginalFileName))
+        if (metadata == null
+            || string.IsNullOrWhiteSpace(metadata.OriginalFileName)
+            || metadata.OriginalFileName.Length > TemporaryMapLimits.MaxOriginalFileNameLength)
         {
             throw Malformed();
         }

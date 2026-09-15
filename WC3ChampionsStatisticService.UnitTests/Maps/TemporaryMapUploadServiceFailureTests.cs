@@ -77,6 +77,28 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     }
 
     [Test]
+    public async Task AClientAbortDuringTheRetryAfterTheStrayDelete_StillStoresAndCreates()
+    {
+        // F-B: once the stray file is deleted, only the retried store can put bytes back at the fileKey.
+        using var aborted = new CancellationTokenSource();
+        var handler = UnknownSha1Handler()
+            .On(IsByPath, Respond(HttpStatusCode.NotFound))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""))
+            .On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
+        OnSequence(handler, IsUsUpload, Respond(HttpStatusCode.Conflict, Conflict), _ =>
+        {
+            aborted.Cancel();
+            return ScriptedHttpHandler.Json(HttpStatusCode.OK, UsUploadBody());
+        });
+
+        var outcome = await Run(handler, cancellationToken: aborted.Token);
+
+        Assert.That(outcome.Created, Is.True);
+        Assert.That(handler.Requests.Select(Route),
+            Is.EqualTo(new[] { "by-sha1", "us-upload", "by-sha1", "by-path", "us-delete", "us-upload", "create" }));
+    }
+
+    [Test]
     public void UpdateService409_WhenARecordClaimsThePath_Is502_WithZeroDeletes_AndWarns()
     {
         // H1: the 8-hex suffix is grindable, so a colliding upload must never delete a live map's bytes.
@@ -412,9 +434,10 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     }
 
     [Test]
-    public void AnUnexpectedFailureAfterTheBytesAreStored_Compensates_AndIs502()
+    public void AnUnexpectedFailureOfTheCreateCall_ReprobesBeforeCompensating_AndIs502()
     {
-        // Neither an HTTP outcome nor an unanswered request: e.g. a local IO fault while the create runs.
+        // Neither an HTTP outcome nor an unanswered request (a local IO fault while the create runs): it still
+        // follows a write attempt, so F-A asks matchmaking before deleting anything.
         var handler = StoredNewMapHandler()
             .On(IsCreate, _ => throw new IOException("simulated local fault"))
             .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
@@ -424,8 +447,59 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
         Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
-        Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "us-upload", "create", "us-delete" }));
+        Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "us-upload", "create", "by-sha1", "us-delete" }));
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+    }
+
+    // ---- The winning record must be a present temporary file (S-L2) ------------------------------
+
+    private static readonly object[] UnusableWinners =
+    [
+        new object[] { "without a path", "{\"map\":{\"id\":99,\"name\":\"Legion TD\",\"temporary\":true,\"fileState\":\"present\"}}" },
+        new object[] { "outside CustomGames", Record(99, "W3Champions/v10/Legion TD.w3x") },
+        new object[] { "deleted at another path", Record(99, "W3Champions/CustomGames/older-a9993e36.w3x", fileState: "deleted") },
+        new object[] { "deleted at our fileKey", Record(99, fileState: "deleted") },
+        new object[] { "in an unknown state", Record(99, "W3Champions/CustomGames/older-a9993e36.w3x", fileState: "gone") },
+    ];
+
+    [TestCaseSource(nameof(UnusableWinners))]
+    public void AConflictNamingAWinnerThatIsNotAPresentTemporaryFile_Is502_WithNoCompensation(string _, string winner)
+    {
+        var handler = StoredNewMapHandler()
+            .On(IsCreate, Respond(HttpStatusCode.Conflict, winner))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var counts = new UploadCounts();
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler));
+
+        Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
+        Assert.That(Count(handler, IsUsDelete), Is.Zero, "with the winner unusable the outcome is unknown, and the bytes may back it");
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+    }
+
+    [TestCaseSource(nameof(UnusableWinners))]
+    public void AFailedCreateWhoseReprobeFindsAWinnerThatIsNotAPresentTemporaryFile_Is502_WithNoCompensation(string _, string winner)
+    {
+        var handler = OnSequence(new ScriptedHttpHandler(), IsBySha1, Respond(HttpStatusCode.NotFound), Respond(HttpStatusCode.OK, winner))
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
+            .On(IsCreate, TimesOut())
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler));
+
+        Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
+        Assert.That(Count(handler, IsUsDelete), Is.Zero);
+    }
+
+    [Test]
+    public void ADedupeHitWithoutATemporaryFilePath_Is502_WithNothingStored()
+    {
+        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811, "W3Champions/v10/Legion TD.w3x")));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler));
+
+        Assert.That(ex.Code, Is.EqualTo("UPSTREAM"), "a 200 must never hand out a path the launcher cannot host");
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
     }
 
     // ---- Compensation ---------------------------------------------------------------------------
@@ -466,8 +540,15 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         var service = new TemporaryMapUploadService(null, null, new MintRateLimiter(),
             Microsoft.Extensions.Logging.Abstractions.NullLogger<TemporaryMapUploadService>.Instance);
 
-        Assert.That(service.SpoolDirectory, Is.Null, "production spools into TemporaryMapLimits.TempUploadDir");
+        Assert.That(service.SpoolDirectory, Is.Null);
+        Assert.That(service.EffectiveSpoolDirectory, Is.EqualTo(TemporaryMapLimits.TempUploadDir), "production spools into the shared upload dir");
         Assert.That(service.WaitAsync(TimeSpan.FromMinutes(1)).IsCompleted, Is.False, "the default wait is a real delay");
+    }
+
+    [Test]
+    public void TheSpoolDirectorySeam_WinsOverTheProductionDefault()
+    {
+        Assert.That(CreateService(new ScriptedHttpHandler()).EffectiveSpoolDirectory, Is.EqualTo(SpoolDirectory));
     }
 
     // ---- The spool file and the body -----------------------------------------------------------
@@ -513,7 +594,8 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
 
         Assert.ThrowsAsync<TemporaryMapSpoolException>(() => blockedService.HandleUploadAsync(body, contentType, BattleTag, default));
 
-        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.ServerError);
+        Assert.That(TemporaryMapMetrics.Results.ServerError, Is.EqualTo("server_error"));
     }
 
     [Test]

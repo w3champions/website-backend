@@ -38,6 +38,12 @@ public static class TemporaryMapLimits
     public const int MaxSanitisedNameLength = 100;
 
     /// <summary>
+    /// Longest `originalFileName` accepted, in UTF-16 code units: no file system hands a launcher a longer name, and
+    /// matchmaking stores and re-serves the value as sent (S-L5).
+    /// </summary>
+    public const int MaxOriginalFileNameLength = 255;
+
+    /// <summary>
     /// The single path prefix that makes a stored map "temporary". Forward slashes, case preserved. Defined once in
     /// <see cref="TemporaryMapKeys.PathPrefix"/>, which the update-service client's delete guard also uses.
     /// </summary>

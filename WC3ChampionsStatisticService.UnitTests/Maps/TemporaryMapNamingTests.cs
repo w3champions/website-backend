@@ -289,6 +289,96 @@ public class TemporaryMapNamingTests
         Assert.That(failures, Is.Empty, string.Join("; ", failures.Take(20)));
     }
 
+    // ---- The other §6.4 spellings, derived from the fileKey ------------------------------------
+
+    [Test]
+    public void UpdateServiceFileName_IsTheFileKeyWithoutItsRoot()
+    {
+        Assert.That(TemporaryMapNaming.UpdateServiceFileName(Prefix + "Legion TD" + Suffix), Is.EqualTo("CustomGames/Legion TD" + Suffix));
+    }
+
+    [TestCase("CustomGames/x-94ec3bda.w3x")]
+    [TestCase("w3champions/CustomGames/x-94ec3bda.w3x")]
+    [TestCase("")]
+    [TestCase(null)]
+    public void UpdateServiceFileName_RefusesAnythingNotUnderTheRoot(string notAFileKey)
+    {
+        // A slice of a non-fileKey would send update-service a name outside the temporary folder.
+        Assert.Throws<ArgumentException>(() => TemporaryMapNaming.UpdateServiceFileName(notAFileKey));
+    }
+
+    [Test]
+    public void GameMapPath_IsTheBackslashedFileKeyUnderTheMapsRoot()
+    {
+        Assert.That(TemporaryMapNaming.GameMapPath(Prefix + "Legion TD" + Suffix), Is.EqualTo(@"maps\W3Champions\CustomGames\Legion TD" + Suffix));
+    }
+
+    [TestCase("CustomGames/x-94ec3bda.w3x")]
+    [TestCase("W3Champions\\CustomGames\\x-94ec3bda.w3x")]
+    [TestCase(null)]
+    public void GameMapPath_RefusesAnythingThatIsNotAFileKey(string notAFileKey)
+    {
+        Assert.Throws<ArgumentException>(() => TemporaryMapNaming.GameMapPath(notAFileKey));
+    }
+
+    // ---- The strict fileKey shape a restore requires before writing (S-I2) -----------------------
+
+    [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.w3x", true)]
+    [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.W3X", true)]
+    [TestCase("W3Champions/CustomGames/x.w3m", true)]
+    [TestCase("W3Champions/CustomGames/a..b-94ec3bda.w3x", true, TestName = "IsFileKey keeps inner dots")]
+    [TestCase("W3Champions/CustomGames/\u00e9\u00e8 \ufeff-94ec3bda.w3x", true, TestName = "IsFileKey keeps non-ASCII and format characters")]
+    [TestCase("W3Champions/CustomGames/.w3x", true, TestName = "IsFileKey accepts a name that is only the extension")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.w3x/", false, TestName = "IsFileKey refuses a trailing separator")]
+    [TestCase("W3Champions/CustomGames/sub/x-94ec3bda.w3x", false, TestName = "IsFileKey refuses a second segment")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.zip", false)]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.w3x.exe", false)]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda", false)]
+    [TestCase("W3Champions/CustomGames/", false)]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.w3x ", false, TestName = "IsFileKey refuses a trailing space after the extension")]
+    [TestCase("W3Champions/CustomGames/x\u0000y-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+0000")]
+    [TestCase("W3Champions/CustomGames/x\u001fy-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+001F")]
+    [TestCase("W3Champions/CustomGames/x\ny-94ec3bda.w3x", false, TestName = "IsFileKey refuses a line feed")]
+    [TestCase("W3Champions/CustomGames/x\u007fy-94ec3bda.w3x", true, TestName = "IsFileKey keeps U+007F (only < U+0020 is refused)")]
+    [TestCase("W3Champions/v10/EchoIsles.w3x", false)]
+    [TestCase("W3Champions/CustomGames/../v10/EchoIsles.w3x", false)]
+    [TestCase("w3champions/CustomGames/x-94ec3bda.w3x", false)]
+    [TestCase("W3Champions\\CustomGames\\x-94ec3bda.w3x", false)]
+    [TestCase("W3Champions/CustomGames/a\\b-94ec3bda.w3x", false, TestName = "IsFileKey refuses a backslash inside the name")]
+    [TestCase("", false)]
+    [TestCase(null, false)]
+    public void IsFileKey_RequiresThePrefixOneSegmentAMapExtensionAndNoControlCharacter(string path, bool expected)
+    {
+        Assert.That(TemporaryMapNaming.IsFileKey(path), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void EveryBuiltFileKey_IsAFileKey_ForEveryUtf16CodeUnit()
+    {
+        for (var codeUnit = 0; codeUnit <= char.MaxValue; codeUnit++)
+        {
+            var c = (char)codeUnit;
+            foreach (var name in new[] { $"{c}.w3x", $"x{c}y.w3m", new string('a', 99) + c + "b.w3x" })
+            {
+                var key = TemporaryMapNaming.BuildFileKey(name, Sha1, name.EndsWith(".w3m", StringComparison.Ordinal) ? ".w3m" : ".w3x");
+                Assert.That(TemporaryMapNaming.IsFileKey(key), Is.True, $"U+{codeUnit:X4}: {key}");
+            }
+        }
+    }
+
+    // ---- Control characters removed from the forwarded originalFileName (S-L5) -------------------
+
+    [Test]
+    public void RemoveControlCharacters_DropsC0AndC1AndKeepsEverythingElse()
+    {
+        var input = "\u0000a\u001f\u0020b\u007e\u007f\u0080c\u009f\u00a0d\u2028\ufeff/\\:*?\"<>|.w3x";
+
+        Assert.That(TemporaryMapNaming.RemoveControlCharacters(input), Is.EqualTo("a\u0020b\u007ec\u00a0d\u2028\ufeff/\\:*?\"<>|.w3x"),
+            "only U+0000-U+001F and U+007F-U+009F go; separators, the reserved set and other whitespace stay");
+        Assert.That(TemporaryMapNaming.RemoveControlCharacters(null), Is.EqualTo(""));
+        Assert.That(TemporaryMapNaming.RemoveControlCharacters("plain.w3x"), Is.SameAs("plain.w3x").Or.EqualTo("plain.w3x"));
+    }
+
     [TestCase("x.w3m.w3x", "x.w3m", ".w3x")]
     [TestCase("x.W3x.W3M", "x.W3x", ".w3m")]
     [TestCase("x.w3x.w3x", "x.w3x", ".w3x")]

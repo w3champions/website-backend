@@ -136,6 +136,44 @@ public class TemporaryMapUploadReaderValidationTests : TemporaryMapUploadReaderT
     }
 
     [Test]
+    public void RejectsAnOriginalFileNameOver255CodeUnits_With400Metadata()
+    {
+        // S-L5: OS file names are at most 255 code units; anything longer is not a file name a launcher read.
+        var (body, contentType) = BuildMultipart(MinimalMetadata(new string('a', 252) + ".w3x"), Encoding.UTF8.GetBytes("abc"));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Read(body, contentType));
+
+        Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
+        Assert.That(ex.Code, Is.EqualTo("METADATA"));
+        AssertSpoolDirectoryHasNoFiles();
+    }
+
+    [Test]
+    public async Task AcceptsAnOriginalFileNameOfExactly255CodeUnits()
+    {
+        var name = new string('a', 251) + ".w3x";
+        var (body, contentType) = BuildMultipart(MinimalMetadata(name), Encoding.UTF8.GetBytes("abc"));
+
+        using var upload = await Read(body, contentType);
+
+        Assert.That(upload.Metadata.OriginalFileName, Has.Length.EqualTo(TemporaryMapLimits.MaxOriginalFileNameLength).And.EqualTo(name));
+        Assert.That(TemporaryMapLimits.MaxOriginalFileNameLength, Is.EqualTo(255));
+    }
+
+    [Test]
+    public void TheOriginalFileNameCap_CountsUtf16CodeUnits_NotBytesOrCharacters()
+    {
+        // 128 astral characters are 256 code units in 512 UTF-8 bytes: over the cap although only 128 "characters".
+        var astral = string.Concat(Enumerable.Repeat("\U0001F600", 126)) + ".w3x";
+        Assert.That(astral, Has.Length.EqualTo(256));
+        var (body, contentType) = BuildMultipart(MinimalMetadata(astral), Encoding.UTF8.GetBytes("abc"));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Read(body, contentType));
+
+        Assert.That(ex.Code, Is.EqualTo("METADATA"));
+    }
+
+    [Test]
     public void RejectsPartsInTheWrongOrder_With400Metadata()
     {
         var content = new MultipartFormDataContent(Boundary);

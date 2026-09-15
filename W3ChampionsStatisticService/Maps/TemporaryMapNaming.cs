@@ -26,6 +26,12 @@ public static class TemporaryMapNaming
     private const string FallbackName = "map";
     private const int Sha1SuffixLength = 8;
 
+    /// <summary>The root update-service's upload form does not take: its fileName is the fileKey below this.</summary>
+    private const string UpdateServiceRoot = "W3Champions/";
+
+    /// <summary>The root matchmaking and flo put every map path under, with backslashes.</summary>
+    private const string GameMapRoot = @"maps\";
+
     private static readonly char[] ReservedCharacters = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
     /// <summary>"Dots and spaces": U+002E and U+0020 only, stripped in any interleaving.</summary>
@@ -100,6 +106,71 @@ public static class TemporaryMapNaming
         return $"{TemporaryMapLimits.TempMapPathPrefix}{Sanitise(originalFileName)}-{lowercaseSha1[..Sha1SuffixLength]}{extension}";
     }
 
+    /// <summary>
+    /// The strict fileKey shape, for a path matchmaking hands back before anything is written at it (S-I2):
+    /// <see cref="TemporaryMapKeys.IsFilePath"/>, exactly one segment under the prefix, a map extension (either case),
+    /// and no character below U+0020. Every <see cref="BuildFileKey"/> output satisfies it.
+    /// </summary>
+    public static bool IsFileKey(string path)
+    {
+        if (!TemporaryMapKeys.IsFilePath(path))
+        {
+            return false;
+        }
+
+        var name = path[TemporaryMapKeys.PathPrefix.Length..];
+        if (name.Contains('/') || !TryGetExtension(name, out _))
+        {
+            return false;
+        }
+
+        foreach (var c in name)
+        {
+            if (c < ' ')
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// update-service's upload form takes the fileKey without its "W3Champions/" root. Anything else is refused rather
+    /// than sliced: a slice of a foreign path would name a file outside the temporary folder.
+    /// </summary>
+    public static string UpdateServiceFileName(string fileKey)
+        => fileKey != null && fileKey.StartsWith(UpdateServiceRoot, StringComparison.Ordinal)
+            ? fileKey[UpdateServiceRoot.Length..]
+            : throw new ArgumentException("The fileKey must start with the update-service root.", nameof(fileKey));
+
+    /// <summary>matchmaking's and flo's gameMap.path: exactly the fileKey with backslashes under a "maps\" root.</summary>
+    public static string GameMapPath(string fileKey)
+        => TemporaryMapKeys.IsFilePath(fileKey)
+            ? GameMapRoot + fileKey.Replace('/', '\\')
+            : throw new ArgumentException("The fileKey must be a temporary map file path.", nameof(fileKey));
+
+    /// <summary>
+    /// The name forwarded to matchmaking as originalFileName: the uploader's value with the C0 and C1 control
+    /// characters (U+0000-U+001F, U+007F-U+009F) removed and nothing else changed (S-L5). Null reads as empty.
+    /// </summary>
+    public static string RemoveControlCharacters(string value)
+    {
+        value ??= string.Empty;
+        var kept = new StringBuilder(value.Length);
+        foreach (var c in value)
+        {
+            if (!IsControl(c))
+            {
+                kept.Append(c);
+            }
+        }
+
+        return kept.Length == value.Length ? value : kept.ToString();
+    }
+
+    private static bool IsControl(char c) => c < ' ' || (c >= '\u007f' && c <= '\u009f');
+
     // Unpaired surrogates (reachable through a JSON "\ud800" escape) and U+FFFE make Normalize throw.
     private static string DropCodeUnitsThatCannotBeNormalised(string value)
     {
@@ -124,8 +195,7 @@ public static class TemporaryMapNaming
         var kept = new StringBuilder(value.Length);
         foreach (var c in value)
         {
-            var isControl = c < ' ' || (c >= '\u007f' && c <= '\u009f');
-            if (!isControl && Array.IndexOf(ReservedCharacters, c) < 0)
+            if (!IsControl(c) && Array.IndexOf(ReservedCharacters, c) < 0)
             {
                 kept.Append(c);
             }

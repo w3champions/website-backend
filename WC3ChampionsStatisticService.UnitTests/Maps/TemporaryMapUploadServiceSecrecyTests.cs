@@ -64,6 +64,36 @@ public class TemporaryMapUploadServiceSecrecyTests : TemporaryMapUploadServiceTe
             Is.SupersetOf(new[] { LogEventLevel.Information, LogEventLevel.Warning, LogEventLevel.Error }),
             "the flows must actually log, or this check is vacuous");
         Assert.That(lines, Has.Some.Contains(Sha1), "sha1 may be logged, and is");
+        AssertNoSecretIn(lines);
+    }
+
+    [Test]
+    public async Task MatchmakingErrorText_EchoingTheProof_NeverReachesTheLogs_FromAProofCarryingCall()
+    {
+        // S-L3: matchmaking's generic 400 echoes raw exception text, which can quote the request it refused.
+        using var logs = new LogCapture();
+        var echo = "{\"errors\":[{\"param\":\"mapProof\",\"msg\":\"refused " + MapProofValue + " hashing to " + ProofHash + "\"}]}";
+
+        await ExpectFailure(Run(StoredNewMapHandler()
+            .On(IsCreate, Respond(HttpStatusCode.BadRequest, echo))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, "")), logger: logs.Logger));
+        await ExpectFailure(Run(DeletedRecordHandler()
+            .On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(5811)))
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
+            .On(IsFileRestored, Respond(HttpStatusCode.BadRequest, echo))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, "")), withCapture: false, logger: logs.Logger));
+        await ExpectFailure(Run(DeletedRecordHandler().On(IsVerifyProof, Respond(HttpStatusCode.InternalServerError, echo)), logger: logs.Logger));
+
+        var failures = logs.Lines().Where(l => l.StartsWith("Warning") && l.Contains("HttpRequestException")).ToArray();
+        Assert.That(failures, Has.Length.EqualTo(3), "each proof-carrying call names the exception type");
+        Assert.That(failures.Count(l => l.Contains("400")), Is.EqualTo(2), "and the upstream status");
+        Assert.That(failures.Count(l => l.Contains("500")), Is.EqualTo(1));
+        Assert.That(logs.Lines(), Has.None.Contains("refused"), "matchmaking's error text is not logged at all");
+        AssertNoSecretIn(logs.Lines());
+    }
+
+    private static void AssertNoSecretIn(string[] lines)
+    {
         foreach (var secret in new[] { MapProofValue, ProofHash, ProofHash.ToUpperInvariant(), MapProofValue.ToUpperInvariant() })
         {
             Assert.That(lines, Has.None.Contains(secret));

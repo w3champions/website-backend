@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -267,6 +268,29 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     [TestCase("[{\"team\":0,\"slots\":[{\"index\":0},{\"index\":1}]},{\"team\":1,\"slots\":[{\"index\":1},{\"index\":2}]}]",
         TestName = "a slot index used twice across forces")]
     [TestCase("[{\"team\":0,\"slots\":[{\"index\":3},{\"index\":3}]}]", TestName = "a slot index used twice in one force")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0}],\"computers\":[{\"slot\":0,\"color\":1,\"race\":1,\"difficulty\":1}]}]",
+        TestName = "a computer on a human seat")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0}]},{\"team\":1,\"slots\":[],\"computers\":[{\"slot\":0,\"color\":1,\"race\":1,\"difficulty\":1}]}]",
+        TestName = "a computer on another force's human seat")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":4,\"color\":1,\"race\":1,\"difficulty\":1},{\"slot\":4,\"color\":2,\"race\":2,\"difficulty\":1}]}]",
+        TestName = "two computers on one seat")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0}],\"computers\":[{\"slot\":16,\"color\":1,\"race\":1,\"difficulty\":1}]}]",
+        TestName = "a computer seat equal to slotCount")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0}],\"computers\":[{\"slot\":-1,\"color\":1,\"race\":1,\"difficulty\":1}]}]",
+        TestName = "a negative computer seat")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0}],\"computers\":[null]}]", TestName = "a null computer")]
+    [TestCase("[{\"team\":-1,\"slots\":[{\"index\":0}]}]", TestName = "a negative team")]
+    [TestCase("[{\"team\":24,\"slots\":[{\"index\":0}]}]", TestName = "team 24, the observers")]
+    [TestCase("[{\"team\":1,\"slots\":[{\"index\":0}]},{\"team\":1,\"slots\":[{\"index\":1}]}]", TestName = "a team used by two forces")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0,\"color\":-1}]}]", TestName = "a negative human colour")]
+    [TestCase("[{\"team\":0,\"slots\":[{\"index\":0,\"color\":24}]}]", TestName = "human colour 24")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":-1,\"race\":1,\"difficulty\":1}]}]", TestName = "a negative computer colour")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":24,\"race\":1,\"difficulty\":1}]}]", TestName = "computer colour 24")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":1,\"race\":3,\"difficulty\":1}]}]", TestName = "computer race 3")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":1,\"race\":16,\"difficulty\":1}]}]", TestName = "computer race 16")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":1,\"race\":-1,\"difficulty\":1}]}]", TestName = "a negative computer race")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":1,\"race\":1,\"difficulty\":3}]}]", TestName = "computer difficulty 3")]
+    [TestCase("[{\"team\":0,\"slots\":[],\"computers\":[{\"slot\":1,\"color\":1,\"race\":1,\"difficulty\":-1}]}]", TestName = "a negative computer difficulty")]
     public void AMalformedMappedForce_Is400_InvalidLayout_AndCompensates(string mappedForcesJson)
     {
         var handler = StoredNewMapHandler().On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
@@ -293,6 +317,85 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     }
 
     [Test]
+    public async Task ForcesWithoutComputers_AreForwardedWithAnEmptyComputersList_NeverWithout()
+    {
+        // Matchmaking's serializer drops null members, so a null list would vanish from the create body.
+        var handler = StoredNewMapHandler().On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
+        var forces = "[{\"team\":0,\"slots\":[{\"index\":0}],\"computers\":null},{\"team\":1,\"slots\":[{\"index\":1}]}," +
+                     "{\"team\":2,\"slots\":[],\"computers\":[{\"slot\":2,\"color\":2,\"race\":4,\"difficulty\":1}]}]";
+
+        await Run(handler, capture: CaptureJsonWithForces(forces, maxTeams: 3));
+
+        var forwarded = JObject.Parse(handler.RequestBodies[handler.Requests.FindIndex(r => IsCreate(r))])["mappedForces"]!;
+        Assert.That(forwarded[0]!["computers"], Is.InstanceOf<JArray>().And.Empty, "computers: null is forwarded as []");
+        Assert.That(forwarded[1]!["computers"], Is.InstanceOf<JArray>().And.Empty, "an absent computers list is forwarded as []");
+        Assert.That(forwarded[2]!["computers"]![0]!["slot"]!.Value<int>(), Is.EqualTo(2));
+        Assert.That(forwarded[2]!["computers"]![0]!["race"]!.Value<int>(), Is.EqualTo(4));
+        Assert.That(forwarded[1]!["team"]!.Value<int>(), Is.EqualTo(1));
+        Assert.That(forwarded[0]!["slots"]![0]!["index"]!.Value<int>(), Is.Zero);
+    }
+
+    [Test]
+    public async Task TheOriginalFileName_ReachesMatchmakingWithoutControlCharacters()
+    {
+        var handler = StoredNewMapHandler().On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
+
+        await Run(handler, originalFileNameJson: "\\u0000Leg\\u001fion\\u007f T\\u0085D\\u009f\\u00a0~.w3x");
+
+        var mmBody = JObject.Parse(handler.RequestBodies[handler.Requests.FindIndex(r => IsCreate(r))]);
+        Assert.That(mmBody["originalFileName"]!.Value<string>(), Is.EqualTo("Legion TD\u00a0~.w3x"),
+            "C0 and C1 controls (U+0000-U+001F, U+007F-U+009F) are removed; everything else is kept");
+    }
+
+    [TestCase("3.4.0", "3.4.0", TestName = "a plain version is logged as sent")]
+    [TestCase("3.4.0-beta.2+build.7", "3.4.0-beta.2+build.7", TestName = "semver punctuation is logged as sent")]
+    [TestCase("3.4.0\\r\\nWarning forged line", "invalid", TestName = "a line break is not logged")]
+    [TestCase("3.4.0 ", "invalid", TestName = "a space is not logged")]
+    [TestCase("3.4.0\\u0000", "invalid", TestName = "a control character is not logged")]
+    [TestCase("", "invalid", TestName = "an empty version is not logged")]
+    [TestCase("123456789012345678901234567890123", "invalid", TestName = "33 characters are not logged")]
+    [TestCase("12345678901234567890123456789012", "12345678901234567890123456789012", TestName = "32 characters are logged")]
+    public async Task TheLauncherVersion_IsLoggedOnlyWhenItIsAPlainVersionString(string launcherVersionJson, string logged)
+    {
+        using var logs = new LogCapture();
+        var handler = StoredNewMapHandler().On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
+
+        await Run(handler, capture: CaptureJsonWithForces("[]", lobbyMode: "free", launcherVersionJson: launcherVersionJson), logger: logs.Logger);
+
+        var line = logs.Lines().Single(l => l.StartsWith("Information") && l.Contains("Temporary map upload from"));
+        Assert.That(line, Does.Contain("launcher \"" + logged + "\""), "the rendered message quotes string properties");
+        Assert.That(line, Does.Not.Contain("forged"));
+        Assert.That(line.IndexOfAny(['\r', '\n', '\0']), Is.EqualTo(-1), "no line break or control character reaches the sink");
+    }
+
+    [Test]
+    public async Task AMissingLauncherVersion_IsLoggedAsInvalid()
+    {
+        using var logs = new LogCapture();
+        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811)));
+
+        await Run(handler, withCapture: false, logger: logs.Logger);
+
+        Assert.That(logs.Lines().Single(l => l.Contains("Temporary map upload from")), Does.Contain("launcher \"invalid\""));
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase(" \t")]
+    public void ABlankBattleTag_IsRefusedBeforeTheBodyIsRead_AndNotCounted(string battleTag)
+    {
+        var handler = new ScriptedHttpHandler();
+        var counts = new UploadCounts();
+        var (body, contentType) = BuildMultipart(Metadata(), "abc"u8.ToArray());
+
+        Assert.CatchAsync<ArgumentException>(() => CreateService(handler).HandleUploadAsync(body, contentType, battleTag, default));
+
+        Assert.That(body.Position, Is.Zero, "the body is not read");
+        Assert.That(handler.Requests, Is.Empty);
+        counts.AssertNothingCounted();
+    }
+
+    [Test]
     public void ANewMapWithoutACapture_Is400_InvalidLayout_AndCompensates()
     {
         // The known race: a record swept between a ready/expired pre-check and this upload. wb cannot invent a layout.
@@ -309,6 +412,14 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         TestName = "24 slots with the last index")]
     [TestCase(12, "mapped-forces", "[{\"team\":0,\"slots\":[{\"index\":11}]}]", true, TestName = "12 slots on a twelve_p map")]
     [TestCase(1, "free", "[]", false, TestName = "a free lobby with one slot and no forces")]
+    [TestCase(24, "mapped-forces",
+        "[{\"team\":0,\"slots\":[{\"index\":0,\"color\":0}],\"computers\":[{\"slot\":1,\"color\":0,\"race\":0,\"difficulty\":0}]}," +
+        "{\"team\":23,\"slots\":[{\"index\":22,\"color\":23}],\"computers\":[{\"slot\":23,\"color\":23,\"race\":8,\"difficulty\":2}]}]", false,
+        TestName = "teams, colours, seats, races and difficulties at their limits")]
+    [TestCase(16, "mapped-forces",
+        "[{\"team\":5,\"slots\":[],\"computers\":[{\"slot\":2,\"color\":7,\"race\":1,\"difficulty\":1}," +
+        "{\"slot\":3,\"color\":8,\"race\":2,\"difficulty\":1},{\"slot\":4,\"color\":9,\"race\":4,\"difficulty\":1}]}]", false,
+        TestName = "every other computer race")]
     public async Task AValidCaptureAtItsLimits_IsAccepted(int slotCount, string lobbyMode, string mappedForcesJson, bool twelveP)
     {
         var handler = UnknownSha1Handler()
@@ -325,10 +436,10 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     [TestCase(HttpStatusCode.Unauthorized)]
     [TestCase(HttpStatusCode.InternalServerError)]
     [TestCase(HttpStatusCode.ServiceUnavailable)]
-    public void MatchmakingRefusingTheRecord_Compensates_AndIs502(HttpStatusCode status)
+    public void MatchmakingRefusingTheRecord_WhenTheReprobeFindsNothing_Compensates_AndIs502(HttpStatusCode status)
     {
         var handler = StoredNewMapHandler()
-            .On(IsCreate, Respond(status, "{\"errors\":[{\"param\":\"gameMap\",\"message\":\"boom\"}]}"))
+            .On(IsCreate, Respond(status, "{\"errors\":[{\"param\":\"gameMap\",\"msg\":\"boom\"}]}"))
             .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
         var counts = new UploadCounts();
 
@@ -336,9 +447,29 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
 
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
         Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
-        Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1));
-        Assert.That(Count(handler, IsBySha1), Is.EqualTo(1), "a definite refusal needs no re-probe");
+        Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "us-upload", "create", "by-sha1", "us-delete" }),
+            "F-A: even a refusal re-probes before compensating, because matchmaking can answer non-2xx after committing");
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+    }
+
+    [TestCase(HttpStatusCode.BadRequest)]
+    [TestCase(HttpStatusCode.ServiceUnavailable)]
+    public async Task MatchmakingRefusingTheRecord_WhenTheReprobeFindsOurRecord_KeepsTheBytes_AndIs200Deduped(HttpStatusCode status)
+    {
+        // matchmaking answers 400 when its map refresh fails after the insert, and a proxy can answer 503 after processing.
+        var handler = OnSequence(new ScriptedHttpHandler(), IsBySha1, Respond(HttpStatusCode.NotFound), Respond(HttpStatusCode.OK, Record(5811)))
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
+            .On(IsCreate, Respond(status, "{\"errors\":[{\"param\":\"gameMap\",\"msg\":\"boom\"}]}"))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var counts = new UploadCounts();
+
+        var outcome = await Run(handler);
+
+        Assert.That(outcome.Created, Is.False);
+        Assert.That(outcome.Response.MapId, Is.EqualTo(5811));
+        Assert.That(outcome.Response.Path, Is.EqualTo(FileKey));
+        Assert.That(Count(handler, IsUsDelete), Is.Zero, "the committed record points at these bytes");
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Deduped);
     }
 
     [Test]

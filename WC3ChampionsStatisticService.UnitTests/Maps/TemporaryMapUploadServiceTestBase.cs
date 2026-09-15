@@ -39,6 +39,7 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         TemporaryMapMetrics.Results.Restored,
         TemporaryMapMetrics.Results.Rejected,
         TemporaryMapMetrics.Results.UpstreamError,
+        TemporaryMapMetrics.Results.ServerError,
     ];
 
     // ---- Scripted routes ------------------------------------------------------------------
@@ -121,9 +122,11 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         return CaptureJsonWithForces(forces, slotCount, lobbyMode, maxTeams);
     }
 
-    protected static string CaptureJsonWithForces(string mappedForcesJson, int slotCount = 16, string lobbyMode = "mapped-forces", int maxTeams = 2)
+    /// <summary><paramref name="launcherVersionJson"/> is spliced into the JSON as written, escapes included.</summary>
+    protected static string CaptureJsonWithForces(
+        string mappedForcesJson, int slotCount = 16, string lobbyMode = "mapped-forces", int maxTeams = 2, string launcherVersionJson = "3.4.0")
         => "{\"lobbyMode\":\"" + lobbyMode + "\",\"maxTeams\":" + maxTeams + ",\"slotCount\":" + slotCount +
-           ",\"mappedForces\":" + mappedForcesJson + ",\"launcherVersion\":\"3.4.0\",\"capturedAt\":\"2026-09-14T09:10:39Z\"}";
+           ",\"mappedForces\":" + mappedForcesJson + ",\"launcherVersion\":\"" + launcherVersionJson + "\",\"capturedAt\":\"2026-09-14T09:10:39Z\"}";
 
     /// <summary>A fresh handler whose dedupe probe knows nothing, the start of every new-map flow.</summary>
     private protected static ScriptedHttpHandler UnknownSha1Handler()
@@ -139,14 +142,33 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
 
     // ---- Running the service ----------------------------------------------------------------
 
+    /// <summary>Only fails a broken build that would otherwise hang; no assertion depends on timing.</summary>
+    protected static readonly TimeSpan HangGuard = TimeSpan.FromSeconds(30);
+
     /// <summary>Every wait the compensation retries asked for in this test; nothing actually sleeps.</summary>
     private protected List<TimeSpan> CompensationWaits { get; private set; } = [];
 
+    /// <summary>
+    /// The fileKey lock every service this test creates shares, as all requests of one process do. A test may replace it
+    /// (before creating services) with one whose <see cref="TemporaryMapFileKeyLock.OnContended"/> signals the test.
+    /// </summary>
+    private protected TemporaryMapFileKeyLock FileKeyLock { get; set; } = new();
+
     [SetUp]
-    public void ResetCompensationWaits() => CompensationWaits = [];
+    public void ResetPerTestState()
+    {
+        CompensationWaits = [];
+        FileKeyLock = new TemporaryMapFileKeyLock();
+    }
+
+    /// <summary>A signal a scripted route or seam completes and the test awaits; continuations never run inline.</summary>
+    protected static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private protected TemporaryMapUploadService CreateService(
-        ScriptedHttpHandler handler, MintRateLimiter limiter = null, ILogger<TemporaryMapUploadService> logger = null)
+        ScriptedHttpHandler handler,
+        MintRateLimiter limiter = null,
+        ILogger<TemporaryMapUploadService> logger = null,
+        Func<TimeSpan, Task> waitAsync = null)
     {
         var factory = new ScriptedHttpHandler.Factory(handler);
         return new TemporaryMapUploadService(
@@ -156,18 +178,21 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
             logger ?? NullLogger<TemporaryMapUploadService>.Instance)
         {
             SpoolDirectory = SpoolDirectory,
-            WaitAsync = delay =>
+            FileKeyLock = FileKeyLock,
+            WaitAsync = waitAsync ?? (delay =>
             {
                 CompensationWaits.Add(delay);
                 return Task.CompletedTask;
-            },
+            }),
         };
     }
 
-    protected static string Metadata(string metadataSha1 = Sha1, string capture = null, bool withCapture = true)
-        => "{\"sha1\":\"" + metadataSha1 + "\",\"originalFileName\":\"Legion TD.w3x\",\"fileSize\":3" +
+    protected static string Metadata(
+        string metadataSha1 = Sha1, string capture = null, bool withCapture = true, string originalFileNameJson = "Legion TD.w3x")
+        => "{\"sha1\":\"" + metadataSha1 + "\",\"originalFileName\":\"" + originalFileNameJson + "\",\"fileSize\":3" +
            (withCapture ? ",\"capture\":" + (capture ?? CaptureJson()) : "") + "}";
 
+    /// <summary>One upload of the bytes "abc". <paramref name="originalFileNameJson"/> is spliced into the JSON as written, escapes included.</summary>
     private protected Task<TemporaryMapUploadOutcome> Run(
         ScriptedHttpHandler handler,
         MintRateLimiter limiter = null,
@@ -175,10 +200,12 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         string capture = null,
         bool withCapture = true,
         ILogger<TemporaryMapUploadService> logger = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<TimeSpan, Task> waitAsync = null,
+        string originalFileNameJson = "Legion TD.w3x")
     {
-        var (body, contentType) = BuildMultipart(Metadata(metadataSha1, capture, withCapture), "abc"u8.ToArray());
-        return CreateService(handler, limiter, logger).HandleUploadAsync(body, contentType, BattleTag, cancellationToken);
+        var (body, contentType) = BuildMultipart(Metadata(metadataSha1, capture, withCapture, originalFileNameJson), "abc"u8.ToArray());
+        return CreateService(handler, limiter, logger, waitAsync).HandleUploadAsync(body, contentType, BattleTag, cancellationToken);
     }
 
     // ---- Metric ------------------------------------------------------------------------------

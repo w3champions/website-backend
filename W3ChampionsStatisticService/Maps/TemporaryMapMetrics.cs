@@ -6,9 +6,10 @@ namespace W3ChampionsStatisticService.Maps;
 public static class TemporaryMapMetrics
 {
     /// <summary>
-    /// One increment per upload that reaches a terminal outcome; a client abort is not counted. Server-side faults
-    /// (5xx answers, including a local spool fault and TEMP_MAP_KEY_MISMATCH) count as <see cref="Results.UpstreamError"/>,
-    /// client-caused 4xx answers (including a malformed or oversized body) as <see cref="Results.Rejected"/>.
+    /// One increment per upload that reaches a terminal outcome; a client abort is not counted. Upstream and
+    /// orchestration faults (5xx answers, TEMP_MAP_KEY_MISMATCH included) count as <see cref="Results.UpstreamError"/>,
+    /// a local spool or disk fault as <see cref="Results.ServerError"/>, and client-caused 4xx answers (including a
+    /// malformed or oversized body) as <see cref="Results.Rejected"/>.
     /// </summary>
     public static readonly Counter Uploads = Metrics.CreateCounter(
         "website_temporary_map_uploads_total",
@@ -22,5 +23,6 @@ public static class TemporaryMapMetrics
         public const string Restored = "restored";
         public const string Rejected = "rejected";
         public const string UpstreamError = "upstream_error";
+        public const string ServerError = "server_error";
     }
 }
