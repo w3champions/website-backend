@@ -250,10 +250,16 @@ public class TelemetryRedactionTests
     [TestCase("WCF Service", "https://legacy.test/Service.svc?id=7&secret=SECRET", "https://legacy.test/Service.svc?id=Redacted&secret=Redacted")]
     [TestCase("Azure blob", "https://account.blob.test/replays/42?sv=2020&sig=SIGNATURE", "https://account.blob.test/replays/42?sv=Redacted&sig=Redacted")]
     [TestCase("Http", "HTTPS://mm.test/maps?filter=legion", "HTTPS://mm.test/maps?filter=Redacted")]
+    [TestCase("Http", " https://mm.test/maps?filter=legion&id=7", " https://mm.test/maps?filter=Redacted&id=Redacted")]
+    [TestCase("Http", "\thttp://mm.test/maps?filter=legion", "\thttp://mm.test/maps?filter=Redacted")]
+    [TestCase("Http", "\uFEFFhttps://mm.test/maps?filter=legion", "\uFEFFhttps://mm.test/maps?filter=Redacted")]
+    [TestCase("Http", " \uFEFF https://mm.test/maps?filter=legion", " \uFEFF https://mm.test/maps?filter=Redacted")]
     public void AppInsightsHttpDependency_RedactsEveryQueryValue_WhateverTypeApplicationInsightsGaveIt(string type, string data, string expected)
     {
         // Application Insights' HttpDependenciesParsingTelemetryInitializer runs before this one and renames some HTTP
-        // dependencies ("WCF Service", "Azure blob", ...), keeping the request URL in Data.
+        // dependencies ("WCF Service", "Azure blob", ...), keeping the request URL in Data. HttpClient accepts a
+        // request URL with leading whitespace (a misconfigured base URL) and the collector records it verbatim, so
+        // the URL is still recognised behind leading whitespace or a byte-order mark.
         var dependency = new DependencyTelemetry
         {
             Type = type,
@@ -269,6 +275,7 @@ public class TelemetryRedactionTests
 
     [TestCase("SQL", "SELECT name FROM maps WHERE note = 'a?season=22&gateway=20'", "SELECT name FROM maps WHERE note = 'a?season=22&gateway=20'")]
     [TestCase("InProc", "find maps ?season=22&gateway=20", "find maps ?season=22&gateway=20")]
+    [TestCase("InProc", "  find maps ?season=22&secret=SECRET", "  find maps ?season=22&secret=Redacted")]
     [TestCase("InProc", "replay export 42?season=22&secret=SECRET", "replay export 42?season=22&secret=Redacted")]
     [TestCase(null, "generate/42?season=22&authorization=JWT", "generate/42?season=22&authorization=Redacted")]
     public void AppInsightsNonHttpDependency_KeepsItsData_ExceptSecretValues(string type, string data, string expected)

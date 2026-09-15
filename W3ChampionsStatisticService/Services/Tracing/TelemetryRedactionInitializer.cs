@@ -39,10 +39,25 @@ public sealed class TelemetryRedactionInitializer : ITelemetryInitializer
     /// <summary>
     /// An HTTP dependency is recognised by the URL in its data, not by its type: Application Insights'
     /// HttpDependenciesParsingTelemetryInitializer is registered before this initializer and renames some HTTP
-    /// dependencies ("WCF Service", "Azure blob", ...) while keeping the request URL.
+    /// dependencies ("WCF Service", "Azure blob", ...) while keeping the request URL. HttpClient accepts a request
+    /// URL with leading whitespace (a misconfigured base URL) and the collector records it verbatim, so the scheme
+    /// is looked for past leading whitespace and a byte-order mark, which char.IsWhiteSpace does not cover.
     /// </summary>
     private static bool IsHttpUrl(string data)
-        => data != null
-           && (data.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-               || data.StartsWith("http://", StringComparison.OrdinalIgnoreCase));
+    {
+        if (data == null)
+        {
+            return false;
+        }
+
+        var start = 0;
+        while (start < data.Length && (char.IsWhiteSpace(data[start]) || data[start] == '\uFEFF'))
+        {
+            start++;
+        }
+
+        var url = data.AsSpan(start);
+        return url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+               || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+    }
 }
