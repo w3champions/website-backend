@@ -30,9 +30,12 @@ public class CheckIfBattleTagIsAdminFilter(IW3CAuthenticationService authService
             }
             else
             {
-                // Without a Result, MVC treats the un-invoked pipeline as short-circuited and writes an
-                // empty 200.
-                context.Result = InvalidAuthResult();
+                // A valid token without admin rights deliberately gets an empty 200; the action still never runs.
+                // The website's admin JWT-lifetime check logs the user out on any non-2xx from this filter, so a
+                // 401 or 403 here would log out every non-admin who opens the admin page. Switching to 403
+                // requires the website to run that check only for admins first. EmptyResult is what MVC
+                // substitutes when a filter short-circuits without setting a Result.
+                context.Result = new EmptyResult();
             }
         }
         catch (SecurityTokenExpiredException)
