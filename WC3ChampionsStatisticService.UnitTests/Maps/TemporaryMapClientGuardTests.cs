@@ -174,6 +174,34 @@ public class TemporaryMapClientGuardTests
         await Us(handler).CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, battleTag);
 
         Assert.That(DecodedQuery(handler.Requests.Single()), Is.EqualTo(new Dictionary<string, string> { ["uploadedBy"] = battleTag }));
+        Assert.That(handler.Requests.Single().RequestUri!.Query, Is.EqualTo("?uploadedBy=Ad%20min%231%26x%3Dy%2Bz%252F"),
+            "RFC 3986 percent-encoding, not form encoding (a space is %20, never +)");
+    }
+
+    [Test]
+    public async Task CreateMapFromFormAsync_PercentEncodesTheBattleTagHash()
+    {
+        // A BattleTag's "#" starts a URL fragment if it is sent raw: update-service would see uploadedBy=Player.
+        var handler = AllRoutesHandler();
+
+        await Us(handler).CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Player#1234");
+
+        var request = handler.Requests.Single();
+        Assert.That(request.RequestUri!.Query, Is.EqualTo("?uploadedBy=Player%231234"));
+        Assert.That(request.RequestUri.Fragment, Is.Empty);
+    }
+
+    [Test]
+    public async Task UploadTemporaryMapAsync_SendsUploadedByAsAFormField_NotOnTheQuery()
+    {
+        // The temporary-map upload is a form wb builds itself, so the BattleTag travels as a multipart part: no query encoding.
+        var handler = AllRoutesHandler();
+
+        await Us(handler).UploadTemporaryMapAsync(new MemoryStream("abc"u8.ToArray()), "CustomGames/x-94ec3bda.w3x", 0, "Player#1234", default);
+
+        var request = handler.Requests.Single();
+        Assert.That(request.RequestUri!.Query, Is.Empty);
+        Assert.That(handler.RequestBodies.Single(), Does.Match("name=\"?uploadedBy\"?\r\n(?:[^\r\n]+\r\n)*\r\nPlayer#1234\r\n"));
     }
 
     [Test]
