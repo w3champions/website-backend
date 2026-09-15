@@ -4,11 +4,16 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.MatchmakingService;
 using W3C.Domain.MatchmakingService.Contracts;
 using static WC3ChampionsStatisticService.Tests.Maps.TemporaryMapClientTests;
 
@@ -158,6 +163,46 @@ public class TemporaryMapClientContractTests
         Assert.That(ex.InnerException, Is.Null);
     }
 
+    [TestCase("GetMaps", HttpStatusCode.Unauthorized)]
+    [TestCase("GetMaps", HttpStatusCode.Forbidden)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden)]
+    public void MapListing_WhenMatchmakingRefusesWebsiteBackend_LogsTheUpstreamStatusAtWarning_NamingNeitherBodyUriNorSecret(
+        string listing, HttpStatusCode upstreamStatus)
+    {
+        // The global filter logs only the 502 it answers, so this is the one log line that records what matchmaking
+        // said. It names the service, the listing and the upstream status, and nothing from the request or the body.
+        var route = Routes.Single(r => r.Name == listing);
+        var handler = new ScriptedHttpHandler().On(route.Method, route.Path, upstreamStatus,
+            "{\"message\":\"refused behind " + BodyMarker + "\",\"url\":\"https://" + BodyMarker + "/maps?secret=placeholder\"}");
+
+        var logEvent = LogEventsWhile(() => route.Call(handler)).Single();
+
+        Assert.That(logEvent.Level, Is.EqualTo(LogEventLevel.Warning));
+        Assert.That(logEvent.Exception, Is.Null);
+        Assert.That(Scalar(logEvent, "Service"), Is.EqualTo("matchmaking-service"));
+        Assert.That(Scalar(logEvent, "Listing"), Is.EqualTo(listing));
+        Assert.That(Scalar(logEvent, "UpstreamStatusCode"), Is.EqualTo((int)upstreamStatus));
+        var logged = logEvent.RenderMessage() + string.Join(",", logEvent.Properties.Values);
+        Assert.That(logged, Does.Contain(((int)upstreamStatus).ToString()));
+        Assert.That(logged, Does.Not.Contain(BodyMarker).And.Not.Contain("://").And.Not.Contain("/maps").And.Not.Contain("{"));
+        Assert.That(ConfiguredAdminSecret, Is.Not.Empty);
+        Assert.That(logged, Does.Not.Contain(ConfiguredAdminSecret));
+    }
+
+    [TestCase("GetMaps", HttpStatusCode.InternalServerError)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.NotFound)]
+    public void MapListing_OnAnyOtherErrorStatus_LeavesTheLoggingToTheGlobalFilter(string listing, HttpStatusCode status)
+    {
+        // The filter logs these with their real status, so a client line would only duplicate it.
+        var route = Routes.Single(r => r.Name == listing);
+        var handler = new ScriptedHttpHandler().On(route.Method, route.Path, status, "{}");
+
+        var logEvents = LogEventsWhile(() => route.Call(handler));
+
+        Assert.That(logEvents, Is.Empty);
+    }
+
     [Test]
     public async Task MapListings_StillReadWellFormedBodies()
     {
@@ -230,5 +275,37 @@ public class TemporaryMapClientContractTests
     {
         await using var bytes = new MemoryStream(Encoding.UTF8.GetBytes("abc"));
         await Us(handler).UploadTemporaryMapAsync(bytes, "CustomGames/x-94ec3bda.w3x", 0, "peter#123", CancellationToken.None);
+    }
+
+    /// <summary>The secret the client sends, read from its field so no test carries a copy of the value.</summary>
+    private static readonly string ConfiguredAdminSecret = (string)typeof(MatchmakingServiceClient)
+        .GetField("AdminSecret", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+
+    /// <summary>The Serilog events a call that must throw an HttpRequestException writes to the static logger.</summary>
+    private static List<LogEvent> LogEventsWhile(AsyncTestDelegate call)
+    {
+        var sink = new CapturingSink();
+        var previousLogger = Log.Logger;
+        Log.Logger = new LoggerConfiguration().MinimumLevel.Verbose().WriteTo.Sink(sink).CreateLogger();
+        try
+        {
+            Assert.ThrowsAsync<HttpRequestException>(call);
+        }
+        finally
+        {
+            Log.Logger = previousLogger;
+        }
+
+        return sink.Events;
+    }
+
+    private static object Scalar(LogEvent logEvent, string property)
+        => ((ScalarValue)logEvent.Properties[property]).Value;
+
+    private sealed class CapturingSink : ILogEventSink
+    {
+        public List<LogEvent> Events { get; } = [];
+
+        public void Emit(LogEvent logEvent) => Events.Add(logEvent);
     }
 }

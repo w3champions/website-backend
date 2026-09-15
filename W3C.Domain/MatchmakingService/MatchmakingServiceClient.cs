@@ -20,6 +20,7 @@ using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.Repositories;
 using System.Net.Http.Json;
 using W3C.Domain.Tracing;
+using Serilog;
 
 namespace W3C.Domain.MatchmakingService;
 
@@ -273,7 +274,7 @@ public partial class MatchmakingServiceClient
         // checkbox becomes a silent permanent no-op: nothing fails and nothing logs. Sending it on a
         // permanent-only listing is behaviour-neutral.
         var response = await SendWithSecret(HttpMethod.Get, url);
-        return await ReadMapListing(response);
+        return await ReadMapListing(response, nameof(GetMaps));
     }
 
     public async Task<MapContract> GetMap(int id)
@@ -318,7 +319,7 @@ public partial class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/maps/tournaments";
         var response = await _httpClient.GetAsync(url);
-        return await ReadMapListing(response);
+        return await ReadMapListing(response, nameof(GetTournamentMaps));
     }
 
     /// <summary>
@@ -327,14 +328,21 @@ public partial class MatchmakingServiceClient
     /// Neither message quotes the body or the URL. A 401 or 403 from matchmaking means website-backend's own
     /// admin-secret configuration is wrong, never the caller's authentication, so it surfaces as 502 (the message
     /// still names the upstream status): relayed as-is, the website would treat it as the caller's own auth failure.
+    /// The global filter then logs only the 502 it answers, so that case is logged here: service, listing and upstream
+    /// status only, never the URL or the body.
     /// </summary>
-    private static async Task<GetMapsResponse> ReadMapListing(HttpResponseMessage response)
+    private static async Task<GetMapsResponse> ReadMapListing(HttpResponseMessage response, string listing)
     {
         if (!response.IsSuccessStatusCode)
         {
-            var status = response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden
-                ? HttpStatusCode.BadGateway
-                : response.StatusCode;
+            var status = response.StatusCode;
+            if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                Log.Warning("{Service} answered {UpstreamStatusCode} to {Listing}, answered as 502: website-backend's own credential configuration, not the caller's",
+                    ServiceName, (int)status, listing);
+                status = HttpStatusCode.BadGateway;
+            }
+
             throw new HttpRequestException($"{ServiceName} answered {(int)response.StatusCode}", null, status);
         }
 
