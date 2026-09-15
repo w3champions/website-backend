@@ -84,6 +84,8 @@ builder.Services.AddControllers(c =>
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    // The Microsoft.AspNetCore and System.Net.Http overrides also keep proofHash values out of the logs (spec §10.3):
+    // hosting's "Request starting" and IHttpClientFactory's "Sending HTTP request" Information entries carry full URLs.
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("AspNetCore.Authentication.Basic.BasicHandler", LogEventLevel.Warning) // Temporarily filter out the Basic auth schema log. We should add central JWT though.
     .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning) // Filter out verbose HTTP client logs
@@ -98,7 +100,7 @@ Log.Information("Starting server.");
 
 // Add telemetry
 string appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
-builder.Services.AddApplicationInsightsTelemetry(c => c.ConnectionString = "InstrumentationKey=" + appInsightsKey?.Replace("'", ""));
+builder.Services.AddW3CApplicationInsights(appInsightsKey);
 
 // Add Swagger
 builder.Services.AddSwaggerGen(f =>

@@ -12,6 +12,8 @@ using System.Reflection;
 using OpenTelemetry.Exporter;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
+using Microsoft.ApplicationInsights.Extensibility;
+using W3ChampionsStatisticService.RateLimiting.Models;
 
 namespace W3ChampionsStatisticService.Services.Tracing;
 
@@ -23,12 +25,14 @@ public static class TracingServiceCollectionExtensions
     static readonly string OTEL_EXPORTER_OTLP_ENDPOINT = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
     static readonly string OTEL_EXPORTER_OTLP_PROTOCOL = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL") ?? "Grpc";
     static readonly string SERVICE_VERSION = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "undefined";
+    // MongoDbRepositoryBase names every collection after its document type.
+    static readonly string API_TOKEN_COLLECTION_NAME = typeof(ApiToken).Name;
     public static IServiceCollection AddW3CTracing(
         this IServiceCollection services,
         string websiteBackendHubPath,
         MongoClientSettings mongoClientSettings)
     {
-        mongoClientSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
+        mongoClientSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(CreateMongoInstrumentationOptions()));
         mongoClientSettings.ApplicationName = OTEL_SERVICE_NAME;
 
         services.AddSingleton(new ActivitySource(OTEL_SERVICE_NAME));
@@ -84,6 +88,8 @@ public static class TracingServiceCollectionExtensions
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
                 .AddSource(OTEL_SERVICE_NAME)
                 .AddProcessor(new BaggageToTagProcessor())
+                // Before the exporter: strips proofHash values from URL attributes (spec §10.3).
+                .AddProcessor(new TelemetryRedactionProcessor())
                 .AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(OTEL_EXPORTER_OTLP_ENDPOINT);
@@ -98,4 +104,25 @@ public static class TracingServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Application Insights, with <see cref="TelemetryRedactionInitializer"/> so request and dependency URLs never
+    /// carry a proofHash (spec §10.3).
+    /// </summary>
+    public static IServiceCollection AddW3CApplicationInsights(this IServiceCollection services, string appInsightsKey)
+    {
+        services.AddApplicationInsightsTelemetry(c => c.ConnectionString = "InstrumentationKey=" + appInsightsKey?.Replace("'", ""));
+        services.AddSingleton<ITelemetryInitializer, TelemetryRedactionInitializer>();
+        return services;
+    }
+
+    /// <summary>
+    /// Command text stays captured for every collection except the API-token one: its lookups and last-used updates
+    /// filter on the raw token, which would otherwise sit in <c>db.query.text</c> of every sampled span.
+    /// </summary>
+    internal static InstrumentationOptions CreateMongoInstrumentationOptions() => new()
+    {
+        CaptureCommandText = true,
+        ShouldStartActivity = command => !string.Equals(command.GetCollectionName(), API_TOKEN_COLLECTION_NAME, StringComparison.Ordinal),
+    };
 }
