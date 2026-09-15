@@ -59,8 +59,6 @@ using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
-using Serilog.Events;
-using Serilog.Formatting.Json;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Services.Tracing;
 using W3ChampionsStatisticService.Rewards.Middleware;
@@ -80,13 +78,9 @@ builder.Services.AddControllers(c =>
     c.Filters.Add<HttpRequestExceptionFilter>();
 });
 
-// Create logs with format website-backend_yyyyMMdd.log
-Log.Logger = new LoggerConfiguration()
-    // Its overrides also keep proofHash values out of the hosting and HttpClient logs (spec §10.3).
-    .WithW3CMinimumLevels()
-    .WriteTo.Console(new JsonFormatter(renderMessage: true), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
-    .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+// Console and website-backend_yyyyMMdd.log sinks; the level overrides also keep proofHash values out of the hosting and
+// HttpClient logs (spec §10.3).
+Log.Logger = W3CLoggerConfiguration.Create().CreateLogger();
 // Tell the AspNetCore host to use Serilog for all logging
 builder.Host.UseSerilog();
 

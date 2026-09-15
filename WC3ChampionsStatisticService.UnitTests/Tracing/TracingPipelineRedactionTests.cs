@@ -7,6 +7,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -18,6 +20,7 @@ using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Servers;
 using NUnit.Framework;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 using W3ChampionsStatisticService.Services.Tracing;
 using WC3ChampionsStatisticService.Tests.Maps;
@@ -26,7 +29,7 @@ namespace WC3ChampionsStatisticService.Tests.Tracing;
 
 /// <summary>
 /// Runs the real <see cref="TracingServiceCollectionExtensions.AddW3CTracing"/> pipeline (spec §10.3): what a
-/// span carries when it reaches the exporter, and which Mongo commands start a span at all.
+/// span carries when its OTLP exporter sends it, and which Mongo commands start a span at all.
 /// </summary>
 [TestFixture]
 public class TracingPipelineRedactionTests
@@ -36,39 +39,14 @@ public class TracingPipelineRedactionTests
     private const string ApiTokenValue = "raw-api-token-value-under-test";
 
     [Test]
-    public async Task OutboundProofHashPathSegment_IsRedactedBeforeTheSpanIsExported()
+    public async Task OutboundProofHashPathSegment_IsRedactedBeforeTheOtlpExporterSendsTheSpan()
     {
         // The HttpClient instrumentation redacts query VALUES only; the matchmaking by-proof-hash route
         // carries the proofHash as a PATH segment, which it records verbatim in url.full.
-        var captured = new CapturingProcessor();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddW3CTracing("/hub", new MongoClientSettings());
-        services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddProcessor(captured));
-        var provider = services.BuildServiceProvider();
-        var tracerProvider = provider.GetRequiredService<TracerProvider>();
+        var exported = await ExportedBytesOfOutboundCalls($"maps/temporary/by-proof-hash/{TemporaryMapClientTests.ProofHash}");
 
-        try
-        {
-            using var server = LoopbackServer.Start();
-            using (var client = new HttpClient())
-            {
-                using var response = await client.GetAsync(
-                    $"{server.BaseUrl}maps/temporary/by-proof-hash/{TemporaryMapClientTests.ProofHash}");
-                Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-            }
-
-            var span = captured.Ended.SingleOrDefault(a => a.Kind == ActivityKind.Client && a.GetTagItem("url.full") != null);
-            Assert.That(span, Is.Not.Null, "the HttpClient instrumentation recorded no client span");
-            var urlFull = (string)span!.GetTagItem("url.full");
-            Assert.That(urlFull, Does.Not.Contain(TemporaryMapClientTests.ProofHash));
-            Assert.That(urlFull, Does.EndWith("/maps/temporary/by-proof-hash/Redacted"));
-        }
-        finally
-        {
-            tracerProvider.Shutdown(1000);
-            await provider.DisposeAsync();
-        }
+        Assert.That(exported, Does.Contain("/maps/temporary/by-proof-hash/Redacted"));
+        Assert.That(exported, Does.Not.Contain(TemporaryMapClientTests.ProofHash));
     }
 
     [Test]
@@ -181,14 +159,64 @@ public class TracingPipelineRedactionTests
         }
     }
 
-    private sealed class CapturingProcessor : BaseProcessor<Activity>
+    /// <summary>
+    /// Sends one GET per path through <see cref="TracingServiceCollectionExtensions.AddW3CTracing"/> exactly as
+    /// registered and returns everything its OTLP exporter sent, decoded as Latin-1 so ASCII attribute values can be
+    /// searched. Production exports in batches, where a wrong processor order would only lose a race; the same
+    /// exporter switched to simple export sends each span synchronously when it ends, in registration order, so a
+    /// redaction registered after it fails here. Its HttpClient answers in memory: nothing leaves the process.
+    /// </summary>
+    private static async Task<string> ExportedBytesOfOutboundCalls(params string[] paths)
     {
-        public ConcurrentQueue<Activity> Ended { get; } = new();
+        var collector = new InMemoryOtlpCollector();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.Configure<OtlpExporterOptions>(options =>
+        {
+            options.ExportProcessorType = ExportProcessorType.Simple;
+            options.HttpClientFactory = () => new HttpClient(collector);
+        });
+        services.AddW3CTracing("/hub", new MongoClientSettings());
+        var provider = services.BuildServiceProvider();
+        var tracerProvider = provider.GetRequiredService<TracerProvider>();
 
-        public override void OnEnd(Activity data) => Ended.Enqueue(data);
+        try
+        {
+            using var server = LoopbackServer.Start();
+            using (var client = new HttpClient())
+            {
+                foreach (var path in paths)
+                {
+                    using var response = await client.GetAsync(server.BaseUrl + path);
+                    Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+                }
+            }
+
+            Assert.That(collector.Requests, Has.Count.EqualTo(paths.Length), "the OTLP exporter did not send one request per span");
+            return string.Concat(collector.Requests.Select(Encoding.Latin1.GetString));
+        }
+        finally
+        {
+            tracerProvider.Shutdown(1000);
+            await provider.DisposeAsync();
+        }
     }
 
-    /// <summary>A one-request HTTP server on a free loopback port, answering matchmaking's record-not-found 404 {}.</summary>
+    /// <summary>Stands in for an OTLP collector (gRPC or HTTP/protobuf): records each export body and accepts it.</summary>
+    private sealed class InMemoryOtlpCollector : HttpMessageHandler
+    {
+        public ConcurrentQueue<byte[]> Requests { get; } = new();
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Requests.Enqueue(await request.Content!.ReadAsByteArrayAsync(cancellationToken));
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([]) };
+            response.Headers.TryAddWithoutValidation("grpc-status", "0");
+            return response;
+        }
+    }
+
+    /// <summary>An HTTP server on a free loopback port, answering every request with matchmaking's record-not-found 404 {}.</summary>
     private sealed class LoopbackServer : IDisposable
     {
         private readonly HttpListener _listener;
@@ -214,11 +242,23 @@ public class TracingPipelineRedactionTests
             listener.Start();
             _ = Task.Run(async () =>
             {
-                var context = await listener.GetContextAsync();
-                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                var body = "{}"u8.ToArray();
-                await context.Response.OutputStream.WriteAsync(body);
-                context.Response.Close();
+                while (listener.IsListening)
+                {
+                    HttpListenerContext context;
+                    try
+                    {
+                        context = await listener.GetContextAsync();
+                    }
+                    catch (Exception) when (!listener.IsListening)
+                    {
+                        return;
+                    }
+
+                    context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    var body = "{}"u8.ToArray();
+                    await context.Response.OutputStream.WriteAsync(body);
+                    context.Response.Close();
+                }
             });
             return new LoopbackServer(listener, baseUrl);
         }
