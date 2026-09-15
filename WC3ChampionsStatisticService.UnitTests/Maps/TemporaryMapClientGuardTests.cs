@@ -186,6 +186,28 @@ public class TemporaryMapClientGuardTests
         Assert.That(handler.Requests.Single().RequestUri!.Query, Is.Empty);
     }
 
+    [TestCase("GetMapFile")]
+    [TestCase("DeleteMapFile")]
+    public async Task MapFileIdRoutes_KeepTheFileIdOneEscapedPathSegment(string method)
+    {
+        // fileId is a route value of the admin map-file routes; unescaped, its "?" or "#" would rewrite the
+        // update-service URL (DeleteMapFile sends x-admin-secret).
+        const string hostileFileId = "abc?filePath=W3Champions/v10/x.w3x#f g%2F";
+        const string route = "/api/content/maps/";
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, route, HttpStatusCode.OK, "{\"id\":\"abc\"}")
+            .On(HttpMethod.Delete, route, HttpStatusCode.NoContent, "");
+        var client = Us(handler);
+
+        await (method == "GetMapFile" ? client.GetMapFile(hostileFileId) : client.DeleteMapFile(hostileFileId));
+
+        var uri = handler.Requests.Single().RequestUri!;
+        Assert.That(uri.Query, Is.Empty, "the file id must not leak into the query");
+        var segment = uri.AbsolutePath[(uri.AbsolutePath.IndexOf(route, StringComparison.Ordinal) + route.Length)..];
+        Assert.That(segment, Does.Not.Contain("/"), "the file id must stay a single path segment");
+        Assert.That(Uri.UnescapeDataString(segment), Is.EqualTo(hostileFileId));
+    }
+
     private static IEnumerable<TestCaseData> MalformedDigestKeys()
     {
         var methods = new (string Name, string Valid, Func<MatchmakingServiceClient, string, Task> Call)[]

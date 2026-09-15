@@ -84,7 +84,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
     public async Task<MapFileData> GetMapFile(string fileId)
     {
-        var url = $"{UpdateServiceUrl}/api/content/maps/{fileId}";
+        var url = $"{UpdateServiceUrl}/api/content/maps/{Uri.EscapeDataString(fileId)}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         var response = await _httpClient.SendAsync(request);
 
@@ -100,7 +100,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
     public async Task DeleteMapFile(string fileId)
     {
-        var url = $"{UpdateServiceUrl}/api/content/maps/{fileId}";
+        var url = $"{UpdateServiceUrl}/api/content/maps/{Uri.EscapeDataString(fileId)}";
         var request = AdminRequest(HttpMethod.Delete, url);
         var response = await _httpClient.SendAsync(request);
 
