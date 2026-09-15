@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -194,11 +193,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
     private static void RequireTemporaryMapFilePath(string filePath)
     {
-        // Inner dots stay legal: the §6.4 names keep them (e.g. "a..b-94ec3bda.w3x"), so only whole segments are checked.
-        if (filePath == null
-            || !filePath.StartsWith(TemporaryMapKeys.PathPrefix, StringComparison.Ordinal)
-            || filePath.Contains('\\')
-            || filePath.Split('/').Any(segment => segment is "" or "." or ".."))
+        if (!TemporaryMapKeys.IsFilePath(filePath))
         {
             throw new ArgumentException(
                 $"must be a file under {TemporaryMapKeys.PathPrefix} without backslashes or empty, '.' or '..' segments", nameof(filePath));
