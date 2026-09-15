@@ -4,10 +4,11 @@ using System.Text;
 namespace W3ChampionsStatisticService.Services.Tracing;
 
 /// <summary>
-/// Removes temporary-map secrets from URL-shaped telemetry values (design spec §10.3: never log a mapProof or a
-/// proofHash). Two shapes reach telemetry: matchmaking's <c>/maps/temporary/by-proof-hash/{proofHash}</c> route
-/// carries the proofHash as a path segment, and website-backend's own routes take it as a query parameter.
-/// Values become "Redacted", the placeholder OpenTelemetry's own query redaction uses.
+/// Removes secrets from URL-shaped telemetry values. Temporary-map secrets (design spec §10.3: never log a mapProof or
+/// a proofHash) reach telemetry in two shapes: matchmaking's <c>/maps/temporary/by-proof-hash/{proofHash}</c> route
+/// carries the proofHash as a path segment, and website-backend's own routes take it as a query parameter. The
+/// SignalR hub takes its token as the <c>access_token</c> query parameter. Values become "Redacted", the
+/// placeholder OpenTelemetry's own query redaction uses.
 /// </summary>
 public static class TelemetryRedaction
 {
@@ -15,7 +16,7 @@ public static class TelemetryRedaction
 
     private const string ProofHashPathPrefix = "/maps/temporary/by-proof-hash/";
 
-    private static readonly string[] SecretQueryKeys = ["proofHash", "mapProof"];
+    private static readonly string[] SecretQueryKeys = ["proofHash", "mapProof", "access_token"];
 
     /// <summary>
     /// Redacts a full URL, a bare path, or text embedding one (e.g. "GET /path"). Returns the same instance when

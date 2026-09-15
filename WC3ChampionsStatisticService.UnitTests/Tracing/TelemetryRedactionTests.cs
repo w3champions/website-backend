@@ -22,6 +22,7 @@ public class TelemetryRedactionTests
 {
     private const string Hash = TemporaryMapClientTests.ProofHash;
     private const string Sha1 = TemporaryMapClientTests.Sha1;
+    private const string HubToken = "raw-hub-token-under-test";
 
     [TestCase("https://mm.test/maps/temporary/by-proof-hash/HASH", "https://mm.test/maps/temporary/by-proof-hash/Redacted")]
     [TestCase("/maps/temporary/by-proof-hash/HASH", "/maps/temporary/by-proof-hash/Redacted")]
@@ -38,6 +39,16 @@ public class TelemetryRedactionTests
         var redacted = TelemetryRedaction.RedactUrl(input.Replace("HASH", Hash));
 
         Assert.That(redacted, Is.EqualTo(expected));
+    }
+
+    [TestCase("https://wb.test/websiteBackendHub?access_token=TOKEN", "https://wb.test/websiteBackendHub?access_token=Redacted")]
+    [TestCase("https://wb.test/websiteBackendHub/negotiate?negotiateVersion=1&access_token=TOKEN&id=abc",
+        "https://wb.test/websiteBackendHub/negotiate?negotiateVersion=1&access_token=Redacted&id=abc")]
+    [TestCase("/websiteBackendHub?Access_Token=TOKEN", "/websiteBackendHub?Access_Token=Redacted")]
+    public void RedactUrl_RedactsTheHubAccessToken(string input, string expected)
+    {
+        // The SignalR hub takes its JWT or ticket as ?access_token= (browsers cannot set headers on WebSockets).
+        Assert.That(TelemetryRedaction.RedactUrl(input.Replace("TOKEN", HubToken)), Is.EqualTo(expected));
     }
 
     [TestCase("https://mm.test/maps/temporary/by-sha1/SHA1")]
@@ -153,6 +164,23 @@ public class TelemetryRedactionTests
         Assert.That(request.Name, Is.EqualTo("GET TemporaryMaps/GetStatus"));
         Assert.That(dependency.Name, Is.EqualTo("GET /maps/temporary/by-proof-hash/Redacted"));
         Assert.That(dependency.Data, Is.EqualTo("https://mm.test/maps/temporary/by-proof-hash/Redacted"));
+    }
+
+    [Test]
+    public void HubAccessToken_IsRedactedFromAppInsightsRequestsAndSpanUrls()
+    {
+        var request = new RequestTelemetry { Url = new Uri($"https://wb.test/websiteBackendHub?id=abc&access_token={HubToken}") };
+        using var activity = new Activity("GET").Start();
+        activity.SetTag("url.full", $"https://wb.test/websiteBackendHub/negotiate?negotiateVersion=1&access_token={HubToken}");
+        activity.SetTag("url.query", $"?negotiateVersion=1&access_token={HubToken}");
+        activity.Stop();
+
+        new TelemetryRedactionInitializer().Initialize(request);
+        new TelemetryRedactionProcessor().OnEnd(activity);
+
+        Assert.That(request.Url.OriginalString, Is.EqualTo("https://wb.test/websiteBackendHub?id=abc&access_token=Redacted"));
+        Assert.That(activity.GetTagItem("url.full"), Is.EqualTo("https://wb.test/websiteBackendHub/negotiate?negotiateVersion=1&access_token=Redacted"));
+        Assert.That(activity.GetTagItem("url.query"), Is.EqualTo("?negotiateVersion=1&access_token=Redacted"));
     }
 
     [Test]
