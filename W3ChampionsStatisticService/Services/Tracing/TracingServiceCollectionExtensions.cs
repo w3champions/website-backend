@@ -87,14 +87,11 @@ public static class TracingServiceCollectionExtensions
                 })
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
                 .AddSource(OTEL_SERVICE_NAME)
-                .AddProcessor(new BaggageToTagProcessor())
-                // Before the exporter: strips proofHash values from URL attributes (spec §10.3).
-                .AddProcessor(new TelemetryRedactionProcessor())
-                .AddOtlpExporter(options =>
+                .AddW3CProcessorsThenExporter(exporter => exporter.AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(OTEL_EXPORTER_OTLP_ENDPOINT);
                     options.Protocol = Enum.Parse<OtlpExportProtocol>(OTEL_EXPORTER_OTLP_PROTOCOL);
-                })
+                }))
             );
 
         // Add core tracing services
@@ -104,6 +101,17 @@ public static class TracingServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers the span processors, then the exporter <paramref name="addExporter"/> adds. Processors run in
+    /// registration order, so the proofHash redaction (spec §10.3) always edits a span before it is exported.
+    /// </summary>
+    internal static TracerProviderBuilder AddW3CProcessorsThenExporter(
+        this TracerProviderBuilder tracing, Func<TracerProviderBuilder, TracerProviderBuilder> addExporter)
+        => addExporter(tracing
+            .AddProcessor(new BaggageToTagProcessor())
+            // Before the exporter: strips proofHash values from URL attributes (spec §10.3).
+            .AddProcessor(new TelemetryRedactionProcessor()));
 
     /// <summary>
     /// Application Insights, with <see cref="TelemetryRedactionInitializer"/> so request and dependency URLs never

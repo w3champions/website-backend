@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -68,6 +69,30 @@ public class TracingPipelineRedactionTests
             tracerProvider.Shutdown(1000);
             await provider.DisposeAsync();
         }
+    }
+
+    [Test]
+    public void RedactionProcessor_RunsBeforeTheExporter()
+    {
+        // A simple export processor exports synchronously in OnEnd, so a redaction registered after it would edit
+        // a span that has already left. The exporter snapshots tag values at export time; AddW3CTracing registers
+        // its OTLP exporter through the same helper.
+        var exporter = new SnapshotExporter();
+        var sourceName = "w3c-redaction-order-test-" + Guid.NewGuid().ToString("N");
+        using var source = new ActivitySource(sourceName);
+        using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+            .AddSource(sourceName)
+            .SetSampler(new AlwaysOnSampler())
+            .AddW3CProcessorsThenExporter(tracing => tracing.AddProcessor(new SimpleActivityExportProcessor(exporter)))
+            .Build();
+
+        using (var activity = source.StartActivity("GET", ActivityKind.Client))
+        {
+            activity!.SetTag("url.full", $"https://mm.test/maps/temporary/by-proof-hash/{TemporaryMapClientTests.ProofHash}");
+        }
+
+        var exported = exporter.Exported.Single();
+        Assert.That(exported["url.full"], Is.EqualTo("https://mm.test/maps/temporary/by-proof-hash/Redacted"));
     }
 
     [Test]
@@ -140,6 +165,21 @@ public class TracingPipelineRedactionTests
     private static CommandStartedEvent Command(string name, int requestId, BsonDocument command)
         => new(name, command, new DatabaseNamespace(TestDatabase), null, requestId,
             new ConnectionId(new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017))));
+
+    private sealed class SnapshotExporter : BaseExporter<Activity>
+    {
+        public ConcurrentQueue<Dictionary<string, string>> Exported { get; } = new();
+
+        public override ExportResult Export(in Batch<Activity> batch)
+        {
+            foreach (var activity in batch)
+            {
+                Exported.Enqueue(activity.TagObjects.ToDictionary(t => t.Key, t => t.Value?.ToString()));
+            }
+
+            return ExportResult.Success;
+        }
+    }
 
     private sealed class CapturingProcessor : BaseProcessor<Activity>
     {
