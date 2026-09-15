@@ -177,6 +177,8 @@ public class MapsControllerPassthroughTests
     [TestCase("GetMaps", HttpStatusCode.Forbidden, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetMaps", HttpStatusCode.ProxyAuthenticationRequired, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.ProxyAuthenticationRequired, "{\"message\":\"refused\"}", StatusCodes.Status502BadGateway)]
     [TestCase("GetMaps", HttpStatusCode.OK, "{\"total\":0}", StatusCodes.Status502BadGateway)]
     [TestCase("GetTournamentMaps", HttpStatusCode.OK, "{\"total\":0}", StatusCodes.Status502BadGateway)]
     public void MapListingActions_WhenMatchmakingFails_AnswerAnUpstreamFailure_NeverAnEmptyList(

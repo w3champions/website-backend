@@ -145,12 +145,15 @@ public class TemporaryMapClientContractTests
 
     [TestCase("GetMaps", HttpStatusCode.Unauthorized)]
     [TestCase("GetMaps", HttpStatusCode.Forbidden)]
+    [TestCase("GetMaps", HttpStatusCode.ProxyAuthenticationRequired)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.ProxyAuthenticationRequired)]
     public void MapListing_WhenMatchmakingRefusesWebsiteBackend_ThrowsBadGateway_NamingTheUpstreamStatus(string listing, HttpStatusCode upstreamStatus)
     {
-        // A 401 or 403 from matchmaking means website-backend's own admin-secret configuration is wrong, never the
-        // caller's authentication. Relayed as-is, the website would treat it as the caller's own auth failure.
+        // A 401 or 403 from matchmaking means website-backend's own admin-secret configuration is wrong, and a 407 that
+        // a proxy on the way demands credentials: never the caller's authentication. Relayed as-is, the website would
+        // treat it as the caller's own auth failure.
         var route = Routes.Single(r => r.Name == listing);
         var handler = new ScriptedHttpHandler().On(route.Method, route.Path, upstreamStatus,
             "{\"message\":\"refused behind " + BodyMarker + "\"}");
@@ -165,16 +168,21 @@ public class TemporaryMapClientContractTests
 
     [TestCase("GetMaps", HttpStatusCode.Unauthorized)]
     [TestCase("GetMaps", HttpStatusCode.Forbidden)]
+    [TestCase("GetMaps", HttpStatusCode.ProxyAuthenticationRequired)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Unauthorized)]
     [TestCase("GetTournamentMaps", HttpStatusCode.Forbidden)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.ProxyAuthenticationRequired)]
     public void MapListing_WhenMatchmakingRefusesWebsiteBackend_LogsTheUpstreamStatusAtWarning_NamingNeitherBodyUriNorSecret(
         string listing, HttpStatusCode upstreamStatus)
     {
         // The global filter logs only the 502 it answers, so this is the one log line that records what matchmaking
         // said. It names the service, the listing and the upstream status, and nothing from the request or the body.
+        // The response carries its request, as HttpClientHandler's do, so a line that reached for the URL would show it.
         var route = Routes.Single(r => r.Name == listing);
-        var handler = new ScriptedHttpHandler().On(route.Method, route.Path, upstreamStatus,
-            "{\"message\":\"refused behind " + BodyMarker + "\",\"url\":\"https://" + BodyMarker + "/maps?secret=placeholder\"}");
+        var body = "{\"message\":\"refused behind " + BodyMarker + "\",\"url\":\"https://" + BodyMarker + "/maps?secret=placeholder\"}";
+        var handler = new ScriptedHttpHandler().On(
+            r => r.Method == route.Method && r.RequestUri!.PathAndQuery.Contains(route.Path, StringComparison.Ordinal),
+            r => { var response = ScriptedHttpHandler.Json(upstreamStatus, body); response.RequestMessage = r; return response; });
 
         var logEvent = LogEventsWhile(() => route.Call(handler)).Single();
 

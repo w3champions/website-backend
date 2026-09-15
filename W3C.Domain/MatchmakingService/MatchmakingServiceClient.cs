@@ -326,19 +326,19 @@ public partial class MatchmakingServiceClient
     /// Both map listings are relayed to callers as a list, so a failure must never read as one. An error status throws
     /// with that status, and a success whose body is not a listing throws a contract violation (see UpstreamContract).
     /// Neither message quotes the body or the URL. A 401 or 403 from matchmaking means website-backend's own
-    /// admin-secret configuration is wrong, never the caller's authentication, so it surfaces as 502 (the message
-    /// still names the upstream status): relayed as-is, the website would treat it as the caller's own auth failure.
-    /// The global filter then logs only the 502 it answers, so that case is logged here: service, listing and upstream
-    /// status only, never the URL or the body.
+    /// admin-secret configuration is wrong, and a 407 that a proxy on the way demands credentials: never the caller's
+    /// authentication, so each surfaces as 502 (the message still names the upstream status), because relayed as-is
+    /// the website would treat it as the caller's own auth failure. The global filter then logs only the 502 it
+    /// answers, so that case is logged here: service, listing and upstream status only, never the URL or the body.
     /// </summary>
     private static async Task<GetMapsResponse> ReadMapListing(HttpResponseMessage response, string listing)
     {
         if (!response.IsSuccessStatusCode)
         {
             var status = response.StatusCode;
-            if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.ProxyAuthenticationRequired)
             {
-                Log.Warning("{Service} answered {UpstreamStatusCode} to {Listing}, answered as 502: website-backend's own credential configuration, not the caller's",
+                Log.Warning("{Service} answered {UpstreamStatusCode} to {Listing}, answered as 502: website-backend's own credential or proxy configuration, not the caller's",
                     ServiceName, (int)status, listing);
                 status = HttpStatusCode.BadGateway;
             }
