@@ -107,9 +107,11 @@ public static class TemporaryMapNaming
     }
 
     /// <summary>
-    /// The strict fileKey shape, for a path matchmaking hands back before anything is written at it (S-I2):
-    /// <see cref="TemporaryMapKeys.IsFilePath"/>, exactly one segment under the prefix, a map extension (either case),
-    /// and no character below U+0020. Every <see cref="BuildFileKey"/> output satisfies it.
+    /// The strict fileKey shape, for a path matchmaking hands back before anything is written at it (S-I2, S2-1): what
+    /// <see cref="BuildFileKey"/> emits and nothing wider — <see cref="TemporaryMapKeys.IsFilePath"/>, exactly one
+    /// segment under the prefix, shaped <c>&lt;stem&gt;-&lt;8 lowercase hex&gt;.w3x|.w3m</c> with a non-empty stem, the
+    /// extension in either case, and no control character (U+0000-U+001F, U+007F-U+009F) anywhere in the name. Every
+    /// <see cref="BuildFileKey"/> output satisfies it.
     /// </summary>
     public static bool IsFileKey(string path)
     {
@@ -119,20 +121,30 @@ public static class TemporaryMapNaming
         }
 
         var name = path[TemporaryMapKeys.PathPrefix.Length..];
-        if (name.Contains('/') || !TryGetExtension(name, out _))
+        if (name.Contains('/') || ContainsControlCharacter(name) || !TryGetExtension(name, out var extension))
         {
             return false;
         }
 
-        foreach (var c in name)
+        var stemAndSuffix = name[..^extension.Length];
+        var dash = stemAndSuffix.Length - (Sha1SuffixLength + 1);
+        return dash > 0
+               && stemAndSuffix[dash] == '-'
+               && TemporaryMapKeys.IsLowercaseHex(stemAndSuffix[(dash + 1)..], Sha1SuffixLength);
+    }
+
+    /// <summary>true when <paramref name="value"/> holds a C0 or C1 control character (U+0000-U+001F, U+007F-U+009F).</summary>
+    public static bool ContainsControlCharacter(string value)
+    {
+        foreach (var c in value ?? string.Empty)
         {
-            if (c < ' ')
+            if (IsControl(c))
             {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     /// <summary>

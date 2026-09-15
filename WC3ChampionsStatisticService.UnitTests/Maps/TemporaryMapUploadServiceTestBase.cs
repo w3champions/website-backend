@@ -30,6 +30,7 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
     protected const string FileKey = "W3Champions/CustomGames/Legion TD-a9993e36.w3x";
     protected const string UsFileName = "CustomGames/Legion TD-a9993e36.w3x";
     protected const string BattleTag = "peter#123";
+    protected const string OtherBattleTag = "Other#5678";
     protected const string OtherSha1 = "0123456789abcdef0123456789abcdef01234567";
 
     private static readonly string[] AllResults =
@@ -192,7 +193,10 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         => "{\"sha1\":\"" + metadataSha1 + "\",\"originalFileName\":\"" + originalFileNameJson + "\",\"fileSize\":3" +
            (withCapture ? ",\"capture\":" + (capture ?? CaptureJson()) : "") + "}";
 
-    /// <summary>One upload of the bytes "abc". <paramref name="originalFileNameJson"/> is spliced into the JSON as written, escapes included.</summary>
+    /// <summary>
+    /// One upload of the bytes "abc" by <paramref name="battleTag"/>. <paramref name="originalFileNameJson"/> is spliced
+    /// into the JSON as written, escapes included.
+    /// </summary>
     private protected Task<TemporaryMapUploadOutcome> Run(
         ScriptedHttpHandler handler,
         MintRateLimiter limiter = null,
@@ -202,10 +206,11 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         ILogger<TemporaryMapUploadService> logger = null,
         CancellationToken cancellationToken = default,
         Func<TimeSpan, Task> waitAsync = null,
-        string originalFileNameJson = "Legion TD.w3x")
+        string originalFileNameJson = "Legion TD.w3x",
+        string battleTag = BattleTag)
     {
         var (body, contentType) = BuildMultipart(Metadata(metadataSha1, capture, withCapture, originalFileNameJson), "abc"u8.ToArray());
-        return CreateService(handler, limiter, logger, waitAsync).HandleUploadAsync(body, contentType, BattleTag, cancellationToken);
+        return CreateService(handler, limiter, logger, waitAsync).HandleUploadAsync(body, contentType, battleTag, cancellationToken);
     }
 
     // ---- Metric ------------------------------------------------------------------------------

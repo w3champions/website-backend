@@ -321,14 +321,25 @@ public class TemporaryMapNamingTests
         Assert.Throws<ArgumentException>(() => TemporaryMapNaming.GameMapPath(notAFileKey));
     }
 
-    // ---- The strict fileKey shape a restore requires before writing (S-I2) -----------------------
+    // ---- The strict fileKey shape a restore requires before writing (S-I2, S2-1) -----------------
 
     [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.w3x", true)]
-    [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.W3X", true)]
-    [TestCase("W3Champions/CustomGames/x.w3m", true)]
+    [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.W3X", true, TestName = "IsFileKey takes the extension in either case")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.w3m", true)]
     [TestCase("W3Champions/CustomGames/a..b-94ec3bda.w3x", true, TestName = "IsFileKey keeps inner dots")]
+    [TestCase("W3Champions/CustomGames/a--94ec3bda.w3x", true, TestName = "IsFileKey keeps a stem that ends with a dash")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda-94ec3bda.w3x", true, TestName = "IsFileKey keeps a stem that looks like a suffix")]
     [TestCase("W3Champions/CustomGames/\u00e9\u00e8 \ufeff-94ec3bda.w3x", true, TestName = "IsFileKey keeps non-ASCII and format characters")]
-    [TestCase("W3Champions/CustomGames/.w3x", true, TestName = "IsFileKey accepts a name that is only the extension")]
+    [TestCase("W3Champions/CustomGames/.w3x", false, TestName = "IsFileKey refuses a name that is only the extension")]
+    [TestCase("W3Champions/CustomGames/x.w3m", false, TestName = "IsFileKey refuses a name without the sha1 suffix")]
+    [TestCase("W3Champions/CustomGames/-94ec3bda.w3x", false, TestName = "IsFileKey refuses an empty stem")]
+    [TestCase("W3Champions/CustomGames/x94ec3bda.w3x", false, TestName = "IsFileKey refuses a bare suffix with neither stem nor dash")]
+    [TestCase("W3Champions/CustomGames/xy94ec3bda.w3x", false, TestName = "IsFileKey refuses a suffix joined to the stem without a dash")]
+    [TestCase("W3Champions/CustomGames/x_94ec3bda.w3x", false, TestName = "IsFileKey refuses an underscore before the suffix")]
+    [TestCase("W3Champions/CustomGames/x-94EC3BDA.w3x", false, TestName = "IsFileKey refuses an uppercase hex suffix, which BuildFileKey never emits")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bd.w3x", false, TestName = "IsFileKey refuses a 7-hex suffix")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bdag.w3x", false, TestName = "IsFileKey refuses a suffix that is not hex")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda .w3x", false, TestName = "IsFileKey refuses a space between the suffix and the extension")]
     [TestCase("W3Champions/CustomGames/x-94ec3bda.w3x/", false, TestName = "IsFileKey refuses a trailing separator")]
     [TestCase("W3Champions/CustomGames/sub/x-94ec3bda.w3x", false, TestName = "IsFileKey refuses a second segment")]
     [TestCase("W3Champions/CustomGames/x-94ec3bda.zip", false)]
@@ -339,7 +350,11 @@ public class TemporaryMapNamingTests
     [TestCase("W3Champions/CustomGames/x\u0000y-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+0000")]
     [TestCase("W3Champions/CustomGames/x\u001fy-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+001F")]
     [TestCase("W3Champions/CustomGames/x\ny-94ec3bda.w3x", false, TestName = "IsFileKey refuses a line feed")]
-    [TestCase("W3Champions/CustomGames/x\u007fy-94ec3bda.w3x", true, TestName = "IsFileKey keeps U+007F (only < U+0020 is refused)")]
+    [TestCase("W3Champions/CustomGames/x\u007fy-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+007F")]
+    [TestCase("W3Champions/CustomGames/x\u0085y-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+0085 (a C1 control)")]
+    [TestCase("W3Champions/CustomGames/x\u009fy-94ec3bda.w3x", false, TestName = "IsFileKey refuses U+009F")]
+    [TestCase("W3Champions/CustomGames/x\u00a0y-94ec3bda.w3x", true, TestName = "IsFileKey keeps U+00A0, the first character after the C1 controls")]
+    [TestCase("W3Champions/CustomGames/x-94ec3bda.w3x\u0085", false, TestName = "IsFileKey refuses a C1 control after the extension")]
     [TestCase("W3Champions/v10/EchoIsles.w3x", false)]
     [TestCase("W3Champions/CustomGames/../v10/EchoIsles.w3x", false)]
     [TestCase("w3champions/CustomGames/x-94ec3bda.w3x", false)]
@@ -347,7 +362,7 @@ public class TemporaryMapNamingTests
     [TestCase("W3Champions/CustomGames/a\\b-94ec3bda.w3x", false, TestName = "IsFileKey refuses a backslash inside the name")]
     [TestCase("", false)]
     [TestCase(null, false)]
-    public void IsFileKey_RequiresThePrefixOneSegmentAMapExtensionAndNoControlCharacter(string path, bool expected)
+    public void IsFileKey_RequiresThePrefixOneSegmentTheSha1SuffixAMapExtensionAndNoControlCharacter(string path, bool expected)
     {
         Assert.That(TemporaryMapNaming.IsFileKey(path), Is.EqualTo(expected));
     }

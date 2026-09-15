@@ -165,7 +165,10 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
     [TestCase("")]
     [TestCase("W3Champions/CustomGames/sub/Legion TD-a9993e36.w3x", TestName = "a stored path with a second segment (S-I2)")]
     [TestCase("W3Champions/CustomGames/Legion TD-a9993e36.zip", TestName = "a stored path without a map extension (S-I2)")]
-    [TestCase("W3Champions/CustomGames/Legion TD-a9993e36.w3x\\u000a", TestName = "a stored path with a control character (S-I2)")]
+    [TestCase("W3Champions/CustomGames/Legion\\u000aTD-a9993e36.w3x", TestName = "a stored path with a control character in the stem (S-I2)")]
+    [TestCase("W3Champions/CustomGames/Legion\\u0085TD-a9993e36.w3x", TestName = "a stored path with a C1 control in the stem (S2-1)")]
+    [TestCase("W3Champions/CustomGames/Legion TD.w3x", TestName = "a stored path without the sha1 suffix (S2-1)")]
+    [TestCase("W3Champions/CustomGames/Legion TD-A9993E36.w3x", TestName = "a stored path with an uppercase sha1 suffix (S2-1)")]
     public void AStoredRecordPathThatIsNotATemporaryFile_Is500_TempMapKeyMismatch_WithNoWrite(string storedPath)
     {
         var handler = DeletedRecordHandler().On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(MapId, storedPath)));
@@ -254,6 +257,32 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
         Assert.That(Count(handler, IsBySha1), Is.EqualTo(2), "exactly one re-probe");
         Assert.That(Count(handler, IsUsDelete), Is.Zero);
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Restored);
+    }
+
+    [Test]
+    public void FileRestoredFailing_WhenTheReprobeNamesAnotherRecordAsPresent_Is502_WithNoDelete()
+    {
+        // R2-1/S2-6: sha1 is unique in matchmaking, so another id means the record was replaced between verify-proof and
+        // the re-probe; the bytes at our fileKey may back that record now, so nothing is deleted and nothing is claimed.
+        var handler = OnSequence(new ScriptedHttpHandler(), IsBySha1,
+                Respond(HttpStatusCode.OK, Record(MapId, fileState: "deleted")),
+                Respond(HttpStatusCode.OK, Record(7777, fileState: "present")))
+            .On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(MapId)))
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
+            .On(IsFileRestored, Respond(HttpStatusCode.InternalServerError, "{}"))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var counts = new UploadCounts();
+        using var logs = new LogCapture();
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler, logger: logs.Logger));
+
+        Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
+        Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "verify-proof", "us-upload", "file-restored", "by-sha1" }));
+        Assert.That(Count(handler, IsUsDelete), Is.Zero, "the other record may use the bytes at the path");
+        Assert.That(logs.Lines().Where(l => l.StartsWith("Warning") && l.Contains("7777") && l.Contains("5811") && l.Contains(FileKey)),
+            Has.Exactly(1).Items, "the warning names both records and the path");
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
     }
 
     [Test]

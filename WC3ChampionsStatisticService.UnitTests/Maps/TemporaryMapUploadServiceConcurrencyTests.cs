@@ -22,6 +22,7 @@ public class TemporaryMapUploadServiceConcurrencyTests : TemporaryMapUploadServi
     [Test]
     public async Task TwoUploadsOfTheSameFileKey_NeverInterleave_AndTheSecondDedupesWithoutADelete()
     {
+        // Two uploaders send the same bytes under the same name (S2-7): the same fileKey, one quota each.
         var firstInCreate = NewSignal();
         var releaseCreate = NewSignal();
         var secondWaitingOrStoring = NewSignal();
@@ -50,7 +51,7 @@ public class TemporaryMapUploadServiceConcurrencyTests : TemporaryMapUploadServi
         try
         {
             await firstInCreate.Task.WaitAsync(HangGuard);
-            second = Task.Run(() => Run(handler));
+            second = Task.Run(() => Run(handler, battleTag: OtherBattleTag));
             await secondWaitingOrStoring.Task.WaitAsync(HangGuard);
             storesWhileTheFirstHeldTheKey = Count(handler, IsUsUpload);
         }

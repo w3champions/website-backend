@@ -502,6 +502,47 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         Assert.That(handler.Requests, Has.Count.EqualTo(1));
     }
 
+    /// <summary>A matchmaking path whose stem carries CR LF and a fake log line; as JSON, with the escapes spliced in.</summary>
+    private const string ForgingPath = "W3Champions/CustomGames/Legion TD\\u000d\\u000aforged line-a9993e36.w3x";
+
+    [TestCase("dedupe hit outside the temporary folder")]
+    [TestCase("dedupe hit outside the temporary folder, without a control character")]
+    [TestCase("restore path that is not a fileKey")]
+    [TestCase("winner after a failed create")]
+    [TestCase("another record present after a failed file-restored")]
+    public void AMatchmakingPathThatIsNotACleanTemporaryFilePath_IsLoggedAsInvalid(string site)
+    {
+        // S2-2: the file sink renders strings raw, so a drifted or forged matchmaking path must never reach a log line as sent;
+        // only a temporary map file path without a control character is rendered, anything else as the placeholder.
+        var handler = site switch
+        {
+            "dedupe hit outside the temporary folder" => new ScriptedHttpHandler()
+                .On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811, ForgingPath.Replace("CustomGames", "v10")))),
+            "dedupe hit outside the temporary folder, without a control character" => new ScriptedHttpHandler()
+                .On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811, "W3Champions/v10/forged-a9993e36.w3x"))),
+            "restore path that is not a fileKey" => DeletedRecordHandler()
+                .On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(5811, ForgingPath))),
+            "winner after a failed create" => OnSequence(new ScriptedHttpHandler(), IsBySha1,
+                    Respond(HttpStatusCode.NotFound), Respond(HttpStatusCode.OK, Record(99, ForgingPath, fileState: "deleted")))
+                .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
+                .On(IsCreate, Respond(HttpStatusCode.BadRequest, "{}")),
+            _ => OnSequence(new ScriptedHttpHandler(), IsBySha1,
+                    Respond(HttpStatusCode.OK, Record(5811, fileState: "deleted")), Respond(HttpStatusCode.OK, Record(7777, ForgingPath)))
+                .On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(5811)))
+                .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
+                .On(IsFileRestored, Respond(HttpStatusCode.InternalServerError, "{}")),
+        };
+        handler.On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        using var logs = new LogCapture();
+
+        Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler, logger: logs.Logger));
+
+        Assert.That(logs.Lines().Any(l => l.Contains("forged", StringComparison.Ordinal)), Is.False, "the path was rendered as sent");
+        Assert.That(logs.Lines().Count(l => l.Contains("=\"invalid\"", StringComparison.Ordinal)), Is.EqualTo(1),
+            "the placeholder stands in for the path, as the property value too");
+        Assert.That(Count(handler, IsUsDelete), Is.Zero);
+    }
+
     // ---- Compensation ---------------------------------------------------------------------------
 
     [Test]
