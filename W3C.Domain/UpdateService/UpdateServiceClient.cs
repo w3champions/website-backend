@@ -38,8 +38,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
-            throw new HttpRequestException(errMessage.message, null, response.StatusCode);
+            ThrowUpstream(content, response.StatusCode);
         }
         if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Unable to get map files!", null, HttpStatusCode.ServiceUnavailable);
 
@@ -84,8 +83,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            var errMessage = JsonConvert.DeserializeObject<ErrorData>(content);
-            throw new HttpRequestException(errMessage.message, null, response.StatusCode);
+            ThrowUpstream(content, response.StatusCode);
         }
         if (string.IsNullOrEmpty(content)) throw new HttpRequestException("Unable to get map file!", null, HttpStatusCode.ServiceUnavailable);
         var deserializeObject = JsonConvert.DeserializeObject<MapFileData>(content);

@@ -657,11 +657,28 @@ public partial class MatchmakingServiceClient
         return null;
     }
 
+    /// <summary>
+    /// Always throws an HttpRequestException carrying the upstream status. A body that is empty, not JSON (e.g. a
+    /// proxy's error page) or without an errors array gets a status-only message instead of escaping as a
+    /// NullReferenceException or JsonReaderException.
+    /// </summary>
     private async Task HandleMMError(HttpResponseMessage response)
     {
-        var errorReponse = await GetResult<ErrorResponse>(response);
-        var errors = errorReponse.Errors.Select(x => $"{x.Param} {x.Message}");
-        throw new HttpRequestException(string.Join(",", errors), null, response.StatusCode);
+        string message = null;
+        try
+        {
+            var errors = (await GetResult<ErrorResponse>(response))?.Errors;
+            if (errors != null)
+            {
+                message = string.Join(",", errors.Select(x => $"{x?.Param} {x?.Message}"));
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON: fall back to the status code below.
+        }
+
+        throw new HttpRequestException(message ?? $"matchmaking-service returned {(int)response.StatusCode}", null, response.StatusCode);
     }
 
     private async Task<T> GetResult<T>(HttpResponseMessage response)

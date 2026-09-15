@@ -5,6 +5,7 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using System.Net;
 using System.Net.Http;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
@@ -42,7 +43,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            return StatusCode(StatusCodeOf(ex), ex.Message);
         }
     }
 
@@ -59,7 +60,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            return StatusCode(StatusCodeOf(ex), ex.Message);
         }
     }
 
@@ -74,7 +75,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            return StatusCode(StatusCodeOf(ex), ex.Message);
         }
     }
 
@@ -90,7 +91,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            return StatusCode(StatusCodeOf(ex), ex.Message);
         }
     }
 
@@ -105,7 +106,7 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            return StatusCode(StatusCodeOf(ex), ex.Message);
         }
     }
 
@@ -120,9 +121,15 @@ public class MapsController(
         }
         catch (HttpRequestException ex)
         {
-            return StatusCode((int)ex.StatusCode, ex.Message);
+            return StatusCode(StatusCodeOf(ex), ex.Message);
         }
     }
+
+    /// <summary>
+    /// A transport failure (connection refused, DNS, TLS) has no status code; answer 500 for it, as
+    /// HttpRequestExceptionFilter does, instead of throwing on the null.
+    /// </summary>
+    private static int StatusCodeOf(HttpRequestException ex) => (int)(ex.StatusCode ?? HttpStatusCode.InternalServerError);
 
     [HttpGet("tournaments")]
     public async Task<IActionResult> GetTournamentMaps()
