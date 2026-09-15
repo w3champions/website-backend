@@ -8,8 +8,10 @@ namespace W3ChampionsStatisticService.Services.Tracing;
 /// <summary>
 /// Application Insights counterpart of <see cref="TelemetryRedactionProcessor"/>: request telemetry records the
 /// full request URL including its query, and HTTP dependency telemetry records the outbound path in its name and
-/// the full URL in its data. Every query value of that data is redacted, keys kept, because outbound clients send
-/// credentials as query parameters. Initializers run again when the telemetry is tracked, after those fields are set.
+/// the full URL in its data. Every query value of an HTTP URL in that data is redacted, keys kept, because outbound
+/// clients send credentials as query parameters. Other dependency data (a command or query text) keeps its query-like
+/// text; only credential values and proofHash segments are redacted there. Initializers run again when the telemetry
+/// is tracked, after those fields are set.
 /// </summary>
 public sealed class TelemetryRedactionInitializer : ITelemetryInitializer
 {
@@ -27,8 +29,20 @@ public sealed class TelemetryRedactionInitializer : ITelemetryInitializer
                 break;
             case DependencyTelemetry dependency:
                 dependency.Name = TelemetryRedaction.RedactUrl(dependency.Name);
-                dependency.Data = TelemetryRedaction.RedactUrlQueryValues(dependency.Data);
+                dependency.Data = IsHttpUrl(dependency.Data)
+                    ? TelemetryRedaction.RedactUrlQueryValues(dependency.Data)
+                    : TelemetryRedaction.RedactUrl(dependency.Data);
                 break;
         }
     }
+
+    /// <summary>
+    /// An HTTP dependency is recognised by the URL in its data, not by its type: Application Insights'
+    /// HttpDependenciesParsingTelemetryInitializer is registered before this initializer and renames some HTTP
+    /// dependencies ("WCF Service", "Azure blob", ...) while keeping the request URL.
+    /// </summary>
+    private static bool IsHttpUrl(string data)
+        => data != null
+           && (data.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+               || data.StartsWith("http://", StringComparison.OrdinalIgnoreCase));
 }

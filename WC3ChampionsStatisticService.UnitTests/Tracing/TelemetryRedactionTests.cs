@@ -1,10 +1,16 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Clusters;
@@ -237,6 +243,92 @@ public class TelemetryRedactionTests
         Assert.That(identity.Target, Is.EqualTo("identity.test"));
     }
 
+    [TestCase("Http", "http://identity.test/api/permissions?id=Peter%23123&authorization=JWT",
+        "http://identity.test/api/permissions?id=Redacted&authorization=Redacted")]
+    [TestCase("Http (tracked component)", "https://mm.test/maps?filter=legion&includeTemporary=true",
+        "https://mm.test/maps?filter=Redacted&includeTemporary=Redacted")]
+    [TestCase("WCF Service", "https://legacy.test/Service.svc?id=7&secret=SECRET", "https://legacy.test/Service.svc?id=Redacted&secret=Redacted")]
+    [TestCase("Azure blob", "https://account.blob.test/replays/42?sv=2020&sig=SIGNATURE", "https://account.blob.test/replays/42?sv=Redacted&sig=Redacted")]
+    [TestCase("Http", "HTTPS://mm.test/maps?filter=legion", "HTTPS://mm.test/maps?filter=Redacted")]
+    public void AppInsightsHttpDependency_RedactsEveryQueryValue_WhateverTypeApplicationInsightsGaveIt(string type, string data, string expected)
+    {
+        // Application Insights' HttpDependenciesParsingTelemetryInitializer runs before this one and renames some HTTP
+        // dependencies ("WCF Service", "Azure blob", ...), keeping the request URL in Data.
+        var dependency = new DependencyTelemetry
+        {
+            Type = type,
+            Name = "GET /x",
+            Data = data.Replace("SECRET", OutboundSecret).Replace("JWT", OutboundJwt),
+        };
+
+        new TelemetryRedactionInitializer().Initialize(dependency);
+
+        Assert.That(dependency.Data, Is.EqualTo(expected));
+        Assert.That(dependency.Type, Is.EqualTo(type));
+    }
+
+    [TestCase("SQL", "SELECT name FROM maps WHERE note = 'a?season=22&gateway=20'", "SELECT name FROM maps WHERE note = 'a?season=22&gateway=20'")]
+    [TestCase("InProc", "find maps ?season=22&gateway=20", "find maps ?season=22&gateway=20")]
+    [TestCase("InProc", "replay export 42?season=22&secret=SECRET", "replay export 42?season=22&secret=Redacted")]
+    [TestCase(null, "generate/42?season=22&authorization=JWT", "generate/42?season=22&authorization=Redacted")]
+    public void AppInsightsNonHttpDependency_KeepsItsData_ExceptSecretValues(string type, string data, string expected)
+    {
+        // Data that is not an HTTP URL (a command, a query text) is never rewritten wholesale; the values of the
+        // credential keys and proofHash segments are still redacted, whatever the dependency is.
+        var dependency = new DependencyTelemetry
+        {
+            Type = type,
+            Name = "command",
+            Data = data.Replace("SECRET", OutboundSecret).Replace("JWT", OutboundJwt),
+        };
+
+        new TelemetryRedactionInitializer().Initialize(dependency);
+
+        Assert.That(dependency.Data, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void AddW3CApplicationInsights_RedactsEveryQueryValue_AfterApplicationInsightsRenamesAnHttpDependency()
+    {
+        var channel = new CollectingTelemetryChannel();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITelemetryChannel>(channel);
+#pragma warning disable CS0618 // Application Insights 2.23 resolves the obsolete IHostingEnvironment the web host provides.
+        services.AddSingleton<IHostingEnvironment>(new TestHostingEnvironment());
+#pragma warning restore CS0618
+        services.AddW3CApplicationInsights("00000000-0000-0000-0000-000000000000");
+        // Collection modules and sampling only; the telemetry initializers stay exactly as registered. None of the
+        // modules may start background work or reach the network from a unit test.
+        services.Configure<ApplicationInsightsServiceOptions>(o =>
+        {
+            o.EnableQuickPulseMetricStream = false;
+            o.EnablePerformanceCounterCollectionModule = false;
+            o.EnableAppServicesHeartbeatTelemetryModule = false;
+            o.EnableAzureInstanceMetadataTelemetryModule = false;
+            o.EnableDependencyTrackingTelemetryModule = false;
+            o.EnableRequestTrackingTelemetryModule = false;
+            o.EnableEventCounterCollectionModule = false;
+            o.EnableDiagnosticsTelemetryModule = false;
+            o.EnableHeartbeat = false;
+            o.EnableAdaptiveSampling = false;
+            o.AddAutoCollectedMetricExtractor = false;
+        });
+        using var provider = services.BuildServiceProvider();
+        var client = provider.GetRequiredService<TelemetryClient>();
+
+        client.TrackDependency(new DependencyTelemetry
+        {
+            Type = "Http",
+            Target = "legacy.test",
+            Name = "GET /Service.svc",
+            Data = $"https://legacy.test/Service.svc?id=7&secret={OutboundSecret}",
+        });
+
+        var sent = channel.Items.OfType<DependencyTelemetry>().Single();
+        Assert.That(sent.Type, Is.EqualTo("WCF Service"), "Application Insights' own parsing initializer must have run first");
+        Assert.That(sent.Data, Is.EqualTo("https://legacy.test/Service.svc?id=Redacted&secret=Redacted"));
+    }
+
     [Test]
     public void HubAccessToken_IsRedactedFromAppInsightsRequestsAndSpanUrls()
     {
@@ -280,6 +372,42 @@ public class TelemetryRedactionTests
                                       && d.ImplementationType == typeof(TelemetryRedactionInitializer)), Is.True);
         Assert.That(services.Any(d => d.ServiceType == typeof(TelemetryConfiguration)), Is.True,
             "Application Insights itself must still be registered");
+    }
+
+#pragma warning disable CS0618 // See AddW3CApplicationInsights_RedactsEveryQueryValue_AfterApplicationInsightsRenamesAnHttpDependency.
+    private sealed class TestHostingEnvironment : IHostingEnvironment
+#pragma warning restore CS0618
+    {
+        public string EnvironmentName { get; set; } = "Test";
+
+        public string ApplicationName { get; set; } = "website-backend-tests";
+
+        public string WebRootPath { get; set; }
+
+        public IFileProvider WebRootFileProvider { get; set; }
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; }
+    }
+
+    private sealed class CollectingTelemetryChannel : ITelemetryChannel
+    {
+        public ConcurrentQueue<ITelemetry> Items { get; } = new();
+
+        public bool? DeveloperMode { get; set; }
+
+        public string EndpointAddress { get; set; }
+
+        public void Send(ITelemetry item) => Items.Enqueue(item);
+
+        public void Flush()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private static CommandStartedEvent Command(string name, BsonDocument command)
