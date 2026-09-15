@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using W3C.Contracts.Matchmaking;
-using W3C.Domain.Maps;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.UpdateService;
@@ -214,15 +213,16 @@ public class TemporaryMapUploadService(
     }
 
     /// <summary>
-    /// A record of this sha1 exists after our create. Our file is stray only if that record is a present temporary file at a
-    /// different path; any other record leaves the outcome unknown (S-L2), so nothing is deleted.
+    /// A record of this sha1 exists after our create. Our file is stray only if that record is a present §6.4 temporary
+    /// file (the strict <see cref="TemporaryMapNaming.IsFileKey"/> shape, which every record this service created has)
+    /// at a different path; any other record leaves the outcome unknown (S-L2), so nothing is deleted.
     /// </summary>
     private async Task<(TemporaryMapUploadOutcome, string)> KeepTheWinnerAsync(MapContract winner, string sha1, string fileKey)
     {
-        if (winner.FileState != TemporaryMapFileStates.Present || !TemporaryMapKeys.IsFilePath(winner.Path))
+        if (winner.FileState != TemporaryMapFileStates.Present || !TemporaryMapNaming.IsFileKey(winner.Path))
         {
             throw Upstream("Temporary map {MapId} holds sha1 {Sha1} with fileState {FileState} at {Path}; leaving {FileKey}, which it may use",
-                winner.Id, sha1, winner.FileState, LoggablePath(winner.Path), fileKey);
+                winner.Id, sha1, LoggableFileState(winner.FileState), LoggablePath(winner.Path), fileKey);
         }
 
         if (!string.Equals(winner.Path, fileKey, StringComparison.Ordinal))
@@ -352,7 +352,7 @@ public class TemporaryMapUploadService(
         {
             throw Upstream("Refusing to replace {FileKey}: temporary map {ClaimantMapId} (sha1 {ClaimantSha1}) claims it, " +
                            "not this upload of sha1 {Sha1} for map {MapId} (0 is a new map)",
-                fileKey, claimant.Id, claimant.GameMap?.Sha1, upload.Sha1, mapId);
+                fileKey, claimant.Id, LoggableSha1(claimant.GameMap?.Sha1), upload.Sha1, mapId);
         }
 
         if (claimant != null && claimant.FileState != TemporaryMapFileStates.Deleted)
@@ -478,7 +478,7 @@ public class TemporaryMapUploadService(
         }
 
         _logger.LogWarning("update-service derived other digests for sha1 {Sha1} (parsed sha1 {ParsedSha1}); compensating {FileKey}",
-            upload.Sha1, parsedSha1, fileKey);
+            upload.Sha1, LoggableSha1(parsedSha1), fileKey);
         await Compensation.DeleteAsync(fileKey);
         throw new TemporaryMapUploadException(StatusCodes.Status502BadGateway, "PARSER_MISMATCH");
     }
@@ -501,7 +501,8 @@ public class TemporaryMapUploadService(
     private static int? StatusOf(Exception ex) => (int?)(ex as HttpRequestException)?.StatusCode;
 
     private TemporaryMapUploadException UnknownFileState(int mapId, string fileState)
-        => Upstream("matchmaking answered temporary map {MapId} with fileState {FileState}, which this step cannot act on", mapId, fileState);
+        => Upstream("matchmaking answered temporary map {MapId} with fileState {FileState}, which this step cannot act on",
+            mapId, LoggableFileState(fileState));
 
     /// <summary>Logs why at warning and returns the 502 to throw.</summary>
     private TemporaryMapUploadException Upstream(string why, params object[] args)
@@ -514,9 +515,9 @@ public class TemporaryMapUploadService(
 
     private static TemporaryMapUploadException KeyMismatch() => new(StatusCodes.Status500InternalServerError, "TEMP_MAP_KEY_MISMATCH");
 
-    /// <summary>A 200 never hands out a path that is not a temporary map file (S-L2).</summary>
+    /// <summary>A 200 never hands out a path that is not a §6.4 temporary map file, the shape this service alone produces (S-L2).</summary>
     private (TemporaryMapUploadOutcome, string) Deduped(MapContract map, string sha1)
-        => TemporaryMapKeys.IsFilePath(map.Path)
+        => TemporaryMapNaming.IsFileKey(map.Path)
             ? Outcome(TemporaryMapMetrics.Results.Deduped, map.Id, map.Path, map.Name, sha1)
             : throw Upstream("Temporary map {MapId} with sha1 {Sha1} has no temporary map file path ({Path})", map.Id, sha1, LoggablePath(map.Path));
 

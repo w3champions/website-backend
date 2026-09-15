@@ -353,6 +353,8 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     [TestCase("3.4.0\\r\\nWarning forged line", "invalid", TestName = "a line break is not logged")]
     [TestCase("3.4.0 ", "invalid", TestName = "a space is not logged")]
     [TestCase("3.4.0\\u0000", "invalid", TestName = "a control character is not logged")]
+    [TestCase("3_4_0", "invalid", TestName = "an underscore is not logged")]
+    [TestCase("3.4.0\\u00e9", "invalid", TestName = "a letter outside ASCII is not logged")]
     [TestCase("", "invalid", TestName = "an empty version is not logged")]
     [TestCase("123456789012345678901234567890123", "invalid", TestName = "33 characters are not logged")]
     [TestCase("12345678901234567890123456789012", "12345678901234567890123456789012", TestName = "32 characters are logged")]

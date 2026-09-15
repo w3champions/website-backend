@@ -460,6 +460,8 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         new object[] { "deleted at another path", Record(99, "W3Champions/CustomGames/older-a9993e36.w3x", fileState: "deleted") },
         new object[] { "deleted at our fileKey", Record(99, fileState: "deleted") },
         new object[] { "in an unknown state", Record(99, "W3Champions/CustomGames/older-a9993e36.w3x", fileState: "gone") },
+        new object[] { "present inside the prefix but not a §6.4 fileKey (control character in the stem)", Record(99, "W3Champions/CustomGames/older\\u000aforged-a9993e36.w3x") },
+        new object[] { "present inside the prefix without the sha1 suffix", Record(99, "W3Champions/CustomGames/older.w3x") },
     ];
 
     [TestCaseSource(nameof(UnusableWinners))]
@@ -491,10 +493,12 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         Assert.That(Count(handler, IsUsDelete), Is.Zero);
     }
 
-    [Test]
-    public void ADedupeHitWithoutATemporaryFilePath_Is502_WithNothingStored()
+    [TestCase("W3Champions/v10/Legion TD.w3x", TestName = "a dedupe hit outside the temporary folder")]
+    [TestCase("W3Champions/CustomGames/Legion\\u000aTD-a9993e36.w3x", TestName = "a dedupe hit inside the prefix with a control character in the stem")]
+    [TestCase("W3Champions/CustomGames/Legion TD.w3x", TestName = "a dedupe hit inside the prefix without the sha1 suffix")]
+    public void ADedupeHitAtAPathThatIsNotAFileKey_Is502_WithNothingStored(string path)
     {
-        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811, "W3Champions/v10/Legion TD.w3x")));
+        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811, path)));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler));
 
