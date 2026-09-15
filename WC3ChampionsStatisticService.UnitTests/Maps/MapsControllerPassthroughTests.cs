@@ -24,6 +24,7 @@ using W3C.Domain.UpdateService;
 using W3C.Domain.UpdateService.Contracts;
 using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
@@ -168,14 +169,23 @@ public class MapsControllerPassthroughTests
         Assert.That(json, Does.Not.Contain("Admin#1").And.Not.Contain("secret").And.Not.Contain("hash").And.Not.Contain("present"));
     }
 
-    [Test]
-    public async Task GetTournamentMaps_KeepsAnEmptyUpstreamAnswerEmpty()
+    [TestCase("GetMaps", HttpStatusCode.InternalServerError, "{\"total\":0}", StatusCodes.Status500InternalServerError)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.InternalServerError, "{\"total\":0}", StatusCodes.Status500InternalServerError)]
+    [TestCase("GetMaps", HttpStatusCode.OK, "<html>maintenance</html>", StatusCodes.Status502BadGateway)]
+    [TestCase("GetTournamentMaps", HttpStatusCode.OK, "", StatusCodes.Status502BadGateway)]
+    public void MapListingActions_WhenMatchmakingFails_AnswerAnUpstreamFailure_NeverAnEmptyList(
+        string action, HttpStatusCode upstreamStatus, string body, int expectedStatus)
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps/tournaments", HttpStatusCode.OK, "");
+        // Neither action catches: the global HttpRequestExceptionFilter answers the failure. This includes the
+        // anonymous tournaments route, which used to answer 200 with an empty listing.
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, "/maps", upstreamStatus, body);
+        var controller = CreateController(handler);
 
-        var result = await CreateController(handler).GetTournamentMaps();
+        var ex = Assert.ThrowsAsync<HttpRequestException>(() => action == "GetMaps"
+            ? controller.GetMaps(new GetMapsRequest())
+            : controller.GetTournamentMaps());
 
-        Assert.That(((OkObjectResult)result).Value, Is.Null);
+        Assert.That(HttpRequestExceptionFilter.StatusCodeOf(ex!), Is.EqualTo(expectedStatus));
     }
 
     [Test]

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Dynamic;
+using W3C.Domain.Common;
 using W3C.Domain.CommonValueObjects;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking.Tournaments;
@@ -272,10 +273,7 @@ public partial class MatchmakingServiceClient
         // checkbox becomes a silent permanent no-op: nothing fails and nothing logs. Sending it on a
         // permanent-only listing is behaviour-neutral.
         var response = await SendWithSecret(HttpMethod.Get, url);
-        var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
-        return result;
+        return await ReadMapListing(response);
     }
 
     public async Task<MapContract> GetMap(int id)
@@ -320,10 +318,23 @@ public partial class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/maps/tournaments";
         var response = await _httpClient.GetAsync(url);
-        var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
-        return result;
+        return await ReadMapListing(response);
+    }
+
+    /// <summary>
+    /// Both map listings are relayed to callers as a list, so a failure must never read as one. An error status throws
+    /// with that status, and a success whose body is not a listing throws a contract violation (see UpstreamContract).
+    /// Neither message quotes the body or the URL.
+    /// </summary>
+    private static async Task<GetMapsResponse> ReadMapListing(HttpResponseMessage response)
+    {
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"{ServiceName} answered {(int)response.StatusCode}", null, response.StatusCode);
+        }
+
+        return UpstreamContract.Deserialize<GetMapsResponse>(
+            await response.Content.ReadAsStringAsync(), response.StatusCode, ServiceName);
     }
 
     public async Task<MessageOfTheDay> GetMotd()

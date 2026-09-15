@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService.Contracts;
 using static WC3ChampionsStatisticService.Tests.Maps.TemporaryMapClientTests;
 
@@ -17,7 +18,7 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 /// A body that breaks the Appendix A.5/A.7 contract on an otherwise expected status (2xx, or 409 on create) is an
 /// upstream fault. It must surface as an HttpRequestException carrying that status, never as a JsonException, a
 /// null record or an empty page, and its message must quote neither the body nor a URI. The pre-existing
-/// update-service map-file reads behind the admin Maps page follow the same rule.
+/// update-service map-file reads behind the admin Maps page and matchmaking's two map listings follow the same rule.
 /// </summary>
 [TestFixture]
 public class TemporaryMapClientContractTests
@@ -77,6 +78,10 @@ public class TemporaryMapClientContractTests
             h => Us(h).GetMapFile("f1"), []),
         new("CreateMapFromFormAsync", HttpMethod.Post, "/api/content/maps", HttpStatusCode.OK,
             h => Us(h).CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1"), []),
+        new("GetMaps", HttpMethod.Get, "/maps?filter=x", HttpStatusCode.OK,
+            h => Mm(h).GetMaps(new GetMapsRequest { Filter = "x" }), []),
+        new("GetTournamentMaps", HttpMethod.Get, "/maps/tournaments", HttpStatusCode.OK,
+            h => Mm(h).GetTournamentMaps(), []),
     ];
 
     private static IEnumerable<TestCaseData> ContractViolations()
@@ -110,6 +115,42 @@ public class TemporaryMapClientContractTests
         Assert.That(ex!.StatusCode, Is.EqualTo(route.Status));
         Assert.That(ex.Message, Does.Not.Contain(BodyMarker).And.Not.Contain("://").And.Not.Contain("/maps").And.Not.Contain("/api"));
         Assert.That(ex.InnerException, Is.Null, "a parser exception can quote the body");
+    }
+
+    [TestCase("GetMaps", HttpStatusCode.InternalServerError, "{\"message\":\"failed behind " + BodyMarker + "\"}")]
+    [TestCase("GetMaps", HttpStatusCode.BadGateway, "<html><body>502 from " + BodyMarker + "</body></html>")]
+    [TestCase("GetMaps", HttpStatusCode.NotFound, "{}")]
+    [TestCase("GetTournamentMaps", HttpStatusCode.InternalServerError, "{\"message\":\"failed behind " + BodyMarker + "\"}")]
+    [TestCase("GetTournamentMaps", HttpStatusCode.BadGateway, "<html><body>502 from " + BodyMarker + "</body></html>")]
+    [TestCase("GetTournamentMaps", HttpStatusCode.NotFound, "{}")]
+    public void MapListing_OnAnErrorStatus_ThrowsWithThatStatus_AndQuotesNeitherBodyNorUri(string listing, HttpStatusCode status, string body)
+    {
+        // Before, any answer was read as a listing, so a matchmaking error became an empty 200 page.
+        var route = Routes.Single(r => r.Name == listing);
+        var handler = new ScriptedHttpHandler().On(route.Method, route.Path, status, body);
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(() => route.Call(handler));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(status));
+        Assert.That(ex.Message, Does.Not.Contain(BodyMarker).And.Not.Contain("://").And.Not.Contain("/maps").And.Not.Contain("{"));
+        Assert.That(ex.InnerException, Is.Null);
+    }
+
+    [Test]
+    public async Task MapListings_StillReadWellFormedBodies()
+    {
+        const string listing = "{\"total\":1,\"items\":[{\"id\":7,\"name\":\"Echo Isles\"}]}";
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, "/maps/tournaments", HttpStatusCode.OK, listing)
+            .On(HttpMethod.Get, "/maps?filter=x", HttpStatusCode.OK, "{\"total\":0,\"items\":[]}");
+        var client = Mm(handler);
+
+        var tournaments = await client.GetTournamentMaps();
+        var maps = await client.GetMaps(new GetMapsRequest { Filter = "x" });
+
+        Assert.That(tournaments.Total, Is.EqualTo(1));
+        Assert.That(tournaments.Items.Single().Name, Is.EqualTo("Echo Isles"));
+        Assert.That(maps.Items, Is.Empty);
     }
 
     [Test]
