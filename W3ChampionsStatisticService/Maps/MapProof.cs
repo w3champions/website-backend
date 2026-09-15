@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using W3C.Domain.Maps;
 
 namespace W3ChampionsStatisticService.Maps;
 
@@ -22,24 +23,8 @@ public static class MapProof
     public static string Hash(string mapProof)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(mapProof))).ToLowerInvariant();
 
-    public static bool IsLowercaseHex(string value, int length)
-    {
-        if (value == null || value.Length != length)
-        {
-            return false;
-        }
-
-        foreach (var c in value)
-        {
-            var isHex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
-            if (!isHex)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    /// <summary>Delegates to <see cref="TemporaryMapKeys.IsLowercaseHex"/>, the one definition the service clients share.</summary>
+    public static bool IsLowercaseHex(string value, int length) => TemporaryMapKeys.IsLowercaseHex(value, length);
 }
 
 /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Text;
+using W3C.Domain.Maps;
 
 namespace W3ChampionsStatisticService.Maps;
 
@@ -23,7 +24,6 @@ namespace W3ChampionsStatisticService.Maps;
 public static class TemporaryMapNaming
 {
     private const string FallbackName = "map";
-    private const int Sha1HexLength = 40;
     private const int Sha1SuffixLength = 8;
 
     private static readonly char[] ReservedCharacters = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
@@ -92,7 +92,7 @@ public static class TemporaryMapNaming
         }
 
         var lowercaseSha1 = sha1?.ToLowerInvariant();
-        if (!MapProof.IsLowercaseHex(lowercaseSha1, Sha1HexLength))
+        if (!MapProof.IsLowercaseHex(lowercaseSha1, TemporaryMapKeys.Sha1HexLength))
         {
             throw new ArgumentException("The sha1 must be 40 hexadecimal characters.", nameof(sha1));
         }

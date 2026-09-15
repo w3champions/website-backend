@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using W3C.Domain.Maps;
 
 namespace W3ChampionsStatisticService.Maps;
 
@@ -36,8 +37,11 @@ public static class TemporaryMapLimits
 
     public const int MaxSanitisedNameLength = 100;
 
-    /// <summary>The single path prefix that makes a stored map "temporary". Forward slashes, case preserved.</summary>
-    public const string TempMapPathPrefix = "W3Champions/CustomGames/";
+    /// <summary>
+    /// The single path prefix that makes a stored map "temporary". Forward slashes, case preserved. Defined once in
+    /// <see cref="TemporaryMapKeys.PathPrefix"/>, which the update-service client's delete guard also uses.
+    /// </summary>
+    public const string TempMapPathPrefix = TemporaryMapKeys.PathPrefix;
 
     public static readonly TimeSpan UploadQuotaWindow = TimeSpan.FromHours(1);
     public static readonly TimeSpan PrecheckQuotaWindow = TimeSpan.FromMinutes(1);

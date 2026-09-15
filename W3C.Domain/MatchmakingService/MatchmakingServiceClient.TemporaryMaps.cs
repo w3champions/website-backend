@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using System.Web;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Common;
+using W3C.Domain.Maps;
 using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.Tracing;
 
@@ -20,8 +20,6 @@ namespace W3C.Domain.MatchmakingService;
 public partial class MatchmakingServiceClient
 {
     private const string ServiceName = "matchmaking-service";
-    private const int Sha1HexLength = 40;
-    private const int ProofHashHexLength = 64;
 
     private static readonly char[] JsonWhitespace = [' ', '\t', '\r', '\n'];
 
@@ -34,7 +32,7 @@ public partial class MatchmakingServiceClient
     /// <summary>Upload dedupe probe. Returns null when no temporary map has this sha1 (strict 404 {}).</summary>
     public async Task<MapContract> GetTemporaryMapBySha1(string sha1, CancellationToken cancellationToken = default)
     {
-        RequireLowercaseHex(sha1, Sha1HexLength, nameof(sha1));
+        RequireLowercaseHex(sha1, TemporaryMapKeys.Sha1HexLength, nameof(sha1));
         var url = $"{MatchmakingApiUrl}/maps/temporary/by-sha1/{Uri.EscapeDataString(sha1)}";
         var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
         return (await ReadRecordOrNull<TemporaryMapEnvelope>(response, e => e.Map != null, cancellationToken))?.Map;
@@ -44,7 +42,7 @@ public partial class MatchmakingServiceClient
     public async Task<TemporaryMapStateResponse> GetTemporaryMapStateByProofHash(
         [NoTrace] string proofHash, CancellationToken cancellationToken = default)
     {
-        RequireLowercaseHex(proofHash, ProofHashHexLength, nameof(proofHash));
+        RequireLowercaseHex(proofHash, TemporaryMapKeys.ProofHashHexLength, nameof(proofHash));
         var url = $"{MatchmakingApiUrl}/maps/temporary/by-proof-hash/{Uri.EscapeDataString(proofHash)}";
         var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
         return await ReadRecordOrNull<TemporaryMapStateResponse>(response, s => !string.IsNullOrEmpty(s.FileState), cancellationToken);
@@ -77,7 +75,7 @@ public partial class MatchmakingServiceClient
     public async Task<VerifyTemporaryMapProofResponse> VerifyTemporaryMapProof(
         [NoTrace] string proofHash, CancellationToken cancellationToken = default)
     {
-        RequireLowercaseHex(proofHash, ProofHashHexLength, nameof(proofHash));
+        RequireLowercaseHex(proofHash, TemporaryMapKeys.ProofHashHexLength, nameof(proofHash));
         var url = $"{MatchmakingApiUrl}/maps/temporary/verify-proof";
         var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(new { proofHash }), cancellationToken);
         return await ReadRecordOrNull<VerifyTemporaryMapProofResponse>(response, v => !string.IsNullOrEmpty(v.FileState), cancellationToken);
@@ -137,12 +135,11 @@ public partial class MatchmakingServiceClient
     /// <summary>
     /// sha1 and proofHash are lowercase hex digests, and two routes carry them as a URL path segment, where System.Uri
     /// would collapse a "." or ".." key into another route. Anything else is refused before a request is built; the
-    /// message never echoes the value. Mirrors <c>MapProof.IsLowercaseHex</c>, which lives in the web project that
-    /// W3C.Domain cannot reference.
+    /// message never echoes the value.
     /// </summary>
     private static void RequireLowercaseHex(string value, int length, string parameterName)
     {
-        if (value == null || value.Length != length || !value.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+        if (!TemporaryMapKeys.IsLowercaseHex(value, length))
         {
             throw new ArgumentException($"must be {length} lowercase hex characters", parameterName);
         }
