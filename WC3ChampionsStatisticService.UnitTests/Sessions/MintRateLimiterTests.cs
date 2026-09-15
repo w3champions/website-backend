@@ -268,6 +268,20 @@ public class MintRateLimiterTests
         Assert.AreEqual(0, limiter.Count);
     }
 
+    [TestCase(0)]
+    [TestCase(-1)]
+    public void NonPositiveLimit_IsRejectedByBothOverloads(int limit)
+    {
+        var limiter = new MintRateLimiter();
+        var now = DateTime.UtcNow;
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => limiter.TryAcquire("bt:peter#123", limit, now),
+            "a limit of zero or less would still grant the first call of every window");
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => limiter.TryAcquire("tm-upload:peter#123", limit, now, TimeSpan.FromHours(1), out _));
+        Assert.AreEqual(0, limiter.Count);
+    }
+
     [Test]
     public void AWindowThatOverflowsADate_NeverMakesTheLimiterThrow()
     {

@@ -53,6 +53,7 @@ public class MintRateLimiter
     /// later call throw.
     /// </para>
     /// </summary>
+    /// <param name="limit">Must be positive: a new window always grants its first call.</param>
     /// <param name="window">Must be positive: a window that is already over would disable the limit.</param>
     /// <param name="retryAfter">
     /// Time left in the live window when the call is denied (always positive, saturating at
@@ -60,6 +61,7 @@ public class MintRateLimiter
     /// </param>
     public bool TryAcquire(string key, int limit, DateTime now, TimeSpan window, out TimeSpan retryAfter)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(window, TimeSpan.Zero);
 
         lock (_lock)
