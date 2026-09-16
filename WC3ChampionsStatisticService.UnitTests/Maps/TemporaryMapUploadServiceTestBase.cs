@@ -115,10 +115,14 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
     protected static string Verified(int mapId, string path = FileKey, string fileState = "deleted")
         => "{\"mapId\":" + mapId + ",\"path\":\"" + path + "\",\"fileState\":\"" + fileState + "\"}";
 
-    /// <summary>update-service's upload answer; <paramref name="filePath"/> null leaves the field out.</summary>
-    protected static string UsUploadBody(string metaSha1 = Sha1, string mapProofHash = ProofHash, bool twelveP = false, string filePath = FileKey)
+    /// <summary>
+    /// update-service's upload answer; <paramref name="filePath"/> or <paramref name="nameJson"/> null leaves that field
+    /// out. <paramref name="nameJson"/> is spliced into the JSON as written, escapes included.
+    /// </summary>
+    protected static string UsUploadBody(
+        string metaSha1 = Sha1, string mapProofHash = ProofHash, bool twelveP = false, string filePath = FileKey, string nameJson = "Legion TD")
         => "{\"id\":\"66f0\",\"mapId\":0," + (filePath == null ? "" : "\"filePath\":\"" + filePath + "\",") + "\"mapProofHash\":\"" + mapProofHash + "\"," +
-           "\"metaData\":{\"sha1\":\"" + metaSha1 + "\",\"name\":\"Legion TD\",\"checksum\":1,\"crc32\":2," +
+           "\"metaData\":{\"sha1\":\"" + metaSha1 + "\"," + (nameJson == null ? "" : "\"name\":\"" + nameJson + "\",") + "\"checksum\":1,\"crc32\":2," +
            "\"width\":128,\"height\":106,\"suggested_players\":\"4v4\",\"num_players\":16,\"twelve_p\":" +
            (twelveP ? "true" : "false") + ",\"players\":[],\"forces\":[]}}";
 

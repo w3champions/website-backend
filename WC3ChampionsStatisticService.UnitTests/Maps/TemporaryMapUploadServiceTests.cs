@@ -246,6 +246,38 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
     }
 
+    [TestCase("", TestName = "UpdateServiceParsingAnEmptyMapName_Is502_ParserMismatch_AndCompensates_BeforeAnyRecordIsAskedFor")]
+    [TestCase(" \\t\\u000a", TestName = "UpdateServiceParsingAWhitespaceMapName_Is502_ParserMismatch_AndCompensates_BeforeAnyRecordIsAskedFor")]
+    [TestCase(null, TestName = "UpdateServiceParsingNoMapName_Is502_ParserMismatch_AndCompensates_BeforeAnyRecordIsAskedFor")]
+    public void UpdateServiceParsingNoUsableMapName_Is502_ParserMismatch_AndCompensates_BeforeAnyRecordIsAskedFor(string nameJson)
+    {
+        // matchmaking requires a non-empty gameMap.name and would refuse the create (a 502 UPSTREAM here) only after
+        // the bytes were stored. A parser that read no name read something other than a map, so it is caught where
+        // the digests are: compensated, PARSER_MISMATCH, and no record is ever asked for.
+        var handler = UnknownSha1Handler()
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody(nameJson: nameJson)))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""))
+            .On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
+        var counts = new UploadCounts();
+        using var logs = new LogCapture();
+        var before = FilesIn(SpoolDirectory);
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler, logger: logs.Logger));
+
+        Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(ex.Code, Is.EqualTo("PARSER_MISMATCH"));
+        Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "us-upload", "us-delete" }), "stored, then compensated, and nothing else");
+        Assert.That(handler.LastRequest(HttpMethod.Delete, "/api/content/maps/file")!.RequestUri!.Query,
+            Is.EqualTo("?filePath=" + Uri.EscapeDataString(FileKey)), "our own fileKey is compensated");
+        Assert.That(Count(handler, IsCreate), Is.Zero, "no record is asked for a map the parser gave no name");
+        AssertNoNewSpoolFiles(before);
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+        Assert.That(logs.Lines().Where(l => l.StartsWith("Warning") && l.Contains("no map name", StringComparison.Ordinal)
+                                            && l.Contains("Sha1=\"" + Sha1 + "\"", StringComparison.Ordinal)
+                                            && l.Contains("FileKey=\"" + FileKey + "\"", StringComparison.Ordinal)),
+            Has.Exactly(1).Items, "logged once at Warning with the sha1 and the fileKey");
+    }
+
     [Test]
     public void UpdateServiceAnsweringWithoutMetadata_Is502_ParserMismatch_AndCompensates()
     {

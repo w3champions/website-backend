@@ -472,20 +472,29 @@ public class TemporaryMapUploadService(
     {
         // 5. Both services derived these from the same bytes; a mismatch means one of them read different bytes. The
         // stored path is checked the same way: the record will name the fileKey this service sent, and bytes stored
-        // anywhere else would leave record and bytes disagreeing.
+        // anywhere else would leave record and bytes disagreeing. So is the parsed name: matchmaking requires one on
+        // the record, and a parser that read none read something other than a map — refused here, before any record
+        // is written, rather than by matchmaking after the bytes are stored.
         var parsedSha1 = stored.MetaData?.Sha1?.ToLowerInvariant();
         var storedAtFileKey = string.Equals(stored.FilePath, fileKey, StringComparison.Ordinal);
-        if (storedAtFileKey
-            && string.Equals(parsedSha1, upload.Sha1, StringComparison.Ordinal)
-            && string.Equals(stored.MapProofHash, proofHash, StringComparison.Ordinal))
+        var digestsMatch = string.Equals(parsedSha1, upload.Sha1, StringComparison.Ordinal)
+                           && string.Equals(stored.MapProofHash, proofHash, StringComparison.Ordinal);
+        var hasName = !string.IsNullOrWhiteSpace(stored.MetaData?.Name);
+        if (storedAtFileKey && digestsMatch && hasName)
         {
             return;
         }
 
-        if (storedAtFileKey)
+        if (storedAtFileKey && !digestsMatch)
         {
             _logger.LogWarning("update-service derived other digests for sha1 {Sha1} (parsed sha1 {ParsedSha1}); compensating {FileKey}",
                 upload.Sha1, LoggableSha1(parsedSha1), fileKey);
+            await Compensation.DeleteAsync(fileKey);
+        }
+        else if (storedAtFileKey)
+        {
+            // The name is client-controlled content of the file and is never logged; here there is none anyway.
+            _logger.LogWarning("update-service parsed no map name for sha1 {Sha1}; compensating {FileKey}", upload.Sha1, fileKey);
             await Compensation.DeleteAsync(fileKey);
         }
         else

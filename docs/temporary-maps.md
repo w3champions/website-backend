@@ -63,7 +63,7 @@ buffered in memory.
 | 500 | *(empty)* | a local spooling/disk fault (already logged once by the reader) or any other unexpected server fault (a body-stream fault, a cancellation the request did not cause) |
 | 500 | `{ code: "TEMP_MAP_KEY_MISMATCH" }` | the sha1 dedupe and the proof verification resolved to two different map ids, or the record's stored path is not a well-formed §6.4 temporary-map file path |
 | 502 | `{ code: "UPSTREAM" }` | any upstream/orchestration failure not covered above, including every path-conflict guard refusal, an unknown `fileState`, and an ambiguous post-write failure whose re-probe could not resolve it |
-| 502 | `{ code: "PARSER_MISMATCH" }` | update-service derived a different sha1 or `MapProofHash` than website-backend computed while spooling |
+| 502 | `{ code: "PARSER_MISMATCH" }` | update-service derived a different sha1 or `MapProofHash` than website-backend computed while spooling, stored the file at another path, or parsed no map name (matchmaking requires one on the record) |
 | 401 | `{ error: "Invalid token" }` / *(empty)* | same two 401 shapes as the status route |
 | *(no response)* | — | the client disconnected — at any point, including mid-body-read or mid-orchestration — and nothing it did was worth logging; or its body fell below the data-rate floor, in which case the action aborts the connection itself and logs one Information line (see "Concurrency and quotas") |
 
@@ -162,8 +162,10 @@ sha1 and `mapProof` in one streaming pass:
    record (`200`, no write, no quota spent); `deleted` → restore.
 3. **Create** (new record): spend the hourly quota, build the server-generated fileKey
    (`TemporaryMapNaming.BuildFileKey`), store the bytes at update-service, verify update-service's derived
-   sha1/`MapProofHash` against what was computed locally and its echoed `filePath` against the fileKey
-   that was sent (→ `PARSER_MISMATCH` on any mismatch; a file stored at another path is compensated at
+   sha1/`MapProofHash` against what was computed locally, its echoed `filePath` against the fileKey
+   that was sent, and that its parsed `metaData.name` is not blank — matchmaking requires a name on
+   the record, so a nameless parse is refused here rather than by matchmaking after the store
+   (→ `PARSER_MISMATCH` on any of these; a file stored at another path is compensated at
    both paths, the other one only when it is a well-formed fileKey), validate the capture
    (→ `INVALID_LAYOUT`), then create the matchmaking record.
 4. **Restore** (existing but `deleted` record): **verify the proof before mutating anything**

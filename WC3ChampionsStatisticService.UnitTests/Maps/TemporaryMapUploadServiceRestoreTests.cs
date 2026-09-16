@@ -226,6 +226,24 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
         Assert.That(Count(handler, IsFileRestored), Is.Zero);
     }
 
+    [Test]
+    public void ARestoredFileTheParserGaveNoNameFor_Is502_ParserMismatch_AndCompensates()
+    {
+        // The record's own name stays authoritative on a restore (file-restored carries no name), but a parser that read
+        // no name read something other than a map: the same check as on create, before fileState could flip.
+        var handler = DeletedRecordHandler()
+            .On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(MapId)))
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody(nameJson: "")))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""))
+            .On(IsFileRestored, Respond(HttpStatusCode.OK, RestoredRecord));
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler, withCapture: false));
+
+        Assert.That(ex.Code, Is.EqualTo("PARSER_MISMATCH"));
+        Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1));
+        Assert.That(Count(handler, IsFileRestored), Is.Zero, "fileState must never become present behind bytes the parser could not name");
+    }
+
     private static readonly object[] FailedFileRestored =
     [
         new object[] { "timeout", TimesOut() },
