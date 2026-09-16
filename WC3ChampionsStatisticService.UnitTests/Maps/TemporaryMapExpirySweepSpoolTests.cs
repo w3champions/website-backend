@@ -182,9 +182,32 @@ public class TemporaryMapExpirySweepSpoolTests : TemporaryMapUploadServiceTestBa
         Assert.That(logs.Lines().Single(l => l.StartsWith("Error", StringComparison.Ordinal)), Does.Contain("InvalidOperationException"));
     }
 
+    [Test]
+    public void ACancelledEnumeration_PropagatesInsteadOfBeingLoggedAndSwallowed()
+    {
+        // Task 6 Info observation: the purge's catch-alls must let a genuine cancellation through rather than log it as
+        // an Error and count it as Failed, which would hide a shutdown behind "retrying next run".
+        using var logs = new LogCapture();
+        var stale = PlantSpoolFile("stale", Now - StaleAge - TimeSpan.FromHours(1));
+        var handler = NothingToDo();
+        var sweep = CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>(), _ => CancelledAfter(stale));
+
+        Assert.ThrowsAsync<OperationCanceledException>(() => sweep.RunOnceAsync(Now, CancellationToken.None));
+
+        Assert.That(File.Exists(stale), Is.False, "the file yielded before the cancellation was still purged");
+        Assert.That(logs.Lines().Any(l => l.StartsWith("Error", StringComparison.Ordinal)), Is.False,
+            "a cancellation is not this run's failure to log");
+    }
+
     private static IEnumerable<string> ListingThatBreaksAfter(string first)
     {
         yield return first;
         throw new InvalidOperationException("the listing broke");
+    }
+
+    private static IEnumerable<string> CancelledAfter(string first)
+    {
+        yield return first;
+        throw new OperationCanceledException();
     }
 }

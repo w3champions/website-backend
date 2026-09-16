@@ -387,7 +387,7 @@ public class TemporaryMapExpirySweep(
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             report.Failed++;
             _logger.LogError(ex, "Stale temporary map spool files could not be listed; retrying next run");
@@ -411,7 +411,7 @@ public class TemporaryMapExpirySweep(
             _logger.LogInformation("Purged a stale temporary map spool file last written {LastWriteUtc}",
                 lastWriteUtc.ToString("o", CultureInfo.InvariantCulture));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Whatever the fault, it is this file's; the name is rendered only when it has the reader's spool-file shape.
             report.Failed++;
