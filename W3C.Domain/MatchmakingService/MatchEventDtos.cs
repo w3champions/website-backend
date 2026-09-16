@@ -120,7 +120,8 @@ public enum EMatchState : int
 // [BsonIgnoreExtraElements] silently discards every field not declared below, and that is the
 // boundary keeping such fields out of the C# object graph and out of everything built from it.
 // Do not remove the attribute and do not declare a floTvPasswordSha256 property here; a client that
-// needs a FloTV flag gets a boolean such as floTvPasswordProtected instead.
+// needs a FloTV flag gets a boolean named floTvProtected instead (the guard rejects any member whose
+// name contains floTvPassword, so do not pick a name with that fragment).
 // Pinned by WC3ChampionsStatisticService.UnitTests/ReadModel/MatchEventDtosFloTvTests.cs.
 [BsonIgnoreExtraElements]
 [BsonNoId]
