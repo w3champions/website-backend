@@ -114,6 +114,14 @@ public enum EMatchState : int
     CANCELED = 3,
 }
 
+// SECURITY — DO NOT WIDEN. matchmaking-service writes the whole Match object into the event
+// collections this service polls, and those documents carry fields that must never be deserialised
+// or re-served by this service (floTvPasswordSha256 is a credential-bearing field).
+// [BsonIgnoreExtraElements] silently discards every field not declared below, and that is the
+// boundary keeping such fields out of the C# object graph and out of everything built from it.
+// Do not remove the attribute and do not declare a floTvPasswordSha256 property here; a client that
+// needs a FloTV flag gets a boolean such as floTvPasswordProtected instead.
+// Pinned by WC3ChampionsStatisticService.UnitTests/ReadModel/MatchEventDtosFloTvTests.cs.
 [BsonIgnoreExtraElements]
 [BsonNoId]
 public class Match : IMatchServerInfo
@@ -167,6 +175,9 @@ public class Match : IMatchServerInfo
     }
 }
 
+// SECURITY — DO NOT WIDEN. Same reasoning as Match above: [BsonIgnoreExtraElements] is what keeps
+// floTvPasswordSha256 (a credential-bearing matchmaking field) out of the object graph. See
+// WC3ChampionsStatisticService.UnitTests/ReadModel/MatchEventDtosFloTvTests.cs.
 [BsonIgnoreExtraElements]
 [BsonNoId]
 public class UnfinishedMatch : IMatchServerInfo
