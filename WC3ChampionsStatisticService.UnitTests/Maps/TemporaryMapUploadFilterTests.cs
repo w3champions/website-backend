@@ -145,7 +145,8 @@ public class TemporaryMapUploadFilterTests
         // parameter (a route id, a battleTag the permission filter fills in) MVC's form value provider otherwise reads
         // and buffers the whole body before the action — and before an action-filter permission check — leaving nothing
         // to forward. That is the regression the admin passthrough carried between ec3a81d and 39a1b49. "Streams its
-        // body" is approximated as: carries [TemporaryMapUploadBodyLimit], or is one of the known streaming actions.
+        // body" is approximated as: carries [TemporaryMapUploadBodyLimit], or is one of the known streaming actions —
+        // which must carry it too: the two attributes travel together on every action that streams a map file.
         var actions = typeof(MapsController).Assembly.GetTypes()
             .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
@@ -160,8 +161,9 @@ public class TemporaryMapUploadFilterTests
             .Union(known)
             .ToArray();
 
-        Assert.That(streaming.Select(m => $"{m.DeclaringType!.Name}.{m.Name}"),
-            Is.SupersetOf(KnownStreamingActions.Select(k => $"{k.Controller.Name}.{k.Action}")));
+        Assert.That(known.Where(m => m.GetCustomAttribute<TemporaryMapUploadBodyLimitAttribute>() == null)
+                .Select(m => $"{m.DeclaringType!.Name}.{m.Name}"),
+            Is.Empty, "a known streaming action without [TemporaryMapUploadBodyLimit] runs under the global 128 MiB ceiling");
         Assert.That(streaming.Where(m => m.GetCustomAttribute<DisableFormValueModelBindingAttribute>() == null)
                 .Select(m => $"{m.DeclaringType!.Name}.{m.Name}"),
             Is.Empty, "a streaming action without [DisableFormValueModelBinding] has its body read by model binding first");
