@@ -36,7 +36,9 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 /// proofHash query, the auth filter in front of both routes, and the bare answers — which MVC's [ApiController]
 /// client-error mapping would wrap in a ProblemDetails body, and Appendix A.4 says carry nothing. The production
 /// registrations (<see cref="MapServiceExtensions.AddMapServices"/>) and the real auth filter are used, over the same
-/// host doubles as the DI smoke test; the player token is the stubbed auth service's.
+/// host doubles as the DI smoke test; the player token is the stubbed auth service's. The admin map-file passthrough
+/// (<see cref="MapsController.CreateMapFile"/>) is hosted the same way for what its pipeline does before the permission
+/// filter answers.
 /// </summary>
 [TestFixture]
 public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTestBase
@@ -284,6 +286,97 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(host.Services.GetRequiredService<TemporaryMapUploadGate>().InFlight, Is.Zero, "no slot was ever taken");
     }
 
+    // ---- The admin map-file passthrough, sent without a token ----------------------------------
+
+    [Test]
+    public async Task TheAdminMapFilePassthrough_LeavesItsBodyToTheAction_SoModelBindingReadsNoByte()
+    {
+        // CreateMapFile forwards the multipart body to update-service as a stream. Its battleTag parameter (filled in
+        // by the permission filter) makes MVC bind arguments, and the form value provider reads any multipart body
+        // during binding — all of it, buffered, before the permission filter has run, leaving the action an empty
+        // stream to forward. [DisableFormValueModelBinding] keeps binding off the body, as on the temporary upload.
+        var handler = new ScriptedHttpHandler();
+
+        var (observed, bodyLength) = await ObserveAdminMapFileRoutesAsync(handler);
+
+        Assert.That(bodyLength, Is.GreaterThan(0));
+        Assert.That(observed["POST /api/maps/7/files"].BytesRead, Is.Zero, "model binding must not consume the body the action forwards");
+    }
+
+    /// <summary>
+    /// A multipart POST to the passthrough and a GET to its sibling route, both without a token, and what the pipeline
+    /// did with each: the request features once the pipeline has run and the body bytes the application read, recorded
+    /// by a middleware in front of MVC. The permission filter is an action filter, so the resource filters and model
+    /// binding have run by the time it answers 401 — and it needs a real admin token this host cannot mint, so the 401
+    /// is where these round trips end. Returns the observations by "METHOD /path" and the POST body's length.
+    /// </summary>
+    private static async Task<(Dictionary<string, RequestObservation> Observed, int BodyLength)> ObserveAdminMapFileRoutesAsync(ScriptedHttpHandler handler)
+    {
+        var observed = new Dictionary<string, RequestObservation>();
+        await using var host = await StartHostAsync(handler, configureApp: app => app.Use(async (context, next) =>
+        {
+            var body = new CountingStream(context.Request.Body);
+            context.Request.Body = body;
+            await next(context);
+            observed[context.Request.Method + " " + context.Request.Path] = new RequestObservation(
+                context.Features.Get<IHttpMaxRequestBodySizeFeature>()?.MaxRequestBodySize,
+                context.Features.Get<IHttpMinRequestBodyDataRateFeature>()?.MinDataRate,
+                body.BytesRead);
+        }), controllers: [typeof(MapsController)]);
+        var (bytes, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
+        var upload = new HttpRequestMessage(HttpMethod.Post, "api/maps/7/files")
+        {
+            Content = new ByteArrayContent(bytes) { Headers = { ContentType = MediaTypeHeaderValue.Parse(contentType) } },
+        };
+
+        var uploaded = await host.Client.SendAsync(upload);
+        var listed = await host.Client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "api/maps/7/files"));
+
+        Assert.That(uploaded.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(await uploaded.Content.ReadAsStringAsync(), Is.EqualTo("{\"error\":\"Unauthorized\"}"), "the permission filter's own answer: the action was not reached");
+        Assert.That(listed.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+        Assert.That(handler.Requests, Is.Empty, "nothing reaches an upstream without an admin token");
+        return (observed, bytes.Length);
+    }
+
+    private sealed record RequestObservation(long? MaxBodySize, MinDataRate DataRate, long BytesRead);
+
+    /// <summary>A read-only pass-through over <paramref name="inner"/> that counts the bytes read through it.</summary>
+    private sealed class CountingStream(Stream inner) : Stream
+    {
+        public long BytesRead { get; private set; }
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override int Read(byte[] buffer, int offset, int count) => Count(inner.Read(buffer, offset, count));
+
+        public override int Read(Span<byte> buffer) => Count(inner.Read(buffer));
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => Count(await inner.ReadAsync(buffer.AsMemory(offset, count), cancellationToken));
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => Count(await inner.ReadAsync(buffer, cancellationToken));
+
+        private int Count(int read)
+        {
+            BytesRead += read;
+            return read;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     // ---- Helpers ------------------------------------------------------------------------------
 
     private static HttpRequestMessage StatusRequest(string proofHash)
@@ -392,9 +485,10 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     /// The production registrations over the host doubles, with an auth service that knows one player token. With
     /// <paramref name="spoolDirectory"/>, the upload service the controller resolves spools there instead of the
     /// machine-wide directory (the service's spool seam is an init property, so it is registered on top).
+    /// <paramref name="controllers"/> defaults to the temporary-map controller alone.
     /// </summary>
     private static async Task<LoopbackMvcHost> StartHostAsync(
-        ScriptedHttpHandler handler, string spoolDirectory = null, Action<IApplicationBuilder> configureApp = null)
+        ScriptedHttpHandler handler, string spoolDirectory = null, Action<IApplicationBuilder> configureApp = null, Type[] controllers = null)
     {
         var authService = new Mock<IW3CAuthenticationService>(MockBehavior.Strict);
         authService.Setup(s => s.GetUserByToken(PlayerToken, false)).Returns(new W3CUserAuthenticationDto { BattleTag = BattleTag });
@@ -420,7 +514,7 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
                 }
             },
             configureApp,
-            typeof(TemporaryMapsController));
+            controllers ?? [typeof(TemporaryMapsController)]);
     }
 
     /// <summary>

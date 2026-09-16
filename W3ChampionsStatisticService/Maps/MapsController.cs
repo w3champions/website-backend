@@ -83,8 +83,15 @@ public class MapsController(
         }
     }
 
+    /// <summary>
+    /// Forwards the admin's multipart body to update-service as a stream, untouched. The battleTag parameter (filled in
+    /// by the permission filter) makes MVC bind arguments, and the form value provider would otherwise read the whole
+    /// multipart body during binding — buffered, and before the permission filter has run — leaving nothing to forward;
+    /// <see cref="DisableFormValueModelBindingAttribute"/> keeps binding off the body, as on the temporary upload.
+    /// </summary>
     [HttpPost("{id}/files")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    [DisableFormValueModelBinding]
     public async Task<IActionResult> CreateMapFile([NoTrace] string battleTag)
     {
         try

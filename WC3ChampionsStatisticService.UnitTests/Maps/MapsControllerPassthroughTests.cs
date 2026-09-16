@@ -133,6 +133,16 @@ public class MapsControllerPassthroughTests
     }
 
     [Test]
+    public void CreateMapFile_StreamsItsBodyLikeTheTemporaryUpload()
+    {
+        // The passthrough forwards the multipart body as a stream; binding its battleTag parameter must not let the
+        // form value provider read that body first (the whole body, buffered, before the permission filter runs).
+        var passthrough = typeof(MapsController).GetMethod(nameof(MapsController.CreateMapFile))!;
+
+        Assert.That(passthrough.GetCustomAttribute<DisableFormValueModelBindingAttribute>(), Is.Not.Null, "model binding must stay off the body");
+    }
+
+    [Test]
     public void TemporaryMapRoutesAreNotOnTheAdminController()
     {
         Assert.That(typeof(MapsController).GetMethods().Any(m => m.Name.Contains("Temporary")), Is.False,
