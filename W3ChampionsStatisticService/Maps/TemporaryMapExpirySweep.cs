@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,11 +48,14 @@ public class TemporaryMapSweepReport
 /// Before both, spool files a crash left in the upload directory are purged (Task 2 L2). Per-item failures are counted
 /// and logged, never swallowed, never abort the run and are never given up on: the next run tries them again. Runs are
 /// serialised on one lock (X12): the daily trigger and an admin-triggered run queue behind each other rather than
-/// double-deleting.
+/// double-deleting. Every probe-and-delete and delete-and-mark of one fileKey is done under the per-fileKey lock the
+/// upload service holds from its store to its record write (S6-M1), so neither pass can take bytes an upload has just
+/// stored.
 /// </summary>
 public class TemporaryMapExpirySweep(
     MatchmakingServiceClient matchmakingServiceClient,
     UpdateServiceClient updateServiceClient,
+    TemporaryMapFileKeyLock fileKeyLock,
     ILogger<TemporaryMapExpirySweep> logger)
 {
     private static readonly TimeSpan StaleSpoolFileAge = TimeSpan.FromHours(TemporaryMapLimits.StaleSpoolFileAgeHours);
@@ -63,8 +67,17 @@ public class TemporaryMapExpirySweep(
     /// <summary>One run at a time; a second caller waits rather than skips, so no trigger is ever lost.</summary>
     private readonly SemaphoreSlim _runLock = new(1, 1);
 
+    /// <summary>
+    /// The per-fileKey lock the upload service holds from its store to its record write (S6-M1): held here around every
+    /// probe-and-delete and delete-and-mark of one fileKey, so a reclaim never lands on bytes an upload has just stored.
+    /// </summary>
+    internal TemporaryMapFileKeyLock FileKeyLock { get; } = fileKeyLock;
+
     /// <summary>Test seam: the spool directory; null means <see cref="TemporaryMapLimits.TempUploadDir"/>.</summary>
     internal string SpoolDirectory { get; init; }
+
+    /// <summary>Test seam: the spool directory's file listing, so a file the purge cannot handle can be staged portably.</summary>
+    internal Func<string, IEnumerable<string>> EnumerateSpoolFiles { get; init; } = Directory.EnumerateFiles;
 
     internal string EffectiveSpoolDirectory => SpoolDirectory ?? TemporaryMapLimits.TempUploadDir;
 
@@ -131,6 +144,17 @@ public class TemporaryMapExpirySweep(
             foreach (var item in batch)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (item.Id <= 0 || !TemporaryMapKeys.IsFilePath(item.Path))
+                {
+                    // matchmaking drift (S6-L2): without a valid id the record could never be marked once its bytes were
+                    // gone, and outside CustomGames/ the client would refuse the delete. Nothing is tried, every such row
+                    // is counted, and the path is rendered only when it has the expected shape.
+                    report.Failed++;
+                    _logger.LogWarning("Expired temporary map row {MapId} at {FileKey} is not a deletable record; not deleted, retrying next run",
+                        item.Id, LoggablePath(item.Path));
+                    continue;
+                }
+
                 if (!attempted.Add(item.Id))
                 {
                     // Listed again in this run: either it failed above (logged, retried next run) or matchmaking still
@@ -155,11 +179,19 @@ public class TemporaryMapExpirySweep(
         } while (listAgain);
     }
 
-    /// <summary>The bytes first, then the record; true only when the record says deleted.</summary>
+    /// <summary>
+    /// The bytes first, then the record; true once matchmaking accepted the mark. A.5 pins that answer as 200 { map }
+    /// and nothing about the echoed fileState, so the echo is not inspected: a record mm did not flip is listed and
+    /// marked again next run, idempotently.
+    /// </summary>
     private async Task<bool> TryExpire(ExpiredTemporaryMap item, CancellationToken cancellationToken)
     {
         try
         {
+            // S6-M1: an upload or restore of this fileKey holds the key from its store to its record write. Waiting comes
+            // before anything is deleted, so a cancelled wait leaves nothing half-done.
+            using var fileKeyHeld = await FileKeyLock.AcquireAsync(item.Path, cancellationToken);
+
             // Idempotent: update-service answers 204 whether or not the file was there, so a run that deleted the bytes
             // and then failed to mark the record simply does both again next time.
             await _updateServiceClient.DeleteMapFileByPathAsync(item.Path, cancellationToken);
@@ -185,6 +217,7 @@ public class TemporaryMapExpirySweep(
     {
         string after = null;
         var cursors = new HashSet<string>(StringComparer.Ordinal);
+        var scanned = new HashSet<string>(StringComparer.Ordinal);
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -209,15 +242,35 @@ public class TemporaryMapExpirySweep(
                 return;
             }
 
+            var newRows = 0;
             foreach (var file in page.Files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (!scanned.Add(file.FilePath))
+                {
+                    // Listed again this run (a page overlapping the previous one): examined once per run, like an expiry item.
+                    continue;
+                }
+
+                newRows++;
                 report.Scanned++;
                 await ReconcileFile(file.FilePath, report, cancellationToken);
             }
 
             if (string.IsNullOrEmpty(page.Next))
             {
+                return;
+            }
+
+            if (page.Files.Count > 0 && newRows == 0)
+            {
+                // S6-L3: a listing that ignores `after` yet mints a fresh cursor each time never repeats a cursor, so the
+                // rows are the other thing that must advance. An empty page with a cursor is not this: a page can be
+                // filtered down to nothing and still have more behind it. Nor is a last page that only overlaps the
+                // previous one: without a cursor the pass ends here anyway.
+                report.Failed++;
+                _logger.LogError("Temporary map reconciliation listing repeated only rows already scanned on page {Page}; ending this run's pass, the next run starts over",
+                    cursors.Count + 1);
                 return;
             }
 
@@ -237,8 +290,10 @@ public class TemporaryMapExpirySweep(
 
     /// <summary>
     /// Keeps a file a present record claims; reclaims one that no record claims (strict 404 {}) or whose record says its
-    /// file is deleted (S-I6); anything else — another fileState, a 404 that is not the empty object, a timeout, a
-    /// transport error — is this file's failure, with no delete, retried next run (I3/D2).
+    /// file is deleted and names this very path (S-I6, S6-I1); anything else — another fileState, a deleted record that
+    /// names another path, a 404 that is not the empty object, a timeout, a transport error — is this file's failure,
+    /// with no delete, retried next run (I3/D2). Probe and delete happen under the fileKey lock (S6-M1): probed before
+    /// an upload's record write, the answer would be "unclaimed" and the delete would take the upload's bytes.
     /// </summary>
     private async Task ReconcileFile(string filePath, TemporaryMapSweepReport report, CancellationToken cancellationToken)
     {
@@ -252,6 +307,7 @@ public class TemporaryMapExpirySweep(
 
         try
         {
+            using var fileKeyHeld = await FileKeyLock.AcquireAsync(filePath, cancellationToken);
             var claim = await _matchmakingServiceClient.GetTemporaryMapByPath(filePath, cancellationToken);
             if (claim == null)
             {
@@ -264,6 +320,12 @@ public class TemporaryMapExpirySweep(
             switch (claim.FileState)
             {
                 case TemporaryMapFileStates.Present:
+                    return;
+                case TemporaryMapFileStates.Deleted when !string.Equals(claim.Path, filePath, StringComparison.Ordinal):
+                    // Reached by an inexact lookup: the record is about another file (S6-I1, the S-L2 precedent).
+                    report.Failed++;
+                    _logger.LogWarning("Temporary map {MapId} answered for {FileKey} but names {RecordFileKey}; not reclaimed, retrying next run",
+                        claim.Id, LoggablePath(filePath), LoggablePath(claim.Path));
                     return;
                 case TemporaryMapFileStates.Deleted:
                     await _updateServiceClient.DeleteMapFileByPathAsync(filePath, cancellationToken);
@@ -293,20 +355,31 @@ public class TemporaryMapExpirySweep(
     /// <summary>
     /// Removes spool files not written for <see cref="TemporaryMapLimits.StaleSpoolFileAgeHours"/> as of the run's clock.
     /// A live upload's file is minutes old at most. On Linux an unlinked open file does not break its writer. Runs
-    /// first, so an upstream outage never delays it, and per file, so one failure never hides the rest.
+    /// first, so an upstream outage never delays it; per file, so one failure never hides the rest; and whatever it
+    /// throws is this run's failure, never the passes' (R-Minor5). The directory must pass the reader's rules
+    /// (<see cref="TemporaryMapUploadReader.RefusalOf"/>): a purge through a link would delete elsewhere (S6-L1).
     /// </summary>
     private void PurgeStaleSpoolFiles(DateTime nowUtc, TemporaryMapSweepReport report)
     {
-        var directory = EffectiveSpoolDirectory;
         var staleBefore = nowUtc - StaleSpoolFileAge;
         try
         {
-            if (!Directory.Exists(directory))
+            if (!Directory.Exists(EffectiveSpoolDirectory))
             {
                 return;
             }
 
-            foreach (var path in Directory.EnumerateFiles(directory))
+            var directory = TemporaryMapUploadReader.ResolveSpoolDirectory(EffectiveSpoolDirectory);
+            var refusal = TemporaryMapUploadReader.RefusalOf(directory, out var cause);
+            if (refusal != null)
+            {
+                // The path is a server-chosen directory: no proof, token or client data.
+                report.Failed++;
+                _logger.LogError(cause, "Stale temporary map spool files were not purged from {SpoolPath}: {SpoolFault}", directory, refusal);
+                return;
+            }
+
+            foreach (var path in EnumerateSpoolFiles(directory))
             {
                 if (string.Equals(Path.GetExtension(path), TemporaryMapUploadReader.SpoolFileExtension, StringComparison.Ordinal))
                 {
@@ -314,7 +387,7 @@ public class TemporaryMapExpirySweep(
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
             report.Failed++;
             _logger.LogError(ex, "Stale temporary map spool files could not be listed; retrying next run");
@@ -331,14 +404,18 @@ public class TemporaryMapExpirySweep(
                 return;
             }
 
+            // S6-L4: read before the delete; afterwards the cached status is refreshed from a file that is gone.
+            var lastWriteUtc = file.LastWriteTimeUtc;
             file.Delete();
             report.PurgedSpoolFiles++;
-            _logger.LogInformation("Purged a stale temporary map spool file last written {LastWriteUtc}", file.LastWriteTimeUtc);
+            _logger.LogInformation("Purged a stale temporary map spool file last written {LastWriteUtc}",
+                lastWriteUtc.ToString("o", CultureInfo.InvariantCulture));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
+            // Whatever the fault, it is this file's; the name is rendered only when it has the reader's spool-file shape.
             report.Failed++;
-            _logger.LogWarning(ex, "Failed to purge a stale temporary map spool file; retrying next run");
+            _logger.LogWarning(ex, "Failed to purge the temporary map spool file {SpoolFile}; retrying next run", LoggableSpoolFileName(path));
         }
     }
 }

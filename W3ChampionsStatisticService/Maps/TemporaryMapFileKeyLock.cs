@@ -8,16 +8,18 @@ namespace W3ChampionsStatisticService.Maps;
 /// <summary>
 /// One async mutex per fileKey (R-I1/S-H1): two uploads of the same fileKey — the same bytes under the same name, or two
 /// restores of one record — never interleave their store, digest check, record write, re-probe and compensation, so
-/// neither can delete bytes the other has just stored. Keys are compared ordinally, like update-service's byte-exact file
-/// paths. Entries are reference-counted and removed when their last holder or waiter leaves, so the dictionary never
-/// outgrows the uploads in flight.
+/// neither can delete bytes the other has just stored. The expiry sweep takes the same lock around its own probe and
+/// delete of a fileKey (S6-M1), so a reclaim can never land on bytes an upload has just stored either. Keys are compared
+/// ordinally, like update-service's byte-exact file paths. Entries are reference-counted and removed when their last
+/// holder or waiter leaves, so the dictionary never outgrows the uploads in flight.
 /// <para>
-/// In-memory and single-instance by design, like <see cref="Sessions.MintRateLimiter"/>: two website-backend instances
-/// would not see each other's locks. Concurrency idiom as in MintRateLimiter: a private Dictionary guarded by one lock
-/// object.
+/// In-memory and single-instance by design, like <see cref="Sessions.MintRateLimiter"/>: ONE instance per process,
+/// registered once in <see cref="MapServiceExtensions.AddMapServices"/> and injected into the upload service and the
+/// sweep; two website-backend instances would not see each other's locks. Concurrency idiom as in MintRateLimiter: a
+/// private Dictionary guarded by one lock object.
 /// </para>
 /// </summary>
-internal sealed class TemporaryMapFileKeyLock
+public sealed class TemporaryMapFileKeyLock
 {
     private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
     private readonly object _lock = new();

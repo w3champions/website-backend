@@ -210,29 +210,21 @@ public static class TemporaryMapUploadReader
     }
 
     /// <summary>
-    /// Makes the spool directory owner-only (0700) where the OS has Unix modes, and refuses one that is a
-    /// link: a pre-planted link in a shared temp directory would redirect the map bytes elsewhere.
-    /// Returns the directory path without a trailing separator.
+    /// Creates the spool directory if needed and applies <see cref="RefusalOf"/>'s rules to it: owner-only (0700) where
+    /// the OS has Unix modes, and never a link. Returns the directory path without a trailing separator.
     /// </summary>
     private static string PrepareSpoolDirectory(string spoolDirectory)
     {
-        // Any trailing separator would make the link check follow the link instead of inspecting it.
-        // GetFullPath collapses repeated separators, so the trim then removes the last one.
-        var path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(spoolDirectory));
-        bool isLink;
+        var path = ResolveSpoolDirectory(spoolDirectory);
         try
         {
-            var directory = OperatingSystem.IsWindows()
-                ? Directory.CreateDirectory(path)
-                : Directory.CreateDirectory(path, OwnerOnlyDirectoryMode);
-            isLink = directory.LinkTarget != null;
-            if (!isLink && !OperatingSystem.IsWindows())
+            if (OperatingSystem.IsWindows())
             {
-                // CreateDirectory applies its mode only to a directory it creates, so a leftover one needs this
-                // chmod. It runs every time because a "did this call create it" check would race another creator.
-                // Only the owner or root may chmod: as a non-root process this refuses a directory another user
-                // created (a spool fault), but as root it tightens that directory rather than refusing it.
-                File.SetUnixFileMode(path, OwnerOnlyDirectoryMode);
+                Directory.CreateDirectory(path);
+            }
+            else
+            {
+                Directory.CreateDirectory(path, OwnerOnlyDirectoryMode);
             }
         }
         catch (Exception ex) when (IsDiskFault(ex))
@@ -240,12 +232,54 @@ public static class TemporaryMapUploadReader
             throw SpoolFault("The spool directory could not be prepared.", path, ex);
         }
 
-        if (isLink)
+        var refusal = RefusalOf(path, out var cause);
+        if (refusal != null)
         {
-            throw SpoolFault("The spool directory is a link; refusing to spool through it.", path, null);
+            throw SpoolFault(refusal, path, cause);
         }
 
         return path;
+    }
+
+    /// <summary>
+    /// The spool directory as a full path without a trailing separator: with one, a link check would follow the link
+    /// instead of inspecting it. GetFullPath collapses repeated separators, so the trim then removes the last one.
+    /// </summary>
+    internal static string ResolveSpoolDirectory(string spoolDirectory)
+        => Path.TrimEndingDirectorySeparator(Path.GetFullPath(spoolDirectory));
+
+    /// <summary>
+    /// The rules an existing spool directory at the resolved <paramref name="path"/> must meet before anything is spooled
+    /// into it (the reader) or purged from it (the expiry sweep, S6-L1): never a link, as a pre-planted one in a shared
+    /// temp directory would redirect the map bytes, or a purge, elsewhere; and owner-only (0700) where the OS has Unix
+    /// modes. Null when it passes, else the refusal to log, with the disk fault behind it, if any, in
+    /// <paramref name="cause"/>. The chmod runs every time because CreateDirectory applies its mode only to a directory
+    /// it creates and a "did this call create it" check would race another creator. Only the owner or root may chmod:
+    /// as a non-root process this refuses a directory another user created, but as root it tightens that directory
+    /// rather than refusing it.
+    /// </summary>
+    internal static string RefusalOf(string path, out Exception cause)
+    {
+        cause = null;
+        try
+        {
+            if (new DirectoryInfo(path).LinkTarget != null)
+            {
+                return "The spool directory is a link; refusing to use it.";
+            }
+
+            if (!OperatingSystem.IsWindows())
+            {
+                File.SetUnixFileMode(path, OwnerOnlyDirectoryMode);
+            }
+
+            return null;
+        }
+        catch (Exception ex) when (IsDiskFault(ex))
+        {
+            cause = ex;
+            return "The spool directory could not be prepared.";
+        }
     }
 
     private static Stream OpenSpoolFile(string path)

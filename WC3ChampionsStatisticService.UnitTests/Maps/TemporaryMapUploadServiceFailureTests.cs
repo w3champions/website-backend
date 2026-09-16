@@ -582,7 +582,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     [Test]
     public void ProductionDefaults_SpoolIntoTheTempUploadDir_AndReallyWaitBetweenRetries()
     {
-        var service = new TemporaryMapUploadService(null, null, new MintRateLimiter(),
+        var service = new TemporaryMapUploadService(null, null, new MintRateLimiter(), FileKeyLock,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<TemporaryMapUploadService>.Instance);
 
         Assert.That(service.SpoolDirectory, Is.Null);
@@ -629,7 +629,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         Directory.CreateDirectory(TestRoot);
         var blocker = Path.Combine(TestRoot, "not-a-directory");
         File.WriteAllText(blocker, "");
-        var blockedService = new TemporaryMapUploadService(null, null, new MintRateLimiter(),
+        var blockedService = new TemporaryMapUploadService(null, null, new MintRateLimiter(), FileKeyLock,
             Microsoft.Extensions.Logging.Abstractions.NullLogger<TemporaryMapUploadService>.Instance)
         {
             SpoolDirectory = Path.Combine(blocker, "spool"),

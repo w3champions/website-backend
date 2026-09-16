@@ -37,11 +37,9 @@ public class TemporaryMapUploadService(
     MatchmakingServiceClient matchmakingServiceClient,
     UpdateServiceClient updateServiceClient,
     MintRateLimiter rateLimiter,
+    TemporaryMapFileKeyLock fileKeyLock,
     ILogger<TemporaryMapUploadService> logger)
 {
-    /// <summary>One lock per process, whatever lifetime the service is registered with (single-instance, like MintRateLimiter).</summary>
-    private static readonly TemporaryMapFileKeyLock ProcessFileKeyLock = new();
-
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly UpdateServiceClient _updateServiceClient = updateServiceClient;
     private readonly MintRateLimiter _rateLimiter = rateLimiter;
@@ -61,8 +59,8 @@ public class TemporaryMapUploadService(
     private TemporaryMapCompensation Compensation
         => _compensation ??= new TemporaryMapCompensation(_updateServiceClient, _logger) { WaitAsync = WaitAsync };
 
-    /// <summary>Test seam: the per-fileKey lock; production shares <see cref="ProcessFileKeyLock"/>.</summary>
-    internal TemporaryMapFileKeyLock FileKeyLock { get; init; } = ProcessFileKeyLock;
+    /// <summary>The per-fileKey lock, the one process-wide instance the expiry sweep holds too (S6-M1).</summary>
+    internal TemporaryMapFileKeyLock FileKeyLock { get; } = fileKeyLock;
 
     /// <summary>
     /// Spools the body, then orchestrates. Escapes: <see cref="TemporaryMapUploadException"/> (its status and body), the

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using W3C.Contracts.GameObjects;
@@ -156,6 +157,24 @@ internal static class TemporaryMapUploadRules
     /// </summary>
     public static string LoggablePath(string path)
         => TemporaryMapKeys.IsFilePath(path) && !TemporaryMapNaming.ContainsControlCharacter(path) ? path : InvalidForLog;
+
+    /// <summary>
+    /// A spool file's name as the log may render it: only when it has the shape the reader gives spool files, 32 lowercase
+    /// hex characters and the spool extension, else <see cref="InvalidForLog"/>. Never the directory: a name identifies
+    /// the file for a manual clean-up and carries no client data, a whole path is a server detail.
+    /// </summary>
+    public static string LoggableSpoolFileName(string path)
+    {
+        var name = path == null ? null : Path.GetFileName(path);
+        var extension = TemporaryMapUploadReader.SpoolFileExtension;
+        const int nameLength = 32;
+        return name != null
+               && name.Length == nameLength + extension.Length
+               && name.EndsWith(extension, StringComparison.Ordinal)
+               && TemporaryMapKeys.IsLowercaseHex(name[..nameLength], nameLength)
+            ? name
+            : InvalidForLog;
+    }
 
     /// <summary>The upstream status an exception carries, for log lines that may not carry the exception itself (S-L3).</summary>
     public static int? StatusOf(Exception ex) => (int?)(ex as HttpRequestException)?.StatusCode;

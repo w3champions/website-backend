@@ -5,11 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
-using W3C.Domain.MatchmakingService;
-using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Maps;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
@@ -25,6 +21,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     private static readonly DateTime Now = new(2026, 9, 14, 3, 0, 0, DateTimeKind.Utc);
     private const string FileA = "W3Champions/CustomGames/a-11111111.w3x";
     private const string FileB = "W3Champions/CustomGames/b-22222222.w3x";
+    private const string FileC = "W3Champions/CustomGames/c-33333333.w3x";
     private const string Expired = "/maps/temporary/expired";
     private const string Listing = "/api/content/maps/files";
     private const string ByPath = "/maps/temporary/by-path";
@@ -38,7 +35,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     {
         var handler = EmptyReconciliation().On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items());
 
-        await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         var query = handler.LastRequest(HttpMethod.Get, Expired).RequestUri!.Query;
         var expectedBefore = new DateTimeOffset(Now.AddDays(-TemporaryMapLimits.TtlDays)).ToUnixTimeMilliseconds();
@@ -54,7 +51,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":1}}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Deleted, Is.EqualTo(2));
         Assert.That(report.Failed, Is.Zero);
@@ -78,7 +75,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":2}}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Failed, Is.EqualTo(1));
         Assert.That(report.Deleted, Is.EqualTo(1));
@@ -98,7 +95,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":2}}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Failed, Is.EqualTo(1));
         Assert.That(report.Deleted, Is.EqualTo(1));
@@ -116,7 +113,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.InternalServerError, "{\"errors\":[{\"param\":\"id\",\"message\":\"boom\"}]}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Deleted, Is.Zero);
         Assert.That(report.Failed, Is.EqualTo(1));
@@ -135,7 +132,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":1}}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(handler.CountRequests(HttpMethod.Get, Expired), Is.EqualTo(3));
         Assert.That(report.Deleted, Is.EqualTo(2 * TemporaryMapLimits.SweepBatchSize + 50));
@@ -151,7 +148,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(IsExpired, Sequence(batch, batch, batch))
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.InternalServerError, "{}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(handler.CountRequests(HttpMethod.Get, Expired), Is.EqualTo(1));
         Assert.That(report.Failed, Is.EqualTo(TemporaryMapLimits.SweepBatchSize));
@@ -171,7 +168,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.InternalServerError, "{}")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":1}}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(handler.CountRequests(HttpMethod.Get, Expired), Is.EqualTo(2), "full and progressing, so listed again; then no progress");
         Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(TemporaryMapLimits.SweepBatchSize), "each item once");
@@ -182,21 +179,75 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ExpiryPass_AnItemWhosePathIsNotATemporaryMapFile_FailsWithoutADelete_AndIsLoggedAsInvalid()
     {
-        // matchmaking drift: the client refuses to delete outside CustomGames/, and the warning never renders the
-        // supplied path (it could forge a log line).
+        // matchmaking drift: the sweep refuses the row itself (S6-L2), before the client's own guard could throw, and
+        // the warning never renders the supplied path (it could forge a log line).
         using var logs = new LogCapture();
         var handler = EmptyReconciliation()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items((1, "maps\\\\evil\\r\\ninjected.w3x")))
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Failed, Is.EqualTo(1));
         Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.Zero);
         Assert.That(handler.CountRequests(HttpMethod.Post, FileDeleted), Is.Zero);
         var warning = logs.Lines().Single(l => l.StartsWith("Warning", StringComparison.Ordinal));
         Assert.That(warning, Does.Contain("FileKey=\"invalid\"").And.Contain("MapId=1"));
+        Assert.That(warning, Does.Not.Contain("Exception"), "refused by the sweep's own check, not by a thrown client guard");
         Assert.That(logs.Lines(), Has.None.Contains("evil"));
+    }
+
+    [TestCase(0)]
+    [TestCase(-7)]
+    public async Task ExpiryPass_ARowWithoutAValidId_FailsWithoutADelete(int id)
+    {
+        // S6-L2: with the bytes deleted, a record that cannot be marked would stay present without them, every run.
+        using var logs = new LogCapture();
+        var handler = EmptyReconciliation()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items((id, FileA), (2, FileB)))
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
+            .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, Record(2, FileB, "deleted"));
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.Failed, Is.EqualTo(1));
+        Assert.That(report.Deleted, Is.EqualTo(1), "the valid row is still expired");
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
+        Assert.That(Uri.UnescapeDataString(handler.LastRequest(HttpMethod.Delete, UsFile).RequestUri!.Query), Does.Contain(FileB));
+        Assert.That(handler.CountRequests(HttpMethod.Post, FileDeleted), Is.EqualTo(1));
+        var warning = logs.Lines().Single(l => l.StartsWith("Warning", StringComparison.Ordinal));
+        Assert.That(warning, Does.Contain($"MapId={id}").And.Contain($"FileKey=\"{FileA}\""));
+    }
+
+    [Test]
+    public async Task ExpiryPass_DeletesAndMarksUnderTheFileKeyLock_AnUploadHolds()
+    {
+        // S6-M1: the upload service holds the fileKey from its store to its record write. Nothing of this item happens
+        // until it lets go; then the item completes and the key is free again.
+        var sweepWaiting = NewSignal();
+        FileKeyLock = new TemporaryMapFileKeyLock { OnContended = _ => sweepWaiting.TrySetResult() };
+        var handler = EmptyReconciliation()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items((1, FileA)))
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
+            .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, Record(1, FileA, "deleted"));
+        var sweep = CreateSweep(handler);
+
+        Task<TemporaryMapSweepReport> run;
+        using (await FileKeyLock.AcquireAsync(FileA, CancellationToken.None))
+        {
+            run = sweep.RunOnceAsync(Now, CancellationToken.None);
+            await sweepWaiting.Task.WaitAsync(HangGuard);
+            Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.Zero, "no delete while the upload holds the key");
+            Assert.That(handler.CountRequests(HttpMethod.Post, FileDeleted), Is.Zero, "no mark either");
+            Assert.That(run.IsCompleted, Is.False);
+        }
+
+        var report = await run.WaitAsync(HangGuard);
+        Assert.That(report.Deleted, Is.EqualTo(1));
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
+        Assert.That(handler.CountRequests(HttpMethod.Post, FileDeleted), Is.EqualTo(1));
+        Assert.That(FileKeyLock.Count, Is.Zero, "the sweep released the key");
     }
 
     [Test]
@@ -205,7 +256,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
         var handler = EmptyReconciliation()
             .On(HttpMethod.Get, Expired, HttpStatusCode.InternalServerError, "{\"errors\":[{\"param\":\"before\",\"message\":\"boom\"}]}");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Failed, Is.EqualTo(1));
         Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(1));
@@ -223,7 +274,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Scanned, Is.EqualTo(2));
         Assert.That(report.ReclaimedOrphans, Is.EqualTo(1));
@@ -238,7 +289,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     {
         var handler = EmptyReconciliation().On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items());
 
-        await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         var query = Uri.UnescapeDataString(handler.LastRequest(HttpMethod.Get, Listing).RequestUri!.Query);
         Assert.That(query, Does.Contain($"prefix={TemporaryMapLimits.TempMapPathPrefix}"));
@@ -255,7 +306,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(IsListing, Sequence(Files(FileA, FileA), Files(null, FileB)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Scanned, Is.EqualTo(2));
         Assert.That(report.Failed, Is.Zero);
@@ -267,16 +318,16 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ReconciliationPass_EndsTheRunOnARepeatingCursor_AndCountsItAsFailed()
     {
-        // No page ceiling (I2): the listing is followed until it is exhausted. A cursor that does not advance is the
-        // one thing that could loop forever, so it ends this run's pass, loudly; the next run starts over.
+        // No page ceiling (I2): the listing is followed until it is exhausted. A cursor that does not advance could loop
+        // forever, so it ends this run's pass, loudly; the next run starts over. The rows differ per page so that this
+        // is the cursor guard alone (…EndsTheRunWhenAPageOnlyRepeatsRowsAlreadyScanned covers the rows).
         using var logs = new LogCapture();
-        var page = Files("never-ends", FileA);
         var handler = new ScriptedHttpHandler()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
-            .On(IsListing, Sequence(page, page, page, page))
+            .On(IsListing, Sequence(Files("never-ends", FileA), Files("never-ends", FileB), Files("never-ends", FileC), Files("never-ends", FileA)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1, FileA));
 
-        var report = await Sweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(2), "the page after the cursor repeated it");
         Assert.That(report.Scanned, Is.EqualTo(2));
@@ -290,10 +341,11 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     {
         var handler = new ScriptedHttpHandler()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
-            .On(IsListing, Sequence(Files(FileA, FileA), Files(FileB, FileB), Files(FileA, FileA), Files(FileB, FileB)))
+            // Cursors A, B, A again: the third page's row is fresh, so only the cursor repeats.
+            .On(IsListing, Sequence(Files("A", FileA), Files("B", FileB), Files("A", FileC), Files("B", FileB)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(3));
         Assert.That(report.Failed, Is.EqualTo(1));
@@ -311,12 +363,139 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(r => IsByPathOf(r, "b-22222222"), Respond(HttpStatusCode.OK, Record(2, FileB, "present")))
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.ReclaimedOrphans, Is.EqualTo(1));
         Assert.That(report.Failed, Is.Zero);
         Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
         Assert.That(Uri.UnescapeDataString(handler.LastRequest(HttpMethod.Delete, UsFile).RequestUri!.Query), Does.Contain(FileA));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_ProbesAndDeletesUnderTheFileKeyLock_AnUploadHolds()
+    {
+        // S6-M1: an upload of the same fileKey holds the lock from its store to its record write. A probe before that write
+        // would answer "unclaimed" and a delete would take the upload's bytes, so neither happens until the upload is done.
+        var sweepWaiting = NewSignal();
+        FileKeyLock = new TemporaryMapFileKeyLock { OnContended = _ => sweepWaiting.TrySetResult() };
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+        var sweep = CreateSweep(handler);
+
+        Task<TemporaryMapSweepReport> run;
+        using (await FileKeyLock.AcquireAsync(FileA, CancellationToken.None))
+        {
+            run = sweep.RunOnceAsync(Now, CancellationToken.None);
+            await sweepWaiting.Task.WaitAsync(HangGuard);
+            Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(1), "the listing needs no key");
+            Assert.That(handler.CountRequests(HttpMethod.Get, ByPath), Is.Zero, "the probe waits for the key: before it, the answer is stale");
+            Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.Zero, "no delete while the upload holds the key");
+            Assert.That(run.IsCompleted, Is.False);
+        }
+
+        var report = await run.WaitAsync(HangGuard);
+        Assert.That(report.ReclaimedOrphans, Is.EqualTo(1));
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Get, ByPath), Is.EqualTo(1));
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
+        Assert.That(FileKeyLock.Count, Is.Zero, "the sweep released the key");
+    }
+
+    [TestCase(FileB)]
+    [TestCase("W3Champions/CustomGames/A-11111111.w3x")]
+    public async Task ReconciliationPass_ADeletedRecordThatNamesAnotherPath_IsAFailure_NotAnOrphan(string recordPath)
+    {
+        // S6-I1: a record reached by an inexact lookup (another file, another case) says nothing about this file.
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1, recordPath, "deleted"))
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.Failed, Is.EqualTo(1));
+        Assert.That(report.ReclaimedOrphans, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.Zero);
+    }
+
+    [Test]
+    public async Task ReconciliationPass_EndsTheRunWhenAPageOnlyRepeatsRowsAlreadyScanned()
+    {
+        // S6-L3: a listing that ignores `after` yet mints fresh cursors never repeats a cursor; without this guard it
+        // would loop forever holding the run lock.
+        using var logs = new LogCapture();
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(IsListing, Sequence(Files("c1", FileA, FileB), Files("c2", FileA, FileB), Files("c3", FileA, FileB)))
+            .On(r => IsByPathOf(r, "a-11111111"), Respond(HttpStatusCode.OK, Record(1, FileA)))
+            .On(r => IsByPathOf(r, "b-22222222"), Respond(HttpStatusCode.OK, Record(2, FileB)));
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(2));
+        Assert.That(report.Scanned, Is.EqualTo(2));
+        Assert.That(report.Failed, Is.EqualTo(1));
+        Assert.That(handler.CountRequests(HttpMethod.Get, ByPath), Is.EqualTo(2), "each file was examined once");
+        Assert.That(logs.Lines().Single(l => l.StartsWith("Error", StringComparison.Ordinal)), Does.Contain("rows"));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_ExaminesARowRepeatedOnALaterPage_OnceARun()
+    {
+        // A page that overlaps the previous one (a listing whose cursor is inclusive) still advances: only the new rows
+        // are examined, and the run goes on to the end.
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(IsListing, Sequence(Files("c1", FileA, FileB), Files(null, FileB, FileC)))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.Scanned, Is.EqualTo(3));
+        Assert.That(report.ReclaimedOrphans, Is.EqualTo(3));
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Get, ByPath), Is.EqualTo(3), "B was examined once");
+    }
+
+    [Test]
+    public async Task ReconciliationPass_FollowsAnEmptyPageThatStillHasACursor()
+    {
+        // update-service may filter a page down to nothing (every file on it younger than olderThanHours) and still have
+        // more behind it: not stuck, just empty.
+        using var logs = new LogCapture();
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(IsListing, Sequence(Files("c1"), Files("c2"), Files(null, FileA)))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(3));
+        Assert.That(report.Scanned, Is.EqualTo(1));
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(logs.Lines(), Has.None.StartsWith("Error"));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_ALastPageThatOnlyOverlapsThePrevious_IsTheNormalEnd()
+    {
+        // An inclusive cursor whose last page holds nothing but the overlap: the listing is exhausted, not stuck.
+        using var logs = new LogCapture();
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(IsListing, Sequence(Files("c1", FileA, FileB), Files(null, FileB)))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.Scanned, Is.EqualTo(2));
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(logs.Lines(), Has.None.StartsWith("Error"));
     }
 
     [Test]
@@ -330,7 +509,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound, "{\"message\":\"Cannot GET /maps/temporary/by-path\"}")
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Scanned, Is.EqualTo(1));
         Assert.That(report.ReclaimedOrphans, Is.Zero);
@@ -348,7 +527,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1, FileA, fileState))
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.ReclaimedOrphans, Is.Zero);
         Assert.That(report.Failed, Is.EqualTo(1));
@@ -365,7 +544,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Scanned, Is.EqualTo(2));
         Assert.That(report.Failed, Is.EqualTo(1));
@@ -380,7 +559,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.BadGateway, "<html>502</html>");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Scanned, Is.Zero);
         Assert.That(report.Failed, Is.EqualTo(1));
@@ -398,7 +577,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
 
-        var report = await Sweep(handler).RunOnceAsync(Now, CancellationToken.None);
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
 
         Assert.That(report.Scanned, Is.EqualTo(2));
         Assert.That(report.Failed, Is.EqualTo(1));
@@ -434,7 +613,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
 
                 return ScriptedHttpHandler.Json(HttpStatusCode.OK, Items());
             });
-        var sweep = Sweep(handler);
+        var sweep = CreateSweep(handler);
 
         var first = Task.Run(() => sweep.RunOnceAsync(Now, CancellationToken.None));
         await firstInListing.Task.WaitAsync(HangGuard);
@@ -461,7 +640,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             })
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":1}}");
-        var sweep = Sweep(handler);
+        var sweep = CreateSweep(handler);
 
         Assert.CatchAsync<OperationCanceledException>(() => sweep.RunOnceAsync(Now, cancellation.Token));
         Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.Zero, "nothing after the cancellation");
@@ -474,7 +653,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     public void RunOnceAsync_RequiresAUtcClock()
     {
         // A local or unspecified DateTime would shift the TTL boundary by the server's zone.
-        var sweep = Sweep(EmptyReconciliation());
+        var sweep = CreateSweep(EmptyReconciliation());
 
         Assert.ThrowsAsync<ArgumentException>(() => sweep.RunOnceAsync(new DateTime(2026, 9, 14, 3, 0, 0, DateTimeKind.Unspecified), CancellationToken.None));
         Assert.ThrowsAsync<ArgumentException>(() => sweep.RunOnceAsync(new DateTime(2026, 9, 14, 3, 0, 0, DateTimeKind.Local), CancellationToken.None));
@@ -491,7 +670,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, FileDeleted, HttpStatusCode.OK, "{\"map\":{\"id\":1}}");
 
-        await Sweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+        await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
 
         var summary = logs.Lines().Single(l => l.Contains("Temporary map sweep finished"));
         Assert.That(summary, Does.StartWith("Information"));
@@ -552,17 +731,5 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
         return _ => remaining.Count > 0
             ? ScriptedHttpHandler.Json(HttpStatusCode.OK, remaining.Dequeue())
             : throw new InvalidOperationException("the sweep asked for more pages than the test scripted");
-    }
-
-    private TemporaryMapExpirySweep Sweep(ScriptedHttpHandler handler, ILogger<TemporaryMapExpirySweep> logger = null)
-    {
-        var factory = new ScriptedHttpHandler.Factory(handler);
-        return new TemporaryMapExpirySweep(
-            new MatchmakingServiceClient(factory),
-            new UpdateServiceClient(factory),
-            logger ?? NullLogger<TemporaryMapExpirySweep>.Instance)
-        {
-            SpoolDirectory = SpoolDirectory,
-        };
     }
 }

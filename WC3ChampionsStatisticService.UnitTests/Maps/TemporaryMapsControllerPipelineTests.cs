@@ -296,6 +296,7 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
                         provider.GetRequiredService<MatchmakingServiceClient>(),
                         provider.GetRequiredService<UpdateServiceClient>(),
                         provider.GetRequiredService<MintRateLimiter>(),
+                        provider.GetRequiredService<TemporaryMapFileKeyLock>(),
                         provider.GetRequiredService<ILogger<TemporaryMapUploadService>>())
                     {
                         SpoolDirectory = spoolDirectory,

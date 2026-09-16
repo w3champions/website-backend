@@ -19,6 +19,11 @@ public static class MapServiceExtensions
         // Transient and traced like the other action filters registered in Program.cs.
         services.AddInterceptedTransient<BearerRequiresPlayerAuthFilter>();
 
+        // The per-fileKey lock (R-I1/S-H1, S6-M1). ONE instance per process is load-bearing: the upload service and the
+        // expiry sweep serialise every store, record write, probe and delete of one fileKey on it. Plain AddSingleton
+        // like MintRateLimiter: infra state, not a traced service.
+        services.AddSingleton<TemporaryMapFileKeyLock>();
+
         // The §6.3 orchestration, next to the singleton clients it drives.
         services.AddInterceptedSingleton<TemporaryMapUploadService>();
 

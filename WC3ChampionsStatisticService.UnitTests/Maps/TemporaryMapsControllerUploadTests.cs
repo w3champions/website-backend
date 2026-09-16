@@ -432,10 +432,9 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         var factory = new ScriptedHttpHandler.Factory(handler);
         var matchmaking = new MatchmakingServiceClient(factory);
         var rateLimiter = limiter ?? new MintRateLimiter();
-        var service = new TemporaryMapUploadService(matchmaking, new UpdateServiceClient(factory), rateLimiter, NullLogger<TemporaryMapUploadService>.Instance)
+        var service = new TemporaryMapUploadService(matchmaking, new UpdateServiceClient(factory), rateLimiter, FileKeyLock, NullLogger<TemporaryMapUploadService>.Instance)
         {
             SpoolDirectory = spoolDirectory ?? SpoolDirectory,
-            FileKeyLock = FileKeyLock,
             WaitAsync = _ => Task.CompletedTask,
         };
         var controller = new TemporaryMapsController(service, matchmaking, rateLimiter, Gate, logger ?? NullLogger<TemporaryMapsController>.Instance)

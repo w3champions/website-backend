@@ -377,7 +377,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         // One limiter instance for the controller and the upload service, exactly as Program.cs registers it.
         var rateLimiter = limiter ?? new MintRateLimiter();
         var controller = new TemporaryMapsController(
-            new TemporaryMapUploadService(matchmaking, new UpdateServiceClient(factory), rateLimiter, NullLogger<TemporaryMapUploadService>.Instance)
+            new TemporaryMapUploadService(matchmaking, new UpdateServiceClient(factory), rateLimiter, FileKeyLock, NullLogger<TemporaryMapUploadService>.Instance)
             {
                 SpoolDirectory = SpoolDirectory,
             },

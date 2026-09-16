@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -201,10 +202,10 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
             new MatchmakingServiceClient(factory),
             new UpdateServiceClient(factory),
             limiter ?? new MintRateLimiter(),
+            FileKeyLock,
             logger ?? NullLogger<TemporaryMapUploadService>.Instance)
         {
             SpoolDirectory = SpoolDirectory,
-            FileKeyLock = FileKeyLock,
             WaitAsync = waitAsync ?? (delay =>
             {
                 CompensationWaits.Add(delay);
@@ -212,6 +213,43 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
             }),
         };
     }
+
+    /// <summary>
+    /// The sweep over the real clients on <paramref name="handler"/>, purging this test's private spool directory and
+    /// sharing the test's <see cref="FileKeyLock"/> with every service the test creates, as one process does.
+    /// </summary>
+    private protected TemporaryMapExpirySweep CreateSweep(
+        ScriptedHttpHandler handler,
+        ILogger<TemporaryMapExpirySweep> logger = null,
+        Func<string, IEnumerable<string>> enumerateSpoolFiles = null)
+    {
+        var factory = new ScriptedHttpHandler.Factory(handler);
+        return new TemporaryMapExpirySweep(
+            new MatchmakingServiceClient(factory),
+            new UpdateServiceClient(factory),
+            FileKeyLock,
+            logger ?? NullLogger<TemporaryMapExpirySweep>.Instance)
+        {
+            SpoolDirectory = SpoolDirectory,
+            EnumerateSpoolFiles = enumerateSpoolFiles ?? Directory.EnumerateFiles,
+        };
+    }
+
+    /// <summary>A spool file in this test's directory, last written at <paramref name="lastWriteUtc"/>.</summary>
+    protected string PlantSpoolFile(string name, DateTime lastWriteUtc)
+    {
+        Directory.CreateDirectory(SpoolDirectory);
+        var path = Path.Combine(SpoolDirectory, name + TemporaryMapUploadReader.SpoolFileExtension);
+        File.WriteAllBytes(path, [1, 2, 3]);
+        File.SetLastWriteTimeUtc(path, lastWriteUtc);
+        return path;
+    }
+
+    /// <summary>A handler on which the sweep has nothing to do: no expired map and no stored file.</summary>
+    private protected static ScriptedHttpHandler NothingToDo()
+        => new ScriptedHttpHandler()
+            .On(HttpMethod.Get, "/maps/temporary/expired", HttpStatusCode.OK, "{\"items\":[]}")
+            .On(HttpMethod.Get, "/api/content/maps/files", HttpStatusCode.OK, "{\"files\":[],\"next\":null}");
 
     protected static string Metadata(
         string metadataSha1 = Sha1, string capture = null, bool withCapture = true, string originalFileNameJson = "Legion TD.w3x")

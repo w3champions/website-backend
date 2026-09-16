@@ -128,7 +128,7 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
     [Test]
     public void TheAdminJobExposesTheSameSweepUnderAStableKey()
     {
-        var job = new TemporaryMapExpiryJob(Sweep(new ScriptedHttpHandler()));
+        var job = new TemporaryMapExpiryJob(CreateSweep(new ScriptedHttpHandler()));
 
         Assert.That(job.Key, Is.EqualTo("temporary-maps-expiry"));
         Assert.That(job.Name, Is.Not.Empty);
@@ -152,7 +152,7 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
                 m.Contains("deleted=1") && m.Contains("reclaimedOrphans=1") && m.Contains("failed=0") && m.Contains("purgedSpoolFiles=0")), null))
             .Returns(Task.CompletedTask);
 
-        await new TemporaryMapExpiryJob(Sweep(handler)).RunAsync(context.Object, CancellationToken.None);
+        await new TemporaryMapExpiryJob(CreateSweep(handler)).RunAsync(context.Object, CancellationToken.None);
 
         context.VerifyAll();
         Assert.That(handler.CountRequests(HttpMethod.Get, Expired), Is.EqualTo(1));
@@ -167,7 +167,7 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
         var handler = new ScriptedHttpHandler();
 
         Assert.CatchAsync<OperationCanceledException>(
-            () => new TemporaryMapExpiryJob(Sweep(handler)).RunAsync(new Mock<IAdminJobContext>(MockBehavior.Strict).Object, cancelled.Token));
+            () => new TemporaryMapExpiryJob(CreateSweep(handler)).RunAsync(new Mock<IAdminJobContext>(MockBehavior.Strict).Object, cancelled.Token));
 
         Assert.That(handler.Requests, Is.Empty);
     }
@@ -187,25 +187,13 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Get, "/api/content/maps/files", HttpStatusCode.OK, "{\"files\":[],\"next\":null}");
     }
 
-    private TemporaryMapExpirySweep Sweep(ScriptedHttpHandler handler)
-    {
-        var factory = new ScriptedHttpHandler.Factory(handler);
-        return new TemporaryMapExpirySweep(
-            new MatchmakingServiceClient(factory),
-            new UpdateServiceClient(factory),
-            NullLogger<TemporaryMapExpirySweep>.Instance)
-        {
-            SpoolDirectory = SpoolDirectory,
-        };
-    }
-
     /// <summary>The service over a sweep of <paramref name="handler"/>; without <paramref name="interval"/>, the production one.</summary>
     private TemporaryMapExpiryService Service(ScriptedHttpHandler handler, TimeSpan? interval = null, ILogger<TemporaryMapExpiryService> logger = null)
     {
         logger ??= NullLogger<TemporaryMapExpiryService>.Instance;
         return interval is { } every
-            ? new TemporaryMapExpiryService(Sweep(handler), logger) { Interval = every }
-            : new TemporaryMapExpiryService(Sweep(handler), logger);
+            ? new TemporaryMapExpiryService(CreateSweep(handler), logger) { Interval = every }
+            : new TemporaryMapExpiryService(CreateSweep(handler), logger);
     }
 
     /// <summary>A sweep with a defect: every run throws.</summary>
@@ -213,6 +201,7 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
         : TemporaryMapExpirySweep(
             new MatchmakingServiceClient(new ScriptedHttpHandler.Factory(handler)),
             new UpdateServiceClient(new ScriptedHttpHandler.Factory(handler)),
+            new TemporaryMapFileKeyLock(),
             NullLogger<TemporaryMapExpirySweep>.Instance)
     {
         private int _calls;
