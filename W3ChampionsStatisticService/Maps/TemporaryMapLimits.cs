@@ -68,6 +68,14 @@ public static class TemporaryMapLimits
     public const int OrphanMinAgeHours = 24;
 
     /// <summary>
+    /// Stored files the reconciliation pass reclaims (deletes) in one run, at most. Reclaiming rests on one
+    /// matchmaking answer per file — "no record claims this path" — so a regression in that lookup would otherwise
+    /// call every stored file unclaimed and delete all of them in one run. Past the cap, candidates are counted and
+    /// left for the next run (a rate bound, never a skip) and the run ends with one Error line.
+    /// </summary>
+    public const int MaxReclaimsPerRun = 25;
+
+    /// <summary>
     /// A spool file in <see cref="TempUploadDir"/> not written for this long was left behind by a crash or restart (a live
     /// upload writes continuously and finishes within minutes) and is purged by the expiry sweep (Task 2 L2).
     /// </summary>

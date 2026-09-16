@@ -145,11 +145,13 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
             .On(HttpMethod.Post, "/file-deleted", HttpStatusCode.OK, "{\"map\":{\"id\":1}}")
             .On(HttpMethod.Get, "/api/content/maps/files", HttpStatusCode.OK,
                 "{\"files\":[{\"filePath\":\"W3Champions/CustomGames/c-33333333.w3x\"}],\"next\":null}")
+            .On(r => r.Method == HttpMethod.Get && r.RequestUri!.PathAndQuery.Contains("/maps/temporary/by-path?path=") && r.RequestUri.Query.Contains("b-22222222"),
+                _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, "{\"map\":{\"id\":1,\"path\":\"" + FileB + "\",\"fileState\":\"present\",\"lastHostedAt\":0}}"))
             .On(HttpMethod.Get, "/maps/temporary/by-path", HttpStatusCode.NotFound);
         var context = new Mock<IAdminJobContext>(MockBehavior.Strict);
         context.Setup(c => c.AddItems(2));
         context.Setup(c => c.Report(2, 0, It.Is<string>(m =>
-                m.Contains("deleted=1") && m.Contains("reclaimedOrphans=1") && m.Contains("failed=0") && m.Contains("purgedSpoolFiles=0")), null))
+                m.Contains("deleted=1") && m.Contains("reclaimedOrphans=1") && m.Contains("deferred=0") && m.Contains("failed=0") && m.Contains("purgedSpoolFiles=0")), null))
             .Returns(Task.CompletedTask);
 
         await new TemporaryMapExpiryJob(CreateSweep(handler)).RunAsync(context.Object, CancellationToken.None);

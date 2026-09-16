@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using W3C.Contracts.Matchmaking;
 using W3C.Domain.Maps;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.MatchmakingService.Contracts;
@@ -26,6 +27,12 @@ public class TemporaryMapSweepReport
     /// <summary>Stored files no record claims any more: unclaimed, or claimed by a record that says its file is gone.</summary>
     public int ReclaimedOrphans { get; internal set; }
 
+    /// <summary>
+    /// Reclaim candidates left for the next run because <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> files had
+    /// already been reclaimed. Not failures: nothing went wrong with them, they are merely queued.
+    /// </summary>
+    public int Deferred { get; internal set; }
+
     /// <summary>Per-item failures; they are retried by the next run.</summary>
     public int Failed { get; internal set; }
 
@@ -38,12 +45,15 @@ public class TemporaryMapSweepReport
 /// <list type="number">
 /// <item><b>Expiry</b> — maps whose last game START is older than the TTL: delete the bytes, then mark the record. The
 /// order matters: a record marked deleted while its bytes survive becomes an orphan nobody will ever reclaim by id,
-/// whereas bytes deleted before the mark are simply retried. Batches are listed again while a batch was full and made
-/// progress (the listing has no cursor), and every item is attempted at most once per run (S11).</item>
+/// whereas bytes deleted before the mark are simply retried. Before the bytes go, the record itself is asked about
+/// (by path) and must confirm the expiry; the listing alone never deletes anything. Batches are listed again while a
+/// batch was full and made progress (the listing has no cursor), and every item is attempted at most once per run.</item>
 /// <item><b>Reconciliation</b> — stored CustomGames/ files at least <see cref="TemporaryMapLimits.OrphanMinAgeHours"/>
-/// old that no record claims (a compensation that never completed), or whose record says its file is deleted (a restore
-/// that never completed), are reclaimed. The listing is followed to its end; only a cursor that repeats ends the pass
-/// early (I2).</item>
+/// old that no record claims (a compensation that never completed, or a file another route put under the prefix),
+/// or whose record says its file is deleted (a restore that never completed), are reclaimed — at most
+/// <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> of them per run; the rest are counted, left for the next run
+/// and reported in one Error line. The listing is followed to its end; only a cursor that repeats ends the pass
+/// early.</item>
 /// </list>
 /// Before both, spool files a crash left in the upload directory are purged (Task 2 L2). Per-item failures are counted
 /// and logged, never swallowed, never abort the run and are never given up on: the next run tries them again. Runs are
@@ -103,8 +113,8 @@ public class TemporaryMapExpirySweep(
             await RunReconciliationPass(report, cancellationToken);
 
             _logger.LogInformation(
-                "Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}",
-                report.Scanned, report.Deleted, report.ReclaimedOrphans, report.Failed, report.PurgedSpoolFiles);
+                "Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}",
+                report.Scanned, report.Deleted, report.ReclaimedOrphans, report.Deferred, report.Failed, report.PurgedSpoolFiles);
 
             return report;
         }
@@ -162,7 +172,7 @@ public class TemporaryMapExpirySweep(
                     continue;
                 }
 
-                if (await TryExpire(item, cancellationToken))
+                if (await TryExpire(item, before, cancellationToken))
                 {
                     report.Deleted++;
                     deletedInBatch++;
@@ -180,17 +190,31 @@ public class TemporaryMapExpirySweep(
     }
 
     /// <summary>
-    /// The bytes first, then the record; true once matchmaking accepted the mark. A.5 pins that answer as 200 { map }
-    /// and nothing about the echoed fileState, so the echo is not inspected: a record mm did not flip is listed and
-    /// marked again next run, idempotently.
+    /// The record's own confirmation, then the bytes, then the mark; true once matchmaking accepted the mark. A.5 pins
+    /// that answer as 200 { map } and nothing about the echoed fileState, so the echo is not inspected: a record mm did
+    /// not flip is listed and marked again next run, idempotently.
     /// </summary>
-    private async Task<bool> TryExpire(ExpiredTemporaryMap item, CancellationToken cancellationToken)
+    private async Task<bool> TryExpire(ExpiredTemporaryMap item, long before, CancellationToken cancellationToken)
     {
         try
         {
-            // S6-M1: an upload or restore of this fileKey holds the key from its store to its record write. Waiting comes
-            // before anything is deleted, so a cancelled wait leaves nothing half-done.
+            // An upload or restore of this fileKey holds the key from its store to its record write. Waiting comes
+            // before anything is read or deleted, so the confirmation below is never stale and a cancelled wait leaves
+            // nothing half-done.
             using var fileKeyHeld = await FileKeyLock.AcquireAsync(item.Path, cancellationToken);
+
+            // The expired listing is one matchmaking answer; a listing that ignored `before` (or read it in another
+            // unit) would name every temporary map. So before its bytes go, the record is asked about by path and must
+            // be the very record, present, last hosted before the boundary this run sent. Anything short of that is the
+            // item's failure, retried next run; the path is rendered only when it has the expected shape.
+            var claim = await _matchmakingServiceClient.GetTemporaryMapByPath(item.Path, cancellationToken);
+            var refusal = ExpiryRefusalOf(claim, item, before);
+            if (refusal != null)
+            {
+                _logger.LogWarning("Expired temporary map {MapId} at {FileKey} was not confirmed by its record ({Refusal}); not deleted, retrying next run",
+                    item.Id, LoggablePath(item.Path), refusal);
+                return false;
+            }
 
             // Idempotent: update-service answers 204 whether or not the file was there, so a run that deleted the bytes
             // and then failed to mark the record simply does both again next time.
@@ -211,9 +235,55 @@ public class TemporaryMapExpirySweep(
         }
     }
 
+    /// <summary>
+    /// Why the by-path answer does not confirm <paramref name="item"/> as expired, or null when it does. Every reason is
+    /// a fixed phrase plus numbers matchmaking already published in the listing: never a proof, never a free string.
+    /// </summary>
+    private static string ExpiryRefusalOf(MapContract claim, ExpiredTemporaryMap item, long before)
+    {
+        if (claim == null)
+        {
+            return "no record claims the path";
+        }
+
+        if (claim.Id != item.Id)
+        {
+            return $"the path is claimed by temporary map {claim.Id}";
+        }
+
+        if (!string.Equals(claim.Path, item.Path, StringComparison.Ordinal))
+        {
+            return "the record names another path";
+        }
+
+        if (!string.Equals(claim.FileState, TemporaryMapFileStates.Present, StringComparison.Ordinal))
+        {
+            return $"the record's file is {LoggableFileState(claim.FileState)}";
+        }
+
+        if (claim.LastHostedAt is not long lastHostedAt)
+        {
+            return "the record has no lastHostedAt";
+        }
+
+        return lastHostedAt < before ? null : $"the record was last hosted at {lastHostedAt}, not before {before}";
+    }
+
     // ---- Reconciliation ----------------------------------------------------------------------
 
     private async Task RunReconciliationPass(TemporaryMapSweepReport report, CancellationToken cancellationToken)
+    {
+        await ReconcileListing(report, cancellationToken);
+        if (report.Deferred > 0)
+        {
+            // Loud on purpose: a backlog this size is either an outage's leftovers, which drain at the cap per run, or a
+            // by-path regression calling claimed files unclaimed, which the cap has bounded. Either way a human looks.
+            _logger.LogError("Temporary map reconciliation reclaimed the run's cap of {MaxReclaimsPerRun} files and deferred {Deferred} more candidates to the next run",
+                TemporaryMapLimits.MaxReclaimsPerRun, report.Deferred);
+        }
+    }
+
+    private async Task ReconcileListing(TemporaryMapSweepReport report, CancellationToken cancellationToken)
     {
         string after = null;
         var cursors = new HashSet<string>(StringComparer.Ordinal);
@@ -290,18 +360,22 @@ public class TemporaryMapExpirySweep(
 
     /// <summary>
     /// Keeps a file a present record claims; reclaims one that no record claims (strict 404 {}) or whose record says its
-    /// file is deleted and names this very path (S-I6, S6-I1); anything else — another fileState, a deleted record that
-    /// names another path, a 404 that is not the empty object, a timeout, a transport error — is this file's failure,
-    /// with no delete, retried next run (I3/D2). Probe and delete happen under the fileKey lock (S6-M1): probed before
-    /// an upload's record write, the answer would be "unclaimed" and the delete would take the upload's bytes.
+    /// file is deleted and names this very path; anything else — another fileState, a deleted record that names
+    /// another path, a 404 that is not the empty object, a timeout, a transport error — is this file's failure, with no
+    /// delete, retried next run. Probe and delete happen under the fileKey lock: probed before an upload's record
+    /// write, the answer would be "unclaimed" and the delete would take the upload's bytes. Once the run has reclaimed
+    /// <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> files, a further candidate is deferred instead.
     /// </summary>
     private async Task ReconcileFile(string filePath, TemporaryMapSweepReport report, CancellationToken cancellationToken)
     {
-        if (!TemporaryMapKeys.IsFilePath(filePath))
+        if (!TemporaryMapNaming.IsNormalisedFileKey(filePath))
         {
-            // The listing was asked for CustomGames/ only; anything else is update-service drift and not a candidate.
+            // The listing was asked for CustomGames/ only, and this service spells every file it stores one way. A path
+            // spelled otherwise — outside the prefix, in a subdirectory, without the sha1 suffix, or in a Unicode form
+            // this service never emits — is not a candidate: the by-path answer for a spelling matchmaking never saw
+            // would be "unclaimed" whatever the truth. Counted, warned, left alone.
             report.Failed++;
-            _logger.LogWarning("Stored map listing returned {FileKey}, which is not a temporary map file; not reclaimed", LoggablePath(filePath));
+            _logger.LogWarning("Stored map listing returned {FileKey}, which is not a temporary map file as this service spells them; not reclaimed", LoggablePath(filePath));
             return;
         }
 
@@ -311,8 +385,11 @@ public class TemporaryMapExpirySweep(
             var claim = await _matchmakingServiceClient.GetTemporaryMapByPath(filePath, cancellationToken);
             if (claim == null)
             {
-                await _updateServiceClient.DeleteMapFileByPathAsync(filePath, cancellationToken);
-                report.ReclaimedOrphans++;
+                if (!await TryReclaim(filePath, report, cancellationToken))
+                {
+                    return;
+                }
+
                 _logger.LogInformation("ORPHAN_RECLAIMED {FileKey}: no temporary map claims it", LoggablePath(filePath));
                 return;
             }
@@ -322,14 +399,17 @@ public class TemporaryMapExpirySweep(
                 case TemporaryMapFileStates.Present:
                     return;
                 case TemporaryMapFileStates.Deleted when !string.Equals(claim.Path, filePath, StringComparison.Ordinal):
-                    // Reached by an inexact lookup: the record is about another file (S6-I1, the S-L2 precedent).
+                    // Reached by an inexact lookup: the record is about another file.
                     report.Failed++;
                     _logger.LogWarning("Temporary map {MapId} answered for {FileKey} but names {RecordFileKey}; not reclaimed, retrying next run",
                         claim.Id, LoggablePath(filePath), LoggablePath(claim.Path));
                     return;
                 case TemporaryMapFileStates.Deleted:
-                    await _updateServiceClient.DeleteMapFileByPathAsync(filePath, cancellationToken);
-                    report.ReclaimedOrphans++;
+                    if (!await TryReclaim(filePath, report, cancellationToken))
+                    {
+                        return;
+                    }
+
                     _logger.LogInformation("ORPHAN_RECLAIMED {FileKey}: temporary map {MapId} says its file is deleted", LoggablePath(filePath), claim.Id);
                     return;
                 default:
@@ -348,6 +428,23 @@ public class TemporaryMapExpirySweep(
             report.Failed++;
             _logger.LogWarning(ex, "Failed to reconcile stored map file {FileKey}; retrying next run", LoggablePath(filePath));
         }
+    }
+
+    /// <summary>
+    /// Deletes the file unless this run has already reclaimed <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/>, in
+    /// which case the candidate is counted as deferred and kept; true when the file is gone.
+    /// </summary>
+    private async Task<bool> TryReclaim(string filePath, TemporaryMapSweepReport report, CancellationToken cancellationToken)
+    {
+        if (report.ReclaimedOrphans >= TemporaryMapLimits.MaxReclaimsPerRun)
+        {
+            report.Deferred++;
+            return false;
+        }
+
+        await _updateServiceClient.DeleteMapFileByPathAsync(filePath, cancellationToken);
+        report.ReclaimedOrphans++;
+        return true;
     }
 
     // ---- Spool purge -------------------------------------------------------------------------

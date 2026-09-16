@@ -268,23 +268,44 @@ rather than double-processing), preceded by a spool cleanup:
    never blocks the rest.
 2. **Expiry pass.** Lists matchmaking records whose last game start is older than `TtlDays` (30) in
    batches of `SweepBatchSize` (200; the listing has no cursor — a full batch that made progress is
-   re-listed, since deleting/marking shrinks what the next listing returns). For each: **delete the bytes
-   at update-service first, then mark the record deleted** — this order matters, because a record marked
-   deleted while its bytes survive would be an orphan nobody could ever reclaim by id, whereas bytes
-   deleted before the mark are simply retried on failure. Every item is attempted at most once per run.
-   Both the delete and the mark for one fileKey run under the same per-fileKey lock the upload service
-   uses, so the sweep can never take bytes an in-flight upload just stored.
+   re-listed, since deleting/marking shrinks what the next listing returns). For each item, under the
+   per-fileKey lock: **ask matchmaking about the path itself** (`GET /maps/temporary/by-path`) and require
+   that answer to be the very record (same id, same path), `fileState: present`, with a `lastHostedAt`
+   strictly before the `before` boundary this run sent — the listing is one matchmaking answer, and a
+   listing that ignored `before` (or read it in another unit) would otherwise name every temporary map;
+   any other answer (no record, another record, another fileState, no or too-recent `lastHostedAt`, a
+   failed probe) is that item's failure: one Warning, no delete, no mark, retried next run. Only then
+   **delete the bytes at update-service first, then mark the record deleted** — this order matters, because
+   a record marked deleted while its bytes survive would be an orphan nobody could ever reclaim by id,
+   whereas bytes deleted before the mark are simply retried on failure. Every item is attempted at most
+   once per run. The probe, the delete and the mark for one fileKey all run under the same per-fileKey
+   lock the upload service uses, so the sweep can never take bytes an in-flight upload just stored.
 3. **Reconciliation pass.** Lists update-service's stored `W3Champions/CustomGames/` files at least
    `OrphanMinAgeHours` (24h) old (so a genuinely in-flight upload is never a candidate) and follows the
    listing to its end — there is **no page cap** (a fixed cap would silently stop examining files past
    some point while logging progress, which the "never drop failed work" rule forbids); only a
    non-advancing/repeated cursor, or a page that repeats only rows already scanned this run, ends the pass
-   early (logged as a failure, retried by the next run). For each file: **reclaimed** (the bytes are
+   early (logged as a failure, retried by the next run). A listed path is a candidate only when it is
+   spelled exactly as this service builds fileKeys — one segment under the prefix, `<stem>-<8 lowercase
+   hex>.w3x|.w3m`, in Unicode normalisation form C; a path spelled otherwise is a failure of the run (one
+   Warning, never probed, never deleted), because a by-path answer for a spelling matchmaking never saw
+   would read "unclaimed" whatever the truth. For each candidate: **reclaimed** (the bytes are
    deleted) when no matchmaking record claims the path (a strict `404 {}` by-path answer) or when the
    record that does claim it says `fileState: deleted` **and names this very path**; kept when the
    claiming record is `present`; anything else (another fileState, a `deleted` record naming a *different*
    path, a non-empty-body 404, a transport failure) is that file's failure — no delete, retried next run.
-   The probe and the delete for one file also run under the per-fileKey lock.
+   The probe and the delete for one file also run under the per-fileKey lock. **At most
+   `MaxReclaimsPerRun` (25) files are reclaimed per run**: once that many are gone, every further candidate
+   is still examined but counted as *deferred* rather than deleted, and the pass ends with one Error line
+   naming the cap and the deferred count. This is a rate bound, not a skip — nothing is dropped, a genuine
+   backlog drains at 25 per run, and a by-path regression that called every file unclaimed could take at
+   most 25 files before the Error line brings a human. (Deferred candidates are not failures and are not in
+   `failed`.)
+
+**The prefix is reserved.** `W3Champions/CustomGames/` belongs to temporary maps. Any file placed there by
+another route — for instance the admin map-file passthrough — has no matchmaking temporary-map record
+claiming that path, so the reconciliation pass reclaims it once it is older than 24h. Permanent pool maps
+live outside the prefix and are never listed.
 
 Both passes never give up on a failed item: the owner's rule is that failed work is retried on the next
 run, forever — there is no attempt budget and nothing is ever dead-lettered. Every per-item failure is
@@ -300,17 +321,19 @@ manual run queues behind an in-progress daily run rather than double-processing.
 The admin job runner has **no separate failure column** — `IAdminJobContext.Report(current, total,
 message)`'s `total` is "zero if unknown", not a failure count. The job reports
 `items = scanned + deleted` and puts everything else in the message:
-`scanned=<n> deleted=<n> reclaimedOrphans=<n> purgedSpoolFiles=<n> failed=<n>`. The sweep's own per-item
-failures are also each logged individually as the run happens.
+`scanned=<n> deleted=<n> reclaimedOrphans=<n> deferred=<n> purgedSpoolFiles=<n> failed=<n>`. The sweep's
+own per-item failures are also each logged individually as the run happens.
 
 **Sweep summary log line** (Information, once per run):
-`Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}`.
+`Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}`.
 A reclaim is additionally logged at Information as `ORPHAN_RECLAIMED {FileKey}: no temporary map claims
 it` (unclaimed path) or `ORPHAN_RECLAIMED {FileKey}: temporary map {MapId} says its file is deleted`
 (claimed by a `deleted` record). An orphan the *compensation* loop could not clean up immediately (a
 failed create/restore whose delete retries all failed) is logged as `ORPHAN temporary map file left in
 update-service at {FileKey}` (Warning) at the time it happens — the next reconciliation pass, at least 24h
-later, reclaims it through the strict by-path check above.
+later, reclaims it through the strict by-path check above. When the reclaim cap was hit the run also logs
+`Temporary map reconciliation reclaimed the run's cap of {MaxReclaimsPerRun} files and deferred {Deferred}
+more candidates to the next run` (Error, once per run).
 
 No metrics are emitted for the sweep — the summary log line is the operational signal.
 

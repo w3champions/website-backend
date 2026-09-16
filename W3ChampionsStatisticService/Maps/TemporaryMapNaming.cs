@@ -133,6 +133,30 @@ public static class TemporaryMapNaming
                && TemporaryMapKeys.IsLowercaseHex(stemAndSuffix[(dash + 1)..], Sha1SuffixLength);
     }
 
+    /// <summary>
+    /// The shape a stored file must have before the sweep reclaims it: <see cref="IsFileKey"/> and spelled in Unicode
+    /// normalisation form C, which is how <see cref="Sanitise"/> spells every stem. The sweep looks a listed path up by
+    /// that very spelling; a spelling this service never produced (a decomposed form of a name it stored composed) is
+    /// where an answer of "unclaimed" is least trustworthy, so such a file is refused rather than reclaimed. A path
+    /// that is not valid Unicode (an unpaired surrogate) cannot be tested and is refused too.
+    /// </summary>
+    public static bool IsNormalisedFileKey(string path)
+    {
+        if (!IsFileKey(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            return path.IsNormalized(NormalizationForm.FormC);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>true when <paramref name="value"/> holds a C0 or C1 control character (U+0000-U+001F, U+007F-U+009F).</summary>
     public static bool ContainsControlCharacter(string value)
     {

@@ -35,6 +35,6 @@ public class TemporaryMapExpiryJob(TemporaryMapExpirySweep sweep) : IAdminJob
             items,
             0,
             $"scanned={report.Scanned} deleted={report.Deleted} reclaimedOrphans={report.ReclaimedOrphans} " +
-            $"purgedSpoolFiles={report.PurgedSpoolFiles} failed={report.Failed}");
+            $"deferred={report.Deferred} purgedSpoolFiles={report.PurgedSpoolFiles} failed={report.Failed}");
     }
 }
