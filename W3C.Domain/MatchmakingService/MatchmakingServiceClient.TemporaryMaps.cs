@@ -99,7 +99,10 @@ public partial class MatchmakingServiceClient
         return await ReadMap(response, cancellationToken);
     }
 
-    /// <summary>One page of expired records. A page without its items array throws rather than reading as empty.</summary>
+    /// <summary>
+    /// One page of expired records. A page without its items array, or with a null row (no record, yet the sweep
+    /// would act on it), throws rather than reading as empty — the same rule as the map listings.
+    /// </summary>
     public async Task<ExpiredTemporaryMapsResponse> GetExpiredTemporaryMaps(
         long beforeEpochMs, int limit, CancellationToken cancellationToken = default)
     {
@@ -107,7 +110,8 @@ public partial class MatchmakingServiceClient
                   $"?before={beforeEpochMs.ToString(CultureInfo.InvariantCulture)}&limit={limit.ToString(CultureInfo.InvariantCulture)}";
         var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
         if (!response.IsSuccessStatusCode) await HandleMMError(response, cancellationToken);
-        return await ReadContractBody<ExpiredTemporaryMapsResponse>(response, cancellationToken);
+        var page = await ReadContractBody<ExpiredTemporaryMapsResponse>(response, cancellationToken);
+        return page.Items.TrueForAll(row => row is not null) ? page : throw UpstreamContract.Violation(response.StatusCode, ServiceName);
     }
 
     /// <summary>

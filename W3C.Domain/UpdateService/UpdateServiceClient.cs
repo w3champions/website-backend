@@ -162,8 +162,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     }
 
     /// <summary>
-    /// Lists stored files under a prefix, oldest-first, for orphan reconciliation. A page without its files array
-    /// throws rather than reading as empty.
+    /// Lists stored files under a prefix, oldest-first, for orphan reconciliation. A page without its files array,
+    /// or with a null row (no file, yet the sweep would act on it), throws rather than reading as empty.
     /// </summary>
     public async Task<MapFileListingResponse> ListMapFilesAsync(
         string prefix, int olderThanHours, string after, int limit, CancellationToken cancellationToken)
@@ -189,7 +189,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
             ThrowUpstream(content, response.StatusCode);
         }
 
-        return UpstreamContract.Deserialize<MapFileListingResponse>(content, response.StatusCode, ServiceName);
+        var page = UpstreamContract.Deserialize<MapFileListingResponse>(content, response.StatusCode, ServiceName);
+        return page.Files.TrueForAll(row => row is not null) ? page : throw UpstreamContract.Violation(response.StatusCode, ServiceName);
     }
 
     private static void RequireTemporaryMapFilePath(string filePath)
