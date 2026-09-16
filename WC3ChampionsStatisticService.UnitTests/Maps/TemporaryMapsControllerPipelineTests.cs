@@ -19,6 +19,7 @@ using NUnit.Framework;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Maps;
+using W3ChampionsStatisticService.Services.BackgroundTasks;
 using W3ChampionsStatisticService.Sessions;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using WC3ChampionsStatisticService.Tests.WebApi;
@@ -286,6 +287,9 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
             services =>
             {
                 AddHostDoubles(services, handler, activitySource, authService.Object).AddMapServices();
+                // The daily sweep is not under test here: started with the host it would call the scripted handler
+                // (every round trip asserts what the handler saw) and purge the machine-wide spool directory.
+                services.Remove(services.Single(d => d.ImplementationType == typeof(TemporaryMapExpiryService)));
                 if (spoolDirectory != null)
                 {
                     services.AddSingleton(provider => new TemporaryMapUploadService(

@@ -48,8 +48,8 @@ public sealed class TemporaryMapUpload(
 
     /// <summary>
     /// Deletes a spool file. Never throws: it runs on failure paths whose original exception must win.
-    /// Nothing else reclaims the spool directory, so a failed delete is logged. The path is a random
-    /// file name and carries no secret.
+    /// A failed delete is logged; the expiry sweep purges what is left behind once it is a day old. The
+    /// path is a random file name and carries no secret.
     /// </summary>
     internal static void DeleteTempFile(string path)
     {

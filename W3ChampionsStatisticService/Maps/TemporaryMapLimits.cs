@@ -42,8 +42,17 @@ public static class TemporaryMapLimits
     public const int SweepIntervalHours = 24;
     public const int SweepBatchSize = 200;
 
-    /// <summary>A CustomGames/ file younger than this is never treated as an orphan: an upload may be in flight.</summary>
+    /// <summary>
+    /// A CustomGames/ file younger than this is never treated as an orphan: an upload may be in flight. The reconciliation
+    /// pass asks update-service for files at least this old (its <c>olderThanHours</c>) and nothing younger is ever deleted.
+    /// </summary>
     public const int OrphanMinAgeHours = 24;
+
+    /// <summary>
+    /// A spool file in <see cref="TempUploadDir"/> not written for this long was left behind by a crash or restart (a live
+    /// upload writes continuously and finishes within minutes) and is purged by the expiry sweep (Task 2 L2).
+    /// </summary>
+    public const int StaleSpoolFileAgeHours = 24;
 
     public const int MaxSanitisedNameLength = 100;
 
@@ -62,6 +71,9 @@ public static class TemporaryMapLimits
     public static readonly TimeSpan UploadQuotaWindow = TimeSpan.FromHours(1);
     public static readonly TimeSpan PrecheckQuotaWindow = TimeSpan.FromMinutes(1);
 
-    /// <summary>Spool directory for in-flight uploads. Files here are deleted in a finally block.</summary>
+    /// <summary>
+    /// Spool directory for in-flight uploads. Files here are deleted in a finally block; what a crash leaves behind is
+    /// purged by <see cref="TemporaryMapExpirySweep"/> once it is <see cref="StaleSpoolFileAgeHours"/> old.
+    /// </summary>
     public static string TempUploadDir => Path.Combine(Path.GetTempPath(), "w3c-map-uploads");
 }

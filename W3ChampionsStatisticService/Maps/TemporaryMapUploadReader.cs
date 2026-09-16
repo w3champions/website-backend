@@ -23,6 +23,9 @@ public static class TemporaryMapUploadReader
     /// <summary>RFC 2046 §5.1.1: a boundary is 1 to 70 characters.</summary>
     private const int MaxBoundaryLength = 70;
 
+    /// <summary>Every spool file is a random name with this extension; the expiry sweep purges stale ones by it.</summary>
+    internal const string SpoolFileExtension = ".tmp";
+
     private const UnixFileMode OwnerOnlyDirectoryMode = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
     private const UnixFileMode OwnerOnlyFileMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
 
@@ -121,7 +124,7 @@ public static class TemporaryMapUploadReader
             throw Malformed();
         }
 
-        var tempFilePath = Path.Combine(PrepareSpoolDirectory(spoolDirectory), $"{Guid.NewGuid():N}.tmp");
+        var tempFilePath = Path.Combine(PrepareSpoolDirectory(spoolDirectory), $"{Guid.NewGuid():N}{SpoolFileExtension}");
 
         try
         {

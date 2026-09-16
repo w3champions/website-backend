@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using W3ChampionsStatisticService.Extensions;
+using W3ChampionsStatisticService.Services.BackgroundTasks;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Maps;
@@ -24,6 +25,13 @@ public static class MapServiceExtensions
         // In-flight upload bounds (D7 + the process-wide cap). ONE instance per process is load-bearing, and plain
         // AddSingleton (no tracing interception) like MintRateLimiter: infra state, not a traced service.
         services.AddSingleton<TemporaryMapUploadGate>();
+
+        // The §3.5 expiry and reconciliation sweep. ONE instance per process: its run lock is what keeps the daily run
+        // and an admin-triggered run (TemporaryMapExpiryJob, registered with the other jobs in AddAdminJobs) apart.
+        services.AddInterceptedSingleton<TemporaryMapExpirySweep>();
+
+        // The daily trigger of that sweep, next to the other BackgroundServices Program.cs hosts.
+        services.AddHostedService<TemporaryMapExpiryService>();
 
         return services;
     }

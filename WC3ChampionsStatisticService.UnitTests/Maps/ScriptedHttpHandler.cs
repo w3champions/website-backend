@@ -16,7 +16,7 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 /// </summary>
 internal sealed class ScriptedHttpHandler : HttpMessageHandler
 {
-    private readonly List<(Func<HttpRequestMessage, bool> Match, Func<HttpRequestMessage, HttpResponseMessage> Respond)> _routes = [];
+    private readonly List<(Func<HttpRequestMessage, bool> Match, Func<HttpRequestMessage, Task<HttpResponseMessage>> Respond)> _routes = [];
 
     public List<HttpRequestMessage> Requests { get; } = [];
 
@@ -29,6 +29,15 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
     public ScriptedHttpHandler On(
         Func<HttpRequestMessage, bool> match,
         Func<HttpRequestMessage, HttpResponseMessage> respond)
+        => OnAsync(match, r => Task.FromResult(respond(r)));
+
+    /// <summary>
+    /// A responder that awaits: the one way to hold a request in flight without blocking the caller's thread, which a
+    /// BackgroundService's StartAsync needs (it runs ExecuteAsync synchronously up to its first real await).
+    /// </summary>
+    public ScriptedHttpHandler OnAsync(
+        Func<HttpRequestMessage, bool> match,
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> respond)
     {
         _routes.Add((match, respond));
         return this;
@@ -80,7 +89,7 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
         {
             if (route.Match(request))
             {
-                return route.Respond(request);
+                return await route.Respond(request);
             }
         }
 
