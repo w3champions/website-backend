@@ -5,10 +5,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -58,6 +62,36 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(body.Properties().Select(p => p.Name), Is.EqualTo(new[] { "code" }));
         Assert.That(body["code"]!.Value<string>(), Is.EqualTo("FILE_TOO_LARGE"));
         Assert.That(handler.Requests, Is.Empty, "no byte was spooled, so no upstream was asked");
+        Assert.That(host.Services.GetRequiredService<TemporaryMapUploadGate>().InFlight, Is.Zero, "the slot was released");
+    }
+
+    [Test]
+    public async Task ABodyAboveTheServersOwnCeiling_IsReadUnderTheRaisedLimit_AndIsNot413()
+    {
+        // [TemporaryMapUploadBodyLimit] raises the per-request ceiling to TransportBodyBytes; the server's own limit
+        // (Kestrel's 30,000,000 default in this host, 128 MiB in Program.cs) must not be the one deciding. A real,
+        // well-formed multipart body one MiB above the server's ceiling is streamed from a repeated zero buffer (nothing
+        // large in memory) with Expect: 100-continue, so a 413 — which Kestrel decides against the declared
+        // Content-Length on the reader's first read — would come back cleanly before any byte is sent. Under the
+        // raised limit the whole file reaches the reader and the service's sha1 check answers 400 SHA1_MISMATCH.
+        var handler = new ScriptedHttpHandler();
+        await using var host = await StartHostAsync(handler);
+        var serverCeiling = host.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value.Limits.MaxRequestBodySize!.Value;
+        var fileBytes = serverCeiling + 1024 * 1024;
+        Assert.That(fileBytes, Is.LessThan(TemporaryMapLimits.MaxFileBytes), "the file must be within the feature's own cap");
+        var content = new MultipartFormDataContent(Boundary);
+        content.Add(new StringContent(Metadata(), Encoding.UTF8, "application/json"), "metadata");
+        content.Add(new StreamContent(new ZeroStream(fileBytes)), "mapFile", "upload.bin");
+        var request = new HttpRequestMessage(HttpMethod.Post, "api/maps/temporary") { Content = content };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PlayerToken);
+        request.Headers.ExpectContinue = true;
+
+        var response = await host.Client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "the ceiling was raised, so the body was read in full");
+        var body = JObject.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body["code"]!.Value<string>(), Is.EqualTo("SHA1_MISMATCH"));
+        Assert.That(handler.Requests, Is.Empty, "the sha1 check comes before any upstream call");
         Assert.That(host.Services.GetRequiredService<TemporaryMapUploadGate>().InFlight, Is.Zero, "the slot was released");
     }
 
@@ -138,6 +172,23 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(host.Services.GetRequiredService<TemporaryMapUploadGate>().InFlight, Is.Zero);
     }
 
+    // ---- ApiExplorer, which the Swagger document in Program.cs is built from --------------------
+
+    [Test]
+    public async Task BothRoutes_AreDescribedToApiExplorer()
+    {
+        // Without [ApiController] a controller is invisible to ApiExplorer (and so to the Swagger document Program.cs
+        // publishes) unless it opts in; every other controller of the service is documented, and so must this one be.
+        var handler = new ScriptedHttpHandler();
+        await using var host = await StartHostAsync(handler);
+
+        var described = host.Services.GetRequiredService<IApiDescriptionGroupCollectionProvider>()
+            .ApiDescriptionGroups.Items.SelectMany(group => group.Items)
+            .Select(description => description.HttpMethod + " " + description.RelativePath);
+
+        Assert.That(described, Is.EquivalentTo(new[] { "GET api/maps/temporary/status", "POST api/maps/temporary" }));
+    }
+
     // ---- The auth filter, in front of both routes ---------------------------------------------
 
     [TestCase("GET", "api/maps/temporary/status?proofHash=" + ProofHash)]
@@ -177,6 +228,40 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(response.Content.Headers.ContentType, Is.Null, "no body, so no content type");
         Assert.That(response.Content.Headers.ContentLength, Is.Zero);
         Assert.That(await response.Content.ReadAsStringAsync(), Is.Empty);
+    }
+
+    /// <summary>A read-only stream of <paramref name="length"/> zero bytes; nothing is held in memory.</summary>
+    private sealed class ZeroStream(long length) : Stream
+    {
+        private long _position;
+
+        public override bool CanRead => true;
+        public override bool CanSeek => true;
+        public override bool CanWrite => false;
+        public override long Length => length;
+        public override long Position { get => _position; set => _position = value; }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = (int)Math.Min(count, length - _position);
+            Array.Clear(buffer, offset, read);
+            _position += read;
+            return read;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => _position = origin switch
+        {
+            SeekOrigin.Begin => offset,
+            SeekOrigin.Current => _position + offset,
+            _ => length + offset,
+        };
+
+        public override void Flush()
+        {
+        }
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>

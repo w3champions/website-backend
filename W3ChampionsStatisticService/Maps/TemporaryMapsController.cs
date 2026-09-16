@@ -25,10 +25,12 @@ namespace W3ChampionsStatisticService.Maps;
 /// <para>
 /// Deliberately NOT an [ApiController]: its client-error mapping turns every bare status (the pre-check's 429 and 502,
 /// the upload's spool 500) into a ProblemDetails body, and A.4 says those answers carry nothing. Binding is explicit
-/// ([FromQuery]) and the upload reads its own multipart, so nothing else of the attribute is used.
+/// ([FromQuery]) and the upload reads its own multipart, so nothing else of the attribute is used — except its opt-in
+/// to ApiExplorer, which the Swagger document in Program.cs is built from; [ApiExplorerSettings] restores that.
 /// </para>
 /// <para>NEVER log mapProof or proofHash (design spec §10.3); sha1, map ids, fileKeys and battleTags are fine.</para>
 /// </summary>
+[ApiExplorerSettings(IgnoreApi = false)]
 [Route("api/maps/temporary")]
 [Trace]
 public class TemporaryMapsController(
