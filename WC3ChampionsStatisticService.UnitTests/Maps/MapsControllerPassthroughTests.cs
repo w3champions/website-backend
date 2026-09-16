@@ -143,6 +143,23 @@ public class MapsControllerPassthroughTests
     }
 
     [Test]
+    public void CreateMapFile_CarriesTheSharedTransportBodyLimit_AndNoOtherActionDoes()
+    {
+        // update-service accepts a map file up to TransportBodyBytes; under the global Kestrel ceiling alone this
+        // passthrough would refuse an admin's file between 128 MiB and 256 MiB with a 413 although update-service takes
+        // it. The same resource filter as on the temporary upload raises the ceiling (and sets the data-rate floor) for
+        // this action only: nothing else on the controller streams a body.
+        var actions = typeof(MapsController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName && m.GetCustomAttribute<NonActionAttribute>() == null)
+            .ToArray();
+
+        Assert.That(actions, Has.Length.GreaterThan(1));
+        Assert.That(actions.Where(m => m.GetCustomAttribute<TemporaryMapUploadBodyLimitAttribute>() != null).Select(m => m.Name),
+            Is.EqualTo(new[] { nameof(MapsController.CreateMapFile) }));
+    }
+
+    [Test]
     public void TemporaryMapRoutesAreNotOnTheAdminController()
     {
         Assert.That(typeof(MapsController).GetMethods().Any(m => m.Name.Contains("Temporary")), Is.False,

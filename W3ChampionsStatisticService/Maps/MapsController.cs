@@ -88,10 +88,18 @@ public class MapsController(
     /// by the permission filter) makes MVC bind arguments, and the form value provider would otherwise read the whole
     /// multipart body during binding — buffered, and before the permission filter has run — leaving nothing to forward;
     /// <see cref="DisableFormValueModelBindingAttribute"/> keeps binding off the body, as on the temporary upload.
+    /// <para>
+    /// <see cref="TemporaryMapUploadBodyLimitAttribute"/> applies here exactly as on the temporary upload, both of its
+    /// effects: the per-request ceiling is raised to <see cref="TemporaryMapLimits.TransportBodyBytes"/> — the size
+    /// update-service accepts, so a file between the global Kestrel limit (128 MiB, unchanged elsewhere) and the 256 MiB
+    /// map cap is no longer refused here with a 413 — and the minimum body data rate is set, so a body that stalls
+    /// fails the forward instead of holding the connection. Not <c>[RequestFormLimits]</c>: nothing here form-binds.
+    /// </para>
     /// </summary>
     [HttpPost("{id}/files")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     [DisableFormValueModelBinding]
+    [TemporaryMapUploadBodyLimit]
     public async Task<IActionResult> CreateMapFile([NoTrace] string battleTag)
     {
         try

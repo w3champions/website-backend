@@ -17,7 +17,9 @@ fallback value anywhere) and fans out to the two owners:
 Both temporary-map routes are player routes, not admin routes: any player with a valid JWT may pre-check
 and upload, bounded only by the in-memory quotas and the in-flight gate below. The existing admin routes
 (`MapsController`) are unchanged except that `GET api/maps` now always sends `x-admin-secret` (see
-"`GET api/maps` and `includeTemporary`" below).
+"`GET api/maps` and `includeTemporary`" below) and that the map-file passthrough `POST api/maps/{id}/files`
+shares the upload's per-action transport limit (see "Deployment prerequisites") and forwards the calling
+admin as `uploadedBy`.
 
 ## Routes
 
@@ -134,7 +136,8 @@ nothing, and `RequestAborted` is not cancelled — so the read surfaces as Kestr
 written to the client (an empty result is a `200` with no body), so the action aborts the connection
 instead and answers nothing, exactly as for a client that went away: one Information line is logged, and
 the slot and the partial spool are released — no new status code of this service. The floor applies to
-the upload action only; every other route keeps Kestrel's default.
+the upload action and to the admin map-file passthrough, which carries the same filter (there the failed
+read fails the forward); every other route keeps Kestrel's default.
 
 **Residual.** Eight accounts each sustaining at least 32 KiB/s (≈ 256 KiB/s in total) can still hold all
 eight slots for up to ~2.3 hours per attempt, bounded further by the attempt quota (20 attempts per account
@@ -396,11 +399,13 @@ about the difference between "our disk" and "their service".
 ## Deployment prerequisites (owned by other workstreams)
 
 - **nginx-proxy** must raise `client_max_body_size` to `257M` before website-backend is deployed. website-
-  backend's own per-action ceiling (`[TemporaryMapUploadBodyLimit]`, raised only on the upload action, not
-  globally — the global Kestrel limit elsewhere in this service stays 128 MiB) is
-  `TransportBodyBytes = 269_484_032` bytes (256 MiB file cap + 1 MiB of multipart/header slack). All three
-  numbers (nginx, wb, update-service's own `[RequestSizeLimit]`) must agree; they are not derived from one
-  shared constant, so a future change to any one of them must update the others by hand.
+  backend's own per-action ceiling (`[TemporaryMapUploadBodyLimit]`, raised on the upload action and on the
+  admin map-file passthrough `POST api/maps/{id}/files`, not globally — the global Kestrel limit elsewhere
+  in this service stays 128 MiB) is `TransportBodyBytes = 269_484_032` bytes (256 MiB file cap + 1 MiB of
+  multipart/header slack); the admin passthrough shares that 257 MiB per-action limit because update-service
+  accepts the same size on its map-file route. All three numbers (nginx, wb, update-service's own
+  `[RequestSizeLimit]`) must agree; they are not derived from one shared constant, so a future change to any
+  one of them must update the others by hand.
 - **update-service** must accept `uploadedBy` on the admin map-file passthrough as a **query parameter**
   (not only a form field) and must return `MapProofHash` to `x-admin-secret` callers — these are
   prerequisites of the admin-passthrough path this service already forwards, not something website-backend

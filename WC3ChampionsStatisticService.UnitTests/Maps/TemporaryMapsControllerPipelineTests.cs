@@ -107,8 +107,9 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     public async Task TheUploadAction_RunsUnderTheRaisedBodyLimitAndTheMinimumDataRate_AndTheStatusRouteDoesNot()
     {
         // What Kestrel's per-request features hold once the pipeline has run, recorded by a middleware in front of MVC:
-        // only the upload action carries [TemporaryMapUploadBodyLimit], so only there is the size ceiling raised and the
-        // data-rate floor set; the status route keeps the server's defaults (Kestrel's 240 B/s after 5 s).
+        // of the two temporary-map routes only the upload action carries [TemporaryMapUploadBodyLimit], so only there is
+        // the size ceiling raised and the data-rate floor set; the status route keeps the server's defaults (Kestrel's
+        // 240 B/s after 5 s).
         var observed = new Dictionary<string, (long? MaxBodySize, MinDataRate DataRate)>();
         var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811)));
         await using var host = await StartHostAsync(handler, configureApp: app => app.Use(async (context, next) =>
@@ -301,6 +302,27 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
 
         Assert.That(bodyLength, Is.GreaterThan(0));
         Assert.That(observed["POST /api/maps/7/files"].BytesRead, Is.Zero, "model binding must not consume the body the action forwards");
+    }
+
+    [Test]
+    public async Task TheAdminMapFilePassthrough_RunsUnderTheSharedBodyLimitAndDataRate_AndItsSiblingRouteDoesNot()
+    {
+        // [TemporaryMapUploadBodyLimit] on CreateMapFile: the same per-request ceiling update-service accepts and the
+        // same data-rate floor as the temporary upload, set by the resource filter before the permission filter
+        // answers; GET api/maps/{id}/files keeps the server's own defaults.
+        var handler = new ScriptedHttpHandler();
+
+        var (observed, _) = await ObserveAdminMapFileRoutesAsync(handler);
+
+        var uploaded = observed["POST /api/maps/7/files"];
+        Assert.That(uploaded.MaxBodySize, Is.EqualTo(TemporaryMapLimits.TransportBodyBytes));
+        Assert.That(uploaded.DataRate, Is.Not.Null);
+        Assert.That(uploaded.DataRate!.BytesPerSecond, Is.EqualTo(TemporaryMapLimits.MinUploadBytesPerSecond));
+        Assert.That(uploaded.DataRate.GracePeriod, Is.EqualTo(TemporaryMapLimits.MinUploadGracePeriod));
+        var listed = observed["GET /api/maps/7/files"];
+        var kestrelDefaults = new KestrelServerOptions().Limits;
+        Assert.That(listed.MaxBodySize, Is.EqualTo(kestrelDefaults.MaxRequestBodySize), "the server's own ceiling, untouched");
+        Assert.That(listed.DataRate?.BytesPerSecond, Is.EqualTo(kestrelDefaults.MinRequestBodyDataRate!.BytesPerSecond), "the server's own floor, untouched");
     }
 
     /// <summary>

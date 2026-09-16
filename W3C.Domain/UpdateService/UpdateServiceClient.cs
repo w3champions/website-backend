@@ -52,7 +52,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     {
         // The admin upload is an opaque body pass-through (the multipart content object is moved onto
         // the outbound message verbatim), so the uploader cannot be injected as a form field without
-        // buffering and re-encoding up to 128 MiB. It travels as a query parameter instead;
+        // buffering and re-encoding a body as large as the action's ceiling allows (256 MiB plus
+        // multipart slack). It travels as a query parameter instead;
         // update-service accepts uploadedBy from either the form or the query string. Percent-encoded
         // per RFC 3986: a BattleTag's "#" would otherwise start a fragment and truncate the value.
         var url = $"{UpdateServiceUrl}/api/content/maps";
