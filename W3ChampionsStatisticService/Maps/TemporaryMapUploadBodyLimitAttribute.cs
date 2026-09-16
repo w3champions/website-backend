@@ -16,8 +16,9 @@ namespace W3ChampionsStatisticService.Maps;
 /// binding, so both are in place before the first byte is read and the 401 still wins first.
 /// <para>
 /// The data-rate floor is what keeps an in-flight slot from being held for days by a client that trickles its body:
-/// below the floor Kestrel aborts the request, the action's abort arm answers nothing, and the slot is released. A
-/// server without the feature (a test host) has no floor to set.
+/// below the floor Kestrel answers 408 itself and closes the connection, the body read then surfaces as its 408
+/// <c>BadHttpRequestException</c> (RequestBodyTimeout), the action returns no body of its own, and the slot and the
+/// spool are released. A server without the feature (a test host) has no floor to set.
 /// </para>
 /// <para>
 /// A server without the size feature has no per-request limit to raise. A read-only feature means the body

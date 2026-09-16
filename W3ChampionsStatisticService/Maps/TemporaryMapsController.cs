@@ -202,7 +202,18 @@ public class TemporaryMapsController(
             }
             catch (BadHttpRequestException ex)
             {
-                // Kestrel's own request rejections: its body-size limit (413) before the reader's cap, anything else a
+                if (ex.StatusCode == StatusCodes.Status408RequestTimeout)
+                {
+                    // The body arrived below the data-rate floor [TemporaryMapUploadBodyLimit] sets. Kestrel has already
+                    // answered 408 (RequestBodyTimeout) and is closing the connection; it does not cancel RequestAborted,
+                    // so the read fails with this instead. Abandoned exactly like the abort arm: no second status on a
+                    // connection that already carries one, the slot goes back with the using, the reader has removed
+                    // its spool, and no fileKey lock was taken (the read fails before a fileKey exists).
+                    _logger.LogInformation("Temporary map upload from {BattleTag} was abandoned: the body arrived below the data-rate floor", battleTag);
+                    return new EmptyResult();
+                }
+
+                // Kestrel's other request rejections: its body-size limit (413) before the reader's cap, anything else a
                 // malformed request.
                 return ex.StatusCode == StatusCodes.Status413PayloadTooLarge
                     ? StatusCode(StatusCodes.Status413PayloadTooLarge, TemporaryMapFailureBodies.Coded(TemporaryMapErrorCodes.FileTooLarge))

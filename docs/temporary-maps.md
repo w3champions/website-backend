@@ -66,6 +66,7 @@ buffered in memory.
 | 502 | `{ code: "PARSER_MISMATCH" }` | update-service derived a different sha1 or `MapProofHash` than website-backend computed while spooling |
 | 401 | `{ error: "Invalid token" }` / *(empty)* | same two 401 shapes as the status route |
 | *(no response)* | — | the client disconnected — at any point, including mid-body-read or mid-orchestration — and nothing it did was worth logging |
+| 408 *(written by Kestrel, not by this action)* | *(Kestrel's own)* | the body arrived below the data-rate floor for longer than the grace period: Kestrel answers and closes the connection, the action adds nothing and logs one Information line — see "Concurrency and quotas" |
 
 Appendix A.3's own list omits `PROOF_MISMATCH` and `TEMP_MAP_KEY_MISMATCH`, although §6.3 step 4 names
 both; both are implemented exactly as §6.3 describes (a launcher not coded for them sees a generic error —
@@ -127,10 +128,13 @@ a **minimum body data rate** on the request (`[TemporaryMapUploadBodyLimit]`, vi
 `IHttpMinRequestBodyDataRateFeature`): `MinUploadBytesPerSecond = 32 KiB/s` after a
 `MinUploadGracePeriod` of 30 s. Kestrel's own default floor (240 B/s after 5 s) would let a 256 MiB body
 legally take about thirteen days, so eight slow connections could hold every slot for as long as they
-liked. At 32 KiB/s a full-size upload must finish within roughly 2.3 hours, and a body that falls below
-the floor for longer than the grace period is aborted by Kestrel: the abort surfaces as `RequestAborted`,
-the action's abort arm answers nothing (nobody is listening), and the slot is released — no new status
-code. The floor applies to the upload action only; every other route keeps Kestrel's default.
+liked. At 32 KiB/s a full-size upload must finish within roughly 2.3 hours. A body that falls below the
+floor for longer than the grace period is answered by Kestrel itself: it writes `408 Request Timeout` and
+closes the connection, without cancelling `RequestAborted`, so the next body read surfaces as Kestrel's
+408 `BadHttpRequestException` (RequestBodyTimeout). The upload action treats that as an abandoned upload:
+it returns no body of its own (Kestrel has already answered 408 and is closing the connection), logs one
+Information line, and the slot and the partial spool are released — no new status code of this service.
+The floor applies to the upload action only; every other route keeps Kestrel's default.
 
 **Residual.** Eight accounts each sustaining at least 32 KiB/s (≈ 256 KiB/s in total) can still hold all
 eight slots for up to ~2.3 hours per attempt, bounded further by the attempt quota (20 attempts per account

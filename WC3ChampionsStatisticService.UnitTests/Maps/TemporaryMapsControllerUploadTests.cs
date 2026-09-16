@@ -318,11 +318,45 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
+    [Test]
+    public async Task ABodyBelowTheDataRateFloor_IsAnEmptyResult_AndReleasesItsSlotAndSpool()
+    {
+        // A body below the data-rate floor [TemporaryMapUploadBodyLimit] sets is answered by Kestrel itself: 408
+        // (RequestBodyTimeout), after which it closes the connection. RequestAborted is NOT cancelled; the next body
+        // read throws BadHttpRequestException 408 instead. The action adds no second status to a connection that
+        // already carries one: the upload is abandoned like a client abort, the slot goes back, nothing is left behind.
+        var before = FilesIn(SpoolDirectory);
+        var body = new ThrowingStream(new BadHttpRequestException("Reading the request body timed out due to data arriving too slowly.",
+            StatusCodes.Status408RequestTimeout));
+        var handler = UnknownSha1Handler();
+        using var logs = new LogCapture();
+        var controller = CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>());
+        var counts = new UploadCounts();
+
+        var result = await Upload(controller, body: body);
+
+        Assert.That(result, Is.InstanceOf<EmptyResult>(), "Kestrel already answered 408: no 400 or 413 body from here");
+        Assert.That(controller.HttpContext.RequestAborted.IsCancellationRequested, Is.False,
+            "the non-abort path: a data-rate timeout does not cancel RequestAborted");
+        Assert.That(Gate.InFlight, Is.Zero, "the slot is released");
+        AssertNoNewSpoolFiles(before);
+        Assert.That(FileKeyLock.Count, Is.Zero, "no fileKey lock is held: the read failed before any fileKey existed");
+        Assert.That(handler.Requests, Is.Empty, "no upstream was asked");
+        var lines = logs.Lines();
+        Assert.That(lines.Where(l => l.StartsWith("Warning", StringComparison.Ordinal) || l.StartsWith("Error", StringComparison.Ordinal)), Is.Empty,
+            "a client that sent too slowly is not a fault of this service");
+        Assert.That(lines.Where(l => l.Contains("below the data-rate floor", StringComparison.Ordinal)), Has.Exactly(1).Items);
+        Assert.That(lines.Single(l => l.Contains("below the data-rate floor", StringComparison.Ordinal)), Does.StartWith("Information").And.Contain(BattleTag));
+        // The service saw the read fail with an IOException-derived exception, a 4xx the client caused, and counted it so.
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
+    }
+
     [TestCase(StatusCodes.Status400BadRequest)]
-    [TestCase(StatusCodes.Status408RequestTimeout)]
     [TestCase(StatusCodes.Status431RequestHeaderFieldsTooLarge)]
     public async Task AnyOtherKestrelRequestError_Is400_Metadata_AndCountedRejected(int kestrelStatus)
     {
+        // The same stream, any Kestrel status but 413 (FILE_TOO_LARGE) and 408 (answered by Kestrel itself, nothing
+        // from here): the A.3 code for a malformed body.
         var body = new ThrowingStream(new BadHttpRequestException("Bad request.", kestrelStatus));
         var counts = new UploadCounts();
 
