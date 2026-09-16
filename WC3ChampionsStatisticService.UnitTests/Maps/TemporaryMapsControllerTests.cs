@@ -298,13 +298,22 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     // ---- Route and filter shape -----------------------------------------------------------
 
     [Test]
-    public void BothRoutesRequirePlayerAuth()
+    public void EveryActionRequiresPlayerAuth()
     {
-        foreach (var methodName in new[] { nameof(TemporaryMapsController.GetStatus), nameof(TemporaryMapsController.Upload) })
+        // Every public instance method the controller declares is an MVC action unless marked [NonAction]; the filter
+        // is per method, so an action added without it would be anonymous. Enumerating rather than naming the two
+        // known actions makes that omission a failing test, not a hole.
+        var actions = typeof(TemporaryMapsController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName && m.GetCustomAttribute<NonActionAttribute>() == null)
+            .ToArray();
+
+        Assert.That(actions.Select(m => m.Name), Is.EquivalentTo(new[] { nameof(TemporaryMapsController.GetStatus), nameof(TemporaryMapsController.Upload) }),
+            "the two Appendix A routes and nothing else");
+        foreach (var action in actions)
         {
-            var method = typeof(TemporaryMapsController).GetMethod(methodName)!;
-            Assert.That(method.GetCustomAttribute<BearerRequiresPlayerAuthAttribute>(), Is.Not.Null, methodName + " must be player-authenticated");
-            Assert.That(method.GetCustomAttribute<BearerHasPermissionFilter>(), Is.Null, methodName + " is player-facing and must NOT require an admin permission");
+            Assert.That(action.GetCustomAttribute<BearerRequiresPlayerAuthAttribute>(), Is.Not.Null, action.Name + " must be player-authenticated");
+            Assert.That(action.GetCustomAttribute<BearerHasPermissionFilter>(), Is.Null, action.Name + " is player-facing and must NOT require an admin permission");
         }
     }
 
