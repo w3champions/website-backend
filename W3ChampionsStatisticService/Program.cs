@@ -264,8 +264,8 @@ builder.Services.AddRewardServices();
 // Manually-triggered operational jobs (see docs/admin-job-runner.md)
 builder.Services.AddAdminJobs();
 
-// Self-provided (temporary) custom maps: the player auth filter, the upload orchestration and the in-flight gate.
-// After the clients, MintRateLimiter and IW3CAuthenticationService above, which they depend on.
+// Self-provided (temporary) custom maps: the player auth filter, the upload orchestration and the in-flight gate
+// (see MapServiceExtensions for what each depends on).
 builder.Services.AddMapServices();
 
 // MongoDB index initialization service - runs once at startup

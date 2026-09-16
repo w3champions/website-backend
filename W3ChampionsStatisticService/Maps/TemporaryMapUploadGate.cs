@@ -9,8 +9,9 @@ namespace W3ChampionsStatisticService.Maps;
 /// <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> per process (Task 2 security H1). The controller acquires a slot
 /// after the auth filter and BEFORE the first request-body byte, so a spool of up to 256 MiB is never started for an
 /// upload that will be refused, and releases it in a finally once the service has returned — compensation included.
-/// The per-battleTag slot is taken first, then the process-wide one; a global refusal gives the per-battleTag slot back.
-/// Both refusals answer <c>429 { code: "QUOTA_EXCEEDED", retryAfterSeconds: 30 }</c>, the pinned A.3 body.
+/// The per-battleTag bound is checked first, then the process-wide one; a refusal leaves nothing held and names the
+/// bound, so the refusal log can say which without naming the other uploaders. Both refusals answer
+/// <c>429 { code: "QUOTA_EXCEEDED", retryAfterSeconds: 30 }</c>, the pinned A.3 body.
 /// <para>
 /// A slot is held for however long the upload takes. Once the bytes are stored the service runs to its outcome without
 /// the request token, so under an upstream outage one slot can be held for the worst case of that path (~10 minutes:
@@ -25,51 +26,54 @@ namespace W3ChampionsStatisticService.Maps;
 /// </summary>
 public sealed class TemporaryMapUploadGate
 {
+    /// <summary>One entry per upload holding a slot; its count is the process-wide occupancy.</summary>
     private readonly HashSet<string> _battleTagsInFlight = new(StringComparer.Ordinal);
     private readonly object _lock = new();
-    private int _inFlight;
 
-    /// <summary>Test seam: uploads currently holding a slot.</summary>
+    /// <summary>Uploads currently holding a slot: logged with a refusal, asserted by the tests.</summary>
     internal int InFlight
     {
         get
         {
             lock (_lock)
             {
-                return _inFlight;
+                return _battleTagsInFlight.Count;
             }
         }
     }
 
     /// <summary>
     /// Takes a slot for one upload by <paramref name="battleTag"/>. On true, <paramref name="slot"/> releases it when
-    /// disposed (idempotent); on false nothing is held and <paramref name="slot"/> is null. A blank battleTag is a
-    /// caller bug: the controller fails closed before asking.
+    /// disposed (idempotent) and <paramref name="refusedBy"/> is <see cref="TemporaryMapUploadGateBound.None"/>; on false
+    /// nothing is held, <paramref name="slot"/> is null and <paramref name="refusedBy"/> names the bound that refused.
+    /// A blank battleTag is a caller bug: the controller fails closed before asking.
     /// </summary>
-    public bool TryAcquire(string battleTag, out IDisposable slot)
+    public bool TryAcquire(string battleTag, out IDisposable slot, out TemporaryMapUploadGateBound refusedBy)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(battleTag);
         lock (_lock)
         {
             // 1. The per-battleTag slot: a second upload while this player's first is still in flight is refused.
-            if (!_battleTagsInFlight.Add(battleTag))
+            if (_battleTagsInFlight.Contains(battleTag))
             {
                 slot = null;
+                refusedBy = TemporaryMapUploadGateBound.PerBattleTag;
                 return false;
             }
 
-            // 2. The process-wide slot; a refusal hands the per-battleTag slot straight back.
-            if (_inFlight >= TemporaryMapLimits.MaxConcurrentUploads)
+            // 2. The process-wide slot: taking this player's would exceed the cap.
+            if (_battleTagsInFlight.Count >= TemporaryMapLimits.MaxConcurrentUploads)
             {
-                _battleTagsInFlight.Remove(battleTag);
                 slot = null;
+                refusedBy = TemporaryMapUploadGateBound.Global;
                 return false;
             }
 
-            _inFlight++;
+            _battleTagsInFlight.Add(battleTag);
         }
 
         slot = new Slot(this, battleTag);
+        refusedBy = TemporaryMapUploadGateBound.None;
         return true;
     }
 
@@ -78,7 +82,6 @@ public sealed class TemporaryMapUploadGate
         lock (_lock)
         {
             _battleTagsInFlight.Remove(battleTag);
-            _inFlight--;
         }
     }
 
@@ -94,4 +97,16 @@ public sealed class TemporaryMapUploadGate
             }
         }
     }
+}
+
+/// <summary>Which bound of <see cref="TemporaryMapUploadGate"/> refused an upload; <see cref="None"/> when it was admitted.</summary>
+public enum TemporaryMapUploadGateBound
+{
+    None,
+
+    /// <summary>D7: an upload of the same battleTag is in flight.</summary>
+    PerBattleTag,
+
+    /// <summary>Task 2 security H1: all <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> slots are taken.</summary>
+    Global,
 }

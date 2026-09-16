@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using Prometheus;
 
 namespace W3ChampionsStatisticService.Maps;
@@ -6,10 +8,12 @@ namespace W3ChampionsStatisticService.Maps;
 public static class TemporaryMapMetrics
 {
     /// <summary>
-    /// One increment per upload that reaches a terminal outcome; a client abort is not counted. Upstream and
-    /// orchestration faults (5xx answers, TEMP_MAP_KEY_MISMATCH included) count as <see cref="Results.UpstreamError"/>,
-    /// a local spool or disk fault as <see cref="Results.ServerError"/>, and client-caused 4xx answers (including a
-    /// malformed or oversized body) as <see cref="Results.Rejected"/>.
+    /// One increment per upload that reaches a terminal outcome; a client abort is not counted. The label follows the
+    /// status the controller answers: a client-caused 4xx (an A.3 rejection, a body that could not be read, Kestrel's own
+    /// request errors, a refused in-flight slot) is <see cref="Results.Rejected"/>; an upstream or orchestration fault
+    /// answered with a 5xx A.3 body (UPSTREAM, PARSER_MISMATCH, TEMP_MAP_KEY_MISMATCH) is <see cref="Results.UpstreamError"/>;
+    /// a fault of this service answered as a bare 500 (a spool or disk fault, a body-stream fault, a cancellation the
+    /// request did not cause) is <see cref="Results.ServerError"/>. See <see cref="ResultOf"/>.
     /// </summary>
     public static readonly Counter Uploads = Metrics.CreateCounter(
         "website_temporary_map_uploads_total",
@@ -25,4 +29,21 @@ public static class TemporaryMapMetrics
         public const string UpstreamError = "upstream_error";
         public const string ServerError = "server_error";
     }
+
+    /// <summary>
+    /// The result label of an upload that escaped the service with <paramref name="exception"/>, classified by the type
+    /// alone so that it matches the status <see cref="TemporaryMapsController"/> answers it with (see the catch ladder
+    /// there): the one place this classification is spelled.
+    /// </summary>
+    public static string ResultOf(Exception exception) => exception switch
+    {
+        // Its status is relayed: below 500 the client did something wrong; PARSER_MISMATCH, UPSTREAM and
+        // TEMP_MAP_KEY_MISMATCH are the upstream's or the orchestration's fault.
+        TemporaryMapUploadException { StatusCode: < 500 } => Results.Rejected,
+        TemporaryMapUploadException => Results.UpstreamError,
+        // The request body could not be read (Kestrel's BadHttpRequestException included): 413 or 400.
+        IOException => Results.Rejected,
+        // A spool fault, a body-stream fault, a cancellation the request did not cause: a bare 500 of this service.
+        _ => Results.ServerError,
+    };
 }

@@ -34,8 +34,6 @@ public class TemporaryMapsController(
     TemporaryMapUploadGate uploadGate,
     ILogger<TemporaryMapsController> logger) : ControllerBase
 {
-    private const string QuotaExceeded = "QUOTA_EXCEEDED";
-
     private readonly TemporaryMapUploadService _uploadService = uploadService;
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly MintRateLimiter _rateLimiter = rateLimiter;
@@ -77,8 +75,10 @@ public class TemporaryMapsController(
         {
             state = await _matchmakingServiceClient.GetTemporaryMapStateByProofHash(proofHash, cancellationToken);
         }
-        catch (OperationCanceledException) when (RequestAborted)
+        catch (Exception) when (RequestAborted)
         {
+            // The client went away while matchmaking was asked: whatever escaped — the cancelled read, a contract
+            // violation the client raised after the body was read — nobody is listening and nothing is worth a Warning.
             return new EmptyResult();
         }
         catch (Exception ex)
@@ -91,16 +91,29 @@ public class TemporaryMapsController(
             return StatusCode(StatusCodes.Status502BadGateway);
         }
 
-        switch (state?.FileState)
+        return AnswerState(state);
+    }
+
+    /// <summary>
+    /// The A.4 answer for what matchmaking returned: no record is <c>unknown</c>; a record is relayed only as
+    /// <c>ready</c> or <c>expired</c>, from exactly the two fileStates this route knows. Anything else — a value it does
+    /// not know, a missing one — is a bare 502: relaying it would send the launcher down a path it has no code for. This
+    /// validation holds on its own; the client's own contract check is not relied on.
+    /// </summary>
+    internal IActionResult AnswerState(TemporaryMapStateResponse state)
+    {
+        if (state == null)
         {
-            case null:
-                return Unknown();
+            return Unknown();
+        }
+
+        switch (state.FileState)
+        {
             case TemporaryMapFileStates.Present:
                 return Ok(new { state = "ready" });
             case TemporaryMapFileStates.Deleted:
                 return Ok(new { state = "expired" });
             default:
-                // Relaying a state the launcher does not know would send it down a path it has no code for.
                 _logger.LogWarning("Temporary map pre-check: matchmaking answered fileState {FileState}, which this route cannot relay",
                     LoggableFileState(state.FileState));
                 return StatusCode(StatusCodes.Status502BadGateway);
@@ -124,13 +137,15 @@ public class TemporaryMapsController(
             return FailClosed();
         }
 
-        if (!_uploadGate.TryAcquire(battleTag, out var slot))
+        if (!_uploadGate.TryAcquire(battleTag, out var slot, out var refusedBy))
         {
-            _logger.LogInformation("Temporary map upload from {BattleTag} refused: an upload of this player is in flight or all {MaxConcurrentUploads} " +
-                                   "slots are taken ({InFlight} in flight)", battleTag, TemporaryMapLimits.MaxConcurrentUploads, _uploadGate.InFlight);
+            // Which bound refused, and how full the gate is — never who holds the other slots.
+            _logger.LogInformation("Temporary map upload from {BattleTag} refused by the {Bound} bound ({InFlight} of {MaxConcurrentUploads} slots taken)",
+                battleTag, refusedBy, _uploadGate.InFlight, TemporaryMapLimits.MaxConcurrentUploads);
+            // A 4xx the client caused, so the label the service would give a 429 (TemporaryMapMetrics.ResultOf).
             TemporaryMapMetrics.Uploads.WithLabels(TemporaryMapMetrics.Results.Rejected).Inc();
             return StatusCode(StatusCodes.Status429TooManyRequests,
-                new { code = QuotaExceeded, retryAfterSeconds = TemporaryMapLimits.ConcurrentUploadRetryAfterSeconds });
+                TemporaryMapFailureBodies.QuotaExceeded(TemporaryMapLimits.ConcurrentUploadRetryAfterSeconds));
         }
 
         using (slot)
@@ -139,6 +154,14 @@ public class TemporaryMapsController(
             {
                 var outcome = await _uploadService.HandleUploadAsync(Request.Body, Request.ContentType, battleTag, cancellationToken);
                 return StatusCode(outcome.Created ? StatusCodes.Status201Created : StatusCodes.Status200OK, outcome.Response);
+            }
+            catch (Exception) when (RequestAborted)
+            {
+                // The client went away: whatever escaped — the body read, a pre-store call, an A.3 rejection, a spool
+                // fault — nobody is listening (Task 5a §9, item 1). Checked before any status is chosen, because Kestrel
+                // cancels RequestAborted before the read fails. Whatever the service counted, it counted by outcome.
+                _logger.LogInformation("Temporary map upload from {BattleTag} was abandoned by the client", battleTag);
+                return new EmptyResult();
             }
             catch (TemporaryMapUploadException ex)
             {
@@ -153,30 +176,24 @@ public class TemporaryMapsController(
                 // framework, which would log it a second time.
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
-            catch (Exception ex) when (RequestAborted && ex is (OperationCanceledException or IOException))
-            {
-                // The client went away: whatever the body read or a pre-store call threw, nobody is listening. Checked
-                // before any status is chosen, because Kestrel cancels RequestAborted before the read fails.
-                _logger.LogInformation("Temporary map upload from {BattleTag} was abandoned by the client", battleTag);
-                return new EmptyResult();
-            }
             catch (BadHttpRequestException ex)
             {
                 // Kestrel's own request rejections: its body-size limit (413) before the reader's cap, anything else a
                 // malformed request (I1/D1 (c)).
                 return ex.StatusCode == StatusCodes.Status413PayloadTooLarge
-                    ? StatusCode(StatusCodes.Status413PayloadTooLarge, new { code = "FILE_TOO_LARGE" })
-                    : StatusCode(StatusCodes.Status400BadRequest, new { code = "METADATA" });
+                    ? StatusCode(StatusCodes.Status413PayloadTooLarge, TemporaryMapFailureBodies.Coded(TemporaryMapErrorCodes.FileTooLarge))
+                    : StatusCode(StatusCodes.Status400BadRequest, TemporaryMapFailureBodies.Coded(TemporaryMapErrorCodes.Metadata));
             }
             catch (IOException)
             {
                 // The body ended early or the connection was reset without an abort: the A.3 code for a malformed body.
-                return StatusCode(StatusCodes.Status400BadRequest, new { code = "METADATA" });
+                return StatusCode(StatusCodes.Status400BadRequest, TemporaryMapFailureBodies.Coded(TemporaryMapErrorCodes.Metadata));
             }
             catch (Exception ex)
             {
                 // Nothing the contract lets escape: a cancellation the request did not cause, or a fault in the body
-                // stream itself. Logged here, once, and answered as the server fault it is.
+                // stream itself. Logged here, once, and answered as the server fault it is (counted server_error by the
+                // service, TemporaryMapMetrics.ResultOf).
                 _logger.LogError(ex, "Temporary map upload from {BattleTag} failed unexpectedly", battleTag);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }

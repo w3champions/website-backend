@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using W3C.Domain.MatchmakingService;
+using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.Tracing;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Maps;
@@ -150,7 +152,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
 
     private static readonly object[] MatchmakingFailures =
     [
-        new object[] { "transport failure", (Func<HttpRequestMessage, HttpResponseMessage>)(_ => throw new HttpRequestException("connection refused (mm.internal:3000)")) },
+        new object[] { "transport failure", (Func<HttpRequestMessage, HttpResponseMessage>)(_ => throw new HttpRequestException("connection refused (matchmaking.example:3000)")) },
         new object[] { "HttpClient timeout", (Func<HttpRequestMessage, HttpResponseMessage>)(_ => throw new TaskCanceledException("simulated HttpClient timeout")) },
         new object[] { "route 404 with an HTML body", Respond(HttpStatusCode.NotFound, "<html>Cannot GET /maps/temporary/by-proof-hash/" + ProofHash + "</html>") },
         new object[] { "404 with a non-empty JSON body", Respond(HttpStatusCode.NotFound, "{\"state\":\"unknown\"}") },
@@ -174,7 +176,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         Assert.That(warnings, Has.Length.EqualTo(1), "one Warning, nothing at Error: an upstream outage is expected noise");
         Assert.That(logs.Lines().Where(l => l.StartsWith("Error", StringComparison.Ordinal)), Is.Empty);
         Assert.That(warnings[0], Does.Contain("Exception"), "the exception type is logged");
-        Assert.That(warnings[0], Does.Not.Contain("simulated").And.Not.Contain("boom").And.Not.Contain("mm.internal"),
+        Assert.That(warnings[0], Does.Not.Contain("simulated").And.Not.Contain("boom").And.Not.Contain("matchmaking.example"),
             "never the exception or its message: matchmaking echoes request text, which can hold the proofHash");
         AssertNoSecretIn(logs.Lines());
     }
@@ -203,6 +205,26 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     }
 
     [Test]
+    public async Task Status_AContractViolationRacingTheClientAbort_IsAnEmptyResult_AndNotAWarning()
+    {
+        // The one failure that reaches this route as something other than a cancellation once the client is gone: the
+        // body was read in full, the abort landed, and only then did the client reject the body (200 without a fileState).
+        // HttpClient itself turns every transport failure under a cancelled token into a cancellation. Whatever escaped,
+        // nobody is listening, and an abort is not upstream noise worth a Warning.
+        using var aborted = new CancellationTokenSource();
+        var handler = new ScriptedHttpHandler().On(r => r.RequestUri!.AbsolutePath.Contains(ByProofHash, StringComparison.Ordinal),
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new AbortingAtEndStream("{}"u8.ToArray(), aborted)) });
+        using var logs = new LogCapture();
+        var controller = CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>());
+        controller.HttpContext.RequestAborted = aborted.Token;
+
+        var result = await controller.GetStatus(ProofHash, aborted.Token);
+
+        Assert.That(result, Is.InstanceOf<EmptyResult>());
+        Assert.That(logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal) || l.StartsWith("Error", StringComparison.Ordinal)), Is.Empty);
+    }
+
+    [Test]
     public async Task Status_ACancellationTheClientDidNotCause_Is502()
     {
         // The request token is not cancelled, yet the call was: an HttpClient timeout, i.e. an upstream failure.
@@ -214,6 +236,36 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         var result = await controller.GetStatus(ProofHash, notTheRequest.Token);
 
         AssertBare502(result);
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    public void Status_ARecordWithoutAFileState_Is502_WithNoBody_AndWarns(string fileState)
+    {
+        // The matchmaking client refuses such a record itself, so this cannot be reached through it today; the route's
+        // own validation holds regardless: only "present" and "deleted" are relayed, a missing value is not "unknown".
+        using var logs = new LogCapture();
+        var controller = CreateController(new ScriptedHttpHandler(), logger: logs.CreateLogger<TemporaryMapsController>());
+
+        var result = controller.AnswerState(new TemporaryMapStateResponse { FileState = fileState });
+
+        AssertBare502(result);
+        var warnings = logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal)).ToArray();
+        Assert.That(warnings, Has.Length.EqualTo(1));
+        Assert.That(warnings[0], Does.Contain("FileState=\"invalid\""));
+    }
+
+    [Test]
+    public void Status_NoRecord_IsUnknown_AndNothingIsLogged()
+    {
+        using var logs = new LogCapture();
+        var controller = CreateController(new ScriptedHttpHandler(), logger: logs.CreateLogger<TemporaryMapsController>());
+
+        var result = controller.AnswerState(null) as NotFoundObjectResult;
+
+        Assert.That(result, Is.Not.Null);
+        Assert.That(JObject.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(result!.Value))["state"]!.Value<string>(), Is.EqualTo("unknown"));
+        Assert.That(logs.Lines(), Is.Empty);
     }
 
     [TestCase(null)]
@@ -337,5 +389,20 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         };
         controller.HttpContext.Items[BearerRequiresPlayerAuthFilter.BattleTagItemKey] = battleTag;
         return controller;
+    }
+
+    /// <summary>A response body that is delivered whole, then aborts the request as it reports its end.</summary>
+    private sealed class AbortingAtEndStream(byte[] bytes, CancellationTokenSource abort) : MemoryStream(bytes)
+    {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            var read = await base.ReadAsync(buffer, cancellationToken);
+            if (read == 0)
+            {
+                abort.Cancel();
+            }
+
+            return read;
+        }
     }
 }

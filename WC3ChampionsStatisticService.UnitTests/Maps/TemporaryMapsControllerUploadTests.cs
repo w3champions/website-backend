@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,9 +73,10 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
     // ---- TemporaryMapUploadException: its status and body -----------------------------------
 
     [Test]
-    public async Task AnUploadRejection_IsAnsweredWithItsStatusAndBody()
+    public async Task AnUploadRejection_IsAnsweredWithItsStatusAndBody_AndCountedRejected()
     {
         var handler = new ScriptedHttpHandler();
+        var counts = new UploadCounts();
 
         var result = await Upload(CreateController(handler), metadataSha1: OtherSha1) as ObjectResult;
 
@@ -82,20 +84,23 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         var body = JObject.Parse(JsonSerializer.Serialize(result!.Value, WebJson));
         Assert.That(body["code"]!.Value<string>(), Is.EqualTo("SHA1_MISMATCH"));
         Assert.That(body.Properties().Count(), Is.EqualTo(1));
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
     [Test]
-    public async Task AnUpstreamFailure_IsAnswered502Upstream_AndNeverEscapes()
+    public async Task AnUpstreamFailure_IsAnswered502Upstream_AndNeverEscapes_AndCountedUpstreamError()
     {
         var handler = StoredNewMapHandler()
             .On(IsCreate, TransportFails())
             .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var counts = new UploadCounts();
 
         var result = await Upload(CreateController(handler)) as ObjectResult;
 
         Assert.That(result?.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
         Assert.That(JObject.Parse(JsonSerializer.Serialize(result!.Value, WebJson))["code"]!.Value<string>(), Is.EqualTo("UPSTREAM"));
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
         Assert.That(Gate.InFlight, Is.Zero, "released only after the compensation, which ran inside the service");
     }
 
@@ -108,6 +113,8 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
             limiter.TryAcquire("tm-upload:" + BattleTag, TemporaryMapLimits.UploadsPerHourPerBattleTag, DateTime.UtcNow, TemporaryMapLimits.UploadQuotaWindow, out _);
         }
 
+        var counts = new UploadCounts();
+
         var result = await Upload(CreateController(UnknownSha1Handler(), limiter)) as ObjectResult;
 
         Assert.That(result?.StatusCode, Is.EqualTo(StatusCodes.Status429TooManyRequests));
@@ -115,6 +122,7 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         Assert.That(body.Properties().Select(p => p.Name), Is.EquivalentTo(new[] { "code", "retryAfterSeconds" }));
         Assert.That(body["code"]!.Value<string>(), Is.EqualTo("QUOTA_EXCEEDED"));
         Assert.That(body["retryAfterSeconds"]!.Value<int>(), Is.InRange(1, 3600));
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
     }
 
     // ---- Server faults and transport errors ------------------------------------------------
@@ -158,52 +166,93 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
+    [TestCase("the reader's own rejection", TestName = "WhateverEscapesAfterTheClientAborted_IsAnEmptyResult(TemporaryMapUploadException)")]
+    [TestCase("a spool fault", TestName = "WhateverEscapesAfterTheClientAborted_IsAnEmptyResult(TemporaryMapSpoolException)")]
+    [TestCase("a stream fault", TestName = "WhateverEscapesAfterTheClientAborted_IsAnEmptyResult(InvalidOperationException)")]
     [TestCase("connection reset", TestName = "ABodyErrorAfterTheClientAborted_IsAnEmptyResult(IOException)")]
     [TestCase("kestrel 413", TestName = "ABodyErrorAfterTheClientAborted_IsAnEmptyResult(BadHttpRequestException 413)")]
     [TestCase("kestrel 400", TestName = "ABodyErrorAfterTheClientAborted_IsAnEmptyResult(BadHttpRequestException 400)")]
     public async Task ABodyErrorAfterTheClientAborted_IsAnEmptyResult(string failure)
     {
-        // Kestrel cancels RequestAborted before the read fails; the abort is checked before any status is chosen.
+        // Kestrel cancels RequestAborted before the read fails; the abort is checked before any status is chosen, and
+        // before any exception type is looked at (Task 5a §9, item 1): whatever escaped, nobody is listening.
         using var aborted = new CancellationTokenSource();
         var body = new ThrowingStream(failure switch
         {
+            "the reader's own rejection" => new TemporaryMapUploadException(StatusCodes.Status400BadRequest, "METADATA"),
+            "a spool fault" => new TemporaryMapSpoolException("The spool file could not be written.", new IOException("disk full")),
+            "a stream fault" => new InvalidOperationException("simulated stream fault"),
             "connection reset" => new IOException("simulated connection reset"),
             "kestrel 413" => new BadHttpRequestException("Request body too large.", StatusCodes.Status413PayloadTooLarge),
             _ => new BadHttpRequestException("Unexpected end of request content.", StatusCodes.Status400BadRequest),
         }, abortFirst: aborted);
-        var controller = CreateController(UnknownSha1Handler());
+        using var logs = new LogCapture();
+        var controller = CreateController(UnknownSha1Handler(), logger: logs.CreateLogger<TemporaryMapsController>());
         controller.HttpContext.RequestAborted = aborted.Token;
 
         var result = await Upload(controller, body: body, cancellationToken: aborted.Token);
 
         Assert.That(result, Is.InstanceOf<EmptyResult>());
+        Assert.That(logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal) || l.StartsWith("Error", StringComparison.Ordinal)), Is.Empty,
+            "a client that went away is not a fault of this service");
+        Assert.That(logs.Lines().Where(l => l.Contains("abandoned by the client", StringComparison.Ordinal)), Has.Exactly(1).Items);
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
     [Test]
-    public async Task KestrelsBodyLimit_Is413_FileTooLarge()
+    public async Task AnUpstreamFailureAfterTheClientLeft_IsAnEmptyResult_ButCountedByItsOutcome()
+    {
+        // The bytes are stored and the client goes away while the record write fails: the service runs on without the
+        // request token, compensates, maps the failure to 502 UPSTREAM and counts it — the upload did reach a terminal
+        // outcome — but nobody is listening for the answer.
+        using var aborted = new CancellationTokenSource();
+        var handler = StoredNewMapHandler()
+            .On(IsCreate, _ =>
+            {
+                aborted.Cancel();
+                throw new HttpRequestException("simulated transport failure");
+            })
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var controller = CreateController(handler);
+        controller.HttpContext.RequestAborted = aborted.Token;
+        var counts = new UploadCounts();
+
+        var result = await Upload(controller, cancellationToken: aborted.Token);
+
+        Assert.That(result, Is.InstanceOf<EmptyResult>());
+        Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1), "compensation ran to the end");
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+        Assert.That(Gate.InFlight, Is.Zero, "released only after the compensation");
+    }
+
+    [Test]
+    public async Task KestrelsBodyLimit_Is413_FileTooLarge_AndCountedRejected()
     {
         var body = new ThrowingStream(new BadHttpRequestException("Request body too large. The max request body size is 269484032 bytes.",
             StatusCodes.Status413PayloadTooLarge));
+        var counts = new UploadCounts();
 
         var result = await Upload(CreateController(UnknownSha1Handler()), body: body) as ObjectResult;
 
         Assert.That(result?.StatusCode, Is.EqualTo(StatusCodes.Status413PayloadTooLarge));
         Assert.That(JObject.Parse(JsonSerializer.Serialize(result!.Value, WebJson))["code"]!.Value<string>(), Is.EqualTo("FILE_TOO_LARGE"));
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
     [TestCase(StatusCodes.Status400BadRequest)]
     [TestCase(StatusCodes.Status408RequestTimeout)]
     [TestCase(StatusCodes.Status431RequestHeaderFieldsTooLarge)]
-    public async Task AnyOtherKestrelRequestError_Is400_Metadata(int kestrelStatus)
+    public async Task AnyOtherKestrelRequestError_Is400_Metadata_AndCountedRejected(int kestrelStatus)
     {
         var body = new ThrowingStream(new BadHttpRequestException("Bad request.", kestrelStatus));
+        var counts = new UploadCounts();
 
         var result = await Upload(CreateController(UnknownSha1Handler()), body: body) as ObjectResult;
 
         Assert.That(result?.StatusCode, Is.EqualTo(StatusCodes.Status400BadRequest));
         Assert.That(JObject.Parse(JsonSerializer.Serialize(result!.Value, WebJson))["code"]!.Value<string>(), Is.EqualTo("METADATA"));
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
     }
 
     [TestCase("truncated multipart")]
@@ -227,22 +276,25 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
     [Test]
     public async Task ACancellationTheClientDidNotCause_IsABare500_AndLogsAtError()
     {
-        // Cannot happen for the request token (the service maps an HttpClient timeout to 502 UPSTREAM); if it ever does,
-        // it is a server fault, not a client that went away.
+        // Cannot happen for the request token (the service maps an HttpClient timeout to 502 UPSTREAM, and MVC binds the
+        // action's token to RequestAborted); if it ever does, it is a server fault, not a client that went away. The
+        // service, which knows only the token it was given, has treated it as an abort and counted nothing.
         using var notTheRequest = new CancellationTokenSource();
         notTheRequest.Cancel();
         using var logs = new LogCapture();
         var controller = CreateController(UnknownSha1Handler(), logger: logs.CreateLogger<TemporaryMapsController>());
+        var counts = new UploadCounts();
 
         var result = await Upload(controller, cancellationToken: notTheRequest.Token);
 
         AssertBareStatus(result, StatusCodes.Status500InternalServerError);
         Assert.That(logs.Lines().Where(l => l.StartsWith("Error", StringComparison.Ordinal)), Has.Exactly(1).Items);
+        counts.AssertNothingCounted();
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
     [Test]
-    public async Task AnUnexpectedFailure_IsABare500_AndLogsItAtError()
+    public async Task AnUnexpectedFailure_IsABare500_AndLogsItAtError_AndCountedServerError()
     {
         using var logs = new LogCapture();
         var controller = CreateController(UnknownSha1Handler(), logger: logs.CreateLogger<TemporaryMapsController>());
@@ -254,7 +306,8 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         var errors = logs.Lines().Where(l => l.StartsWith("Error", StringComparison.Ordinal)).ToArray();
         Assert.That(errors, Has.Length.EqualTo(1));
         Assert.That(errors[0], Does.Contain("InvalidOperationException").And.Contain("simulated stream fault"), "the exception itself is logged: nothing else knows it");
-        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+        // The label follows the 500 this route answers, not an upstream that was never involved.
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.ServerError);
         Assert.That(Gate.InFlight, Is.Zero);
     }
 
@@ -299,13 +352,14 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         var (bytes, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
         var secondBody = new MemoryStream(bytes);
         var counts = new UploadCounts();
+        using var logs = new LogCapture();
 
         var first = Task.Run(() => Upload(CreateController(handler)));
         IActionResult second;
         try
         {
             await firstIsStoring.Task.WaitAsync(HangGuard);
-            second = await Upload(CreateController(handler), body: secondBody, contentType: contentType);
+            second = await Upload(CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>()), body: secondBody, contentType: contentType);
         }
         finally
         {
@@ -323,6 +377,8 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "us-upload", "create" }), "the refused upload reached no upstream");
         Assert.That(Gate.InFlight, Is.Zero, "the first upload released its slot");
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected, TemporaryMapMetrics.Results.Created);
+        var refusal = logs.Lines().Single(l => l.Contains("refused", StringComparison.Ordinal));
+        Assert.That(refusal, Does.StartWith("Information").And.Contain("Bound=PerBattleTag").And.Contain("InFlight=1"), "which bound refused, and how full the gate was");
     }
 
     [Test]
@@ -330,20 +386,24 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
     {
         var others = Enumerable.Range(0, TemporaryMapLimits.MaxConcurrentUploads).Select(i =>
         {
-            Assert.That(Gate.TryAcquire($"player{i}#1", out var slot), Is.True);
+            Assert.That(Gate.TryAcquire($"player{i}#1", out var slot, out _), Is.True);
             return slot;
         }).ToList();
         var handler = StoredNewMapHandler().On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
         var (bytes, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
         var body = new MemoryStream(bytes);
+        using var logs = new LogCapture();
 
-        var refused = await Upload(CreateController(handler), body: body, contentType: contentType) as ObjectResult;
+        var refused = await Upload(CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>()), body: body, contentType: contentType) as ObjectResult;
 
         Assert.That(refused?.StatusCode, Is.EqualTo(StatusCodes.Status429TooManyRequests));
         Assert.That(JObject.Parse(JsonSerializer.Serialize(refused!.Value, WebJson))["retryAfterSeconds"]!.Value<int>(), Is.EqualTo(30));
         Assert.That(body.Position, Is.Zero);
         Assert.That(handler.Requests, Is.Empty);
         Assert.That(Gate.InFlight, Is.EqualTo(TemporaryMapLimits.MaxConcurrentUploads), "the refusal took no slot from anyone");
+        var refusal = logs.Lines().Single(l => l.Contains("refused", StringComparison.Ordinal));
+        Assert.That(refusal, Does.Contain("Bound=Global").And.Contain("InFlight=8").And.Contain("MaxConcurrentUploads=8"));
+        Assert.That(refusal, Does.Contain(BattleTag).And.Not.Contain("player"), "the refused player is named; the players holding the slots never are");
 
         others[0].Dispose();
 

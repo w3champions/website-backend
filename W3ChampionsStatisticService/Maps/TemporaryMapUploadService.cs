@@ -86,12 +86,7 @@ public class TemporaryMapUploadService(
         }
         catch (Exception ex) when (!(cancellationToken.IsCancellationRequested && ex is OperationCanceledException or IOException))
         {
-            TemporaryMapMetrics.Uploads.WithLabels(ex switch
-            {
-                TemporaryMapUploadException { StatusCode: < 500 } or IOException => TemporaryMapMetrics.Results.Rejected,
-                TemporaryMapSpoolException => TemporaryMapMetrics.Results.ServerError,
-                _ => TemporaryMapMetrics.Results.UpstreamError,
-            }).Inc();
+            TemporaryMapMetrics.Uploads.WithLabels(TemporaryMapMetrics.ResultOf(ex)).Inc();
             throw;
         }
     }

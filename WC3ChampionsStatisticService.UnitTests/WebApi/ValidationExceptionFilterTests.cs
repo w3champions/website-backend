@@ -1,20 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
@@ -60,35 +53,12 @@ public class ValidationExceptionFilterTests
     public async Task TheBadRequest_ReachesTheClient_ThroughTheMvcPipeline()
     {
         // The same two global filters as Program.cs, in the same order, in front of a controller that throws.
-        var builder = WebApplication.CreateBuilder();
-        builder.Logging.ClearProviders();
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
-        builder.Services.AddControllers(c =>
-            {
-                c.Filters.Add<ValidationExceptionFilter>();
-                c.Filters.Add<HttpRequestExceptionFilter>();
-            })
-            .ConfigureApplicationPartManager(manager =>
-            {
-                manager.ApplicationParts.Clear();
-                manager.ApplicationParts.Add(new AssemblyPart(typeof(ValidationProbeController).Assembly));
-            });
-        await using var app = builder.Build();
-        app.MapControllers();
-        await app.StartAsync();
-        try
-        {
-            using var client = new HttpClient { BaseAddress = new Uri(app.Urls.Single()) };
+        await using var host = await LoopbackMvcHost.StartAsync(_ => { }, typeof(ValidationProbeController));
 
-            var response = await client.GetAsync(ProbeRoute);
+        var response = await host.Client.GetAsync(ProbeRoute);
 
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-            Assert.That(await response.Content.ReadAsStringAsync(), Is.EqualTo("{\"error\":\"" + Message + "\"}"));
-        }
-        finally
-        {
-            await app.StopAsync();
-        }
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(await response.Content.ReadAsStringAsync(), Is.EqualTo("{\"error\":\"" + Message + "\"}"));
     }
 
     private static ExceptionContext ExceptionContextFor(Exception exception)

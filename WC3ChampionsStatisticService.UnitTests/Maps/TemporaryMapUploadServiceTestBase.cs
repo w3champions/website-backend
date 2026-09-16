@@ -1,18 +1,23 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using Serilog.Extensions.Logging;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
+using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Maps;
+using W3ChampionsStatisticService.Services.Interceptors;
 using W3ChampionsStatisticService.Sessions;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
@@ -164,6 +169,26 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
 
     /// <summary>A signal a scripted route or seam completes and the test awaits; continuations never run inline.</summary>
     protected static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// What Program.cs registers before AddMapServices, as doubles: the tracing interceptor and its ActivitySource,
+    /// logging, the two service clients over <paramref name="handler"/>, the shared rate limiter and
+    /// <paramref name="authService"/>. Shared by the DI smoke test and the real-pipeline round trips, so both exercise the
+    /// production registrations over the same host surface.
+    /// </summary>
+    private protected static IServiceCollection AddHostDoubles(
+        IServiceCollection services, ScriptedHttpHandler handler, ActivitySource activitySource, IW3CAuthenticationService authService)
+    {
+        services.AddSingleton(activitySource);
+        services.AddSingleton<TracingInterceptor>();
+        services.AddLogging();
+        services.AddSingleton<IHttpClientFactory>(new ScriptedHttpHandler.Factory(handler));
+        services.AddInterceptedSingleton<MatchmakingServiceClient>();
+        services.AddInterceptedSingleton<UpdateServiceClient>();
+        services.AddSingleton<MintRateLimiter>();
+        services.AddSingleton(authService);
+        return services;
+    }
 
     private protected TemporaryMapUploadService CreateService(
         ScriptedHttpHandler handler,

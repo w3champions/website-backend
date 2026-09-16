@@ -1,16 +1,10 @@
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using NUnit.Framework;
-using W3C.Domain.MatchmakingService;
-using W3C.Domain.UpdateService;
-using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Maps;
-using W3ChampionsStatisticService.Services.Interceptors;
-using W3ChampionsStatisticService.Sessions;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
@@ -30,17 +24,7 @@ public class MapServiceExtensionsTests : TemporaryMapUploadServiceTestBase
     {
         using var activitySource = new ActivitySource(nameof(MapServiceExtensionsTests));
         var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811)));
-        var services = new ServiceCollection();
-        // What Program.cs registers before AddMapServices, as doubles: the tracing interceptor's own dependencies, logging,
-        // the two service clients over a scripted HttpClient factory, the shared rate limiter and the auth service.
-        services.AddSingleton(activitySource);
-        services.AddSingleton<TracingInterceptor>();
-        services.AddLogging();
-        services.AddSingleton<IHttpClientFactory>(new ScriptedHttpHandler.Factory(handler));
-        services.AddInterceptedSingleton<MatchmakingServiceClient>();
-        services.AddInterceptedSingleton<UpdateServiceClient>();
-        services.AddSingleton<MintRateLimiter>();
-        services.AddSingleton(new Mock<IW3CAuthenticationService>(MockBehavior.Strict).Object);
+        var services = AddHostDoubles(new ServiceCollection(), handler, activitySource, new Mock<IW3CAuthenticationService>(MockBehavior.Strict).Object);
 
         services.AddMapServices();
 
