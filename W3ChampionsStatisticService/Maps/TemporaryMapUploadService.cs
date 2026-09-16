@@ -337,11 +337,11 @@ public class TemporaryMapUploadService(
 
     /// <summary>
     /// update-service answered 409 for <paramref name="fileKey"/>, and <paramref name="claimant"/> is the record that claims
-    /// it (null: none). Deleting that file is only safe when no OTHER record claims the path (H1: the 8-hex fileKey suffix
-    /// can be ground to collide with a live map), or when the record being restored claims it and is still deleted. Returns
+    /// it (null: none). The file-name suffix is short, so a path conflict at update-service is never resolved by deleting
+    /// an existing file unless no record claims it, or the record being restored claims it and is still deleted. Returns
     /// the one retried upload.
     /// <para>
-    /// Sound only under two assumptions (S-I1): matchmaking's unique index on <c>gameMap.path</c>, so at most one record
+    /// Sound only under two assumptions: matchmaking's unique index on <c>gameMap.path</c>, so at most one record
     /// claims a path; and byte-exact, case-sensitive file identity at update-service, so the by-path answer is about the
     /// very file the 409 reported.
     /// </para>

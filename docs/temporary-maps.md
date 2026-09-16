@@ -62,7 +62,7 @@ buffered in memory.
 | 429 | `{ code: "QUOTA_EXCEEDED", retryAfterSeconds }` | any of four independent limits (the record quota, the attempt quota, the per-battleTag in-flight slot, the process-wide in-flight cap) — see "Concurrency and quotas" |
 | 500 | *(empty)* | a local spooling/disk fault (already logged once by the reader) or any other unexpected server fault (a body-stream fault, a cancellation the request did not cause) |
 | 500 | `{ code: "TEMP_MAP_KEY_MISMATCH" }` | the sha1 dedupe and the proof verification resolved to two different map ids, or the record's stored path is not a well-formed §6.4 temporary-map file path |
-| 502 | `{ code: "UPSTREAM" }` | any upstream/orchestration failure not covered above, including every H1 guard refusal, an unknown `fileState`, and an ambiguous post-write failure whose re-probe could not resolve it |
+| 502 | `{ code: "UPSTREAM" }` | any upstream/orchestration failure not covered above, including every path-conflict guard refusal, an unknown `fileState`, and an ambiguous post-write failure whose re-probe could not resolve it |
 | 502 | `{ code: "PARSER_MISMATCH" }` | update-service derived a different sha1 or `MapProofHash` than website-backend computed while spooling |
 | 401 | `{ error: "Invalid token" }` / *(empty)* | same two 401 shapes as the status route |
 | *(no response)* | — | the client disconnected — at any point, including mid-body-read or mid-orchestration — and nothing it did was worth logging |
@@ -179,8 +179,9 @@ The lock is acquired with the caller's request token *before* anything is stored
 leaves nothing to undo); once the bytes are stored, the rest of the orchestration for that fileKey runs
 with `CancellationToken.None` and is not cancellable by a client disconnect.
 
-**The H1 guard (fileKey suffix grinding).** The §6.4 fileKey's uniqueness suffix is only an 8-hex-digit
-(32-bit) sha1 prefix, which an attacker can grind to collide with a known live map's name. If
+**The path-conflict guard.** The §6.4 fileKey's uniqueness suffix is short (eight hex digits of the
+sha1), so two different maps can legitimately end up with the same fileKey, and a path conflict at
+update-service is never resolved by deleting the existing file unless no record claims it. If
 update-service answers **409 Conflict** while creating or restoring, the service never deletes the
 existing file at that path blindly:
 
@@ -228,10 +229,11 @@ directly — those are wb-side verification failures with a definite answer, not
 
 **What never compensates.** A failure **during** the update-service upload call itself (client abort,
 HttpClient timeout, transport error) never triggers a delete: whether the bytes landed at all is unknown,
-and deleting at that fileKey could remove another live file entirely (the H1 threat again). A genuine
+and deleting at that fileKey could remove another live file entirely (the same path conflict the guard
+above exists for). A genuine
 orphan from this path is reclaimed only by the reconciliation sweep, after `OrphanMinAgeHours` (24h).
 
-**F-B: the post-stray-delete retry is uncancellable.** After the H1 guard deletes a genuine stray file and
+**The post-stray-delete retry is uncancellable.** After the path-conflict guard deletes a genuine stray file and
 retries the store, that retry runs with `CancellationToken.None` — a client disconnecting right then must
 not leave the fileKey permanently unusable.
 
@@ -365,9 +367,16 @@ about the difference between "our disk" and "their service".
   call (create, file-restored, verify-proof) logs only the exception type and the upstream HTTP status,
   never the exception's message — matchmaking's own error bodies can echo the request text back, which
   for those calls includes the proof.
-- The inbound `proofHash` query parameter on the status route carries `[NoTrace]`, so it is excluded from
-  OpenTelemetry/tracing spans and from Application Insights (this redaction was built in Task 4, ahead of
-  this controller).
+- The inbound `proofHash` query parameter on the status route never reaches a span or a request
+  telemetry item as a value. The mechanism is the telemetry pipeline, not the controller:
+  `TelemetryRedactionProcessor` rewrites the `url.query`, `url.full` and `url.path` attributes of every
+  OpenTelemetry activity before the exporter sees it (the proofHash path segment of matchmaking's
+  by-proof-hash route included), `TelemetryRedactionInitializer` does the same for the Application
+  Insights request URL, and the Serilog category overrides in `W3CLoggerConfiguration` keep the ASP.NET
+  Core and HttpClient request logging below Information. `TracingPipelineRedactionTests` proves the
+  processor and initializer end to end. The `[NoTrace]` on the controller parameter is a marker only —
+  controllers are not Castle-intercepted, so the attribute redacts nothing there; it stays so that the
+  intent is visible at the parameter and pinned by a test, should interception ever reach controllers.
 - Every other value an upstream service supplies and that might reach a log line (a `fileState`, a sha1, a
   stored path, a launcher version string, a spool file name) is passed through a shape gate first
   (`LoggableFileState`, `LoggableSha1`, `LoggablePath`, `LauncherVersionForLog`, `LoggableSpoolFileName`)
@@ -428,12 +437,29 @@ introduced in any service; website-backend reuses the existing `ADMIN_SECRET`, `
 matchmaking hardening → docker-compose-files (nginx `client_max_body_size 257M`) → update-service →
 matchmaking-service → **website-backend** → website → flo/launcher release.
 
-Both out-of-order failure modes are safe and loud, and neither writes any data:
+Both out-of-order failure modes are loud and safe, though one of them can leave a stray file behind for
+a while:
 
 - Deploying website-backend **before update-service**: uploads fail with `502 PARSER_MISMATCH` (update-
-  service has no `MapProofHash` to return to an admin-secret caller yet).
+  service has no `MapProofHash` to return to an admin-secret caller yet). The old update-service *does*
+  store the bytes before that answer, and the compensation that follows calls a delete route the old
+  service lacks, so the bytes can be left behind as an `ORPHAN` warning until update-service is deployed
+  and the sweep's listing route exists; the reconciliation pass then reclaims the file (it is unclaimed
+  and older than 24h by then). No record is ever written for it.
 - Deploying website-backend **before matchmaking-service**: matchmaking has no `/maps/temporary/*` routes
   yet, so every call gets a route-level (non-empty-body) 404 rather than the pinned `404 {}` "no record"
   answer. The client-side contract treats that as a violation and throws, which every caller maps to a
   bare `502` (status route) or `502 UPSTREAM` (upload route) — every temporary-map request fails loudly
   rather than silently doing nothing or writing partial state.
+
+## What is not covered
+
+- **A restore does not refresh `lastHostedAt`.** matchmaking owns the `file-restored` flip and its
+  Appendix A body is frozen, so restoring a map's bytes leaves the record's last-game-start clock where
+  it was. A restored map that is not hosted before the next daily sweep is therefore listed as expired
+  again — and, since its record is `present` and its `lastHostedAt` is still older than the TTL, the
+  expiry cross-check confirms it — so it is expired again and must be restored again. Recovery is
+  automatic: the launcher's pre-check answers `expired`, and the next upload takes the restore path.
+- **Slot exhaustion by cooperating accounts.** See the residual under "Concurrency and quotas": eight
+  accounts each sustaining the data-rate floor can hold every in-flight slot; per-IP limits are an
+  infrastructure concern.

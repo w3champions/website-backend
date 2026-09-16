@@ -51,6 +51,11 @@ public class TemporaryMapsController(
     /// test whether a publicly known map is on the server. It returns the state and NOTHING else: no id, path, name, sha1
     /// or proof (Appendix A.4); a bare 429 over the per-battleTag quota; a bare 502 for anything matchmaking cannot answer
     /// (S3), including a fileState this service does not know; and nothing at all for a client that is gone.
+    /// <para>
+    /// The [NoTrace] on proofHash is a marker: controllers are not intercepted, so it redacts nothing by itself. The
+    /// value is kept out of spans and request telemetry by the telemetry processor and initializer
+    /// (<see cref="Services.Tracing.TelemetryRedactionProcessor"/>, <see cref="Services.Tracing.TelemetryRedactionInitializer"/>).
+    /// </para>
     /// </summary>
     [HttpGet("status")]
     [BearerRequiresPlayerAuth]
