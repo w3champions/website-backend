@@ -331,6 +331,23 @@ public class TemporaryMapClientTests
     }
 
     [Test]
+    public void DeleteMapFileByPathAsync_NamesTheOperationAndStatus_NeverThePath()
+    {
+        // The path passes the shape check with a control character in it (S2-2 admits none in a log line), and callers log
+        // the exception: its message carries the operation and the status, and the caller renders the gated path itself.
+        const string pathWithLineBreak = "W3Champions/CustomGames/x-94ec3bda\r\nforged.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Delete, "/api/content/maps/file", HttpStatusCode.InternalServerError, "");
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(
+            () => Us(handler).DeleteMapFileByPathAsync(pathWithLineBreak, CancellationToken.None));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That(ex.Message, Does.Contain("500").And.Contain("delet"));
+        Assert.That(ex.Message, Does.Not.Contain("forged").And.Not.Contain("\r").And.Not.Contain("\n").And.Not.Contain("CustomGames"));
+    }
+
+    [Test]
     public async Task ListMapFilesAsync_SendsEveryPagingParameter()
     {
         var handler = new ScriptedHttpHandler()

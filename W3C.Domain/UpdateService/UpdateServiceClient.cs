@@ -146,7 +146,9 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     /// <summary>
     /// Idempotent: update-service answers 204 whether or not the file existed. Only a file under
     /// W3Champions/CustomGames/ can be deleted: any other path, or one with a backslash or an empty, "." or ".."
-    /// segment, throws ArgumentException before a request is built.
+    /// segment, throws ArgumentException before a request is built. A failure's message names the operation and the
+    /// status, never the path: the shape check admits control characters, callers log the exception, and they render
+    /// the path through their own gate.
     /// </summary>
     public async Task DeleteMapFileByPathAsync(string filePath, CancellationToken cancellationToken)
     {
@@ -157,7 +159,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException($"Unable to delete map file at {filePath}", null, response.StatusCode);
+            throw new HttpRequestException(
+                $"update-service answered {(int)response.StatusCode} deleting a map file by path", null, response.StatusCode);
         }
     }
 
