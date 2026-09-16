@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using W3C.Domain.Maps;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Maps;
@@ -32,8 +34,9 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
 /// Real round trips through Kestrel and the MVC pipeline, for the answers that depend on framework behaviour the
-/// action-level tests bypass: Kestrel's own 413 for a body above the raised limit, the binder's null for a missing
-/// proofHash query, the auth filter in front of both routes, and the bare answers — which MVC's [ApiController]
+/// action-level tests bypass: Kestrel's own 413 for a body above the raised limit, the x-proof-hash request header as
+/// Kestrel delivers it (absent, malformed, sent twice, or sent next to the removed ?proofHash= query), the auth filter
+/// in front of both routes, and the bare answers — which MVC's [ApiController]
 /// client-error mapping would wrap in a ProblemDetails body, and Appendix A.4 says carry nothing. The production
 /// registrations (<see cref="MapServiceExtensions.AddMapServices"/>) and the real auth filter are used, over the same
 /// host doubles as the DI smoke test; the player token is the stubbed auth service's. The admin map-file passthrough
@@ -169,23 +172,103 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(FilesIn(SpoolDirectory), Is.Empty, "the partial spool file was removed");
     }
 
-    [Test]
-    public async Task AStatusRequestWithoutAProofHash_Is404Unknown_WithoutAskingMatchmaking()
+    // ---- The x-proof-hash header (Appendix A.4, revision 10) ----------------------------------
+
+    [TestCase("present", "ready")]
+    [TestCase("deleted", "expired")]
+    public async Task AStatusRequestWithAValidProofHashHeader_RelaysMatchmakingsState(string fileState, string expected)
     {
-        // No query at all: the binder hands the action a null proofHash (no [ApiController], so no implicit [Required]
-        // and no automatic 400), and the action answers "unknown" locally.
-        var handler = new ScriptedHttpHandler();
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"" + fileState + "\"}");
         await using var host = await StartHostAsync(handler);
-        var request = new HttpRequestMessage(HttpMethod.Get, "api/maps/temporary/status");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PlayerToken);
 
-        var response = await host.Client.SendAsync(request);
+        var response = await host.Client.SendAsync(StatusRequest(ProofHash));
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var body = JObject.Parse(await response.Content.ReadAsStringAsync());
         Assert.That(body.Properties().Select(p => p.Name), Is.EqualTo(new[] { "state" }));
-        Assert.That(body["state"]!.Value<string>(), Is.EqualTo("unknown"));
+        Assert.That(body["state"]!.Value<string>(), Is.EqualTo(expected));
+        var lookup = handler.Requests.Single();
+        Assert.That(lookup.Method, Is.EqualTo(HttpMethod.Post));
+        Assert.That(lookup.RequestUri!.PathAndQuery, Does.EndWith("/maps/temporary/by-proof-hash"), "the key travels in the body, never in the URL");
+        Assert.That(JObject.Parse(handler.RequestBodies.Single())["proofHash"]!.Value<string>(), Is.EqualTo(ProofHash));
+    }
+
+    [Test]
+    public async Task AStatusRequestWithoutAProofHashHeader_Is404Unknown_WithoutAskingMatchmaking()
+    {
+        // No header at all: nothing is model-bound (no [ApiController], no [Required], no automatic 400); the action
+        // reads the header itself and answers "unknown" locally.
+        var handler = new ScriptedHttpHandler();
+        await using var host = await StartHostAsync(handler);
+
+        var response = await host.Client.SendAsync(StatusRequest(proofHash: null));
+
+        await AssertUnknown(response);
         Assert.That(handler.Requests, Is.Empty, "a proofHash that can never match is not a free upstream probe");
+    }
+
+    [TestCase("6E60C9A01CFD09CEC0B8493FE1AD9F2411ED21A1E1E58AAB9ECEEB3E9BAC2BD6", TestName = "AStatusRequestWithAMalformedProofHashHeader_Is404Unknown(uppercase)")]
+    [TestCase("6e60c9a01cfd09cec0b8493fe1ad9f2411ed21a1e1e58aab9eceeb3e9bac2bd", TestName = "AStatusRequestWithAMalformedProofHashHeader_Is404Unknown(63 chars)")]
+    [TestCase("6e60c9a01cfd09cec0b8493fe1ad9f2411ed21a1e1e58aab9eceeb3e9bac2bdg", TestName = "AStatusRequestWithAMalformedProofHashHeader_Is404Unknown(non-hex)")]
+    [TestCase("", TestName = "AStatusRequestWithAMalformedProofHashHeader_Is404Unknown(empty)")]
+    public async Task AStatusRequestWithAMalformedProofHashHeader_Is404Unknown_WithoutAskingMatchmaking(string proofHash)
+    {
+        var handler = new ScriptedHttpHandler();
+        await using var host = await StartHostAsync(handler);
+
+        var response = await host.Client.SendAsync(StatusRequest(proofHash));
+
+        await AssertUnknown(response);
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [Test]
+    public async Task AStatusRequestWithOnlyTheRemovedProofHashQuery_Is404Unknown_AndNeverAsksMatchmaking()
+    {
+        // Revision 10 removed ?proofHash=: the value is never consulted, so a client still sending it (and nothing
+        // else) is answered "unknown" without a lookup — matchmaking is scripted to answer, and must not be asked.
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        await using var host = await StartHostAsync(handler);
+
+        var response = await host.Client.SendAsync(StatusRequest(proofHash: null, query: "?proofHash=" + ProofHash));
+
+        await AssertUnknown(response);
+        Assert.That(handler.Requests, Is.Empty, "the query value must never become the key of an upstream probe");
+    }
+
+    [Test]
+    public async Task AStatusRequestWithBothTheHeaderAndTheQuery_UsesTheHeader()
+    {
+        const string otherProofHash = "0000000000000000000000000000000000000000000000000000000000000000";
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        await using var host = await StartHostAsync(handler);
+
+        var response = await host.Client.SendAsync(StatusRequest(ProofHash, query: "?proofHash=" + otherProofHash));
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(JObject.Parse(handler.RequestBodies.Single())["proofHash"]!.Value<string>(), Is.EqualTo(ProofHash), "the header's value");
+        Assert.That(handler.RequestBodies.Single(), Does.Not.Contain(otherProofHash));
+    }
+
+    [Test]
+    public async Task AStatusRequestWithTwoProofHashHeaderLines_Is404Unknown_WithoutAskingMatchmaking()
+    {
+        // Two header lines, which Kestrel delivers as two values (HttpClient would fold them into one "a, b" line,
+        // which is malformed in its own right): written raw over the socket. Ambiguous, so malformed.
+        var handler = new ScriptedHttpHandler();
+        await using var host = await StartHostAsync(handler);
+
+        var (statusLine, body) = await SendRawAsync(host,
+            "GET /api/maps/temporary/status HTTP/1.1\r\n" +
+            $"Host: {host.BaseAddress.Authority}\r\n" +
+            $"Authorization: Bearer {PlayerToken}\r\n" +
+            $"{TemporaryMapKeys.ProofHashHeaderName}: {ProofHash}\r\n" +
+            $"{TemporaryMapKeys.ProofHashHeaderName}: {ProofHash}\r\n" +
+            "Connection: close\r\n\r\n");
+
+        Assert.That(statusLine, Does.StartWith("HTTP/1.1 404"));
+        Assert.That(body, Does.Contain("\"state\":\"unknown\""));
+        Assert.That(handler.Requests, Is.Empty);
     }
 
     // ---- The bare answers: a status and nothing else ---------------------------------------
@@ -203,9 +286,11 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         }
 
         var response = await host.Client.SendAsync(StatusRequest(ProofHash));
+        var withoutAKey = await host.Client.SendAsync(StatusRequest("not-hex"));
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests));
         await AssertNoBody(response);
+        Assert.That(withoutAKey.StatusCode, Is.EqualTo(HttpStatusCode.TooManyRequests), "the quota is spent before the header is looked at");
         Assert.That(handler.Requests, Is.Empty, "a throttled pre-check never reaches matchmaking");
     }
 
@@ -265,14 +350,21 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
 
     // ---- The auth filter, in front of both routes ---------------------------------------------
 
-    [TestCase("GET", "api/maps/temporary/status?proofHash=" + ProofHash)]
-    [TestCase("POST", "api/maps/temporary")]
-    public async Task ARequestWithoutAPlayerToken_IsTheFilters401(string method, string route)
+    [TestCase("GET", "api/maps/temporary/status", ProofHash)]
+    [TestCase("GET", "api/maps/temporary/status", "not-hex", TestName = "ARequestWithoutAPlayerToken_IsTheFilters401_BeforeTheHeaderIsLookedAt")]
+    [TestCase("POST", "api/maps/temporary", null)]
+    public async Task ARequestWithoutAPlayerToken_IsTheFilters401(string method, string route, string proofHash)
     {
-        // The filter's own body, not the mapping's and not the controller's: the controller is never reached.
+        // The filter's own body, not the mapping's and not the controller's: the controller is never reached, so a
+        // malformed key is not answered "unknown".
         var handler = new ScriptedHttpHandler();
         await using var host = await StartHostAsync(handler);
         var request = new HttpRequestMessage(new HttpMethod(method), route);
+        if (proofHash != null)
+        {
+            request.Headers.TryAddWithoutValidation(TemporaryMapKeys.ProofHashHeaderName, proofHash);
+        }
+
         if (method == "POST")
         {
             var (bytes, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
@@ -401,11 +493,42 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
 
     // ---- Helpers ------------------------------------------------------------------------------
 
-    private static HttpRequestMessage StatusRequest(string proofHash)
+    /// <summary>
+    /// An authenticated pre-check with <paramref name="proofHash"/> in the x-proof-hash header (null: no header) and,
+    /// for the tests of the removed form, <paramref name="query"/> appended to the route.
+    /// </summary>
+    private static HttpRequestMessage StatusRequest(string proofHash, string query = null)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, "api/maps/temporary/status?proofHash=" + proofHash);
+        var request = new HttpRequestMessage(HttpMethod.Get, "api/maps/temporary/status" + query);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PlayerToken);
+        if (proofHash != null)
+        {
+            request.Headers.TryAddWithoutValidation(TemporaryMapKeys.ProofHashHeaderName, proofHash);
+        }
+
         return request;
+    }
+
+    /// <summary>Writes <paramref name="rawRequest"/> to the host's socket as is and returns the status line and everything after the headers.</summary>
+    private static async Task<(string StatusLine, string Body)> SendRawAsync(LoopbackMvcHost host, string rawRequest)
+    {
+        using var client = new TcpClient();
+        await client.ConnectAsync(host.BaseAddress.Host, host.BaseAddress.Port);
+        await using var stream = client.GetStream();
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(rawRequest));
+        using var reader = new StreamReader(stream, Encoding.ASCII);
+        var response = await reader.ReadToEndAsync();
+        var statusLine = response[..response.IndexOf("\r\n", StringComparison.Ordinal)];
+        return (statusLine, response[(response.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4)..]);
+    }
+
+    /// <summary>404 { state: "unknown" } and nothing else.</summary>
+    private static async Task AssertUnknown(HttpResponseMessage response)
+    {
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        var body = JObject.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body.Properties().Select(p => p.Name), Is.EqualTo(new[] { "state" }));
+        Assert.That(body["state"]!.Value<string>(), Is.EqualTo("unknown"));
     }
 
     /// <summary>Polls <paramref name="condition"/> until it holds; fails the test after <see cref="HangGuard"/>.</summary>

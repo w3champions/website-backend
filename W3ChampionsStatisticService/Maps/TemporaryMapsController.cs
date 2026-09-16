@@ -24,9 +24,10 @@ namespace W3ChampionsStatisticService.Maps;
 /// reaches the global exception filters (whose ErrorResult envelope A.3/A.4 do not allow).
 /// <para>
 /// Deliberately NOT an [ApiController]: its client-error mapping turns every bare status (the pre-check's 429 and 502,
-/// the upload's spool 500) into a ProblemDetails body, and A.4 says those answers carry nothing. Binding is explicit
-/// ([FromQuery]) and the upload reads its own multipart, so nothing else of the attribute is used — except its opt-in
-/// to ApiExplorer, which the Swagger document in Program.cs is built from; [ApiExplorerSettings] restores that.
+/// the upload's spool 500) into a ProblemDetails body, and A.4 says those answers carry nothing. Nothing is model-bound
+/// (the pre-check reads its header itself and the upload reads its own multipart), so nothing else of the attribute
+/// is used — except its opt-in to ApiExplorer, which the Swagger document in Program.cs is built from;
+/// [ApiExplorerSettings] restores that.
 /// </para>
 /// <para>NEVER log mapProof or proofHash (design spec §10.3); sha1, map ids, fileKeys and battleTags are fine.</para>
 /// </summary>
@@ -48,18 +49,23 @@ public class TemporaryMapsController(
 
     /// <summary>
     /// Pre-check keyed by proofHash — a hash of a secret only a holder of the file can compute — so it cannot be used to
-    /// test whether a publicly known map is on the server. It returns the state and NOTHING else: no id, path, name, sha1
-    /// or proof (Appendix A.4); a bare 429 over the per-battleTag quota; a bare 502 for anything matchmaking cannot answer,
-    /// including a fileState this service does not know; and nothing at all for a client that is gone.
+    /// test whether a publicly known map is on the server. The key arrives in the <c>x-proof-hash</c> request header
+    /// (Appendix A.4, revision 10), never in the URL: the proxies in front of this service record request lines in
+    /// their logs and do not record headers. The removed <c>?proofHash=</c> query form is not bound and never
+    /// consulted. It returns the state and NOTHING else: no id, path, name, sha1 or proof (A.4); a bare 429 over the
+    /// per-battleTag quota; a bare 502 for anything matchmaking cannot answer, including a fileState this service
+    /// does not know; and nothing at all for a client that is gone. The token is checked first, then the quota, then
+    /// the header, so neither an anonymous nor a throttled caller learns anything about its key.
     /// <para>
-    /// The [NoTrace] on proofHash is a marker: controllers are not intercepted, so it redacts nothing by itself. The
-    /// value is kept out of spans and request telemetry by the telemetry processor and initializer
+    /// The header value is read here and handed to the matchmaking client only; it is never logged (§10.3), and
+    /// controllers are not intercepted, so no <c>param.*</c> activity tag can carry it. Telemetry that could record
+    /// headers is redacted by the telemetry processor and initializer
     /// (<see cref="Services.Tracing.TelemetryRedactionProcessor"/>, <see cref="Services.Tracing.TelemetryRedactionInitializer"/>).
     /// </para>
     /// </summary>
     [HttpGet("status")]
     [BearerRequiresPlayerAuth]
-    public async Task<IActionResult> GetStatus([FromQuery][NoTrace] string proofHash, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetStatus(CancellationToken cancellationToken)
     {
         var battleTag = BattleTag();
         if (battleTag == null)
@@ -74,8 +80,9 @@ public class TemporaryMapsController(
             return StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
-        // A malformed key can never match a record, and answering "unknown" locally keeps it from becoming a free
-        // upstream probe (the client would also refuse it as an argument).
+        // A missing or malformed key (A.4 answers both the same way) can never match a record, and answering "unknown"
+        // locally keeps it from becoming a free upstream probe (the client would also refuse it as an argument).
+        var proofHash = ProofHashHeader();
         if (!MapProof.IsLowercaseHex(proofHash, TemporaryMapKeys.ProofHashHexLength))
         {
             return Unknown();
@@ -244,6 +251,15 @@ public class TemporaryMapsController(
            && value is string battleTag
            && !string.IsNullOrWhiteSpace(battleTag)
             ? battleTag
+            : null;
+
+    /// <summary>
+    /// The x-proof-hash header when it was sent exactly once, else null: two header lines are ambiguous, so they are
+    /// malformed rather than "the first one" (two values folded into one line fail the hex check on their own).
+    /// </summary>
+    private string ProofHashHeader()
+        => Request.Headers.TryGetValue(TemporaryMapKeys.ProofHashHeaderName, out var values) && values.Count == 1
+            ? values[0]
             : null;
 
     private bool RequestAborted => HttpContext.RequestAborted.IsCancellationRequested;

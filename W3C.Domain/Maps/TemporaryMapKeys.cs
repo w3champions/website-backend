@@ -20,6 +20,14 @@ public static class TemporaryMapKeys
     public const int ProofHashHexLength = 64;
 
     /// <summary>
+    /// The request header that carries the proofHash to website-backend's pre-check (design spec Appendix A.4,
+    /// revision 10). A header rather than a query parameter because the proxies in front of the service record
+    /// request lines in their logs and do not record headers; its value is a credential-derived secret and is never
+    /// logged (§10.3).
+    /// </summary>
+    public const string ProofHashHeaderName = "x-proof-hash";
+
+    /// <summary>
     /// true for a stored-file path under <see cref="PathPrefix"/> with no backslash and no empty, "." or ".." segment.
     /// Inner dots stay legal: the §6.4 names keep them (e.g. "a..b-94ec3bda.w3x"), so only whole segments are checked.
     /// </summary>
