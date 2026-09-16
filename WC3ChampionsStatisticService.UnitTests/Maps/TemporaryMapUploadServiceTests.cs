@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -211,6 +212,40 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
     }
 
+    [TestCase("W3Champions/CustomGames/Legion TD-a9993e36.w3m", 2, TestName = "UpdateServiceStoringAtAnotherFileKey_Is502_ParserMismatch_AndCompensatesBothPaths")]
+    [TestCase("W3Champions/CustomGames/legion td-a9993e36.w3x", 2, TestName = "UpdateServiceStoringAtAnotherStemCasing_Is502_ParserMismatch_AndCompensatesBothPaths")]
+    [TestCase("W3Champions/CustomGames/Legion TD-A9993E36.w3x", 1, TestName = "UpdateServiceStoringAnUppercaseSuffix_Is502_ParserMismatch_AndCompensatesOnlyOurFileKey")]
+    [TestCase("W3Champions/v10/Legion TD-a9993e36.w3x", 1, TestName = "UpdateServiceStoringOutsideThePrefix_Is502_ParserMismatch_AndCompensatesOnlyOurFileKey")]
+    [TestCase("W3Champions/CustomGames/Legion TD.w3x", 1, TestName = "UpdateServiceStoringWithoutTheSuffix_Is502_ParserMismatch_AndCompensatesOnlyOurFileKey")]
+    [TestCase("W3Champions/CustomGames/Legion\\u000aTD-a9993e36.w3x", 1, TestName = "UpdateServiceStoringAControlCharacterPath_Is502_ParserMismatch_AndCompensatesOnlyOurFileKey")]
+    [TestCase(null, 1, TestName = "UpdateServiceAnsweringWithoutAFilePath_Is502_ParserMismatch_AndCompensatesOnlyOurFileKey")]
+    public void UpdateServiceStoringAtAnotherPath_Is502_ParserMismatch_AndCompensates(string storedPath, int expectedDeletes)
+    {
+        // The stored path is what the record will point at and what the sweep will look up; a file stored elsewhere
+        // than the fileKey this service sent would leave the record and the bytes disagreeing. Both are removed when
+        // the other path is a well-formed fileKey; a path this service could never have built is not deleted through
+        // the client at all, and only the fileKey is compensated.
+        var handler = UnknownSha1Handler()
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody(filePath: storedPath)))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var counts = new UploadCounts();
+
+        var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler));
+
+        Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(ex.Code, Is.EqualTo("PARSER_MISMATCH"));
+        Assert.That(Count(handler, IsUsDelete), Is.EqualTo(expectedDeletes));
+        var deleted = handler.Requests.Where(IsUsDelete).Select(r => QueryHelpers.ParseQuery(r.RequestUri!.Query)["filePath"].ToString()).ToArray();
+        Assert.That(deleted, Has.Some.EqualTo(FileKey), "our own fileKey is compensated");
+        if (expectedDeletes == 2)
+        {
+            Assert.That(deleted, Has.Some.EqualTo(storedPath), "the stray file at the stored path too");
+        }
+
+        Assert.That(Count(handler, IsCreate), Is.Zero, "no record is ever written for bytes at a path this service did not choose");
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+    }
+
     [Test]
     public void UpdateServiceAnsweringWithoutMetadata_Is502_ParserMismatch_AndCompensates()
     {
@@ -339,7 +374,12 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task TheOriginalFileName_ReachesMatchmakingWithoutControlCharacters()
     {
-        var handler = StoredNewMapHandler().On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
+        // The fileKey carries the sanitised stem, and update-service echoes the path it stored at, so the double must
+        // answer with that key rather than the fixture's default one.
+        var storedPath = TemporaryMapNaming.BuildFileKey("\u0000Leg\u001fion\u007f T\u0085D\u009f\u00a0~.w3x", Sha1, ".w3x");
+        var handler = UnknownSha1Handler()
+            .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody(filePath: storedPath)))
+            .On(IsCreate, Respond(HttpStatusCode.Created, Record(5811, storedPath)));
 
         await Run(handler, originalFileNameJson: "\\u0000Leg\\u001fion\\u007f T\\u0085D\\u009f\\u00a0~.w3x");
 
@@ -501,6 +541,21 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         Assert.That(outcome.Response.MapId, Is.EqualTo(99));
         Assert.That(Count(handler, IsUsDelete), Is.Zero, "the existing record points at the same bytes, so deleting them would break it");
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Deduped);
+    }
+
+    [Test]
+    public async Task MatchmakingConflictWhoseWinnerSpellsTheSha1InUppercase_IsStillTheSameBytes()
+    {
+        const string olderPath = "W3Champions/CustomGames/older-a9993e36.w3x";
+        var handler = StoredNewMapHandler()
+            .On(IsCreate, Respond(HttpStatusCode.Conflict, Record(99, olderPath, sha1: Sha1.ToUpperInvariant())))
+            .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+
+        var outcome = await Run(handler);
+
+        Assert.That(outcome.Created, Is.False);
+        Assert.That(outcome.Response.Path, Is.EqualTo(olderPath));
+        Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1));
     }
 
     [Test]

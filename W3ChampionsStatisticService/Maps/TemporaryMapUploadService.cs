@@ -207,7 +207,9 @@ public class TemporaryMapUploadService(
     /// <summary>
     /// A record of this sha1 exists after our create. Our file is stray only if that record is a present §6.4 temporary
     /// file (the strict <see cref="TemporaryMapNaming.IsFileKey"/> shape, which every record this service created has)
-    /// at a different path; any other record leaves the outcome unknown (S-L2), so nothing is deleted.
+    /// holding these very bytes (its gameMap sha1 equals ours) at a different path; any other record leaves the outcome
+    /// unknown — a record the sha1 lookup returned for other bytes would be an inexact lookup, and our bytes might be
+    /// the only copy — so nothing is deleted.
     /// </summary>
     private async Task<(TemporaryMapUploadOutcome, string)> KeepTheWinnerAsync(MapContract winner, string sha1, string fileKey)
     {
@@ -215,6 +217,13 @@ public class TemporaryMapUploadService(
         {
             throw Upstream("Temporary map {MapId} holds sha1 {Sha1} with fileState {FileState} at {Path}; leaving {FileKey}, which it may use",
                 winner.Id, sha1, LoggableFileState(winner.FileState), LoggablePath(winner.Path), fileKey);
+        }
+
+        var winnerSha1 = winner.GameMap?.Sha1?.ToLowerInvariant();
+        if (!string.Equals(winnerSha1, sha1, StringComparison.Ordinal))
+        {
+            throw Upstream("Temporary map {MapId} was returned for sha1 {Sha1} but holds sha1 {WinnerSha1} at {Path}; leaving {FileKey}, which it may use",
+                winner.Id, sha1, LoggableSha1(winnerSha1), LoggablePath(winner.Path), fileKey);
         }
 
         if (!string.Equals(winner.Path, fileKey, StringComparison.Ordinal))
@@ -461,17 +470,38 @@ public class TemporaryMapUploadService(
 
     private async Task VerifyDigestsAsync(MapFileData stored, TemporaryMapUpload upload, string proofHash, string fileKey)
     {
-        // 5. Both services derived these from the same bytes; a mismatch means one of them read different bytes.
+        // 5. Both services derived these from the same bytes; a mismatch means one of them read different bytes. The
+        // stored path is checked the same way: the record will name the fileKey this service sent, and bytes stored
+        // anywhere else would leave record and bytes disagreeing.
         var parsedSha1 = stored.MetaData?.Sha1?.ToLowerInvariant();
-        if (string.Equals(parsedSha1, upload.Sha1, StringComparison.Ordinal)
+        var storedAtFileKey = string.Equals(stored.FilePath, fileKey, StringComparison.Ordinal);
+        if (storedAtFileKey
+            && string.Equals(parsedSha1, upload.Sha1, StringComparison.Ordinal)
             && string.Equals(stored.MapProofHash, proofHash, StringComparison.Ordinal))
         {
             return;
         }
 
-        _logger.LogWarning("update-service derived other digests for sha1 {Sha1} (parsed sha1 {ParsedSha1}); compensating {FileKey}",
-            upload.Sha1, LoggableSha1(parsedSha1), fileKey);
-        await Compensation.DeleteAsync(fileKey);
+        if (storedAtFileKey)
+        {
+            _logger.LogWarning("update-service derived other digests for sha1 {Sha1} (parsed sha1 {ParsedSha1}); compensating {FileKey}",
+                upload.Sha1, LoggableSha1(parsedSha1), fileKey);
+            await Compensation.DeleteAsync(fileKey);
+        }
+        else
+        {
+            // Our fileKey is compensated regardless (an idempotent delete of what may be nothing); the stored path only
+            // when it is a path this service could have built, so a spelling it never produced is never sent to the
+            // delete route. Neither path is a proof.
+            _logger.LogWarning("update-service stored sha1 {Sha1} at {StoredPath} instead of {FileKey}; compensating both",
+                upload.Sha1, LoggablePath(stored.FilePath), fileKey);
+            await Compensation.DeleteAsync(fileKey);
+            if (TemporaryMapNaming.IsFileKey(stored.FilePath))
+            {
+                await Compensation.DeleteAsync(stored.FilePath);
+            }
+        }
+
         throw new TemporaryMapUploadException(StatusCodes.Status502BadGateway, TemporaryMapErrorCodes.ParserMismatch);
     }
 

@@ -115,8 +115,9 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
     protected static string Verified(int mapId, string path = FileKey, string fileState = "deleted")
         => "{\"mapId\":" + mapId + ",\"path\":\"" + path + "\",\"fileState\":\"" + fileState + "\"}";
 
-    protected static string UsUploadBody(string metaSha1 = Sha1, string mapProofHash = ProofHash, bool twelveP = false)
-        => "{\"id\":\"66f0\",\"mapId\":0,\"filePath\":\"" + FileKey + "\",\"mapProofHash\":\"" + mapProofHash + "\"," +
+    /// <summary>update-service's upload answer; <paramref name="filePath"/> null leaves the field out.</summary>
+    protected static string UsUploadBody(string metaSha1 = Sha1, string mapProofHash = ProofHash, bool twelveP = false, string filePath = FileKey)
+        => "{\"id\":\"66f0\",\"mapId\":0," + (filePath == null ? "" : "\"filePath\":\"" + filePath + "\",") + "\"mapProofHash\":\"" + mapProofHash + "\"," +
            "\"metaData\":{\"sha1\":\"" + metaSha1 + "\",\"name\":\"Legion TD\",\"checksum\":1,\"crc32\":2," +
            "\"width\":128,\"height\":106,\"suggested_players\":\"4v4\",\"num_players\":16,\"twelve_p\":" +
            (twelveP ? "true" : "false") + ",\"players\":[],\"forces\":[]}}";

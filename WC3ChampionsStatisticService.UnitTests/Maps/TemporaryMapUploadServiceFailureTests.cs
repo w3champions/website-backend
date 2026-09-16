@@ -462,6 +462,9 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         new object[] { "in an unknown state", Record(99, "W3Champions/CustomGames/older-a9993e36.w3x", fileState: "gone") },
         new object[] { "present inside the prefix but not a §6.4 fileKey (control character in the stem)", Record(99, "W3Champions/CustomGames/older\\u000aforged-a9993e36.w3x") },
         new object[] { "present inside the prefix without the sha1 suffix", Record(99, "W3Champions/CustomGames/older.w3x") },
+        new object[] { "present at another path but holding other bytes", Record(99, "W3Champions/CustomGames/older-a9993e36.w3x", sha1: OtherSha1) },
+        new object[] { "present at another path without a gameMap", "{\"map\":{\"id\":99,\"name\":\"Legion TD\",\"path\":\"W3Champions/CustomGames/older-a9993e36.w3x\",\"temporary\":true,\"fileState\":\"present\"}}" },
+        new object[] { "present at our fileKey but holding other bytes", Record(99, sha1: OtherSha1) },
     ];
 
     [TestCaseSource(nameof(UnusableWinners))]

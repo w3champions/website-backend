@@ -158,8 +158,10 @@ sha1 and `mapProof` in one streaming pass:
    record (`200`, no write, no quota spent); `deleted` → restore.
 3. **Create** (new record): spend the hourly quota, build the server-generated fileKey
    (`TemporaryMapNaming.BuildFileKey`), store the bytes at update-service, verify update-service's derived
-   sha1/`MapProofHash` against what was computed locally (→ `PARSER_MISMATCH` on mismatch), validate the
-   capture (→ `INVALID_LAYOUT`), then create the matchmaking record.
+   sha1/`MapProofHash` against what was computed locally and its echoed `filePath` against the fileKey
+   that was sent (→ `PARSER_MISMATCH` on any mismatch; a file stored at another path is compensated at
+   both paths, the other one only when it is a well-formed fileKey), validate the capture
+   (→ `INVALID_LAYOUT`), then create the matchmaking record.
 4. **Restore** (existing but `deleted` record): **verify the proof before mutating anything**
    (`VerifyTemporaryMapProof` — this call writes nothing, so a wrong proof costs no state) →
    `PROOF_MISMATCH` if unrecognised, `TEMP_MAP_KEY_MISMATCH` if the verified proof names a different map
@@ -207,10 +209,11 @@ whether to compensate, because matchmaking can commit the write and still answer
 post-insert refresh failing, or a proxy 5xx after the write landed). Outcomes:
 
 - create: a record now present at *our* fileKey → keep the bytes, return it (`200 deduped`); present at a
-  *different*, well-formed §6.4 fileKey path → compensate our fileKey (delete), return the other record
-  (`200`); nothing known for the sha1 at all → compensate, `502 UPSTREAM`; a record known but not
-  `present`, or not a well-formed §6.4 fileKey path → **no compensation**, `502 UPSTREAM` (the outcome is
-  ambiguous, so nothing is deleted, S-L2).
+  *different*, well-formed §6.4 fileKey path and holding *these* bytes (its `gameMap.sha1` equals the
+  upload's, compared lower-cased) → compensate our fileKey (delete), return the other record (`200`);
+  nothing known for the sha1 at all → compensate, `502 UPSTREAM`; a record known but not `present`, not a
+  well-formed §6.4 fileKey path, or naming another sha1 → **no compensation**, `502 UPSTREAM` (the outcome
+  is ambiguous, so nothing is deleted). The same rule decides a matchmaking `409` on create.
 - restore: the record now `present` **at the same map id** → success (`200 restored`, no delete); still
   `deleted`, or nothing found at all → compensate, `502 UPSTREAM`; `present` at a *different* map id →
   **no compensation**, `502 UPSTREAM` — sha1 is unique, so another id means the record was replaced
