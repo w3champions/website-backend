@@ -23,17 +23,24 @@ admin as `uploadedBy`.
 
 ## Routes
 
-### `GET api/maps/temporary/status?proofHash=<64 lowercase hex>`
+### `GET api/maps/temporary/status` with request header `x-proof-hash: <64 lowercase hex>`
 
 `[BearerRequiresPlayerAuth]`. Answers the *state* only — never an id, path, name or proof — because the
 route is keyed by `proofHash`, a hash of a secret only a file holder can compute, so knowing the state of
-someone else's map is impossible without already holding the file.
+someone else's map is impossible without already holding the file. The proofHash travels in the
+`x-proof-hash` request header (`TemporaryMapKeys.ProofHashHeaderName`, revision 10 of the design spec),
+not in the URL: the proxies in front of the service record request lines in their logs and do not record
+headers. The former `?proofHash=` query parameter is not bound and never consulted — a request carrying
+only the query is answered `404 { state: "unknown" }` without asking matchmaking, and one carrying both
+is answered from the header alone. The header is read after the auth filter and the quota (401 and 429
+come first), and read directly from `Request.Headers` rather than model-bound, so no bound parameter can
+surface its value anywhere.
 
 | Status | Body | When |
 |---|---|---|
 | 200 | `{ state: "ready" }` | matchmaking reports `fileState: present` |
 | 200 | `{ state: "expired" }` | matchmaking reports `fileState: deleted` |
-| 404 | `{ state: "unknown" }` | no record for that proofHash, **or** `proofHash` is not exactly 64 lowercase hex (checked locally — no matchmaking call) |
+| 404 | `{ state: "unknown" }` | no record for that proofHash, **or** the `x-proof-hash` header is missing, sent more than once, or not exactly 64 lowercase hex (checked locally — no matchmaking call) |
 | 429 | *(empty)* | the per-battleTag pre-check quota (`PrecheckPerBattleTagPerMinute` = 60/minute) is exhausted |
 | 502 | *(empty)* | matchmaking could not be asked (transport failure, timeout, a strict-404 contract violation) **or** it answered a `fileState` this route does not know how to relay |
 | 401 | `{ error: "Invalid token" }` | the auth filter rejected a missing/malformed/badly-signed bearer token |
@@ -376,16 +383,28 @@ about the difference between "our disk" and "their service".
   call (create, file-restored, verify-proof) logs only the exception type and the upstream HTTP status,
   never the exception's message — matchmaking's own error bodies can echo the request text back, which
   for those calls includes the proof.
-- The inbound `proofHash` query parameter on the status route never reaches a span or a request
-  telemetry item as a value. The mechanism is the telemetry pipeline, not the controller:
-  `TelemetryRedactionProcessor` rewrites the `url.query`, `url.full` and `url.path` attributes of every
-  OpenTelemetry activity before the exporter sees it (the proofHash path segment of matchmaking's
-  by-proof-hash route included), `TelemetryRedactionInitializer` does the same for the Application
-  Insights request URL, and the Serilog category overrides in `W3CLoggerConfiguration` keep the ASP.NET
-  Core and HttpClient request logging below Information. `TracingPipelineRedactionTests` proves the
-  processor and initializer end to end. The `[NoTrace]` on the controller parameter is a marker only —
-  controllers are not Castle-intercepted, so the attribute redacts nothing there; it stays so that the
-  intent is visible at the parameter and pinned by a test, should interception ever reach controllers.
+- Since revision 10 the proofHash never travels in a URL: the status route reads it from the
+  `x-proof-hash` request header and matchmaking's lookup takes it in a `POST /maps/temporary/by-proof-hash`
+  JSON body (`{ proofHash }`), because the edge and upstream proxies record request lines in their access
+  and error logs and do not record headers or bodies. Inside this service, neither the ASP.NET Core nor
+  the HttpClient OpenTelemetry instrumentation records headers or bodies, `AddW3CTracing`'s enrich hooks
+  read only `x-faro-session-id`, no `AddHttpLogging`/Serilog request logging is enabled, and Application
+  Insights' request module records the URL and not the headers. The redaction is still the safety net,
+  not the controller: `TelemetryRedaction.IsSecretHeader` names every credential header (`x-proof-hash`,
+  `x-admin-secret`, `x-map-key`, `authorization`, cookies, the API token and the chat-service secret) and
+  `TelemetryRedactionProcessor` rewrites any `http.request.header.<name>` / `http.response.header.<name>`
+  span attribute named after one before the exporter sees it, as `TelemetryRedactionInitializer` does for
+  a telemetry property of that name. The URL redaction of the earlier shapes stays (the `?proofHash=`
+  query and the `/by-proof-hash/{proofHash}` path segment are still rewritten to `Redacted`, as are the
+  credentials still sent as query values). The Serilog category overrides in `W3CLoggerConfiguration`
+  keep hosting's, Kestrel's and HttpClient's request logging below Information (`LogLevelOverrideTests`);
+  IHttpClientFactory's Trace-level header listing prints every header value as `*` under
+  Microsoft.Extensions.Http 9 and never a body (pinned by `TracingPipelineRedactionTests`).
+  `InboundHeaderRedactionPipelineTests` sends a real pre-check through Kestrel, the production tracing
+  pipeline, Application Insights request tracking and Trace-level logging and searches everything that
+  left for the header's value; `TracingPipelineRedactionTests` does the same for the outbound POST body.
+  The status action binds no parameter for the proofHash (it reads the header itself), so there is
+  nothing for a `[NoTrace]` marker to mark.
 - Every other value an upstream service supplies and that might reach a log line (a `fileState`, a sha1, a
   stored path, a launcher version string, a spool file name) is passed through a shape gate first
   (`LoggableFileState`, `LoggableSha1`, `LoggablePath`, `LauncherVersionForLog`, `LoggableSpoolFileName`)
@@ -452,7 +471,7 @@ introduced in any service; website-backend reuses the existing `ADMIN_SECRET`, `
 matchmaking hardening → docker-compose-files (nginx `client_max_body_size 257M`) → update-service →
 matchmaking-service → **website-backend** → website → flo/launcher release.
 
-Both out-of-order failure modes are loud and safe, though one of them can leave a stray file behind for
+The out-of-order failure modes are loud and safe, though one of them can leave a stray file behind for
 a while:
 
 - Deploying website-backend **before update-service**: uploads fail with `502 PARSER_MISMATCH` (update-
@@ -466,6 +485,13 @@ a while:
   answer. The client-side contract treats that as a violation and throws, which every caller maps to a
   bare `502` (status route) or `502 UPSTREAM` (upload route) — every temporary-map request fails loudly
   rather than silently doing nothing or writing partial state.
+- Revision 10 moves the matchmaking lookup from `GET /maps/temporary/by-proof-hash/{proofHash}` to
+  `POST /maps/temporary/by-proof-hash` with the proofHash in the body. Deploy matchmaking-service first,
+  then website-backend. In the window between the two the pre-check answers a bare `502`: whichever side
+  is ahead, its route form is unknown to its peer and answered with a non-empty (HTML or framework-text)
+  404, which the client treats as a contract violation rather than as the strict `404 {}` "no record"
+  answer. Loud and safe — nothing is written, and the upload route is unaffected (its matchmaking calls
+  did not change).
 
 ## What is not covered
 
