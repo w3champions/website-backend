@@ -1,4 +1,5 @@
 using System;
+using Microsoft.AspNetCore.Http;
 
 namespace W3ChampionsStatisticService.Maps;
 
@@ -13,5 +14,10 @@ public class TemporaryMapUploadException(int statusCode, string code, object bod
     public string Code { get; } = code;
 
     /// <summary>The response body, e.g. <c>{ code: "FILE_TOO_LARGE" }</c>.</summary>
-    public object Body { get; } = body ?? new { code };
+    public object Body { get; } = body ?? TemporaryMapFailureBodies.Coded(code);
+
+    /// <summary>429 with the A.3 quota body; <paramref name="retryAfterSeconds"/> is the caller's, already clamped.</summary>
+    public static TemporaryMapUploadException QuotaExceeded(int retryAfterSeconds)
+        => new(StatusCodes.Status429TooManyRequests, TemporaryMapErrorCodes.QuotaExceeded,
+            TemporaryMapFailureBodies.QuotaExceeded(retryAfterSeconds));
 }

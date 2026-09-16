@@ -112,7 +112,7 @@ public static class TemporaryMapUploadReader
         var metadata = await ReadMetadataAsync(reader, cancellationToken);
         if (!TemporaryMapNaming.TryGetExtension(metadata.OriginalFileName, out var extension))
         {
-            throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, "EXTENSION");
+            throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, TemporaryMapErrorCodes.Extension);
         }
 
         var fileSection = await reader.ReadNextSectionAsync(cancellationToken);
@@ -165,7 +165,7 @@ public static class TemporaryMapUploadReader
                 {
                     if (hasher.BytesHashed + read > maxFileBytes)
                     {
-                        throw new TemporaryMapUploadException(StatusCodes.Status413PayloadTooLarge, "FILE_TOO_LARGE");
+                        throw new TemporaryMapUploadException(StatusCodes.Status413PayloadTooLarge, TemporaryMapErrorCodes.FileTooLarge);
                     }
 
                     hasher.Append(buffer.AsSpan(0, read));
@@ -365,5 +365,5 @@ public static class TemporaryMapUploadReader
     }
 
     private static TemporaryMapUploadException Malformed()
-        => new(StatusCodes.Status400BadRequest, "METADATA");
+        => new(StatusCodes.Status400BadRequest, TemporaryMapErrorCodes.Metadata);
 }

@@ -102,7 +102,7 @@ public class TemporaryMapUploadService(
         // 1. The client's sha1 is a hint only; the authoritative one came off the wire.
         if (!string.Equals(upload.Metadata.Sha1?.ToLowerInvariant(), upload.Sha1, StringComparison.Ordinal))
         {
-            throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, "SHA1_MISMATCH");
+            throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, TemporaryMapErrorCodes.Sha1Mismatch);
         }
 
         _logger.LogInformation("Temporary map upload from {BattleTag}: sha1 {Sha1}, {SizeBytes} bytes, launcher {LauncherVersion}",
@@ -129,8 +129,7 @@ public class TemporaryMapUploadService(
         if (!_rateLimiter.TryAcquire($"tm-upload:{battleTag}", TemporaryMapLimits.UploadsPerHourPerBattleTag, DateTime.UtcNow,
                 TemporaryMapLimits.UploadQuotaWindow, out var retryAfter))
         {
-            throw new TemporaryMapUploadException(StatusCodes.Status429TooManyRequests, "QUOTA_EXCEEDED",
-                new { code = "QUOTA_EXCEEDED", retryAfterSeconds = RetryAfterSeconds(retryAfter) });
+            throw TemporaryMapUploadException.QuotaExceeded(RetryAfterSeconds(retryAfter));
         }
 
         // 4. Server-generated fileKey: the uploader's name only ever contributes a sanitised base.
@@ -165,7 +164,7 @@ public class TemporaryMapUploadService(
             {
                 _logger.LogInformation("Upload sha1 {Sha1} captured a lobby this map cannot have; compensating {FileKey}", upload.Sha1, fileKey);
                 await Compensation.DeleteAsync(fileKey);
-                throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, "INVALID_LAYOUT");
+                throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, TemporaryMapErrorCodes.InvalidLayout);
             }
 
             return await CreateRecordAsync(upload, stored.MetaData, fileKey, battleTag);
@@ -239,7 +238,7 @@ public class TemporaryMapUploadService(
         // 4a. VERIFY BEFORE MUTATE: this route writes nothing, so a wrong proof costs no state.
         var verified = await BeforeStoreAsync("proof verification",
                            ct => _matchmakingServiceClient.VerifyTemporaryMapProof(proofHash, ct), cancellationToken, carriesProof: true)
-                       ?? throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, "PROOF_MISMATCH");
+                       ?? throw new TemporaryMapUploadException(StatusCodes.Status400BadRequest, TemporaryMapErrorCodes.ProofMismatch);
         if (verified.MapId != existing.Id)
         {
             // sha1 is the dedupe key and proofHash the credential key; both derive from the same bytes (§5.1).
@@ -480,7 +479,7 @@ public class TemporaryMapUploadService(
         _logger.LogWarning("update-service derived other digests for sha1 {Sha1} (parsed sha1 {ParsedSha1}); compensating {FileKey}",
             upload.Sha1, LoggableSha1(parsedSha1), fileKey);
         await Compensation.DeleteAsync(fileKey);
-        throw new TemporaryMapUploadException(StatusCodes.Status502BadGateway, "PARSER_MISMATCH");
+        throw new TemporaryMapUploadException(StatusCodes.Status502BadGateway, TemporaryMapErrorCodes.ParserMismatch);
     }
 
     /// <summary>Logs why the stored bytes are rolled back, rolls them back, and returns the 502 to throw.</summary>
@@ -509,9 +508,9 @@ public class TemporaryMapUploadService(
         return Upstream();
     }
 
-    private static TemporaryMapUploadException Upstream() => new(StatusCodes.Status502BadGateway, "UPSTREAM");
+    private static TemporaryMapUploadException Upstream() => new(StatusCodes.Status502BadGateway, TemporaryMapErrorCodes.Upstream);
 
-    private static TemporaryMapUploadException KeyMismatch() => new(StatusCodes.Status500InternalServerError, "TEMP_MAP_KEY_MISMATCH");
+    private static TemporaryMapUploadException KeyMismatch() => new(StatusCodes.Status500InternalServerError, TemporaryMapErrorCodes.TempMapKeyMismatch);
 
     /// <summary>A 200 never hands out a path that is not a §6.4 temporary map file, the shape this service alone produces (S-L2).</summary>
     private (TemporaryMapUploadOutcome, string) Deduped(MapContract map, string sha1)

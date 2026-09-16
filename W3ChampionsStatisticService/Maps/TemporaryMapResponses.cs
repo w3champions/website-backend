@@ -24,3 +24,32 @@ public class TemporaryMapUploadOutcome
 
     public TemporaryMapUploadResponse Response { get; set; }
 }
+
+/// <summary>
+/// The <c>code</c> of every failure body POST api/maps/temporary can answer (Appendix A.3), spelled once: the reader,
+/// the service and the controller answer through these constants, so the wire contract cannot drift between them.
+/// </summary>
+public static class TemporaryMapErrorCodes
+{
+    public const string Extension = "EXTENSION";
+    public const string Metadata = "METADATA";
+    public const string FileTooLarge = "FILE_TOO_LARGE";
+    public const string Sha1Mismatch = "SHA1_MISMATCH";
+    public const string InvalidLayout = "INVALID_LAYOUT";
+    public const string ProofMismatch = "PROOF_MISMATCH";
+    public const string QuotaExceeded = "QUOTA_EXCEEDED";
+    public const string Upstream = "UPSTREAM";
+    public const string ParserMismatch = "PARSER_MISMATCH";
+    public const string TempMapKeyMismatch = "TEMP_MAP_KEY_MISMATCH";
+}
+
+/// <summary>The failure bodies of Appendix A.3, composed in one place. Neither ever carries a secret.</summary>
+public static class TemporaryMapFailureBodies
+{
+    /// <summary><c>{ code }</c>: every A.3 failure but the quota.</summary>
+    public static object Coded(string code) => new { code };
+
+    /// <summary><c>{ code: "QUOTA_EXCEEDED", retryAfterSeconds }</c>, the one A.3 body with a second field.</summary>
+    public static object QuotaExceeded(int retryAfterSeconds)
+        => new { code = TemporaryMapErrorCodes.QuotaExceeded, retryAfterSeconds };
+}
