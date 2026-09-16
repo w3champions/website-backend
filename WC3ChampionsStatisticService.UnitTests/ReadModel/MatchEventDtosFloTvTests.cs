@@ -33,13 +33,19 @@ public class MatchEventDtosFloTvTests
     // Positive control: a declared field the fixture document carries, proving deserialisation actually ran.
     private const string MapName = "Legion TD";
 
+    // The serialised `mapName` property itself, not just its value: `match.map` ("W3Champions/CustomGames/
+    // Legion TD-94ec3bda.w3x") also contains "Legion TD" as a plain substring, so a bare Does.Contain(MapName)
+    // would pass even if `mapName` itself were dropped and only `map` survived deserialisation.
+    private const string MapNameProperty = "\"mapName\":\"" + MapName + "\"";
+
     // Any member whose name (or BSON element name) contains this fragment is rejected by the guard.
     private const string ForbiddenNameFragment = "floTvPassword";
 
-    // The name the guard recommends for a client-facing FloTV flag. It deliberately does not contain
-    // ForbiddenNameFragment, so following the guard's own advice can never turn the guard red — pinned by
-    // ADtoDeclaringTheRecommendedFlagPassesTheGuard.
-    private const string RecommendedFlagName = "floTvProtected";
+    // The name the guard recommends for a client-facing FloTV flag, taken from the sample DTO below so the
+    // literal cannot drift from what ADtoDeclaringTheRecommendedFlagPassesTheGuard actually declares. It
+    // deliberately does not contain ForbiddenNameFragment, so following the guard's own advice can never turn
+    // the guard red.
+    private const string RecommendedFlagName = nameof(DtoWithTheRecommendedFlag.floTvProtected);
 
     // The API serialises with System.Text.Json under MVC's defaults: Program.cs registers AddControllers()
     // with neither AddNewtonsoftJson nor AddJsonOptions, and AddSignalR() uses the same JSON protocol.
@@ -59,7 +65,8 @@ public class MatchEventDtosFloTvTests
 
         Assert.That(matchEvent.match, Is.Not.Null);
         var served = ServeAsApiJson(matchEvent.match);
-        Assert.That(served, Does.Contain(MapName), "positive control: the declared fields must have been deserialised");
+        Assert.That(served, Does.Contain(MapNameProperty),
+            "positive control: the mapName field must have been deserialised (map also contains \"Legion TD\", so this checks mapName specifically)");
         Assert.That(served, Does.Not.Contain(Credential),
             "a credential-bearing matchmaking field must not survive deserialization");
     }
@@ -77,7 +84,8 @@ public class MatchEventDtosFloTvTests
 
         Assert.That(matchEvent.match, Is.Not.Null);
         var served = ServeAsApiJson(matchEvent.match);
-        Assert.That(served, Does.Contain(MapName), "positive control: the declared fields must have been deserialised");
+        Assert.That(served, Does.Contain(MapNameProperty),
+            "positive control: the mapName field must have been deserialised (map also contains \"Legion TD\", so this checks mapName specifically)");
         Assert.That(served, Does.Not.Contain(Credential),
             "a credential-bearing matchmaking field must not survive deserialization");
     }
