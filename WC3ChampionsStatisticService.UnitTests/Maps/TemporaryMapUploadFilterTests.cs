@@ -60,9 +60,10 @@ public class TemporaryMapUploadFilterTests
     {
         // Kestrel's default floor (240 B/s after 5 s) lets a 256 MiB body take ~13 days while holding a gate slot; the
         // filter raises it so a full upload must finish within a few hours and a trickle is cut off after the grace
-        // period: Kestrel answers 408 itself and closes the connection, the body read surfaces as its 408
-        // BadHttpRequestException (RequestBodyTimeout), and the controller returns no body of its own and releases
-        // the slot and the spool (TemporaryMapsControllerUploadTests pins that arm).
+        // period: Kestrel flags the request and cancels the pending read, the read surfaces as its 408
+        // BadHttpRequestException (RequestBodyTimeout) with RequestAborted not cancelled, and the controller aborts
+        // the connection, answers nothing and releases the slot and the partial spool (TemporaryMapsControllerUploadTests
+        // pins that arm).
         var httpContext = new DefaultHttpContext();
         httpContext.Features.Set<IHttpMaxRequestBodySizeFeature>(new FakeMaxBodySizeFeature());
         var dataRate = new FakeMinDataRateFeature();

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -319,25 +320,27 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
     }
 
     [Test]
-    public async Task ABodyBelowTheDataRateFloor_IsAnEmptyResult_AndReleasesItsSlotAndSpool()
+    public async Task ABodyBelowTheDataRateFloor_AbortsTheConnection_AnswersNothing_AndReleasesItsSlotAndSpool()
     {
-        // A body below the data-rate floor [TemporaryMapUploadBodyLimit] sets is answered by Kestrel itself: 408
-        // (RequestBodyTimeout), after which it closes the connection. RequestAborted is NOT cancelled; the next body
-        // read throws BadHttpRequestException 408 instead. The action adds no second status to a connection that
-        // already carries one: the upload is abandoned like a client abort, the slot goes back, nothing is left behind.
+        // Below the data-rate floor [TemporaryMapUploadBodyLimit] sets, Kestrel flags the request and cancels the
+        // pending read — it writes nothing, and RequestAborted is not cancelled — so the read surfaces as its 408
+        // BadHttpRequestException (RequestBodyTimeout). Returning any result here would have Kestrel write it (an
+        // EmptyResult is a 200 with no body); the action aborts the connection instead and answers nothing, the slot
+        // goes back, nothing is left behind.
         var before = FilesIn(SpoolDirectory);
         var body = new ThrowingStream(new BadHttpRequestException("Reading the request body timed out due to data arriving too slowly.",
             StatusCodes.Status408RequestTimeout));
         var handler = UnknownSha1Handler();
         using var logs = new LogCapture();
         var controller = CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>());
+        var lifetime = new RecordingLifetimeFeature();
+        controller.HttpContext.Features.Set<IHttpRequestLifetimeFeature>(lifetime);
         var counts = new UploadCounts();
 
         var result = await Upload(controller, body: body);
 
-        Assert.That(result, Is.InstanceOf<EmptyResult>(), "Kestrel already answered 408: no 400 or 413 body from here");
-        Assert.That(controller.HttpContext.RequestAborted.IsCancellationRequested, Is.False,
-            "the non-abort path: a data-rate timeout does not cancel RequestAborted");
+        Assert.That(lifetime.Aborts, Is.EqualTo(1), "the connection is aborted: nothing goes on the wire, no second status");
+        Assert.That(result, Is.InstanceOf<EmptyResult>(), "nothing is written to a connection that was just aborted");
         Assert.That(Gate.InFlight, Is.Zero, "the slot is released");
         AssertNoNewSpoolFiles(before);
         Assert.That(FileKeyLock.Count, Is.Zero, "no fileKey lock is held: the read failed before any fileKey existed");
@@ -347,6 +350,8 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
             "a client that sent too slowly is not a fault of this service");
         Assert.That(lines.Where(l => l.Contains("below the data-rate floor", StringComparison.Ordinal)), Has.Exactly(1).Items);
         Assert.That(lines.Single(l => l.Contains("below the data-rate floor", StringComparison.Ordinal)), Does.StartWith("Information").And.Contain(BattleTag));
+        Assert.That(lines.Where(l => l.Contains("abandoned by the client", StringComparison.Ordinal)), Is.Empty,
+            "the 408 arm answered, not the abort arm: RequestAborted was not cancelled when the read failed");
         // The service saw the read fail with an IOException-derived exception, a 4xx the client caused, and counted it so.
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
     }
@@ -355,8 +360,8 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
     [TestCase(StatusCodes.Status431RequestHeaderFieldsTooLarge)]
     public async Task AnyOtherKestrelRequestError_Is400_Metadata_AndCountedRejected(int kestrelStatus)
     {
-        // The same stream, any Kestrel status but 413 (FILE_TOO_LARGE) and 408 (answered by Kestrel itself, nothing
-        // from here): the A.3 code for a malformed body.
+        // The same stream, any Kestrel status but 413 (FILE_TOO_LARGE) and 408 (the connection is aborted, nothing is
+        // answered): the A.3 code for a malformed body.
         var body = new ThrowingStream(new BadHttpRequestException("Bad request.", kestrelStatus));
         var counts = new UploadCounts();
 
@@ -593,5 +598,18 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
             abortFirst?.Cancel();
             throw failure;
         }
+    }
+
+    /// <summary>
+    /// Records <see cref="Abort"/>: the feature <see cref="DefaultHttpContext"/> installs by default swallows it, so
+    /// a test could not otherwise tell an aborted connection from one that was answered.
+    /// </summary>
+    private sealed class RecordingLifetimeFeature : IHttpRequestLifetimeFeature
+    {
+        public int Aborts { get; private set; }
+
+        public CancellationToken RequestAborted { get; set; }
+
+        public void Abort() => Aborts++;
     }
 }

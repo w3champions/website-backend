@@ -142,8 +142,9 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     {
         // The slot is taken before the first body byte and held while the body streams in. A client that drops the
         // connection mid-body must hand the slot back: nothing else could, and a slot held for good is a slot denied
-        // to everyone. (A body below the data-rate floor takes another path — Kestrel answers 408 itself and the read
-        // fails with its 408 BadHttpRequestException; TemporaryMapsControllerUploadTests pins that arm.)
+        // to everyone. (A body below the data-rate floor takes another path — Kestrel flags the request and cancels
+        // the pending read, the read fails with its 408 BadHttpRequestException, and the action aborts the connection
+        // itself; TemporaryMapsControllerUploadTests pins that arm.)
         var handler = new ScriptedHttpHandler();
         await using var host = await StartHostAsync(handler, spoolDirectory: SpoolDirectory);
         var gate = host.Services.GetRequiredService<TemporaryMapUploadGate>();

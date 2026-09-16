@@ -42,7 +42,8 @@ public static class TemporaryMapMetrics
         TemporaryMapUploadException { StatusCode: < 500 } => Results.Rejected,
         TemporaryMapUploadException => Results.UpstreamError,
         // The request body could not be read (Kestrel's BadHttpRequestException included): 413 or 400, or Kestrel's
-        // own 408 for a body below the data-rate floor (answered by Kestrel; the controller adds nothing).
+        // 408 for a body below the data-rate floor, on which the controller aborts the connection and answers nothing.
+        // Still the client's doing, so still rejected — unlike a client that went away, which is counted nowhere.
         IOException => Results.Rejected,
         // A spool fault, a body-stream fault, a cancellation the request did not cause: a bare 500 of this service.
         _ => Results.ServerError,

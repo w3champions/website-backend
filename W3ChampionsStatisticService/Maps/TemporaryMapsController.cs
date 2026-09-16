@@ -204,12 +204,15 @@ public class TemporaryMapsController(
             {
                 if (ex.StatusCode == StatusCodes.Status408RequestTimeout)
                 {
-                    // The body arrived below the data-rate floor [TemporaryMapUploadBodyLimit] sets. Kestrel has already
-                    // answered 408 (RequestBodyTimeout) and is closing the connection; it does not cancel RequestAborted,
-                    // so the read fails with this instead. Abandoned exactly like the abort arm: no second status on a
-                    // connection that already carries one, the slot goes back with the using, the reader has removed
-                    // its spool, and no fileKey lock was taken (the read fails before a fileKey exists).
+                    // The body arrived below the data-rate floor [TemporaryMapUploadBodyLimit] sets. Kestrel flags the
+                    // request and cancels the pending read — it writes nothing and does not cancel RequestAborted — so
+                    // the read surfaces as its 408 BadHttpRequestException (RequestBodyTimeout). Any result returned
+                    // from here would be written (an EmptyResult is a 200 with no body; rethrowing would make it a
+                    // 500 through the middleware), so the connection is aborted instead and nothing is answered, as
+                    // for a client that went away. The slot goes back with the using, the reader has removed its
+                    // partial spool, and no fileKey lock was taken (the read fails before a fileKey exists).
                     _logger.LogInformation("Temporary map upload from {BattleTag} was abandoned: the body arrived below the data-rate floor", battleTag);
+                    HttpContext.Abort();
                     return new EmptyResult();
                 }
 
