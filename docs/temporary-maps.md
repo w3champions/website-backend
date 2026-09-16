@@ -186,8 +186,8 @@ post-insert refresh failing, or a proxy 5xx after the write landed). Outcomes:
 
 - create: a record now present at *our* fileKey → keep the bytes, return it (`200 deduped`); present at a
   *different*, well-formed §6.4 fileKey path → compensate our fileKey (delete), return the other record
-  (`200`); nothing known for the sha1 at all → compensate, `502 UPSTREAM`; a record known but neither
-  `present` nor a well-formed fileKey path → **no compensation**, `502 UPSTREAM` (the outcome is
+  (`200`); nothing known for the sha1 at all → compensate, `502 UPSTREAM`; a record known but not
+  `present`, or not a well-formed §6.4 fileKey path → **no compensation**, `502 UPSTREAM` (the outcome is
   ambiguous, so nothing is deleted, S-L2).
 - restore: the record now `present` **at the same map id** → success (`200 restored`, no delete); still
   `deleted`, or nothing found at all → compensate, `502 UPSTREAM`; `present` at a *different* map id →
