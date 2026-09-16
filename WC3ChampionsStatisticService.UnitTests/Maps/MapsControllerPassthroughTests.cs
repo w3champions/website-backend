@@ -46,7 +46,7 @@ public class MapsControllerPassthroughTests
         Assert.That(request.RequestUri!.Query, Does.Contain("includeTemporary=true"));
         Assert.That(request.Headers.Contains("x-admin-secret"), Is.True,
             "matchmaking ignores includeTemporary without the admin secret, so the admin checkbox would "
-            + "silently show nothing (cross-plan review BLOCKER 3)");
+            + "silently show nothing");
     }
 
     [Test]
