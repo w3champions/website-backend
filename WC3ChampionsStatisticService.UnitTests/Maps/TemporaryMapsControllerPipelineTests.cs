@@ -90,6 +90,7 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
 
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest), "the ceiling was raised, so the body was read in full");
         var body = JObject.Parse(await response.Content.ReadAsStringAsync());
+        Assert.That(body.Properties().Select(p => p.Name), Is.EqualTo(new[] { "code" }));
         Assert.That(body["code"]!.Value<string>(), Is.EqualTo("SHA1_MISMATCH"));
         Assert.That(handler.Requests, Is.Empty, "the sha1 check comes before any upstream call");
         Assert.That(host.Services.GetRequiredService<TemporaryMapUploadGate>().InFlight, Is.Zero, "the slot was released");
@@ -230,7 +231,10 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(await response.Content.ReadAsStringAsync(), Is.Empty);
     }
 
-    /// <summary>A read-only stream of <paramref name="length"/> zero bytes; nothing is held in memory.</summary>
+    /// <summary>
+    /// A read-only stream of <paramref name="length"/> zero bytes; nothing is held in memory. Like a file, it can be
+    /// positioned past its end (reads then return 0) but never before its start.
+    /// </summary>
     private sealed class ZeroStream(long length) : Stream
     {
         private long _position;
@@ -239,22 +243,26 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         public override bool CanSeek => true;
         public override bool CanWrite => false;
         public override long Length => length;
-        public override long Position { get => _position; set => _position = value; }
+        public override long Position { get => _position; set => Seek(value, SeekOrigin.Begin); }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var read = (int)Math.Min(count, length - _position);
+            var read = (int)Math.Clamp(length - _position, 0, count);
             Array.Clear(buffer, offset, read);
             _position += read;
             return read;
         }
 
-        public override long Seek(long offset, SeekOrigin origin) => _position = origin switch
+        public override long Seek(long offset, SeekOrigin origin)
         {
-            SeekOrigin.Begin => offset,
-            SeekOrigin.Current => _position + offset,
-            _ => length + offset,
-        };
+            var target = origin switch
+            {
+                SeekOrigin.Begin => offset,
+                SeekOrigin.Current => _position + offset,
+                _ => length + offset,
+            };
+            return _position = target >= 0 ? target : throw new IOException("An attempt was made to move the position before the beginning of the stream.");
+        }
 
         public override void Flush()
         {
