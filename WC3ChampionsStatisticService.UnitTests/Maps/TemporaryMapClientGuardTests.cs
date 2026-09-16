@@ -72,7 +72,7 @@ public class TemporaryMapClientGuardTests
     private static IEnumerable<TestCaseData> NullOnNotFoundMethods()
     {
         yield return Probe("GetTemporaryMapBySha1", "/maps/temporary/by-sha1/", c => c.GetTemporaryMapBySha1(Sha1));
-        yield return Probe("GetTemporaryMapStateByProofHash", "/maps/temporary/by-proof-hash/", c => c.GetTemporaryMapStateByProofHash(ProofHash));
+        yield return Probe("GetTemporaryMapStateByProofHash", "/maps/temporary/by-proof-hash", c => c.GetTemporaryMapStateByProofHash(ProofHash));
         yield return Probe("GetTemporaryMapByPath", "/maps/temporary/by-path", c => c.GetTemporaryMapByPath(FileKey));
         yield return Probe("VerifyTemporaryMapProof", "/maps/temporary/verify-proof", c => c.VerifyTemporaryMapProof(ProofHash));
     }
@@ -276,8 +276,9 @@ public class TemporaryMapClientGuardTests
     public void DigestKeys_ThatAreNotLowercaseHexOfTheirLength_AreRefusedBeforeAnyRequest(
         Func<MatchmakingServiceClient, string, Task> call, string key)
     {
-        // sha1 and proofHash are URL path segments on two of these routes: a "." or ".." key would be collapsed
-        // by System.Uri into another route that still carries x-admin-secret.
+        // sha1 is a URL path segment on by-sha1, where a "." or ".." key would be collapsed by System.Uri into another
+        // route that still carries x-admin-secret; the two proofHash routes carry the key in a POST body and refuse
+        // the same shapes, so a key that can never match is never sent at all.
         var handler = AllRoutesHandler();
 
         var ex = Assert.ThrowsAsync<ArgumentException>(() => call(Mm(handler), key));
@@ -380,7 +381,8 @@ public class TemporaryMapClientGuardTests
         const string map = "{\"map\":{\"id\":5811,\"path\":\"" + FileKey + "\"}}";
         return new ScriptedHttpHandler()
             .On(HttpMethod.Get, "/maps/temporary/by-sha1/", HttpStatusCode.OK, map)
-            .On(HttpMethod.Get, "/maps/temporary/by-proof-hash/", HttpStatusCode.OK, "{\"fileState\":\"present\"}")
+            // Before the POST /maps/temporary create route: the handler matches on a path substring.
+            .On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"present\"}")
             .On(HttpMethod.Get, "/maps/temporary/by-path", HttpStatusCode.OK, map)
             .On(HttpMethod.Get, "/maps/temporary/expired", HttpStatusCode.OK, "{\"items\":[]}")
             .On(HttpMethod.Post, "/maps/temporary/verify-proof", HttpStatusCode.OK,

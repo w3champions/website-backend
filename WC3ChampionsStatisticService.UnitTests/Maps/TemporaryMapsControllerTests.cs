@@ -30,13 +30,13 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 [TestFixture]
 public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
 {
-    private const string ByProofHash = "/maps/temporary/by-proof-hash/";
+    private const string ByProofHash = "/maps/temporary/by-proof-hash";
 
     [TestCase("present", "ready")]
     [TestCase("deleted", "expired")]
     public async Task Status_MapsTheFileStateOntoTheClientState(string fileState, string expected)
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"" + fileState + "\"}");
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"" + fileState + "\"}");
 
         var result = await CreateController(handler).GetStatus(ProofHash, CancellationToken.None) as OkObjectResult;
 
@@ -44,13 +44,15 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         var body = JObject.Parse(Newtonsoft.Json.JsonConvert.SerializeObject(result!.Value));
         Assert.That(body["state"]!.Value<string>(), Is.EqualTo(expected));
         Assert.That(body.Properties().Count(), Is.EqualTo(1), "the pre-check returns state and nothing else — no id, path, name, sha1 or proof");
-        Assert.That(handler.LastRequest(HttpMethod.Get, ByProofHash).RequestUri!.AbsolutePath, Does.EndWith("/" + ProofHash));
+        var request = handler.LastRequest(HttpMethod.Post, ByProofHash);
+        Assert.That(request.RequestUri!.PathAndQuery, Does.EndWith(ByProofHash), "the proofHash travels in the body, never in the URL");
+        Assert.That(JObject.Parse(handler.LastBody(HttpMethod.Post, ByProofHash))["proofHash"]!.Value<string>(), Is.EqualTo(ProofHash));
     }
 
     [Test]
     public async Task Status_ReturnsUnknownWhenMatchmakingHasNoRecord()
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.NotFound);
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.NotFound);
 
         var result = await CreateController(handler).GetStatus(ProofHash, CancellationToken.None) as NotFoundObjectResult;
 
@@ -82,7 +84,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task Status_RateLimitsPerBattleTag_WithABareBody()
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.NotFound);
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.NotFound);
         var limiter = new MintRateLimiter();
         var controller = CreateController(handler, limiter);
         for (var i = 0; i < TemporaryMapLimits.PrecheckPerBattleTagPerMinute; i++)
@@ -94,7 +96,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
 
         Assert.That(throttled, Is.Not.Null, "the pre-check 429 carries no body at all (Appendix A.4)");
         Assert.That(throttled!.StatusCode, Is.EqualTo(StatusCodes.Status429TooManyRequests));
-        Assert.That(handler.CountRequests(HttpMethod.Get, ByProofHash), Is.EqualTo(TemporaryMapLimits.PrecheckPerBattleTagPerMinute),
+        Assert.That(handler.CountRequests(HttpMethod.Post, ByProofHash), Is.EqualTo(TemporaryMapLimits.PrecheckPerBattleTagPerMinute),
             "a throttled pre-check never reaches matchmaking");
         Assert.That(TemporaryMapLimits.PrecheckPerBattleTagPerMinute, Is.EqualTo(60));
 
@@ -109,7 +111,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         // One MintRateLimiter instance serves both routes (Program.cs registers a single one): the pre-check window must
         // not touch the upload window of the same battleTag.
         var limiter = new MintRateLimiter();
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.NotFound);
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.NotFound);
         var controller = CreateController(handler, limiter);
         for (var i = 0; i < TemporaryMapLimits.PrecheckPerBattleTagPerMinute; i++)
         {
@@ -125,7 +127,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     [TestCase("Deleted")]
     public async Task Status_AnUnknownFileState_Is502_WithNoBody_AndWarns(string fileState)
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"" + fileState + "\"}");
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"" + fileState + "\"}");
         using var logs = new LogCapture();
 
         var result = await CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>()).GetStatus(ProofHash, CancellationToken.None);
@@ -140,7 +142,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task Status_AFileStateWithALineBreak_IsLoggedAsInvalid()
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"gone\\u000d\\u000aforged line\"}");
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"gone\\u000d\\u000aforged line\"}");
         using var logs = new LogCapture();
 
         var result = await CreateController(handler, logger: logs.CreateLogger<TemporaryMapsController>()).GetStatus(ProofHash, CancellationToken.None);
@@ -154,7 +156,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     [
         new object[] { "transport failure", (Func<HttpRequestMessage, HttpResponseMessage>)(_ => throw new HttpRequestException("connection refused (matchmaking.example:3000)")) },
         new object[] { "HttpClient timeout", (Func<HttpRequestMessage, HttpResponseMessage>)(_ => throw new TaskCanceledException("simulated HttpClient timeout")) },
-        new object[] { "route 404 with an HTML body", Respond(HttpStatusCode.NotFound, "<html>Cannot GET /maps/temporary/by-proof-hash/" + ProofHash + "</html>") },
+        new object[] { "route 404 with an HTML body", Respond(HttpStatusCode.NotFound, "<html>Cannot POST /maps/temporary/by-proof-hash</html>") },
         new object[] { "404 with a non-empty JSON body", Respond(HttpStatusCode.NotFound, "{\"state\":\"unknown\"}") },
         new object[] { "500 with an error body", Respond(HttpStatusCode.InternalServerError, "{\"errors\":[{\"param\":\"proofHash\",\"message\":\"boom " + ProofHash + "\"}]}") },
         new object[] { "200 without a fileState", Respond(HttpStatusCode.OK, "{}") },
@@ -199,7 +201,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         var result = await controller.GetStatus(ProofHash, aborted.Token);
 
         Assert.That(result, Is.InstanceOf<EmptyResult>(), "nobody is listening");
-        Assert.That(handler.CountRequests(HttpMethod.Get, ByProofHash), Is.EqualTo(1));
+        Assert.That(handler.CountRequests(HttpMethod.Post, ByProofHash), Is.EqualTo(1));
         Assert.That(logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal) || l.StartsWith("Error", StringComparison.Ordinal)), Is.Empty,
             "a client abort is not an upstream failure");
     }
@@ -230,7 +232,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         // The request token is not cancelled, yet the call was: an HttpClient timeout, i.e. an upstream failure.
         using var notTheRequest = new CancellationTokenSource();
         notTheRequest.Cancel();
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"present\"}");
         var controller = CreateController(handler);
 
         var result = await controller.GetStatus(ProofHash, notTheRequest.Token);
@@ -272,7 +274,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     [TestCase("")]
     public async Task Status_FailsClosed_WithoutABattleTag(string battleTag)
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"present\"}");
         var controller = CreateController(handler, battleTag: battleTag);
 
         var result = await controller.GetStatus(ProofHash, CancellationToken.None) as StatusCodeResult;
@@ -285,7 +287,7 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task Status_FailsClosed_WhenTheBattleTagItemIsMissingAltogether()
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Get, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, ByProofHash, HttpStatusCode.OK, "{\"fileState\":\"present\"}");
         var controller = CreateController(handler);
         controller.HttpContext.Items.Remove(BearerRequiresPlayerAuthFilter.BattleTagItemKey);
 

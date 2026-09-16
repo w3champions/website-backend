@@ -61,16 +61,45 @@ public class TemporaryMapClientTests
     }
 
     [Test]
-    public async Task GetTemporaryMapStateByProofHash_ReturnsOnlyTheFileState()
+    public async Task GetTemporaryMapStateByProofHash_PostsTheProofHashInTheBody_AndReadsOnlyTheFileState()
     {
+        // Appendix A.5 (revision 10): the proofHash travels in a JSON body, never in the URL, because the edge and
+        // upstream proxies record request lines in their logs and do not record bodies.
         var handler = new ScriptedHttpHandler()
-            .On(HttpMethod.Get, "/maps/temporary/by-proof-hash/", HttpStatusCode.OK, "{\"fileState\":\"deleted\"}");
+            .On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"deleted\"}");
 
         var state = await Mm(handler).GetTemporaryMapStateByProofHash(ProofHash);
 
         Assert.That(state.FileState, Is.EqualTo(TemporaryMapFileStates.Deleted));
-        Assert.That(handler.LastRequest(HttpMethod.Get, "/maps/temporary/by-proof-hash/").RequestUri!.AbsolutePath,
-            Does.EndWith("/maps/temporary/by-proof-hash/" + ProofHash));
+        var request = handler.Requests.Single();
+        Assert.That(request.Method, Is.EqualTo(HttpMethod.Post));
+        Assert.That(request.RequestUri!.AbsolutePath, Does.EndWith("/maps/temporary/by-proof-hash"), "no trailing path segment");
+        Assert.That(request.RequestUri.Query, Is.Empty, "no query");
+        Assert.That(request.RequestUri.OriginalString, Does.Not.Contain(ProofHash));
+        Assert.That(request.Headers.Contains("x-admin-secret"), Is.True);
+        Assert.That(request.Content!.Headers.ContentType!.MediaType, Is.EqualTo("application/json"));
+        var body = JObject.Parse(handler.RequestBodies.Single());
+        Assert.That(body.Properties().Select(p => p.Name), Is.EqualTo(new[] { "proofHash" }), "the exact A.5 body key, and nothing else");
+        Assert.That(body["proofHash"]!.Value<string>(), Is.EqualTo(ProofHash));
+    }
+
+    [Test]
+    public void GetTemporaryMapStateByProofHash_A400_IsAContractViolation_WhoseMessageEchoesNothing()
+    {
+        // The key was validated before the request was built, so matchmaking refusing the body means the two services
+        // disagree on the Appendix A.5 contract. Its 400 body can echo what it refused, so the message names the
+        // status only, and the parser's own exception is never attached.
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.BadRequest,
+                "{\"errors\":[{\"path\":\"proofHash\",\"msg\":\"Invalid value " + ProofHash + "\"}]}");
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(() => Mm(handler).GetTemporaryMapStateByProofHash(ProofHash));
+
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+        Assert.That(ex.Message, Does.Contain("400"));
+        Assert.That(ex.Message, Does.Not.Contain(ProofHash).And.Not.Contain("Invalid value").And.Not.Contain("{"));
+        Assert.That(ex.InnerException, Is.Null);
     }
 
     [Test]

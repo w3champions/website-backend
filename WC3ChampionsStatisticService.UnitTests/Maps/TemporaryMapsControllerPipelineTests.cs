@@ -212,7 +212,7 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     [Test]
     public async Task AStatusRequestMatchmakingCannotAnswer_Is502_WithNoBodyAtAll()
     {
-        var handler = new ScriptedHttpHandler().On(r => r.RequestUri!.AbsolutePath.Contains("/by-proof-hash/", StringComparison.Ordinal), TransportFails());
+        var handler = new ScriptedHttpHandler().On(r => r.RequestUri!.AbsolutePath.EndsWith("/by-proof-hash", StringComparison.Ordinal), TransportFails());
         await using var host = await StartHostAsync(handler);
 
         var response = await host.Client.SendAsync(StatusRequest(ProofHash));

@@ -19,7 +19,7 @@ public class TemporaryMapEnvelope
 }
 
 /// <summary>
-/// GET /maps/temporary/by-proof-hash/{proofHash}. Status only, never an identifier, so the answer
+/// POST /maps/temporary/by-proof-hash, body { proofHash }. Status only, never an identifier, so the answer
 /// can be relayed to the player verbatim as the pre-check state (design spec §5.4, least privilege).
 /// </summary>
 public class TemporaryMapStateResponse

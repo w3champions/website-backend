@@ -52,7 +52,7 @@ public class TemporaryMapClientContractTests
     [
         new("GetTemporaryMapBySha1", HttpMethod.Get, "/maps/temporary/by-sha1/", HttpStatusCode.OK,
             h => Mm(h).GetTemporaryMapBySha1(Sha1), ["{}", "{\"map\":null}", "{\"map\":\"" + BodyMarker + "\"}"]),
-        new("GetTemporaryMapStateByProofHash", HttpMethod.Get, "/maps/temporary/by-proof-hash/", HttpStatusCode.OK,
+        new("GetTemporaryMapStateByProofHash", HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK,
             h => Mm(h).GetTemporaryMapStateByProofHash(ProofHash), ["{}", "{\"fileState\":\"\"}", "{\"fileState\":null}"]),
         new("GetTemporaryMapByPath", HttpMethod.Get, "/maps/temporary/by-path", HttpStatusCode.OK,
             h => Mm(h).GetTemporaryMapByPath(FileKey), ["{}", "{\"map\":null}"]),

@@ -38,13 +38,24 @@ public partial class MatchmakingServiceClient
         return (await ReadRecordOrNull<TemporaryMapEnvelope>(response, e => e.Map != null, cancellationToken))?.Map;
     }
 
-    /// <summary>Pre-check probe. Returns null when nothing is known for this proofHash (strict 404 {}).</summary>
+    /// <summary>
+    /// Pre-check probe: <c>POST /maps/temporary/by-proof-hash</c> with the proofHash in a JSON body (Appendix A.5,
+    /// revision 10). It never travels in the URL: the proxies between the services record request lines in their logs
+    /// and do not record request bodies. Returns null when nothing is known for this proofHash (strict 404 {}); a 400
+    /// means matchmaking refused a body this client had already validated, i.e. the two disagree on the contract.
+    /// </summary>
     public async Task<TemporaryMapStateResponse> GetTemporaryMapStateByProofHash(
         [NoTrace] string proofHash, CancellationToken cancellationToken = default)
     {
         RequireLowercaseHex(proofHash, TemporaryMapKeys.ProofHashHexLength, nameof(proofHash));
-        var url = $"{MatchmakingApiUrl}/maps/temporary/by-proof-hash/{Uri.EscapeDataString(proofHash)}";
-        var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
+        var url = $"{MatchmakingApiUrl}/maps/temporary/by-proof-hash";
+        var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(new { proofHash }), cancellationToken);
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            // Its 400 body echoes what it refused, so the message names the status only.
+            throw UpstreamContract.Violation(response.StatusCode, ServiceName);
+        }
+
         return await ReadRecordOrNull<TemporaryMapStateResponse>(response, s => !string.IsNullOrEmpty(s.FileState), cancellationToken);
     }
 
@@ -137,8 +148,9 @@ public partial class MatchmakingServiceClient
     }
 
     /// <summary>
-    /// sha1 and proofHash are lowercase hex digests, and two routes carry them as a URL path segment, where System.Uri
-    /// would collapse a "." or ".." key into another route. Anything else is refused before a request is built; the
+    /// sha1 and proofHash are lowercase hex digests. by-sha1 carries the sha1 as a URL path segment, where System.Uri
+    /// would collapse a "." or ".." key into another route; the two proofHash routes carry the key in a POST body, and a
+    /// key that can never match is not worth a request. Anything else is refused before a request is built; the
     /// message never echoes the value.
     /// </summary>
     private static void RequireLowercaseHex(string value, int length, string parameterName)
