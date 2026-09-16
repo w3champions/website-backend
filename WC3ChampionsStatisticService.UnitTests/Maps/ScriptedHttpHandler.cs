@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -102,17 +103,34 @@ internal sealed class ScriptedHttpHandler : HttpMessageHandler
     /// Returns a NEW client over the shared handler on every call, like the real IHttpClientFactory: a
     /// client whose Timeout is set after it has sent a request throws, so one shared instance would
     /// break code that configures a fresh client per call. The handler is never disposed with a client.
+    /// Each client sends through its own tagging handler, so a test can tell which client sent a request.
     /// </summary>
     internal sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
     {
+        private readonly List<(int Client, HttpRequestMessage Request)> _sent = [];
+
         /// <summary>Every client handed out, in creation order.</summary>
         public List<HttpClient> CreatedClients { get; } = [];
 
         public HttpClient CreateClient(string name)
         {
-            var client = new HttpClient(handler, disposeHandler: false);
+            var client = new HttpClient(new SenderTag(handler, CreatedClients.Count, _sent), disposeHandler: false);
             CreatedClients.Add(client);
             return client;
+        }
+
+        /// <summary>The client that sent <paramref name="request"/>, as its index in <see cref="CreatedClients"/>.</summary>
+        public int SenderOf(HttpRequestMessage request)
+            => _sent.Single(s => ReferenceEquals(s.Request, request)).Client;
+
+        private sealed class SenderTag(HttpMessageHandler inner, int client, List<(int Client, HttpRequestMessage Request)> sent)
+            : DelegatingHandler(inner)
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                sent.Add((client, request));
+                return base.SendAsync(request, cancellationToken);
+            }
         }
     }
 }

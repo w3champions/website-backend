@@ -325,20 +325,32 @@ public class TemporaryMapClientGuardTests
         Assert.That(DecodedQuery(handler.Requests.Single()), Is.EqualTo(new Dictionary<string, string> { ["filePath"] = filePath }));
     }
 
-    [Test]
-    public async Task UploadTemporaryMapAsync_UsesItsOwnClientWithTheLongUploadTimeout()
+    /// <summary>The two calls that send a map file to update-service: the temporary upload and the admin passthrough.</summary>
+    private static readonly Dictionary<string, Func<UpdateServiceClient, Task>> MapFileUploads = new()
     {
+        ["UploadTemporaryMapAsync"] = UploadAbc,
+        ["CreateMapFromFormAsync"] = c => c.CreateMapFromFormAsync(new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1"),
+    };
+
+    [TestCase("UploadTemporaryMapAsync", TestName = "UploadTemporaryMapAsync_UsesItsOwnClientWithTheLongUploadTimeout")]
+    [TestCase("CreateMapFromFormAsync", TestName = "CreateMapFromFormAsync_UsesItsOwnClientWithTheLongUploadTimeout")]
+    public async Task MapFileUpload_UsesItsOwnClientWithTheLongUploadTimeout(string upload)
+    {
+        // Both send a body of up to 256 MiB that update-service then parses; under the shared client's 100 s timeout
+        // the send itself would have to sustain megabytes per second, or end in a TaskCanceledException.
         var handler = AllRoutesHandler();
         var factory = new ScriptedHttpHandler.Factory(handler);
         var client = new UpdateServiceClient(factory);
 
         // The shared client has already sent a request, so re-configuring IT would throw.
         await client.DeleteMapFileByPathAsync(FileKey, CancellationToken.None);
-        await UploadAbc(client);
+        await MapFileUploads[upload](client);
 
         Assert.That(factory.CreatedClients, Has.Count.EqualTo(2), "the upload must not reuse the shared client");
         Assert.That(factory.CreatedClients[0].Timeout, Is.EqualTo(TimeSpan.FromSeconds(100)));
         Assert.That(factory.CreatedClients[1].Timeout, Is.EqualTo(TimeSpan.FromMinutes(10)));
+        Assert.That(factory.SenderOf(handler.LastRequest(HttpMethod.Post, "/api/content/maps")), Is.EqualTo(1),
+            "the map file must travel through the client with the long timeout, not merely next to it");
     }
 
     private static TestCaseData Probe<T>(string name, string path, Func<MatchmakingServiceClient, Task<T>> call)

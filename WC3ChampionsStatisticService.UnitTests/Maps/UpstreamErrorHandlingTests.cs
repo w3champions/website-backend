@@ -154,6 +154,27 @@ public class UpstreamErrorHandlingTests
         Assert.That(entry.Message, Does.Contain(action).And.Contain("502"));
     }
 
+    [Test]
+    public async Task CreateMapFile_WhenTheForwardOutlivesTheUploadTimeout_AnswersLikeATransportFailure()
+    {
+        // HttpClient's own timeout is a TaskCanceledException, not an HttpRequestException: neither the per-action
+        // catch nor the global filter would see it, and the admin would get an unexplained 500 for a forward that
+        // simply took too long. The temporary upload answers the same case as an upstream failure.
+        var timeout = new TaskCanceledException("simulated HttpClient timeout");
+        var handler = new ScriptedHttpHandler().On(_ => true, _ => throw timeout);
+        var logger = new Mock<ILogger<MapsController>>();
+
+        var result = await ControllerActions["CreateMapFile"](CreateController(handler, logger));
+
+        Assert.That(result, Is.InstanceOf<ObjectResult>());
+        Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
+        Assert.That(((ObjectResult)result).Value, Is.EqualTo(HttpRequestExceptionFilter.TransportFailureMessage));
+        var entry = HttpRequestExceptionFilterTests.LogEntries(logger).Single();
+        Assert.That(entry.Level, Is.EqualTo(LogLevel.Error));
+        Assert.That(entry.Exception, Is.SameAs(timeout));
+        Assert.That(entry.Message, Does.Contain("CreateMapFile").And.Contain("502"));
+    }
+
     private static IEnumerable<TestCaseData> ActionsWithSuccessStatuses()
         => from action in ControllerActions.Keys
            from status in new[] { HttpStatusCode.OK, HttpStatusCode.Created }

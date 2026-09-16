@@ -24,7 +24,9 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
     /// <summary>
     /// update-service can spend minutes writing and parsing a 256 MiB map, well past HttpClient's
-    /// 100 s default. Timeout is per-client, not per-request, so the upload path uses its own client.
+    /// 100 s default, and the timeout spans the send of the body too. Timeout is per-client, not
+    /// per-request, so both calls that send a map file (the temporary upload and the admin passthrough)
+    /// use their own client.
     /// </summary>
     private static readonly TimeSpan UploadTimeout = TimeSpan.FromMinutes(10);
 
@@ -62,9 +64,12 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
             url += $"?uploadedBy={Uri.EscapeDataString(uploadedBy)}";
         }
 
+        using var uploadClient = _httpClientFactory.CreateClient();
+        uploadClient.Timeout = UploadTimeout;
+
         var request = AdminRequest(HttpMethod.Post, url);
         request.Content = req.Content;
-        var response = await _httpClient.SendAsync(request);
+        var response = await uploadClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)

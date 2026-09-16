@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
 using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
@@ -112,6 +113,11 @@ public class MapsController(
         {
             return UpstreamFailure(ex);
         }
+        catch (TaskCanceledException ex)
+        {
+            // HttpClient's own timeout (the forward takes no request token, so nothing else cancels it).
+            return UpstreamTimeout(ex);
+        }
     }
 
     [HttpGet("files/{fileId}")]
@@ -153,6 +159,17 @@ public class MapsController(
     {
         HttpRequestExceptionFilter.LogFailure(_logger, ex, action);
         return StatusCode(HttpRequestExceptionFilter.StatusCodeOf(ex), HttpRequestExceptionFilter.ClientMessageOf(ex));
+    }
+
+    /// <summary>
+    /// A forward that outlived the client's timeout is answered like a transport failure (502, the same fixed text),
+    /// as the temporary upload answers it; the exception is logged, its message naming only the timeout.
+    /// </summary>
+    private ObjectResult UpstreamTimeout(TaskCanceledException ex, [CallerMemberName] string action = "")
+    {
+        _logger.LogError(ex, "{Action} timed out forwarding to an upstream service and answered {StatusCode}",
+            action, StatusCodes.Status502BadGateway);
+        return StatusCode(StatusCodes.Status502BadGateway, HttpRequestExceptionFilter.TransportFailureMessage);
     }
 
     [HttpGet("tournaments")]
