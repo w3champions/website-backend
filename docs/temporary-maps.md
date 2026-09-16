@@ -160,8 +160,11 @@ with `CancellationToken.None` and is not cancellable by a client disconnect.
 update-service answers **409 Conflict** while creating or restoring, the service never deletes the
 existing file at that path blindly:
 
-1. Re-probe matchmaking **by sha1** — if a record is now known, that record wins (a dedupe/keep), no
-   delete.
+1. Re-probe matchmaking **by sha1**:
+   - known and `present` → that record wins, dedupe `200` (no delete);
+   - known but not `present` (e.g. `deleted`) → `502 UPSTREAM`, no delete, no retry — a client retry
+     takes the restore path instead, since the record is now known;
+   - unknown → fall through to the by-path probe below, before any delete.
 2. If sha1 is still unknown, probe matchmaking **by path** (`GetTemporaryMapByPath`) *before any delete*:
    - a strict `404 {}` (no record claims the path) → genuine stray file → delete it and retry the store
      once;
@@ -182,10 +185,15 @@ whether to compensate, because matchmaking can commit the write and still answer
 post-insert refresh failing, or a proxy 5xx after the write landed). Outcomes:
 
 - create: a record now present at *our* fileKey → keep the bytes, return it (`200 deduped`); present at a
-  *different* path → compensate our fileKey (delete), return the other record (`200`); still unknown →
-  compensate, `502 UPSTREAM`.
+  *different*, well-formed §6.4 fileKey path → compensate our fileKey (delete), return the other record
+  (`200`); nothing known for the sha1 at all → compensate, `502 UPSTREAM`; a record known but neither
+  `present` nor a well-formed fileKey path → **no compensation**, `502 UPSTREAM` (the outcome is
+  ambiguous, so nothing is deleted, S-L2).
 - restore: the record now `present` **at the same map id** → success (`200 restored`, no delete); still
-  `deleted`, or `present` at a *different* map id → compensate, `502 UPSTREAM`.
+  `deleted`, or nothing found at all → compensate, `502 UPSTREAM`; `present` at a *different* map id →
+  **no compensation**, `502 UPSTREAM` — sha1 is unique, so another id means the record was replaced
+  meanwhile and the bytes may now belong to the winning record (R2-1/S2-6); a known record in some other
+  file state → **no compensation**, `502 UPSTREAM`.
 - the re-probe call itself fails → **no compensation**, `502 UPSTREAM` + a warning; the bytes are left for
   the reconciliation sweep to reclaim later (or a later restore, if a `deleted` record still claims the
   path).
