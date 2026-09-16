@@ -22,9 +22,13 @@ namespace W3ChampionsStatisticService.Maps;
 /// filter, so the 401 is written before any request body byte is read; both fail closed with 401 should the filter have
 /// left no battleTag behind. Appendix A pins every body these actions answer, so each failure is mapped here and nothing
 /// reaches the global exception filters (whose ErrorResult envelope A.3/A.4 do not allow).
+/// <para>
+/// Deliberately NOT an [ApiController]: its client-error mapping turns every bare status (the pre-check's 429 and 502,
+/// the upload's spool 500) into a ProblemDetails body, and A.4 says those answers carry nothing. Binding is explicit
+/// ([FromQuery]) and the upload reads its own multipart, so nothing else of the attribute is used.
+/// </para>
 /// <para>NEVER log mapProof or proofHash (design spec §10.3); sha1, map ids, fileKeys and battleTags are fine.</para>
 /// </summary>
-[ApiController]
 [Route("api/maps/temporary")]
 [Trace]
 public class TemporaryMapsController(

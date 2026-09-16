@@ -326,7 +326,8 @@ public class TemporaryMapsControllerTests : TemporaryMapUploadServiceTestBase
         var route = typeof(TemporaryMapsController).GetCustomAttribute<RouteAttribute>();
         Assert.That(route, Is.Not.Null);
         Assert.That(route!.Template, Is.EqualTo("api/maps/temporary"));
-        Assert.That(typeof(TemporaryMapsController).GetCustomAttribute<ApiControllerAttribute>(), Is.Not.Null);
+        Assert.That(typeof(TemporaryMapsController).GetCustomAttribute<ApiControllerAttribute>(), Is.Null,
+            "the [ApiController] client-error mapping would give the A.4 bare answers a ProblemDetails body");
 
         var status = typeof(TemporaryMapsController).GetMethod(nameof(TemporaryMapsController.GetStatus))!.GetCustomAttribute<HttpGetAttribute>();
         Assert.That(status?.Template, Is.EqualTo("status"));
