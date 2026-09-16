@@ -133,6 +133,8 @@ public class TemporaryMapClientGuardTests
         await Us(handler).DeleteMapFileByPathAsync(HostileFileKey, CancellationToken.None);
 
         Assert.That(DecodedQuery(handler.Requests.Single()), Is.EqualTo(new Dictionary<string, string> { ["filePath"] = HostileFileKey }));
+        Assert.That(handler.Requests.Single().RequestUri!.Query, Is.EqualTo("?filePath=" + Uri.EscapeDataString(HostileFileKey)),
+            "RFC 3986 percent-encoding, the one encoder this client uses (a space is %20, never +)");
     }
 
     [Test]
@@ -149,6 +151,9 @@ public class TemporaryMapClientGuardTests
             ["limit"] = "500",
             ["after"] = HostileFileKey,
         }));
+        Assert.That(handler.Requests.Single().RequestUri!.Query, Does.Contain("prefix=" + Uri.EscapeDataString(HostileFileKey + "/"))
+            .And.Contain("after=" + Uri.EscapeDataString(HostileFileKey)).And.Not.Contain("+"),
+            "RFC 3986 percent-encoding, the one encoder this client uses (a space is %20, never +)");
     }
 
     [Test]

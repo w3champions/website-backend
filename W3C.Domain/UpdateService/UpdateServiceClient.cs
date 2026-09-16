@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using W3C.Domain.Common;
 using W3C.Domain.Maps;
 using W3C.Domain.UpdateService.Contracts;
@@ -153,7 +152,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     public async Task DeleteMapFileByPathAsync(string filePath, CancellationToken cancellationToken)
     {
         RequireTemporaryMapFilePath(filePath);
-        var url = $"{UpdateServiceUrl}/api/content/maps/file?filePath={HttpUtility.UrlEncode(filePath)}";
+        var url = $"{UpdateServiceUrl}/api/content/maps/file?filePath={Uri.EscapeDataString(filePath)}";
         var request = AdminRequest(HttpMethod.Delete, url);
         var response = await _httpClient.SendAsync(request, cancellationToken);
 
@@ -173,13 +172,13 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     {
         var query = new List<string>
         {
-            $"prefix={HttpUtility.UrlEncode(prefix)}",
+            $"prefix={Uri.EscapeDataString(prefix)}",
             $"olderThanHours={olderThanHours.ToString(CultureInfo.InvariantCulture)}",
             $"limit={limit.ToString(CultureInfo.InvariantCulture)}",
         };
         if (!string.IsNullOrEmpty(after))
         {
-            query.Add($"after={HttpUtility.UrlEncode(after)}");
+            query.Add($"after={Uri.EscapeDataString(after)}");
         }
 
         var url = $"{UpdateServiceUrl}/api/content/maps/files?{string.Join("&", query)}";

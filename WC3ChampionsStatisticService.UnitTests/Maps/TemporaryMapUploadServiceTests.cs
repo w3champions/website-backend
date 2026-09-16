@@ -207,7 +207,7 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         Assert.That(ex.Code, Is.EqualTo("PARSER_MISMATCH"));
         Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1));
         Assert.That(handler.LastRequest(HttpMethod.Delete, "/api/content/maps/file")!.RequestUri!.Query,
-            Is.EqualTo("?filePath=" + System.Web.HttpUtility.UrlEncode(FileKey)), "our own fileKey is compensated");
+            Is.EqualTo("?filePath=" + Uri.EscapeDataString(FileKey)), "our own fileKey is compensated");
         Assert.That(Count(handler, IsCreate), Is.Zero);
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
     }
@@ -573,7 +573,7 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         Assert.That(outcome.Response.Path, Is.EqualTo(olderPath));
         Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1));
         Assert.That(handler.LastRequest(HttpMethod.Delete, "/api/content/maps/file")!.RequestUri!.Query,
-            Is.EqualTo("?filePath=" + System.Web.HttpUtility.UrlEncode(FileKey)), "only our own fileKey is deleted, never the winner's");
+            Is.EqualTo("?filePath=" + Uri.EscapeDataString(FileKey)), "only our own fileKey is deleted, never the winner's");
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Deduped);
     }
 }

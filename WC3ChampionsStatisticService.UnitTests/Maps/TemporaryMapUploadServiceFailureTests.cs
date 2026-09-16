@@ -70,7 +70,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         Assert.That(handler.Requests.Select(Route),
             Is.EqualTo(new[] { "by-sha1", "us-upload", "by-sha1", "by-path", "us-delete", "us-upload", "create" }));
         Assert.That(handler.Requests.Single(IsByPath).RequestUri!.Query, Is.EqualTo("?path=" + HttpUtility.UrlEncode(FileKey)));
-        Assert.That(handler.Requests.Single(IsUsDelete).RequestUri!.Query, Is.EqualTo("?filePath=" + HttpUtility.UrlEncode(FileKey)));
+        Assert.That(handler.Requests.Single(IsUsDelete).RequestUri!.Query, Is.EqualTo("?filePath=" + Uri.EscapeDataString(FileKey)));
         Assert.That(handler.RequestBodies.Where((_, i) => IsUsUpload(handler.Requests[i])).Last(), Does.Contain("\r\n\r\nabc\r\n"),
             "the retry streams the whole file again from a freshly opened spool stream");
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Created);
@@ -394,7 +394,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
 
         Assert.That(outcome.Response.MapId, Is.EqualTo(99));
         Assert.That(outcome.Response.Path, Is.EqualTo(olderPath));
-        Assert.That(handler.Requests.Single(IsUsDelete).RequestUri!.Query, Is.EqualTo("?filePath=" + HttpUtility.UrlEncode(FileKey)));
+        Assert.That(handler.Requests.Single(IsUsDelete).RequestUri!.Query, Is.EqualTo("?filePath=" + Uri.EscapeDataString(FileKey)));
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Deduped);
     }
 
