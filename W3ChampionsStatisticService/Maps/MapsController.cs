@@ -96,6 +96,14 @@ public class MapsController(
     /// map cap is no longer refused here with a 413 — and the minimum body data rate is set, so a body that stalls
     /// fails the forward instead of holding the connection. Not <c>[RequestFormLimits]</c>: nothing here form-binds.
     /// </para>
+    /// <para>
+    /// Ordering: <see cref="BearerHasPermissionFilter"/> is an action filter, so on this action the ceiling and the
+    /// floor are in place before its 401 (on the temporary routes the authorization filter's 401 comes first). That is
+    /// bounded because no body byte is read before the 401 — nothing ahead of the action reads the body, which
+    /// <c>TemporaryMapsControllerPipelineTests.TheAdminMapFilePassthrough_LeavesItsBodyToTheAction_SoModelBindingReadsNoByte</c>
+    /// pins (it is the tripwire for any filter or binder added here) — and Kestrel drains an unread body for at most
+    /// its 5 s <c>RequestBodyDrainTimeout</c> after the response.
+    /// </para>
     /// </summary>
     [HttpPost("{id}/files")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]

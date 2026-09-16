@@ -403,7 +403,11 @@ about the difference between "our disk" and "their service".
   admin map-file passthrough `POST api/maps/{id}/files`, not globally — the global Kestrel limit elsewhere
   in this service stays 128 MiB) is `TransportBodyBytes = 269_484_032` bytes (256 MiB file cap + 1 MiB of
   multipart/header slack); the admin passthrough shares that 257 MiB per-action limit because update-service
-  accepts the same size on its map-file route. All three numbers (nginx, wb, update-service's own
+  accepts the same size on its map-file route. On the passthrough the admin permission check is an action
+  filter, so the ceiling and the floor are set before an unauthenticated request is refused — bounded because
+  no body byte is read before that 401 (pinned by the pipeline test
+  `TheAdminMapFilePassthrough_LeavesItsBodyToTheAction_SoModelBindingReadsNoByte`) and Kestrel drains an
+  unread body for at most 5 s after it. All three numbers (nginx, wb, update-service's own
   `[RequestSizeLimit]`) must agree; they are not derived from one shared constant, so a future change to any
   one of them must update the others by hand.
 - **update-service** must accept `uploadedBy` on the admin map-file passthrough as a **query parameter**

@@ -15,7 +15,8 @@ namespace W3ChampionsStatisticService.Maps;
 /// (<see cref="MapsController.CreateMapFile"/>). The global Kestrel limit (<c>MaxRequestBodySize</c> in Program.cs,
 /// 128 MiB) and Kestrel's default data-rate floor stay in force everywhere else. Resource filters run after
 /// authorization filters and before model binding, so both are in place before the first byte is read and a 401 from
-/// an authorization filter still wins first.
+/// an authorization filter still wins first. The passthrough's permission check is an action filter, so there both are
+/// set before its 401; see <see cref="MapsController.CreateMapFile"/> for why that is bounded and which test pins it.
 /// <para>
 /// The data-rate floor bounds how long one request can keep streaming: below the floor Kestrel flags the request and
 /// cancels the pending read, and the read surfaces as its 408 <c>BadHttpRequestException</c> (RequestBodyTimeout) with
