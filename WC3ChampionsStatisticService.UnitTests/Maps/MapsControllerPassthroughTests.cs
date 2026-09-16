@@ -291,7 +291,7 @@ public class MapsControllerPassthroughTests
     }
 
     /// <summary>Every property System.Text.Json writes for <paramref name="root"/>, walking W3C types, arrays and lists.</summary>
-    private static IEnumerable<(string Path, string JsonName)> SerialisedMembers(Type root)
+    private static IEnumerable<(string Path, string JsonName, PropertyInfo Property)> SerialisedMembers(Type root)
     {
         var visited = new HashSet<Type>();
         var pending = new Stack<(Type Type, string Path)>();
@@ -311,7 +311,7 @@ public class MapsControllerPassthroughTests
                 }
 
                 var path = current.Path + "." + property.Name;
-                yield return (path, property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name);
+                yield return (path, property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name, property);
 
                 var memberType = ElementTypeOf(property.PropertyType);
                 if (memberType.Namespace?.StartsWith("W3C", StringComparison.Ordinal) == true
@@ -331,6 +331,63 @@ public class MapsControllerPassthroughTests
         }
 
         return type.IsGenericType ? type.GetGenericArguments()[0] : type;
+    }
+
+    // ---- Members renamed on the wire: read from matchmaking with Newtonsoft, written to the website with STJ --------
+
+    [Test]
+    public void GameMapForce_WritesPlayerSetUnderItsSnakeCaseName_AsTheWebsiteReadsIt()
+    {
+        // MVC writes responses with System.Text.Json, which honours only [JsonPropertyName]; the matchmaking listing
+        // is read with Newtonsoft, which honours [JsonProperty]. A member renamed for one serialiser only leaves this
+        // service camel-casing what the admin map file details read as force.player_set.
+        var map = new MapContract
+        {
+            Id = 7,
+            GameMap = new GameMap { Forces = [new GameMapForce { Name = "Force 1", Flags = 0, PlayerSet = 3 }] },
+        };
+
+        var json = JsonSerializer.Serialize(new GetMapsResponse { Total = 1, Items = [map] }, WebJson);
+
+        using var document = JsonDocument.Parse(json);
+        var force = document.RootElement.GetProperty("items")[0].GetProperty("gameMap").GetProperty("forces")[0];
+        Assert.That(force.EnumerateObject().Select(p => p.Name), Is.EquivalentTo(new[] { "name", "flags", "player_set" }));
+        Assert.That(force.GetProperty("player_set").GetInt64(), Is.EqualTo(3));
+        Assert.That(json, Does.Not.Contain("playerSet"));
+    }
+
+    [Test]
+    public void GameMapForce_StillReadsPlayerSetFromMatchmaking()
+    {
+        var map = Newtonsoft.Json.JsonConvert.DeserializeObject<GameMap>(
+            "{\"sha1\":\"abc\",\"forces\":[{\"name\":\"Force 1\",\"flags\":0,\"player_set\":3}]}");
+
+        Assert.That(map!.Forces, Has.Length.EqualTo(1));
+        Assert.That(map.Forces[0].PlayerSet, Is.EqualTo(3));
+    }
+
+    [Test]
+    public void EveryRenamedMemberOfTheMapListing_IsWrittenUnderTheNameItIsReadWith()
+    {
+        // The [JsonProperty] rename is what matchmaking sends; the [JsonPropertyName] twin is what this service writes.
+        // Walking the listing's whole graph makes a renamed member added without its twin a failing test.
+        var renamed = SerialisedMembers(typeof(GetMapsResponse))
+            .Select(m => (
+                m.Path,
+                Read: m.Property.GetCustomAttribute<Newtonsoft.Json.JsonPropertyAttribute>()?.PropertyName,
+                Written: m.Property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name))
+            .Where(m => m.Read != null)
+            .ToList();
+
+        Assert.That(renamed.Select(m => m.Path), Is.EquivalentTo(new[]
+        {
+            "GetMapsResponse.Items.GameMap.SuggestedPlayers",
+            "GetMapsResponse.Items.GameMap.NumPlayers",
+            "GetMapsResponse.Items.GameMap.TwelveP",
+            "GetMapsResponse.Items.GameMap.Forces.PlayerSet",
+        }));
+        Assert.That(renamed.Where(m => m.Written != m.Read).Select(m => $"{m.Path}: read as {m.Read}, written as {m.Written ?? "(camelCase)"}"),
+            Is.Empty, "a member renamed for Newtonsoft needs the same [JsonPropertyName] for System.Text.Json");
     }
 
     private static MapContract MapWithEveryField() => new()
