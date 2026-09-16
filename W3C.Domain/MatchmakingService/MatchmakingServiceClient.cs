@@ -583,8 +583,10 @@ public partial class MatchmakingServiceClient
 
     /// <summary>
     /// Always throws an HttpRequestException carrying the upstream status. A body that is empty, not JSON (e.g. a
-    /// proxy's error page) or without an errors array gets a status-only message instead of escaping as a
-    /// NullReferenceException or JsonReaderException.
+    /// proxy's error page), without an errors array or with one that says nothing (a bare <c>{}</c> deserialises to
+    /// an empty array) gets a status-only message instead of escaping as a NullReferenceException or
+    /// JsonReaderException, or saying nothing. Each entry names its field (express-validator's <c>path</c> from v7,
+    /// <c>param</c> before) and its message, with neither leaving a stray space when absent.
     /// </summary>
     private async Task HandleMMError(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
@@ -594,7 +596,7 @@ public partial class MatchmakingServiceClient
             var errors = (await GetResult<ErrorResponse>(response, cancellationToken))?.Errors;
             if (errors != null)
             {
-                message = string.Join(",", errors.Select(x => $"{x?.Param} {x?.Message}"));
+                message = string.Join(",", errors.Select(x => $"{x?.Path ?? x?.Param} {x?.Message}".Trim()));
             }
         }
         catch (JsonException)
@@ -602,7 +604,12 @@ public partial class MatchmakingServiceClient
             // Not JSON: fall back to the status code below.
         }
 
-        throw new HttpRequestException(message ?? $"matchmaking-service returned {(int)response.StatusCode}", null, response.StatusCode);
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            message = $"matchmaking-service returned {(int)response.StatusCode}";
+        }
+
+        throw new HttpRequestException(message, null, response.StatusCode);
     }
 
     private async Task<T> GetResult<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)

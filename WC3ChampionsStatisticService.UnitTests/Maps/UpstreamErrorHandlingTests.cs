@@ -60,6 +60,49 @@ public class UpstreamErrorHandlingTests
         Assert.That(thrown.Message, Is.EqualTo("sha1 does not match,uploader required"));
     }
 
+    [TestCase("{}", TestName = "MatchmakingError_WithAnEmptyObjectBody_DescribesTheStatus")]
+    [TestCase("{\"errors\":[]}", TestName = "MatchmakingError_WithAnEmptyErrorsArray_DescribesTheStatus")]
+    [TestCase("{\"errors\":null}", TestName = "MatchmakingError_WithANullErrorsArray_DescribesTheStatus")]
+    [TestCase("{\"errors\":[{}]}", TestName = "MatchmakingError_WhoseOnlyEntryIsEmpty_DescribesTheStatus")]
+    [TestCase("{\"errors\":[null]}", TestName = "MatchmakingError_WhoseOnlyEntryIsNull_DescribesTheStatus")]
+    public void MatchmakingError_WithoutAnErrorEntryThatSaysAnything_DescribesTheStatus(string body)
+    {
+        // matchmaking answers a bare {} (e.g. file-deleted for an id that is not a temporary map) and its validator
+        // may send an entries-less array; ErrorResponse deserialises both to an empty Errors array. An empty message
+        // would leave the log and the 502 body saying nothing, so the status-only text applies to those as well.
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/7/file-deleted", HttpStatusCode.NotFound, body);
+        var client = new MatchmakingServiceClient(new ScriptedHttpHandler.Factory(handler));
+
+        var thrown = Assert.ThrowsAsync<HttpRequestException>(() => client.MarkTemporaryMapFileDeleted(7));
+
+        Assert.That(thrown!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        Assert.That(thrown.Message, Is.EqualTo("matchmaking-service returned 404"));
+    }
+
+    [TestCase("{\"errors\":[{\"msg\":\"x is required\",\"path\":\"x\"}]}", "x x is required",
+        TestName = "MatchmakingError_ReadsTheFieldNameFromExpressValidatorV7Path")]
+    [TestCase("{\"errors\":[{\"msg\":\"x is required\",\"param\":\"x\"}]}", "x x is required",
+        TestName = "MatchmakingError_ReadsTheFieldNameFromExpressValidatorV6Param")]
+    [TestCase("{\"errors\":[{\"msg\":\"x is required\",\"param\":\"old\",\"path\":\"new\"}]}", "new x is required",
+        TestName = "MatchmakingError_PrefersPathOverParam")]
+    [TestCase("{\"errors\":[{\"msg\":\"x is required\"}]}", "x is required",
+        TestName = "MatchmakingError_WithoutAFieldName_IsJustTheMessage")]
+    [TestCase("{\"errors\":[{\"path\":\"x\"}]}", "x",
+        TestName = "MatchmakingError_WithoutAMessage_IsJustTheFieldName")]
+    [TestCase("{\"errors\":[{\"msg\":\"a\",\"path\":\"x\"},{\"msg\":\"b\"},{\"msg\":\"c\",\"param\":\"z\"}]}", "x a,b,z c",
+        TestName = "MatchmakingError_JoinsEveryEntryWithoutStrayWhitespace")]
+    public void MatchmakingError_NamesTheFieldAndTheMessageOfEveryEntry(string body, string expected)
+    {
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/7/file-restored", HttpStatusCode.UnprocessableEntity, body);
+        var client = new MatchmakingServiceClient(new ScriptedHttpHandler.Factory(handler));
+
+        var thrown = Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.MarkTemporaryMapFileRestored(7, new TemporaryMapFileRestoredRequest { Sha1 = TemporaryMapClientTests.Sha1 }));
+
+        Assert.That(thrown!.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
+        Assert.That(thrown.Message, Is.EqualTo(expected));
+    }
+
     [TestCase("")]
     [TestCase(HtmlGatewayPage)]
     public void UpdateServiceMapFileReads_WithAnUnreadableErrorBody_ThrowWithTheUpstreamStatus(string body)
