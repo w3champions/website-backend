@@ -397,7 +397,9 @@ public class MapsControllerPassthroughTests
     public void EveryRenamedMemberOfTheMapListing_IsWrittenUnderTheNameItIsReadWith()
     {
         // The [JsonProperty] rename is what matchmaking sends; the [JsonPropertyName] twin is what this service writes.
-        // Walking the listing's whole graph makes a renamed member added without its twin a failing test.
+        // Walking the listing's whole graph makes a renamed member added without its twin a failing test — and one
+        // added WITH its twin is not: only the mismatch is asserted, the known renames merely prove the walk reaches
+        // the nested force member.
         var renamed = SerialisedMembers(typeof(GetMapsResponse))
             .Select(m => (
                 m.Path,
@@ -406,10 +408,8 @@ public class MapsControllerPassthroughTests
             .Where(m => m.Read != null)
             .ToList();
 
-        Assert.That(renamed.Select(m => m.Path), Is.EquivalentTo(new[]
+        Assert.That(renamed.Select(m => m.Path), Is.SupersetOf(new[]
         {
-            "GetMapsResponse.Items.GameMap.SuggestedPlayers",
-            "GetMapsResponse.Items.GameMap.NumPlayers",
             "GetMapsResponse.Items.GameMap.TwelveP",
             "GetMapsResponse.Items.GameMap.Forces.PlayerSet",
         }));

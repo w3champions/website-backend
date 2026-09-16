@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -127,6 +129,42 @@ public class TemporaryMapUploadFilterTests
 
         Assert.That(factories, Has.Count.EqualTo(1));
         Assert.That(factories[0], Is.InstanceOf<QueryStringValueProviderFactory>());
+    }
+
+    /// <summary>The actions that read their multipart body themselves, by name: the reflection below cannot see a body read.</summary>
+    private static readonly (Type Controller, string Action)[] KnownStreamingActions =
+    [
+        (typeof(TemporaryMapsController), nameof(TemporaryMapsController.Upload)),
+        (typeof(MapsController), nameof(MapsController.CreateMapFile)),
+    ];
+
+    [Test]
+    public void EveryStreamingAction_KeepsModelBindingOffItsBody()
+    {
+        // An action that streams its own multipart body must carry [DisableFormValueModelBinding]: with any bindable
+        // parameter (a route id, a battleTag the permission filter fills in) MVC's form value provider otherwise reads
+        // and buffers the whole body before the action — and before an action-filter permission check — leaving nothing
+        // to forward. That is the regression the admin passthrough carried between ec3a81d and 39a1b49. "Streams its
+        // body" is approximated as: carries [TemporaryMapUploadBodyLimit], or is one of the known streaming actions.
+        var actions = typeof(MapsController).Assembly.GetTypes()
+            .Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract)
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(m => !m.IsSpecialName && m.GetCustomAttribute<NonActionAttribute>() == null)
+            .ToArray();
+        var known = KnownStreamingActions
+            .Select(k => actions.SingleOrDefault(m => m.DeclaringType == k.Controller && m.Name == k.Action)
+                         ?? throw new InvalidOperationException($"{k.Controller.Name}.{k.Action} is no longer an action; update KnownStreamingActions"))
+            .ToArray();
+        var streaming = actions
+            .Where(m => m.GetCustomAttribute<TemporaryMapUploadBodyLimitAttribute>() != null)
+            .Union(known)
+            .ToArray();
+
+        Assert.That(streaming.Select(m => $"{m.DeclaringType!.Name}.{m.Name}"),
+            Is.SupersetOf(KnownStreamingActions.Select(k => $"{k.Controller.Name}.{k.Action}")));
+        Assert.That(streaming.Where(m => m.GetCustomAttribute<DisableFormValueModelBindingAttribute>() == null)
+                .Select(m => $"{m.DeclaringType!.Name}.{m.Name}"),
+            Is.Empty, "a streaming action without [DisableFormValueModelBinding] has its body read by model binding first");
     }
 
     private static ResourceExecutingContext CreateResourceContext(
