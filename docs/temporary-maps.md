@@ -59,7 +59,7 @@ buffered in memory.
 | 400 | `{ code: "INVALID_LAYOUT" }` | the capture cannot describe a lobby this map can have (new-record path only — a restore never validates the capture, the record's own layout is authoritative) |
 | 400 | `{ code: "PROOF_MISMATCH" }` | a restore whose proof matchmaking does not recognise |
 | 413 | `{ code: "FILE_TOO_LARGE" }` | over `MaxFileBytes` (256 MiB), whether caught by the reader's own running cap or by Kestrel's own per-action limit (both raised together, see below) |
-| 429 | `{ code: "QUOTA_EXCEEDED", retryAfterSeconds }` | any of three independent quotas — see "Concurrency and quotas" |
+| 429 | `{ code: "QUOTA_EXCEEDED", retryAfterSeconds }` | any of four independent limits (the record quota, the attempt quota, the per-battleTag in-flight slot, the process-wide in-flight cap) — see "Concurrency and quotas" |
 | 500 | *(empty)* | a local spooling/disk fault (already logged once by the reader) or any other unexpected server fault (a body-stream fault, a cancellation the request did not cause) |
 | 500 | `{ code: "TEMP_MAP_KEY_MISMATCH" }` | the sha1 dedupe and the proof verification resolved to two different map ids, or the record's stored path is not a well-formed §6.4 temporary-map file path |
 | 502 | `{ code: "UPSTREAM" }` | any upstream/orchestration failure not covered above, including every H1 guard refusal, an unknown `fileState`, and an ambiguous post-write failure whose re-probe could not resolve it |
@@ -90,7 +90,7 @@ handle a 401).
 
 ## Concurrency and quotas
 
-Four independent limits, all in-memory and per-process (none survives a restart; the owner accepted
+Five independent limits, all in-memory and per-process (none survives a restart; the owner accepted
 this — see `TemporaryMapLimits.cs`):
 
 1. **Per-battleTag hourly upload quota** — `UploadsPerHourPerBattleTag = 10`, on the existing
@@ -98,22 +98,44 @@ this — see `TemporaryMapLimits.cs`):
    restore never spends it). A race where an update-service 409 turns an upload into a dedupe can
    over-count by one; `MintRateLimiter` has no release, so this is accepted and documented in a code
    comment at the spend site.
-2. **Per-battleTag pre-check quota** — `PrecheckPerBattleTagPerMinute = 60`, same limiter, a different key
+2. **Per-battleTag hourly attempt quota** — `UploadAttemptsPerHourPerBattleTag = 20`, same limiter, key
+   prefix `tm-upload-attempt:`, spent by **every** upload attempt once it holds an in-flight slot and
+   before its body is read — whatever the attempt then turns into (a new record, a dedupe hit, a
+   rejection, an abandoned body). It bounds how often one account can take a slot at all, and with it the
+   store-then-reject churn (`INVALID_LAYOUT`, `PARSER_MISMATCH`) that costs update-service a 256 MiB write
+   and a delete each time. A refusal at the gate (limits 4 and 5) spends no attempt token: it never held a
+   slot. Same 429 body as limit 1, with the window's remaining seconds.
+3. **Per-battleTag pre-check quota** — `PrecheckPerBattleTagPerMinute = 60`, same limiter, a different key
    prefix and window; exhausting it answers a bare 429 on the status route only.
-3. **Per-battleTag single in-flight upload** (D7) — at most one upload per battleTag at a time.
-4. **Process-wide in-flight cap** — `MaxConcurrentUploads = 8` across every battleTag, bounding spooled
+4. **Per-battleTag single in-flight upload** — at most one upload per battleTag at a time.
+5. **Process-wide in-flight cap** — `MaxConcurrentUploads = 8` across every battleTag, bounding spooled
    temp disk to 8 × 256 MiB regardless of how many Battle.net accounts are used at once.
 
-Limits 3 and 4 live together in one DI singleton, `TemporaryMapUploadGate` (not named in the original
+Limits 4 and 5 live together in one DI singleton, `TemporaryMapUploadGate` (not named in the original
 plan's file list, added during implementation). The controller acquires a slot **after** the auth filter
 and **before the first request-body byte is read**, so a spool is never started for an upload that will
 be refused; it releases the slot in a `finally` once the service has returned, compensation time
 included. The per-battleTag bound is checked first, then the process-wide one (the per-battleTag slot is
 handed back if the process-wide one refuses). Both answer the same body:
 `429 { code: "QUOTA_EXCEEDED", retryAfterSeconds: TemporaryMapLimits.ConcurrentUploadRetryAfterSeconds }`
-(= 30), the pinned Appendix A.3 shape. `retryAfterSeconds` for the hourly quota is instead computed from
-the limiter's actual remaining window, rounded up to whole seconds and clamped to `[1, int.MaxValue]`
+(= 30), the pinned Appendix A.3 shape. `retryAfterSeconds` for the two hourly quotas is instead computed
+from the limiter's actual remaining window, rounded up to whole seconds and clamped to `[1, int.MaxValue]`
 *before* the integer cast, so a saturated or sub-second window never yields 0 or wraps.
+
+**How long a slot can be held.** A slot is held while the body streams in, so the upload action also sets
+a **minimum body data rate** on the request (`[TemporaryMapUploadBodyLimit]`, via Kestrel's
+`IHttpMinRequestBodyDataRateFeature`): `MinUploadBytesPerSecond = 32 KiB/s` after a
+`MinUploadGracePeriod` of 30 s. Kestrel's own default floor (240 B/s after 5 s) would let a 256 MiB body
+legally take about thirteen days, so eight slow connections could hold every slot for as long as they
+liked. At 32 KiB/s a full-size upload must finish within roughly 2.3 hours, and a body that falls below
+the floor for longer than the grace period is aborted by Kestrel: the abort surfaces as `RequestAborted`,
+the action's abort arm answers nothing (nobody is listening), and the slot is released — no new status
+code. The floor applies to the upload action only; every other route keeps Kestrel's default.
+
+**Residual.** Eight accounts each sustaining at least 32 KiB/s (≈ 256 KiB/s in total) can still hold all
+eight slots for up to ~2.3 hours per attempt, bounded further by the attempt quota (20 attempts per account
+per hour). Per-IP connection and bandwidth limits at the edge are an infrastructure concern (nginx-proxy),
+not something website-backend enforces.
 
 Separately, `TemporaryMapFileKeyLock` (a per-fileKey in-process async mutex, not a quota) serialises same
 fileKey uploads/restores/sweep operations — see "Orchestration" below — and is shared between the upload

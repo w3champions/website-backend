@@ -1,17 +1,26 @@
 using System;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Serilog;
 
 namespace W3ChampionsStatisticService.Maps;
 
 /// <summary>
 /// Raises the request-body ceiling to <see cref="TemporaryMapLimits.TransportBodyBytes"/> for the
-/// decorated action only. The global Kestrel limit (<c>MaxRequestBodySize</c> in Program.cs, 128 MiB)
-/// stays in force everywhere else. Resource filters run after authorization filters and before model
-/// binding, so the limit is in place before the first byte is read and the 401 still wins first.
+/// decorated action only, and sets the least rate the body must arrive at
+/// (<see cref="TemporaryMapLimits.MinUploadBytesPerSecond"/> after <see cref="TemporaryMapLimits.MinUploadGracePeriod"/>).
+/// The global Kestrel limit (<c>MaxRequestBodySize</c> in Program.cs, 128 MiB) and Kestrel's default data-rate floor
+/// stay in force everywhere else. Resource filters run after authorization filters and before model
+/// binding, so both are in place before the first byte is read and the 401 still wins first.
 /// <para>
-/// A server without the feature has no per-request limit to raise. A read-only feature means the body
+/// The data-rate floor is what keeps an in-flight slot from being held for days by a client that trickles its body:
+/// below the floor Kestrel aborts the request, the action's abort arm answers nothing, and the slot is released. A
+/// server without the feature (a test host) has no floor to set.
+/// </para>
+/// <para>
+/// A server without the size feature has no per-request limit to raise. A read-only feature means the body
 /// was already being read, so the server's own limit stays; that is logged, because uploads above
 /// 128 MiB would then fail as FILE_TOO_LARGE for a reason the response cannot show.
 /// </para>
@@ -21,6 +30,12 @@ public class TemporaryMapUploadBodyLimitAttribute : Attribute, IResourceFilter
 {
     public void OnResourceExecuting(ResourceExecutingContext context)
     {
+        var dataRate = context.HttpContext.Features.Get<IHttpMinRequestBodyDataRateFeature>();
+        if (dataRate != null)
+        {
+            dataRate.MinDataRate = new MinDataRate(TemporaryMapLimits.MinUploadBytesPerSecond, TemporaryMapLimits.MinUploadGracePeriod);
+        }
+
         var feature = context.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (feature == null)
         {

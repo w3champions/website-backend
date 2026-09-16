@@ -125,6 +125,84 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
     }
 
+    [Test]
+    public async Task TheTwentyFirstAttemptInAnHour_Is429_QuotaExceeded_BeforeTheBodyIsRead()
+    {
+        // Every upload attempt spends an attempt token once it holds a slot, before the body is read: a slot cannot be
+        // re-taken indefinitely for free, however the attempt ends (dedupe, rejection, an abandoned body). The record
+        // quota (10/h, spent only for a new record) is a separate, tighter bound.
+        var limiter = new MintRateLimiter();
+        for (var i = 0; i < TemporaryMapLimits.UploadAttemptsPerHourPerBattleTag; i++)
+        {
+            Assert.That(limiter.TryAcquire("tm-upload-attempt:" + BattleTag, TemporaryMapLimits.UploadAttemptsPerHourPerBattleTag, DateTime.UtcNow,
+                TemporaryMapLimits.UploadAttemptWindow, out _), Is.True);
+        }
+
+        var (bytes, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
+        var body = new MemoryStream(bytes);
+        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811)));
+        var counts = new UploadCounts();
+        using var logs = new LogCapture();
+
+        var result = await Upload(CreateController(handler, limiter, logs.CreateLogger<TemporaryMapsController>()), body: body, contentType: contentType) as ObjectResult;
+
+        Assert.That(result?.StatusCode, Is.EqualTo(StatusCodes.Status429TooManyRequests));
+        var answer = JObject.Parse(JsonSerializer.Serialize(result!.Value, WebJson));
+        Assert.That(answer.Properties().Select(p => p.Name), Is.EquivalentTo(new[] { "code", "retryAfterSeconds" }), "the pinned A.3 body, no new wire names");
+        Assert.That(answer["code"]!.Value<string>(), Is.EqualTo("QUOTA_EXCEEDED"));
+        Assert.That(answer["retryAfterSeconds"]!.Value<int>(), Is.InRange(1, 3600), "the window's remaining seconds, rounded up");
+        Assert.That(body.Position, Is.Zero, "refused before the first body byte");
+        Assert.That(handler.Requests, Is.Empty, "no upstream was asked");
+        Assert.That(Gate.InFlight, Is.Zero, "the slot taken for the attempt was handed back");
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.Rejected);
+        Assert.That(logs.Lines().Single(l => l.Contains("attempt quota", StringComparison.Ordinal)), Does.StartWith("Information").And.Contain(BattleTag));
+        Assert.That(TemporaryMapLimits.UploadAttemptsPerHourPerBattleTag, Is.EqualTo(20));
+        Assert.That(TemporaryMapLimits.UploadAttemptWindow, Is.EqualTo(TimeSpan.FromHours(1)));
+    }
+
+    [Test]
+    public async Task ADedupeHit_SpendsAnAttemptToken_ButNoRecordToken()
+    {
+        var limiter = new MintRateLimiter();
+        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811)));
+
+        var result = await Upload(CreateController(handler, limiter)) as ObjectResult;
+
+        Assert.That(result?.StatusCode, Is.EqualTo(StatusCodes.Status200OK));
+        Assert.That(Remaining("tm-upload-attempt:" + BattleTag, TemporaryMapLimits.UploadAttemptsPerHourPerBattleTag, TemporaryMapLimits.UploadAttemptWindow),
+            Is.EqualTo(TemporaryMapLimits.UploadAttemptsPerHourPerBattleTag - 1), "one attempt token was spent");
+        Assert.That(Remaining("tm-upload:" + BattleTag, TemporaryMapLimits.UploadsPerHourPerBattleTag, TemporaryMapLimits.UploadQuotaWindow),
+            Is.EqualTo(TemporaryMapLimits.UploadsPerHourPerBattleTag), "a dedupe hit creates no record, so the record quota is untouched");
+
+        int Remaining(string key, int limit, TimeSpan window)
+        {
+            var left = 0;
+            while (limiter.TryAcquire(key, limit, DateTime.UtcNow, window, out _))
+            {
+                left++;
+            }
+
+            return left;
+        }
+    }
+
+    [Test]
+    public async Task AGateRefusal_SpendsNoAttemptToken()
+    {
+        // The attempt token is spent only by an attempt that holds a slot: a refusal at the gate never reached the body
+        // and is already answered 429.
+        var limiter = new MintRateLimiter();
+        Assert.That(Gate.TryAcquire(BattleTag, out var held, out _), Is.True);
+        using (held)
+        {
+            var refused = await Upload(CreateController(new ScriptedHttpHandler(), limiter)) as ObjectResult;
+            Assert.That(refused?.StatusCode, Is.EqualTo(StatusCodes.Status429TooManyRequests));
+        }
+
+        Assert.That(limiter.TryAcquire("tm-upload-attempt:" + BattleTag, 1, DateTime.UtcNow, TemporaryMapLimits.UploadAttemptWindow, out _), Is.True,
+            "the attempt window was never opened");
+    }
+
     // ---- Server faults and transport errors ------------------------------------------------
 
     [Test]

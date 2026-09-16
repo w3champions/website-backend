@@ -41,7 +41,15 @@ internal sealed class LoopbackMvcHost : IAsyncDisposable
     /// Starts the host with <paramref name="controllers"/> as the only discoverable controllers and whatever
     /// <paramref name="configureServices"/> registers on top of MVC (nothing else from Program.cs is registered).
     /// </summary>
-    public static async Task<LoopbackMvcHost> StartAsync(Action<IServiceCollection> configureServices, params Type[] controllers)
+    public static Task<LoopbackMvcHost> StartAsync(Action<IServiceCollection> configureServices, params Type[] controllers)
+        => StartAsync(configureServices, configureApp: null, controllers);
+
+    /// <summary>
+    /// As above, with <paramref name="configureApp"/> adding middleware in front of MVC — e.g. one that records what a
+    /// request's features hold once the pipeline has run, which nothing outside the server can otherwise observe.
+    /// </summary>
+    public static async Task<LoopbackMvcHost> StartAsync(
+        Action<IServiceCollection> configureServices, Action<IApplicationBuilder> configureApp, params Type[] controllers)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
@@ -63,6 +71,7 @@ internal sealed class LoopbackMvcHost : IAsyncDisposable
             });
         configureServices(builder.Services);
         var app = builder.Build();
+        configureApp?.Invoke(app);
         app.MapControllers();
         await app.StartAsync();
         return new LoopbackMvcHost(app);

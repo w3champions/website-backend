@@ -129,7 +129,9 @@ public class TemporaryMapsController(
     /// <summary>
     /// Streams a multipart upload (metadata then mapFile) straight off the wire. 201 for a new record, 200 for a dedupe
     /// hit or a restore; the response body never carries a secret. An in-flight slot (one per battleTag, eight per
-    /// process) is taken before the first body byte and released once the service has returned, compensation included.
+    /// process) is taken before the first body byte and released once the service has returned, compensation included;
+    /// holding it costs one of the battleTag's hourly attempt tokens, spent before the body is read, so a slot cannot be
+    /// re-taken indefinitely for free.
     /// </summary>
     [HttpPost]
     [BearerRequiresPlayerAuth]
@@ -156,6 +158,17 @@ public class TemporaryMapsController(
 
         using (slot)
         {
+            // Every attempt that holds a slot spends a token, whatever it turns into (a new record, a dedupe hit, a
+            // rejection, an abandoned body); the service's record quota is the separate, tighter bound on new records.
+            if (!_rateLimiter.TryAcquire($"tm-upload-attempt:{battleTag}", TemporaryMapLimits.UploadAttemptsPerHourPerBattleTag, DateTime.UtcNow,
+                    TemporaryMapLimits.UploadAttemptWindow, out var retryAfter))
+            {
+                _logger.LogInformation("Temporary map upload from {BattleTag} refused by the attempt quota", battleTag);
+                TemporaryMapMetrics.Uploads.WithLabels(TemporaryMapMetrics.Results.Rejected).Inc();
+                return StatusCode(StatusCodes.Status429TooManyRequests,
+                    TemporaryMapFailureBodies.QuotaExceeded(TemporaryMapUploadService.RetryAfterSeconds(retryAfter)));
+            }
+
             try
             {
                 var outcome = await _uploadService.HandleUploadAsync(Request.Body, Request.ContentType, battleTag, cancellationToken);

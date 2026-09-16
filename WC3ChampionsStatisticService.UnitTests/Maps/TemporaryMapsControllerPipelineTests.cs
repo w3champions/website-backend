@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,8 +9,11 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -95,6 +99,69 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(body["code"]!.Value<string>(), Is.EqualTo("SHA1_MISMATCH"));
         Assert.That(handler.Requests, Is.Empty, "the sha1 check comes before any upstream call");
         Assert.That(host.Services.GetRequiredService<TemporaryMapUploadGate>().InFlight, Is.Zero, "the slot was released");
+    }
+
+    [Test]
+    public async Task TheUploadAction_RunsUnderTheRaisedBodyLimitAndTheMinimumDataRate_AndTheStatusRouteDoesNot()
+    {
+        // What Kestrel's per-request features hold once the pipeline has run, recorded by a middleware in front of MVC:
+        // only the upload action carries [TemporaryMapUploadBodyLimit], so only there is the size ceiling raised and the
+        // data-rate floor set; the status route keeps the server's defaults (Kestrel's 240 B/s after 5 s).
+        var observed = new Dictionary<string, (long? MaxBodySize, MinDataRate DataRate)>();
+        var handler = new ScriptedHttpHandler().On(IsBySha1, Respond(HttpStatusCode.OK, Record(5811)));
+        await using var host = await StartHostAsync(handler, configureApp: app => app.Use(async (context, next) =>
+        {
+            await next(context);
+            observed[context.Request.Path] = (
+                context.Features.Get<IHttpMaxRequestBodySizeFeature>()?.MaxRequestBodySize,
+                context.Features.Get<IHttpMinRequestBodyDataRateFeature>()?.MinDataRate);
+        }));
+        var (bytes, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
+        var upload = new HttpRequestMessage(HttpMethod.Post, "api/maps/temporary")
+        {
+            Content = new ByteArrayContent(bytes) { Headers = { ContentType = MediaTypeHeaderValue.Parse(contentType) } },
+        };
+        upload.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PlayerToken);
+
+        Assert.That((await host.Client.SendAsync(upload)).StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That((await host.Client.SendAsync(StatusRequest(ProofHash))).StatusCode, Is.EqualTo(HttpStatusCode.BadGateway), "unscripted, and irrelevant here");
+
+        var uploaded = observed["/api/maps/temporary"];
+        Assert.That(uploaded.MaxBodySize, Is.EqualTo(TemporaryMapLimits.TransportBodyBytes));
+        Assert.That(uploaded.DataRate, Is.Not.Null);
+        Assert.That(uploaded.DataRate!.BytesPerSecond, Is.EqualTo(TemporaryMapLimits.MinUploadBytesPerSecond));
+        Assert.That(uploaded.DataRate.GracePeriod, Is.EqualTo(TemporaryMapLimits.MinUploadGracePeriod));
+        var status = observed["/api/maps/temporary/status"];
+        var kestrelDefaults = new KestrelServerOptions().Limits;
+        Assert.That(status.MaxBodySize, Is.EqualTo(kestrelDefaults.MaxRequestBodySize), "the server's own ceiling, untouched");
+        Assert.That(status.DataRate?.BytesPerSecond, Is.EqualTo(kestrelDefaults.MinRequestBodyDataRate!.BytesPerSecond), "the server's own floor, untouched");
+    }
+
+    [Test]
+    public async Task AClientThatStopsSendingAndGoesAway_ReleasesItsSlot_AndStoredNothing()
+    {
+        // The slot is taken before the first body byte and held while the body streams in. A client that drops the
+        // connection mid-body (the same thing Kestrel does to a body below the data-rate floor once the grace period
+        // is over) must hand the slot back: nothing else could, and a slot held for good is a slot denied to everyone.
+        var handler = new ScriptedHttpHandler();
+        await using var host = await StartHostAsync(handler, spoolDirectory: SpoolDirectory);
+        var gate = host.Services.GetRequiredService<TemporaryMapUploadGate>();
+        using var abandon = new CancellationTokenSource();
+        var (_, contentType) = BuildMultipartBytes(Metadata(), "abc"u8.ToArray());
+        var request = new HttpRequestMessage(HttpMethod.Post, "api/maps/temporary")
+        {
+            Content = new StallingMultipartContent(Boundary, Metadata(), contentType, abandon.Token),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PlayerToken);
+
+        var send = host.Client.SendAsync(request, abandon.Token);
+        await WaitUntilAsync(() => gate.InFlight == 1, "the upload never took its slot");
+        abandon.Cancel();
+
+        Assert.CatchAsync<OperationCanceledException>(() => send);
+        await WaitUntilAsync(() => gate.InFlight == 0, "the slot was never released after the client went away");
+        Assert.That(handler.Requests, Is.Empty, "no byte reached the end of the body, so no upstream was asked");
+        Assert.That(FilesIn(SpoolDirectory), Is.Empty, "the partial spool file was removed");
     }
 
     [Test]
@@ -224,6 +291,52 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         return request;
     }
 
+    /// <summary>Polls <paramref name="condition"/> until it holds; fails the test after <see cref="HangGuard"/>.</summary>
+    private static async Task WaitUntilAsync(Func<bool> condition, string otherwise)
+    {
+        var deadline = DateTime.UtcNow + HangGuard;
+        while (!condition())
+        {
+            Assert.That(DateTime.UtcNow, Is.LessThan(deadline), otherwise);
+            await Task.Delay(10);
+        }
+    }
+
+    /// <summary>
+    /// A multipart body whose metadata part and mapFile headers arrive at once, followed by the first bytes of the file,
+    /// and then nothing: it waits on <paramref name="abandoned"/>, the token the test cancels to drop the connection.
+    /// </summary>
+    private sealed class StallingMultipartContent : HttpContent
+    {
+        private readonly byte[] _prefix;
+        private readonly CancellationToken _abandoned;
+
+        public StallingMultipartContent(string boundary, string metadata, string contentType, CancellationToken abandoned)
+        {
+            _abandoned = abandoned;
+            _prefix = Encoding.UTF8.GetBytes(
+                $"--{boundary}\r\nContent-Disposition: form-data; name=\"metadata\"\r\nContent-Type: application/json\r\n\r\n{metadata}\r\n" +
+                $"--{boundary}\r\nContent-Disposition: form-data; name=\"mapFile\"; filename=\"upload.w3x\"\r\nContent-Type: application/octet-stream\r\n\r\nab");
+            Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+
+        protected override async Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext context)
+        {
+            await stream.WriteAsync(_prefix, _abandoned);
+            await stream.FlushAsync(_abandoned);
+            await Task.Delay(Timeout.InfiniteTimeSpan, _abandoned);
+        }
+
+        protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext context, CancellationToken cancellationToken)
+            => SerializeToStreamAsync(stream, context);
+    }
+
     /// <summary>A status and nothing else: no body byte, no content type.</summary>
     private static async Task AssertNoBody(HttpResponseMessage response)
     {
@@ -278,7 +391,8 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     /// <paramref name="spoolDirectory"/>, the upload service the controller resolves spools there instead of the
     /// machine-wide directory (the service's spool seam is an init property, so it is registered on top).
     /// </summary>
-    private static async Task<LoopbackMvcHost> StartHostAsync(ScriptedHttpHandler handler, string spoolDirectory = null)
+    private static async Task<LoopbackMvcHost> StartHostAsync(
+        ScriptedHttpHandler handler, string spoolDirectory = null, Action<IApplicationBuilder> configureApp = null)
     {
         var authService = new Mock<IW3CAuthenticationService>(MockBehavior.Strict);
         authService.Setup(s => s.GetUserByToken(PlayerToken, false)).Returns(new W3CUserAuthenticationDto { BattleTag = BattleTag });
@@ -303,6 +417,7 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
                     });
                 }
             },
+            configureApp,
             typeof(TemporaryMapsController));
     }
 

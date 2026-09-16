@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Maps;
 
@@ -54,6 +56,59 @@ public class TemporaryMapUploadFilterTests
     }
 
     [Test]
+    public void BodyLimitFilter_SetsTheMinimumBodyDataRate_SoATrickledBodyCannotHoldASlotForDays()
+    {
+        // Kestrel's default floor (240 B/s after 5 s) lets a 256 MiB body take ~13 days while holding a gate slot; the
+        // filter raises it so a full upload must finish within a few hours and a trickle is aborted after the grace
+        // period. The abort surfaces as RequestAborted, which the controller already answers with no status at all.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpMaxRequestBodySizeFeature>(new FakeMaxBodySizeFeature());
+        var dataRate = new FakeMinDataRateFeature();
+        httpContext.Features.Set<IHttpMinRequestBodyDataRateFeature>(dataRate);
+
+        new TemporaryMapUploadBodyLimitAttribute().OnResourceExecuting(
+            CreateResourceContext(httpContext, new List<IValueProviderFactory>()));
+
+        Assert.That(dataRate.MinDataRate, Is.Not.Null);
+        Assert.That(dataRate.MinDataRate!.BytesPerSecond, Is.EqualTo(TemporaryMapLimits.MinUploadBytesPerSecond));
+        Assert.That(dataRate.MinDataRate.GracePeriod, Is.EqualTo(TemporaryMapLimits.MinUploadGracePeriod));
+        Assert.That(TemporaryMapLimits.MinUploadBytesPerSecond, Is.EqualTo(32 * 1024));
+        Assert.That(TemporaryMapLimits.MinUploadGracePeriod, Is.EqualTo(TimeSpan.FromSeconds(30)));
+        // A full-size upload at the floor: bounded to hours, not days.
+        Assert.That(TemporaryMapLimits.MaxFileBytes / TemporaryMapLimits.MinUploadBytesPerSecond, Is.LessThan(TimeSpan.FromHours(3).TotalSeconds));
+    }
+
+    [Test]
+    public void BodyLimitFilter_SetsTheDataRateEvenWhenTheSizeLimitIsReadOnly()
+    {
+        // The two features are independent: a body already being read keeps the server's size limit, but the data-rate
+        // floor still applies to the rest of that body.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set<IHttpMaxRequestBodySizeFeature>(new FakeMaxBodySizeFeature { IsReadOnly = true });
+        var dataRate = new FakeMinDataRateFeature();
+        httpContext.Features.Set<IHttpMinRequestBodyDataRateFeature>(dataRate);
+
+        new TemporaryMapUploadBodyLimitAttribute().OnResourceExecuting(
+            CreateResourceContext(httpContext, new List<IValueProviderFactory>()));
+
+        Assert.That(dataRate.MinDataRate?.BytesPerSecond, Is.EqualTo(TemporaryMapLimits.MinUploadBytesPerSecond));
+    }
+
+    [Test]
+    public void BodyLimitFilter_ToleratesAServerWithoutTheDataRateFeature()
+    {
+        // A test host or a server other than Kestrel: the size limit is still raised, nothing throws.
+        var httpContext = new DefaultHttpContext();
+        var feature = new FakeMaxBodySizeFeature();
+        httpContext.Features.Set<IHttpMaxRequestBodySizeFeature>(feature);
+
+        Assert.DoesNotThrow(() => new TemporaryMapUploadBodyLimitAttribute().OnResourceExecuting(
+            CreateResourceContext(httpContext, new List<IValueProviderFactory>())));
+
+        Assert.That(feature.MaxRequestBodySize, Is.EqualTo(TemporaryMapLimits.TransportBodyBytes));
+    }
+
+    [Test]
     public void DisableFormValueModelBinding_RemovesEveryFormValueProvider()
     {
         var factories = new List<IValueProviderFactory>
@@ -77,6 +132,11 @@ public class TemporaryMapUploadFilterTests
             new ActionContext(httpContext, new RouteData(), new ActionDescriptor()),
             new List<IFilterMetadata>(),
             valueProviderFactories);
+
+    private sealed class FakeMinDataRateFeature : IHttpMinRequestBodyDataRateFeature
+    {
+        public MinDataRate MinDataRate { get; set; }
+    }
 
     private sealed class FakeMaxBodySizeFeature : IHttpMaxRequestBodySizeFeature
     {

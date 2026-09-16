@@ -27,6 +27,25 @@ public static class TemporaryMapLimits
     public const int PrecheckPerBattleTagPerMinute = 60;
 
     /// <summary>
+    /// Upload attempts per battleTag per hour, spent once an upload holds an in-flight slot and before its body is read,
+    /// whatever the attempt then turns into (a new record, a dedupe hit, a rejection, an abandoned body). It bounds how
+    /// often one account can take a slot at all; <see cref="UploadsPerHourPerBattleTag"/> separately bounds the new
+    /// records it can create. The same 429 QUOTA_EXCEEDED body answers both.
+    /// </summary>
+    public const int UploadAttemptsPerHourPerBattleTag = 20;
+
+    /// <summary>
+    /// The least rate a client must sustain while sending an upload body, after <see cref="MinUploadGracePeriod"/>: below
+    /// it Kestrel aborts the request, which frees the in-flight slot. Kestrel's own floor (240 B/s after 5 s) would let a
+    /// 256 MiB body take about thirteen days, so eight trickling connections could hold every slot for as long as they
+    /// liked. At this floor a full-size upload must finish in roughly 2.3 hours.
+    /// </summary>
+    public const int MinUploadBytesPerSecond = 32 * 1024;
+
+    /// <summary>How long a client may fall below <see cref="MinUploadBytesPerSecond"/> before the request is aborted.</summary>
+    public static readonly TimeSpan MinUploadGracePeriod = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Uploads in flight per process, across all accounts (Task 2 security H1): bounds the spooled temp disk to
     /// 8 × <see cref="MaxFileBytes"/>. One upload per battleTag is enforced at the same point (D7); both refusals answer
     /// 429 QUOTA_EXCEEDED with <see cref="ConcurrentUploadRetryAfterSeconds"/>.
@@ -69,6 +88,7 @@ public static class TemporaryMapLimits
     public const string TempMapPathPrefix = TemporaryMapKeys.PathPrefix;
 
     public static readonly TimeSpan UploadQuotaWindow = TimeSpan.FromHours(1);
+    public static readonly TimeSpan UploadAttemptWindow = TimeSpan.FromHours(1);
     public static readonly TimeSpan PrecheckQuotaWindow = TimeSpan.FromMinutes(1);
 
     /// <summary>
