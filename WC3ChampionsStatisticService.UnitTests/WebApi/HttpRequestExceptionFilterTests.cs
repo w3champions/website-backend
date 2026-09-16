@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
+using W3C.Domain.Maps;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 using WC3ChampionsStatisticService.Tests.Maps;
 
@@ -22,7 +23,8 @@ namespace WC3ChampionsStatisticService.Tests.WebApi;
 /// logged server-side. A status-less one is a transport failure whose message names the upstream host and port, so a
 /// fixed text replaces it; one carrying a status below 400 (an upstream success whose body breaks its contract, an
 /// unfollowed redirect) is never relayed as that status. Log entries carry the action and the statuses only: an
-/// exception message can hold an upstream body, and the request URL can hold a proofHash.
+/// exception message can hold an upstream body, and the request can carry a credential in its query or its headers
+/// (the pre-check's x-proof-hash, spec §10.3).
 /// </summary>
 [TestFixture]
 public class HttpRequestExceptionFilterTests
@@ -30,6 +32,7 @@ public class HttpRequestExceptionFilterTests
     private const string Action = "W3ChampionsStatisticService.Tournaments.TournamentsController.GetEnabledFloNodes (W3ChampionsStatisticService)";
     private const string InternalHost = "mm.internal.example:3000";
     private const string UpstreamText = "upstream body text";
+    private const string FormerQueryProofHash = "0000000000000000000000000000000000000000000000000000000000000000";
 
     [Test]
     public void TransportFailure_AnswersAFixedMessage_AndLogsTheExceptionAtError()
@@ -104,18 +107,23 @@ public class HttpRequestExceptionFilterTests
     [TestCase(null)]
     [TestCase(HttpStatusCode.NotFound)]
     [TestCase(HttpStatusCode.BadGateway)]
-    public void LogEntries_NeverCarryTheRequestUrl(HttpStatusCode? status)
+    public void LogEntries_NeverCarryTheRequestUrlOrItsHeaders(HttpStatusCode? status)
     {
+        // The pre-check's proofHash arrives in the x-proof-hash header (revision 10); the query form is the shape it
+        // had before, and a hub request carries its token in the query still.
         var logger = new Mock<ILogger<HttpRequestExceptionFilter>>();
         var context = ExceptionContextFor(new HttpRequestException("failed", null, status));
         context.HttpContext.Request.Path = "/api/maps/temporary/status";
-        context.HttpContext.Request.QueryString = new QueryString("?proofHash=" + TemporaryMapClientTests.ProofHash);
+        context.HttpContext.Request.Headers[TemporaryMapKeys.ProofHashHeaderName] = TemporaryMapClientTests.ProofHash;
+        context.HttpContext.Request.QueryString = new QueryString("?proofHash=" + FormerQueryProofHash);
 
         new HttpRequestExceptionFilter(logger.Object).OnException(context);
 
         var entries = LogEntries(logger);
         Assert.That(entries, Has.Count.EqualTo(1));
-        Assert.That(entries.Any(e => e.Message.Contains(TemporaryMapClientTests.ProofHash) || e.Message.Contains("/api/maps")), Is.False);
+        Assert.That(entries.Any(e => e.Message.Contains(TemporaryMapClientTests.ProofHash)
+                                     || e.Message.Contains(FormerQueryProofHash)
+                                     || e.Message.Contains("/api/maps")), Is.False);
     }
 
     [Test]

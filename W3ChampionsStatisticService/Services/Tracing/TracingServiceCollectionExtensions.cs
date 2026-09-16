@@ -104,18 +104,18 @@ public static class TracingServiceCollectionExtensions
 
     /// <summary>
     /// Registers the span processors, then the exporter <paramref name="addExporter"/> adds. Processors run in
-    /// registration order, so the proofHash redaction (spec §10.3) always edits a span before it is exported.
+    /// registration order, so the credential redaction (spec §10.3) always edits a span before it is exported.
     /// </summary>
     internal static TracerProviderBuilder AddW3CProcessorsThenExporter(
         this TracerProviderBuilder tracing, Func<TracerProviderBuilder, TracerProviderBuilder> addExporter)
         => addExporter(tracing
             .AddProcessor(new BaggageToTagProcessor())
-            // Before the exporter: strips proofHash values from URL attributes (spec §10.3).
+            // Before the exporter: strips credentials from URL and header attributes (spec §10.3).
             .AddProcessor(new TelemetryRedactionProcessor()));
 
     /// <summary>
-    /// Application Insights, with <see cref="TelemetryRedactionInitializer"/> so request and dependency URLs never
-    /// carry a proofHash (spec §10.3).
+    /// Application Insights, with <see cref="TelemetryRedactionInitializer"/> so request and dependency URLs, and any
+    /// property named after a credential header, never carry a secret (spec §10.3).
     /// </summary>
     public static IServiceCollection AddW3CApplicationInsights(this IServiceCollection services, string appInsightsKey)
     {

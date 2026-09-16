@@ -9,9 +9,12 @@ public static class W3CLoggerConfiguration
     /// <summary>
     /// The configuration Program.cs builds the global Serilog logger from: website-backend's minimum levels, a JSON
     /// console sink for log scraping and a daily website-backend_yyyyMMdd.log file. The Microsoft.AspNetCore and
-    /// System.Net.Http overrides also keep proofHash values out of the logs (spec §10.3): hosting's "Request starting"
-    /// and IHttpClientFactory's "Sending HTTP request" Information entries carry full URLs. LogLevelOverrideTests pins
-    /// those categories through the Microsoft.Extensions.Logging bridge the host uses.
+    /// System.Net.Http overrides also keep credentials out of the logs (spec §10.3): hosting's "Request starting" and
+    /// IHttpClientFactory's "Sending HTTP request" Information entries carry full URLs (the hub's access_token query;
+    /// the proofHash too before revision 10 moved it to the x-proof-hash header), Kestrel's bad-request entries quote
+    /// the offending header line when its category is at Information, and IHttpClientFactory's Trace entries list the
+    /// request headers. LogLevelOverrideTests pins those categories through the Microsoft.Extensions.Logging bridge
+    /// the host uses.
     /// </summary>
     public static LoggerConfiguration Create() => new LoggerConfiguration()
         .WithW3CMinimumLevels()

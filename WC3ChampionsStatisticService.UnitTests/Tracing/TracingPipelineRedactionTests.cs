@@ -8,9 +8,9 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Clusters;
@@ -22,6 +22,8 @@ using NUnit.Framework;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
+using Serilog;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Services.Tracing;
 using WC3ChampionsStatisticService.Tests.Maps;
 
@@ -61,6 +63,57 @@ public class TracingPipelineRedactionTests
         Assert.That(exported, Does.Contain("authorization=Redacted"));
         Assert.That(exported, Does.Not.Contain(TelemetryRedactionTests.OutboundSecret));
         Assert.That(exported, Does.Not.Contain(TelemetryRedactionTests.OutboundJwt));
+    }
+
+    [Test]
+    public async Task OutboundProofHashBody_AndAdminSecretHeader_NeverReachTheOtlpExporter()
+    {
+        // Revision 10: the by-proof-hash lookup carries the proofHash in a JSON body and the admin secret in a
+        // header. The HttpClient instrumentation records neither bodies nor headers, and nothing in AddW3CTracing
+        // turns either on; the URL it does record has nothing left to redact.
+        var exported = await ExportedBytesOfOutboundCalls(baseUrl =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, baseUrl + "maps/temporary/by-proof-hash")
+            {
+                Content = new StringContent("{\"proofHash\":\"" + TemporaryMapClientTests.ProofHash + "\"}", Encoding.UTF8, "application/json"),
+            };
+            request.Headers.TryAddWithoutValidation("x-admin-secret", TelemetryRedactionTests.OutboundSecret);
+            return request;
+        });
+
+        Assert.That(exported, Does.Contain("/maps/temporary/by-proof-hash"));
+        Assert.That(exported, Does.Not.Contain(TemporaryMapClientTests.ProofHash));
+        Assert.That(exported, Does.Not.Contain(TelemetryRedactionTests.OutboundSecret));
+    }
+
+    [Test]
+    public async Task HttpClientFactoryTraceLogging_PrintsEveryHeaderValueAsAnAsterisk_AndNeverTheBody()
+    {
+        // IHttpClientFactory's logging handlers list the request headers at Trace, a level the logger configuration
+        // keeps off for that category (LogLevelOverrideTests). Microsoft.Extensions.Http 9 prints every header value
+        // as "*" unless RedactLoggedHeaders narrows that (nothing here does), and no level logs a body: the admin
+        // secret and the revision-10 proofHash body of the real matchmaking client, over the real factory and a
+        // scripted transport, stay out of the log even with the category wide open.
+        var sink = new CapturingLogSink();
+        using var serilog = sink.CreateLogger();
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        var services = new ServiceCollection();
+        services.AddLogging(logging => logging.SetMinimumLevel(LogLevel.Trace).AddSerilog(serilog));
+        services.AddHttpClient();
+        services.ConfigureHttpClientDefaults(client => client.ConfigurePrimaryHttpMessageHandler(() => handler));
+        await using var provider = services.BuildServiceProvider();
+        var client = new MatchmakingServiceClient(provider.GetRequiredService<IHttpClientFactory>());
+
+        var state = await client.GetTemporaryMapStateByProofHash(TemporaryMapClientTests.ProofHash);
+
+        Assert.That(state.FileState, Is.EqualTo("present"));
+        var adminSecret = handler.Requests.Single().Headers.GetValues("x-admin-secret").Single();
+        var lines = sink.Events.Select(e => e.RenderMessage()).ToList();
+        Assert.That(lines.Any(l => l.Contains("x-admin-secret: *")), Is.True, "the header log was not written, or the secret not masked");
+        Assert.That(lines.Any(l => l.Contains("/maps/temporary/by-proof-hash")), Is.True, "method and URL are logged as before");
+        // Boolean checks: a failure must not print the secret or the proofHash.
+        Assert.That(lines.Any(l => l.Contains(adminSecret)), Is.False, "the admin secret was logged");
+        Assert.That(lines.Any(l => l.Contains(TemporaryMapClientTests.ProofHash)), Is.False, "the proofHash was logged");
     }
 
     [Test]
@@ -180,7 +233,12 @@ public class TracingPipelineRedactionTests
     /// exporter switched to simple export sends each span synchronously when it ends, in registration order, so a
     /// redaction registered after it fails here. Its HttpClient answers in memory: nothing leaves the process.
     /// </summary>
-    private static async Task<string> ExportedBytesOfOutboundCalls(params string[] paths)
+    private static Task<string> ExportedBytesOfOutboundCalls(params string[] paths)
+        => ExportedBytesOfOutboundCalls(paths.Select(path => new Func<string, HttpRequestMessage>(
+            baseUrl => new HttpRequestMessage(HttpMethod.Get, baseUrl + path))).ToArray());
+
+    /// <summary>As above, for requests other than a bare GET: each builder gets the server's base URL.</summary>
+    private static async Task<string> ExportedBytesOfOutboundCalls(params Func<string, HttpRequestMessage>[] requests)
     {
         var collector = new InMemoryOtlpCollector();
         var services = new ServiceCollection();
@@ -199,34 +257,20 @@ public class TracingPipelineRedactionTests
             using var server = LoopbackServer.Start();
             using (var client = new HttpClient())
             {
-                foreach (var path in paths)
+                foreach (var request in requests)
                 {
-                    using var response = await client.GetAsync(server.BaseUrl + path);
+                    using var response = await client.SendAsync(request(server.BaseUrl));
                     Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
                 }
             }
 
-            Assert.That(collector.Requests, Has.Count.EqualTo(paths.Length), "the OTLP exporter did not send one request per span");
+            Assert.That(collector.Requests, Has.Count.EqualTo(requests.Length), "the OTLP exporter did not send one request per span");
             return string.Concat(collector.Requests.Select(Encoding.Latin1.GetString));
         }
         finally
         {
             tracerProvider.Shutdown(1000);
             await provider.DisposeAsync();
-        }
-    }
-
-    /// <summary>Stands in for an OTLP collector (gRPC or HTTP/protobuf): records each export body and accepts it.</summary>
-    private sealed class InMemoryOtlpCollector : HttpMessageHandler
-    {
-        public ConcurrentQueue<byte[]> Requests { get; } = new();
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Requests.Enqueue(await request.Content!.ReadAsByteArrayAsync(cancellationToken));
-            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent([]) };
-            response.Headers.TryAddWithoutValidation("grpc-status", "0");
-            return response;
         }
     }
 

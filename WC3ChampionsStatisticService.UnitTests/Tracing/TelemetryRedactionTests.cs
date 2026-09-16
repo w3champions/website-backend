@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -18,7 +17,9 @@ using MongoDB.Driver.Core.Connections;
 using MongoDB.Driver.Core.Events;
 using MongoDB.Driver.Core.Servers;
 using NUnit.Framework;
+using W3C.Domain.Maps;
 using W3ChampionsStatisticService.Services.Tracing;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 using WC3ChampionsStatisticService.Tests.Maps;
 
 namespace WC3ChampionsStatisticService.Tests.Tracing;
@@ -169,6 +170,110 @@ public class TelemetryRedactionTests
         Assert.That(activity.GetTagItem("url.query"), Is.EqualTo(42));
     }
 
+    [TestCase("x-proof-hash")]
+    [TestCase("X-Proof-Hash")]
+    [TestCase("X-PROOF-HASH")]
+    [TestCase("x_proof_hash")]
+    [TestCase("authorization")]
+    [TestCase("Authorization")]
+    [TestCase("proxy-authorization")]
+    [TestCase("cookie")]
+    [TestCase("Set-Cookie")]
+    [TestCase("x-admin-secret")]
+    [TestCase("X-Admin-Secret")]
+    [TestCase("x-map-key")]
+    [TestCase("x-api-token")]
+    [TestCase("X-API-Token")]
+    [TestCase(ChatServiceSecretAuthFilter.HeaderName)]
+    public void IsSecretHeader_RecognisesEveryCredentialHeader_WhateverItsCase(string name)
+    {
+        // Headers are case-insensitive on the wire, and the OpenTelemetry semantic conventions spelled them with
+        // underscores before dashes.
+        Assert.That(TelemetryRedaction.IsSecretHeader(name), Is.True);
+    }
+
+    [TestCase("content-type")]
+    [TestCase("x-faro-session-id")]
+    [TestCase("x-forwarded-for")]
+    [TestCase("user-agent")]
+    [TestCase("x-proof-hash-version")]
+    [TestCase("proofhash")]
+    [TestCase("x-proof")]
+    [TestCase("")]
+    [TestCase(null)]
+    public void IsSecretHeader_LeavesEveryOtherHeaderAlone(string name)
+    {
+        Assert.That(TelemetryRedaction.IsSecretHeader(name), Is.False);
+    }
+
+    [TestCase("http.request.header.x-proof-hash")]
+    [TestCase("http.request.header.x_proof_hash")]
+    [TestCase("http.request.header.authorization")]
+    [TestCase("http.response.header.set-cookie")]
+    [TestCase("HTTP.Request.Header.X-Proof-Hash")]
+    [TestCase("x-proof-hash")]
+    public void IsSecretHeaderKey_RecognisesTheHeaderTagNamesOfTheSemanticConventions(string key)
+    {
+        // Instrumentations that record headers name the attribute http.request.header.<name> or
+        // http.response.header.<name>; a property dump may use the bare header name.
+        Assert.That(TelemetryRedaction.IsSecretHeaderKey(key), Is.True);
+    }
+
+    [TestCase("http.request.header.content-type")]
+    [TestCase("http.request.header.x-faro-session-id")]
+    [TestCase("http.request.header.")]
+    [TestCase("http.request.header")]
+    [TestCase("http.request.header.x-proof-hash.first")]
+    [TestCase("url.full")]
+    [TestCase("proofHash")]
+    [TestCase("")]
+    [TestCase(null)]
+    public void IsSecretHeaderKey_LeavesEveryOtherKeyAlone(string key)
+    {
+        Assert.That(TelemetryRedaction.IsSecretHeaderKey(key), Is.False);
+    }
+
+    [Test]
+    public void Processor_RedactsSecretHeaderTags_AndKeepsTheOthers()
+    {
+        // No instrumentation records headers today; should an enrich hook or a future option do so, the value of
+        // a credential header never reaches the exporter (spec §10.3: the x-proof-hash header is never logged).
+        using var activity = new Activity("GET").Start();
+        activity.SetTag("http.request.header.x-proof-hash", Hash);
+        activity.SetTag("http.request.header.authorization", "Bearer " + HubToken);
+        activity.SetTag("http.request.header.x_admin_secret", OutboundSecret);
+        activity.SetTag("http.response.header.set-cookie", "session=" + HubToken);
+        activity.SetTag("http.request.header.x-faro-session-id", "session-42");
+        activity.SetTag("http.request.header.content-type", "application/json");
+        activity.SetTag("http.route", "api/maps/temporary/status");
+        activity.Stop();
+
+        new TelemetryRedactionProcessor().OnEnd(activity);
+
+        Assert.That(activity.GetTagItem("http.request.header.x-proof-hash"), Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(activity.GetTagItem("http.request.header.authorization"), Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(activity.GetTagItem("http.request.header.x_admin_secret"), Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(activity.GetTagItem("http.response.header.set-cookie"), Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(activity.GetTagItem("http.request.header.x-faro-session-id"), Is.EqualTo("session-42"));
+        Assert.That(activity.GetTagItem("http.request.header.content-type"), Is.EqualTo("application/json"));
+        Assert.That(activity.GetTagItem("http.route"), Is.EqualTo("api/maps/temporary/status"));
+        var values = activity.TagObjects.Select(t => t.Value?.ToString()).ToList();
+        Assert.That(values.Any(v => v?.Contains(Hash) == true || v?.Contains(HubToken) == true || v?.Contains(OutboundSecret) == true), Is.False);
+    }
+
+    [Test]
+    public void Processor_RedactsAMultiValuedSecretHeaderTag()
+    {
+        // The semantic conventions record header values as arrays; two x-proof-hash lines arrive as one such tag.
+        using var activity = new Activity("GET").Start();
+        activity.SetTag("http.request.header.x-proof-hash", new[] { Hash, Hash });
+        activity.Stop();
+
+        new TelemetryRedactionProcessor().OnEnd(activity);
+
+        Assert.That(activity.GetTagItem("http.request.header.x-proof-hash"), Is.EqualTo(TelemetryRedaction.Redacted));
+    }
+
     [Test]
     public void MongoPredicate_SkipsOnlyApiTokenCommands()
     {
@@ -211,6 +316,39 @@ public class TelemetryRedactionTests
         Assert.That(request.Name, Is.EqualTo("GET TemporaryMaps/GetStatus"));
         Assert.That(dependency.Name, Is.EqualTo("GET /maps/temporary/by-proof-hash/Redacted"));
         Assert.That(dependency.Data, Is.EqualTo("https://mm.test/maps/temporary/by-proof-hash/Redacted"));
+    }
+
+    [Test]
+    public void AppInsightsInitializer_RedactsSecretHeaderProperties_OnEveryKindOfTelemetry()
+    {
+        // No initializer or module of this service copies headers into telemetry properties; should one do so,
+        // under the semantic-convention tag name or the bare header name, the credential value never leaves.
+        var request = new RequestTelemetry { Name = "GET TemporaryMaps/GetStatus" };
+        request.Properties["http.request.header.x-proof-hash"] = Hash;
+        request.Properties[TemporaryMapKeys.ProofHashHeaderName] = Hash;
+        request.Properties["http.request.header.authorization"] = "Bearer " + HubToken;
+        request.Properties["http.request.header.x-faro-session-id"] = "session-42";
+        var dependency = new DependencyTelemetry { Type = "Http", Name = "POST /maps/temporary/by-proof-hash" };
+        dependency.Properties["http.request.header.x-admin-secret"] = OutboundSecret;
+        dependency.Properties["http.response.header.content-type"] = "application/json";
+        var trace = new TraceTelemetry("message");
+        trace.Properties["X-Proof-Hash"] = Hash;
+        var initializer = new TelemetryRedactionInitializer();
+
+        initializer.Initialize(request);
+        initializer.Initialize(dependency);
+        initializer.Initialize(trace);
+
+        Assert.That(request.Properties["http.request.header.x-proof-hash"], Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(request.Properties[TemporaryMapKeys.ProofHashHeaderName], Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(request.Properties["http.request.header.authorization"], Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(request.Properties["http.request.header.x-faro-session-id"], Is.EqualTo("session-42"));
+        Assert.That(request.Name, Is.EqualTo("GET TemporaryMaps/GetStatus"));
+        Assert.That(dependency.Properties["http.request.header.x-admin-secret"], Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(dependency.Properties["http.response.header.content-type"], Is.EqualTo("application/json"));
+        Assert.That(dependency.Name, Is.EqualTo("POST /maps/temporary/by-proof-hash"));
+        Assert.That(trace.Properties["X-Proof-Hash"], Is.EqualTo(TelemetryRedaction.Redacted));
+        Assert.That(trace.Message, Is.EqualTo("message"));
     }
 
     [Test]
@@ -396,25 +534,6 @@ public class TelemetryRedactionTests
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
 
         public IFileProvider ContentRootFileProvider { get; set; }
-    }
-
-    private sealed class CollectingTelemetryChannel : ITelemetryChannel
-    {
-        public ConcurrentQueue<ITelemetry> Items { get; } = new();
-
-        public bool? DeveloperMode { get; set; }
-
-        public string EndpointAddress { get; set; }
-
-        public void Send(ITelemetry item) => Items.Enqueue(item);
-
-        public void Flush()
-        {
-        }
-
-        public void Dispose()
-        {
-        }
     }
 
     private static CommandStartedEvent Command(string name, BsonDocument command)

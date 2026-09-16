@@ -46,8 +46,9 @@ public class HttpRequestExceptionFilter(ILogger<HttpRequestExceptionFilter> logg
         => exception.StatusCode == null ? TransportFailureMessage : exception.Message;
 
     /// <summary>
-    /// Logs an HttpRequestException answered to a client, never with the request URL (it can hold a proofHash). A
-    /// status-bearing exception is logged by action and statuses only, because its message can hold an upstream body:
+    /// Logs an HttpRequestException answered to a client, never with the request URL or its headers: a query can carry
+    /// a credential (the hub's access_token; the pre-check's proofHash before revision 10 moved it to the x-proof-hash
+    /// header). A status-bearing exception is logged by action and statuses only, because its message can hold an upstream body:
     /// a 4xx at Warning, anything else at Error, and a status below 400 next to the 502 answered for it. A transport
     /// failure is logged at Error with the exception itself.
     /// </summary>

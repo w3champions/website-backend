@@ -1,14 +1,20 @@
 using System;
 using System.Text;
+using W3C.Domain.Maps;
+using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace W3ChampionsStatisticService.Services.Tracing;
 
 /// <summary>
-/// Removes secrets from URL-shaped telemetry values. Temporary-map secrets (design spec §10.3: never log a mapProof or
-/// a proofHash) reach telemetry in two shapes: matchmaking's <c>/maps/temporary/by-proof-hash/{proofHash}</c> route
-/// carries the proofHash as a path segment, and website-backend's own routes take it as a query parameter. The
-/// SignalR hub takes its token as the <c>access_token</c> query parameter, and two outbound clients send credentials
-/// as query parameters: the replay-service admin secret as <c>secret</c> and the caller's JWT to identification-service
+/// Removes secrets from telemetry values. Temporary-map secrets (design spec §10.3: never log a mapProof or a
+/// proofHash) travel in a request header and a POST body since revision 10 — the x-proof-hash header of
+/// website-backend's pre-check and the body of matchmaking's by-proof-hash lookup — because the proxies in front of
+/// the services record request lines and not headers or bodies. No instrumentation here records headers or bodies
+/// either; <see cref="IsSecretHeader"/> names the credential headers for everything that lists headers, and
+/// <see cref="IsSecretHeaderKey"/> the attribute names an instrumentation would record them under. The URL
+/// redaction stays for the shapes that used to carry the proofHash (a <c>/by-proof-hash/{proofHash}</c> path segment,
+/// a <c>?proofHash=</c> query) and for the credentials still sent as query parameters: the SignalR hub's
+/// <c>access_token</c>, the replay-service admin secret as <c>secret</c> and the caller's JWT to identification-service
 /// as <c>authorization</c>. Values become "Redacted", the placeholder OpenTelemetry's own query redaction uses.
 /// </summary>
 public static class TelemetryRedaction
@@ -16,8 +22,92 @@ public static class TelemetryRedaction
     public const string Redacted = "Redacted";
 
     private const string ProofHashPathPrefix = "/maps/temporary/by-proof-hash/";
+    private const string RequestHeaderTagPrefix = "http.request.header.";
+    private const string ResponseHeaderTagPrefix = "http.response.header.";
 
     private static readonly string[] SecretQueryKeys = ["proofHash", "mapProof", "access_token", "secret", "authorization"];
+
+    /// <summary>
+    /// Every header that carries a credential, lowercase: the standard ones, the admin secret the internal-service
+    /// clients send, the pre-check's proofHash, the map-download key of update-service (spec A.7, not sent by this
+    /// service), the API token of the rate limiter and chat-service's relationships secret.
+    /// </summary>
+    private static readonly string[] SecretHeaderNames =
+    [
+        "authorization",
+        "proxy-authorization",
+        "cookie",
+        "set-cookie",
+        "x-admin-secret",
+        TemporaryMapKeys.ProofHashHeaderName,
+        "x-map-key",
+        "x-api-token",
+        ChatServiceSecretAuthFilter.HeaderName,
+    ];
+
+    /// <summary>
+    /// Whether <paramref name="name"/> is a credential header. Case-insensitive, as header names are on the wire, and
+    /// an underscore counts as a dash, as the OpenTelemetry semantic conventions once spelled header attributes.
+    /// </summary>
+    public static bool IsSecretHeader(string name) => name != null && IsSecretHeader(name.AsSpan());
+
+    /// <summary>
+    /// Whether <paramref name="key"/> is where a telemetry item would hold a credential header's value: the
+    /// semantic-convention attribute <c>http.request.header.{name}</c> or <c>http.response.header.{name}</c>, or
+    /// the bare header name as a property dump would use it.
+    /// </summary>
+    public static bool IsSecretHeaderKey(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return false;
+        }
+
+        if (key.StartsWith(RequestHeaderTagPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return IsSecretHeader(key.AsSpan(RequestHeaderTagPrefix.Length));
+        }
+
+        if (key.StartsWith(ResponseHeaderTagPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return IsSecretHeader(key.AsSpan(ResponseHeaderTagPrefix.Length));
+        }
+
+        return IsSecretHeader(key.AsSpan());
+    }
+
+    private static bool IsSecretHeader(ReadOnlySpan<char> name)
+    {
+        foreach (var secretHeader in SecretHeaderNames)
+        {
+            if (HeaderNameEquals(name, secretHeader))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary><paramref name="secretHeader"/> is lowercase with dashes; <paramref name="name"/> may use any case and underscores.</summary>
+    private static bool HeaderNameEquals(ReadOnlySpan<char> name, string secretHeader)
+    {
+        if (name.Length != secretHeader.Length)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < name.Length; i++)
+        {
+            var c = name[i] == '_' ? '-' : char.ToLowerInvariant(name[i]);
+            if (c != secretHeader[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Redacts a full URL, a bare path, or text embedding one (e.g. "GET /path"). Returns the same instance when
