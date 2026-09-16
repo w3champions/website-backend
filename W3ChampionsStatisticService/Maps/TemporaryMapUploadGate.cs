@@ -5,8 +5,8 @@ using System.Threading;
 namespace W3ChampionsStatisticService.Maps;
 
 /// <summary>
-/// Bounds the temporary-map uploads in flight, in one place: at most one per battleTag (D7) and at most
-/// <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> per process (Task 2 security H1). The controller acquires a slot
+/// Bounds the temporary-map uploads in flight, in one place: at most one per battleTag and at most
+/// <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> per process, so the spooled temp disk is bounded. The controller acquires a slot
 /// after the auth filter and BEFORE the first request-body byte, so a spool of up to 256 MiB is never started for an
 /// upload that will be refused, and releases it in a finally once the service has returned — compensation included.
 /// The per-battleTag bound is checked first, then the process-wide one; a refusal leaves nothing held and names the
@@ -15,7 +15,7 @@ namespace W3ChampionsStatisticService.Maps;
 /// <para>
 /// A slot is held for however long the upload takes. Once the bytes are stored the service runs to its outcome without
 /// the request token, so under an upstream outage one slot can be held for the worst case of that path (~10 minutes:
-/// client timeouts on the record write and the re-probe, then four compensation attempts) — accepted by ruling:
+/// client timeouts on the record write and the re-probe, then four compensation attempts) — a deliberate trade:
 /// correctness over latency while uploads fail anyway; new uploads then see 429 and retry.
 /// </para>
 /// <para>
@@ -104,9 +104,9 @@ public enum TemporaryMapUploadGateBound
 {
     None,
 
-    /// <summary>D7: an upload of the same battleTag is in flight.</summary>
+    /// <summary>An upload of the same battleTag is in flight.</summary>
     PerBattleTag,
 
-    /// <summary>Task 2 security H1: all <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> slots are taken.</summary>
+    /// <summary>All <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> slots are taken.</summary>
     Global,
 }

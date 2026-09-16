@@ -68,8 +68,8 @@ buffered in memory.
 | *(no response)* | — | the client disconnected — at any point, including mid-body-read or mid-orchestration — and nothing it did was worth logging |
 
 Appendix A.3's own list omits `PROOF_MISMATCH` and `TEMP_MAP_KEY_MISMATCH`, although §6.3 step 4 names
-both; both are implemented exactly as §6.3 describes (a launcher not coded for them sees a generic error,
-per the cross-repo ruling that accepted this gap rather than changing the frozen wire contract).
+both; both are implemented exactly as §6.3 describes (a launcher not coded for them sees a generic error —
+the gap was accepted across the repos rather than changing the frozen wire contract).
 
 ## Auth
 
@@ -83,10 +83,10 @@ non-admin token check in this service (`AuthSessionController.MintTicket`): an e
 correctly-signed player token is accepted, not rejected.
 
 Both actions also fail closed with a bare 401 if, for any reason, the filter ran but left no battleTag in
-`HttpContext.Items` (defence in depth for a code path that should not exist in production; the ledgered
-CROSS-REPO ruling is that Appendix A.4 lists no 401 for the status route, but the filter and this
-fail-closed path both answer one anyway — a launcher expecting only 200/404/429/502 there must also
-handle a 401).
+`HttpContext.Items` (defence in depth for a code path that should not exist in production). Appendix A.4
+lists no 401 for the status route, but the filter and this fail-closed path both answer one anyway — a
+known and accepted cross-repo gap: a launcher expecting only 200/404/429/502 there must also handle a
+401.
 
 ## Concurrency and quotas
 
@@ -144,9 +144,9 @@ website-backend instances would not see each other's locks, in-flight slots or q
 
 Once the bytes are stored, the request runs to its outcome uncancellable (see below); under an mm/us
 outage the worst case is roughly ten minutes (client timeouts on the record write, the re-probe, then up
-to three compensation retries with 1/2/4 s back-offs) holding one of the 8 global slots. This was accepted
-by ruling: correctness over latency while uploads are failing anyway; new uploads meanwhile see 429 and
-retry.
+to three compensation retries with 1/2/4 s back-offs) holding one of the 8 global slots. This is a
+deliberate trade: correctness over latency while uploads are failing anyway; new uploads meanwhile see
+429 and retry.
 
 ## Orchestration
 
@@ -198,12 +198,12 @@ existing file at that path blindly:
    - any other by-path outcome (transport failure, contract violation) → `502 UPSTREAM`, no delete.
 
 This guard applies identically to create and to restore. Its soundness rests on two assumptions
-documented at the code (`ReplaceStrayFileAsync`, S-I1): matchmaking enforces a **unique index on
+documented at the code (`ReplaceStrayFileAsync`): matchmaking enforces a **unique index on
 `gameMap.path`**, so at most one record ever claims a given path; and update-service's file identity is
 **byte-exact and case-sensitive**, so a by-path answer is really about the file the 409 reported. If
 either assumption is ever violated, the guard degrades safely (an extra 502, never a wrong delete).
 
-**F-A: re-probe before any post-write compensating delete.** Once the bytes are stored, *any* failure of
+**Re-probe before any post-write compensating delete.** Once the bytes are stored, *any* failure of
 the matchmaking create or file-restored call — including a status-less one such as a timeout or a
 transport error — re-probes matchmaking by sha1 once (with `CancellationToken.None`) before deciding
 whether to compensate, because matchmaking can commit the write and still answer an error (e.g. its own
@@ -218,7 +218,7 @@ post-insert refresh failing, or a proxy 5xx after the write landed). Outcomes:
 - restore: the record now `present` **at the same map id** → success (`200 restored`, no delete); still
   `deleted`, or nothing found at all → compensate, `502 UPSTREAM`; `present` at a *different* map id →
   **no compensation**, `502 UPSTREAM` — sha1 is unique, so another id means the record was replaced
-  meanwhile and the bytes may now belong to the winning record (R2-1/S2-6); a known record in some other
+  meanwhile and the bytes may now belong to the winning record; a known record in some other
   file state → **no compensation**, `502 UPSTREAM`.
 - the re-probe call itself fails → **no compensation**, `502 UPSTREAM` + a warning; the bytes are left for
   the reconciliation sweep to reclaim later (or a later restore, if a `deleted` record still claims the

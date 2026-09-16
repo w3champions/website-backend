@@ -333,7 +333,7 @@ public class TemporaryMapClientTests
     [Test]
     public void DeleteMapFileByPathAsync_NamesTheOperationAndStatus_NeverThePath()
     {
-        // The path passes the shape check with a control character in it (S2-2 admits none in a log line), and callers log
+        // The path passes the shape check with a control character in it (a log line admits none), and callers log
         // the exception: its message carries the operation and the status, and the caller renders the gated path itself.
         const string pathWithLineBreak = "W3Champions/CustomGames/x-94ec3bda\r\nforged.w3x";
         var handler = new ScriptedHttpHandler()

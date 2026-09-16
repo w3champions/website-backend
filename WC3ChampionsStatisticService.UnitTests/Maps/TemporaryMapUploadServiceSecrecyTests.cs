@@ -48,7 +48,7 @@ public class TemporaryMapUploadServiceSecrecyTests : TemporaryMapUploadServiceTe
             .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody(mapProofHash: ProofHash.ToUpperInvariant())))
             .On(IsUsDelete, Respond(HttpStatusCode.NoContent, "")), logger: logs.Logger));
 
-        // The H1 guard refuses a claimed path, and matchmaking refuses and then fails to answer a create.
+        // The path-conflict guard refuses a claimed path, and matchmaking refuses and then fails to answer a create.
         await ExpectFailure(Run(UnknownSha1Handler()
             .On(IsUsUpload, Respond(HttpStatusCode.Conflict, "{}"))
             .On(IsByPath, Respond(HttpStatusCode.OK, Record(4242, sha1: OtherSha1))), logger: logs.Logger));
@@ -70,7 +70,7 @@ public class TemporaryMapUploadServiceSecrecyTests : TemporaryMapUploadServiceTe
     [Test]
     public async Task MatchmakingErrorText_EchoingTheProof_NeverReachesTheLogs_FromAProofCarryingCall()
     {
-        // S-L3: matchmaking's generic 400 echoes raw exception text, which can quote the request it refused.
+        // matchmaking's generic 400 echoes raw exception text, which can quote the request it refused.
         using var logs = new LogCapture();
         var echo = "{\"errors\":[{\"param\":\"mapProof\",\"msg\":\"refused " + MapProofValue + " hashing to " + ProofHash + "\"}]}";
 

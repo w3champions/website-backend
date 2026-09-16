@@ -10,7 +10,7 @@ using W3ChampionsStatisticService.Sessions;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// R-I1/S-H1 and S-L1: uploads of the same fileKey serialise on <see cref="TemporaryMapFileKeyLock"/> from the store
+/// Uploads of the same fileKey serialise on <see cref="TemporaryMapFileKeyLock"/> from the store
 /// through compensation, so neither can delete the other's bytes. Every interleaving is forced with signals completed by
 /// scripted routes, the lock's contention hook and the compensation wait seam; nothing sleeps.
 /// </summary>
@@ -22,7 +22,7 @@ public class TemporaryMapUploadServiceConcurrencyTests : TemporaryMapUploadServi
     [Test]
     public async Task TwoUploadsOfTheSameFileKey_NeverInterleave_AndTheSecondDedupesWithoutADelete()
     {
-        // Two uploaders send the same bytes under the same name (S2-7): the same fileKey, one quota each.
+        // Two uploaders send the same bytes under the same name: the same fileKey, one quota each.
         var firstInCreate = NewSignal();
         var releaseCreate = NewSignal();
         var secondWaitingOrStoring = NewSignal();

@@ -6,7 +6,7 @@ using W3ChampionsStatisticService.Maps;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// The in-flight bounds of D7 and the Task 2 H1 ruling: one upload per battleTag and
+/// The in-flight bounds: one upload per battleTag and
 /// <see cref="TemporaryMapLimits.MaxConcurrentUploads"/> per process, in one gate. A slot is held from the
 /// controller's acquire until its dispose; both refusals look the same to the client and name their bound to the caller.
 /// </summary>

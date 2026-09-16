@@ -106,7 +106,7 @@ public class TemporaryMapNamingTests
     public void Sanitise_KeepsFormatCharactersBecauseTheSpecDoesNotRemoveThem()
     {
         // U+200B, U+FEFF and U+200D are not White_Space and §6.4 does not remove format (Cf)
-        // characters (ruling on watch item 8: stay spec-literal).
+        // characters (deliberately spec-literal).
         Assert.That(TemporaryMapNaming.Sanitise("a\u200bb\ufeffc\u200dd.w3x"), Is.EqualTo("a\u200bb\ufeffc\u200dd"));
     }
 
@@ -321,7 +321,7 @@ public class TemporaryMapNamingTests
         Assert.Throws<ArgumentException>(() => TemporaryMapNaming.GameMapPath(notAFileKey));
     }
 
-    // ---- The strict fileKey shape a restore requires before writing (S-I2, S2-1) -----------------
+    // ---- The strict fileKey shape a restore requires before writing -----------------------------
 
     [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.w3x", true)]
     [TestCase("W3Champions/CustomGames/Legion TD-94ec3bda.W3X", true, TestName = "IsFileKey takes the extension in either case")]
@@ -381,7 +381,7 @@ public class TemporaryMapNamingTests
         }
     }
 
-    // ---- Control characters removed from the forwarded originalFileName (S-L5) -------------------
+    // ---- Control characters removed from the forwarded originalFileName -------------------------
 
     [Test]
     public void RemoveControlCharacters_DropsC0AndC1AndKeepsEverythingElse()

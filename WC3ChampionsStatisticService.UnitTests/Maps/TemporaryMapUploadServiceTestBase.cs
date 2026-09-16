@@ -351,7 +351,7 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
 
     // ---- Spool directory ---------------------------------------------------------------------
 
-    /// <summary>D8: no spool file left behind, judged as a set against what the directory held before.</summary>
+    /// <summary>No spool file left behind, judged as a set against what the directory held before.</summary>
     protected void AssertNoNewSpoolFiles(IEnumerable<string> before)
         => Assert.That(FilesIn(SpoolDirectory), Is.SubsetOf(before), "a spool file survived the upload");
 }

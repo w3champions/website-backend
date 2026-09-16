@@ -7,7 +7,7 @@ using W3ChampionsStatisticService.Maps;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// Upstream-supplied strings in log lines (S2-2, round 3): the Serilog file sink renders strings raw, so a fileState or
+/// Upstream-supplied strings in log lines: the Serilog file sink renders strings raw, so a fileState or
 /// sha1 that matchmaking or update-service sends is rendered only when it has the shape the service expects, and the
 /// placeholder "invalid" stands in otherwise. The same rule for paths is pinned in the failure tests.
 /// </summary>

@@ -17,7 +17,7 @@ internal static class TemporaryMapUploadRules
 
     /// <summary>
     /// Teams 0..23 are player teams; 24 is the observers, which the launcher never emits as a force (§4.4). So a force's
-    /// team is below this, and maxTeams — the number of player teams — is at most this (matchmaking takes 1..24; S2-4).
+    /// team is below this, and maxTeams — the number of player teams — is at most this (matchmaking takes 1..24).
     /// </summary>
     private const int TeamCount = 24;
 
@@ -26,12 +26,12 @@ internal static class TemporaryMapUploadRules
 
     /// <summary>
     /// What the log renders in place of a supplied string that could forge a log line: the file sink renders strings
-    /// raw, so a launcherVersion that is not a plain version string (S-L4) and an upstream path, fileState or sha1 that
-    /// is not the shape the service expects (S2-2) are replaced by this.
+    /// raw, so a launcherVersion that is not a plain version string and an upstream path, fileState or sha1 that
+    /// is not the shape the service expects are replaced by this.
     /// </summary>
     public const string InvalidForLog = "invalid";
 
-    /// <summary>What the log renders for a launcherVersion that is not a plain version string (S-L4).</summary>
+    /// <summary>What the log renders for a launcherVersion that is not a plain version string.</summary>
     public const string InvalidLauncherVersion = InvalidForLog;
 
     /// <summary>The longest plain token (a launcherVersion, a fileState) the log renders as sent.</summary>
@@ -41,7 +41,7 @@ internal static class TemporaryMapUploadRules
     /// §6.3 step 6: the capture must describe a lobby this map can have — a known lobby mode, 1..12 (12-player maps) or
     /// 1..24 slots, 1..24 teams, forces exactly when mapped, every force on a distinct team below the observers,
     /// every seat (human or computer) a distinct in-range index, and every colour, race and difficulty a value WC3 has
-    /// (S-M3). Any missing part of the capture is a rejection rather than an exception.
+    /// Any missing part of the capture is a rejection rather than an exception.
     /// </summary>
     public static bool IsPossibleLayout(TemporaryMapCapture capture, GameMap parsed)
     {
@@ -129,7 +129,7 @@ internal static class TemporaryMapUploadRules
     };
 
     /// <summary>
-    /// The client-supplied launcherVersion is logged only when it is 1..32 characters of [0-9A-Za-z.+-] (S-L4): the
+    /// The client-supplied launcherVersion is logged only when it is 1..32 characters of [0-9A-Za-z.+-]: the
     /// file sink renders strings raw, so anything else — a line break, a control character, 64 KiB of text — is
     /// replaced by <see cref="InvalidLauncherVersion"/>.
     /// </summary>
@@ -138,21 +138,21 @@ internal static class TemporaryMapUploadRules
 
     /// <summary>
     /// A fileState matchmaking supplied, as the log may render it: the unknown value is the point of the warning that
-    /// logs it, so it is kept when it is 1..32 characters of [0-9A-Za-z_-], else <see cref="InvalidForLog"/> (S2-2).
+    /// logs it, so it is kept when it is 1..32 characters of [0-9A-Za-z_-], else <see cref="InvalidForLog"/>.
     /// </summary>
     public static string LoggableFileState(string fileState)
         => IsPlainToken(fileState, "_-") ? fileState : InvalidForLog;
 
     /// <summary>
     /// A sha1 an upstream service supplied, as the log may render it: only when it is exactly 40 lowercase hex characters,
-    /// the shape the clients require of their own keys, else <see cref="InvalidForLog"/> (S2-2).
+    /// the shape the clients require of their own keys, else <see cref="InvalidForLog"/>.
     /// </summary>
     public static string LoggableSha1(string sha1)
         => TemporaryMapKeys.IsLowercaseHex(sha1, TemporaryMapKeys.Sha1HexLength) ? sha1 : InvalidForLog;
 
     /// <summary>
     /// A matchmaking-supplied path as the log may render it: the path itself when it is a temporary map file path without
-    /// a control character, else <see cref="InvalidForLog"/> (S2-2). Paths are wb-generated in normal operation and reach a
+    /// a control character, else <see cref="InvalidForLog"/>. Paths are wb-generated in normal operation and reach a
     /// log line only through matchmaking drift, which is exactly when they cannot be trusted to stay on one line.
     /// </summary>
     public static string LoggablePath(string path)
@@ -176,7 +176,7 @@ internal static class TemporaryMapUploadRules
             : InvalidForLog;
     }
 
-    /// <summary>The upstream status an exception carries, for log lines that may not carry the exception itself (S-L3).</summary>
+    /// <summary>The upstream status an exception carries, for log lines that may not carry the exception itself.</summary>
     public static int? StatusOf(Exception ex) => (int?)(ex as HttpRequestException)?.StatusCode;
 
     /// <summary>

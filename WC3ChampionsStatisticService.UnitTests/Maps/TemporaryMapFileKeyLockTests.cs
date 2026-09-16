@@ -8,7 +8,7 @@ using W3ChampionsStatisticService.Maps;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// The per-fileKey async mutex behind R-I1/S-H1: one holder per key, independent keys, a cancellable wait that
+/// The per-fileKey async mutex: one holder per key, independent keys, a cancellable wait that
 /// leaves nothing behind, and entries that disappear with their last holder or waiter.
 /// </summary>
 [TestFixture]

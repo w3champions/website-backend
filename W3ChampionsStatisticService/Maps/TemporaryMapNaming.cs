@@ -107,7 +107,7 @@ public static class TemporaryMapNaming
     }
 
     /// <summary>
-    /// The strict fileKey shape, for a path matchmaking hands back before anything is written at it (S-I2, S2-1): what
+    /// The strict fileKey shape, for a path matchmaking hands back before anything is written at it: what
     /// <see cref="BuildFileKey"/> emits and nothing wider — <see cref="TemporaryMapKeys.IsFilePath"/>, exactly one
     /// segment under the prefix, shaped <c>&lt;stem&gt;-&lt;8 lowercase hex&gt;.w3x|.w3m</c> with a non-empty stem, the
     /// extension in either case, and no control character (U+0000-U+001F, U+007F-U+009F) anywhere in the name. Every
@@ -188,7 +188,7 @@ public static class TemporaryMapNaming
 
     /// <summary>
     /// The name forwarded to matchmaking as originalFileName: the uploader's value with the C0 and C1 control
-    /// characters (U+0000-U+001F, U+007F-U+009F) removed and nothing else changed (S-L5). Null reads as empty.
+    /// characters (U+0000-U+001F, U+007F-U+009F) removed and nothing else changed. Null reads as empty.
     /// </summary>
     public static string RemoveControlCharacters(string value)
     {

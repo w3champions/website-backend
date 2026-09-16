@@ -12,7 +12,7 @@ using W3ChampionsStatisticService.Maps;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// The spool purge of <see cref="TemporaryMapExpirySweep"/> (Task 2 L2): a spool file a crash or restart left behind is
+/// The spool purge of <see cref="TemporaryMapExpirySweep"/>: a spool file a crash or restart left behind is
 /// removed once it is <see cref="TemporaryMapLimits.StaleSpoolFileAgeHours"/> old, judged against the run's clock. Every
 /// test uses the private spool directory of the base; the machine-wide one is never touched.
 /// </summary>
@@ -99,7 +99,7 @@ public class TemporaryMapExpirySweepSpoolTests : TemporaryMapUploadServiceTestBa
     [Test]
     public async Task ThePurgeLine_CarriesTheFilesLastWrite()
     {
-        // S6-L4: read after the delete, the timestamp is the epoch of a file that no longer exists.
+        // Read after the delete, the timestamp is the epoch of a file that no longer exists.
         using var logs = new LogCapture();
         PlantSpoolFile("stale", new DateTime(2026, 9, 12, 2, 30, 0, DateTimeKind.Utc));
 
@@ -112,7 +112,7 @@ public class TemporaryMapExpirySweepSpoolTests : TemporaryMapUploadServiceTestBa
     [Test]
     public async Task ALinkedSpoolDirectory_IsRefused_AndThePassesStillRun()
     {
-        // S6-L1: the reader refuses to spool through a link; the purge must not delete through one either. The refusal
+        // The reader refuses to spool through a link; the purge must not delete through one either. The refusal
         // is this run's failure, logged once, and the two passes are not delayed by it.
         if (OperatingSystem.IsWindows())
         {
@@ -166,7 +166,7 @@ public class TemporaryMapExpirySweepSpoolTests : TemporaryMapUploadServiceTestBa
     [Test]
     public async Task AFaultWhileListingTheSpoolDirectory_IsCounted_AndBothPassesStillRun()
     {
-        // R-Minor5: whatever the purge throws, the passes run. What was purged before the fault stays purged.
+        // Whatever the purge throws, the passes run. What was purged before the fault stays purged.
         using var logs = new LogCapture();
         var stale = PlantSpoolFile("stale", Now - StaleAge - TimeSpan.FromHours(1));
         var handler = NothingToDo();
@@ -185,7 +185,7 @@ public class TemporaryMapExpirySweepSpoolTests : TemporaryMapUploadServiceTestBa
     [Test]
     public void ACancelledEnumeration_PropagatesInsteadOfBeingLoggedAndSwallowed()
     {
-        // Task 6 Info observation: the purge's catch-alls must let a genuine cancellation through rather than log it as
+        // The purge's catch-alls must let a genuine cancellation through rather than log it as
         // an Error and count it as Failed, which would hide a shutdown behind "retrying next run".
         using var logs = new LogCapture();
         var stale = PlantSpoolFile("stale", Now - StaleAge - TimeSpan.FromHours(1));

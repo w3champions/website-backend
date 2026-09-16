@@ -46,8 +46,8 @@ public static class TemporaryMapLimits
     public static readonly TimeSpan MinUploadGracePeriod = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Uploads in flight per process, across all accounts (Task 2 security H1): bounds the spooled temp disk to
-    /// 8 × <see cref="MaxFileBytes"/>. One upload per battleTag is enforced at the same point (D7); both refusals answer
+    /// Uploads in flight per process, across all accounts: bounds the spooled temp disk to
+    /// 8 × <see cref="MaxFileBytes"/>. One upload per battleTag is enforced at the same point; both refusals answer
     /// 429 QUOTA_EXCEEDED with <see cref="ConcurrentUploadRetryAfterSeconds"/>.
     /// </summary>
     public const int MaxConcurrentUploads = 8;
@@ -77,7 +77,7 @@ public static class TemporaryMapLimits
 
     /// <summary>
     /// A spool file in <see cref="TempUploadDir"/> not written for this long was left behind by a crash or restart (a live
-    /// upload writes continuously and finishes within minutes) and is purged by the expiry sweep (Task 2 L2).
+    /// upload writes continuously and finishes within minutes) and is purged by the expiry sweep.
     /// </summary>
     public const int StaleSpoolFileAgeHours = 24;
 
@@ -85,7 +85,7 @@ public static class TemporaryMapLimits
 
     /// <summary>
     /// Longest `originalFileName` accepted, in UTF-16 code units: no file system hands a launcher a longer name, and
-    /// matchmaking stores and re-serves the value as sent (S-L5).
+    /// matchmaking stores and re-serves the value as sent.
     /// </summary>
     public const int MaxOriginalFileNameLength = 255;
 

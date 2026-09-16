@@ -250,7 +250,7 @@ public static class TemporaryMapUploadReader
 
     /// <summary>
     /// The rules an existing spool directory at the resolved <paramref name="path"/> must meet before anything is spooled
-    /// into it (the reader) or purged from it (the expiry sweep, S6-L1): never a link, as a pre-planted one in a shared
+    /// into it (the reader) or purged from it (the expiry sweep): never a link, as a pre-planted one in a shared
     /// temp directory would redirect the map bytes, or a purge, elsewhere; and owner-only (0700) where the OS has Unix
     /// modes. Null when it passes, else the refusal to log, with the disk fault behind it, if any, in
     /// <paramref name="cause"/>. The chmod runs every time because CreateDirectory applies its mode only to a directory

@@ -23,7 +23,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// GET api/maps/temporary/status (Appendix A.4 with the segment B rulings) and the shape of both routes: the state and
+/// GET api/maps/temporary/status (Appendix A.4) and the shape of both routes: the state and
 /// nothing else, a bare 429, a bare 502 for anything matchmaking cannot answer, an empty result for a client that is
 /// gone, and a 401 when the auth filter left no battleTag behind.
 /// </summary>

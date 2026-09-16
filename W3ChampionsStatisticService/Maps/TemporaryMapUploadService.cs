@@ -24,12 +24,12 @@ namespace W3ChampionsStatisticService.Maps;
 /// Before the bytes are stored every call takes the request's token, and a failure DURING the update-service upload is
 /// never compensated: whether the bytes landed is unknown, and the fileKey may back another record. Once they are
 /// stored everything is uncancellable. A failed digest or layout check compensates with an update-service delete
-/// directly; any failure of a matchmaking write first re-probes by sha1 once (F-A), because matchmaking can commit and
+/// directly; any failure of a matchmaking write first re-probes by sha1 once, because matchmaking can commit and
 /// still answer an error.
 /// </para>
 /// <para>
 /// Uploads of the same fileKey serialise on <see cref="TemporaryMapFileKeyLock"/> from just before the store until any
-/// compensation is done, so one upload never deletes bytes another has just stored (R-I1).
+/// compensation is done, so one upload never deletes bytes another has just stored.
 /// </para>
 /// <para>NEVER log mapProof, proofHash or MapProofHash (design spec §10.3). sha1, map ids and fileKeys are fine.</para>
 /// </summary>
@@ -49,7 +49,7 @@ public class TemporaryMapUploadService(
     /// <summary>Test seam: the spool directory; null means <see cref="TemporaryMapLimits.TempUploadDir"/>.</summary>
     internal string SpoolDirectory { get; init; }
 
-    /// <summary>Where this service spools: the seam when set, otherwise the shared upload directory Task 6 purges.</summary>
+    /// <summary>Where this service spools: the seam when set, otherwise the shared upload directory the expiry sweep purges.</summary>
     internal string EffectiveSpoolDirectory => SpoolDirectory ?? TemporaryMapLimits.TempUploadDir;
 
     /// <summary>Test seam: how compensation waits before each retry. Never cancellable.</summary>
@@ -59,7 +59,7 @@ public class TemporaryMapUploadService(
     private TemporaryMapCompensation Compensation
         => _compensation ??= new TemporaryMapCompensation(_updateServiceClient, _logger) { WaitAsync = WaitAsync };
 
-    /// <summary>The per-fileKey lock, the one process-wide instance the expiry sweep holds too (S6-M1).</summary>
+    /// <summary>The per-fileKey lock, the one process-wide instance the expiry sweep holds too.</summary>
     internal TemporaryMapFileKeyLock FileKeyLock { get; } = fileKeyLock;
 
     /// <summary>
@@ -118,7 +118,7 @@ public class TemporaryMapUploadService(
         TemporaryMapUpload upload, string proofHash, string battleTag, CancellationToken cancellationToken)
     {
         // 3. Quota: only a genuinely new record costs one. MintRateLimiter has no release, so the token is kept even
-        // when the update-service 409 re-probe below turns this upload into a dedupe — a race-only overcount (S5).
+        // when the update-service 409 re-probe below turns this upload into a dedupe — a race-only overcount.
         if (!_rateLimiter.TryAcquire($"tm-upload:{battleTag}", TemporaryMapLimits.UploadsPerHourPerBattleTag, DateTime.UtcNow,
                 TemporaryMapLimits.UploadQuotaWindow, out var retryAfter))
         {
@@ -128,7 +128,7 @@ public class TemporaryMapUploadService(
         // 4. Server-generated fileKey: the uploader's name only ever contributes a sanitised base.
         var fileKey = TemporaryMapNaming.BuildFileKey(upload.Metadata.OriginalFileName, upload.Sha1, upload.Extension);
 
-        // R-I1: held until this upload's store, record write and compensation are all done. Waiting comes before anything
+        // Held until this upload's store, record write and compensation are all done. Waiting comes before anything
         // is stored, so an abort while waiting has nothing to undo.
         using var fileKeyHeld = await FileKeyLock.AcquireAsync(fileKey, cancellationToken);
         var stored = await StoreBytesAsync(upload, fileKey, mapId: 0, battleTag, cancellationToken);
@@ -187,7 +187,7 @@ public class TemporaryMapUploadService(
         }
         catch (Exception ex)
         {
-            // F-A: an error answer does not prove nothing was written (matchmaking answers 400 when its refresh fails after
+            // An error answer does not prove nothing was written (matchmaking answers 400 when its refresh fails after
             // the insert; a proxy can answer 5xx after processing), so ask before deleting bytes a record may point at.
             LogProofCarryingCallFailure(ex, "create", upload.Sha1, fileKey);
             var record = await ProbeAfterStoreAsync(upload.Sha1, fileKey, restoringMapId: null)
@@ -251,7 +251,7 @@ public class TemporaryMapUploadService(
 
         if (verified.FileState == TemporaryMapFileStates.Present)
         {
-            // A concurrent restore already put the bytes back: a dedupe hit, nothing written (S4).
+            // A concurrent restore already put the bytes back: a dedupe hit, nothing written.
             return Deduped(existing, upload.Sha1);
         }
 
@@ -261,7 +261,7 @@ public class TemporaryMapUploadService(
         }
 
         // 4b. The record's stored path is authoritative; the uploader's file name plays no part. Before anything is
-        // written at it, it has to be exactly a fileKey this service could have built (S-I2).
+        // written at it, it has to be exactly a fileKey this service could have built.
         var fileKey = verified.Path;
         if (!TemporaryMapNaming.IsFileKey(fileKey))
         {
@@ -270,7 +270,7 @@ public class TemporaryMapUploadService(
             throw KeyMismatch();
         }
 
-        // R-I1: another restore of this record waits here until this one is done, compensation included.
+        // Another restore of this record waits here until this one is done, compensation included.
         using var fileKeyHeld = await FileKeyLock.AcquireAsync(fileKey, cancellationToken);
         var stored = await StoreBytesAsync(upload, fileKey, existing.Id, battleTag, cancellationToken);
         if (stored == null)
@@ -278,7 +278,7 @@ public class TemporaryMapUploadService(
             var claimant = await ProbePathAsync(fileKey, cancellationToken);
             if (claimant?.Id == existing.Id && claimant.FileState == TemporaryMapFileStates.Present)
             {
-                // S-M1, as S4: a concurrent restore of this record already stored the bytes and flipped it.
+                // As on create: a concurrent restore of this record already stored the bytes and flipped it.
                 return Deduped(claimant, upload.Sha1);
             }
 
@@ -287,7 +287,7 @@ public class TemporaryMapUploadService(
 
         return await AfterStoreAsync(fileKey, async () =>
         {
-            // The capture is not validated on a restore: the record's layout is authoritative (B4).
+            // The capture is not validated on a restore: the record's layout is authoritative.
             await VerifyDigestsAsync(stored, upload, proofHash, fileKey);
             await MarkRestoredAsync(existing.Id, upload, fileKey, battleTag);
             _logger.LogInformation("Restored temporary map {MapId} at {FileKey} for {BattleTag}", existing.Id, fileKey, battleTag);
@@ -306,7 +306,7 @@ public class TemporaryMapUploadService(
         }
         catch (Exception ex)
         {
-            // F-A, as on create: the flip may have committed although the call failed.
+            // As on create: the flip may have committed although the call failed.
             LogProofCarryingCallFailure(ex, "file-restored", upload.Sha1, fileKey);
             var record = await ProbeAfterStoreAsync(upload.Sha1, fileKey, restoringMapId: mapId);
             if (record?.FileState == TemporaryMapFileStates.Present)
@@ -316,7 +316,7 @@ public class TemporaryMapUploadService(
                     return;
                 }
 
-                // R2-1/S2-6: sha1 is unique, so another id means the record was replaced meanwhile; the bytes may back it now.
+                // sha1 is unique, so another id means the record was replaced meanwhile; the bytes may back it now.
                 throw Upstream("Temporary map {MapId} holds sha1 {Sha1} at {Path} after the failed file-restored of temporary map " +
                                "{RestoringMapId}; leaving {FileKey}, which it may use", record.Id, upload.Sha1, LoggablePath(record.Path), mapId, fileKey);
             }
@@ -367,7 +367,7 @@ public class TemporaryMapUploadService(
             return true;
         }, cancellationToken);
 
-        // F-B: the stray file is gone, so only this retry can put bytes back at the fileKey; a client abort must not stop it.
+        // The stray file is gone, so only this retry can put bytes back at the fileKey; a client abort must not stop it.
         return await StoreBytesAsync(upload, fileKey, mapId, battleTag, CancellationToken.None)
                ?? throw Upstream("update-service still reports a conflict at {FileKey} after deleting the stray file", fileKey);
     }
@@ -396,7 +396,7 @@ public class TemporaryMapUploadService(
 
     /// <summary>
     /// A call before the bytes are stored: a client abort propagates, any other failure is a 502 with nothing to undo.
-    /// When the call <paramref name="carriesProof"/>, only the exception's type and status are logged (S-L3).
+    /// When the call <paramref name="carriesProof"/>, only the exception's type and status are logged.
     /// </summary>
     private async Task<T> BeforeStoreAsync<T>(
         string step, Func<CancellationToken, Task<T>> call, CancellationToken cancellationToken, bool carriesProof = false)
@@ -422,14 +422,14 @@ public class TemporaryMapUploadService(
     }
 
     /// <summary>
-    /// S-L3: matchmaking echoes raw error text, which can quote the proof the request carried, so a failed create or
+    /// matchmaking echoes raw error text, which can quote the proof the request carried, so a failed create or
     /// file-restored is logged by exception type and status only — never the exception or its message.
     /// </summary>
     private void LogProofCarryingCallFailure(Exception ex, string call, string sha1, string fileKey)
         => _logger.LogWarning("matchmaking {Call} for sha1 {Sha1} failed with {ExceptionType} (status {StatusCode}); " +
                               "re-probing by sha1 before deciding about {FileKey}", call, sha1, ex.GetType().Name, StatusOf(ex), fileKey);
 
-    /// <summary>After the bytes are stored, an exception no step decided on compensates (I1(b)).</summary>
+    /// <summary>After the bytes are stored, an exception no step decided on compensates.</summary>
     private async Task<(TemporaryMapUploadOutcome, string)> AfterStoreAsync(string fileKey, Func<Task<(TemporaryMapUploadOutcome, string)>> steps)
     {
         try
@@ -445,7 +445,7 @@ public class TemporaryMapUploadService(
     }
 
     /// <summary>
-    /// The single sha1 re-probe after a failed matchmaking write (F-A). If it fails too, nothing is compensated, and the
+    /// The single sha1 re-probe after a failed matchmaking write. If it fails too, nothing is compensated, and the
     /// warning names who reclaims the bytes: the sweep for a new map, a later restore for <paramref name="restoringMapId"/>.
     /// </summary>
     private async Task<MapContract> ProbeAfterStoreAsync(string sha1, string fileKey, int? restoringMapId)
@@ -461,7 +461,7 @@ public class TemporaryMapUploadService(
         }
         catch (Exception ex)
         {
-            // The record claims this path, so the sweep never reclaims it (R-Minor2).
+            // The record claims this path, so the sweep never reclaims it.
             _logger.LogWarning(ex, "Could not re-probe sha1 {Sha1} after file-restored for temporary map {MapId}; the bytes at {FileKey} " +
                                    "stay under that record, and while it is deleted a later restore replaces them", sha1, restoringMapId, fileKey);
             throw Upstream();
@@ -535,7 +535,7 @@ public class TemporaryMapUploadService(
 
     private static TemporaryMapUploadException KeyMismatch() => new(StatusCodes.Status500InternalServerError, TemporaryMapErrorCodes.TempMapKeyMismatch);
 
-    /// <summary>A 200 never hands out a path that is not a §6.4 temporary map file, the shape this service alone produces (S-L2).</summary>
+    /// <summary>A 200 never hands out a path that is not a §6.4 temporary map file, the shape this service alone produces.</summary>
     private (TemporaryMapUploadOutcome, string) Deduped(MapContract map, string sha1)
         => TemporaryMapNaming.IsFileKey(map.Path)
             ? Outcome(TemporaryMapMetrics.Results.Deduped, map.Id, map.Path, map.Name, sha1)

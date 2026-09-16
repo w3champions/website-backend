@@ -55,11 +55,11 @@ public class TemporaryMapSweepReport
 /// and reported in one Error line. The listing is followed to its end; only a cursor that repeats ends the pass
 /// early.</item>
 /// </list>
-/// Before both, spool files a crash left in the upload directory are purged (Task 2 L2). Per-item failures are counted
+/// Before both, spool files a crash left in the upload directory are purged. Per-item failures are counted
 /// and logged, never swallowed, never abort the run and are never given up on: the next run tries them again. Runs are
-/// serialised on one lock (X12): the daily trigger and an admin-triggered run queue behind each other rather than
+/// serialised on one lock: the daily trigger and an admin-triggered run queue behind each other rather than
 /// double-deleting. Every probe-and-delete and delete-and-mark of one fileKey is done under the per-fileKey lock the
-/// upload service holds from its store to its record write (S6-M1), so neither pass can take bytes an upload has just
+/// upload service holds from its store to its record write, so neither pass can take bytes an upload has just
 /// stored.
 /// </summary>
 public class TemporaryMapExpirySweep(
@@ -78,7 +78,7 @@ public class TemporaryMapExpirySweep(
     private readonly SemaphoreSlim _runLock = new(1, 1);
 
     /// <summary>
-    /// The per-fileKey lock the upload service holds from its store to its record write (S6-M1): held here around every
+    /// The per-fileKey lock the upload service holds from its store to its record write: held here around every
     /// probe-and-delete and delete-and-mark of one fileKey, so a reclaim never lands on bytes an upload has just stored.
     /// </summary>
     internal TemporaryMapFileKeyLock FileKeyLock { get; } = fileKeyLock;
@@ -156,7 +156,7 @@ public class TemporaryMapExpirySweep(
                 cancellationToken.ThrowIfCancellationRequested();
                 if (item.Id <= 0 || !TemporaryMapKeys.IsFilePath(item.Path))
                 {
-                    // matchmaking drift (S6-L2): without a valid id the record could never be marked once its bytes were
+                    // matchmaking drift: without a valid id the record could never be marked once its bytes were
                     // gone, and outside CustomGames/ the client would refuse the delete. Nothing is tried, every such row
                     // is counted, and the path is rendered only when it has the expected shape.
                     report.Failed++;
@@ -334,7 +334,7 @@ public class TemporaryMapExpirySweep(
 
             if (page.Files.Count > 0 && newRows == 0)
             {
-                // S6-L3: a listing that ignores `after` yet mints a fresh cursor each time never repeats a cursor, so the
+                // A listing that ignores `after` yet mints a fresh cursor each time never repeats a cursor, so the
                 // rows are the other thing that must advance. An empty page with a cursor is not this: a page can be
                 // filtered down to nothing and still have more behind it. Nor is a last page that only overlaps the
                 // previous one: without a cursor the pass ends here anyway.
@@ -346,7 +346,7 @@ public class TemporaryMapExpirySweep(
 
             if (!cursors.Add(page.Next))
             {
-                // There is no page ceiling (I2), so a cursor that does not advance is the one way this loop could never
+                // There is no page ceiling (a fixed one would silently stop examining files), so a cursor that does not advance is the one way this loop could never
                 // end. The cursor is update-service's opaque string and is not rendered.
                 report.Failed++;
                 _logger.LogError("Temporary map reconciliation listing repeated its cursor after page {Page}; ending this run's pass, the next run starts over",
@@ -453,8 +453,8 @@ public class TemporaryMapExpirySweep(
     /// Removes spool files not written for <see cref="TemporaryMapLimits.StaleSpoolFileAgeHours"/> as of the run's clock.
     /// A live upload's file is minutes old at most. On Linux an unlinked open file does not break its writer. Runs
     /// first, so an upstream outage never delays it; per file, so one failure never hides the rest; and whatever it
-    /// throws is this run's failure, never the passes' (R-Minor5). The directory must pass the reader's rules
-    /// (<see cref="TemporaryMapUploadReader.RefusalOf"/>): a purge through a link would delete elsewhere (S6-L1).
+    /// throws is this run's failure, never the passes'. The directory must pass the reader's rules
+    /// (<see cref="TemporaryMapUploadReader.RefusalOf"/>): a purge through a link would delete elsewhere.
     /// </summary>
     private void PurgeStaleSpoolFiles(DateTime nowUtc, TemporaryMapSweepReport report)
     {
@@ -501,7 +501,7 @@ public class TemporaryMapExpirySweep(
                 return;
             }
 
-            // S6-L4: read before the delete; afterwards the cached status is refreshed from a file that is gone.
+            // Read before the delete; afterwards the cached status is refreshed from a file that is gone.
             var lastWriteUtc = file.LastWriteTimeUtc;
             file.Delete();
             report.PurgedSpoolFiles++;

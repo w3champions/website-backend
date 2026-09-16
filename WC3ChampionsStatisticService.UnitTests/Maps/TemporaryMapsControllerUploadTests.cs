@@ -21,7 +21,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// POST api/maps/temporary: the answer for every outcome the service contract (Task 5a §9, corrected) lets escape, the
+/// POST api/maps/temporary: the answer for every outcome the service contract lets escape, the
 /// in-flight gate acquired before the first body byte and released after the last compensation step, and the fail-closed
 /// 401. The bytes are always "abc"; matchmaking and update-service are scripted.
 /// </summary>
@@ -253,7 +253,7 @@ public class TemporaryMapsControllerUploadTests : TemporaryMapUploadServiceTestB
     public async Task ABodyErrorAfterTheClientAborted_IsAnEmptyResult(string failure)
     {
         // Kestrel cancels RequestAborted before the read fails; the abort is checked before any status is chosen, and
-        // before any exception type is looked at (Task 5a §9, item 1): whatever escaped, nobody is listening.
+        // before any exception type is looked at: whatever escaped, nobody is listening.
         using var aborted = new CancellationTokenSource();
         var body = new ThrowingStream(failure switch
         {

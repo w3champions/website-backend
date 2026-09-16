@@ -276,7 +276,7 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     [TestCase(0, "mapped-forces", 2, false, TestName = "slotCount below one")]
     [TestCase(16, "free", 2, false, TestName = "free lobby mode with non-empty mappedForces")]
     [TestCase(16, "mapped-forces", 0, false, TestName = "maxTeams below one")]
-    [TestCase(16, "mapped-forces", 25, false, TestName = "maxTeams above the 24 teams (S2-4)")]
+    [TestCase(16, "mapped-forces", 25, false, TestName = "maxTeams above the 24 teams")]
     [TestCase(16, "Mapped-Forces", 2, false, TestName = "an unknown lobbyMode")]
     public void AnImpossibleCapture_Is400_InvalidLayout_AndCompensates(int slotCount, string lobbyMode, int maxTeams, bool twelveP)
     {
@@ -478,7 +478,7 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task MaxTeamsAtTheTeamCount_IsAccepted()
     {
-        // S2-4: matchmaking takes 1..24; 24 must pass here rather than cost a store, a refused create and a delete.
+        // matchmaking takes 1..24; 24 must pass here rather than cost a store, a refused create and a delete.
         var handler = UnknownSha1Handler()
             .On(IsUsUpload, Respond(HttpStatusCode.OK, UsUploadBody()))
             .On(IsCreate, Respond(HttpStatusCode.Created, Record(5811)));
@@ -505,7 +505,7 @@ public class TemporaryMapUploadServiceTests : TemporaryMapUploadServiceTestBase
         Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
         Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
         Assert.That(handler.Requests.Select(Route), Is.EqualTo(new[] { "by-sha1", "us-upload", "create", "by-sha1", "us-delete" }),
-            "F-A: even a refusal re-probes before compensating, because matchmaking can answer non-2xx after committing");
+            "even a refusal re-probes before compensating, because matchmaking can answer non-2xx after committing");
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
     }
 

@@ -14,8 +14,8 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
 /// §3.6 / §6.3 owner re-host after expiry: verify the proof without mutating, store the bytes at the record's own path
-/// (with the H1 guard on an update-service 409), check the digests, and only then flip fileState to present. The
-/// capture is never validated here (ruling B4). An unanswered file-restored call re-probes matchmaking before deciding.
+/// (with the path-conflict guard on an update-service 409), check the digests, and only then flip fileState to present.
+/// The capture is never validated here: the record's layout is authoritative. An unanswered file-restored call re-probes matchmaking before deciding.
 /// </summary>
 [TestFixture]
 public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTestBase
@@ -132,7 +132,7 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
     [Test]
     public async Task VerifyProofNamingTheSameRecordAsPresent_IsADedupeHit_WithNoWrite()
     {
-        // A concurrent restore won between the dedupe probe and verify-proof (ruling S4 / Deviation 11).
+        // A concurrent restore won between the dedupe probe and verify-proof.
         var handler = DeletedRecordHandler().On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(MapId, fileState: "present")));
         var counts = new UploadCounts();
 
@@ -163,12 +163,12 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
     [TestCase("W3Champions/CustomGames/../v10/EchoIsles.w3x")]
     [TestCase("W3Champions/CustomGames/")]
     [TestCase("")]
-    [TestCase("W3Champions/CustomGames/sub/Legion TD-a9993e36.w3x", TestName = "a stored path with a second segment (S-I2)")]
-    [TestCase("W3Champions/CustomGames/Legion TD-a9993e36.zip", TestName = "a stored path without a map extension (S-I2)")]
-    [TestCase("W3Champions/CustomGames/Legion\\u000aTD-a9993e36.w3x", TestName = "a stored path with a control character in the stem (S-I2)")]
-    [TestCase("W3Champions/CustomGames/Legion\\u0085TD-a9993e36.w3x", TestName = "a stored path with a C1 control in the stem (S2-1)")]
-    [TestCase("W3Champions/CustomGames/Legion TD.w3x", TestName = "a stored path without the sha1 suffix (S2-1)")]
-    [TestCase("W3Champions/CustomGames/Legion TD-A9993E36.w3x", TestName = "a stored path with an uppercase sha1 suffix (S2-1)")]
+    [TestCase("W3Champions/CustomGames/sub/Legion TD-a9993e36.w3x", TestName = "a stored path with a second segment")]
+    [TestCase("W3Champions/CustomGames/Legion TD-a9993e36.zip", TestName = "a stored path without a map extension")]
+    [TestCase("W3Champions/CustomGames/Legion\\u000aTD-a9993e36.w3x", TestName = "a stored path with a control character in the stem")]
+    [TestCase("W3Champions/CustomGames/Legion\\u0085TD-a9993e36.w3x", TestName = "a stored path with a C1 control in the stem")]
+    [TestCase("W3Champions/CustomGames/Legion TD.w3x", TestName = "a stored path without the sha1 suffix")]
+    [TestCase("W3Champions/CustomGames/Legion TD-A9993E36.w3x", TestName = "a stored path with an uppercase sha1 suffix")]
     public void AStoredRecordPathThatIsNotATemporaryFile_Is500_TempMapKeyMismatch_WithNoWrite(string storedPath)
     {
         var handler = DeletedRecordHandler().On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(MapId, storedPath)));
@@ -241,7 +241,7 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
     public async Task FileRestoredFailing_WhenTheReprobeFindsItPresent_Is200Restored_WithoutADelete(
         string _, System.Func<HttpRequestMessage, HttpResponseMessage> fileRestored)
     {
-        // F-A: a refusal is re-probed too, because matchmaking or a proxy can answer non-2xx after the write committed.
+        // A refusal is re-probed too, because matchmaking or a proxy can answer non-2xx after the write committed.
         var handler = OnSequence(new ScriptedHttpHandler(), IsBySha1,
                 Respond(HttpStatusCode.OK, Record(MapId, fileState: "deleted")),
                 Respond(HttpStatusCode.OK, Record(MapId, fileState: "present")))
@@ -262,7 +262,7 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
     [Test]
     public void FileRestoredFailing_WhenTheReprobeNamesAnotherRecordAsPresent_Is502_WithNoDelete()
     {
-        // R2-1/S2-6: sha1 is unique in matchmaking, so another id means the record was replaced between verify-proof and
+        // sha1 is unique in matchmaking, so another id means the record was replaced between verify-proof and
         // the re-probe; the bytes at our fileKey may back that record now, so nothing is deleted and nothing is claimed.
         var handler = OnSequence(new ScriptedHttpHandler(), IsBySha1,
                 Respond(HttpStatusCode.OK, Record(MapId, fileState: "deleted")),
@@ -357,7 +357,7 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
 
         Assert.That(logs.Lines().Where(l => l.StartsWith("Warning") && l.Contains("re-probe") && l.Contains(FileKey)
                                             && l.Contains("5811") && l.Contains("a later restore replaces them")),
-            Has.Exactly(1).Items, "R-Minor2: on a restore the record claims the path, so only a later restore reclaims the bytes");
+            Has.Exactly(1).Items, "on a restore the record claims the path, so only a later restore reclaims the bytes");
     }
 
     [TestCase("{}", HttpStatusCode.NotFound, TestName = "no record claims the path")]
@@ -384,7 +384,7 @@ public class TemporaryMapUploadServiceRestoreTests : TemporaryMapUploadServiceTe
     [Test]
     public async Task UpdateService409_WhenTheRecordBeingRestoredIsAlreadyPresentAtThePath_IsADedupeHit_WithZeroDeletes()
     {
-        // S-M1 mirrors S4: a concurrent restore of this record stored the bytes and flipped it first.
+        // As on create: a concurrent restore of this record stored the bytes and flipped it first.
         var handler = DeletedRecordHandler()
             .On(IsVerifyProof, Respond(HttpStatusCode.OK, Verified(MapId)))
             .On(IsUsUpload, Respond(HttpStatusCode.Conflict, "{\"message\":\"File already exists\"}"))

@@ -14,7 +14,7 @@ using W3ChampionsStatisticService.Sessions;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// Failure semantics of the new-map path (§6.3 steps 4, 7 and 9 with the segment B rulings): the H1 guard on an
+/// Failure semantics of the new-map path (§6.3 steps 4, 7 and 9): the path-conflict guard on an
 /// update-service 409, a failure during the upload itself (never compensated), ambiguous matchmaking writes that
 /// re-probe before deciding, client aborts, compensation retries, and the spool file's lifetime.
 /// </summary>
@@ -23,7 +23,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
 {
     private const string Conflict = "{\"message\":\"File already exists\"}";
 
-    // ---- update-service 409 on a new map (ruling B3 as amended by H1) ------------------------
+    // ---- update-service 409 on a new map: the path-conflict guard ------------------------------
 
     [Test]
     public async Task UpdateService409_WithAKnownSha1_ReturnsThatRecordWithoutReuploading()
@@ -79,7 +79,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     [Test]
     public async Task AClientAbortDuringTheRetryAfterTheStrayDelete_StillStoresAndCreates()
     {
-        // F-B: once the stray file is deleted, only the retried store can put bytes back at the fileKey.
+        // Once the stray file is deleted, only the retried store can put bytes back at the fileKey.
         using var aborted = new CancellationTokenSource();
         var handler = UnknownSha1Handler()
             .On(IsByPath, Respond(HttpStatusCode.NotFound))
@@ -101,7 +101,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     [Test]
     public void UpdateService409_WhenARecordClaimsThePath_Is502_WithZeroDeletes_AndWarns()
     {
-        // H1: the 8-hex suffix is grindable, so a colliding upload must never delete a live map's bytes.
+        // The 8-hex suffix is short, so two maps can share a fileKey; a colliding upload must never delete a live map's bytes.
         var handler = UnknownSha1Handler()
             .On(IsUsUpload, Respond(HttpStatusCode.Conflict, Conflict))
             .On(IsByPath, Respond(HttpStatusCode.OK, Record(4242, sha1: OtherSha1)))
@@ -437,7 +437,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     public void AnUnexpectedFailureOfTheCreateCall_ReprobesBeforeCompensating_AndIs502()
     {
         // Neither an HTTP outcome nor an unanswered request (a local IO fault while the create runs): it still
-        // follows a write attempt, so F-A asks matchmaking before deleting anything.
+        // follows a write attempt, so matchmaking is asked before anything is deleted.
         var handler = StoredNewMapHandler()
             .On(IsCreate, _ => throw new IOException("simulated local fault"))
             .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
@@ -451,7 +451,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
         counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
     }
 
-    // ---- The winning record must be a present temporary file (S-L2) ------------------------------
+    // ---- The winning record must be a present temporary file holding these bytes -----------------
 
     private static readonly object[] UnusableWinners =
     [
@@ -519,7 +519,7 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     [TestCase("another record present after a failed file-restored")]
     public void AMatchmakingPathThatIsNotACleanTemporaryFilePath_IsLoggedAsInvalid(string site)
     {
-        // S2-2: the file sink renders strings raw, so a drifted or forged matchmaking path must never reach a log line as sent;
+        // The file sink renders strings raw, so a drifted or forged matchmaking path must never reach a log line as sent;
         // only a temporary map file path without a control character is rendered, anything else as the placeholder.
         var handler = site switch
         {

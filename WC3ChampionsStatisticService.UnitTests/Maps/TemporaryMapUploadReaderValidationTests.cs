@@ -138,7 +138,7 @@ public class TemporaryMapUploadReaderValidationTests : TemporaryMapUploadReaderT
     [Test]
     public void RejectsAnOriginalFileNameOver255CodeUnits_With400Metadata()
     {
-        // S-L5: OS file names are at most 255 code units; anything longer is not a file name a launcher read.
+        // OS file names are at most 255 code units; anything longer is not a file name a launcher read.
         var (body, contentType) = BuildMultipart(MinimalMetadata(new string('a', 252) + ".w3x"), Encoding.UTF8.GetBytes("abc"));
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Read(body, contentType));

@@ -174,7 +174,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ExpiryPass_FetchesTheNextBatch_WhileABatchWasFullAndMadeProgress()
     {
-        // S11: the listing has no cursor, so a full batch that made progress is followed by another listing; the
+        // The listing has no cursor, so a full batch that made progress is followed by another listing; the
         // items deleted so far are no longer expired-and-present, so the next page starts after them.
         var handler = EmptyReconciliation()
             .On(IsExpired, Sequence(
@@ -234,7 +234,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ExpiryPass_AnItemWhosePathIsNotATemporaryMapFile_FailsWithoutADelete_AndIsLoggedAsInvalid()
     {
-        // matchmaking drift: the sweep refuses the row itself (S6-L2), before the client's own guard could throw, and
+        // matchmaking drift: the sweep refuses the row itself, before the client's own guard could throw, and
         // the warning never renders the supplied path (it could forge a log line).
         using var logs = new LogCapture();
         var handler = EmptyReconciliation()
@@ -256,7 +256,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [TestCase(-7)]
     public async Task ExpiryPass_ARowWithoutAValidId_FailsWithoutADelete(int id)
     {
-        // S6-L2: with the bytes deleted, a record that cannot be marked would stay present without them, every run.
+        // With the bytes deleted, a record that cannot be marked would stay present without them, every run.
         using var logs = new LogCapture();
         var handler = EmptyReconciliation()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items((id, FileA), (2, FileB)))
@@ -279,7 +279,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ExpiryPass_DeletesAndMarksUnderTheFileKeyLock_AnUploadHolds()
     {
-        // S6-M1: the upload service holds the fileKey from its store to its record write. Nothing of this item happens
+        // The upload service holds the fileKey from its store to its record write. Nothing of this item happens
         // until it lets go; then the item completes and the key is free again.
         var sweepWaiting = NewSignal();
         FileKeyLock = new TemporaryMapFileKeyLock { OnContended = _ => sweepWaiting.TrySetResult() };
@@ -378,7 +378,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ReconciliationPass_EndsTheRunOnARepeatingCursor_AndCountsItAsFailed()
     {
-        // No page ceiling (I2): the listing is followed until it is exhausted. A cursor that does not advance could loop
+        // No page ceiling: the listing is followed until it is exhausted. A cursor that does not advance could loop
         // forever, so it ends this run's pass, loudly; the next run starts over. The rows differ per page so that this
         // is the cursor guard alone (…EndsTheRunWhenAPageOnlyRepeatsRowsAlreadyScanned covers the rows).
         using var logs = new LogCapture();
@@ -414,7 +414,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ReconciliationPass_ReclaimsAFileWhoseRecordSaysDeleted()
     {
-        // S-I6: a record that says its bytes are gone claims nothing; the bytes (a restore that never completed) are
+        // A record that says its bytes are gone claims nothing; the bytes (a restore that never completed) are
         // reclaimed like an unclaimed file. A present record keeps its file.
         var handler = new ScriptedHttpHandler()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
@@ -531,7 +531,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ReconciliationPass_ProbesAndDeletesUnderTheFileKeyLock_AnUploadHolds()
     {
-        // S6-M1: an upload of the same fileKey holds the lock from its store to its record write. A probe before that write
+        // An upload of the same fileKey holds the lock from its store to its record write. A probe before that write
         // would answer "unclaimed" and a delete would take the upload's bytes, so neither happens until the upload is done.
         var sweepWaiting = NewSignal();
         FileKeyLock = new TemporaryMapFileKeyLock { OnContended = _ => sweepWaiting.TrySetResult() };
@@ -565,7 +565,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [TestCase("W3Champions/CustomGames/A-11111111.w3x")]
     public async Task ReconciliationPass_ADeletedRecordThatNamesAnotherPath_IsAFailure_NotAnOrphan(string recordPath)
     {
-        // S6-I1: a record reached by an inexact lookup (another file, another case) says nothing about this file.
+        // A record reached by an inexact lookup (another file, another case) says nothing about this file.
         var handler = new ScriptedHttpHandler()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
@@ -582,7 +582,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ReconciliationPass_EndsTheRunWhenAPageOnlyRepeatsRowsAlreadyScanned()
     {
-        // S6-L3: a listing that ignores `after` yet mints fresh cursors never repeats a cursor; without this guard it
+        // A listing that ignores `after` yet mints fresh cursors never repeats a cursor; without this guard it
         // would loop forever holding the run lock.
         using var logs = new LogCapture();
         var handler = new ScriptedHttpHandler()
@@ -658,7 +658,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ReconciliationPass_ARouteStyle404_IsAFailure_NotAnOrphan()
     {
-        // I3/D2: only the empty-object 404 means "no record". Anything else is the route missing (matchmaking
+        // Only the empty-object 404 means "no record". Anything else is the route missing (matchmaking
         // deployed without it, a proxy page) and reading it as unclaimed would delete every listed file.
         var handler = new ScriptedHttpHandler()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
@@ -749,7 +749,7 @@ public class TemporaryMapExpirySweepTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task ConcurrentRuns_ExecuteOneAfterTheOther()
     {
-        // X12: the daily run and an admin-triggered run queue behind each other rather than double-deleting; neither
+        // The daily run and an admin-triggered run queue behind each other rather than double-deleting; neither
         // is skipped. The first run is held inside its expiry listing while the second is started.
         var firstInListing = NewSignal();
         var secondInListing = NewSignal();

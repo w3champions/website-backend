@@ -12,7 +12,7 @@ namespace W3ChampionsStatisticService.Maps;
 /// ORPHAN; the sweep's reconciliation pass reclaims an unclaimed file after 24 h.
 /// <para>
 /// Retrying a delete later is safe only because the caller holds the fileKey's <see cref="TemporaryMapFileKeyLock"/>
-/// throughout: no other upload can have stored bytes at the fileKey in the meantime (S-L1).
+/// throughout: no other upload can have stored bytes at the fileKey in the meantime.
 /// </para>
 /// </summary>
 internal sealed class TemporaryMapCompensation(UpdateServiceClient updateServiceClient, ILogger logger)

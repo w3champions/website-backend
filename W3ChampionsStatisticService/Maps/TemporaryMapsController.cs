@@ -49,8 +49,8 @@ public class TemporaryMapsController(
     /// <summary>
     /// Pre-check keyed by proofHash — a hash of a secret only a holder of the file can compute — so it cannot be used to
     /// test whether a publicly known map is on the server. It returns the state and NOTHING else: no id, path, name, sha1
-    /// or proof (Appendix A.4); a bare 429 over the per-battleTag quota; a bare 502 for anything matchmaking cannot answer
-    /// (S3), including a fileState this service does not know; and nothing at all for a client that is gone.
+    /// or proof (Appendix A.4); a bare 429 over the per-battleTag quota; a bare 502 for anything matchmaking cannot answer,
+    /// including a fileState this service does not know; and nothing at all for a client that is gone.
     /// <para>
     /// The [NoTrace] on proofHash is a marker: controllers are not intercepted, so it redacts nothing by itself. The
     /// value is kept out of spans and request telemetry by the telemetry processor and initializer
@@ -95,7 +95,7 @@ public class TemporaryMapsController(
         catch (Exception ex)
         {
             // Everything else — a transport failure, an HttpClient timeout, a route-level 404, a contract violation — is
-            // an upstream failure. Logged by type and status only (S-L3): matchmaking echoes request text in its error
+            // an upstream failure. Logged by type and status only: matchmaking echoes request text in its error
             // bodies, and this request's text is the proofHash.
             _logger.LogWarning("Temporary map pre-check could not be answered by matchmaking: {ExceptionType} (status {StatusCode})",
                 ex.GetType().Name, StatusOf(ex));
@@ -182,7 +182,7 @@ public class TemporaryMapsController(
             catch (Exception) when (RequestAborted)
             {
                 // The client went away: whatever escaped — the body read, a pre-store call, an A.3 rejection, a spool
-                // fault — nobody is listening (Task 5a §9, item 1). Checked before any status is chosen, because Kestrel
+                // fault — nobody is listening. Checked before any status is chosen, because Kestrel
                 // cancels RequestAborted before the read fails. Whatever the service counted, it counted by outcome.
                 _logger.LogInformation("Temporary map upload from {BattleTag} was abandoned by the client", battleTag);
                 return new EmptyResult();
@@ -203,7 +203,7 @@ public class TemporaryMapsController(
             catch (BadHttpRequestException ex)
             {
                 // Kestrel's own request rejections: its body-size limit (413) before the reader's cap, anything else a
-                // malformed request (I1/D1 (c)).
+                // malformed request.
                 return ex.StatusCode == StatusCodes.Status413PayloadTooLarge
                     ? StatusCode(StatusCodes.Status413PayloadTooLarge, TemporaryMapFailureBodies.Coded(TemporaryMapErrorCodes.FileTooLarge))
                     : StatusCode(StatusCodes.Status400BadRequest, TemporaryMapFailureBodies.Coded(TemporaryMapErrorCodes.Metadata));

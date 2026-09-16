@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 namespace W3ChampionsStatisticService.Maps;
 
 /// <summary>
-/// One async mutex per fileKey (R-I1/S-H1): two uploads of the same fileKey — the same bytes under the same name, or two
+/// One async mutex per fileKey: two uploads of the same fileKey — the same bytes under the same name, or two
 /// restores of one record — never interleave their store, digest check, record write, re-probe and compensation, so
 /// neither can delete bytes the other has just stored. The expiry sweep takes the same lock around its own probe and
-/// delete of a fileKey (S6-M1), so a reclaim can never land on bytes an upload has just stored either. Keys are compared
+/// delete of a fileKey, so a reclaim can never land on bytes an upload has just stored either. Keys are compared
 /// ordinally, like update-service's byte-exact file paths. Entries are reference-counted and removed when their last
 /// holder or waiter leaves, so the dictionary never outgrows the uploads in flight.
 /// <para>

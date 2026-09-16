@@ -220,7 +220,7 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     public async Task AnUploadThatCannotBeSpooled_Is500_WithNoBodyAtAll()
     {
         // The service resolved for the controller spools into a directory that cannot exist (a file sits at its parent);
-        // the reader's TemporaryMapSpoolException is the bare 500 of the CROSS-REPO ruling, and it must stay bare.
+        // the reader's TemporaryMapSpoolException is a bare 500 by the cross-repo contract, and it must stay bare.
         Directory.CreateDirectory(TestRoot);
         var blocker = Path.Combine(TestRoot, "not-a-directory");
         File.WriteAllText(blocker, "");

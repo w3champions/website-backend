@@ -21,7 +21,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
 /// <summary>
-/// D9: the self-provided map feature's registrations resolve from a ServiceCollection that holds the host's pre-existing
+/// The self-provided map feature's registrations resolve from a ServiceCollection that holds the host's pre-existing
 /// services as test doubles, so a wiring mistake fails here rather than at the first request after a deploy. The
 /// AddIntercepted helpers build constructor arguments with GetService and pass null for anything unregistered, so
 /// resolving alone proves little: the resolved upload service is also driven through one dedupe to show its clients are
