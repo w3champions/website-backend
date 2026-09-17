@@ -11,7 +11,6 @@ using Moq;
 using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
-using W3C.Domain.MatchmakingService.Contracts;
 using W3C.Domain.UpdateService;
 using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
@@ -49,12 +48,13 @@ public class UpstreamErrorHandlingTests
     [Test]
     public void MatchmakingError_KeepsItsParamAndMessageText()
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/7/file-restored", HttpStatusCode.BadRequest,
+        // On a route whose request carries no proof: the proof-carrying calls never read an error body
+        // (TemporaryMapClientContractTests.ProofCarryingCall_OnAnErrorStatus_ThrowsWithThatStatus_AndEchoesNothingOfTheBody).
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/7/file-deleted", HttpStatusCode.BadRequest,
             "{\"errors\":[{\"param\":\"sha1\",\"msg\":\"does not match\"},{\"param\":\"uploader\",\"msg\":\"required\"}]}");
         var client = new MatchmakingServiceClient(new ScriptedHttpHandler.Factory(handler));
 
-        var thrown = Assert.ThrowsAsync<HttpRequestException>(() =>
-            client.MarkTemporaryMapFileRestored(7, new TemporaryMapFileRestoredRequest { Sha1 = TemporaryMapClientTests.Sha1 }));
+        var thrown = Assert.ThrowsAsync<HttpRequestException>(() => client.MarkTemporaryMapFileDeleted(7));
 
         Assert.That(thrown!.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
         Assert.That(thrown.Message, Is.EqualTo("sha1 does not match,uploader required"));
@@ -93,11 +93,10 @@ public class UpstreamErrorHandlingTests
         TestName = "MatchmakingError_JoinsEveryEntryWithoutStrayWhitespace")]
     public void MatchmakingError_NamesTheFieldAndTheMessageOfEveryEntry(string body, string expected)
     {
-        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/7/file-restored", HttpStatusCode.UnprocessableEntity, body);
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/7/file-deleted", HttpStatusCode.UnprocessableEntity, body);
         var client = new MatchmakingServiceClient(new ScriptedHttpHandler.Factory(handler));
 
-        var thrown = Assert.ThrowsAsync<HttpRequestException>(() =>
-            client.MarkTemporaryMapFileRestored(7, new TemporaryMapFileRestoredRequest { Sha1 = TemporaryMapClientTests.Sha1 }));
+        var thrown = Assert.ThrowsAsync<HttpRequestException>(() => client.MarkTemporaryMapFileDeleted(7));
 
         Assert.That(thrown!.StatusCode, Is.EqualTo(HttpStatusCode.UnprocessableEntity));
         Assert.That(thrown.Message, Is.EqualTo(expected));

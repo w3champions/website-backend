@@ -28,4 +28,11 @@ internal static class UpstreamContract
 
     public static HttpRequestException Violation(HttpStatusCode statusCode, string service)
         => new($"{service} answered {(int)statusCode} with a body that breaks its contract", null, statusCode);
+
+    /// <summary>
+    /// An error status whose body is deliberately not read: for a call whose request carried a secret, the service's
+    /// error text can echo it (a validator's "Invalid value …"), so the exception names the service and the status only.
+    /// </summary>
+    public static HttpRequestException FailureWithoutItsBody(HttpStatusCode statusCode, string service)
+        => new($"{service} answered {(int)statusCode}", null, statusCode);
 }

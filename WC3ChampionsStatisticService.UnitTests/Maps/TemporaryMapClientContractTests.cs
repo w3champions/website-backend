@@ -129,6 +129,40 @@ public class TemporaryMapClientContractTests
         Assert.That(ex.InnerException, Is.Null, "a parser exception can quote the body");
     }
 
+    private static readonly string[] ProofCarryingRoutes =
+        ["GetTemporaryMapStateByProofHash", "VerifyTemporaryMapProof", "CreateTemporaryMap_Created", "MarkTemporaryMapFileRestored"];
+
+    private static readonly HttpStatusCode[] ErrorStatuses =
+    [
+        HttpStatusCode.BadRequest, HttpStatusCode.Unauthorized, HttpStatusCode.UnprocessableEntity,
+        HttpStatusCode.InternalServerError, HttpStatusCode.ServiceUnavailable,
+    ];
+
+    public static IEnumerable<TestCaseData> ProofCarryingErrors()
+        => from routeName in ProofCarryingRoutes
+           from status in ErrorStatuses
+           select new TestCaseData(routeName, status).SetName($"{routeName}_{(int)status}_EchoesNothing");
+
+    [TestCaseSource(nameof(ProofCarryingErrors))]
+    public void ProofCarryingCall_OnAnErrorStatus_ThrowsWithThatStatus_AndEchoesNothingOfTheBody(string routeName, HttpStatusCode status)
+    {
+        // The four calls whose body carries a mapProof or a proofHash. matchmaking's validator echoes the value it
+        // refused ("Invalid value <text>") and its error bodies are free text, so the error body is never read into
+        // the exception: the message names the service and the status only, whichever caller ends up logging it.
+        var route = Routes.Single(r => r.Name == routeName);
+        var body = "{\"errors\":[{\"path\":\"proofHash\",\"msg\":\"Invalid value " + ProofHash + " " + MapProof + " " + BodyMarker + "\"}]}";
+        var handler = new ScriptedHttpHandler().On(route.Method, route.Path, status, body);
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(() => route.Call(handler));
+
+        Assert.That(handler.Requests, Has.Count.EqualTo(1));
+        Assert.That(ex!.StatusCode, Is.EqualTo(status));
+        Assert.That(ex.Message, Does.Contain(((int)status).ToString()), "the upstream status is the diagnostic");
+        Assert.That(ex.Message, Does.Not.Contain(ProofHash).And.Not.Contain(MapProof).And.Not.Contain(BodyMarker)
+            .And.Not.Contain("Invalid value").And.Not.Contain("{").And.Not.Contain("://").And.Not.Contain("/maps"));
+        Assert.That(ex.InnerException, Is.Null);
+    }
+
     [TestCase("GetMaps", HttpStatusCode.InternalServerError, "{\"message\":\"failed behind " + BodyMarker + "\"}")]
     [TestCase("GetMaps", HttpStatusCode.BadGateway, "<html><body>502 from " + BodyMarker + "</body></html>")]
     [TestCase("GetMaps", HttpStatusCode.NotFound, "{}")]
