@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.Channel;
@@ -151,7 +150,6 @@ public class InboundHeaderRedactionPipelineTests : TemporaryMapUploadServiceTest
 
         // Application Insights initialises its modules with the configuration; a real host does this at startup.
         host.Services.GetRequiredService<TelemetryConfiguration>();
-        string Exported() => string.Concat(collector.Requests.Select(Encoding.Latin1.GetString));
         var request = new HttpRequestMessage(HttpMethod.Get, "api/maps/temporary/status");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", PlayerToken);
         request.Headers.TryAddWithoutValidation(TemporaryMapKeys.ProofHashHeaderName, ProofHash);
@@ -164,11 +162,22 @@ public class InboundHeaderRedactionPipelineTests : TemporaryMapUploadServiceTest
         Assert.That(await response.Content.ReadAsStringAsync(), Is.EqualTo("{\"state\":\"ready\"}"));
         // The server span ends, and the request telemetry is tracked, after the response has left; the client span
         // of host.Client (the HttpClient instrumentation listens process-wide) is exported too, and carries no route.
-        Assert.That(SpinWait.SpinUntil(() => Exported().Contains("http.route") && channel.Items.OfType<RequestTelemetry>().Any(), HangGuard), Is.True,
-            "the server span was not exported or the request telemetry not tracked");
+        // The exports are decoded again only when another one has arrived.
+        var exported = "";
+        var exportsDecoded = 0;
+        await WaitUntilAsync(() =>
+        {
+            if (collector.Requests.Count != exportsDecoded)
+            {
+                exportsDecoded = collector.Requests.Count;
+                exported = string.Concat(collector.Requests.Select(Encoding.Latin1.GetString));
+            }
+
+            return exported.Contains("http.route") && channel.Items.OfType<RequestTelemetry>().Any();
+        }, "the server span was not exported or the request telemetry not tracked");
 
         return new CapturedTelemetry(
-            Exported(),
+            exported,
             Encoding.UTF8.GetString(JsonSerializer.Serialize(channel.Items.ToArray(), compress: false)),
             sink.Events
                 .Select(e => $"{e.RenderMessage()} | {string.Join(" | ", e.Properties.Select(p => $"{p.Key}={p.Value}"))} | {e.Exception}")

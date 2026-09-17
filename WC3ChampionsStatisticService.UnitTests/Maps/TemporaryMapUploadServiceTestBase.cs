@@ -176,6 +176,17 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
     /// <summary>A signal a scripted route or seam completes and the test awaits; continuations never run inline.</summary>
     protected static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    /// <summary>Polls <paramref name="condition"/> every 10 ms until it holds; fails the test after <see cref="HangGuard"/>.</summary>
+    protected static async Task WaitUntilAsync(Func<bool> condition, string otherwise)
+    {
+        var deadline = DateTime.UtcNow + HangGuard;
+        while (!condition())
+        {
+            Assert.That(DateTime.UtcNow, Is.LessThan(deadline), otherwise);
+            await Task.Delay(10);
+        }
+    }
+
     /// <summary>
     /// What Program.cs registers before AddMapServices, as doubles: the tracing interceptor and its ActivitySource,
     /// logging, the two service clients over <paramref name="handler"/>, the shared rate limiter and

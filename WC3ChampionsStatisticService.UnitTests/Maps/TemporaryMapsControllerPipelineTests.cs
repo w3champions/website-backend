@@ -554,17 +554,6 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
         Assert.That(body["state"]!.Value<string>(), Is.EqualTo("unknown"));
     }
 
-    /// <summary>Polls <paramref name="condition"/> until it holds; fails the test after <see cref="HangGuard"/>.</summary>
-    private static async Task WaitUntilAsync(Func<bool> condition, string otherwise)
-    {
-        var deadline = DateTime.UtcNow + HangGuard;
-        while (!condition())
-        {
-            Assert.That(DateTime.UtcNow, Is.LessThan(deadline), otherwise);
-            await Task.Delay(10);
-        }
-    }
-
     /// <summary>
     /// A multipart body whose metadata part and mapFile headers arrive at once, followed by the first bytes of the file,
     /// and then nothing: it waits on <paramref name="abandoned"/>, the token the test cancels to drop the connection.
