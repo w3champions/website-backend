@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace W3ChampionsStatisticService.PlayerStats.GameLengthForPlayerStatistics;
 
@@ -13,6 +14,7 @@ public class PlayerGameLength : IIdentifiable
     public string Id => CompoundId(BattleTag, Season);
     public Dictionary<string, PlayerGameLengthStat> PlayerGameLengthIntervalByOpponentRace { get; set; }
     [JsonIgnore]
+    [BsonElement]
     public Dictionary<string, List<int>> GameLengthsByOpponentRace { get; set; }
     public Dictionary<string, int> AverageGameLengthByOpponentRace { get; set; }
     public string BattleTag { get; set; }
