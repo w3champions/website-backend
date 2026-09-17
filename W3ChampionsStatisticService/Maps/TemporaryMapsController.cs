@@ -65,6 +65,9 @@ public class TemporaryMapsController(
     /// </summary>
     [HttpGet("status")]
     [BearerRequiresPlayerAuth]
+    // Every player's pre-check is this same URL and only the header tells them apart: no cache on the way may
+    // store an answer (Cache-Control: no-store, no-cache; headers only — the A.4 statuses and bodies are unchanged).
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> GetStatus(CancellationToken cancellationToken)
     {
         var battleTag = BattleTag();

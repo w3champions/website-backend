@@ -194,6 +194,29 @@ public class TemporaryMapsControllerPipelineTests : TemporaryMapUploadServiceTes
     }
 
     [Test]
+    public async Task AStatusResponse_IsMarkedNoStore_WhateverTheState()
+    {
+        // Since revision 10 every player's pre-check is the same GET /api/maps/temporary/status and only the
+        // x-proof-hash header tells them apart, so no cache on the way may store an answer and serve it to the next
+        // player. Headers only: the A.4 statuses and bodies are unchanged.
+        var handler = new ScriptedHttpHandler().On(HttpMethod.Post, "/maps/temporary/by-proof-hash", HttpStatusCode.OK, "{\"fileState\":\"present\"}");
+        await using var host = await StartHostAsync(handler);
+
+        using var ready = await host.Client.SendAsync(StatusRequest(ProofHash));
+        using var unknown = await host.Client.SendAsync(StatusRequest("not-hex"));
+
+        Assert.That(ready.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(unknown.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+        foreach (var response in new[] { ready, unknown })
+        {
+            Assert.That(response.Headers.CacheControl, Is.Not.Null, $"{(int)response.StatusCode}: no Cache-Control");
+            Assert.That(response.Headers.CacheControl!.NoStore, Is.True, $"{(int)response.StatusCode}: not no-store");
+            Assert.That(response.Headers.CacheControl.NoCache, Is.True, $"{(int)response.StatusCode}: not no-cache");
+            Assert.That(response.Headers.Pragma.ToString(), Does.Contain("no-cache"), $"{(int)response.StatusCode}: no Pragma");
+        }
+    }
+
+    [Test]
     public async Task AStatusRequestWithoutAProofHashHeader_Is404Unknown_WithoutAskingMatchmaking()
     {
         // No header at all: nothing is model-bound (no [ApiController], no [Required], no automatic 400); the action
