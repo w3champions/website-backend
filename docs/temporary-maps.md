@@ -492,6 +492,13 @@ a while:
   404, which the client treats as a contract violation rather than as the strict `404 {}` "no record"
   answer. Loud and safe — nothing is written, and the upload route is unaffected (its matchmaking calls
   did not change).
+- Deploying this website-backend **before the launcher release** that sends the `x-proof-hash` header: a
+  launcher still sending `?proofHash=` is answered `404 { state: "unknown" }` on every pre-check (the query
+  is never consulted), so it takes its capture-and-upload path every time. The upload's sha1 dedupe still
+  answers with the existing record and stores no second copy, so no duplicate record or file results — but
+  the dedupe runs after the file has been spooled, so each such pre-check costs one full upload's worth of
+  bandwidth and spool space until the launcher updates. Safe, and visible as a rise in `deduped` upload
+  results rather than as errors.
 
 ## What is not covered
 

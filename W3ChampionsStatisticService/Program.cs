@@ -95,6 +95,8 @@ builder.Services.AddW3CApplicationInsights(appInsightsKey);
 builder.Services.AddSwaggerGen(f =>
 {
     f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1" });
+    // The pre-check reads its x-proof-hash header itself (nothing is bound), so its document names the header here.
+    f.OperationFilter<ProofHashHeaderOperationFilter>();
 });
 
 // Configure and add MongoDB
