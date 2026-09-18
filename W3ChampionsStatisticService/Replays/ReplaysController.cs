@@ -33,6 +33,10 @@ public class ReplaysController(
             return NotFound();
         }
         var replayStream = await _replayServiceClient.GenerateReplay(floMatchId);
+        if (replayStream == null)
+        {
+            return NotFound();
+        }
         return File(replayStream, "application/octet-stream", $"{gameId}.w3g");
     }
 
@@ -46,6 +50,10 @@ public class ReplaysController(
             return NotFound();
         }
         var data = await _replayServiceClient.GetChatLogs(floMatchId);
+        if (data == null)
+        {
+            return NotFound();
+        }
         return Ok(data);
     }
 
@@ -63,6 +71,10 @@ public class ReplaysController(
             return NotFound();
         }
         var replayStream = await _replayServiceClient.GenerateReplay(floMatchId);
+        if (replayStream == null)
+        {
+            return NotFound();
+        }
         return File(replayStream, "application/octet-stream", $"{floMatchId}.w3g");
     }
 
@@ -75,6 +87,10 @@ public class ReplaysController(
             return NotFound();
         }
         var data = await _replayServiceClient.GetChatLogs(floMatchId);
+        if (data == null)
+        {
+            return NotFound();
+        }
         return Ok(data);
     }
 }
