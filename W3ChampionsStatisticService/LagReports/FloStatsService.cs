@@ -165,7 +165,7 @@ public class FloStatsService : IFloStatsService
         return pingData;
     }
 
-    private static List<ServerSidePingData> ParsePingData(JsonElement payload)
+    internal static List<ServerSidePingData> ParsePingData(JsonElement payload)
     {
         var playerNames = new Dictionary<int, string>();
         if (payload.TryGetProperty("game", out var game) &&
@@ -199,9 +199,9 @@ public class FloStatsService : IFloStatsService
                     byPlayer[playerId].Add(new ServerPingSample
                     {
                         Time = time,
-                        Min = d.TryGetProperty("min", out var min) && min.ValueKind == JsonValueKind.Number ? min.GetInt32() : null,
-                        Max = d.TryGetProperty("max", out var max) && max.ValueKind == JsonValueKind.Number ? max.GetInt32() : null,
-                        Avg = d.TryGetProperty("avg", out var avg) && avg.ValueKind == JsonValueKind.Number ? avg.GetInt32() : null,
+                        Min = ReadRoundedInt(d, "min"),
+                        Max = ReadRoundedInt(d, "max"),
+                        Avg = ReadRoundedInt(d, "avg"),
                     });
                 }
             }
@@ -214,6 +214,22 @@ public class FloStatsService : IFloStatsService
             Samples = kv.Value,
         }).ToList();
     }
+
+    /// <summary>
+    /// Reads a numeric JSON property as an int, rounding a fractional value rather than
+    /// rejecting it. flo's Ping.avg is an f32 (crates/observer/src/record.rs) and so
+    /// arrives as a GraphQL Float, serialising as "12.0" even when integral -
+    /// JsonElement.GetInt32() throws FormatException on that. Because the throw escaped
+    /// ParsePingData, it aborted the whole snapshot parse and the caller then persisted
+    /// an empty ping array, which the "already populated" guard treated as done and
+    /// never retried.
+    /// </summary>
+    private static int? ReadRoundedInt(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) &&
+        value.ValueKind == JsonValueKind.Number &&
+        value.TryGetDouble(out var number)
+            ? (int)Math.Round(number)
+            : null;
 
     private static async Task SendJson<T>(ClientWebSocket ws, T obj, CancellationToken ct)
     {
