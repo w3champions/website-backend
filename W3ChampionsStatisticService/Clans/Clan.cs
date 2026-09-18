@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
@@ -12,6 +12,7 @@ namespace W3ChampionsStatisticService.Clans;
 public class Clan
 {
     [JsonIgnore]
+    [BsonElement]
     public ClanState ClanState { get; set; }
 
     public string ClanName { get; set; }

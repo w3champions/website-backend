@@ -20,6 +20,12 @@ public class IntegrationTestBase
 
     protected PersonalSettingsProvider personalSettingsProvider;
 
+    static IntegrationTestBase()
+    {
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        W3ChampionsStatisticService.ReadModelBase.BsonExtensions.AddSpecialBsonRegistrations(services);
+    }
+
     [SetUp]
     public async Task Setup()
     {

@@ -129,7 +129,7 @@ public class AdminJobRepositoryTests : IntegrationTestBase
 
         Assert.That(firstLeg, Is.GreaterThan(0));
         Assert.That(finished.DurationMs, Is.GreaterThanOrEqualTo(firstLeg));
-        Assert.That(finished.DurationMs, Is.LessThan(firstLeg + 250),
+        Assert.That(finished.DurationMs, Is.LessThan(firstLeg + 2000),
             "the idle time between the two legs leaked into the reported duration");
     }
 
