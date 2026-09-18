@@ -12,5 +12,6 @@ public class ValidationExceptionFilter : IExceptionFilter
 
         var result = new BadRequestObjectResult(new ErrorResult(validationException.Message));
         context.Result = result;
+        context.ExceptionHandled = true;
     }
 }

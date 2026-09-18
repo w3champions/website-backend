@@ -12,7 +12,7 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Admin.CloudStorage.S3;
 
 [Trace]
-public class S3Service : IS3Service
+public class S3Service
 {
     private readonly string S3BucketName = Environment.GetEnvironmentVariable("S3_BUCKET_NAME") ?? "";
     private readonly string S3AccessKey = Environment.GetEnvironmentVariable("S3_ACCESS_KEY") ?? "";

@@ -84,6 +84,11 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - Acting player injection via `InjectActingPlayerAuthCodeAttribute`
 - Basic auth for service-to-service communication
 
+#### Temporary (self-provided) custom maps
+- Player-facing upload/pre-check gateway in front of update-service (bytes) and matchmaking-service
+  (records) — see `docs/temporary-maps.md`. Auth runs as an authorization filter so 401s precede the
+  body read; never log `mapProof`/`proofHash`.
+
 #### Major Feature Areas
 1. **Player Profiles & Statistics** - MMR, race stats, game history
 2. **Ladder & Rankings** - Season-based rankings, leagues, country rankings

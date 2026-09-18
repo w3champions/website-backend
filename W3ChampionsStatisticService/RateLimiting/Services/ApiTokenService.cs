@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -10,8 +12,10 @@ namespace W3ChampionsStatisticService.RateLimiting.Services;
 
 public interface IApiTokenService
 {
-    Task<ApiToken> ValidateToken(string token, string ipAddress, string scope = null);
-    Task<(int hourlyLimit, int dailyLimit)?> GetRateLimitsForScope(string token, string scope);
+    // [NoTrace]: this is an interface proxy, so TracingInterceptor reads parameter attributes here; a raw API token
+    // must never become a "param.token" activity tag.
+    Task<ApiToken> ValidateToken([NoTrace] string token, string ipAddress, string scope = null);
+    Task<(int hourlyLimit, int dailyLimit)?> GetRateLimitsForScope([NoTrace] string token, string scope);
 }
 
 public class ApiTokenService(
@@ -23,6 +27,7 @@ public class ApiTokenService(
     private readonly IMemoryCache _cache = cache;
     private readonly ILogger<ApiTokenService> _logger = logger;
     private const int CACHE_DURATION_MINUTES = 5;
+    private const int TokenFingerprintHexLength = 12;
 
     [Trace]
     public async Task<ApiToken> ValidateToken(string token, string ipAddress, string scope = null)
@@ -47,7 +52,7 @@ public class ApiTokenService(
         var apiToken = await _apiTokenRepository.GetByToken(token);
         if (apiToken == null)
         {
-            _logger.LogWarning("Invalid API token attempted: {Token}", token);
+            _logger.LogWarning("Invalid API token attempted: {TokenFingerprint}", TokenFingerprint(token));
             return null;
         }
 
@@ -78,6 +83,14 @@ public class ApiTokenService(
 
         return (tokenScope.HourlyLimit, tokenScope.DailyLimit);
     }
+
+    /// <summary>
+    /// A short, non-reversible identifier for a presented token, so repeated attempts with the same token stay
+    /// correlatable in logs while the credential itself is never written: the first 12 lowercase hex characters of
+    /// its SHA-256.
+    /// </summary>
+    private static string TokenFingerprint(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)))[..TokenFingerprintHexLength].ToLowerInvariant();
 
     private bool ValidateTokenInternal(ApiToken apiToken, string ipAddress, string scope = null)
     {

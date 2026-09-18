@@ -1,0 +1,206 @@
+using System;
+using System.Globalization;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using W3C.Contracts.Matchmaking;
+using W3C.Domain.Common;
+using W3C.Domain.Maps;
+using W3C.Domain.MatchmakingService.Contracts;
+using W3C.Domain.Tracing;
+
+namespace W3C.Domain.MatchmakingService;
+
+/// <summary>
+/// The x-admin-secret routes matchmaking-service exposes for self-provided (temporary) maps — design spec
+/// §5.4 / Appendix A.5. Consumed only by website-backend; never log a mapProof or a proofHash (§10.3).
+/// </summary>
+public partial class MatchmakingServiceClient
+{
+    private const string ServiceName = "matchmaking-service";
+
+    private static readonly char[] JsonWhitespace = [' ', '\t', '\r', '\n'];
+
+    // ---- Temporary (self-provided) maps -------------------------------------------------
+    // All routes carry x-admin-secret and are consumed only by website-backend. 404 and 409 are
+    // EXPECTED outcomes here, not errors, so these methods branch on the status code themselves.
+    // A body that breaks the A.5 contract on any other expected status throws an HttpRequestException
+    // carrying that status (see UpstreamContract). Never log a mapProof or a proofHash (design spec §10.3):
+    // the four calls whose request body carries one (create, verify-proof, file-restored, by-proof-hash)
+    // never read an error body either, because matchmaking's error text echoes the value it refused.
+
+    /// <summary>Upload dedupe probe. Returns null when no temporary map has this sha1 (strict 404 {}).</summary>
+    public async Task<MapContract> GetTemporaryMapBySha1(string sha1, CancellationToken cancellationToken = default)
+    {
+        RequireLowercaseHex(sha1, TemporaryMapKeys.Sha1HexLength, nameof(sha1));
+        var url = $"{MatchmakingApiUrl}/maps/temporary/by-sha1/{Uri.EscapeDataString(sha1)}";
+        var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
+        return (await ReadRecordOrNull<TemporaryMapEnvelope>(response, e => e.Map != null, cancellationToken))?.Map;
+    }
+
+    /// <summary>
+    /// Pre-check probe: <c>POST /maps/temporary/by-proof-hash</c> with the proofHash in a JSON body (Appendix A.5,
+    /// revision 10). It never travels in the URL: the proxies between the services record request lines in their logs
+    /// and do not record request bodies. Returns null when nothing is known for this proofHash (strict 404 {}); any
+    /// error status (a 400 means matchmaking refused a body this client had already validated, i.e. the two disagree
+    /// on the contract) surfaces by status only, its body unread.
+    /// </summary>
+    public async Task<TemporaryMapStateResponse> GetTemporaryMapStateByProofHash(
+        [NoTrace] string proofHash, CancellationToken cancellationToken = default)
+    {
+        RequireLowercaseHex(proofHash, TemporaryMapKeys.ProofHashHexLength, nameof(proofHash));
+        var url = $"{MatchmakingApiUrl}/maps/temporary/by-proof-hash";
+        var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(new { proofHash }), cancellationToken);
+        return await ReadRecordOrNull<TemporaryMapStateResponse>(
+            response, s => !string.IsNullOrEmpty(s.FileState), cancellationToken, requestCarriedASecret: true);
+    }
+
+    /// <summary>Reconciliation probe: does a record still claim this stored file? Null means orphan (strict 404 {}).</summary>
+    public async Task<MapContract> GetTemporaryMapByPath(string path, CancellationToken cancellationToken = default)
+    {
+        var url = $"{MatchmakingApiUrl}/maps/temporary/by-path?path={HttpUtility.UrlEncode(path)}";
+        var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
+        return (await ReadRecordOrNull<TemporaryMapEnvelope>(response, e => e.Map != null, cancellationToken))?.Map;
+    }
+
+    public async Task<CreateTemporaryMapResult> CreateTemporaryMap(
+        [NoTrace] CreateTemporaryMapRequest request, CancellationToken cancellationToken = default)
+    {
+        var url = $"{MatchmakingApiUrl}/maps/temporary";
+        var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(request), cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            return new CreateTemporaryMapResult { Created = false, Map = await ReadMap(response, cancellationToken) };
+        }
+
+        RequireSuccessWithoutReadingTheBody(response);
+        return new CreateTemporaryMapResult { Created = true, Map = await ReadMap(response, cancellationToken) };
+    }
+
+    /// <summary>Non-mutating proof lookup. Returns null when no record has this proofHash (strict 404 {}).</summary>
+    public async Task<VerifyTemporaryMapProofResponse> VerifyTemporaryMapProof(
+        [NoTrace] string proofHash, CancellationToken cancellationToken = default)
+    {
+        RequireLowercaseHex(proofHash, TemporaryMapKeys.ProofHashHexLength, nameof(proofHash));
+        var url = $"{MatchmakingApiUrl}/maps/temporary/verify-proof";
+        var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(new { proofHash }), cancellationToken);
+        return await ReadRecordOrNull<VerifyTemporaryMapProofResponse>(
+            response, v => !string.IsNullOrEmpty(v.FileState), cancellationToken, requestCarriedASecret: true);
+    }
+
+    /// <summary>Call ONLY after the bytes are stored in update-service: this flips fileState to present.</summary>
+    public async Task<MapContract> MarkTemporaryMapFileRestored(
+        int mapId, [NoTrace] TemporaryMapFileRestoredRequest request, CancellationToken cancellationToken = default)
+    {
+        var url = $"{MatchmakingApiUrl}/maps/temporary/{mapId.ToString(CultureInfo.InvariantCulture)}/file-restored";
+        var response = await SendWithSecret(HttpMethod.Post, url, SerializeData(request), cancellationToken);
+        RequireSuccessWithoutReadingTheBody(response);
+        return await ReadMap(response, cancellationToken);
+    }
+
+    public async Task<MapContract> MarkTemporaryMapFileDeleted(int mapId, CancellationToken cancellationToken = default)
+    {
+        var url = $"{MatchmakingApiUrl}/maps/temporary/{mapId.ToString(CultureInfo.InvariantCulture)}/file-deleted";
+        var response = await SendWithSecret(HttpMethod.Post, url, cancellationToken: cancellationToken);
+        if (!response.IsSuccessStatusCode) await HandleMMError(response, cancellationToken);
+        return await ReadMap(response, cancellationToken);
+    }
+
+    /// <summary>
+    /// One page of expired records. A page without its items array, or with a null row (no record, yet the sweep
+    /// would act on it), throws rather than reading as empty — the same rule as the map listings.
+    /// </summary>
+    public async Task<ExpiredTemporaryMapsResponse> GetExpiredTemporaryMaps(
+        long beforeEpochMs, int limit, CancellationToken cancellationToken = default)
+    {
+        var url = $"{MatchmakingApiUrl}/maps/temporary/expired" +
+                  $"?before={beforeEpochMs.ToString(CultureInfo.InvariantCulture)}&limit={limit.ToString(CultureInfo.InvariantCulture)}";
+        var response = await SendWithSecret(HttpMethod.Get, url, cancellationToken: cancellationToken);
+        if (!response.IsSuccessStatusCode) await HandleMMError(response, cancellationToken);
+        var page = await ReadContractBody<ExpiredTemporaryMapsResponse>(response, cancellationToken);
+        return page.Items.TrueForAll(row => row is not null) ? page : throw UpstreamContract.Violation(response.StatusCode, ServiceName);
+    }
+
+    /// <summary>
+    /// Spec §5.4 pins <c>404 {}</c> as the record-not-found answer of every null-returning probe. Any
+    /// other 404 (an HTML "Cannot GET" page, a proxy page, a non-empty body) means the ROUTE was not found,
+    /// and reading it as "no record" would create duplicate records or delete claimed files — so it throws.
+    /// A success without the record (<paramref name="hasRecord"/> false) is an upstream fault, never "no record".
+    /// When <paramref name="requestCarriedASecret"/>, another error status surfaces by status only (see
+    /// <see cref="RequireSuccessWithoutReadingTheBody"/>); otherwise its error entries are read into the message.
+    /// </summary>
+    private async Task<T> ReadRecordOrNull<T>(
+        HttpResponseMessage response, Func<T, bool> hasRecord, CancellationToken cancellationToken, bool requestCarriedASecret = false)
+        where T : class
+    {
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (IsEmptyJsonObject(body)) return null;
+            throw new HttpRequestException(
+                $"{ServiceName} answered 404 without the empty-object record-not-found body", null, HttpStatusCode.NotFound);
+        }
+
+        if (requestCarriedASecret)
+        {
+            RequireSuccessWithoutReadingTheBody(response);
+        }
+        else if (!response.IsSuccessStatusCode)
+        {
+            await HandleMMError(response, cancellationToken);
+        }
+
+        var record = await ReadContractBody<T>(response, cancellationToken);
+        return hasRecord(record) ? record : throw UpstreamContract.Violation(response.StatusCode, ServiceName);
+    }
+
+    /// <summary>
+    /// The error path of a call whose request body carried a mapProof or a proofHash: matchmaking's validator echoes
+    /// the value it refused ("Invalid value …") and its other error bodies are free text, so the body is never read
+    /// and the exception names the service and the status only (§10.3) — whatever a caller then does with it. The
+    /// 404 {} and 409 answers the contract pins are decided before this.
+    /// </summary>
+    private static void RequireSuccessWithoutReadingTheBody(HttpResponseMessage response)
+    {
+        if (!response.IsSuccessStatusCode)
+        {
+            throw UpstreamContract.FailureWithoutItsBody(response.StatusCode, ServiceName);
+        }
+    }
+
+    /// <summary>
+    /// sha1 and proofHash are lowercase hex digests. by-sha1 carries the sha1 as a URL path segment, where System.Uri
+    /// would collapse a "." or ".." key into another route; the two proofHash routes carry the key in a POST body, and a
+    /// key that can never match is not worth a request. Anything else is refused before a request is built; the
+    /// message never echoes the value.
+    /// </summary>
+    private static void RequireLowercaseHex(string value, int length, string parameterName)
+    {
+        if (!TemporaryMapKeys.IsLowercaseHex(value, length))
+        {
+            throw new ArgumentException($"must be {length} lowercase hex characters", parameterName);
+        }
+    }
+
+    private static bool IsEmptyJsonObject(string body)
+    {
+        var trimmed = (body ?? "").AsSpan().Trim(JsonWhitespace);
+        return trimmed.Length >= 2
+               && trimmed[0] == '{'
+               && trimmed[^1] == '}'
+               && trimmed[1..^1].Trim(JsonWhitespace).IsEmpty;
+    }
+
+    /// <summary>The <c>{ "map": ... }</c> envelope every mutating temporary-map route answers with.</summary>
+    private async Task<MapContract> ReadMap(HttpResponseMessage response, CancellationToken cancellationToken)
+        => (await ReadContractBody<TemporaryMapEnvelope>(response, cancellationToken)).Map
+           ?? throw UpstreamContract.Violation(response.StatusCode, ServiceName);
+
+    private static async Task<T> ReadContractBody<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+        where T : class
+        => UpstreamContract.Deserialize<T>(
+            await response.Content.ReadAsStringAsync(cancellationToken), response.StatusCode, ServiceName);
+}

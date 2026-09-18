@@ -49,10 +49,11 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
                 });
                 context.Result = unauthorizedResult;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Log.Information($"Permission {Permission} missing.");
-                var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult(ex.Message));
+                // Fixed body: exception messages (e.g. IdentityModel IDX diagnostics) never reach clients.
+                var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Unauthorized"));
                 context.Result = unauthorizedResult;
             }
         }

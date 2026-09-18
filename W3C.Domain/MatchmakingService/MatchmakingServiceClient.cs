@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Dynamic;
@@ -21,7 +22,7 @@ using W3C.Domain.Tracing;
 namespace W3C.Domain.MatchmakingService;
 
 [Trace]
-public class MatchmakingServiceClient
+public partial class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
@@ -245,23 +246,6 @@ public class MatchmakingServiceClient
         }
     }
 
-    public async Task<GetMapsResponse> GetMaps(GetMapsRequest request)
-    {
-        List<string> queryParams = [];
-
-        if (!string.IsNullOrEmpty(request.Filter))
-        {
-            queryParams.Add($"filter={request.Filter}");
-        }
-
-        var url = $"{MatchmakingApiUrl}/maps?{string.Join("&", queryParams)}";
-        var response = await _httpClient.GetAsync(url);
-        var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
-        return result;
-    }
-
     public async Task<MapContract> GetMap(int id)
     {
         var url = $"{MatchmakingApiUrl}/maps/{id}";
@@ -269,52 +253,6 @@ public class MatchmakingServiceClient
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<MapContract>(content);
-        return result;
-    }
-
-    public async Task<MapContract> CreateMap(MapContract newMap)
-    {
-        var url = $"{MatchmakingApiUrl}/maps";
-        var httpcontent = new StringContent(SerializeData(newMap), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        request.Content = httpcontent;
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return await GetResult<MapContract>(response);
-        }
-
-        await HandleMMError(response);
-        return null;
-    }
-
-    public async Task<MapContract> UpdateMap(int id, MapContract map)
-    {
-        var url = $"{MatchmakingApiUrl}/maps/{id}";
-        var httpcontent = new StringContent(SerializeData(map), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Put, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        request.Content = httpcontent;
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return await GetResult<MapContract>(response);
-        }
-
-        await HandleMMError(response);
-        return null;
-    }
-
-    public async Task<GetMapsResponse> GetTournamentMaps()
-    {
-        var url = $"{MatchmakingApiUrl}/maps/tournaments";
-        var response = await _httpClient.GetAsync(url);
-        var content = await response.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var result = JsonConvert.DeserializeObject<GetMapsResponse>(content);
         return result;
     }
 
@@ -643,17 +581,41 @@ public class MatchmakingServiceClient
         return null;
     }
 
-    private async Task HandleMMError(HttpResponseMessage response)
+    /// <summary>
+    /// Always throws an HttpRequestException carrying the upstream status. A body that is empty, not JSON (e.g. a
+    /// proxy's error page), without an errors array or with one that says nothing (a bare <c>{}</c> deserialises to
+    /// an empty array) gets a status-only message instead of escaping as a NullReferenceException or
+    /// JsonReaderException, or saying nothing. Each entry names its field (express-validator's <c>path</c> from v7,
+    /// <c>param</c> before) and its message, with neither leaving a stray space when absent.
+    /// </summary>
+    private async Task HandleMMError(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
-        var errorReponse = await GetResult<ErrorResponse>(response);
-        var errors = errorReponse.Errors.Select(x => $"{x.Param} {x.Message}");
-        throw new HttpRequestException(string.Join(",", errors), null, response.StatusCode);
+        string message = null;
+        try
+        {
+            var errors = (await GetResult<ErrorResponse>(response, cancellationToken))?.Errors;
+            if (errors != null)
+            {
+                message = string.Join(",", errors.Select(x => $"{x?.Path ?? x?.Param} {x?.Message}".Trim()));
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON: fall back to the status code below.
+        }
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            message = $"matchmaking-service returned {(int)response.StatusCode}";
+        }
+
+        throw new HttpRequestException(message, null, response.StatusCode);
     }
 
-    private async Task<T> GetResult<T>(HttpResponseMessage response)
+    private async Task<T> GetResult<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)
         where T : class
     {
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
         if (string.IsNullOrEmpty(content)) return null;
         var result = JsonConvert.DeserializeObject<T>(content);
         return result;
