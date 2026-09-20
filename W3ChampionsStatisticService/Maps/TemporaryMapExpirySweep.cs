@@ -85,17 +85,10 @@ public class TemporaryMapExpirySweep(
     private static readonly TimeSpan StaleSpoolFileAge = TimeSpan.FromHours(TemporaryMapLimits.StaleSpoolFileAgeHours);
 
     /// <summary>
-    /// Paths already named in a protected-file Warning, so one path is named once per process however many runs meet
-    /// it. Bounded: past <see cref="MaxWarnedProtectedPaths"/> no further path is added, and the per-run Error line
-    /// in <see cref="RunReconciliationPass"/> keeps the condition visible either way.
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, byte> WarnedProtectedPaths = new(StringComparer.Ordinal);
-
-    /// <summary>
-    /// Distinct protected paths this process names in a Warning. Well past the reclaim cap per run, and small enough
+    /// Distinct protected paths one sweep names in a Warning. Well past the reclaim cap per run, and small enough
     /// that a volume full of protected files cannot grow the set without limit.
     /// </summary>
-    private const int MaxWarnedProtectedPaths = 500;
+    internal const int DefaultMaxWarnedProtectedPaths = 500;
 
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly UpdateServiceClient _updateServiceClient = updateServiceClient;
@@ -115,6 +108,27 @@ public class TemporaryMapExpirySweep(
 
     /// <summary>Test seam: the spool directory's file listing, so a file the purge cannot handle can be staged portably.</summary>
     internal Func<string, IEnumerable<string>> EnumerateSpoolFiles { get; init; } = Directory.EnumerateFiles;
+
+    /// <summary>
+    /// The ceiling on <see cref="_warnedProtectedPaths"/>. A test seam only: production uses
+    /// <see cref="DefaultMaxWarnedProtectedPaths"/>, and a fixture lowers it so the ceiling itself can be pinned
+    /// without building hundreds of protected paths.
+    /// </summary>
+    internal int MaxWarnedProtectedPaths { get; init; } = DefaultMaxWarnedProtectedPaths;
+
+    /// <summary>
+    /// Paths already named in a protected-file Warning, so one path is named once however many runs meet it. An
+    /// instance field, not static: this class is registered once per process
+    /// (<see cref="MapServiceExtensions.AddMapServices"/>), so "once per process" still holds, while a fixture's own
+    /// sweep starts clean instead of inheriting whatever another test warned about. Bounded by
+    /// <see cref="MaxWarnedProtectedPaths"/>; the per-run Error line in <see cref="RunReconciliationPass"/> keeps the
+    /// condition visible either way. Concurrent although runs are serialised on <see cref="_runLock"/>: the type is a
+    /// shared singleton and this costs nothing.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, byte> _warnedProtectedPaths = new(StringComparer.Ordinal);
+
+    /// <summary>1 once the ceiling has announced itself, so that line is written once and not once per path past it.</summary>
+    private int _warnedProtectedPathCeilingAnnounced;
 
     internal string EffectiveSpoolDirectory => SpoolDirectory ?? TemporaryMapLimits.TempUploadDir;
 
@@ -585,12 +599,28 @@ public class TemporaryMapExpirySweep(
     /// </summary>
     private void WarnProtectedOnce(string filePath)
     {
-        if (WarnedProtectedPaths.Count >= MaxWarnedProtectedPaths || !WarnedProtectedPaths.TryAdd(filePath, 0))
+        if (_warnedProtectedPaths.ContainsKey(filePath))
         {
             return;
         }
 
-        _logger.LogWarning("update-service accepted the delete of {FileKey} and the file is still stored; not counted as reclaimed", LoggablePath(filePath));
+        if (_warnedProtectedPaths.Count >= MaxWarnedProtectedPaths)
+        {
+            // Silence here would be its own hazard: the Warning stream stops being an inventory of protected paths
+            // and nothing says so. One line does, and the per-run Error keeps carrying the count.
+            if (Interlocked.Exchange(ref _warnedProtectedPathCeilingAnnounced, 1) == 0)
+            {
+                _logger.LogWarning("The protected-file warning set reached its ceiling of {MaxWarnedProtectedPaths} paths; further protected files are counted but no longer named individually",
+                    MaxWarnedProtectedPaths);
+            }
+
+            return;
+        }
+
+        if (_warnedProtectedPaths.TryAdd(filePath, 0))
+        {
+            _logger.LogWarning("update-service accepted the delete of {FileKey} and the file is still stored; not counted as reclaimed", LoggablePath(filePath));
+        }
     }
 
     // ---- Spool purge -------------------------------------------------------------------------

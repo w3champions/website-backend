@@ -714,4 +714,41 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
 
         Assert.That(logs.Lines().Count(l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains(orphan)), Is.EqualTo(2));
     }
+
+    [Test]
+    public async Task ReconciliationPass_StopsNamingProtectedPathsAtItsCeiling_AndSaysSoOnce()
+    {
+        // The warned set is bounded, so past the ceiling a protected path is counted but never named. That silence
+        // is itself a hazard — the Warning stream stops being an inventory — so the ceiling announces itself once.
+        using var logs = new LogCapture();
+        // Four paths against a ceiling of two: TWO of them fall past it, so "announced once" is distinguishable
+        // from "announced per path past the ceiling".
+        var all = Enumerable.Range(1, 4).Select(i => $"W3Champions/CustomGames/ceil{i:D2}-{i:D8}.w3x")
+            .OrderBy(path => path, StringComparer.Ordinal).ToArray();
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, r =>
+            {
+                var after = AfterOf(r);
+                return ScriptedHttpHandler.Json(HttpStatusCode.OK, Files(null, all[after == null ? 0 : Array.IndexOf(all, after) + 1]));
+            })
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, all))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>(), maxWarnedProtectedPaths: 2)
+            .RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.ProtectedFiles, Is.EqualTo(4), "every protected file is still counted");
+        var warnings = logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal)).ToArray();
+        Assert.That(warnings.Count(w => all.Any(w.Contains)), Is.EqualTo(2), "only up to the ceiling is named");
+        Assert.That(warnings.Count(w => w.Contains("no longer named")), Is.EqualTo(1), "and the ceiling says so exactly once");
+        Assert.That(warnings.Single(w => w.Contains("no longer named")), Does.Not.Contain("W3Champions/"), "the ceiling line is path-free");
+    }
+
+    [Test]
+    public void TheWarnedProtectedPathCeilingIsTheSpecs()
+    {
+        Assert.That(TemporaryMapExpirySweep.DefaultMaxWarnedProtectedPaths, Is.EqualTo(500));
+    }
 }

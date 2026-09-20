@@ -237,7 +237,8 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
     private protected TemporaryMapExpirySweep CreateSweep(
         ScriptedHttpHandler handler,
         ILogger<TemporaryMapExpirySweep> logger = null,
-        Func<string, IEnumerable<string>> enumerateSpoolFiles = null)
+        Func<string, IEnumerable<string>> enumerateSpoolFiles = null,
+        int maxWarnedProtectedPaths = TemporaryMapExpirySweep.DefaultMaxWarnedProtectedPaths)
     {
         var factory = new ScriptedHttpHandler.Factory(handler);
         return new TemporaryMapExpirySweep(
@@ -248,6 +249,7 @@ public abstract class TemporaryMapUploadServiceTestBase : TemporaryMapUploadRead
         {
             SpoolDirectory = SpoolDirectory,
             EnumerateSpoolFiles = enumerateSpoolFiles ?? Directory.EnumerateFiles,
+            MaxWarnedProtectedPaths = maxWarnedProtectedPaths,
         };
     }
 

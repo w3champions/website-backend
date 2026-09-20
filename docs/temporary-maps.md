@@ -375,7 +375,11 @@ reclaimed, retrying next run` (Warning, every run that meets it — this is a tr
 protected path it never enters the once-per-path warned set and never feeds the protected-file
 escalation). Each such path is named once per
 process at Warning (`update-service accepted the delete of {FileKey} and the file is still stored; not
-counted as reclaimed`, bounded at 500 distinct paths), and every run with any of them logs
+counted as reclaimed`, bounded at 500 distinct paths per process). Past that ceiling a protected file is
+still counted but no longer named, and the sweep says so once, path-free:
+`The protected-file warning set reached its ceiling of {MaxWarnedProtectedPaths} paths; further protected
+files are counted but no longer named individually` (Warning) — so the Warning stream never silently stops
+being an inventory. Every run with any protected file logs
 `Temporary map reconciliation deleted {ProtectedFiles} files update-service kept; they are not reclaimed
 and are attempted again next run` (Error, once per run). A probe that throws is that file's failure too:
 the delete is idempotent, so the next run does both again, and this run counts the file as neither
