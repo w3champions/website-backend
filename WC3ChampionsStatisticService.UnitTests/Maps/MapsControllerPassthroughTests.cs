@@ -12,7 +12,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
@@ -25,6 +28,7 @@ using W3C.Domain.UpdateService.Contracts;
 using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
+using WC3ChampionsStatisticService.Tests.WebApi;
 
 namespace WC3ChampionsStatisticService.Tests.Maps;
 
@@ -242,6 +246,41 @@ public class MapsControllerPassthroughTests
         using var document = JsonDocument.Parse(json);
         Assert.That(document.RootElement.GetProperty("total").GetInt32(), Is.EqualTo(0));
         Assert.That(document.RootElement.GetProperty("items").GetArrayLength(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task TheConfiguredOutputFormatter_WritesNoProofHashForAnAdminMapFileResponse()
+    {
+        // The other guards here serialise with this file's own JsonSerializerOptions, so they pin the ATTRIBUTE, not
+        // the pipeline: MapFileData.MapProofHash is [System.Text.Json.Serialization.JsonIgnore], which Newtonsoft
+        // does not honour, and the inbound read IS Newtonsoft (UpstreamContract.Deserialize), so with the admin
+        // secret now sent the field arrives populated. It stays off the wire only because MVC formats with
+        // System.Text.Json. Adding AddNewtonsoftJson() for some unrelated controller would re-serve the hash on both
+        // admin map-file routes with every attribute-level guard still green. This one asks the formatter MVC would
+        // actually select. (The host mirrors Program.cs's AddControllers call; there is no shared extension to call.)
+        await using var host = await LoopbackMvcHost.StartAsync(_ => { }, typeof(MapsController));
+        var jsonFormatter = host.Services.GetRequiredService<IOptions<MvcOptions>>().Value.OutputFormatters
+            .OfType<TextOutputFormatter>()
+            .Single(f => f.SupportedMediaTypes.Contains("application/json"));
+
+        var json = await WriteThroughAsync(jsonFormatter,
+            new MapFileData { Id = "f1", FilePath = "W3Champions/CustomGames/x-94ec3bda.w3x", MapProofHash = TemporaryMapClientTests.ProofHash });
+
+        Assert.That(json, Does.Contain("W3Champions/CustomGames/x-94ec3bda.w3x"), "the formatter really wrote this object");
+        Assert.That(json, Does.Not.Contain(TemporaryMapClientTests.ProofHash));
+        Assert.That(json, Does.Not.Contain("proof").IgnoreCase);
+    }
+
+    /// <summary>What <paramref name="formatter"/> writes for <paramref name="value"/>, as the response body would hold it.</summary>
+    private static async Task<string> WriteThroughAsync(TextOutputFormatter formatter, object value)
+    {
+        var httpContext = new DefaultHttpContext();
+        using var body = new MemoryStream();
+        httpContext.Response.Body = body;
+        await formatter.WriteAsync(new OutputFormatterWriteContext(
+            httpContext, (stream, encoding) => new StreamWriter(stream, encoding), value.GetType(), value));
+
+        return Encoding.UTF8.GetString(body.ToArray());
     }
 
     [Test]
