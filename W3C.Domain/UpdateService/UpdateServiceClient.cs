@@ -33,11 +33,15 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
 
-    /// <summary>A success whose body is empty or not a JSON array of stored files throws with that success status.</summary>
+    /// <summary>
+    /// A success whose body is empty or not a JSON array of stored files throws with that success status. Admin-only,
+    /// like its siblings: without the secret update-service hides a temporary row behind an empty 204, which is not
+    /// a listing.
+    /// </summary>
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {
         var url = $"{UpdateServiceUrl}/api/content/maps?mapId={mapId}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var request = AdminRequest(HttpMethod.Get, url);
         var response = await _httpClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -80,11 +84,14 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         return UpstreamContract.Deserialize<MapFileData>(content, response.StatusCode, ServiceName);
     }
 
-    /// <summary>A success whose body is empty or not the stored-file JSON throws with that success status.</summary>
+    /// <summary>
+    /// A success whose body is empty or not the stored-file JSON throws with that success status. Admin-only, like its
+    /// siblings: an anonymous by-id lookup of a temporary row answers an empty 204, which is not a stored file.
+    /// </summary>
     public async Task<MapFileData> GetMapFile(string fileId)
     {
         var url = $"{UpdateServiceUrl}/api/content/maps/{Uri.EscapeDataString(fileId)}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var request = AdminRequest(HttpMethod.Get, url);
         var response = await _httpClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();

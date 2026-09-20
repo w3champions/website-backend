@@ -44,6 +44,9 @@ public class TemporaryMapClientGuardTests
         ["UploadTemporaryMapAsync"] = (typeof(UpdateServiceClient), h => UploadAbc(Us(h))),
         ["DeleteMapFileByPathAsync"] = (typeof(UpdateServiceClient), h => Us(h).DeleteMapFileByPathAsync(FileKey, CancellationToken.None)),
         ["ListMapFilesAsync"] = (typeof(UpdateServiceClient), h => Us(h).ListMapFilesAsync("W3Champions/CustomGames/", 24, null, 500, CancellationToken.None)),
+        ["GetMapFiles"] = (typeof(UpdateServiceClient), h => Us(h).GetMapFiles(7)),
+        ["GetMapFile"] = (typeof(UpdateServiceClient), h => Us(h).GetMapFile("66f0")),
+        ["DeleteMapFile"] = (typeof(UpdateServiceClient), h => Us(h).DeleteMapFile("66f0")),
         ["CreateMapFromFormAsync"] = (typeof(UpdateServiceClient), h => Us(h).CreateMapFromFormAsync(
             new HttpRequestMessage { Content = new StringContent("form") }, "Admin#1")),
     };
@@ -390,10 +393,16 @@ public class TemporaryMapClientGuardTests
             .On(HttpMethod.Post, "/file-restored", HttpStatusCode.OK, map)
             .On(HttpMethod.Post, "/file-deleted", HttpStatusCode.OK, map)
             .On(HttpMethod.Post, "/maps/temporary", HttpStatusCode.Created, map)
+            // Before matchmaking's GET /maps, whose path also ends with "/maps".
+            .On(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/api/content/maps", StringComparison.Ordinal),
+                _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, "[{\"id\":\"66f0\",\"mapId\":7}]"))
             .On(r => r.Method == HttpMethod.Get && r.RequestUri!.AbsolutePath.EndsWith("/maps", StringComparison.Ordinal),
                 _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, "{\"total\":0,\"items\":[]}"))
             .On(HttpMethod.Delete, "/api/content/maps/file", HttpStatusCode.NoContent, "")
             .On(HttpMethod.Get, "/api/content/maps/files", HttpStatusCode.OK, "{\"files\":[],\"next\":null}")
+            // After the /files listing above, which these contains-matches would otherwise swallow.
+            .On(HttpMethod.Get, "/api/content/maps/", HttpStatusCode.OK, "{\"id\":\"66f0\",\"mapId\":7}")
+            .On(HttpMethod.Delete, "/api/content/maps/", HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, "/api/content/maps", HttpStatusCode.OK,
                 "{\"id\":\"66f0\",\"mapId\":0,\"filePath\":\"" + FileKey + "\",\"mapProofHash\":\"" + ProofHash + "\"}");
     }
