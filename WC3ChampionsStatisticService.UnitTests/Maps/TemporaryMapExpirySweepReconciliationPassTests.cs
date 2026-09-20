@@ -20,7 +20,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     [Test]
     public async Task ReconciliationPass_DeletesOnlyFilesNoRecordClaims()
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA, FileB))
             .On(r => IsByPathOf(r, "a-11111111"), Respond(HttpStatusCode.OK, Record(1, FileA)))
@@ -54,7 +54,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     [Test]
     public async Task ReconciliationPass_FollowsTheNextCursor()
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(IsListing, Sequence(Files(FileA, FileA), Files(null, FileB)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
@@ -75,7 +75,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         // forever, so it ends this run's pass, loudly; the next run starts over. The rows differ per page so that this
         // is the cursor guard alone (…EndsTheRunWhenAPageOnlyRepeatsRowsAlreadyScanned covers the rows).
         using var logs = new LogCapture();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(IsListing, Sequence(Files("never-ends", FileA), Files("never-ends", FileB), Files("never-ends", FileC), Files("never-ends", FileA)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1, FileA));
@@ -92,7 +92,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     [Test]
     public async Task ReconciliationPass_EndsTheRunOnACursorCycle()
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             // Cursors A, B, A again: the third page's row is fresh, so only the cursor repeats.
             .On(IsListing, Sequence(Files("A", FileA), Files("B", FileB), Files("A", FileC), Files("B", FileB)))
@@ -109,7 +109,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     {
         // A record that says its bytes are gone claims nothing; the bytes (a restore that never completed) are
         // reclaimed like an unclaimed file. A present record keeps its file.
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA, FileB))
             .On(r => IsByPathOf(r, "a-11111111"), Respond(HttpStatusCode.OK, Record(1, FileA, "deleted")))
@@ -135,7 +135,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         // run ends with one Error line, because a backlog that large is a signal, not routine.
         using var logs = new LogCapture();
         var files = Enumerable.Range(1, orphans).Select(i => $"W3Champions/CustomGames/o-{i:D8}.w3x").ToArray();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, files))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
@@ -173,7 +173,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         using var logs = new LogCapture();
         var unclaimed = Enumerable.Range(1, 20).Select(i => $"W3Champions/CustomGames/u-{i:D8}.w3x").ToArray();
         var released = Enumerable.Range(1, 6).Select(i => $"W3Champions/CustomGames/r-{i:D8}.w3x").ToArray();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, [.. unclaimed, .. released, FileA, FileB]))
             .On(r => IsByPathFor(r, FileA), Respond(HttpStatusCode.OK, Record(1, FileA)))
@@ -204,7 +204,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         // (a decomposed form of a name it stored composed, a shape BuildFileKey cannot emit) is where a by-path answer
         // of "unclaimed" is least trustworthy. Such a file is a failure of the run: not asked about, not deleted.
         using var logs = new LogCapture();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, listedPath, FileB))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
@@ -228,7 +228,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         // would answer "unclaimed" and a delete would take the upload's bytes, so neither happens until the upload is done.
         var sweepWaiting = NewSignal();
         FileKeyLock = new TemporaryMapFileKeyLock { OnContended = _ => sweepWaiting.TrySetResult() };
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
@@ -259,7 +259,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     public async Task ReconciliationPass_ADeletedRecordThatNamesAnotherPath_IsAFailure_NotAnOrphan(string recordPath)
     {
         // A record reached by an inexact lookup (another file, another case) says nothing about this file.
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1, recordPath, "deleted"))
@@ -278,7 +278,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         // A listing that ignores `after` yet mints fresh cursors never repeats a cursor; without this guard it
         // would loop forever holding the run lock.
         using var logs = new LogCapture();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(IsListing, Sequence(Files("c1", FileA, FileB), Files("c2", FileA, FileB), Files("c3", FileA, FileB)))
             .On(r => IsByPathOf(r, "a-11111111"), Respond(HttpStatusCode.OK, Record(1, FileA)))
@@ -298,7 +298,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     {
         // A page that overlaps the previous one (a listing whose cursor is inclusive) still advances: only the new rows
         // are examined, and the run goes on to the end.
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(IsListing, Sequence(Files("c1", FileA, FileB), Files(null, FileB, FileC)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
@@ -318,7 +318,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         // update-service may filter a page down to nothing (every file on it younger than olderThanHours) and still have
         // more behind it: not stuck, just empty.
         using var logs = new LogCapture();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(IsListing, Sequence(Files("c1"), Files("c2"), Files(null, FileA)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
@@ -336,7 +336,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     {
         // An inclusive cursor whose last page holds nothing but the overlap: the listing is exhausted, not stuck.
         using var logs = new LogCapture();
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(IsListing, Sequence(Files("c1", FileA, FileB), Files(null, FileB)))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1));
@@ -353,7 +353,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     {
         // Only the empty-object 404 means "no record". Anything else is the route missing (matchmaking
         // deployed without it, a proxy page) and reading it as unclaimed would delete every listed file.
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound, "{\"message\":\"Cannot GET /maps/temporary/by-path\"}")
@@ -371,7 +371,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     [TestCase("")]
     public async Task ReconciliationPass_AnUnknownFileState_IsAFailure_NotAnOrphan(string fileState)
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.OK, Record(1, FileA, fileState))
@@ -387,7 +387,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     [Test]
     public async Task ReconciliationPass_AByPathTimeout_IsThatFilesFailure_AndTheNextFileIsStillExamined()
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, FileA, FileB))
             .On(r => IsByPathOf(r, "a-11111111"), TimesOut())
@@ -405,7 +405,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     [Test]
     public async Task ReconciliationPass_AListingFailure_EndsThePass_AndCountsAsFailed()
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.BadGateway, "<html>502</html>");
 
@@ -421,7 +421,7 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
     {
         // update-service drift: the listing was asked for CustomGames/ only. Such a file is a failure of this run
         // (loud, retried), not a candidate — the delete guard would refuse it anyway, but it is not even probed.
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
             .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, "W3Champions/Maps/echo-isles.w3x", FileB))
             .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
@@ -435,5 +435,181 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         Assert.That(handler.CountRequests(HttpMethod.Get, ByPath), Is.EqualTo(1), "only the CustomGames/ file was probed");
         Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
         Assert.That(Uri.UnescapeDataString(handler.LastRequest(HttpMethod.Delete, UsFile).RequestUri!.Query), Does.Contain(FileB));
+    }
+
+    // ---- A file update-service keeps is not a reclaimed orphan -------------------------------
+
+    [Test]
+    public async Task ReconciliationPass_CountsAReclaimOnceTheProbeShowsThePathGone()
+    {
+        using var logs = new LogCapture();
+        const string orphan = "W3Champions/CustomGames/gone-11111111.w3x";
+        var handler = ReclaimsAreVerified()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, orphan))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.ReclaimedOrphans, Is.EqualTo(1));
+        Assert.That(report.ProtectedFiles, Is.Zero);
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(logs.Lines().Single(l => l.Contains("ORPHAN_RECLAIMED")), Does.Contain(orphan));
+        Assert.That(logs.Lines(), Has.None.StartsWith("Warning"));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_AFileUpdateServiceKeptAfterTheDelete_IsProtected_NotReclaimed()
+    {
+        // update-service never keys an unkeyed legacy row at a temporary path, so its by-path delete for one is a
+        // logged no-op and the bytes stay. Counted as a reclaim it would be a false success on every run, forever.
+        using var logs = new LogCapture();
+        const string kept = "W3Champions/CustomGames/kept-22222222.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, StillStored(kept))
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, kept))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.ReclaimedOrphans, Is.Zero);
+        Assert.That(report.ProtectedFiles, Is.EqualTo(1));
+        Assert.That(report.Deferred, Is.Zero);
+        Assert.That(report.Failed, Is.Zero, "update-service accepted the delete; nothing failed");
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
+        Assert.That(logs.Lines().Any(l => l.Contains("ORPHAN_RECLAIMED")), Is.False);
+        var warnings = logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal)).ToArray();
+        Assert.That(warnings, Has.Length.EqualTo(1), "one Warning names the path");
+        Assert.That(warnings[0], Does.Contain(kept).And.Contain("still stored"));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_AProbeAnsweringTheNextStoredPath_MeansThisOneIsGone()
+    {
+        // The probe asks for one row after the bound, so a genuinely reclaimed file's probe answers the NEXT stored
+        // file rather than an empty page. Only a row equal to the deleted path means update-service kept it.
+        const string orphan = "W3Champions/CustomGames/next-55555555.w3x";
+        const string neighbour = "W3Champions/CustomGames/next-66666666.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, StillStored(neighbour))
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, orphan))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.ReclaimedOrphans, Is.EqualTo(1));
+        Assert.That(report.ProtectedFiles, Is.Zero);
+        Assert.That(report.Failed, Is.Zero);
+    }
+
+    [Test]
+    public async Task ReconciliationPass_WarnsOncePerProtectedPath_ButEscalatesTheCountEveryRun()
+    {
+        // The Warning is spent on the first sighting in this process, so the per-run Error line is what keeps the
+        // condition visible afterwards.
+        using var logs = new LogCapture();
+        const string kept = "W3Champions/CustomGames/twice-33333333.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, StillStored(kept))
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, kept))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+        var sweep = CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>());
+
+        var first = await sweep.RunOnceAsync(Now, CancellationToken.None);
+        var second = await sweep.RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(first.ProtectedFiles, Is.EqualTo(1));
+        Assert.That(second.ProtectedFiles, Is.EqualTo(1));
+        Assert.That(logs.Lines().Count(l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains(kept)), Is.EqualTo(1),
+            "the path is named once per process, not once per run");
+        Assert.That(logs.Lines().Count(l => l.StartsWith("Error", StringComparison.Ordinal) && l.Contains("ProtectedFiles=1")), Is.EqualTo(2),
+            "the count is escalated on every run");
+    }
+
+    [Test]
+    public async Task ReconciliationPass_ProbesFromThePathImmediatelyBeforeTheOneItDeleted()
+    {
+        // The probe asks for one row strictly after a bound: the preceding listed path, or the page's own cursor for
+        // its first row. A looser bound could answer with another file and read a kept file as gone.
+        const string first = "W3Champions/CustomGames/bound-a1111111.w3x";
+        const string second = "W3Champions/CustomGames/bound-b2222222.w3x";
+        const string third = "W3Champions/CustomGames/bound-c3333333.w3x";
+        var handler = ReclaimsAreVerified()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(IsListing, Sequence(Files("page-1-cursor", first), Files(null, second, third)))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.ReclaimedOrphans, Is.EqualTo(3));
+        Assert.That(handler.Requests.Where(IsReclaimProbe).Select(AfterOf).ToArray(),
+            Is.EqualTo(new[] { null, "page-1-cursor", second }));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_AProbeFailureAfterTheDelete_IsThatFilesFailure()
+    {
+        // The reclaim delete is idempotent, so the next run simply does it again; this run counts the file as neither
+        // reclaimed nor protected.
+        using var logs = new LogCapture();
+        const string orphan = "W3Champions/CustomGames/probe-44444444.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, TransportFails())
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, orphan))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.Failed, Is.EqualTo(1));
+        Assert.That(report.ReclaimedOrphans, Is.Zero);
+        Assert.That(report.ProtectedFiles, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(1));
+        Assert.That(logs.Lines().Single(l => l.StartsWith("Warning", StringComparison.Ordinal)),
+            Does.Contain("retrying next run").And.Contain(orphan));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_TheCapCountsProtectedFilesToo_SoTheyReachTheDeferredEscalation()
+    {
+        // A protected file consumed a delete attempt, so it counts against the run's blast radius; otherwise a
+        // directory full of them would sit at the cap every run without ever reaching the Deferred escalation.
+        using var logs = new LogCapture();
+        var all = Enumerable.Range(1, TemporaryMapLimits.MaxReclaimsPerRun + 1)
+            .Select(i => $"W3Champions/CustomGames/cap{i:D2}-{i:D8}.w3x").ToArray();
+        var kept = all.Where((_, index) => index % 3 == 2).ToHashSet(StringComparer.Ordinal);
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, r =>
+            {
+                var after = AfterOf(r);
+                var path = all[after == null ? 0 : Array.IndexOf(all, after) + 1];
+                return ScriptedHttpHandler.Json(HttpStatusCode.OK, kept.Contains(path) ? Files(null, path) : Files(null));
+            })
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, all))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        var expectedProtected = all.Take(TemporaryMapLimits.MaxReclaimsPerRun).Count(kept.Contains);
+        Assert.That(report.ProtectedFiles, Is.EqualTo(expectedProtected));
+        Assert.That(report.ReclaimedOrphans, Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun - expectedProtected));
+        Assert.That(report.Deferred, Is.EqualTo(1), "the candidate past the cap");
+        Assert.That(report.Failed, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun),
+            "nothing past the cap was deleted");
+        var errors = logs.Lines().Where(l => l.StartsWith("Error", StringComparison.Ordinal)).ToArray();
+        Assert.That(errors.Count(l => l.Contains($"Deferred={report.Deferred}")), Is.EqualTo(1));
+        Assert.That(errors.Count(l => l.Contains($"ProtectedFiles={expectedProtected}")), Is.EqualTo(1));
     }
 }

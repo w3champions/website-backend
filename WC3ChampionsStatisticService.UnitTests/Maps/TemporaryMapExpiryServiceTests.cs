@@ -23,11 +23,8 @@ namespace WC3ChampionsStatisticService.Tests.Maps;
 /// the scripted handler, never on the clock.
 /// </summary>
 [TestFixture]
-public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
+public class TemporaryMapExpiryServiceTests : TemporaryMapExpirySweepTestBase
 {
-    private const string Expired = "/maps/temporary/expired";
-    private const string FileB = "W3Champions/CustomGames/b-22222222.w3x";
-
     [Test]
     public async Task StartsWithASweep_AndStopsPromptlyDuringTheDailyWait()
     {
@@ -139,7 +136,7 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapUploadServiceTestBase
     [Test]
     public async Task TheAdminJob_RunsTheSweepOnce_AndReportsItsCounts()
     {
-        var handler = new ScriptedHttpHandler()
+        var handler = ReclaimsAreVerified()
             .On(HttpMethod.Get, Expired, HttpStatusCode.OK, "{\"items\":[{\"id\":1,\"path\":\"" + FileB + "\"}]}")
             .On(HttpMethod.Delete, "/api/content/maps/file?", HttpStatusCode.NoContent, "")
             .On(HttpMethod.Post, "/file-deleted", HttpStatusCode.OK, "{\"map\":{\"id\":1}}")

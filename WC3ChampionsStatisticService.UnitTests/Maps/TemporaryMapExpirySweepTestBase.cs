@@ -74,6 +74,25 @@ public abstract class TemporaryMapExpirySweepTestBase : TemporaryMapUploadServic
         };
     }
 
+    /// <summary>
+    /// The one-row re-probe a reclaim sends after its delete, told apart from a page listing by its limit: only the
+    /// probe asks for a single row.
+    /// </summary>
+    protected static bool IsReclaimProbe(HttpRequestMessage r)
+        => IsListing(r) && QueryHelpers.ParseQuery(r.RequestUri!.Query)["limit"].ToString() == "1";
+
+    /// <summary>The decoded <c>after</c> cursor a listing request sent, or null when it sent none.</summary>
+    protected static string AfterOf(HttpRequestMessage r)
+        => QueryHelpers.ParseQuery(r.RequestUri!.Query).TryGetValue("after", out var after) ? after.ToString() : null;
+
+    /// <summary>The reclaim probe's answer when the delete really removed the file: no row between the bound and it.</summary>
+    protected static Func<HttpRequestMessage, HttpResponseMessage> Gone()
+        => _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, Files(null));
+
+    /// <summary>The reclaim probe's answer when update-service kept the file: the very path, still the first row after the bound.</summary>
+    protected static Func<HttpRequestMessage, HttpResponseMessage> StillStored(string filePath)
+        => _ => ScriptedHttpHandler.Json(HttpStatusCode.OK, Files(null, filePath));
+
     protected static string SweepRoute(HttpRequestMessage r)
         => IsExpired(r) ? "expired" : IsListing(r) ? "files" : r.RequestUri!.AbsolutePath;
 
@@ -93,6 +112,13 @@ public abstract class TemporaryMapExpirySweepTestBase : TemporaryMapUploadServic
 
     private protected static ScriptedHttpHandler EmptyReconciliation()
         => new ScriptedHttpHandler().On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null));
+
+    /// <summary>
+    /// A handler whose reclaim probes all answer "gone", the ordinary case: registered first, so it is matched before
+    /// the fixture's own page listing.
+    /// </summary>
+    private protected static ScriptedHttpHandler ReclaimsAreVerified()
+        => new ScriptedHttpHandler().On(IsReclaimProbe, Gone());
 
     /// <summary>
     /// One 200 page per call, in order, and a failure once they run out: a loop that stops where it should never asks
