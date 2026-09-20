@@ -177,19 +177,30 @@ public class TemporaryMapUploadServiceFailureTests : TemporaryMapUploadServiceTe
     }
 
     [Test]
-    public void UpdateService409OnTheRetryToo_Is502_AfterExactlyOneRetry()
+    public async Task UpdateService409OnTheRetryToo_Is502_AfterExactlyOneRetry_AndReleasesTheFileKey()
     {
+        // The stray-file replace deletes and retries the store exactly once; a second 409 ends in the generic 502.
+        // A persistent repeat is reachable, not hypothetical: update-service never keys an UNKEYED legacy row at a
+        // temporary path, so its 409 for one is path-free and survives the delete, which it no-ops. The retry stays
+        // bounded at one — a loop would re-upload the whole file against a conflict that cannot clear — and the
+        // fileKey must be free afterwards, or every later upload of these bytes would queue behind a dead holder.
         var handler = UnknownSha1Handler()
             .On(IsUsUpload, Respond(HttpStatusCode.Conflict, Conflict))
             .On(IsByPath, Respond(HttpStatusCode.NotFound))
             .On(IsUsDelete, Respond(HttpStatusCode.NoContent, ""));
+        var counts = new UploadCounts();
 
         var ex = Assert.ThrowsAsync<TemporaryMapUploadException>(() => Run(handler));
 
+        Assert.That(ex.StatusCode, Is.EqualTo(StatusCodes.Status502BadGateway));
         Assert.That(ex.Code, Is.EqualTo("UPSTREAM"));
-        Assert.That(Count(handler, IsUsUpload), Is.EqualTo(2));
+        Assert.That(Count(handler, IsUsUpload), Is.EqualTo(2), "the store is attempted exactly twice");
         Assert.That(Count(handler, IsUsDelete), Is.EqualTo(1));
         Assert.That(Count(handler, IsCreate), Is.Zero);
+        counts.AssertCountedOnceAs(TemporaryMapMetrics.Results.UpstreamError);
+        Assert.That(FileKeyLock.Count, Is.Zero, "the failed upload released the fileKey");
+        using var reacquired = await FileKeyLock.AcquireAsync(FileKey, CancellationToken.None).WaitAsync(HangGuard);
+        Assert.That(FileKeyLock.Count, Is.EqualTo(1), "the fileKey is free for the next upload");
     }
 
     [Test]
