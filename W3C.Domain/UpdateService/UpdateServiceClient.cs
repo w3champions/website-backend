@@ -36,7 +36,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     /// <summary>
     /// A success whose body is empty or not a JSON array of stored files throws with that success status. Admin-only,
     /// like its siblings: without the secret update-service hides a temporary row behind an empty 204, which is not
-    /// a listing.
+    /// a listing. Because the request carries the secret, an error body is not read: the caller relays the exception's
+    /// message to the admin, and an upstream validator's text can quote what it was given.
     /// </summary>
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {
@@ -44,11 +45,12 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         var request = AdminRequest(HttpMethod.Get, url);
         var response = await _httpClient.SendAsync(request);
 
-        var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            ThrowUpstream(content, response.StatusCode);
+            throw UpstreamContract.FailureWithoutItsBody(response.StatusCode, ServiceName);
         }
+
+        var content = await response.Content.ReadAsStringAsync();
 
         return UpstreamContract.Deserialize<MapFileData[]>(content, response.StatusCode, ServiceName);
     }
@@ -86,7 +88,8 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
     /// <summary>
     /// A success whose body is empty or not the stored-file JSON throws with that success status. Admin-only, like its
-    /// siblings: an anonymous by-id lookup of a temporary row answers an empty 204, which is not a stored file.
+    /// siblings: an anonymous by-id lookup of a temporary row answers an empty 204, which is not a stored file. Because
+    /// the request carries the secret, an error body is not read — see <see cref="GetMapFiles"/>.
     /// </summary>
     public async Task<MapFileData> GetMapFile(string fileId)
     {
@@ -94,11 +97,12 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         var request = AdminRequest(HttpMethod.Get, url);
         var response = await _httpClient.SendAsync(request);
 
-        var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
-            ThrowUpstream(content, response.StatusCode);
+            throw UpstreamContract.FailureWithoutItsBody(response.StatusCode, ServiceName);
         }
+
+        var content = await response.Content.ReadAsStringAsync();
 
         return UpstreamContract.Deserialize<MapFileData>(content, response.StatusCode, ServiceName);
     }

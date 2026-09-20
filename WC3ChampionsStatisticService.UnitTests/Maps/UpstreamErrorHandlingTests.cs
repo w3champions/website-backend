@@ -118,6 +118,29 @@ public class UpstreamErrorHandlingTests
         Assert.That(file!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
     }
 
+    [Test]
+    public void UpdateServiceMapFileReads_EchoNothingOfTheUpstreamErrorBody()
+    {
+        // Both requests now carry x-admin-secret, so they fall under the same convention as the proof-carrying
+        // matchmaking calls: HttpRequestExceptionFilter relays exception.Message to the admin verbatim, and an
+        // upstream validator's text can quote what it was given. The status is kept; the body is not read.
+        const string echoed = "Invalid value for header x-admin-secret";
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, "/api/content/maps?mapId=7", HttpStatusCode.BadGateway, "{\"message\":\"" + echoed + "\"}")
+            .On(HttpMethod.Get, "/api/content/maps/f1", HttpStatusCode.Forbidden, "{\"message\":\"" + echoed + "\"}");
+        var client = new UpdateServiceClient(new ScriptedHttpHandler.Factory(handler));
+
+        var files = Assert.ThrowsAsync<HttpRequestException>(() => client.GetMapFiles(7));
+        var file = Assert.ThrowsAsync<HttpRequestException>(() => client.GetMapFile("f1"));
+
+        Assert.That(files!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+        Assert.That(file!.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        Assert.That(files.Message, Is.EqualTo("update-service answered 502"));
+        Assert.That(file.Message, Is.EqualTo("update-service answered 403"));
+        Assert.That(files.Message, Does.Not.Contain(echoed));
+        Assert.That(file.Message, Does.Not.Contain(echoed));
+    }
+
     private static readonly Dictionary<string, Func<MapsController, Task<IActionResult>>> ControllerActions = new()
     {
         ["CreateMap"] = c => c.CreateMap(new MapContract { Name = "x" }, "Admin#1"),
