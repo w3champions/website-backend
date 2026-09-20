@@ -148,7 +148,8 @@ public class TemporaryMapExpiryServiceTests : TemporaryMapExpirySweepTestBase
         var context = new Mock<IAdminJobContext>(MockBehavior.Strict);
         context.Setup(c => c.AddItems(2));
         context.Setup(c => c.Report(2, 0, It.Is<string>(m =>
-                m.Contains("deleted=1") && m.Contains("reclaimedOrphans=1") && m.Contains("deferred=0") && m.Contains("failed=0") && m.Contains("purgedSpoolFiles=0")), null))
+                m.Contains("deleted=1") && m.Contains("reclaimedOrphans=1") && m.Contains("protectedFiles=0") && m.Contains("deferred=0")
+                && m.Contains("failed=0") && m.Contains("purgedSpoolFiles=0")), null))
             .Returns(Task.CompletedTask);
 
         await new TemporaryMapExpiryJob(CreateSweep(handler)).RunAsync(context.Object, CancellationToken.None);

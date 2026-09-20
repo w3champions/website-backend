@@ -342,11 +342,12 @@ manual run queues behind an in-progress daily run rather than double-processing.
 The admin job runner has **no separate failure column** — `IAdminJobContext.Report(current, total,
 message)`'s `total` is "zero if unknown", not a failure count. The job reports
 `items = scanned + deleted` and puts everything else in the message:
-`scanned=<n> deleted=<n> reclaimedOrphans=<n> deferred=<n> purgedSpoolFiles=<n> failed=<n>`. The sweep's
+`scanned=<n> deleted=<n> reclaimedOrphans=<n> protectedFiles=<n> deferred=<n> purgedSpoolFiles=<n>
+failed=<n>`. The sweep's
 own per-item failures are also each logged individually as the run happens.
 
 **Sweep summary log line** (Information, once per run):
-`Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}`.
+`Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} protectedFiles={ProtectedFiles} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}`.
 A reclaim is additionally logged at Information as `ORPHAN_RECLAIMED {FileKey}: no temporary map claims
 it` (unclaimed path) or `ORPHAN_RECLAIMED {FileKey}: temporary map {MapId} says its file is deleted`
 (claimed by a `deleted` record). An orphan the *compensation* loop could not clean up immediately (a
@@ -355,6 +356,19 @@ update-service at {FileKey}` (Warning) at the time it happens — the next recon
 later, reclaims it through the strict by-path check above. When the reclaim cap was hit the run also logs
 `Temporary map reconciliation reclaimed the run's cap of {MaxReclaimsPerRun} files and deferred {Deferred}
 more candidates to the next run` (Error, once per run).
+
+**Protected files.** update-service accepts the by-path delete of an *unkeyed* legacy file under the
+temporary prefix and keeps it (a logged no-op 204). The sweep therefore re-probes the listing for one row
+after the preceding listed path before counting a reclaim; a file still listed under its own path is
+counted as `protectedFiles`, not `reclaimedOrphans`, and no `ORPHAN_RECLAIMED` line is written for it. It
+counts against `MaxReclaimsPerRun` like a reclaim, because it spent a delete attempt, so a volume full of
+them reaches the Deferred escalation instead of spinning silently. Each such path is named once per
+process at Warning (`update-service accepted the delete of {FileKey} and the file is still stored; not
+counted as reclaimed`, bounded at 500 distinct paths), and every run with any of them logs
+`Temporary map reconciliation deleted {ProtectedFiles} files update-service kept; they are not reclaimed
+and are attempted again next run` (Error, once per run). A probe that fails is that file's failure: the
+delete is idempotent, so the next run does both again, and this run counts the file as neither reclaimed
+nor protected.
 
 No metrics are emitted for the sweep — the summary log line is the operational signal.
 
