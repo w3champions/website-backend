@@ -73,6 +73,10 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     serverOptions.Limits.MaxRequestBodySize = 0x8000000; // 128 MiB
 });
 
+// The unit tests' LoopbackMvcHost mirrors this registration so that serialisation guards — notably the one pinning
+// mapProofHash off a map-file response — run through the formatter the app actually configures. The two are separate
+// call sites: a JSON formatter added here (AddNewtonsoftJson, a custom output formatter, changed naming or ignore
+// behaviour) must be added there too, or those guards stay green while the wire changes.
 builder.Services.AddControllers(c =>
 {
     c.Filters.Add<ValidationExceptionFilter>();
