@@ -612,4 +612,106 @@ public class TemporaryMapExpirySweepReconciliationPassTests : TemporaryMapExpiry
         Assert.That(errors.Count(l => l.Contains($"Deferred={report.Deferred}")), Is.EqualTo(1));
         Assert.That(errors.Count(l => l.Contains($"ProtectedFiles={expectedProtected}")), Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task ReconciliationPass_ACandidateWhoseProbeThrows_StillSpendsItsCapSlot()
+    {
+        // The cap bounds DELETE ATTEMPTS, not verified outcomes. A probe that throws leaves the file counted as
+        // neither reclaimed nor protected, so a cap gated on those two counters would never advance and an
+        // intermittently failing probe would let one run delete every candidate it walked.
+        var candidates = Enumerable.Range(1, TemporaryMapLimits.MaxReclaimsPerRun + 1)
+            .Select(i => $"W3Champions/CustomGames/att{i:D2}-{i:D8}.w3x").ToArray();
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, TransportFails())
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, candidates))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun),
+            "the run's delete blast radius stays bounded although nothing could be verified");
+        Assert.That(report.DeleteAttempts, Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun));
+        Assert.That(report.Failed, Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun), "every attempt's probe failed");
+        Assert.That(report.Deferred, Is.EqualTo(1), "the candidate past the cap; deferring is not a failure");
+        Assert.That(report.ReclaimedOrphans, Is.Zero);
+        Assert.That(report.ProtectedFiles, Is.Zero);
+    }
+
+    [Test]
+    public async Task ReconciliationPass_ACandidateWhoseDeleteThrows_StillSpendsItsCapSlot()
+    {
+        // A delete that throws may still have reached the volume — an HttpClient timeout says nothing about what the
+        // server did — so the attempt is spent before the call, not after it returns.
+        var candidates = Enumerable.Range(1, TemporaryMapLimits.MaxReclaimsPerRun + 1)
+            .Select(i => $"W3Champions/CustomGames/thr{i:D2}-{i:D8}.w3x").ToArray();
+        var handler = new ScriptedHttpHandler()
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, candidates))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(IsUsDelete, TimesOut());
+
+        var report = await CreateSweep(handler).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(handler.CountRequests(HttpMethod.Delete, UsFile), Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun));
+        Assert.That(report.DeleteAttempts, Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun));
+        Assert.That(report.Failed, Is.EqualTo(TemporaryMapLimits.MaxReclaimsPerRun));
+        Assert.That(report.Deferred, Is.EqualTo(1));
+        Assert.That(report.ReclaimedOrphans, Is.Zero);
+        Assert.That(report.ProtectedFiles, Is.Zero);
+        Assert.That(handler.CountRequests(HttpMethod.Get, Listing), Is.EqualTo(1), "a delete that threw is never verified");
+    }
+
+    [Test]
+    public async Task ReconciliationPass_AProbeAnsweringAPathBelowThisOne_IsInconclusive_NotAReclaim()
+    {
+        // update-service recomputes its olderThanHours cutoff per request, so a file just under the age bound when
+        // the page was listed can age into the window before the probe and sort between the bound and this path.
+        // The probe then learned nothing about this path: counting it reclaimed is the very lie this round removes.
+        using var logs = new LogCapture();
+        const string orphan = "W3Champions/CustomGames/aged-77777777.w3x";
+        const string agedIn = "W3Champions/CustomGames/aged-66666666.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, StillStored(agedIn))
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, orphan))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+
+        var report = await CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>()).RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(report.ReclaimedOrphans, Is.Zero, "a row below this path says nothing about it");
+        Assert.That(report.ProtectedFiles, Is.Zero, "and must not page an operator about a file update-service keeps");
+        Assert.That(report.Failed, Is.EqualTo(1));
+        Assert.That(report.DeleteAttempts, Is.EqualTo(1));
+        Assert.That(logs.Lines().Any(l => l.Contains("ORPHAN_RECLAIMED")), Is.False);
+        Assert.That(logs.Lines().Any(l => l.StartsWith("Error", StringComparison.Ordinal)), Is.False,
+            "the protected-file escalation is for files update-service keeps, not for a drift window");
+        var warnings = logs.Lines().Where(l => l.StartsWith("Warning", StringComparison.Ordinal)).ToArray();
+        Assert.That(warnings, Has.Length.EqualTo(1));
+        Assert.That(warnings[0], Does.Contain(orphan).And.Contain("could not be verified"));
+    }
+
+    [Test]
+    public async Task ReconciliationPass_AnInconclusiveProbe_IsWarnedAgainOnTheNextRun()
+    {
+        // Unlike a protected file, an unverified reclaim never enters the once-per-path warned set: it is a
+        // transient drift window, so every run that meets it says so.
+        using var logs = new LogCapture();
+        const string orphan = "W3Champions/CustomGames/aged-99999999.w3x";
+        const string agedIn = "W3Champions/CustomGames/aged-88888888.w3x";
+        var handler = new ScriptedHttpHandler()
+            .On(IsReclaimProbe, StillStored(agedIn))
+            .On(HttpMethod.Get, Expired, HttpStatusCode.OK, Items())
+            .On(HttpMethod.Get, Listing, HttpStatusCode.OK, Files(null, orphan))
+            .On(HttpMethod.Get, ByPath, HttpStatusCode.NotFound)
+            .On(HttpMethod.Delete, UsFile, HttpStatusCode.NoContent, "");
+        var sweep = CreateSweep(handler, logs.CreateLogger<TemporaryMapExpirySweep>());
+
+        await sweep.RunOnceAsync(Now, CancellationToken.None);
+        await sweep.RunOnceAsync(Now, CancellationToken.None);
+
+        Assert.That(logs.Lines().Count(l => l.StartsWith("Warning", StringComparison.Ordinal) && l.Contains(orphan)), Is.EqualTo(2));
+    }
 }

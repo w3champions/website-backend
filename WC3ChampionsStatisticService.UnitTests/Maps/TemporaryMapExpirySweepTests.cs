@@ -107,7 +107,8 @@ public class TemporaryMapExpirySweepTests : TemporaryMapExpirySweepTestBase
         var summary = logs.Lines().Single(l => l.Contains("Temporary map sweep finished"));
         Assert.That(summary, Does.StartWith("Information"));
         Assert.That(summary, Does.Contain("Scanned=1").And.Contain("Deleted=1").And.Contain("ReclaimedOrphans=1")
-            .And.Contain("ProtectedFiles=0").And.Contain("Deferred=0").And.Contain("Failed=0").And.Contain("PurgedSpoolFiles=0"));
+            .And.Contain("ProtectedFiles=0").And.Contain("DeleteAttempts=1").And.Contain("Deferred=0").And.Contain("Failed=0")
+            .And.Contain("PurgedSpoolFiles=0"));
         Assert.That(logs.Lines().Single(l => l.Contains("ORPHAN_RECLAIMED")), Does.Contain(FileB));
     }
 

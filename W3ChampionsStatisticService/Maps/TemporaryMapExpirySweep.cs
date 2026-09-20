@@ -35,8 +35,15 @@ public class TemporaryMapSweepReport
     public int ProtectedFiles { get; internal set; }
 
     /// <summary>
-    /// Reclaim candidates left for the next run because <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> files had
-    /// already been reclaimed. Not failures: nothing went wrong with them, they are merely queued.
+    /// Reclaim deletes this run sent, counted the moment one is issued and whatever it or its verification then does.
+    /// This — not <see cref="ReclaimedOrphans"/> plus <see cref="ProtectedFiles"/>, which count only the attempts that
+    /// resolved — is the per-run blast radius <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> bounds.
+    /// </summary>
+    public int DeleteAttempts { get; internal set; }
+
+    /// <summary>
+    /// Reclaim candidates left for the next run because <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> delete
+    /// attempts had already been spent. Not failures: nothing went wrong with them, they are merely queued.
     /// </summary>
     public int Deferred { get; internal set; }
 
@@ -133,8 +140,8 @@ public class TemporaryMapExpirySweep(
             await RunReconciliationPass(report, cancellationToken);
 
             _logger.LogInformation(
-                "Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} protectedFiles={ProtectedFiles} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}",
-                report.Scanned, report.Deleted, report.ReclaimedOrphans, report.ProtectedFiles, report.Deferred, report.Failed, report.PurgedSpoolFiles);
+                "Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} protectedFiles={ProtectedFiles} deleteAttempts={DeleteAttempts} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}",
+                report.Scanned, report.Deleted, report.ReclaimedOrphans, report.ProtectedFiles, report.DeleteAttempts, report.Deferred, report.Failed, report.PurgedSpoolFiles);
 
             return report;
         }
@@ -306,7 +313,7 @@ public class TemporaryMapExpirySweep(
         {
             // Loud on purpose: a backlog this size is either an outage's leftovers, which drain at the cap per run, or a
             // by-path regression calling claimed files unclaimed, which the cap has bounded. Either way a human looks.
-            _logger.LogError("Temporary map reconciliation reclaimed the run's cap of {MaxReclaimsPerRun} files and deferred {Deferred} more candidates to the next run",
+            _logger.LogError("Temporary map reconciliation spent the run's cap of {MaxReclaimsPerRun} delete attempts and deferred {Deferred} more candidates to the next run",
                 TemporaryMapLimits.MaxReclaimsPerRun, report.Deferred);
         }
     }
@@ -410,8 +417,8 @@ public class TemporaryMapExpirySweep(
     /// file is deleted and names this very path; anything else — another fileState, a deleted record that names
     /// another path, a 404 that is not the empty object, a timeout, a transport error — is this file's failure, with no
     /// delete, retried next run. Probe and delete happen under the fileKey lock: probed before an upload's record
-    /// write, the answer would be "unclaimed" and the delete would take the upload's bytes. Once the run has reclaimed
-    /// <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> files, a further candidate is deferred instead.
+    /// write, the answer would be "unclaimed" and the delete would take the upload's bytes. Once the run has spent
+    /// <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> delete attempts, a further candidate is deferred instead.
     /// </summary>
     private async Task ReconcileFile(string filePath, string bound, TemporaryMapSweepReport report, CancellationToken cancellationToken)
     {
@@ -480,17 +487,28 @@ public class TemporaryMapExpirySweep(
     /// <summary>
     /// Deletes the file unless this run has already spent <see cref="TemporaryMapLimits.MaxReclaimsPerRun"/> delete
     /// attempts, in which case the candidate is counted as deferred and kept; true only once the file is verifiably
-    /// gone. A protected file consumed an attempt, so it counts against that cap as a reclaim does: a directory full
-    /// of protected files reaches the Deferred escalation instead of spinning silently.
+    /// gone. The cap is spent the moment a delete is issued, before anything is known about it — a verification that
+    /// throws must not hand the run a free attempt, or an upstream that deletes but cannot list would let one run
+    /// delete every candidate it walked. <see cref="TemporaryMapSweepReport.ReclaimedOrphans"/> and
+    /// <see cref="TemporaryMapSweepReport.ProtectedFiles"/> are then the honest split of the attempts that resolved.
     /// <para>
     /// update-service accepts the by-path delete of an UNKEYED legacy row under the temporary prefix and keeps the
     /// file, so a non-throwing delete alone proves nothing. The re-probe is the listing this pass already walks,
     /// asked for ONE row after <paramref name="bound"/> — the greatest listed path ordinally below
-    /// <paramref name="filePath"/>, or the page's own cursor. It is exact because update-service answers rows
-    /// strictly greater than the cursor, ordinal-ascending, and its <c>olderThanHours</c> filter holds the candidate
-    /// set still while the run walks it: a file created or replaced during the run is younger than
-    /// <see cref="TemporaryMapLimits.OrphanMinAgeHours"/> and cannot appear between the bound and this path. So the
-    /// single returned row equals <paramref name="filePath"/> exactly while the file is still stored.
+    /// <paramref name="filePath"/>, or the page's own cursor — because update-service answers rows strictly greater
+    /// than the cursor, ordinal-ascending. For every file present when the page was listed the answer is exact: the
+    /// row is this path iff it is still stored. It is only conservative for a file that AGES IN meanwhile —
+    /// update-service recomputes its <c>olderThanHours</c> cutoff per request, so a file just under
+    /// <see cref="TemporaryMapLimits.OrphanMinAgeHours"/> at page time can become listable mid-run and sort between
+    /// the bound and this path. That row proves nothing here, so it resolves as
+    /// <see cref="ReclaimOutcome.Unverified"/> rather than as a reclaim, and the next run walks it as an ordinary
+    /// row. The residual is an outside writer touching these bytes mid-run, which no probe can see.
+    /// </para>
+    /// <para>
+    /// The probe stays INSIDE the fileKey lock, although it is read-only: the lock is what makes "nothing wrote at
+    /// this key between the delete and the probe" true, and the whole verification rests on that. The cost is one
+    /// extra upstream round trip on a lock the delete already held for one, and only against an upload of this very
+    /// fileKey.
     /// </para>
     /// <para>
     /// A throwing probe is this file's failure, handled by <see cref="ReconcileFile"/>: the delete is idempotent
@@ -499,31 +517,65 @@ public class TemporaryMapExpirySweep(
     /// </summary>
     private async Task<bool> TryReclaim(string filePath, string bound, TemporaryMapSweepReport report, CancellationToken cancellationToken)
     {
-        if (report.ReclaimedOrphans + report.ProtectedFiles >= TemporaryMapLimits.MaxReclaimsPerRun)
+        if (report.DeleteAttempts >= TemporaryMapLimits.MaxReclaimsPerRun)
         {
             report.Deferred++;
             return false;
         }
 
+        // Spent whatever happens next, including an exception out of the delete or the verification below.
+        report.DeleteAttempts++;
         await _updateServiceClient.DeleteMapFileByPathAsync(filePath, cancellationToken);
-        if (await IsStillStoredAsync(filePath, bound, cancellationToken))
+        switch (await VerifyReclaimAsync(filePath, bound, cancellationToken))
         {
-            report.ProtectedFiles++;
-            WarnProtectedOnce(filePath);
-            return false;
+            case ReclaimOutcome.Kept:
+                report.ProtectedFiles++;
+                WarnProtectedOnce(filePath);
+                return false;
+            case ReclaimOutcome.Unverified:
+                // Not a protected file: the escalation that counts those pages an operator about bytes update-service
+                // keeps, and a drift window is neither that nor worth the once-per-path warning's single shot.
+                report.Failed++;
+                _logger.LogWarning("The reclaim of {FileKey} could not be verified: the listing answered a path that aged into the window since this page; not counted as reclaimed, retrying next run",
+                    LoggablePath(filePath));
+                return false;
+            default:
+                report.ReclaimedOrphans++;
+                return true;
         }
-
-        report.ReclaimedOrphans++;
-        return true;
     }
 
-    /// <summary>The one row after <paramref name="bound"/>, and whether it is <paramref name="filePath"/> itself.</summary>
-    private async Task<bool> IsStillStoredAsync(string filePath, string bound, CancellationToken cancellationToken)
+    /// <summary>What the one-row re-probe after a reclaim delete established about the path.</summary>
+    private enum ReclaimOutcome
+    {
+        /// <summary>No row, or the first row after the bound sorts above the path: update-service removed the file.</summary>
+        Gone,
+
+        /// <summary>The path itself came back: update-service accepted the delete and kept the file.</summary>
+        Kept,
+
+        /// <summary>A row below the path, which aged into the window since the page was listed and settles nothing.</summary>
+        Unverified,
+    }
+
+    /// <summary>
+    /// What the one row after <paramref name="bound"/> establishes about <paramref name="filePath"/>. Three-way on
+    /// purpose: a row ordinally BELOW the path is a file that aged into the <c>olderThanHours</c> window since this
+    /// page was listed, which proves nothing either way, and reading it as a deletion is what would put a kept file
+    /// in <see cref="TemporaryMapSweepReport.ReclaimedOrphans"/>.
+    /// </summary>
+    private async Task<ReclaimOutcome> VerifyReclaimAsync(string filePath, string bound, CancellationToken cancellationToken)
     {
         var page = await _updateServiceClient.ListMapFilesAsync(
             TemporaryMapLimits.TempMapPathPrefix, TemporaryMapLimits.OrphanMinAgeHours, bound, 1, cancellationToken);
 
-        return page.Files.Count > 0 && string.Equals(page.Files[0].FilePath, filePath, StringComparison.Ordinal);
+        if (page.Files.Count == 0)
+        {
+            return ReclaimOutcome.Gone;
+        }
+
+        var order = string.CompareOrdinal(page.Files[0].FilePath, filePath);
+        return order == 0 ? ReclaimOutcome.Kept : order > 0 ? ReclaimOutcome.Gone : ReclaimOutcome.Unverified;
     }
 
     /// <summary>

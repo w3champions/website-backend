@@ -316,9 +316,10 @@ rather than double-processing), preceded by a spool cleanup:
    claiming record is `present`; anything else (another fileState, a `deleted` record naming a *different*
    path, a non-empty-body 404, a transport failure) is that file's failure — no delete, retried next run.
    The probe and the delete for one file also run under the per-fileKey lock. **At most
-   `MaxReclaimsPerRun` (25) files are reclaimed per run**: once that many are gone, every further candidate
-   is still examined but counted as *deferred* rather than deleted, and the pass ends with one Error line
-   naming the cap and the deferred count. This is a rate bound, not a skip — nothing is dropped, a genuine
+   `MaxReclaimsPerRun` (25) reclaim deletes are sent per run**: the cap counts delete *attempts*, spent the
+   moment one is issued and whatever its verification then reports, so a verification that fails cannot hand
+   the run a free attempt. Once that many are spent, every further candidate is still examined but counted as
+   *deferred* rather than deleted, and the pass ends with one Error line naming the cap and the deferred count. This is a rate bound, not a skip — nothing is dropped, a genuine
    backlog drains at 25 per run, and a by-path regression that called every file unclaimed could take at
    most 25 files before the Error line brings a human. (Deferred candidates are not failures and are not in
    `failed`.)
@@ -342,33 +343,43 @@ manual run queues behind an in-progress daily run rather than double-processing.
 The admin job runner has **no separate failure column** — `IAdminJobContext.Report(current, total,
 message)`'s `total` is "zero if unknown", not a failure count. The job reports
 `items = scanned + deleted` and puts everything else in the message:
-`scanned=<n> deleted=<n> reclaimedOrphans=<n> protectedFiles=<n> deferred=<n> purgedSpoolFiles=<n>
-failed=<n>`. The sweep's
-own per-item failures are also each logged individually as the run happens.
+`scanned=<n> deleted=<n> reclaimedOrphans=<n> protectedFiles=<n> deleteAttempts=<n> deferred=<n>`
+followed by `purgedSpoolFiles=<n> failed=<n>`. The sweep's own per-item failures are also each logged
+individually as the run happens.
 
 **Sweep summary log line** (Information, once per run):
-`Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} protectedFiles={ProtectedFiles} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}`.
+`Temporary map sweep finished: scanned={Scanned} deleted={Deleted} reclaimedOrphans={ReclaimedOrphans} protectedFiles={ProtectedFiles} deleteAttempts={DeleteAttempts} deferred={Deferred} failed={Failed} purgedSpoolFiles={PurgedSpoolFiles}`.
 A reclaim is additionally logged at Information as `ORPHAN_RECLAIMED {FileKey}: no temporary map claims
 it` (unclaimed path) or `ORPHAN_RECLAIMED {FileKey}: temporary map {MapId} says its file is deleted`
 (claimed by a `deleted` record). An orphan the *compensation* loop could not clean up immediately (a
 failed create/restore whose delete retries all failed) is logged as `ORPHAN temporary map file left in
 update-service at {FileKey}` (Warning) at the time it happens — the next reconciliation pass, at least 24h
 later, reclaims it through the strict by-path check above. When the reclaim cap was hit the run also logs
-`Temporary map reconciliation reclaimed the run's cap of {MaxReclaimsPerRun} files and deferred {Deferred}
-more candidates to the next run` (Error, once per run).
+`Temporary map reconciliation spent the run's cap of {MaxReclaimsPerRun} delete attempts and deferred
+{Deferred} more candidates to the next run` (Error, once per run).
 
 **Protected files.** update-service accepts the by-path delete of an *unkeyed* legacy file under the
 temporary prefix and keeps it (a logged no-op 204). The sweep therefore re-probes the listing for one row
 after the preceding listed path before counting a reclaim; a file still listed under its own path is
 counted as `protectedFiles`, not `reclaimedOrphans`, and no `ORPHAN_RECLAIMED` line is written for it. It
 counts against `MaxReclaimsPerRun` like a reclaim, because it spent a delete attempt, so a volume full of
-them reaches the Deferred escalation instead of spinning silently. Each such path is named once per
+them reaches the Deferred escalation instead of spinning silently.
+
+The probe is exact for every file present when the page was listed. It is deliberately *conservative* for
+one that ages in: update-service recomputes its `olderThanHours` cutoff per request, so a file just under
+24h old at page time can become listable mid-run and sort between the bound and this path. The probe then
+answers a row ordinally *below* the path, which settles nothing about it — so the reclaim is counted as
+neither reclaimed nor protected, `failed` is incremented and the run logs `The reclaim of {FileKey} could
+not be verified: the listing answered a path that aged into the window since this page; not counted as
+reclaimed, retrying next run` (Warning, every run that meets it — this is a transient window, so unlike a
+protected path it never enters the once-per-path warned set and never feeds the protected-file
+escalation). Each such path is named once per
 process at Warning (`update-service accepted the delete of {FileKey} and the file is still stored; not
 counted as reclaimed`, bounded at 500 distinct paths), and every run with any of them logs
 `Temporary map reconciliation deleted {ProtectedFiles} files update-service kept; they are not reclaimed
-and are attempted again next run` (Error, once per run). A probe that fails is that file's failure: the
-delete is idempotent, so the next run does both again, and this run counts the file as neither reclaimed
-nor protected.
+and are attempted again next run` (Error, once per run). A probe that throws is that file's failure too:
+the delete is idempotent, so the next run does both again, and this run counts the file as neither
+reclaimed nor protected — but its delete attempt is spent, so it still counts against the cap.
 
 No metrics are emitted for the sweep — the summary log line is the operational signal.
 
