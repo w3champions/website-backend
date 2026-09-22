@@ -339,3 +339,6 @@ ASALocalRun/
 # Real test/prod env files (created locally with real secrets) are ignored so they never get committed.
 environments/*.env
 !environments/local-compose.env
+
+# Local NuGet cache used by dotnet-docker.sh (no dotnet SDK on some dev hosts).
+.nuget-docker/

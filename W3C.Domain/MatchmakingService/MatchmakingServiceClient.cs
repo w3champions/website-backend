@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -111,6 +112,50 @@ public class MatchmakingServiceClient
         }
 
         await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<CanceledMatchesResponse> GetCanceledMatches(CanceledMatchesGetRequest req)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/canceled-matches?itemsPerPage={req.ItemsPerPage}";
+
+        if (req.Cursor != null)
+        {
+            url += $"&cursor={HttpUtility.UrlEncode(req.Cursor)}";
+        }
+
+        if (req.GameMode.HasValue)
+        {
+            url += $"&gameMode={(int)req.GameMode.Value}";
+        }
+
+        if (!string.IsNullOrEmpty(req.BattleTag))
+        {
+            url += $"&battleTag={HttpUtility.UrlEncode(req.BattleTag)}";
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<CanceledMatchesResponse>(response);
+        }
+
+        var errorContent = await response.Content.ReadAsStringAsync();
+        Log.Error("Matchmaking service returned {StatusCode} fetching canceled matches (itemsPerPage {ItemsPerPage}, gameMode {GameMode}, cursor {HasCursor}): {Content}",
+            response.StatusCode, req.ItemsPerPage, req.GameMode, req.Cursor != null, errorContent);
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            // Matchmaking validates the game mode and the cursor, so a 400 is the
+            // caller's error - a stale or tampered cursor, or an unknown mode. Passing
+            // it back as a 502 would blame the upstream for a bad request.
+            // HttpRequestExceptionFilter turns this back into a 400 response.
+            throw new HttpRequestException(errorContent, null, HttpStatusCode.BadRequest);
+        }
+
         return null;
     }
 
@@ -761,6 +806,32 @@ public class PlayerWarningsGetRequest
     public int ItemsPerPage { get; set; } = 25;
     public string BattleTag { get; set; }
     public string Status { get; set; }
+}
+
+public class CanceledMatchesGetRequest
+{
+    public int ItemsPerPage { get; set; } = 25;
+
+    /// <summary>
+    /// Opaque cursor from a previous response's <c>nextCursor</c>. Null for the first
+    /// page. It is signed and bound to the filter it was issued under, so it must not
+    /// be reused after changing <see cref="GameMode"/> or <see cref="BattleTag"/> -
+    /// matchmaking rejects that with a 400 rather than silently skipping rows.
+    /// </summary>
+    public string Cursor { get; set; }
+
+    /// <summary>Null means every game mode. Not sent upstream when null.</summary>
+    public GameMode? GameMode { get; set; }
+
+    public string BattleTag { get; set; }
+}
+
+public class CanceledMatchesResponse
+{
+    public List<Match> matches { get; set; }
+
+    /// <summary>Cursor for the following page, or null when this was the last one.</summary>
+    public string nextCursor { get; set; }
 }
 
 public class PlayerWarningsResponse
