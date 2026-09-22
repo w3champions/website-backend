@@ -97,17 +97,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             ServerNodeName = r.ServerNodeName,
             CreatedAt = r.CreatedAt,
             HasExplicitReport = r.HasExplicitReport,
-            Players = r.Players.Select(p => new LagReportPlayerSummary
-            {
-                BattleTag = p.BattleTag,
-                IsExplicit = p.IsExplicit,
-                ConnectionType = p.ConnectionType,
-                ProxyName = p.ProxyName,
-                IssueCategories = p.IssueCategories,
-                ConnectionIssueTags = p.ConnectionIssueTags ?? [],
-                LagEventCount = p.Diagnostics?.LagEvents?.Count ?? 0,
-                ConnectionEventCount = p.Diagnostics?.ConnectionEvents?.Count ?? 0,
-            }).ToList(),
+            Players = r.Players.Select(MapToSummary).ToList(),
         }).ToList();
 
         return Ok(new { Items = listItems, Total = total });
@@ -177,6 +167,24 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
 
         return null;
     }
+
+    /// <summary>
+    /// Projects a stored player onto the admin list's summary shape. Extracted as its own
+    /// testable seam for the same reason as <see cref="MapToPlayer"/>: it is the exact
+    /// transformation GetReports applies to every player in the response.
+    /// </summary>
+    internal static LagReportPlayerSummary MapToSummary(LagReportPlayer p) => new()
+    {
+        BattleTag = p.BattleTag,
+        IsExplicit = p.IsExplicit,
+        ConnectionType = p.ConnectionType,
+        ProxyName = p.ProxyName,
+        IssueCategories = p.IssueCategories,
+        ConnectionIssueTags = p.ConnectionIssueTags ?? [],
+        LagEventCount = p.Diagnostics?.LagEvents?.Count ?? 0,
+        ConnectionEventCount = p.Diagnostics?.ConnectionEvents?.Count ?? 0,
+        HostStallCount = p.Diagnostics?.HostStalls?.Count ?? 0,
+    };
 
     internal static LagReportPlayer MapToPlayer(LagReportSubmissionDto dto, string battleTag)
     {
