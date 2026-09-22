@@ -173,6 +173,9 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         // The list view only needs the LagEvents/ConnectionEvents counts, never the
         // heavy per-player MTR/ping arrays. Excluding them avoids deserializing (and
         // then discarding) multi-megabyte diagnostics payloads on every page.
+        // HostStalls is deliberately NOT excluded: it is the same size class as the
+        // event arrays that stay (same 200-entry cap, six scalar fields, no per-hop
+        // nesting), and it is the one diagnostic the list itself wants to surface.
         var projection = Builders<LagReport>.Projection
             .Exclude("Players.Diagnostics.TargetMtr")
             .Exclude("Players.Diagnostics.AllServerBaselines")

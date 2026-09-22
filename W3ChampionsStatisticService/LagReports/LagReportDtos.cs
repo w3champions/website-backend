@@ -106,6 +106,37 @@ public class DiagnosticsDataDto
 
     [JsonPropertyName("connection_events")]
     public List<ConnectionEventDto> ConnectionEvents { get; set; } = [];
+
+    [JsonPropertyName("host_stalls")]
+    public List<HostStallDto> HostStalls { get; set; } = [];
+}
+
+public class HostStallDto
+{
+    [JsonPropertyName("timestamp")]
+    public DateTimeOffset Timestamp { get; set; }
+
+    [JsonPropertyName("game_time_offset")]
+    public long GameTimeOffsetMs { get; set; }
+
+    [JsonPropertyName("stall_ms")]
+    public long StallMs { get; set; }
+
+    [JsonPropertyName("players_total")]
+    public int PlayersTotal { get; set; }
+
+    [JsonPropertyName("players_flagged")]
+    public int PlayersFlagged { get; set; }
+
+    /// <summary>
+    /// What the node did about the stall. Deliberately a plain string and NOT an enum:
+    /// <see cref="JsonStringEnumConverter"/> (as used on <see cref="ConnectionEventDto.EventType"/>)
+    /// throws on an unknown member, and [FromBody] turns that throw into a 400 that rejects the
+    /// WHOLE submission — one new outcome value from a newer node would silently destroy every
+    /// report it touches, with no client-side retry. A string records it verbatim instead.
+    /// </summary>
+    [JsonPropertyName("outcome")]
+    public string Outcome { get; set; }
 }
 
 public class LagEventDto

@@ -24,6 +24,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
     private const int MaxReverseMtrEntries = 500;
     private const int MaxPingHistoryEntries = 5000;
     private const int MaxConnectionEvents = 200;
+    private const int MaxHostStalls = 200;
     private const int MaxAnnotations = 200;
     private const int MaxIssueCategories = 20;
     private const int MaxTagsPerReport = 20;
@@ -138,6 +139,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         if ((diag.ReverseMtr?.Count ?? 0) > MaxReverseMtrEntries) return "Too many reverse_mtr";
         if ((diag.PingHistory?.Count ?? 0) > MaxPingHistoryEntries) return "Too many ping_history";
         if ((diag.ConnectionEvents?.Count ?? 0) > MaxConnectionEvents) return "Too many connection_events";
+        if ((diag.HostStalls?.Count ?? 0) > MaxHostStalls) return "Too many host_stalls";
         if ((dto.Annotations?.Count ?? 0) > MaxAnnotations) return "Too many annotations";
         if ((dto.Categories?.Count ?? 0) > MaxIssueCategories) return "Too many categories";
         if ((dto.ConnectionIssueTags?.Count ?? 0) > MaxTagsPerReport) return "Too many tags";
@@ -165,6 +167,12 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         foreach (var lagEvent in diag.LagEvents ?? [])
         {
             if (lagEvent.Annotation?.Length > MaxAnnotationTextLength) return "Lag event annotation too long";
+        }
+        // Outcome is an open string (see HostStallDto.Outcome), so it needs the same length
+        // bound the other free-form strings get — the array cap alone still admits 200 × huge.
+        foreach (var hostStall in diag.HostStalls ?? [])
+        {
+            if (hostStall.Outcome?.Length > MaxShortStringLength) return "host_stall outcome too long";
         }
 
         return null;
@@ -252,6 +260,15 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
                     GameTimeOffsetMs = c.GameTimeOffsetMs,
                     EventType = c.EventType,
                     DurationMs = c.DurationMs,
+                }).ToList(),
+                HostStalls = (diag.HostStalls ?? []).Select(s => new HostStallData
+                {
+                    Timestamp = s.Timestamp,
+                    GameTimeOffsetMs = s.GameTimeOffsetMs,
+                    StallMs = s.StallMs,
+                    PlayersTotal = s.PlayersTotal,
+                    PlayersFlagged = s.PlayersFlagged,
+                    Outcome = s.Outcome,
                 }).ToList(),
             },
         };
