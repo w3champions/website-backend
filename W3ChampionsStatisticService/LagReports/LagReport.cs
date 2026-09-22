@@ -136,6 +136,41 @@ public class PlayerDiagnostics
 
     /// <summary>Connection events: reconnects and disconnects.</summary>
     public List<ConnectionEventData> ConnectionEvents { get; set; } = [];
+
+    /// <summary>Stalls the hosting flo-node detected in itself — see <see cref="HostStallData"/>.</summary>
+    public List<HostStallData> HostStalls { get; set; } = [];
+}
+
+/// <summary>
+/// A stall the hosting flo-node detected in itself: its own task was descheduled and lost
+/// wall time. Reported by the node (via flo-client and the launcher), not measured by the
+/// client, so it is the same for every player in the game — it identifies a bad node, not a
+/// bad connection.
+/// </summary>
+public class HostStallData
+{
+    [BsonRepresentation(BsonType.Array)]
+    public DateTimeOffset Timestamp { get; set; }
+
+    /// <summary>Milliseconds since game start.</summary>
+    public long GameTimeOffsetMs { get; set; }
+
+    /// <summary>How much wall time the node lost while descheduled (ms).</summary>
+    public long StallMs { get; set; }
+
+    /// <summary>Players in the game when the stall was detected.</summary>
+    public int PlayersTotal { get; set; }
+
+    /// <summary>How many of those players the node would otherwise have blamed for the lag.</summary>
+    public int PlayersFlagged { get; set; }
+
+    /// <summary>
+    /// What the node did about the stall. Stored as a free-form string and NOT an enum on
+    /// purpose: a newer node may emit an outcome this build has never heard of, and an enum
+    /// would make that unknown value reject the entire submission instead of recording it.
+    /// See <see cref="HostStallDto.Outcome"/>.
+    /// </summary>
+    public string Outcome { get; set; }
 }
 
 /// <summary>A !lag event: the moment the player entered the command.</summary>
