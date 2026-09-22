@@ -12,6 +12,7 @@ namespace W3ChampionsStatisticService.LagReports;
 [Trace]
 public class LagReportMatchFinishedHandler(
     LagReportRepository lagReportRepository,
+    FloGameLeaveRepository floGameLeaveRepository,
     IFloStatsService floStatsService
 ) : IMatchFinishedReadModelHandler
 {
@@ -23,6 +24,7 @@ public class LagReportMatchFinishedHandler(
             return;
         }
 
-        await floStatsService.FetchAndStoreIfNeeded(floGameId.Value, lagReportRepository);
+        await floStatsService.FetchAndStoreIfNeeded(
+            floGameId.Value, lagReportRepository, floGameLeaveRepository, EFloLeaveCaptureTrigger.MatchFinished);
     }
 }
