@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using W3ChampionsStatisticService.Services.Tracing;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -23,7 +24,9 @@ public class W3CAuthenticationService : IW3CAuthenticationService
 
 public interface IW3CAuthenticationService
 {
-    W3CUserAuthenticationDto GetUserByToken(string jwt, bool validateLifetime);
+    // [NoTrace]: the service is an interface proxy, so TracingInterceptor reads parameter attributes here; the raw
+    // bearer JWT must never become a "param.jwt" activity tag.
+    W3CUserAuthenticationDto GetUserByToken([NoTrace] string jwt, bool validateLifetime);
 }
 
 public class W3CUserAuthenticationDto

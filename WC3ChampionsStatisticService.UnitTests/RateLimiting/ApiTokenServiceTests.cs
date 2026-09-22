@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -54,6 +55,41 @@ public class ApiTokenServiceTests
         Assert.That(result.Name, Is.EqualTo("Test Token"));
         _repositoryMock.Verify(r => r.UpdateLastUsed("valid-token"), Times.Once);
     }
+
+    [Test]
+    public async Task ValidateToken_WithUnknownToken_LogsAFingerprint_NeverTheRawToken()
+    {
+        // Known-answer vector: the first 12 lowercase hex characters of SHA-256("unknown-api-token-value").
+        const string rawToken = "unknown-api-token-value";
+        const string fingerprint = "e533e0444f1f";
+        _repositoryMock.Setup(r => r.GetByToken(rawToken)).ReturnsAsync((ApiToken)null);
+
+        var result = await _service.ValidateToken(rawToken, "192.168.1.1");
+
+        Assert.That(result, Is.Null);
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString() == "Invalid API token attempted: " + fingerprint),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+            Times.Once);
+        // Neither the rendered message nor any structured log property may carry the credential.
+        _loggerMock.Verify(
+            x => x.Log(
+                It.IsAny<LogLevel>(),
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => CarriesText(state, rawToken)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+            Times.Never);
+    }
+
+    private static bool CarriesText(object state, string text) =>
+        state.ToString()!.Contains(text)
+        || (state is IEnumerable<KeyValuePair<string, object>> properties
+            && properties.Any(property => property.Value?.ToString()?.Contains(text) == true));
 
     [Test]
     public async Task ValidateToken_WithInactiveToken_ReturnsNull()
