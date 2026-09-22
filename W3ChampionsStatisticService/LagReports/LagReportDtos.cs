@@ -323,4 +323,5 @@ public class LagReportPlayerSummary
     public List<ELagReportTag> ConnectionIssueTags { get; set; } = [];
     public int LagEventCount { get; set; }
     public int ConnectionEventCount { get; set; }
+    public int HostStallCount { get; set; }
 }
