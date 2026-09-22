@@ -81,7 +81,7 @@ public class PlayerTests : IntegrationTestBase
     {
         var playerRepository = new PlayerRepository(MongoClient);
         var personalSettingsRepository = new PersonalSettingsRepository(MongoClient);
-        var playerService = new PlayerService(playerRepository, CreateTestCache<List<MmrRank>>(), personalSettingsProvider);
+        var playerService = new PlayerService(playerRepository, CreateTestCache<List<MmrRank>>(), personalSettingsProvider, new RankRepository(MongoClient, personalSettingsProvider));
 
         var player1 = new PersonalSetting("ThunderHorn#2481");
         var playerStats = PlayerOverallStats.Create("ThunderHorn#2481");
@@ -545,7 +545,7 @@ public class PlayerTests : IntegrationTestBase
     {
         // Arrange
         var playerRepository = new PlayerRepository(MongoClient);
-        var playerService = new PlayerService(playerRepository, CreateTestCache<List<MmrRank>>(), personalSettingsProvider);
+        var playerService = new PlayerService(playerRepository, CreateTestCache<List<MmrRank>>(), personalSettingsProvider, new RankRepository(MongoClient, personalSettingsProvider));
 
         // Setup test data - 3 players with different MMRs
         var testPlayers = new[]
