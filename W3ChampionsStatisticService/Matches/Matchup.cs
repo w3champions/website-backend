@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -290,6 +290,8 @@ public class Matchup
             team.MatchRanking = matchRankings[0];
         }
 
+        team.IsAT = players.Any(x => x.IsAt);
+
         return team;
     }
 
@@ -310,6 +312,7 @@ public class Matchup
             MatchRanking = w.matchRanking,
             Location = w.country,
             Ranking = w.updatedRanking,
+            AtTeamId = w.atTeamId,
         });
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using W3C.Contracts.GameObjects;
 using W3C.Domain.MatchmakingService;
 
@@ -24,4 +24,5 @@ public class PlayerOverviewMatches
     public string Twitch { get; set; }
     public IList<Heroes.Hero> Heroes { get; set; }
     public Ranking Ranking { get; set; }
+    public string AtTeamId { get; set; }
 }
