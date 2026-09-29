@@ -290,8 +290,6 @@ public class Matchup
             team.MatchRanking = matchRankings[0];
         }
 
-        team.IsAT = players.Any(x => x.IsAt);
-
         return team;
     }
 
