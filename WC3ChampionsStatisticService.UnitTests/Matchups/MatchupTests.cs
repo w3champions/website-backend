@@ -267,7 +267,7 @@ public class MatchupTests
     public void MapMatch_AtTeamId()
     {
         var fakeEvent = TestDtoHelper.CreateFakeEvent();
-        
+
         var partyId = "team_123";
         fakeEvent.match.players[0].atTeamId = partyId;
         fakeEvent.match.players[1].atTeamId = null;
