@@ -17,6 +17,8 @@ public interface IMatchRepository
 
     Task<List<string>> LoadMapNames(int season, GameMode gameMode);
 
+    Task<List<MmrRiser>> LoadMmrRisers(int season, GameMode gameMode, DateTimeOffset since, int top);
+
     Task<long> Count(
         int season,
         GameMode gameMode,
@@ -51,6 +53,14 @@ public interface IMatchRepository
         HeroType hero = HeroType.AllFilter,
         bool playerIncludeRandom = false,
         bool opponentIncludeRandom = false);
+
+    Task<List<OpponentInfo>> SearchOpponentsFor(
+        string battleTag,
+        string search,
+        int season,
+        GateWay gateWay = GateWay.Undefined,
+        GameMode gameMode = GameMode.Undefined,
+        int limit = 10);
 
     Task<MatchupDetail> LoadFinishedMatchDetails(ObjectId id);
     Task<MatchupDetail> LoadFinishedMatchDetailsByMatchId(string id);
