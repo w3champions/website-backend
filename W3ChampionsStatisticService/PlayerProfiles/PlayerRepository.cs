@@ -263,6 +263,35 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         return result.MatchedCount == 1;
     }
 
+    public async Task<List<SeasonTimeline>> LoadPlayerMmrRpTimelines(
+        string battleTag,
+        IReadOnlyCollection<Race> races,
+        IReadOnlyCollection<GateWay> gateWays,
+        IReadOnlyCollection<int> seasons,
+        GameMode gameMode)
+    {
+        // The id encodes every coordinate, so the whole set can be fetched with
+        // one $in on _id rather than a request per season and race. There is no
+        // index on the individual values to query them any other way.
+        var wanted = new Dictionary<string, (int Season, Race Race, GateWay GateWay)>();
+        foreach (var season in seasons)
+        {
+            foreach (var race in races)
+            {
+                foreach (var gateWay in gateWays)
+                {
+                    wanted[$"{season}_{battleTag}_@{gateWay}_{race}_{gameMode}"] = (season, race, gateWay);
+                }
+            }
+        }
+
+        var timelines = await LoadAll<PlayerMmrRpTimeline>(t => wanted.Keys.Contains(t.Id));
+
+        return timelines
+            .Select(t => new SeasonTimeline(wanted[t.Id].Season, wanted[t.Id].Race, wanted[t.Id].GateWay, t))
+            .ToList();
+    }
+
     public Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season)
     {
         var compoundId = PlayerGameLength.CompoundId(battleTag, season);
