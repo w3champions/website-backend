@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -310,6 +310,7 @@ public class Matchup
             MatchRanking = w.matchRanking,
             Location = w.country,
             Ranking = w.updatedRanking,
+            AtTeamId = w.atTeamId,
         });
     }
 }

@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using Serilog;
 using System.Collections.Generic;
@@ -27,16 +27,7 @@ public class PlayerMMrChange : UnfinishedMatchPlayer
     public int? matchRanking { get; set; }
     public Mmr updatedMmr { get; set; }
     public Ranking updatedRanking { get; set; }
-    public string atTeamId { get; set; }
     public Race? rndRace { get; set; }
-
-    public bool IsAt
-    {
-        get
-        {
-            return !string.IsNullOrEmpty(atTeamId);
-        }
-    }
 }
 
 [BsonIgnoreExtraElements]
@@ -70,6 +61,15 @@ public class UnfinishedMatchPlayer : IMatchPlayerServerInfo
     public QueueQuantiles quantiles { get; set; }
     public string country { get; set; }
     public FloPing[] floPings { get; set; }
+    public string atTeamId { get; set; }
+
+    public bool IsAt
+    {
+        get
+        {
+            return !string.IsNullOrEmpty(atTeamId);
+        }
+    }
 }
 
 [BsonIgnoreExtraElements]

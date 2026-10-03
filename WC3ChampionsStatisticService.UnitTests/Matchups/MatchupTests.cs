@@ -262,4 +262,22 @@ public class MatchupTests
             }
         }
     }
+
+    [Test]
+    public void MapMatch_AtTeamId()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeEvent();
+
+        var partyId = "team_123";
+        fakeEvent.match.players[0].atTeamId = partyId;
+        fakeEvent.match.players[1].atTeamId = null;
+
+        var matchup = Matchup.Create(fakeEvent);
+
+        var firstPlayer = matchup.Teams.SelectMany(t => t.Players).Single(p => p.BattleTag == fakeEvent.match.players[0].battleTag);
+        var secondPlayer = matchup.Teams.SelectMany(t => t.Players).Single(p => p.BattleTag == fakeEvent.match.players[1].battleTag);
+
+        Assert.AreEqual(partyId, firstPlayer.AtTeamId);
+        Assert.IsNull(secondPlayer.AtTeamId);
+    }
 }

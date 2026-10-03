@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using W3C.Domain.MatchmakingService;
@@ -58,6 +58,7 @@ public class OnGoingMatchup : Matchup
             Race = w.race,
             Location = w.country,
             Ranking = w.ranking,
+            AtTeamId = w.atTeamId,
         });
     }
 }
