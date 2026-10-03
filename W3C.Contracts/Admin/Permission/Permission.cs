@@ -24,4 +24,5 @@ public enum EPermission
     SmurfCheckerAdministration = 10,
     Warnings = 11,
     Jobs = 12,
+    GameModeSettings = 13,
 }
