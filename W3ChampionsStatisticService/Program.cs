@@ -27,6 +27,7 @@ using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
@@ -59,8 +60,6 @@ using W3ChampionsStatisticService.W3ChampionsStats.PopularHours;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 using W3ChampionsStatisticService.W3ChampionsStats.OverallRaceAndWinStats;
 using W3ChampionsStatisticService.W3ChampionsStats.MatchupLengths;
-using Serilog.Events;
-using Serilog.Formatting.Json;
 using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.Services.Tracing;
 using W3ChampionsStatisticService.Rewards.Middleware;
@@ -74,23 +73,19 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     serverOptions.Limits.MaxRequestBodySize = 0x8000000; // 128 MiB
 });
 
+// The unit tests' LoopbackMvcHost mirrors this registration so that serialisation guards — notably the one pinning
+// mapProofHash off a map-file response — run through the formatter the app actually configures. The two are separate
+// call sites: a JSON formatter added here (AddNewtonsoftJson, a custom output formatter, changed naming or ignore
+// behaviour) must be added there too, or those guards stay green while the wire changes.
 builder.Services.AddControllers(c =>
 {
     c.Filters.Add<ValidationExceptionFilter>();
     c.Filters.Add<HttpRequestExceptionFilter>();
 });
 
-// Create logs with format website-backend_yyyyMMdd.log
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .MinimumLevel.Override("AspNetCore.Authentication.Basic.BasicHandler", LogEventLevel.Warning) // Temporarily filter out the Basic auth schema log. We should add central JWT though.
-    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning) // Filter out verbose HTTP client logs
-    .MinimumLevel.Override("System.Net.Http", LogEventLevel.Warning) // Filter out verbose System.Net.Http logs
-    .WriteTo.Console(new JsonFormatter(renderMessage: true), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
-    .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+// Console and website-backend_yyyyMMdd.log sinks; the level overrides also keep proofHash values out of the hosting and
+// HttpClient logs (spec §10.3).
+Log.Logger = W3CLoggerConfiguration.Create().CreateLogger();
 // Tell the AspNetCore host to use Serilog for all logging
 builder.Host.UseSerilog();
 
@@ -98,12 +93,14 @@ Log.Information("Starting server.");
 
 // Add telemetry
 string appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
-builder.Services.AddApplicationInsightsTelemetry(c => c.ConnectionString = "InstrumentationKey=" + appInsightsKey?.Replace("'", ""));
+builder.Services.AddW3CApplicationInsights(appInsightsKey);
 
 // Add Swagger
 builder.Services.AddSwaggerGen(f =>
 {
     f.SwaggerDoc("v1", new OpenApiInfo { Title = "w3champions", Version = "v1" });
+    // The pre-check reads its x-proof-hash header itself (nothing is bound), so its document names the header here.
+    f.OperationFilter<ProofHashHeaderOperationFilter>();
 });
 
 // Configure and add MongoDB
@@ -272,6 +269,10 @@ builder.Services.AddRewardServices();
 
 // Manually-triggered operational jobs (see docs/admin-job-runner.md)
 builder.Services.AddAdminJobs();
+
+// Self-provided (temporary) custom maps: the player auth filter, the upload orchestration, the in-flight gate, the
+// expiry sweep and its daily hosted trigger (see MapServiceExtensions for what each depends on).
+builder.Services.AddMapServices();
 
 // MongoDB index initialization service - runs once at startup
 builder.Services.AddHostedService<W3ChampionsStatisticService.Common.Services.MongoIndexInitializationService>();

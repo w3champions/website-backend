@@ -460,8 +460,10 @@ public class AdminController(
         });
     }
 
-    // This API endpoint just runs the 'CheckIfBattleTagIsAdmin' filter which then checks the jwt lifetime.
-    // Returns a 200 OK if it passes validation and a 401 Unauthorized if it's expired.
+    // This API endpoint just runs the 'CheckIfBattleTagIsAdmin' filter, which checks the jwt lifetime.
+    // Admin token: 200 OK from this action. Expired token: 401 with the AUTH_TOKEN_EXPIRED body. Missing or
+    // invalid token: 401. Valid token without admin rights (non-admin, empty or revoked battleTag): an empty 200
+    // and this action does not run; see CheckIfBattleTagIsAdminFilter for why that case is not a 401/403.
     [HttpGet("checkJwtLifetime")]
     [CheckIfBattleTagIsAdmin]
     [NoTrace]

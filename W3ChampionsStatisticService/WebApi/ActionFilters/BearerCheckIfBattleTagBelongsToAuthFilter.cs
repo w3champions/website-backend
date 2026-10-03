@@ -18,9 +18,11 @@ public class BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         context.RouteData.Values.TryGetValue("battleTag", out var battleTag);
-        var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
         try
         {
+            // Inside the try: a missing or non-Bearer Authorization header throws here and must be a 401,
+            // not an unhandled exception (500).
+            var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
             var res = _authService.GetUserByToken(token, false);
             var btagString = battleTag?.ToString();
 
@@ -29,13 +31,20 @@ public class BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService
                 context.ActionArguments["battleTag"] = res.BattleTag;
                 await next.Invoke();
             }
+            else
+            {
+                // Without a Result, MVC treats the un-invoked pipeline as short-circuited and writes an
+                // empty 200.
+                context.Result = InvalidAuthResult();
+            }
         }
         catch (Exception)
         {
-            var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
-            context.Result = unauthorizedResult;
+            context.Result = InvalidAuthResult();
         }
     }
+
+    private static UnauthorizedObjectResult InvalidAuthResult() => new(new ErrorResult("Sorry H4ckerb0i"));
 
     private static string GetToken(StringValues authorization)
     {

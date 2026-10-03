@@ -20,7 +20,7 @@ public class IdentityServiceClient(HttpClient httpClient = null)
 
     public async Task<List<Permission>> GetPermissions([NoTrace] string authorization)
     {
-        var response = await _httpClient.GetAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}");
+        var response = await _httpClient.GetAsync($"{IdentityApiUrl}/api/permissions?authorization={Uri.EscapeDataString(authorization)}");
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         if (response.StatusCode != HttpStatusCode.OK)
@@ -42,7 +42,7 @@ public class IdentityServiceClient(HttpClient httpClient = null)
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
         var byteContent = new ByteArrayContent(buffer);
         byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-        var response = await _httpClient.PostAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}", byteContent);
+        var response = await _httpClient.PostAsync($"{IdentityApiUrl}/api/permissions?authorization={Uri.EscapeDataString(authorization)}", byteContent);
         if (response.StatusCode != HttpStatusCode.OK)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -57,7 +57,7 @@ public class IdentityServiceClient(HttpClient httpClient = null)
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
         var byteContent = new ByteArrayContent(buffer);
         byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-        var response = await _httpClient.PutAsync($"{IdentityApiUrl}/api/permissions?authorization={authorization}", byteContent);
+        var response = await _httpClient.PutAsync($"{IdentityApiUrl}/api/permissions?authorization={Uri.EscapeDataString(authorization)}", byteContent);
         if (response.StatusCode != HttpStatusCode.OK)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -69,7 +69,7 @@ public class IdentityServiceClient(HttpClient httpClient = null)
     public async Task<HttpStatusCode> DeleteAdmin(string id, [NoTrace] string authorization)
     {
         var encodedTag = HttpUtility.UrlEncode(id);
-        var response = await _httpClient.DeleteAsync($"{IdentityApiUrl}/api/permissions?id={encodedTag}&authorization={authorization}");
+        var response = await _httpClient.DeleteAsync($"{IdentityApiUrl}/api/permissions?id={encodedTag}&authorization={Uri.EscapeDataString(authorization)}");
         if (response.StatusCode != HttpStatusCode.OK)
         {
             var content = await response.Content.ReadAsStringAsync();

@@ -236,7 +236,7 @@ public class RateLimitAttributeTests
     }
 
     [Test]
-    public async Task OnActionExecutionAsync_WithException_PropagatesException()
+    public void OnActionExecutionAsync_WithException_PropagatesException()
     {
         var rateLimitContext = new RateLimitContext
         {
