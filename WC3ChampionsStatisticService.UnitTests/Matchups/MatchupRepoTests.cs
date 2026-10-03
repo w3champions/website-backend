@@ -1,4 +1,4 @@
-using W3ChampionsStatisticService.Common.Constants;
+﻿using W3ChampionsStatisticService.Common.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -675,6 +675,109 @@ public class MatchupRepoTests : IntegrationTestBase
         var matches = await matchRepository.Load(0, GameMode.GM_2v2_AT);
 
         Assert.AreEqual(1, matches.Count);
+    }
+
+    // A match whose first player picked `race` outright, second player always Orc.
+    private static MatchFinishedEvent PickedRaceEvent(Race race)
+    {
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent.match.players[0].race = race;
+        matchFinishedEvent.match.players[0].rndRace = null;
+        matchFinishedEvent.match.players[1].race = Race.OC;
+        matchFinishedEvent.match.players[1].rndRace = null;
+        return matchFinishedEvent;
+    }
+
+    // A match whose first player picked Random and rolled `rolled`, second player always Orc.
+    // Matchup.Create derives RndRace from the result's raceId, not from the match player's
+    // rndRace, so the roll has to be expressed there.
+    private static MatchFinishedEvent RolledRandomEvent(RaceId rolled)
+    {
+        var matchFinishedEvent = TestDtoHelper.CreateFakeEvent();
+        matchFinishedEvent.result.players[0].raceId = (int)rolled;
+        matchFinishedEvent.match.players
+            .Find(p => p.battleTag == matchFinishedEvent.result.players[0].battleTag).race = Race.RnD;
+        matchFinishedEvent.match.players[1].race = Race.OC;
+        matchFinishedEvent.match.players[1].rndRace = null;
+        return matchFinishedEvent;
+    }
+
+    [Test]
+    public async Task Load_WithRaceFilter_KeepsMatchesWhereAnyPlayerPickedIt()
+    {
+        var undeadVsHuman = TestDtoHelper.CreateFakeEvent();
+        undeadVsHuman.match.players[0].race = Race.UD;
+        undeadVsHuman.match.players[1].race = Race.HU;
+
+        var orcVsNightElf = TestDtoHelper.CreateFakeEvent();
+        orcVsNightElf.match.players[0].race = Race.OC;
+        orcVsNightElf.match.players[1].race = Race.NE;
+
+        await matchRepository.Insert(Matchup.Create(undeadVsHuman));
+        await matchRepository.Insert(Matchup.Create(orcVsNightElf));
+
+        var matches = await matchRepository.Load(0, GameMode.GM_1v1, race: Race.HU);
+        var count = await matchRepository.Count(0, GameMode.GM_1v1, race: Race.HU);
+
+        Assert.AreEqual(1, count);
+        Assert.AreEqual(Matchup.Create(undeadVsHuman).ToString(), matches.Single().ToString());
+    }
+
+    [Test]
+    public async Task Load_WithRaceTotal_KeepsEveryMatch()
+    {
+        var undeadVsHuman = TestDtoHelper.CreateFakeEvent();
+        undeadVsHuman.match.players[0].race = Race.UD;
+        undeadVsHuman.match.players[1].race = Race.HU;
+
+        var orcVsNightElf = TestDtoHelper.CreateFakeEvent();
+        orcVsNightElf.match.players[0].race = Race.OC;
+        orcVsNightElf.match.players[1].race = Race.NE;
+
+        await matchRepository.Insert(Matchup.Create(undeadVsHuman));
+        await matchRepository.Insert(Matchup.Create(orcVsNightElf));
+
+        var matches = await matchRepository.Load(0, GameMode.GM_1v1, race: Race.Total);
+        var count = await matchRepository.Count(0, GameMode.GM_1v1, race: Race.Total);
+
+        Assert.AreEqual(2, count);
+        Assert.AreEqual(2, matches.Count);
+    }
+
+    [TestCase(false, 1)]
+    [TestCase(true, 2)]
+    public async Task Load_WithRaceFilter_CountsRolledRandomOnlyWhenIncludeRandomIsSet(bool includeRandom, int expected)
+    {
+        var pickedHuman = PickedRaceEvent(Race.HU);
+        var rolledHuman = RolledRandomEvent(RaceId.HU);
+
+        await matchRepository.Insert(Matchup.Create(pickedHuman));
+        await matchRepository.Insert(Matchup.Create(rolledHuman));
+
+        var matches = await matchRepository.Load(0, GameMode.GM_1v1, race: Race.HU, includeRandom: includeRandom);
+        var count = await matchRepository.Count(0, GameMode.GM_1v1, race: Race.HU, includeRandom: includeRandom);
+
+        Assert.AreEqual(expected, count);
+        Assert.AreEqual(expected, matches.Count);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Load_WithRandomRaceFilter_IgnoresIncludeRandom(bool includeRandom)
+    {
+        // Race.RnD already matches every Random pick, so includeRandom must not widen it to the
+        // races those picks rolled into.
+        var rolledHuman = RolledRandomEvent(RaceId.HU);
+        var pickedHuman = PickedRaceEvent(Race.HU);
+
+        await matchRepository.Insert(Matchup.Create(rolledHuman));
+        await matchRepository.Insert(Matchup.Create(pickedHuman));
+
+        var matches = await matchRepository.Load(0, GameMode.GM_1v1, race: Race.RnD, includeRandom: includeRandom);
+        var count = await matchRepository.Count(0, GameMode.GM_1v1, race: Race.RnD, includeRandom: includeRandom);
+
+        Assert.AreEqual(1, count);
+        Assert.AreEqual(Matchup.Create(rolledHuman).ToString(), matches.Single().ToString());
     }
 
     [Test]

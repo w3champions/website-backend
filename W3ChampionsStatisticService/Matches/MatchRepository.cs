@@ -247,11 +247,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall")
+    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", Race race = Race.Total, bool includeRandom = false)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, race, includeRandom);
         var results = await mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
         PlayersObfuscator.ObfuscateMmr(results);
         return results;
@@ -279,14 +279,14 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall")
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", Race race = Race.Total, bool includeRandom = false)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, race, includeRandom);
         return CreateCollection<Matchup>().CountDocumentsAsync(filter);
     }
 
-    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall")
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", Race race = Race.Total, bool includeRandom = false)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var builder = Builders<Matchup>.Filter;
@@ -295,6 +295,15 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         if (!string.IsNullOrWhiteSpace(mapName) && mapName != "Overall")
         {
             filter &= builder.Eq(m => m.MapName, mapName);
+        }
+
+        // Keep any match where at least one player picked the race. When includeRandom is set, a
+        // Random pick that rolled into that race counts too, which is meaningless for Race.RnD
+        // itself (every Random pick already matches) so it is ignored there.
+        if (race != Race.Total)
+        {
+            filter &= builder.Where(m => m.Teams.Any(t => t.Players.Any(p =>
+                p.Race == race || (includeRandom && race != Race.RnD && p.Race == Race.RnD && p.RndRace == race))));
         }
 
         if (hero != HeroType.AllFilter && hero != HeroType.Unknown)
