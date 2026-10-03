@@ -450,6 +450,247 @@ public class PlayerTests : IntegrationTestBase
     }
 
     [Test]
+    [TestCase(false, TestName = "Player_UpdateMmrRpTimeline_MergesSameDayEntries")]
+    [TestCase(true, TestName = "Player_UpdateMmrRpTimeline_MergesSameDayEntries_OutOfOrder")]
+    public async Task Player_UpdateMmrRpTimeline_MergesSameDayEntries(bool outOfOrder)
+    {
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        // Three games on one day: a climb to 150, then a slide back down to 80.
+        // The day should keep 80 as its closing rating but still remember 150.
+        // rd stays above the obfuscation threshold throughout, so it is stored
+        // and the day's closing value can be asserted.
+        var events = new[] { (1585692047363L, 120, 400.0), (1585695047363L, 150, 320.0), (1585698047363L, 80, 260.0) }
+            .Select(x =>
+            {
+                var ev = TestDtoHelper.CreateFakeEvent();
+                ev.match.endTime = x.Item1;
+                ev.match.players[0].race = Race.OC;
+                ev.match.players[1].race = Race.NE;
+                ev.match.players[0].updatedMmr.rating = x.Item2;
+                ev.match.players[0].updatedMmr.rd = x.Item3;
+                ev.match.players.ForEach(p => p.atTeamId = null);
+                return ev;
+            })
+            .ToList();
+
+        foreach (var ev in outOfOrder ? new[] { events[2], events[0], events[1] } : events.ToArray())
+        {
+            await handler.Update(ev);
+        }
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+
+        Assert.IsNotNull(timeline);
+        Assert.AreEqual(1, timeline.MmrRpAtDates.Count, "three games on one day should collapse to a single entry");
+
+        var day = timeline.MmrRpAtDates[0];
+        Assert.AreEqual(80, day.Mmr, "the day closes on the last game played");
+        Assert.AreEqual(150, day.DailyMaxMmr, "the intra-day peak survives the later losses");
+        Assert.AreEqual(3, day.Games);
+        Assert.AreEqual(260.0, day.Rd, "rd comes from the last game of the day");
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_IsIdempotentWhenAnEventIsReplayed()
+    {
+        // The read-model pipeline delivers at least once: a handler that throws part
+        // way through a match leaves the players it already wrote committed and the
+        // event is retried every few seconds, and a crash between the handler
+        // succeeding and the watermark saving replays it once on restart. The games
+        // count accumulates, so without a guard each replay would add another game.
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var ev = TestDtoHelper.CreateFakeEvent();
+        ev.match.endTime = 1585692047363L;
+        ev.match.players[0].race = Race.OC;
+        ev.match.players[1].race = Race.NE;
+        ev.match.players[0].updatedMmr.rating = 120;
+        ev.match.players.ForEach(p => p.atTeamId = null);
+
+        await handler.Update(ev);
+        await handler.Update(ev);
+        await handler.Update(ev);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+
+        Assert.IsNotNull(timeline);
+        Assert.AreEqual(1, timeline.MmrRpAtDates.Count);
+        var day = timeline.MmrRpAtDates[0];
+        Assert.IsNull(day.Games, "a single game stays at the omitted default rather than counting the replays");
+        Assert.AreEqual(1, day.GamesOrDefault);
+        Assert.AreEqual(120, day.Mmr);
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_ReplayingTheLatestEventDoesNotInflateTheDay()
+    {
+        // The same invariant on a day that legitimately has more than one game:
+        // replaying only the most recent event must leave the count at two, not three.
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var events = new[] { (1585692047363L, 120), (1585695047363L, 150) }
+            .Select(x =>
+            {
+                var ev = TestDtoHelper.CreateFakeEvent();
+                ev.match.endTime = x.Item1;
+                ev.match.players[0].race = Race.OC;
+                ev.match.players[1].race = Race.NE;
+                ev.match.players[0].updatedMmr.rating = x.Item2;
+                ev.match.players.ForEach(p => p.atTeamId = null);
+                return ev;
+            })
+            .ToList();
+
+        await handler.Update(events[0]);
+        await handler.Update(events[1]);
+        await handler.Update(events[1]);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+
+        Assert.AreEqual(1, timeline.MmrRpAtDates.Count);
+        Assert.AreEqual(2, timeline.MmrRpAtDates[0].Games, "the replayed match is not counted twice");
+        Assert.AreEqual(150, timeline.MmrRpAtDates[0].Mmr);
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_RejectsAWriteAgainstAStaleRevision()
+    {
+        // The backfill job rewrites these documents whole while the handler is live.
+        // Without a revision check the later write silently reverts the earlier one,
+        // and neither writer ever finds out - both believe they succeeded.
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var ev = TestDtoHelper.CreateFakeEvent();
+        ev.match.endTime = 1585692047363L;
+        ev.match.players[0].race = Race.OC;
+        ev.match.players[1].race = Race.NE;
+        ev.match.players.ForEach(p => p.atTeamId = null);
+        await handler.Update(ev);
+
+        var stale = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        var staleRevision = stale.Revision;
+
+        // Somebody else writes in between - the backfill, in production.
+        var concurrent = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        concurrent.LastProcessedMatchId = "written-by-someone-else";
+        Assert.IsTrue(await playerRepository.TryUpsertPlayerMmrRpTimeline(concurrent, concurrent.Revision));
+
+        // The stale copy must now be refused rather than clobbering that write.
+        stale.LastProcessedMatchId = "stale-write";
+        Assert.IsFalse(await playerRepository.TryUpsertPlayerMmrRpTimeline(stale, staleRevision), "a write against a stale revision must not land");
+
+        var stored = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        Assert.AreEqual("written-by-someone-else", stored.LastProcessedMatchId, "the concurrent write survives");
+        Assert.AreNotEqual("stale-write", stored.LastProcessedMatchId, "the stale write did not land");
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_TreatsAConcurrentCreationAsAConflict()
+    {
+        // A revision of 0 is ambiguous: every document written before the field existed
+        // deserializes as 0, so "no document" has to be passed as null or a racing
+        // creator would be overwritten instead of detected.
+        var playerRepository = new PlayerRepository(MongoClient);
+
+        var first = new PlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        first.UpdateTimeline(new MmrRpAtDate(100, 0, System.DateTimeOffset.FromUnixTimeMilliseconds(1585692047363L)));
+        Assert.IsTrue(await playerRepository.TryUpsertPlayerMmrRpTimeline(first, null));
+
+        var racing = new PlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        racing.UpdateTimeline(new MmrRpAtDate(200, 0, System.DateTimeOffset.FromUnixTimeMilliseconds(1585692047363L)));
+        Assert.IsFalse(await playerRepository.TryUpsertPlayerMmrRpTimeline(racing, null), "a second creation must be reported as a conflict");
+
+        var stored = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        Assert.AreEqual(100, stored.MmrRpAtDates.Single().Mmr);
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_OmitsRedundantFields()
+    {
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        // A single game by a settled player: one game, close is the peak, and an
+        // rd well under the storage floor. None of that needs storing.
+        var settled = TestDtoHelper.CreateFakeEvent();
+        settled.match.endTime = 1585692047363;
+        settled.match.players[0].race = Race.OC;
+        settled.match.players[1].race = Race.NE;
+        settled.match.players[0].updatedMmr.rating = 1500;
+        settled.match.players[0].updatedMmr.rd = 80;
+        settled.match.players.ForEach(p => p.atTeamId = null);
+        await handler.Update(settled);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        var day = timeline.MmrRpAtDates[0];
+
+        Assert.IsNull(day.Games, "a single game is what absence already means");
+        Assert.IsNull(day.DailyMaxMmr, "peak equals close, so it carries nothing");
+        Assert.IsNull(day.Rd, "a settled rd says nothing about calibration");
+
+        // Absence still reads back as the intended value.
+        Assert.AreEqual(1, day.GamesOrDefault);
+        Assert.AreEqual(1500, day.PeakMmr);
+        Assert.IsFalse(day.WasCalibrating);
+    }
+
+    [Test]
+    public async Task Player_UpdateMmrRpTimeline_KeepsRdWhileCalibrating()
+    {
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        // A player's first game still carries the 1v1 starting rd of 500.
+        var placement = TestDtoHelper.CreateFakeEvent();
+        placement.match.endTime = 1585692047363;
+        placement.match.players[0].race = Race.OC;
+        placement.match.players[1].race = Race.NE;
+        placement.match.players[0].updatedMmr.rating = 1500;
+        placement.match.players[0].updatedMmr.rd = 500;
+        placement.match.players.ForEach(p => p.atTeamId = null);
+        await handler.Update(placement);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, GameMode.GM_1v1);
+        var day = timeline.MmrRpAtDates[0];
+
+        Assert.AreEqual(500, day.Rd);
+        Assert.IsTrue(day.WasCalibrating,
+            "without this the 1500 placement rating would count as a lifetime peak");
+    }
+
+    // A settled rating sits at 80 in most modes, 110 in Risk Europe and 135 in
+    // Direct Strike, all comfortably under the 240 line the match API already
+    // uses, so one mode-independent threshold covers every mode.
+    [TestCase(GameMode.GM_1v1, 80)]
+    [TestCase(GameMode.GM_DS, 135)]
+    [TestCase(GameMode.GM_RISK_EUROPE, 110)]
+    public async Task Player_UpdateMmrRpTimeline_SettledRdIsNotStored(GameMode gameMode, double settledRd)
+    {
+        var playerRepository = new PlayerRepository(MongoClient);
+        var handler = new PlayerMmrRpTimelineHandler(playerRepository);
+
+        var ev = TestDtoHelper.CreateFakeEvent();
+        ev.match.gameMode = gameMode;
+        ev.match.endTime = 1585692047363;
+        ev.match.players[0].race = Race.OC;
+        ev.match.players[1].race = Race.NE;
+        ev.match.players[0].updatedMmr.rating = 1500;
+        ev.match.players[0].updatedMmr.rd = settledRd;
+        ev.match.players.ForEach(p => p.atTeamId = null);
+        await handler.Update(ev);
+
+        var timeline = await playerRepository.LoadPlayerMmrRpTimeline("peter#123", Race.OC, GateWay.Europe, 0, gameMode);
+
+        Assert.IsNull(timeline.MmrRpAtDates[0].Rd, $"{settledRd} is settled for {gameMode}");
+        Assert.IsFalse(timeline.MmrRpAtDates[0].WasCalibrating);
+    }
+
+    [Test]
     public async Task Player_UpdateMmrRpTimeline_4v4_WithArrangedTeams()
     {
         var playerRepository = new PlayerRepository(MongoClient);
