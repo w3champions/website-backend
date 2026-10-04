@@ -223,6 +223,53 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
+    public async Task SetVoiceMute_AddsCanonicalBattleTagAndReturnsUpdatedList()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        var result = await hub.SetVoiceMute("Teammate#5678", true);
+
+        CollectionAssert.AreEqual(new[] { "Teammate#5678" }, result.VoiceMutedBattleTags);
+        Assert.That(await friendListCache.LoadFriendList("User#1234"), Is.SameAs(result));
+    }
+
+    [Test]
+    public async Task SetVoiceMute_UnmuteIsCaseInsensitiveAndIdempotent()
+    {
+        var friendList = new Friendlist("User#1234")
+        {
+            VoiceMutedBattleTags = new List<string> { "TEAMMATE#5678" }
+        };
+        friendListCache.Upsert(friendList);
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        var result = await hub.SetVoiceMute("Teammate#5678", false);
+
+        Assert.That(result.VoiceMutedBattleTags, Is.Empty);
+    }
+
+    [Test]
+    public void SetVoiceMute_RejectsSelf()
+    {
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        Assert.ThrowsAsync<HubException>(() => hub.SetVoiceMute("User#1234", true));
+    }
+
+    [Test]
     public async Task RemoveFriend_RemovesFromFriendsList()
     {
         var friendList = new Friendlist("User#1234");

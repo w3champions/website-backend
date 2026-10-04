@@ -469,6 +469,32 @@ public class WebsiteBackendHub(
         }
     }
 
+    public async Task<Friendlist> SetVoiceMute(string battleTag, bool muted)
+    {
+        var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
+        if (currentUser == null)
+        {
+            throw new HubException("Not authenticated.");
+        }
+
+        var canonicalBattleTag = await _battleTagResolver.ResolveCanonical(battleTag);
+        if (canonicalBattleTag == null || canonicalBattleTag != battleTag)
+        {
+            throw new HubException(canonicalBattleTag == null
+                ? "Player not found."
+                : "Use the player's canonical BattleTag.");
+        }
+        if (string.Equals(currentUser, canonicalBattleTag, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new HubException("You cannot voice-mute yourself.");
+        }
+
+        var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
+        friendList.SetVoiceMuted(canonicalBattleTag, muted);
+        await _friendCommandHandler.UpsertFriendList(friendList);
+        return friendList;
+    }
+
     public async Task UnblockFriendRequestsFromPlayer(string battleTag)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
