@@ -394,65 +394,6 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return mapNames.OrderBy(mapName => mapName).ToList();
     }
 
-    // Net MMR movement per ladder entry (player + queued race, so random players pool
-    // under RnD) summed from every match a player finished inside the window. The window
-    // is applied on _id because ObjectIds carry the insertion timestamp — matchups are
-    // written when the match finishes, so this rides the _id index instead of needing a
-    // new EndTime index. Placement-grade entries (rank deviation at or above the
-    // obfuscation threshold) are excluded, mirroring what the site is willing to show.
-    public async Task<List<MmrRiser>> LoadMmrRisers(int season, GameMode gameMode, DateTimeOffset since, int top)
-    {
-        var mongoCollection = CreateCollection<Matchup>();
-        var cutoffId = new ObjectId(((int)since.ToUnixTimeSeconds()).ToString("x8") + "0000000000000000");
-
-        var stages = new[]
-        {
-            new BsonDocument("$match", new BsonDocument
-            {
-                { "_id", new BsonDocument("$gte", cutoffId) },
-                { "Season", season },
-                { "GameMode", (int)gameMode },
-            }),
-            // Chronological order so $last below picks each entry's latest state.
-            new BsonDocument("$sort", new BsonDocument("_id", 1)),
-            new BsonDocument("$unwind", "$Teams"),
-            new BsonDocument("$unwind", "$Teams.Players"),
-            new BsonDocument("$match", new BsonDocument
-            {
-                { "Teams.Players.OldMmr", new BsonDocument("$gt", 0) },
-                { "Teams.Players.CurrentMmr", new BsonDocument("$gt", 0) },
-                { "Teams.Players.OldRankDeviation", new BsonDocument("$not", new BsonDocument("$gte", PlayersObfuscator.RankDeviationObfuscationThreshold)) },
-            }),
-            new BsonDocument("$group", new BsonDocument
-            {
-                { "_id", new BsonDocument { { "battleTag", "$Teams.Players.BattleTag" }, { "race", "$Teams.Players.Race" } } },
-                { "mmrGain", new BsonDocument("$sum", new BsonDocument("$subtract", new BsonArray { "$Teams.Players.CurrentMmr", "$Teams.Players.OldMmr" })) },
-                { "games", new BsonDocument("$sum", 1) },
-                { "name", new BsonDocument("$last", "$Teams.Players.Name") },
-                { "currentMmr", new BsonDocument("$last", "$Teams.Players.CurrentMmr") },
-                { "countryCode", new BsonDocument("$last", "$Teams.Players.CountryCode") },
-            }),
-            // A riser has to have climbed; don't pad short lists with net losers.
-            new BsonDocument("$match", new BsonDocument("mmrGain", new BsonDocument("$gt", 0))),
-            new BsonDocument("$sort", new BsonDocument("mmrGain", -1)),
-            new BsonDocument("$limit", top),
-            new BsonDocument("$project", new BsonDocument
-            {
-                { "_id", 0 },
-                { "BattleTag", "$_id.battleTag" },
-                { "Race", "$_id.race" },
-                { "Name", "$name" },
-                { "MmrGain", "$mmrGain" },
-                { "Games", "$games" },
-                { "CurrentMmr", "$currentMmr" },
-                { "CountryCode", "$countryCode" },
-            }),
-        };
-
-        var pipeline = PipelineDefinition<Matchup, MmrRiser>.Create(stages);
-        return await mongoCollection.Aggregate(pipeline).ToListAsync();
-    }
-
     public async Task<int> GetFloIdFromId(string gameId)
     {
         var gameIdObj = new ObjectId($"{gameId}");
