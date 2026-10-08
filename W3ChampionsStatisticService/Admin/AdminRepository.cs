@@ -187,9 +187,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         var result = await httpClient.SendAsync(BuildGetIgnoredIdentifierRequest(type, identifier));
         await result.ThrowIfError();
         string content = await result.Content.ReadAsStringAsync();
-        if (string.IsNullOrEmpty(content)) return null;
-        var deserializeObject = JsonConvert.DeserializeObject<GetIgnoredIdentifierResponse>(content);
-        return deserializeObject.ignoredIdentifier;
+        return ParseGetIgnoredIdentifierResponse(content);
     }
 
     public async Task<List<SmurfDetection.IgnoredIdentifier>> GetIgnoredIdentifiers(string type, string continuationToken)
@@ -234,44 +232,6 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         return result.StatusCode;
     }
 
-    // Request builders and the add-response parser are internal static so the matchmaking route and
-    // body contract (matchmaking-service smurf-detection/api/admin.ts) is unit-testable.
-    internal static HttpRequestMessage BuildGetIgnoredIdentifierRequest(string type, string identifier)
-    {
-        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier?type={HttpUtility.UrlEncode(type)}&identifier={HttpUtility.UrlEncode(identifier)}";
-        return CreateAdminRequest(HttpMethod.Get, url);
-    }
-
-    internal static HttpRequestMessage BuildAddIgnoredIdentifierRequest(string type, string identifier, string reason, string author)
-    {
-        var request = CreateAdminRequest(HttpMethod.Post, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
-        request.Content = CreateJsonContent(new { type, value = identifier, reason, author });
-        return request;
-    }
-
-    internal static HttpRequestMessage BuildDeleteIgnoredIdentifierRequest(string id)
-    {
-        var request = CreateAdminRequest(HttpMethod.Delete, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
-        request.Content = CreateJsonContent(new { id });
-        return request;
-    }
-
-    internal static SmurfDetection.IgnoredIdentifier ParseAddIgnoredIdentifierResponse(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return null;
-        return JsonConvert.DeserializeObject<AddIgnoredIdentifierResponse>(content)?.newIdentifier;
-    }
-
-    private static HttpRequestMessage CreateAdminRequest(HttpMethod method, string url)
-    {
-        var request = new HttpRequestMessage(method, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
-        return request;
-    }
-
-    private static StringContent CreateJsonContent(object body) =>
-        new(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json");
-
     public async Task<List<string>> GetPossibleIdentifierTypes()
     {
         var httpClient = new HttpClient();
@@ -299,4 +259,48 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
         return deserializeObject;
     }
+
+    // Request builders and the response parsers are internal static so the matchmaking route and
+    // body contract (matchmaking-service smurf-detection/api/admin.ts) is unit-testable.
+    internal static HttpRequestMessage BuildGetIgnoredIdentifierRequest(string type, string identifier)
+    {
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier?type={HttpUtility.UrlEncode(type)}&identifier={HttpUtility.UrlEncode(identifier)}";
+        return CreateAdminRequest(HttpMethod.Get, url);
+    }
+
+    internal static HttpRequestMessage BuildAddIgnoredIdentifierRequest(string type, string identifier, string reason, string author)
+    {
+        var request = CreateAdminRequest(HttpMethod.Post, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
+        request.Content = CreateJsonContent(new { type, value = identifier, reason, author });
+        return request;
+    }
+
+    internal static HttpRequestMessage BuildDeleteIgnoredIdentifierRequest(string id)
+    {
+        var request = CreateAdminRequest(HttpMethod.Delete, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
+        request.Content = CreateJsonContent(new { id });
+        return request;
+    }
+
+    internal static SmurfDetection.IgnoredIdentifier ParseGetIgnoredIdentifierResponse(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return null;
+        return JsonConvert.DeserializeObject<GetIgnoredIdentifierResponse>(content)?.ignoredIdentifier;
+    }
+
+    internal static SmurfDetection.IgnoredIdentifier ParseAddIgnoredIdentifierResponse(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return null;
+        return JsonConvert.DeserializeObject<AddIgnoredIdentifierResponse>(content)?.newIdentifier;
+    }
+
+    private static HttpRequestMessage CreateAdminRequest(HttpMethod method, string url)
+    {
+        var request = new HttpRequestMessage(method, url);
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        return request;
+    }
+
+    private static StringContent CreateJsonContent(object body) =>
+        new(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json");
 }

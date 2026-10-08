@@ -80,4 +80,26 @@ public class AdminRepositoryIgnoredIdentifierTests
 
         Assert.That(parsed!.id, Is.EqualTo("abc123"));
     }
+
+    [Test]
+    public void AddResponseWithoutNewIdentifierYieldsNull()
+    {
+        Assert.That(AdminRepository.ParseAddIgnoredIdentifierResponse("{\"message\":\"x\"}"), Is.Null);
+    }
+
+    [Test]
+    public void GetResponseWithLiteralNullBodyYieldsNull()
+    {
+        Assert.That(AdminRepository.ParseGetIgnoredIdentifierResponse("null"), Is.Null);
+    }
+
+    [Test]
+    public void IgnoredIdentifierSerializesAsIdForTheFrontend()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new IgnoredIdentifier { id = "abc123", type = "ipAddress" });
+        var body = JObject.Parse(json);
+
+        Assert.That(body["id"]!.Value<string>(), Is.EqualTo("abc123"));
+        Assert.That(body.ContainsKey("_id"), Is.False);
+    }
 }
