@@ -93,6 +93,18 @@ public class MatchmakingServiceClientCommercialLicenseTests
     }
 
     [Test]
+    public void ServerErrorMessageFromMatchmakingIsNotForwarded()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.InternalServerError, "{\"error\":\"connect ECONNREFUSED mongo-internal:27017\"}");
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(async () =>
+            await CreateClient(handler).GetCommercialLicenseTaggedPlayers());
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That(ex.Message, Is.EqualTo(new HttpRequestException().Message));
+    }
+
+    [Test]
     public async Task DeleteEscapesBattleTagAndAcceptsNoContent()
     {
         var handler = new StubMatchmakingHandler(HttpStatusCode.NoContent);

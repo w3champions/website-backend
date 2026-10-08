@@ -16,19 +16,23 @@ public static class HttpResponseMessageHandleErrorExtension
         if (response.StatusCode != HttpStatusCode.OK)
         {
             var content = await response.Content.ReadAsStringAsync();
+            string error = null;
             try
             {
                 // If an explicit error result is set, add it to the exception message.
-                var errorResult = JsonConvert.DeserializeObject<ErrorResult>(content);
-                if (errorResult?.Error != null)
-                {
-                    throw new HttpRequestException(errorResult.Error, null, response.StatusCode);
-                }
+                error = JsonConvert.DeserializeObject<ErrorResult>(content)?.Error;
             }
-            catch (Exception)
+            catch (JsonException)
             {
                 // Ignore JSON parsing errors
             }
+
+            // Only 4xx messages are meant for the caller; 5xx bodies may carry internal details.
+            if (error != null && (int)response.StatusCode < 500)
+            {
+                throw new HttpRequestException(error, null, response.StatusCode);
+            }
+
             // Otherwise, do not include unparsed body as it could be sensitive
             throw new HttpRequestException(null, null, response.StatusCode);
         }

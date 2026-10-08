@@ -228,7 +228,7 @@ public class MatchmakingServiceClient
 
     public async Task<List<CommercialLicenseTaggedPlayerDto>> GetCommercialLicenseTaggedPlayers()
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{MatchmakingApiUrl}/admin/commercial-license/tagged-players");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{MatchmakingApiUrl}/admin/commercial-license/tagged-players");
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
 
@@ -243,7 +243,7 @@ public class MatchmakingServiceClient
 
     public async Task<CommercialLicenseTaggedPlayerDto> UpsertCommercialLicenseTaggedPlayer(string battleTag, CommercialLicenseTaggedPlayerRequest taggedPlayerRequest)
     {
-        var request = new HttpRequestMessage(HttpMethod.Put, GetCommercialLicenseTaggedPlayerUrl(battleTag));
+        using var request = new HttpRequestMessage(HttpMethod.Put, GetCommercialLicenseTaggedPlayerUrl(battleTag));
         request.Headers.Add("x-admin-secret", AdminSecret);
         request.Content = new StringContent(SerializeData(taggedPlayerRequest), Encoding.UTF8, "application/json");
         var response = await _httpClient.SendAsync(request);
@@ -259,7 +259,7 @@ public class MatchmakingServiceClient
 
     public async Task DeleteCommercialLicenseTaggedPlayer(string battleTag)
     {
-        var request = new HttpRequestMessage(HttpMethod.Delete, GetCommercialLicenseTaggedPlayerUrl(battleTag));
+        using var request = new HttpRequestMessage(HttpMethod.Delete, GetCommercialLicenseTaggedPlayerUrl(battleTag));
         request.Headers.Add("x-admin-secret", AdminSecret);
         var response = await _httpClient.SendAsync(request);
 
@@ -704,12 +704,14 @@ public class MatchmakingServiceClient
 
         var errors = (errorResponse?.Errors ?? []).Select(x => $"{x.Param} {x.Message}");
         var message = string.Join(",", errors);
-        if (string.IsNullOrEmpty(message))
+        if (string.IsNullOrEmpty(message) && (int)response.StatusCode < 500)
         {
+            // Forward matchmaking's validation message for 4xx only: its global handler answers
+            // 5xx with the raw err.message, which can carry internal hosts or database text.
             message = errorResponse?.Error;
         }
 
-        throw new HttpRequestException(message, null, response.StatusCode);
+        throw new HttpRequestException(string.IsNullOrEmpty(message) ? null : message, null, response.StatusCode);
     }
 
     private async Task<T> GetResult<T>(HttpResponseMessage response)
