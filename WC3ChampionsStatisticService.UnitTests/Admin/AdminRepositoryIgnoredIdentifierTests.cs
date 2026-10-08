@@ -42,18 +42,6 @@ public class AdminRepositoryIgnoredIdentifierTests
     }
 
     [Test]
-    public void GetRequestUsesSingularRouteWithEncodedQuery()
-    {
-        var request = AdminRepository.BuildGetIgnoredIdentifierRequest("battleTag", "Grubby#1234");
-
-        Assert.That(request.Method, Is.EqualTo(HttpMethod.Get));
-        Assert.That(request.RequestUri!.AbsolutePath, Does.EndWith("/admin/smurf-detection/ignored-identifier"));
-        Assert.That(request.RequestUri.Query, Does.Contain("type=battleTag"));
-        Assert.That(request.RequestUri.Query, Does.Contain("identifier=Grubby%231234"));
-        Assert.That(request.Headers.Contains("x-admin-secret"), Is.True);
-    }
-
-    [Test]
     public void AddResponseIsUnwrappedFromNewIdentifierEnvelope()
     {
         var content = "{\"message\":\"Ignored identifier added\",\"newIdentifier\":{\"_id\":\"abc123\",\"type\":\"ipAddress\",\"identifier\":\"1.2.3.4\",\"author\":\"Admin#1\",\"reason\":\"shared cafe\"}}";
@@ -85,12 +73,6 @@ public class AdminRepositoryIgnoredIdentifierTests
     public void AddResponseWithoutNewIdentifierYieldsNull()
     {
         Assert.That(AdminRepository.ParseAddIgnoredIdentifierResponse("{\"message\":\"x\"}"), Is.Null);
-    }
-
-    [Test]
-    public void GetResponseWithLiteralNullBodyYieldsNull()
-    {
-        Assert.That(AdminRepository.ParseGetIgnoredIdentifierResponse("null"), Is.Null);
     }
 
     [Test]

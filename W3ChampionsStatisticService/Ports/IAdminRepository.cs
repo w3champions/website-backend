@@ -15,7 +15,6 @@ public interface IAdminRepository
     Task<GlobalChatBanResponse> GetChatBans(string query, string nextId);
     Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan);
     Task<HttpStatusCode> DeleteChatBan(string id);
-    Task<IgnoredIdentifier> GetIgnoredIdentifier(string type, string identifier);
     Task<List<IgnoredIdentifier>> GetIgnoredIdentifiers(string type, string continuationToken);
     Task<IgnoredIdentifier> AddIgnoredIdentifier(string type, string identifier, string reason, string author);
     Task<HttpStatusCode> DeleteIgnoredIdentifier(string id);

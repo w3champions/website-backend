@@ -181,15 +181,6 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         return result.StatusCode;
     }
 
-    public async Task<SmurfDetection.IgnoredIdentifier> GetIgnoredIdentifier(string type, string identifier)
-    {
-        var httpClient = new HttpClient();
-        var result = await httpClient.SendAsync(BuildGetIgnoredIdentifierRequest(type, identifier));
-        await result.ThrowIfError();
-        string content = await result.Content.ReadAsStringAsync();
-        return ParseGetIgnoredIdentifierResponse(content);
-    }
-
     public async Task<List<SmurfDetection.IgnoredIdentifier>> GetIgnoredIdentifiers(string type, string continuationToken)
     {
         var httpClient = new HttpClient();
@@ -218,7 +209,8 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<SmurfDetection.IgnoredIdentifier> AddIgnoredIdentifier(string type, string identifier, string reason, string author)
     {
         var httpClient = new HttpClient();
-        var result = await httpClient.SendAsync(BuildAddIgnoredIdentifierRequest(type, identifier, reason, author));
+        using var request = BuildAddIgnoredIdentifierRequest(type, identifier, reason, author);
+        var result = await httpClient.SendAsync(request);
         await result.ThrowIfError();
         string content = await result.Content.ReadAsStringAsync();
         return ParseAddIgnoredIdentifierResponse(content);
@@ -227,7 +219,8 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<HttpStatusCode> DeleteIgnoredIdentifier(string id)
     {
         var httpClient = new HttpClient();
-        var result = await httpClient.SendAsync(BuildDeleteIgnoredIdentifierRequest(id));
+        using var request = BuildDeleteIgnoredIdentifierRequest(id);
+        var result = await httpClient.SendAsync(request);
         await result.ThrowIfError();
         return result.StatusCode;
     }
@@ -262,12 +255,6 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     // Request builders and the response parsers are internal static so the matchmaking route and
     // body contract (matchmaking-service smurf-detection/api/admin.ts) is unit-testable.
-    internal static HttpRequestMessage BuildGetIgnoredIdentifierRequest(string type, string identifier)
-    {
-        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier?type={HttpUtility.UrlEncode(type)}&identifier={HttpUtility.UrlEncode(identifier)}";
-        return CreateAdminRequest(HttpMethod.Get, url);
-    }
-
     internal static HttpRequestMessage BuildAddIgnoredIdentifierRequest(string type, string identifier, string reason, string author)
     {
         var request = CreateAdminRequest(HttpMethod.Post, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
@@ -280,12 +267,6 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         var request = CreateAdminRequest(HttpMethod.Delete, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
         request.Content = CreateJsonContent(new { id });
         return request;
-    }
-
-    internal static SmurfDetection.IgnoredIdentifier ParseGetIgnoredIdentifierResponse(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return null;
-        return JsonConvert.DeserializeObject<GetIgnoredIdentifierResponse>(content)?.ignoredIdentifier;
     }
 
     internal static SmurfDetection.IgnoredIdentifier ParseAddIgnoredIdentifierResponse(string content)
