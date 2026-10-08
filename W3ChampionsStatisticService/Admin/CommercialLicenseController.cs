@@ -25,16 +25,20 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
     // action argument "battleTag" with the acting admin's battleTag.
     [HttpPut("tagged-players/{targetBattleTag}")]
     [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
-    public async Task<IActionResult> PutTaggedPlayer([FromRoute] string targetBattleTag, [FromBody] CommercialLicenseTaggedPlayerRequest request, [NoTrace] string battleTag)
+    public async Task<IActionResult> PutTaggedPlayer([FromRoute] string targetBattleTag, [FromBody] CommercialLicenseTaggedPlayerBody body, [NoTrace] string battleTag)
     {
         if (!IsValidTarget(targetBattleTag))
             return BadRequest(new { error = "invalid_battletag" });
 
-        if (request == null)
+        if (body?.Notify == null)
             return BadRequest(new { error = "invalid_request" });
 
-        request.note ??= "";
-        request.actingBattleTag = battleTag;
+        var request = new CommercialLicenseTaggedPlayerRequest
+        {
+            note = body.Note ?? "",
+            notify = body.Notify.Value,
+            actingBattleTag = battleTag,
+        };
         return Ok(await _matchmakingServiceClient.UpsertCommercialLicenseTaggedPlayer(targetBattleTag, request));
     }
 
@@ -52,4 +56,11 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
     // Dot segments collapse in System.Uri and would send the admin-secret request to a different matchmaking path.
     private static bool IsValidTarget(string targetBattleTag) =>
         !string.IsNullOrWhiteSpace(targetBattleTag) && targetBattleTag is not ("." or "..");
+}
+
+/// <summary>Inbound PUT body: deliberately has no acting battleTag, which always comes from the bearer token.</summary>
+public class CommercialLicenseTaggedPlayerBody
+{
+    public string Note { get; set; }
+    public bool? Notify { get; set; }
 }

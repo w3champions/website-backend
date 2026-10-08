@@ -62,10 +62,10 @@ public class CommercialLicenseControllerTests
         var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
         var controller = CreateController(handler);
 
-        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
         {
-            note = "Streams for money",
-            notify = true,
+            Note = "Streams for money",
+            Notify = true,
         }, "Admin#1");
 
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
@@ -80,17 +80,17 @@ public class CommercialLicenseControllerTests
     }
 
     [Test]
-    public async Task PutTaggedPlayerOverwritesSpoofedActingBattleTagFromBody()
+    public async Task PutTaggedPlayerTakesActingBattleTagOnlyFromAuthenticatedParameter()
     {
         var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
         var controller = CreateController(handler);
 
-        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
-        {
-            note = "n",
-            notify = false,
-            actingBattleTag = "Evil#666",
-        }, "Admin#1");
+        // The inbound body type cannot carry an acting battleTag, so a spoofed body value is never bound.
+        Assert.That(typeof(CommercialLicenseTaggedPlayerBody).GetProperty("ActingBattleTag"), Is.Null);
+
+        // The query-string battleTag is overwritten by BearerHasPermissionFilter, which is not exercised here
+        // because there is no JWT test infrastructure; the action just receives the filter's result.
+        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = false }, "Admin#1");
 
         var body = JObject.Parse(handler.RequestBodies[0]);
         Assert.That(body["actingBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
@@ -102,7 +102,7 @@ public class CommercialLicenseControllerTests
         var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
         var controller = CreateController(handler);
 
-        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest { notify = true }, "Admin#1");
+        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Notify = true }, "Admin#1");
 
         var body = JObject.Parse(handler.RequestBodies[0]);
         Assert.That(body["note"]!.Value<string>(), Is.EqualTo(""));
@@ -117,6 +117,19 @@ public class CommercialLicenseControllerTests
         var result = await controller.PutTaggedPlayer("Grubby#1234", null, "Admin#1");
 
         Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerRejectsMissingNotifyBeforeProxying()
+    {
+        var handler = new StubMatchmakingHandler();
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n" }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(JObject.FromObject(((BadRequestObjectResult)result).Value!)["error"]!.Value<string>(), Is.EqualTo("invalid_request"));
         Assert.That(handler.Requests, Is.Empty);
     }
 
@@ -156,7 +169,7 @@ public class CommercialLicenseControllerTests
         var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
         var controller = CreateController(handler);
 
-        var put = await controller.PutTaggedPlayer(target, new CommercialLicenseTaggedPlayerRequest { note = "n" }, "Admin#1");
+        var put = await controller.PutTaggedPlayer(target, new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = true }, "Admin#1");
         var delete = await controller.DeleteTaggedPlayer(target);
 
         Assert.That(put, Is.InstanceOf<BadRequestObjectResult>());
