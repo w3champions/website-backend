@@ -691,7 +691,16 @@ public class MatchmakingServiceClient
 
     private async Task HandleMMError(HttpResponseMessage response)
     {
-        var errorResponse = await GetResult<ErrorResponse>(response);
+        ErrorResponse errorResponse = null;
+        try
+        {
+            errorResponse = await GetResult<ErrorResponse>(response);
+        }
+        catch (JsonException)
+        {
+            // Non-JSON or unexpected error body (e.g. an HTML 502 from a proxy): still surface the status code below.
+        }
+
         var errors = (errorResponse?.Errors ?? []).Select(x => $"{x.Param} {x.Message}");
         var message = string.Join(",", errors);
         if (string.IsNullOrEmpty(message))
