@@ -1,14 +1,20 @@
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace WC3ChampionsStatisticService.Tests.Admin;
 
@@ -138,6 +144,45 @@ public class CommercialLicenseControllerTests
 
         // HttpRequestExceptionFilter maps this exception to a 404 response.
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    [TestCase(".")]
+    [TestCase("..")]
+    public async Task PutAndDeleteRejectInvalidTargetBattleTagWithoutProxying(string target)
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var put = await controller.PutTaggedPlayer(target, new CommercialLicenseTaggedPlayerRequest { note = "n" }, "Admin#1");
+        var delete = await controller.DeleteTaggedPlayer(target);
+
+        Assert.That(put, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(delete, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [TestCase(HttpStatusCode.NotFound, "", 404, null)]
+    [TestCase(HttpStatusCode.BadRequest, "{\"error\":\"note too long\"}", 400, "note too long")]
+    public async Task ExceptionFilterMapsMatchmakingErrorsToStatusAndErrorBody(HttpStatusCode mmStatus, string mmBody, int expectedStatus, string expectedMessage)
+    {
+        var controller = CreateController(new StubMatchmakingHandler(mmStatus, mmBody));
+        var ex = Assert.ThrowsAsync<HttpRequestException>(async () => await controller.DeleteTaggedPlayer("Nobody#1"));
+
+        var actionContext = new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor());
+        var context = new ExceptionContext(actionContext, new List<IFilterMetadata>()) { Exception = ex! };
+        new HttpRequestExceptionFilter().OnException(context);
+
+        Assert.That(context.ExceptionHandled, Is.True);
+        var result = (ObjectResult)context.Result!;
+        Assert.That(result.StatusCode, Is.EqualTo(expectedStatus));
+        var error = ((ErrorResult)result.Value!).Error;
+        if (expectedMessage != null)
+            Assert.That(error, Is.EqualTo(expectedMessage));
+        else
+            Assert.That(error, Is.Not.Null.And.Not.Empty);
     }
 
     private static void AssertCommercialLicensePermission(string methodName)

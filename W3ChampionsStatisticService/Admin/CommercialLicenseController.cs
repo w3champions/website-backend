@@ -27,6 +27,9 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
     [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
     public async Task<IActionResult> PutTaggedPlayer([FromRoute] string targetBattleTag, [FromBody] CommercialLicenseTaggedPlayerRequest request, [NoTrace] string battleTag)
     {
+        if (!IsValidTarget(targetBattleTag))
+            return BadRequest(new { error = "invalid_battletag" });
+
         if (request == null)
             return BadRequest(new { error = "invalid_request" });
 
@@ -39,7 +42,14 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
     [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
     public async Task<IActionResult> DeleteTaggedPlayer([FromRoute] string targetBattleTag)
     {
+        if (!IsValidTarget(targetBattleTag))
+            return BadRequest(new { error = "invalid_battletag" });
+
         await _matchmakingServiceClient.DeleteCommercialLicenseTaggedPlayer(targetBattleTag);
         return NoContent();
     }
+
+    // Dot segments collapse in System.Uri and would send the admin-secret request to a different matchmaking path.
+    private static bool IsValidTarget(string targetBattleTag) =>
+        !string.IsNullOrWhiteSpace(targetBattleTag) && targetBattleTag is not ("." or "..");
 }
