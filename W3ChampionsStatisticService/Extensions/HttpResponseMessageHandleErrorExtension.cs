@@ -2,7 +2,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Net;
 using Newtonsoft.Json;
-using W3C.Contracts.Matchmaking;
+using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.Extensions;
@@ -28,7 +28,7 @@ public static class HttpResponseMessageHandleErrorExtension
             }
 
             // Only 4xx messages are meant for the caller; 5xx bodies may carry internal details.
-            throw new HttpRequestException(ErrorResponse.ClientVisibleMessage(response.StatusCode, error), null, response.StatusCode);
+            throw new HttpRequestException(MatchmakingErrorMessagePolicy.ClientVisibleMessage(response.StatusCode, error), null, response.StatusCode);
         }
     }
 }

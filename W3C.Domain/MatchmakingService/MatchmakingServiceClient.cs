@@ -709,7 +709,7 @@ public class MatchmakingServiceClient
             message = errorResponse?.Error;
         }
 
-        throw new HttpRequestException(ErrorResponse.ClientVisibleMessage(response.StatusCode, message), null, response.StatusCode);
+        throw new HttpRequestException(MatchmakingErrorMessagePolicy.ClientVisibleMessage(response.StatusCode, message), null, response.StatusCode);
     }
 
     private async Task<T> GetResult<T>(HttpResponseMessage response)
