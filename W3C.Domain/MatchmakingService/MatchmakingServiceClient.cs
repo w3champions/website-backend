@@ -25,6 +25,7 @@ public class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+    internal static string AdminSecretForTests => AdminSecret;
     private readonly JsonSerializerSettings _jsonSerializerSettings;
 
     private readonly HttpClient _httpClient;

@@ -14,9 +14,7 @@ public class MatchmakingServiceClientCommercialLicenseTests
     private const string TaggedPlayerJson =
         "{\"battleTag\":\"Grubby#1234\",\"note\":\"Streams for money\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#2\",\"updatedAt\":\"2026-10-08T11:00:00.000Z\"}";
 
-    // Mirrors MatchmakingServiceClient.AdminSecret (private static): env var with the same default.
-    private static readonly string ExpectedAdminSecret =
-        Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+    private static readonly string ExpectedAdminSecret = MatchmakingServiceClient.AdminSecretForTests;
 
     private static MatchmakingServiceClient CreateClient(StubMatchmakingHandler handler) =>
         new(new StubHttpClientFactory(new HttpClient(handler)));
@@ -153,5 +151,7 @@ public class MatchmakingServiceClientCommercialLicenseTests
             await CreateClient(handler).GetCommercialLicenseTaggedPlayers());
 
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+        // No custom message leaked from the empty body: same as the framework default.
+        Assert.That(ex.Message, Is.EqualTo(new HttpRequestException().Message));
     }
 }

@@ -8,6 +8,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="WC3ChampionsStatisticService.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\W3C.Contracts\W3C.Contracts.csproj" />
   </ItemGroup>
 
