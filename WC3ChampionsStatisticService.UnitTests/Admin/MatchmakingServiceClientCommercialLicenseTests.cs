@@ -118,6 +118,18 @@ public class MatchmakingServiceClientCommercialLicenseTests
     }
 
     [Test]
+    public void ServerErrorWithLegacyErrorsArrayIsNotForwarded()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.InternalServerError, "{\"errors\":[{\"msg\":\"Admin API is not configured\",\"param\":\"p\"}]}");
+
+        var ex = Assert.ThrowsAsync<HttpRequestException>(async () =>
+            await CreateClient(handler).GetCommercialLicenseTaggedPlayers());
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.InternalServerError));
+        Assert.That(ex.Message, Is.EqualTo(new HttpRequestException().Message));
+    }
+
+    [Test]
     public void DeleteOfUntaggedPlayerThrowsNotFoundEvenWithEmptyBody()
     {
         var handler = new StubMatchmakingHandler(HttpStatusCode.NotFound);

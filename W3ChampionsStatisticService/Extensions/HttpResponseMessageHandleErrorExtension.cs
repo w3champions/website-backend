@@ -1,8 +1,8 @@
-using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Net;
 using Newtonsoft.Json;
+using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.WebApi.ExceptionFilters;
 
 namespace W3ChampionsStatisticService.Extensions;
@@ -28,13 +28,7 @@ public static class HttpResponseMessageHandleErrorExtension
             }
 
             // Only 4xx messages are meant for the caller; 5xx bodies may carry internal details.
-            if (error != null && (int)response.StatusCode < 500)
-            {
-                throw new HttpRequestException(error, null, response.StatusCode);
-            }
-
-            // Otherwise, do not include unparsed body as it could be sensitive
-            throw new HttpRequestException(null, null, response.StatusCode);
+            throw new HttpRequestException(ErrorResponse.ClientVisibleMessage(response.StatusCode, error), null, response.StatusCode);
         }
     }
 }

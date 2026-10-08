@@ -704,14 +704,12 @@ public class MatchmakingServiceClient
 
         var errors = (errorResponse?.Errors ?? []).Select(x => $"{x.Param} {x.Message}");
         var message = string.Join(",", errors);
-        if (string.IsNullOrEmpty(message) && (int)response.StatusCode < 500)
+        if (string.IsNullOrEmpty(message))
         {
-            // Forward matchmaking's validation message for 4xx only: its global handler answers
-            // 5xx with the raw err.message, which can carry internal hosts or database text.
             message = errorResponse?.Error;
         }
 
-        throw new HttpRequestException(string.IsNullOrEmpty(message) ? null : message, null, response.StatusCode);
+        throw new HttpRequestException(ErrorResponse.ClientVisibleMessage(response.StatusCode, message), null, response.StatusCode);
     }
 
     private async Task<T> GetResult<T>(HttpResponseMessage response)
