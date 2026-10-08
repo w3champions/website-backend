@@ -179,7 +179,7 @@ public class CommercialLicenseControllerTests
 
     [TestCase(HttpStatusCode.NotFound, "", 404, null)]
     [TestCase(HttpStatusCode.BadRequest, "{\"error\":\"note too long\"}", 400, "note too long")]
-    public async Task ExceptionFilterMapsMatchmakingErrorsToStatusAndErrorBody(HttpStatusCode mmStatus, string mmBody, int expectedStatus, string expectedMessage)
+    public void ExceptionFilterMapsMatchmakingErrorsToStatusAndErrorBody(HttpStatusCode mmStatus, string mmBody, int expectedStatus, string expectedMessage)
     {
         var controller = CreateController(new StubMatchmakingHandler(mmStatus, mmBody));
         var ex = Assert.ThrowsAsync<HttpRequestException>(async () => await controller.DeleteTaggedPlayer("Nobody#1"));
