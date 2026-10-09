@@ -190,10 +190,11 @@ public class CommercialLicenseControllerTests
             .PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = true }, "Admin#1");
         var get = await CreateController(new StubMatchmakingHandler(HttpStatusCode.OK, $"[{TaggedPlayerJson}]")).GetTaggedPlayers();
 
-        foreach (var value in new[] { ((OkObjectResult)put).Value, ((OkObjectResult)get).Value })
+        var putJson = JsonSerializer.Serialize(((OkObjectResult)put).Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var getJson = JsonSerializer.Serialize(((OkObjectResult)get).Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        foreach (var restrictions in new[] { JToken.Parse(putJson)["restrictions"], JToken.Parse(getJson)[0]!["restrictions"] })
         {
-            var json = JsonSerializer.Serialize(value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-            var restrictions = JToken.Parse(json).SelectToken("..restrictions");
             Assert.That(restrictions, Is.Not.Null);
             Assert.That(restrictions!["asPlayer"]!.Value<bool>(), Is.False);
             Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.False);
