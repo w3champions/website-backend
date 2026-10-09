@@ -59,7 +59,7 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - **W3ChampionsStatisticService** - Main ASP.NET Core web service
 - **W3C.Domain** - Domain models and repository interfaces
 - **W3C.Contracts** - Shared contracts and DTOs
-- **WC3ChampionsStatisticService.Tests** - Unit and integration tests
+- **WC3ChampionsStatisticService.UnitTests** - Unit and integration tests
 
 ### Key Technologies
 - **.NET 8.0** with ASP.NET Core
