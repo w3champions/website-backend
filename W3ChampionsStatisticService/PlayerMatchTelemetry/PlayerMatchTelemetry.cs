@@ -73,6 +73,9 @@ public class TransportStatsEntry
 {
     public Transport Kind { get; set; } = Transport.TCP;
 
+    // BinData subtype 0; one byte per bucket, the Transport value (0 = TCP, 1 = QUIC)
+    public BsonBinaryData? Kinds { get; set; }
+
     public int BucketCount { get; set; }
 
     // BinData subtype 0; uint32 little-endian
@@ -81,10 +84,10 @@ public class TransportStatsEntry
     // BinData subtype 0; uint8
     public BsonBinaryData SampleCounts { get; set; } = new(Array.Empty<byte>());
 
-    // BinData subtype 0; uint16 little-endian (all six below)
+    // BinData subtype 0; uint16 little-endian (all five below)
     public BsonBinaryData SrttMaxMs { get; set; } = new(Array.Empty<byte>());
     public BsonBinaryData? RttvarMaxMs { get; set; }
-    public BsonBinaryData RetransDelta { get; set; } = new(Array.Empty<byte>());
+    public BsonBinaryData? RetransDelta { get; set; }
     public BsonBinaryData? LostMax { get; set; }
     public BsonBinaryData? UnackedMax { get; set; }
 

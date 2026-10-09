@@ -97,7 +97,6 @@ public record PlayerMatchTelemetrySubmissionDto : IValidatableObject
             (nameof(ts.GameTimeOffsetsMs), ts.GameTimeOffsetsMs),
             (nameof(ts.SampleCounts), ts.SampleCounts),
             (nameof(ts.SrttMaxMs), ts.SrttMaxMs),
-            (nameof(ts.RetransDelta), ts.RetransDelta),
             (nameof(ts.RxBytesDelta), ts.RxBytesDelta),
             (nameof(ts.TxBytesDelta), ts.TxBytesDelta),
             (nameof(ts.StallSecs), ts.StallSecs),
@@ -117,7 +116,8 @@ public record PlayerMatchTelemetrySubmissionDto : IValidatableObject
             (nameof(ts.SampleCounts), ts.SampleCounts.Length),
             (nameof(ts.SrttMaxMs), ts.SrttMaxMs.Length),
             (nameof(ts.RttvarMaxMs), ts.RttvarMaxMs?.Length),
-            (nameof(ts.RetransDelta), ts.RetransDelta.Length),
+            (nameof(ts.RetransDelta), ts.RetransDelta?.Length),
+            (nameof(ts.Kinds), ts.Kinds?.Length),
             (nameof(ts.LostMax), ts.LostMax?.Length),
             (nameof(ts.UnackedMax), ts.UnackedMax?.Length),
             (nameof(ts.RxBytesDelta), ts.RxBytesDelta.Length),
@@ -166,6 +166,9 @@ public record TransportStatsDto
     [EnumDataType(typeof(Transport))]
     public Transport Kind { get; init; }
 
+    /// <summary>Per-bucket transport; null from clients older than this field.</summary>
+    public Transport[] Kinds { get; init; }
+
     public uint[] GameTimeOffsetsMs { get; init; } = [];
 
     [JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
@@ -173,7 +176,8 @@ public record TransportStatsDto
 
     public ushort[] SrttMaxMs { get; init; } = [];
     public ushort[] RttvarMaxMs { get; init; }
-    public ushort[] RetransDelta { get; init; } = [];
+    /// <summary>Absent for an all-QUIC series; QUIC buckets carry 0, so read it with <see cref="Kinds"/>.</summary>
+    public ushort[] RetransDelta { get; init; }
     public ushort[] LostMax { get; init; }
     public ushort[] UnackedMax { get; init; }
     public uint[] RxBytesDelta { get; init; } = [];
@@ -291,13 +295,14 @@ public record TransportStatsResponseDto(
     byte[] SampleCounts,
     ushort[] SrttMaxMs,
     ushort[]? RttvarMaxMs,
-    ushort[] RetransDelta,
+    ushort?[]? RetransDelta,
     ushort[]? LostMax,
     ushort[]? UnackedMax,
     uint[] RxBytesDelta,
     uint[] TxBytesDelta,
     [property: JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
-    byte[] StallSecs
+    byte[] StallSecs,
+    Transport[]? Kinds = null
 );
 
 public record PlayerMatchTelemetryResponseDto(
@@ -353,13 +358,23 @@ public static class PlayerMatchTelemetryMapper
             SampleCounts: DecodeU8(t.SampleCounts),
             SrttMaxMs: DecodeU16Le(t.SrttMaxMs),
             RttvarMaxMs: t.RttvarMaxMs is null ? null : DecodeU16Le(t.RttvarMaxMs),
-            RetransDelta: DecodeU16Le(t.RetransDelta),
+            RetransDelta: RetransForTcpBuckets(t),
             LostMax: t.LostMax is null ? null : DecodeU16Le(t.LostMax),
             UnackedMax: t.UnackedMax is null ? null : DecodeU16Le(t.UnackedMax),
             RxBytesDelta: DecodeU32Le(t.RxBytesDelta),
             TxBytesDelta: DecodeU32Le(t.TxBytesDelta),
-            StallSecs: DecodeU8(t.StallSecs)
+            StallSecs: DecodeU8(t.StallSecs),
+            Kinds: t.Kinds is null ? null : DecodeU8(t.Kinds).Select(k => (Transport)k).ToArray()
         );
+    }
+
+    // QUIC has no retransmit counter; the client writes 0 for its buckets, which would read as "none".
+    private static ushort?[]? RetransForTcpBuckets(TransportStatsEntry t)
+    {
+        if (t.RetransDelta is null) return null;
+        var values = DecodeU16Le(t.RetransDelta);
+        var kinds = t.Kinds is null ? null : DecodeU8(t.Kinds);
+        return values.Select((v, i) => kinds != null && i < kinds.Length && kinds[i] == (byte)Transport.QUIC ? (ushort?)null : v).ToArray();
     }
 
     /// <summary>

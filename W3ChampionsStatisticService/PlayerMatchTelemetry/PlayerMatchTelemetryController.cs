@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -105,7 +106,8 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
         SampleCounts = new BsonBinaryData(ts.SampleCounts),
         SrttMaxMs = new BsonBinaryData(EncodeU16Le(ts.SrttMaxMs)),
         RttvarMaxMs = ts.RttvarMaxMs is null ? null : new BsonBinaryData(EncodeU16Le(ts.RttvarMaxMs)),
-        RetransDelta = new BsonBinaryData(EncodeU16Le(ts.RetransDelta)),
+        Kinds = ts.Kinds is null ? null : new BsonBinaryData(ts.Kinds.Select(k => (byte)k).ToArray()),
+        RetransDelta = ts.RetransDelta is null ? null : new BsonBinaryData(EncodeU16Le(ts.RetransDelta)),
         LostMax = ts.LostMax is null ? null : new BsonBinaryData(EncodeU16Le(ts.LostMax)),
         UnackedMax = ts.UnackedMax is null ? null : new BsonBinaryData(EncodeU16Le(ts.UnackedMax)),
         RxBytesDelta = new BsonBinaryData(EncodeU32Le(ts.RxBytesDelta)),

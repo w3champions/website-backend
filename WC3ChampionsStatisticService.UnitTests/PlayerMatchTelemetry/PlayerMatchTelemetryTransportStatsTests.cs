@@ -128,6 +128,112 @@ public class PlayerMatchTelemetryTransportStatsTests
         Assert.That(dto.TransportStats!.Kind, Is.EqualTo(Transport.QUIC));
     }
 
+    // Mid-game QUIC → TCP fallback: per-bucket kinds; QUIC buckets carry retrans 0.
+    private const string MixedKindsExtra = """
+        ,
+        "transportStats": {
+          "kind": "TCP",
+          "kinds": ["QUIC", "QUIC", "TCP"],
+          "gameTimeOffsetsMs": [0, 5000, 10000],
+          "sampleCounts": [5, 5, 5],
+          "srttMaxMs": [40, 41, 60],
+          "retransDelta": [0, 0, 3],
+          "rxBytesDelta": [1, 2, 3],
+          "txBytesDelta": [1, 2, 3],
+          "stallSecs": [0, 0, 1]
+        }
+        """;
+
+    // All-QUIC series: retransDelta is omitted.
+    private const string AllQuicExtra = """
+        ,
+        "transportStats": {
+          "kind": "QUIC",
+          "kinds": ["QUIC", "QUIC"],
+          "gameTimeOffsetsMs": [0, 5000],
+          "sampleCounts": [5, 5],
+          "srttMaxMs": [40, 41],
+          "rxBytesDelta": [1, 2],
+          "txBytesDelta": [1, 2],
+          "stallSecs": [0, 0]
+        }
+        """;
+
+    [Test]
+    public void Kinds_DeserializeAndValidate()
+    {
+        var dto = Parse(Payload(MixedKindsExtra));
+
+        Assert.That(dto.TransportStats!.Kinds, Is.EqualTo(new[] { Transport.QUIC, Transport.QUIC, Transport.TCP }));
+        var (ok, errors) = Validate(dto);
+        Assert.That(ok, Is.True, string.Join("; ", errors));
+    }
+
+    [Test]
+    public void MissingRetransDelta_IsValid()
+    {
+        var dto = Parse(Payload(AllQuicExtra));
+
+        Assert.That(dto.TransportStats!.RetransDelta, Is.Null);
+        var (ok, errors) = Validate(dto);
+        Assert.That(ok, Is.True, string.Join("; ", errors));
+    }
+
+    [Test]
+    public void OldPayloadWithoutKinds_IsValid()
+    {
+        var dto = Parse(Payload(FullExtra));
+
+        Assert.That(dto.TransportStats!.Kinds, Is.Null);
+        Assert.That(Validate(dto).ok, Is.True);
+    }
+
+    [Test]
+    public void MismatchedKindsLength_FailsValidation()
+    {
+        var dto = Parse(Payload(MixedKindsExtra.Replace("\"kinds\": [\"QUIC\", \"QUIC\", \"TCP\"]", "\"kinds\": [\"QUIC\"]")));
+
+        Assert.That(Validate(dto).ok, Is.False);
+    }
+
+    [Test]
+    public async Task Kinds_AreStoredCompactlyAndQuicBucketsHaveNullRetrans()
+    {
+        var entry = await SubmitAndStore(MixedKindsExtra);
+
+        Assert.That(entry.TransportStats!.Kinds!.Bytes, Is.EqualTo(new byte[] { 1, 1, 0 }), "one byte per bucket: 0 = TCP, 1 = QUIC");
+
+        var rts = Respond(entry).TransportStats!;
+        Assert.That(rts.Kinds, Is.EqualTo(new[] { Transport.QUIC, Transport.QUIC, Transport.TCP }));
+        Assert.That(rts.RetransDelta, Is.EqualTo(new ushort?[] { null, null, 3 }));
+        var json = JsonSerializer.Serialize(rts, WebDefaults);
+        Assert.That(json, Does.Contain("\"kinds\":[\"QUIC\",\"QUIC\",\"TCP\"]"));
+        Assert.That(json, Does.Contain("\"retransDelta\":[null,null,3]"));
+    }
+
+    [Test]
+    public async Task AllQuicSeries_HasNullRetransArray()
+    {
+        var entry = await SubmitAndStore(AllQuicExtra);
+
+        Assert.That(entry.TransportStats!.RetransDelta, Is.Null);
+        Assert.That(Respond(entry).TransportStats!.RetransDelta, Is.Null);
+    }
+
+    private static async Task<PlayerMatchTelemetryEntry> SubmitAndStore(string extra)
+    {
+        var repo = new Mock<IPlayerMatchTelemetryRepository>();
+        PlayerMatchTelemetryEntry? stored = null;
+        repo.Setup(r => r.UpsertPlayerEntryAsync(It.IsAny<long>(), It.IsAny<DateTime>(), It.IsAny<PlayerMatchTelemetryEntry>(), It.IsAny<TimeSpan>()))
+            .Callback<long, DateTime, PlayerMatchTelemetryEntry, TimeSpan>((_, _, e, _) => stored = e)
+            .Returns(Task.CompletedTask);
+        await new PlayerMatchTelemetryController(repo.Object).Submit(Parse(Payload(extra)), "Alice#1");
+        return stored!;
+    }
+
+    private static PlayerMatchTelemetryEntryResponseDto Respond(PlayerMatchTelemetryEntry entry) =>
+        PlayerMatchTelemetryMapper.ToResponseDto(new PlayerMatchTelemetryDoc { GameId = 1, Players = [entry] }).Players.Single();
+
     // ── Validation ────────────────────────────────────────────────────
 
     [Test]
@@ -215,7 +321,7 @@ public class PlayerMatchTelemetryTransportStatsTests
         Assert.That(rts.RttvarMaxMs, Is.EqualTo(new ushort[] { 3, 400 }));
         Assert.That(rts.LostMax, Is.Null);
         Assert.That(rts.UnackedMax, Is.EqualTo(new ushort[] { 1, 2 }));
-        Assert.That(rts.RetransDelta, Is.EqualTo(new ushort[] { 0, 2 }));
+        Assert.That(rts.RetransDelta, Is.EqualTo(new ushort?[] { 0, 2 }), "no kinds (older client): values pass through");
         Assert.That(rts.RxBytesDelta, Is.EqualTo(new uint[] { 900, 70000 }));
         Assert.That(rts.TxBytesDelta, Is.EqualTo(new uint[] { 800, 600 }));
         Assert.That(rts.StallSecs, Is.EqualTo(new byte[] { 0, 1 }));
