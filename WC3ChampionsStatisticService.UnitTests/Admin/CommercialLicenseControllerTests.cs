@@ -177,9 +177,7 @@ public class CommercialLicenseControllerTests
             Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = true, AsObserver = false, FloTv = floTv },
         }, "Admin#1");
 
-        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
-        Assert.That(JObject.FromObject(((BadRequestObjectResult)result).Value!)["error"]!.Value<string>(),
-            Is.EqualTo("restrictions.floTv must be one of none, custom, all"));
+        AssertBadRequestError(result, "restrictions.floTv must be one of none, custom, all");
         Assert.That(handler.Requests, Is.Empty);
     }
 
@@ -217,17 +215,17 @@ public class CommercialLicenseControllerTests
         Assert.That(handler.Requests, Is.Empty);
     }
 
-    [Test]
-    public async Task PutTaggedPlayerRejectsJsonBodyWithoutBooleanFlagsInsteadOfDefaultingToFalse()
+    [TestCase("{\"note\":\"\",\"notify\":true,\"restrictions\":{\"floTv\":\"all\"}}", "restrictions.asPlayer must be a boolean")]
+    [TestCase("{\"note\":\"\",\"notify\":true,\"restrictions\":{\"asPlayer\":true,\"floTv\":\"all\"}}", "restrictions.asObserver must be a boolean")]
+    public async Task PutTaggedPlayerRejectsJsonBodyWithoutBooleanFlagsInsteadOfDefaultingToFalse(string json, string expectedError)
     {
-        const string json = "{\"note\":\"\",\"notify\":true,\"restrictions\":{\"floTv\":\"all\"}}";
         var body = JsonSerializer.Deserialize<CommercialLicenseTaggedPlayerBody>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
         var controller = CreateController(handler);
 
         var result = await controller.PutTaggedPlayer("Grubby#1234", body, "Admin#1");
 
-        AssertBadRequestError(result, "restrictions.asPlayer must be a boolean");
+        AssertBadRequestError(result, expectedError);
         Assert.That(handler.Requests, Is.Empty);
     }
 
