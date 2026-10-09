@@ -1,0 +1,64 @@
+// Trimmed copy of flo-grpc proto/controller.proto (w3champions/flo-grpc): only the
+// GetGameRelayTelemetry rpc and its messages. Package, service name and field numbers
+// must stay identical to upstream for the wire format to match.
+syntax = "proto3";
+package controller;
+
+option csharp_namespace = "W3ChampionsStatisticService.LagReports.FloControllerGrpc";
+
+service FloController {
+  rpc GetGameRelayTelemetry(GetGameRelayTelemetryRequest)
+      returns (GetGameRelayTelemetryReply) {}
+}
+
+message GetGameRelayTelemetryRequest {
+  int32 game_id = 1;
+  int32 player_id = 2;
+}
+
+message RelaySeries {
+  string role = 1;
+  int64 first_seen_unix_ms = 2;
+  int64 closed_unix_ms = 3;
+  // Packed fixed-size samples, 19 bytes per bucket
+  bytes buckets = 4;
+  uint32 bucket_count = 5;
+  // "tcp" or "quic"
+  string kind = 6;
+  // Start of bucket 0; bucket i covers [start + i*5s, start + (i+1)*5s).
+  // Differs from first_seen_unix_ms because a socket is only bucketed once it
+  // has moved enough bytes to be a game connection.
+  int64 buckets_start_unix_ms = 7;
+}
+
+message RelayCloseLine {
+  uint32 fc_rtt_ms = 1;
+  uint32 fc_rttvar_ms = 2;
+  uint32 fc_retrans = 3;
+  uint32 fc_lost = 4;
+  uint32 bc_rtt_ms = 5;
+  string term = 6;
+  uint64 bytes_in = 7;
+  uint64 bytes_out = 8;
+  uint32 duration_ms = 9;
+}
+
+message RelayLeg {
+  string from_label = 1;
+  string to_label = 2;
+  RelaySeries near = 3;
+  RelaySeries far = 4;
+  RelayCloseLine close = 5;
+  string status = 6;
+}
+
+message RelayConnection {
+  int64 connected_unix_ms = 1;
+  repeated RelayLeg legs = 2;
+}
+
+message GetGameRelayTelemetryReply {
+  int32 game_id = 1;
+  int32 player_id = 2;
+  repeated RelayConnection connections = 3;
+}

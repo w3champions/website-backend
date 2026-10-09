@@ -20,6 +20,10 @@ public record PlayerMatchTelemetrySubmissionDto : IValidatableObject
 {
     private const int MaxTimeseriesBuckets = 28_800;
 
+    /// <summary>8 h of 5 s transport buckets, the same span as <see cref="MaxTimeseriesBuckets"/>.</summary>
+    public const int MaxTransportBuckets = 5_760;
+    private const int MaxShortStringLength = 200;
+
     [Range(1L, long.MaxValue)]
     public long GameId { get; init; }
 
@@ -44,8 +48,25 @@ public record PlayerMatchTelemetrySubmissionDto : IValidatableObject
 
     public uint DroppedUnmatchedCount { get; init; }
 
+    /// <summary>The client's own game-socket stats (flo client 0.18.5+); null from older clients.</summary>
+    public TransportStatsDto TransportStats { get; init; }
+
+    [StringLength(MaxShortStringLength)]
+    public string ClientVersion { get; init; }
+
+    [StringLength(MaxShortStringLength)]
+    public string LauncherVersion { get; init; }
+
+    /// <summary>How the launcher routed the game at game start; null from older launchers.</summary>
+    public MatchTelemetryRoutingDto Routing { get; init; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        foreach (var error in ValidateTransportStats().Concat(ValidateRouting()))
+        {
+            yield return error;
+        }
+
         var ts = ActionLatencyTimeseries;
         if (ts is null) yield break;
         if (ts.GameTimeOffsetsMs.Length != ts.MeansMs.Length ||
@@ -65,9 +86,111 @@ public record PlayerMatchTelemetrySubmissionDto : IValidatableObject
                 new[] { nameof(ActionLatencyTimeseries) });
         }
     }
+
+    private IEnumerable<ValidationResult> ValidateTransportStats()
+    {
+        var ts = TransportStats;
+        if (ts is null) yield break;
+
+        var required = new (string Name, object Value)[]
+        {
+            (nameof(ts.GameTimeOffsetsMs), ts.GameTimeOffsetsMs),
+            (nameof(ts.SampleCounts), ts.SampleCounts),
+            (nameof(ts.SrttMaxMs), ts.SrttMaxMs),
+            (nameof(ts.RetransDelta), ts.RetransDelta),
+            (nameof(ts.RxBytesDelta), ts.RxBytesDelta),
+            (nameof(ts.TxBytesDelta), ts.TxBytesDelta),
+            (nameof(ts.StallSecs), ts.StallSecs),
+        };
+        var missing = required.Where(r => r.Value is null).Select(r => r.Name).ToList();
+        if (missing.Count > 0)
+        {
+            yield return new ValidationResult(
+                $"transportStats arrays must not be null: {string.Join(", ", missing)}",
+                new[] { nameof(TransportStats) });
+            yield break;
+        }
+
+        var n = ts.GameTimeOffsetsMs.Length;
+        var lengths = new (string Name, int? Length)[]
+        {
+            (nameof(ts.SampleCounts), ts.SampleCounts.Length),
+            (nameof(ts.SrttMaxMs), ts.SrttMaxMs.Length),
+            (nameof(ts.RttvarMaxMs), ts.RttvarMaxMs?.Length),
+            (nameof(ts.RetransDelta), ts.RetransDelta.Length),
+            (nameof(ts.LostMax), ts.LostMax?.Length),
+            (nameof(ts.UnackedMax), ts.UnackedMax?.Length),
+            (nameof(ts.RxBytesDelta), ts.RxBytesDelta.Length),
+            (nameof(ts.TxBytesDelta), ts.TxBytesDelta.Length),
+            (nameof(ts.StallSecs), ts.StallSecs.Length),
+        };
+        var mismatched = lengths.Where(l => l.Length.HasValue && l.Length != n).ToList();
+        if (mismatched.Count > 0)
+        {
+            yield return new ValidationResult(
+                $"transportStats parallel arrays must match gameTimeOffsetsMs ({n}): " +
+                string.Join(", ", mismatched.Select(l => $"{l.Name}={l.Length}")),
+                new[] { nameof(TransportStats) });
+        }
+        if (n > MaxTransportBuckets)
+        {
+            yield return new ValidationResult(
+                $"transportStats length {n} exceeds max {MaxTransportBuckets} buckets.",
+                new[] { nameof(TransportStats) });
+        }
+    }
+
+    private IEnumerable<ValidationResult> ValidateRouting()
+    {
+        if (Routing is null) yield break;
+        if (Routing.ProxyName?.Length > MaxShortStringLength ||
+            Routing.ProxyAddress?.Length > MaxShortStringLength ||
+            Routing.ConnectionKind?.Length > MaxShortStringLength)
+        {
+            yield return new ValidationResult(
+                $"routing strings must be at most {MaxShortStringLength} characters.",
+                new[] { nameof(Routing) });
+        }
+    }
 }
 
 public record DisconnectEventDto(DateTime StartedAt, uint DurationMs);
+
+/// <summary>
+/// 5 s buckets of the client's game-socket stats as parallel arrays (flo
+/// <c>TransportStatsTimeseries</c>). The nullable arrays are omitted by platforms that
+/// cannot fill them (Windows: rttvar, lost; macOS: unacked; QUIC: rttvar, unacked).
+/// </summary>
+public record TransportStatsDto
+{
+    [EnumDataType(typeof(Transport))]
+    public Transport Kind { get; init; }
+
+    public uint[] GameTimeOffsetsMs { get; init; } = [];
+
+    [JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
+    public byte[] SampleCounts { get; init; } = [];
+
+    public ushort[] SrttMaxMs { get; init; } = [];
+    public ushort[] RttvarMaxMs { get; init; }
+    public ushort[] RetransDelta { get; init; } = [];
+    public ushort[] LostMax { get; init; }
+    public ushort[] UnackedMax { get; init; }
+    public uint[] RxBytesDelta { get; init; } = [];
+    public uint[] TxBytesDelta { get; init; } = [];
+
+    [JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
+    public byte[] StallSecs { get; init; } = [];
+}
+
+public record MatchTelemetryRoutingDto
+{
+    public string ProxyName { get; init; }
+    public string ProxyAddress { get; init; }
+
+    /// <summary>"direct" or "proxied". A string so a new kind is stored, not rejected.</summary>
+    public string ConnectionKind { get; init; }
+}
 
 public record ActionLatencyAggregateDto(
     uint SampleCount,
@@ -153,7 +276,28 @@ public record PlayerMatchTelemetryEntryResponseDto(
     [property: JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
     byte[] SampleCounts,
     uint DroppedUnmatchedCount,
-    DateTime SubmittedAt
+    DateTime SubmittedAt,
+    TransportStatsResponseDto? TransportStats = null,
+    string? ClientVersion = null,
+    string? LauncherVersion = null,
+    MatchTelemetryRouting? Routing = null
+);
+
+public record TransportStatsResponseDto(
+    Transport Kind,
+    int BucketCount,
+    uint[] GameTimeOffsetsMs,
+    [property: JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
+    byte[] SampleCounts,
+    ushort[] SrttMaxMs,
+    ushort[]? RttvarMaxMs,
+    ushort[] RetransDelta,
+    ushort[]? LostMax,
+    ushort[]? UnackedMax,
+    uint[] RxBytesDelta,
+    uint[] TxBytesDelta,
+    [property: JsonConverter(typeof(ByteArrayAsJsonNumberArrayConverter))]
+    byte[] StallSecs
 );
 
 public record PlayerMatchTelemetryResponseDto(
@@ -191,7 +335,30 @@ public static class PlayerMatchTelemetryMapper
             MeansMs: DecodeU16Le(e.MeansMs),
             SampleCounts: DecodeU8(e.SampleCounts),
             DroppedUnmatchedCount: e.DroppedUnmatchedCount,
-            SubmittedAt: e.SubmittedAt
+            SubmittedAt: e.SubmittedAt,
+            TransportStats: ToTransportStatsResponseDto(e.TransportStats),
+            ClientVersion: e.ClientVersion,
+            LauncherVersion: e.LauncherVersion,
+            Routing: e.Routing
+        );
+    }
+
+    private static TransportStatsResponseDto? ToTransportStatsResponseDto(TransportStatsEntry? t)
+    {
+        if (t is null) return null;
+        return new TransportStatsResponseDto(
+            Kind: t.Kind,
+            BucketCount: t.BucketCount,
+            GameTimeOffsetsMs: DecodeU32Le(t.GameTimeOffsetsMs),
+            SampleCounts: DecodeU8(t.SampleCounts),
+            SrttMaxMs: DecodeU16Le(t.SrttMaxMs),
+            RttvarMaxMs: t.RttvarMaxMs is null ? null : DecodeU16Le(t.RttvarMaxMs),
+            RetransDelta: DecodeU16Le(t.RetransDelta),
+            LostMax: t.LostMax is null ? null : DecodeU16Le(t.LostMax),
+            UnackedMax: t.UnackedMax is null ? null : DecodeU16Le(t.UnackedMax),
+            RxBytesDelta: DecodeU32Le(t.RxBytesDelta),
+            TxBytesDelta: DecodeU32Le(t.TxBytesDelta),
+            StallSecs: DecodeU8(t.StallSecs)
         );
     }
 

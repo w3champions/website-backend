@@ -55,6 +55,55 @@ public class PlayerMatchTelemetryEntry
     public uint DroppedUnmatchedCount { get; set; }
 
     public DateTime SubmittedAt { get; set; }
+
+    public TransportStatsEntry? TransportStats { get; set; }
+
+    public string? ClientVersion { get; set; }
+
+    public string? LauncherVersion { get; set; }
+
+    public MatchTelemetryRouting? Routing { get; set; }
+}
+
+/// <summary>
+/// The client's game-socket stats in 5 s buckets, packed like the action-latency series.
+/// The nullable arrays are absent when the client's platform does not expose them.
+/// </summary>
+public class TransportStatsEntry
+{
+    public Transport Kind { get; set; } = Transport.TCP;
+
+    public int BucketCount { get; set; }
+
+    // BinData subtype 0; uint32 little-endian
+    public BsonBinaryData GameTimeOffsetsMs { get; set; } = new(Array.Empty<byte>());
+
+    // BinData subtype 0; uint8
+    public BsonBinaryData SampleCounts { get; set; } = new(Array.Empty<byte>());
+
+    // BinData subtype 0; uint16 little-endian (all six below)
+    public BsonBinaryData SrttMaxMs { get; set; } = new(Array.Empty<byte>());
+    public BsonBinaryData? RttvarMaxMs { get; set; }
+    public BsonBinaryData RetransDelta { get; set; } = new(Array.Empty<byte>());
+    public BsonBinaryData? LostMax { get; set; }
+    public BsonBinaryData? UnackedMax { get; set; }
+
+    // BinData subtype 0; uint32 little-endian
+    public BsonBinaryData RxBytesDelta { get; set; } = new(Array.Empty<byte>());
+    public BsonBinaryData TxBytesDelta { get; set; } = new(Array.Empty<byte>());
+
+    // BinData subtype 0; uint8
+    public BsonBinaryData StallSecs { get; set; } = new(Array.Empty<byte>());
+}
+
+/// <summary>How the launcher routed the game, captured at game start.</summary>
+public class MatchTelemetryRouting
+{
+    public string? ProxyName { get; set; }
+    public string? ProxyAddress { get; set; }
+
+    /// <summary>"direct" or "proxied".</summary>
+    public string? ConnectionKind { get; set; }
 }
 
 /// <summary>

@@ -12,10 +12,15 @@ namespace W3ChampionsStatisticService.LagReports;
 [ApiController]
 [Route("api/lag-reports")]
 [Trace]
-public class LagReportController(LagReportRepository lagReportRepository, IFloStatsService floStatsService) : ControllerBase
+public class LagReportController(
+    LagReportRepository lagReportRepository,
+    IFloStatsService floStatsService,
+    IRelayTelemetryService relayTelemetryService
+) : ControllerBase
 {
     private readonly LagReportRepository _lagReportRepository = lagReportRepository;
     private readonly IFloStatsService _floStatsService = floStatsService;
+    private readonly IRelayTelemetryService _relayTelemetryService = relayTelemetryService;
 
     // ── Submission validation caps ────────────────────────────────────
     private const int MaxLagEvents = 200;
@@ -72,6 +77,13 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         // Fire-and-forget: fetch server-side ping from flo-stats while data is still in LRU.
         // The match-finished handler is a fallback, but often runs before any player submits.
         _ = _floStatsService.FetchAndStoreIfNeeded(dto.GameMetadata.FloGameId, _lagReportRepository);
+
+        // Fire-and-forget: this player's relay chain. An early leaver gets theirs now; the
+        // match-end refresh completes chains whose connections were still open.
+        if (playerData.FloPlayerId is { } floPlayerId)
+        {
+            _ = _relayTelemetryService.FetchForPlayer(dto.GameMetadata.FloGameId, floPlayerId);
+        }
 
         return Ok(new LagReportSubmissionResponse { ReportId = reportId });
     }
@@ -141,6 +153,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
         if (dto.ConnectionTopology.ProxyName?.Length > MaxShortStringLength) return "proxy_name too long";
         if (dto.ConnectionTopology.ProxyAddress?.Length > MaxShortStringLength) return "proxy_address too long";
         if (dto.ConnectionTopology.ClientIp?.Length > MaxClientIpLength) return "client_ip too long";
+        if (diag.ClientVersion?.Length > MaxShortStringLength) return "client_version too long";
 
         foreach (var trace in (diag.TargetMtr ?? []).Concat(diag.ReverseMtr ?? []))
         {
@@ -226,6 +239,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
             ProxyIp = proxyIp,
             ProxyPort = proxyPort,
             IsExplicit = dto.IsExplicit,
+            FloPlayerId = diag.PlayerId > 0 ? diag.PlayerId : null,
             IssueCategories = dto.Categories ?? [],
             ConnectionIssueTags = dto.ConnectionIssueTags ?? [],
             FreeText = dto.FreeText ?? "",
@@ -278,6 +292,7 @@ public class LagReportController(LagReportRepository lagReportRepository, IFloSt
                     PlayersFlagged = s.PlayersFlagged,
                     Outcome = s.Outcome,
                 }).ToList(),
+                ClientVersion = diag.ClientVersion,
             },
         };
     }

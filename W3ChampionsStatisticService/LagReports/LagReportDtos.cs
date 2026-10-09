@@ -109,6 +109,9 @@ public class DiagnosticsDataDto
 
     [JsonPropertyName("host_stalls")]
     public List<HostStallDto> HostStalls { get; set; } = [];
+
+    [JsonPropertyName("client_version")]
+    public string ClientVersion { get; set; }
 }
 
 public class HostStallDto
