@@ -333,6 +333,7 @@ if (runBackfill == "true")
 // One-shot, self-gating backfill of the LagReport lowercased *Search fields onto pre-existing
 // documents. Runs automatically once (marker in HandlerVersions); a cheap no-op on later startups.
 builder.Services.AddHostedService<W3ChampionsStatisticService.LagReports.LagReportSearchBackfillService>();
+builder.Services.AddHostedService<W3ChampionsStatisticService.LagReports.LagReportPlayerCountBackfillService>();
 
 var app = builder.Build();
 
