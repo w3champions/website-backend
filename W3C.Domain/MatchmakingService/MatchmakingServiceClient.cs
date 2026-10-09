@@ -24,8 +24,6 @@ namespace W3C.Domain.MatchmakingService;
 public class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
-    private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
-    internal static string AdminSecretForTests => AdminSecret;
     private readonly JsonSerializerSettings _jsonSerializerSettings;
 
     private readonly HttpClient _httpClient;
@@ -58,7 +56,7 @@ public class MatchmakingServiceClient
         }
 
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -75,7 +73,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -103,7 +101,7 @@ public class MatchmakingServiceClient
         }
 
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -124,7 +122,7 @@ public class MatchmakingServiceClient
         }
 
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -141,7 +139,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/warning-definitions";
         var httpcontent = new StringContent(SerializeData(warningDefinitionRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -159,7 +157,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/warning-definitions/{HttpUtility.UrlEncode(id)}";
         var httpcontent = new StringContent(SerializeData(warningDefinitionRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Put, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -177,7 +175,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/warning-definitions/{HttpUtility.UrlEncode(id)}";
         var httpcontent = new StringContent(SerializeData(disableRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -195,7 +193,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/warnings";
         var httpcontent = new StringContent(SerializeData(warningRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -213,7 +211,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/warnings/{HttpUtility.UrlEncode(id)}/cancel";
         var httpcontent = new StringContent(SerializeData(cancelRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -229,7 +227,7 @@ public class MatchmakingServiceClient
     public async Task<List<CommercialLicenseTaggedPlayerDto>> GetCommercialLicenseTaggedPlayers()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{MatchmakingApiUrl}/admin/commercial-license/tagged-players");
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -244,7 +242,7 @@ public class MatchmakingServiceClient
     public async Task<CommercialLicenseTaggedPlayerDto> UpsertCommercialLicenseTaggedPlayer(string battleTag, CommercialLicenseTaggedPlayerRequest taggedPlayerRequest)
     {
         using var request = new HttpRequestMessage(HttpMethod.Put, GetCommercialLicenseTaggedPlayerUrl(battleTag));
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = new StringContent(SerializeData(taggedPlayerRequest), Encoding.UTF8, "application/json");
         var response = await _httpClient.SendAsync(request);
 
@@ -260,7 +258,7 @@ public class MatchmakingServiceClient
     public async Task DeleteCommercialLicenseTaggedPlayer(string battleTag)
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, GetCommercialLicenseTaggedPlayerUrl(battleTag));
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
@@ -276,7 +274,7 @@ public class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/queue/snapshots";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -324,7 +322,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/maps";
         var httpcontent = new StringContent(SerializeData(newMap), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -342,7 +340,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/maps/{id}";
         var httpcontent = new StringContent(SerializeData(map), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Put, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -379,7 +377,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/motd";
         var httpcontent = new StringContent(JsonConvert.SerializeObject(motd), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -390,7 +388,7 @@ public class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/ladder/active-modes";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
@@ -462,7 +460,7 @@ public class MatchmakingServiceClient
         JsonContent postBody = JsonContent.Create(data);
 
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = postBody;
         var response = await _httpClient.SendAsync(request);
 
@@ -480,7 +478,7 @@ public class MatchmakingServiceClient
             battleTag,
         };
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
         var response = await _httpClient.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
@@ -538,7 +536,7 @@ public class MatchmakingServiceClient
 
         JsonContent patchBody = JsonContent.Create(data);
         var request = new HttpRequestMessage(HttpMethod.Patch, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = patchBody;
         var response = await _httpClient.SendAsync(request);
 
@@ -596,7 +594,7 @@ public class MatchmakingServiceClient
 
         JsonContent postBody = JsonContent.Create(data);
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = postBody;
         var response = await _httpClient.SendAsync(request);
 
@@ -610,7 +608,7 @@ public class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -626,7 +624,7 @@ public class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations/{id}";
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)
@@ -643,7 +641,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations";
         var httpcontent = new StringContent(SerializeData(createRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -661,7 +659,7 @@ public class MatchmakingServiceClient
         var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations/{id}";
         var httpcontent = new StringContent(SerializeData(updateRequest), Encoding.UTF8, "application/json");
         var request = new HttpRequestMessage(HttpMethod.Put, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         request.Content = httpcontent;
         var response = await _httpClient.SendAsync(request);
 
@@ -678,7 +676,7 @@ public class MatchmakingServiceClient
     {
         var url = $"{MatchmakingApiUrl}/admin/ban-reason-translations/{id}";
         var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         var response = await _httpClient.SendAsync(request);
 
         if (response.IsSuccessStatusCode)

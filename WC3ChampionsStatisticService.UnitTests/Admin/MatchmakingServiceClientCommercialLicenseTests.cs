@@ -14,7 +14,7 @@ public class MatchmakingServiceClientCommercialLicenseTests
     private const string TaggedPlayerJson =
         "{\"battleTag\":\"Grubby#1234\",\"note\":\"Streams for money\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#2\",\"updatedAt\":\"2026-10-08T11:00:00.000Z\",\"restrictions\":{\"asPlayer\":true,\"asObserver\":false,\"floTv\":\"custom\"}}";
 
-    private static readonly string ExpectedAdminSecret = MatchmakingServiceClient.AdminSecretForTests;
+    private static readonly string ExpectedAdminSecret = AdminSecretTestEnvironment.Secret;
 
     private static MatchmakingServiceClient CreateClient(StubMatchmakingHandler handler) =>
         new(new StubHttpClientFactory(new HttpClient(handler)));

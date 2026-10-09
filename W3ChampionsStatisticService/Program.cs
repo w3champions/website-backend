@@ -264,6 +264,13 @@ if (!chatRelationshipsAuthSettings.Configured)
 }
 builder.Services.AddSingleton(chatRelationshipsAuthSettings);
 
+// Outbound admin secret for update/replay/matchmaking calls. No fallback: unset means no header is sent.
+if (!W3C.Domain.AdminSecretProvider.IsConfigured)
+{
+    Log.Warning("{Variable} not set: calls to update/replay/matchmaking services carry no admin secret and will be rejected",
+        W3C.Domain.AdminSecretProvider.VariableName);
+}
+
 // Common services (audit logging, optimistic concurrency)
 builder.Services.AddCommonServices();
 
