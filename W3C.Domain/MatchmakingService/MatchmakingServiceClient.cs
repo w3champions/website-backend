@@ -25,6 +25,7 @@ public class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
     private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
+    internal static string AdminSecretForTests => AdminSecret;
     private readonly JsonSerializerSettings _jsonSerializerSettings;
 
     private readonly HttpClient _httpClient;
@@ -224,6 +225,52 @@ public class MatchmakingServiceClient
         await HandleMMError(response);
         return null;
     }
+
+    public async Task<List<CommercialLicenseTaggedPlayerDto>> GetCommercialLicenseTaggedPlayers()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{MatchmakingApiUrl}/admin/commercial-license/tagged-players");
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<List<CommercialLicenseTaggedPlayerDto>>(response) ?? [];
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task<CommercialLicenseTaggedPlayerDto> UpsertCommercialLicenseTaggedPlayer(string battleTag, CommercialLicenseTaggedPlayerRequest taggedPlayerRequest)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Put, GetCommercialLicenseTaggedPlayerUrl(battleTag));
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        request.Content = new StringContent(SerializeData(taggedPlayerRequest), Encoding.UTF8, "application/json");
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await GetResult<CommercialLicenseTaggedPlayerDto>(response);
+        }
+
+        await HandleMMError(response);
+        return null;
+    }
+
+    public async Task DeleteCommercialLicenseTaggedPlayer(string battleTag)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, GetCommercialLicenseTaggedPlayerUrl(battleTag));
+        request.Headers.Add("x-admin-secret", AdminSecret);
+        var response = await _httpClient.SendAsync(request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            await HandleMMError(response);
+        }
+    }
+
+    private static string GetCommercialLicenseTaggedPlayerUrl(string battleTag) =>
+        $"{MatchmakingApiUrl}/admin/commercial-license/tagged-players/{Uri.EscapeDataString(battleTag)}";
 
     public async Task<List<MappedQueue>> GetLiveQueueData()
     {
@@ -645,9 +692,24 @@ public class MatchmakingServiceClient
 
     private async Task HandleMMError(HttpResponseMessage response)
     {
-        var errorReponse = await GetResult<ErrorResponse>(response);
-        var errors = errorReponse.Errors.Select(x => $"{x.Param} {x.Message}");
-        throw new HttpRequestException(string.Join(",", errors), null, response.StatusCode);
+        ErrorResponse errorResponse = null;
+        try
+        {
+            errorResponse = await GetResult<ErrorResponse>(response);
+        }
+        catch (JsonException)
+        {
+            // Non-JSON or unexpected error body (e.g. an HTML 502 from a proxy): still surface the status code below.
+        }
+
+        var errors = (errorResponse?.Errors ?? []).Select(x => $"{x.Param} {x.Message}");
+        var message = string.Join(",", errors);
+        if (string.IsNullOrEmpty(message))
+        {
+            message = errorResponse?.Error;
+        }
+
+        throw new HttpRequestException(MatchmakingErrorMessagePolicy.ClientVisibleMessage(response.StatusCode, message), null, response.StatusCode);
     }
 
     private async Task<T> GetResult<T>(HttpResponseMessage response)
@@ -836,6 +898,24 @@ public class PlayerWarningDefinitionRequest
 public class DisablePlayerWarningDefinitionRequest
 {
     public string updatedByBattleTag { get; set; }
+}
+
+public class CommercialLicenseTaggedPlayerDto
+{
+    public string battleTag { get; set; }
+    public string note { get; set; }
+    public bool notify { get; set; }
+    public string createdBy { get; set; }
+    public DateTime createdAt { get; set; }
+    public string updatedBy { get; set; }
+    public DateTime updatedAt { get; set; }
+}
+
+public class CommercialLicenseTaggedPlayerRequest
+{
+    public string note { get; set; }
+    public bool notify { get; set; }
+    public string actingBattleTag { get; set; }
 }
 
 public class PlayerWarningDeliveryAttempt

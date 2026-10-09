@@ -13,12 +13,6 @@ public class RebuildSmurfDatabaseResponse
 }
 
 
-public class GetIgnoredIdentifierResponse
-{
-    public IgnoredIdentifier ignoredIdentifier { get; set; }
-}
-
-
 public class GetIgnoredIdentifiersResponse
 {
     public List<IgnoredIdentifier> identifiers { get; set; }

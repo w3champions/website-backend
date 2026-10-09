@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -37,7 +35,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task GetWarningDefinitionsForwardsAdminSecret()
     {
-        var handler = new CapturingHandler("[{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":true,\"sortOrder\":10}]");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "[{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":true,\"sortOrder\":10}]");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.GetWarningDefinitions();
@@ -51,7 +49,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task GetWarningDefinitionsCanIncludeDisabledDefinitions()
     {
-        var handler = new CapturingHandler("[{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":false,\"sortOrder\":10}]");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "[{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":false,\"sortOrder\":10}]");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.GetWarningDefinitions(true);
@@ -64,7 +62,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task CreateWarningDefinitionInjectsAdminBattleTagAndForwardsAdminSecret()
     {
-        var handler = new CapturingHandler("{\"_id\":\"warning-template-1\",\"severity\":\"Info\",\"title\":{\"en\":\"Notice\"},\"body\":{\"en\":\"Message\"},\"enabled\":true,\"sortOrder\":20}");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "{\"_id\":\"warning-template-1\",\"severity\":\"Info\",\"title\":{\"en\":\"Notice\"},\"body\":{\"en\":\"Message\"},\"enabled\":true,\"sortOrder\":20}");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.CreateWarningDefinition(new PlayerWarningDefinitionRequest
@@ -91,7 +89,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task UpdateWarningDefinitionInjectsAdminBattleTagAndForwardsAdminSecret()
     {
-        var handler = new CapturingHandler("{\"_id\":\"chat-conduct\",\"severity\":\"Critical\",\"title\":{\"en\":\"Updated\"},\"body\":{\"en\":\"Updated body\"},\"enabled\":false,\"sortOrder\":5}");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "{\"_id\":\"chat-conduct\",\"severity\":\"Critical\",\"title\":{\"en\":\"Updated\"},\"body\":{\"en\":\"Updated body\"},\"enabled\":false,\"sortOrder\":5}");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.UpdateWarningDefinition("chat-conduct", new PlayerWarningDefinitionRequest
@@ -117,7 +115,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task DeleteWarningDefinitionSoftDisablesThroughMatchmaking()
     {
-        var handler = new CapturingHandler("{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":false,\"sortOrder\":10}");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "{\"_id\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Chat conduct reminder\"},\"body\":{\"en\":\"Please keep chat respectful.\"},\"enabled\":false,\"sortOrder\":10}");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.DeleteWarningDefinition("chat-conduct", "Admin#1");
@@ -135,7 +133,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task CreateWarningCanonicalizesTargetInjectsIssuerAndForwardsAdminSecret()
     {
-        var handler = new CapturingHandler();
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, DefaultIssueResponseJson);
         var resolver = new Mock<IBattleTagResolver>();
         resolver.Setup(r => r.ResolveCanonical("grubby#1234")).ReturnsAsync("Grubby#1234");
         var controller = CreateController(handler, resolver.Object);
@@ -162,7 +160,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task GetWarningsCanonicalizesBattleTagFilter()
     {
-        var handler = new CapturingHandler("{\"total\":0,\"warnings\":[]}");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "{\"total\":0,\"warnings\":[]}");
         var resolver = new Mock<IBattleTagResolver>();
         resolver.Setup(r => r.ResolveCanonical("grubby#1234")).ReturnsAsync("Grubby#1234");
         var controller = CreateController(handler, resolver.Object);
@@ -182,7 +180,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task GetWarningsRejectsUnknownBattleTagFilterBeforeProxying()
     {
-        var handler = new CapturingHandler();
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, DefaultIssueResponseJson);
         var resolver = new Mock<IBattleTagResolver>();
         resolver.Setup(r => r.ResolveCanonical("missing#1")).ReturnsAsync((string)null);
         var controller = CreateController(handler, resolver.Object);
@@ -201,7 +199,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task CreateCustomWarningCanonicalizesTargetAndForwardsCustomSnapshot()
     {
-        var handler = new CapturingHandler();
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, DefaultIssueResponseJson);
         var resolver = new Mock<IBattleTagResolver>();
         resolver.Setup(r => r.ResolveCanonical("grubby#1234")).ReturnsAsync("Grubby#1234");
         var controller = CreateController(handler, resolver.Object);
@@ -229,7 +227,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task CreateWarningRejectsUnknownTargetBeforeProxying()
     {
-        var handler = new CapturingHandler();
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, DefaultIssueResponseJson);
         var resolver = new Mock<IBattleTagResolver>();
         resolver.Setup(r => r.ResolveCanonical("missing#1")).ReturnsAsync((string)null);
         var controller = CreateController(handler, resolver.Object);
@@ -247,7 +245,7 @@ public class AdminWarningsControllerTests
     [Test]
     public async Task CancelWarningInjectsAdminBattleTagAndForwardsAdminSecret()
     {
-        var handler = new CapturingHandler("{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Cancelled\",\"createdAt\":\"2026-06-06T20:00:00Z\"}");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Cancelled\",\"createdAt\":\"2026-06-06T20:00:00Z\"}");
         var controller = CreateController(handler, Mock.Of<IBattleTagResolver>());
 
         var result = await controller.CancelWarning("warning-1", "Admin#1");
@@ -270,9 +268,11 @@ public class AdminWarningsControllerTests
         Assert.That(attribute!.Permission, Is.EqualTo(EPermission.Warnings));
     }
 
-    private static AdminController CreateController(CapturingHandler handler, IBattleTagResolver resolver)
+    private const string DefaultIssueResponseJson = "{\"warning\":{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"warningDefinitionId\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Pending\",\"createdAt\":\"2026-06-06T20:00:00Z\"},\"delivered\":false}";
+
+    private static AdminController CreateController(StubMatchmakingHandler handler, IBattleTagResolver resolver)
     {
-        var client = new MatchmakingServiceClient(new TestHttpClientFactory(new HttpClient(handler)));
+        var client = new MatchmakingServiceClient(new StubHttpClientFactory(new HttpClient(handler)));
 
         return new AdminController(
             Mock.Of<IMatchRepository>(),
@@ -282,27 +282,5 @@ public class AdminWarningsControllerTests
             Mock.Of<IAdminRepository>(),
             Mock.Of<IRankRepository>(),
             resolver);
-    }
-
-    private class TestHttpClientFactory(HttpClient client) : IHttpClientFactory
-    {
-        public HttpClient CreateClient(string name) => client;
-    }
-
-    private class CapturingHandler(string responseBody = "{\"warning\":{\"_id\":\"warning-1\",\"targetBattleTag\":\"Grubby#1234\",\"issuedByBattleTag\":\"Admin#1\",\"warningDefinitionId\":\"chat-conduct\",\"severity\":\"Warning\",\"title\":{\"en\":\"Careful\"},\"body\":{\"en\":\"Please mind rule 2.\"},\"status\":\"Pending\",\"createdAt\":\"2026-06-06T20:00:00Z\"},\"delivered\":false}") : HttpMessageHandler
-    {
-        public List<HttpRequestMessage> Requests { get; } = [];
-        public List<string> RequestBodies { get; } = [];
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Requests.Add(request);
-            RequestBodies.Add(request.Content == null ? "" : await request.Content.ReadAsStringAsync(cancellationToken));
-
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
-            };
-        }
     }
 }
