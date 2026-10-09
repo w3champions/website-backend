@@ -290,5 +290,6 @@ public class ServerPingSample
     public double Time { get; set; }
     public int? Min { get; set; }
     public int? Max { get; set; }
-    public int? Avg { get; set; }
+    /// <summary>Mean RTT in ms; flo-stats reports it with a fractional part.</summary>
+    public double? Avg { get; set; }
 }

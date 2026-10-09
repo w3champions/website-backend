@@ -39,7 +39,8 @@ public class FloStatsService : IFloStatsService
 
     /// <summary>
     /// Fetch accumulated ping data for a game from flo-stats via WebSocket subscription.
-    /// Returns null if the game is not found (evicted from LRU) or on any error.
+    /// Returns null if the game is not found (evicted from LRU) or on any error; an empty list
+    /// means the snapshot was read but held no ping samples.
     /// </summary>
     public async Task<List<ServerSidePingData>> FetchGamePingData(int floGameId)
     {
@@ -155,17 +156,23 @@ public class FloStatsService : IFloStatsService
     private async Task<List<ServerSidePingData>> FetchAndStore(int floGameId, LagReportRepository repo)
     {
         var pingData = await FetchGamePingData(floGameId);
+        if (pingData == null)
+        {
+            // Leave ServerSidePing null so a later trigger for this game retries; persisting
+            // [] here would block retries forever via the null check in FetchAndStoreIfNeeded.
+            return null;
+        }
 
         var report = await repo.GetByFloGameId(floGameId);
         if (report != null && report.ServerSidePing == null)
         {
-            await repo.UpdateServerSidePing(report.Id, pingData ?? []);
+            await repo.UpdateServerSidePing(report.Id, pingData);
         }
 
         return pingData;
     }
 
-    private static List<ServerSidePingData> ParsePingData(JsonElement payload)
+    internal static List<ServerSidePingData> ParsePingData(JsonElement payload)
     {
         var playerNames = new Dictionary<int, string>();
         if (payload.TryGetProperty("game", out var game) &&
@@ -199,9 +206,9 @@ public class FloStatsService : IFloStatsService
                     byPlayer[playerId].Add(new ServerPingSample
                     {
                         Time = time,
-                        Min = d.TryGetProperty("min", out var min) && min.ValueKind == JsonValueKind.Number ? min.GetInt32() : null,
-                        Max = d.TryGetProperty("max", out var max) && max.ValueKind == JsonValueKind.Number ? max.GetInt32() : null,
-                        Avg = d.TryGetProperty("avg", out var avg) && avg.ValueKind == JsonValueKind.Number ? avg.GetInt32() : null,
+                        Min = RoundedMs(ReadNumber(d, "min")),
+                        Max = RoundedMs(ReadNumber(d, "max")),
+                        Avg = ReadNumber(d, "avg"),
                     });
                 }
             }
@@ -214,6 +221,13 @@ public class FloStatsService : IFloStatsService
             Samples = kv.Value,
         }).ToList();
     }
+
+    // flo-stats encodes avg as a decimal (and may encode min/max as e.g. 87.0), so GetInt32 throws.
+    private static double? ReadNumber(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var n) ? n : null;
+
+    private static int? RoundedMs(double? ms) =>
+        ms.HasValue ? (int)Math.Round(ms.Value, MidpointRounding.AwayFromZero) : null;
 
     private static async Task SendJson<T>(ClientWebSocket ws, T obj, CancellationToken ct)
     {
