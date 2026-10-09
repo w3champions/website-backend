@@ -98,6 +98,7 @@ public class MatchmakingServiceClientCommercialLicenseTests
         Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.False);
         Assert.That(restrictions["floTv"]!.Value<string>(), Is.EqualTo("custom"));
 
+        Assert.That(result.Restrictions, Is.Not.Null);
         Assert.That(result.Restrictions.AsPlayer, Is.True);
         Assert.That(result.Restrictions.FloTv, Is.EqualTo("custom"));
     }
