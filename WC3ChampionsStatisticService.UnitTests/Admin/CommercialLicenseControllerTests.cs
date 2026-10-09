@@ -51,7 +51,7 @@ public class CommercialLicenseControllerTests
         var result = await controller.GetTaggedPlayers();
 
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
-        var players = (System.Collections.Generic.List<CommercialLicenseTaggedPlayerDto>)((OkObjectResult)result).Value!;
+        var players = (List<CommercialLicenseTaggedPlayerDto>)((OkObjectResult)result).Value!;
         Assert.That(players, Has.Count.EqualTo(1));
         Assert.That(players[0].battleTag, Is.EqualTo("Grubby#1234"));
         Assert.That(players[0].Restrictions.FloTv, Is.EqualTo("none"));
@@ -90,7 +90,7 @@ public class CommercialLicenseControllerTests
         // The inbound body type cannot carry an acting battleTag, so a spoofed body value is never bound.
         Assert.That(typeof(CommercialLicenseTaggedPlayerBody).GetProperty("ActingBattleTag"), Is.Null);
 
-        // The query-string battleTag is overwritten by BearerHasPermissionFilter, which is not exercised here
+        // BearerHasPermissionFilter overwrites the action argument "battleTag", which is not exercised here
         // because there is no JWT test infrastructure; the action just receives the filter's result.
         await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = false }, "Admin#1");
 
@@ -120,7 +120,7 @@ public class CommercialLicenseControllerTests
         {
             Note = "n",
             Notify = true,
-            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, AsObserver = true, FloTv = "all" },
+            Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = true, AsObserver = true, FloTv = "all" },
         }, "Admin#1");
 
         var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
@@ -154,7 +154,7 @@ public class CommercialLicenseControllerTests
         {
             Note = "n",
             Notify = true,
-            Restrictions = new CommercialLicenseRestrictions { FloTv = floTv },
+            Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = false, AsObserver = false, FloTv = floTv },
         }, "Admin#1");
 
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
@@ -174,12 +174,60 @@ public class CommercialLicenseControllerTests
         {
             Note = "n",
             Notify = true,
-            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, FloTv = floTv },
+            Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = true, AsObserver = false, FloTv = floTv },
         }, "Admin#1");
 
         Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
         Assert.That(JObject.FromObject(((BadRequestObjectResult)result).Value!)["error"]!.Value<string>(),
             Is.EqualTo("restrictions.floTv must be one of none, custom, all"));
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerRejectsMissingAsPlayerBeforeProxying()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictionsBody { AsObserver = false, FloTv = "none" },
+        }, "Admin#1");
+
+        AssertBadRequestError(result, "restrictions.asPlayer must be a boolean");
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerRejectsMissingAsObserverBeforeProxying()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = true, FloTv = "none" },
+        }, "Admin#1");
+
+        AssertBadRequestError(result, "restrictions.asObserver must be a boolean");
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerRejectsJsonBodyWithoutBooleanFlagsInsteadOfDefaultingToFalse()
+    {
+        const string json = "{\"note\":\"\",\"notify\":true,\"restrictions\":{\"floTv\":\"all\"}}";
+        var body = JsonSerializer.Deserialize<CommercialLicenseTaggedPlayerBody>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", body, "Admin#1");
+
+        AssertBadRequestError(result, "restrictions.asPlayer must be a boolean");
         Assert.That(handler.Requests, Is.Empty);
     }
 
@@ -290,6 +338,12 @@ public class CommercialLicenseControllerTests
             Assert.That(error, Is.EqualTo(expectedMessage));
         else
             Assert.That(error, Is.Not.Null.And.Not.Empty);
+    }
+
+    private static void AssertBadRequestError(IActionResult result, string expectedError)
+    {
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(JObject.FromObject(((BadRequestObjectResult)result).Value!)["error"]!.Value<string>(), Is.EqualTo(expectedError));
     }
 
     private static void AssertCommercialLicensePermission(string methodName)

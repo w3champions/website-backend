@@ -33,15 +33,32 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
         if (body?.Notify == null)
             return BadRequest(new { error = "invalid_request" });
 
-        if (body.Restrictions is { FloTv: not ("none" or "custom" or "all") })
-            return BadRequest(new { error = "restrictions.floTv must be one of none, custom, all" });
+        // Mirrors matchmaking's validation order and texts. Missing flags must not default to false,
+        // because forwarding false would clear stored restrictions.
+        // A non-object restrictions value or a non-boolean flag (e.g. "true") fails model binding before this
+        // action runs, so ASP.NET answers with a ValidationProblemDetails 400 rather than this {error} shape.
+        var restrictions = body.Restrictions;
+        if (restrictions != null)
+        {
+            if (restrictions.AsPlayer == null)
+                return BadRequest(new { error = "restrictions.asPlayer must be a boolean" });
+            if (restrictions.AsObserver == null)
+                return BadRequest(new { error = "restrictions.asObserver must be a boolean" });
+            if (restrictions.FloTv is not ("none" or "custom" or "all"))
+                return BadRequest(new { error = "restrictions.floTv must be one of none, custom, all" });
+        }
 
         var request = new CommercialLicenseTaggedPlayerRequest
         {
             note = body.Note ?? "",
             notify = body.Notify.Value,
             actingBattleTag = battleTag,
-            Restrictions = body.Restrictions,
+            Restrictions = restrictions == null ? null : new CommercialLicenseRestrictions
+            {
+                AsPlayer = restrictions.AsPlayer.Value,
+                AsObserver = restrictions.AsObserver.Value,
+                FloTv = restrictions.FloTv,
+            },
         };
         return Ok(await _matchmakingServiceClient.UpsertCommercialLicenseTaggedPlayer(targetBattleTag, request));
     }
@@ -69,5 +86,13 @@ public class CommercialLicenseTaggedPlayerBody
     public bool? Notify { get; set; }
 
     /// <summary>Optional. When absent it is not forwarded and matchmaking keeps the stored restrictions.</summary>
-    public CommercialLicenseRestrictions Restrictions { get; set; }
+    public CommercialLicenseRestrictionsBody Restrictions { get; set; }
+}
+
+/// <summary>Inbound restrictions: nullable flags so a missing value is detectable instead of binding to false.</summary>
+public class CommercialLicenseRestrictionsBody
+{
+    public bool? AsPlayer { get; set; }
+    public bool? AsObserver { get; set; }
+    public string FloTv { get; set; }
 }
