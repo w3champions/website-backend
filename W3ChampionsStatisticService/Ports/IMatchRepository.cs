@@ -13,7 +13,7 @@ namespace W3ChampionsStatisticService.Ports;
 
 public interface IMatchRepository
 {
-    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall");
+    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", Race race = Race.Total, bool includeRandom = false);
 
     Task<List<string>> LoadMapNames(int season, GameMode gameMode);
 
@@ -25,7 +25,9 @@ public interface IMatchRepository
         int? maxMmr = null,
         int? minDuration = null,
         int? maxDuration = null,
-        string mapName = "Overall");
+        string mapName = "Overall",
+        Race race = Race.Total,
+        bool includeRandom = false);
 
     Task Insert(Matchup matchup);
 
