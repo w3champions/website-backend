@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using W3C.Domain.Tracing;
@@ -14,8 +15,8 @@ public interface ILagReportRelayStore
     /// <summary>The report with only its id and each player's FloPlayerId and RelayChain loaded.</summary>
     Task<LagReport> GetForRelayTelemetry(int floGameId);
 
-    /// <summary>Replaces the chain on every entry with that flo player id and battletag, and on no other.</summary>
-    Task UpdatePlayerRelayChain(string reportId, int floPlayerId, string battleTag, PlayerRelayChain chain);
+    /// <summary>Replaces the chain on every entry with that flo player id and one of these battletags, and on no other.</summary>
+    Task UpdatePlayerRelayChain(string reportId, int floPlayerId, IReadOnlyCollection<string> battleTags, PlayerRelayChain chain);
 }
 
 /// <summary>
@@ -38,25 +39,67 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
     // Coalesces a submit and a match-end refresh racing for the same player, so they cannot
     // overwrite each other's merge. Lazy because GetOrAdd may run its factory more than once
     // under contention; only the stored Lazy ever starts a fetch. Entries are removed on completion.
-    private readonly ConcurrentDictionary<(int GameId, int PlayerId), Lazy<Task>> _inflight = new();
+    private readonly ConcurrentDictionary<(int GameId, int PlayerId), Lazy<Task<bool>>> _inflight = new();
 
-    public Task FetchForPlayer(int floGameId, int floPlayerId) => FetchCoalesced(floGameId, floPlayerId, roster: null);
+    /// <summary>The controller runs at most 4 walks at once and rejects the rest; leave it one.</summary>
+    public const int MaxConcurrentFetches = 3;
 
-    private async Task FetchCoalesced(int floGameId, int floPlayerId, Dictionary<int, string> roster)
+    private static readonly TimeSpan SlotWait = TimeSpan.FromSeconds(30);
+
+    private readonly SemaphoreSlim _fetchSlots = new(MaxConcurrentFetches);
+
+    /// <summary>
+    /// A submit after the match-end event is the player's last trigger, and their connections
+    /// may still be closing then, so it retries a few times while the chain stays incomplete.
+    /// </summary>
+    internal TimeSpan[] LateRetryDelays { get; set; } = [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(4)];
+
+    public async Task FetchForPlayer(int floGameId, int floPlayerId)
+    {
+        var incomplete = await FetchCoalesced(floGameId, floPlayerId, roster: null);
+        foreach (var delay in LateRetryDelays)
+        {
+            if (!incomplete) return;
+            await Task.Delay(delay);
+            incomplete = await FetchCoalesced(floGameId, floPlayerId, roster: null);
+        }
+    }
+
+    // Returns true while the player's chain is still worth fetching again.
+    private async Task<bool> FetchCoalesced(int floGameId, int floPlayerId, Dictionary<int, string> roster)
     {
         var key = (floGameId, floPlayerId);
-        var lazy = _inflight.GetOrAdd(key, k => new Lazy<Task>(() => FetchAndStore(k.GameId, k.PlayerId, roster)));
+        var lazy = _inflight.GetOrAdd(key, k => new Lazy<Task<bool>>(() => FetchAndStoreBounded(k.GameId, k.PlayerId, roster)));
         try
         {
-            await lazy.Value;
+            return await lazy.Value;
         }
         catch (Exception ex)
         {
             Log.Warning(ex, "RelayTelemetry: fetch for game {GameId} player {PlayerId} failed", floGameId, floPlayerId);
+            return true;
         }
         finally
         {
-            _inflight.TryRemove(new KeyValuePair<(int, int), Lazy<Task>>(key, lazy));
+            _inflight.TryRemove(new KeyValuePair<(int, int), Lazy<Task<bool>>>(key, lazy));
+        }
+    }
+
+    private async Task<bool> FetchAndStoreBounded(int floGameId, int floPlayerId, Dictionary<int, string> roster)
+    {
+        if (!await _fetchSlots.WaitAsync(SlotWait))
+        {
+            Log.Warning("RelayTelemetry: all {Slots} fetch slots busy for {Wait}; skipping game {GameId} player {PlayerId}",
+                MaxConcurrentFetches, SlotWait, floGameId, floPlayerId);
+            return true;
+        }
+        try
+        {
+            return await FetchAndStore(floGameId, floPlayerId, roster);
+        }
+        finally
+        {
+            _fetchSlots.Release();
         }
     }
 
@@ -78,6 +121,11 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
             if (playerIds.Count == 0) return;
 
             roster = await floStats.FetchGamePlayers(floGameId);
+            if (roster == null)
+            {
+                Log.Information("RelayTelemetry: no flo roster for game {GameId}; skipping the match-end refresh", floGameId);
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -92,23 +140,23 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
         }
     }
 
-    private async Task FetchAndStore(int floGameId, int floPlayerId, Dictionary<int, string> roster)
+    private async Task<bool> FetchAndStore(int floGameId, int floPlayerId, Dictionary<int, string> roster)
     {
         var report = await store.GetForRelayTelemetry(floGameId);
         var claimed = report?.Players.Where(p => p.FloPlayerId == floPlayerId).ToList();
-        if (claimed == null || claimed.Count == 0) return;
+        if (claimed == null || claimed.Count == 0) return false;
 
         var existing = CurrentChain(claimed);
         var needsFetch = RelayChainMerge.NeedsRefresh(existing);
         // A re-submission after the chain was final adds an entry without it.
-        if (!needsFetch && claimed.All(p => p.RelayChain != null)) return;
+        if (!needsFetch && claimed.All(p => p.RelayChain != null)) return false;
 
         // FloPlayerId comes from the launcher; only flo's own roster says whose id it is.
         roster ??= await floStats.FetchGamePlayers(floGameId);
         if (roster == null)
         {
             Log.Information("RelayTelemetry: no flo roster for game {GameId}; player {PlayerId} retries on the next trigger", floGameId, floPlayerId);
-            return;
+            return true;
         }
         var entries = roster.TryGetValue(floPlayerId, out var owner)
             ? claimed.Where(p => string.Equals(p.BattleTag, owner, StringComparison.OrdinalIgnoreCase)).ToList()
@@ -117,7 +165,7 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
         {
             Log.Warning("RelayTelemetry: game {GameId} flo player {PlayerId} is {Owner}, not the reporter {Claimants}; ignoring",
                 floGameId, floPlayerId, owner, claimed.Select(p => p.BattleTag).Distinct());
-            return;
+            return false;
         }
 
         existing = CurrentChain(entries);
@@ -125,25 +173,29 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
         {
             if (entries.Any(p => p.RelayChain == null))
             {
-                await store.UpdatePlayerRelayChain(report.Id, floPlayerId, entries[0].BattleTag, existing);
+                await store.UpdatePlayerRelayChain(report.Id, floPlayerId, Tags(entries), existing);
             }
-            return;
+            return false;
         }
 
         var reply = await client.GetGameRelayTelemetry(floGameId, floPlayerId);
-        if (reply == null) return;
+        if (reply == null) return true;
         if (reply.Connections.Count == 0)
         {
             // Nothing to add; writing would only blur "not fetched yet" with "fetched, empty".
             Log.Information("RelayTelemetry: controller returned no connections for game {GameId} player {PlayerId}", floGameId, floPlayerId);
-            return;
+            return true;
         }
 
         var merged = RelayChainMerge.Merge(existing, RelayChainMapper.FromReply(reply, DateTime.UtcNow));
-        await store.UpdatePlayerRelayChain(report.Id, floPlayerId, entries[0].BattleTag, merged);
+        await store.UpdatePlayerRelayChain(report.Id, floPlayerId, Tags(entries), merged);
+        return RelayChainMerge.NeedsRefresh(merged);
     }
 
     // A player who submitted twice has two entries; every update writes all of them.
+    private static IReadOnlyCollection<string> Tags(IEnumerable<LagReportPlayer> entries) =>
+        entries.Select(p => p.BattleTag).Distinct().ToList();
+
     private static PlayerRelayChain CurrentChain(IEnumerable<LagReportPlayer> entries) =>
         entries.Select(p => p.RelayChain).FirstOrDefault(c => c != null);
 }

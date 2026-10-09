@@ -168,10 +168,10 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             .FirstOrDefaultAsync();
     }
 
-    public async Task UpdatePlayerRelayChain(string reportId, int floPlayerId, string battleTag, PlayerRelayChain chain)
+    public async Task UpdatePlayerRelayChain(string reportId, int floPlayerId, IReadOnlyCollection<string> battleTags, PlayerRelayChain chain)
     {
         var collection = CreateCollection<LagReport>();
-        var (update, options) = BuildRelayChainUpdate(floPlayerId, battleTag, chain);
+        var (update, options) = BuildRelayChainUpdate(floPlayerId, battleTags, chain);
         var result = await collection.UpdateOneAsync(Builders<LagReport>.Filter.Eq(r => r.Id, reportId), update, options);
         if (result.MatchedCount == 0)
         {
@@ -179,14 +179,14 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         }
     }
 
-    internal static (UpdateDefinition<LagReport> Update, UpdateOptions Options) BuildRelayChainUpdate(int floPlayerId, string battleTag, PlayerRelayChain chain)
+    internal static (UpdateDefinition<LagReport> Update, UpdateOptions Options) BuildRelayChainUpdate(int floPlayerId, IReadOnlyCollection<string> battleTags, PlayerRelayChain chain)
     {
         var update = Builders<LagReport>.Update
             .Set(r => r.Players.AllMatchingElements("p").RelayChain, chain)
             .Set(r => r.UpdatedAt, DateTime.UtcNow);
         var options = new UpdateOptions
         {
-            ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument { { "p.FloPlayerId", floPlayerId }, { "p.BattleTag", battleTag } })],
+            ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument { { "p.FloPlayerId", floPlayerId }, { "p.BattleTag", new BsonDocument("$in", new BsonArray(battleTags)) } })],
         };
         return (update, options);
     }

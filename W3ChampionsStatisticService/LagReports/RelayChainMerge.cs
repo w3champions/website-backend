@@ -22,6 +22,9 @@ public static class RelayChainMerge
 
     private static readonly HashSet<string> RetryStatuses = [RelayLegStatus.PendingClose, RelayLegStatus.NodeUnavailable];
 
+    // Statuses that report lost access to data, not a newer verdict about it.
+    private static readonly HashSet<string> DataLossStatuses = [RelayLegStatus.Expired, RelayLegStatus.NodeUnavailable, RelayLegStatus.NodeTooOld];
+
     public static bool NeedsRefresh(PlayerRelayChain chain)
     {
         if (chain?.Connections == null || chain.Connections.Count == 0) return true;
@@ -77,14 +80,29 @@ public static class RelayChainMerge
         return new RelayConnectionData
         {
             ConnectedUnixMs = next.ConnectedUnixMs,
-            Legs = old.Legs.Zip(next.Legs).Select(p => CoveredSecs([p.First]) > CoveredSecs([p.Second]) ? p.First : p.Second).ToList(),
+            Legs = old.Legs.Zip(next.Legs).Select(p => MergeLeg(p.First, p.Second)).ToList(),
         };
     }
 
+    // The two ends come from different nodes, so one can expire while the other still answers.
+    private static RelayLegData MergeLeg(RelayLegData old, RelayLegData next) => new()
+    {
+        FromLabel = next.FromLabel,
+        ToLabel = next.ToLabel,
+        Status = DataLossStatuses.Contains(next.Status) && CoveredSecs([old]) > 0 ? old.Status : next.Status,
+        Near = PickSeries(old.Near, next.Near),
+        Far = PickSeries(old.Far, next.Far),
+        Close = next.Close ?? old.Close,
+    };
+
+    private static RelaySeriesData PickSeries(RelaySeriesData old, RelaySeriesData next) =>
+        Covered(old) > Covered(next) ? old : next ?? old;
+
+    private static long Covered(RelaySeriesData s) => s == null ? 0 : (long)s.BucketCount * s.BucketSecs;
+
     private static long CoveredSecs(IEnumerable<RelayLegData> legs) => legs
         .SelectMany(l => new[] { l.Near, l.Far })
-        .Where(s => s != null)
-        .Sum(s => (long)s.BucketCount * s.BucketSecs);
+        .Sum(Covered);
 
     private static List<RelayConnectionData> FitBudget(List<RelayConnectionData> connections)
     {

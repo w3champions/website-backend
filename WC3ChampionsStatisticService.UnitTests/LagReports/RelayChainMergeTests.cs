@@ -137,6 +137,24 @@ public class RelayChainMergeTests
     }
 
     [Test]
+    public void Merge_KeepsEachEndOfALegFromWhicheverFetchHasMoreOfIt()
+    {
+        var existing = Chain(RelayedConnection(1, 30, RelayLegStatus.PendingClose, closedUnixMs: 0));
+        existing.Connections[0].Legs[1].Far = null;
+        var fresh = Chain(RelayedConnection(1, 40));
+        fresh.Connections[0].Legs[1].Near = null;
+        fresh.Connections[0].Legs[1].Close = new RelayCloseLineData { BcRttMs = 9 };
+
+        var merged = RelayChainMerge.Merge(existing, fresh);
+
+        var leg = merged.Connections[0].Legs[1];
+        Assert.That(leg.Near.BucketCount, Is.EqualTo(30), "the relay's side survives a fetch that lost it");
+        Assert.That(leg.Far.BucketCount, Is.EqualTo(40));
+        Assert.That(leg.Status, Is.EqualTo(RelayLegStatus.Measured));
+        Assert.That(leg.Close.BcRttMs, Is.EqualTo(9));
+    }
+
+    [Test]
     public void Merge_DifferentPathKeepsTheConnectionWithMoreData()
     {
         var existing = Chain(RelayedConnection(1, 30, RelayLegStatus.PendingClose, closedUnixMs: 0));

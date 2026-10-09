@@ -24,7 +24,7 @@ public class LagReportRelayChainUpdateTests
     {
         var chain = Chain(RelayedConnection(1, 2));
 
-        var (update, options) = LagReportRepository.BuildRelayChainUpdate(5, "A#1", chain);
+        var (update, options) = LagReportRepository.BuildRelayChainUpdate(5, ["A#1", "a#1"], chain);
 
         var rendered = update.Render(Args).AsBsonDocument;
         var set = rendered["$set"].AsBsonDocument;
@@ -39,7 +39,7 @@ public class LagReportRelayChainUpdateTests
 
         var filter = options.ArrayFilters.Single()
             .Render(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry);
-        Assert.That(filter, Is.EqualTo(new BsonDocument { { "p.FloPlayerId", 5 }, { "p.BattleTag", "A#1" } }));
+        Assert.That(filter, Is.EqualTo(new BsonDocument { { "p.FloPlayerId", 5 }, { "p.BattleTag", new BsonDocument("$in", new BsonArray { "A#1", "a#1" }) } }));
     }
 
     [Test]

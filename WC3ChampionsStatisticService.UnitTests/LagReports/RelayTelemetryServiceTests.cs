@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf;
 using Moq;
@@ -31,8 +32,14 @@ public class RelayTelemetryServiceTests
         // flo names players by battletag; Player(id) uses "P{id}#1".
         _floStats.Setup(f => f.FetchGamePlayers(FloGameId))
             .ReturnsAsync(Enumerable.Range(1, 9).ToDictionary(i => i, i => $"P{i}#1"));
-        _service = new RelayTelemetryService(_client.Object, _store.Object, _floStats.Object);
+        _service = new RelayTelemetryService(_client.Object, _store.Object, _floStats.Object)
+        {
+            LateRetryDelays = [],
+        };
     }
+
+    private static IReadOnlyCollection<string> Tags(params string[] tags) =>
+        It.Is<IReadOnlyCollection<string>>(t => t.OrderBy(x => x).SequenceEqual(tags.OrderBy(x => x)));
 
     private static LagReportPlayer Player(int? floPlayerId, PlayerRelayChain chain = null) => new()
     {
@@ -69,7 +76,7 @@ public class RelayTelemetryServiceTests
     }
 
     private void ExpectStore(int floPlayerId) =>
-        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, floPlayerId, $"P{floPlayerId}#1", It.IsAny<PlayerRelayChain>())).Returns(Task.CompletedTask);
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, floPlayerId, Tags($"P{floPlayerId}#1"), It.IsAny<PlayerRelayChain>())).Returns(Task.CompletedTask);
 
     // ── FetchForPlayer ────────────────────────────────────────────────
 
@@ -82,9 +89,9 @@ public class RelayTelemetryServiceTests
 
         await _service.FetchForPlayer(FloGameId, 5);
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", It.Is<PlayerRelayChain>(c =>
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.Is<PlayerRelayChain>(c =>
             c.Connections.Count == 1 && c.Connections[0].Legs[0].Far.BucketCount == 12)), Times.Once);
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 6, "P6#1", It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 6, Tags("P6#1"), It.IsAny<PlayerRelayChain>()), Times.Never);
     }
 
     [Test]
@@ -95,7 +102,7 @@ public class RelayTelemetryServiceTests
 
         await _service.FetchForPlayer(FloGameId, 5);
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<PlayerRelayChain>()), Times.Never);
     }
 
     [Test]
@@ -106,7 +113,7 @@ public class RelayTelemetryServiceTests
 
         Assert.DoesNotThrowAsync(() => _service.FetchForPlayer(FloGameId, 5));
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<PlayerRelayChain>()), Times.Never);
     }
 
     [Test]
@@ -122,7 +129,7 @@ public class RelayTelemetryServiceTests
         await _service.FetchForPlayer(FloGameId, 5);
 
         _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Exactly(2));
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", It.IsAny<PlayerRelayChain>()), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
     }
 
     [Test]
@@ -145,7 +152,7 @@ public class RelayTelemetryServiceTests
         await _service.FetchForPlayer(FloGameId, 5);
 
         _client.Verify(c => c.GetGameRelayTelemetry(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", final), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), final), Times.Once);
     }
 
     [Test]
@@ -157,7 +164,7 @@ public class RelayTelemetryServiceTests
 
         await _service.FetchForPlayer(FloGameId, 5);
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<PlayerRelayChain>()), Times.Never);
     }
 
     [Test]
@@ -167,8 +174,8 @@ public class RelayTelemetryServiceTests
         // The refresh only reaches the node leg (the relay is gone): the client leg must survive.
         _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).ReturnsAsync(ReplyWithNodeLeg(5, 40));
         PlayerRelayChain stored = null;
-        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", It.IsAny<PlayerRelayChain>()))
-            .Callback<string, int, string, PlayerRelayChain>((_, _, _, c) => stored = c)
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()))
+            .Callback<string, int, IReadOnlyCollection<string>, PlayerRelayChain>((_, _, _, c) => stored = c)
             .Returns(Task.CompletedTask);
 
         await _service.FetchForPlayer(FloGameId, 5);
@@ -227,7 +234,7 @@ public class RelayTelemetryServiceTests
         await _service.FetchForPlayer(FloGameId, 5);
 
         _client.Verify(c => c.GetGameRelayTelemetry(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<PlayerRelayChain>()), Times.Never);
     }
 
     [Test]
@@ -251,8 +258,8 @@ public class RelayTelemetryServiceTests
 
         await _service.FetchForPlayer(FloGameId, 5);
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", It.IsAny<PlayerRelayChain>()), Times.Once);
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "Mallory#1", It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("Mallory#1"), It.IsAny<PlayerRelayChain>()), Times.Never);
     }
 
     [Test]
@@ -265,10 +272,107 @@ public class RelayTelemetryServiceTests
 
         await _service.FetchForPlayer(FloGameId, 5);
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", It.IsAny<PlayerRelayChain>()), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
+    }
+
+    [Test]
+    public async Task FetchForPlayer_UpdatesEveryCasingOfTheVerifiedBattleTag()
+    {
+        StoredReport(Player(5), new LagReportPlayer { BattleTag = "p5#1", FloPlayerId = 5 });
+        _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).ReturnsAsync(ReplyWithNodeLeg(5, 4));
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1", "p5#1"), It.IsAny<PlayerRelayChain>())).Returns(Task.CompletedTask);
+
+        await _service.FetchForPlayer(FloGameId, 5);
+
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1", "p5#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
+    }
+
+    // ── Load bounds and late submits ──────────────────────────────────
+
+    [Test]
+    public async Task FetchForPlayer_BoundsConcurrentControllerCalls()
+    {
+        var players = Enumerable.Range(1, RelayTelemetryService.MaxConcurrentFetches + 2).ToArray();
+        StoredReport(players.Select(id => Player(id)).ToArray());
+        var gate = new TaskCompletionSource<GetGameRelayTelemetryReply>();
+        var running = 0;
+        var peak = 0;
+        foreach (var id in players)
+        {
+            var playerId = id;
+            _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, playerId)).Returns(async () =>
+            {
+                var now = Interlocked.Increment(ref running);
+                InterlockedMax(ref peak, now);
+                await gate.Task;
+                Interlocked.Decrement(ref running);
+                return ReplyWithNodeLeg(playerId, 1);
+            });
+            ExpectStore(playerId);
+        }
+
+        var all = players.Select(id => _service.FetchForPlayer(FloGameId, id)).ToArray();
+        await Task.Yield();
+        gate.SetResult(null);
+        await Task.WhenAll(all);
+
+        Assert.That(peak, Is.LessThanOrEqualTo(RelayTelemetryService.MaxConcurrentFetches));
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, It.IsAny<int>()), Times.Exactly(players.Length));
+    }
+
+    private static void InterlockedMax(ref int target, int value)
+    {
+        int seen;
+        while ((seen = Volatile.Read(ref target)) < value && Interlocked.CompareExchange(ref target, value, seen) != seen)
+        {
+        }
+    }
+
+    [Test]
+    public async Task FetchForPlayer_LateSubmitRetriesWhileTheChainIsStillOpen()
+    {
+        _service.LateRetryDelays = [TimeSpan.Zero, TimeSpan.Zero];
+        var stored = (PlayerRelayChain)null;
+        _store.Setup(s => s.GetForRelayTelemetry(FloGameId))
+            .ReturnsAsync(() => new LagReport { Id = ReportId, FloGameId = FloGameId, Players = [Player(5, stored)] });
+        _client.SetupSequence(c => c.GetGameRelayTelemetry(FloGameId, 5))
+            .ReturnsAsync(ReplyWithNodeLeg(5, 4, RelayLegStatus.PendingClose))
+            .ReturnsAsync(ReplyWithNodeLeg(5, 6));
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()))
+            .Callback<string, int, IReadOnlyCollection<string>, PlayerRelayChain>((_, _, _, c) => stored = c)
+            .Returns(Task.CompletedTask);
+
+        await _service.FetchForPlayer(FloGameId, 5);
+
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Exactly(2));
+        Assert.That(stored.Connections[0].Legs[0].Status, Is.EqualTo(RelayLegStatus.Measured));
+    }
+
+    [Test]
+    public async Task FetchForPlayer_LateRetriesAreBounded()
+    {
+        _service.LateRetryDelays = [TimeSpan.Zero, TimeSpan.Zero];
+        StoredReport(Player(5));
+        _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).ReturnsAsync((GetGameRelayTelemetryReply)null);
+
+        await _service.FetchForPlayer(FloGameId, 5);
+
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Exactly(3));
     }
 
     // ── RefreshOpen ───────────────────────────────────────────────────
+
+    [Test]
+    public async Task RefreshOpen_FailedRosterLookupIsNotRepeatedPerPlayer()
+    {
+        _floStats.Setup(f => f.FetchGamePlayers(FloGameId)).ReturnsAsync((Dictionary<int, string>)null);
+        StoredReport(Player(5), Player(6), Player(7));
+
+        await _service.RefreshOpen(FloGameId);
+
+        _floStats.Verify(f => f.FetchGamePlayers(FloGameId), Times.Once);
+        _client.Verify(c => c.GetGameRelayTelemetry(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+    }
 
     [Test]
     public async Task RefreshOpen_RefreshesOnlyPlayersWhoseChainIsMissingOrOpen()
@@ -286,9 +390,9 @@ public class RelayTelemetryServiceTests
         await _service.RefreshOpen(FloGameId);
 
         _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Never);
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, "P5#1", It.IsAny<PlayerRelayChain>()), Times.Never);
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 6, "P6#1", It.IsAny<PlayerRelayChain>()), Times.Once);
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 7, "P7#1", It.IsAny<PlayerRelayChain>()), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()), Times.Never);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 6, Tags("P6#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 7, Tags("P7#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
         _floStats.Verify(f => f.FetchGamePlayers(FloGameId), Times.Once, "one roster lookup per refresh, not per player");
     }
 
@@ -302,7 +406,7 @@ public class RelayTelemetryServiceTests
 
         await _service.RefreshOpen(FloGameId);
 
-        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 7, "P7#1", It.IsAny<PlayerRelayChain>()), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 7, Tags("P7#1"), It.IsAny<PlayerRelayChain>()), Times.Once);
     }
 
     [Test]
