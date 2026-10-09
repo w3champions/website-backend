@@ -900,6 +900,15 @@ public class DisablePlayerWarningDefinitionRequest
     public string updatedByBattleTag { get; set; }
 }
 
+public class CommercialLicenseRestrictions
+{
+    public bool AsPlayer { get; set; }
+    public bool AsObserver { get; set; }
+
+    /// <summary>"none", "custom" or "all". A string, not an enum, so an unknown future value from matchmaking cannot break the list.</summary>
+    public string FloTv { get; set; }
+}
+
 public class CommercialLicenseTaggedPlayerDto
 {
     public string battleTag { get; set; }
@@ -909,6 +918,7 @@ public class CommercialLicenseTaggedPlayerDto
     public DateTime createdAt { get; set; }
     public string updatedBy { get; set; }
     public DateTime updatedAt { get; set; }
+    public CommercialLicenseRestrictions Restrictions { get; set; }
 }
 
 public class CommercialLicenseTaggedPlayerRequest
@@ -916,6 +926,9 @@ public class CommercialLicenseTaggedPlayerRequest
     public string note { get; set; }
     public bool notify { get; set; }
     public string actingBattleTag { get; set; }
+
+    /// <summary>Null is omitted from the JSON (NullValueHandling.Ignore), which makes matchmaking keep the stored restrictions.</summary>
+    public CommercialLicenseRestrictions Restrictions { get; set; }
 }
 
 public class PlayerWarningDeliveryAttempt
