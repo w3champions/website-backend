@@ -12,7 +12,7 @@ namespace WC3ChampionsStatisticService.Tests.Admin;
 public class MatchmakingServiceClientCommercialLicenseTests
 {
     private const string TaggedPlayerJson =
-        "{\"battleTag\":\"Grubby#1234\",\"note\":\"Streams for money\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#2\",\"updatedAt\":\"2026-10-08T11:00:00.000Z\"}";
+        "{\"battleTag\":\"Grubby#1234\",\"note\":\"Streams for money\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#2\",\"updatedAt\":\"2026-10-08T11:00:00.000Z\",\"restrictions\":{\"asPlayer\":true,\"asObserver\":false,\"floTv\":\"custom\"}}";
 
     private static readonly string ExpectedAdminSecret = MatchmakingServiceClient.AdminSecretForTests;
 
@@ -38,6 +38,10 @@ public class MatchmakingServiceClientCommercialLicenseTests
         Assert.That(players[0].updatedBy, Is.EqualTo("Admin#2"));
         Assert.That(players[0].createdAt, Is.EqualTo(new DateTime(2026, 10, 8, 10, 0, 0, DateTimeKind.Utc)));
         Assert.That(players[0].updatedAt, Is.EqualTo(new DateTime(2026, 10, 8, 11, 0, 0, DateTimeKind.Utc)));
+        Assert.That(players[0].Restrictions, Is.Not.Null);
+        Assert.That(players[0].Restrictions.AsPlayer, Is.True);
+        Assert.That(players[0].Restrictions.AsObserver, Is.False);
+        Assert.That(players[0].Restrictions.FloTv, Is.EqualTo("custom"));
     }
 
     [Test]
@@ -73,6 +77,46 @@ public class MatchmakingServiceClientCommercialLicenseTests
         Assert.That(body["actingBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
 
         Assert.That(result.battleTag, Is.EqualTo("Grubby#1234"));
+    }
+
+    [Test]
+    public async Task UpsertSendsNestedCamelCaseRestrictionsAndParsesThemFromTheResult()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        var result = await CreateClient(handler).UpsertCommercialLicenseTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        {
+            note = "n",
+            notify = false,
+            actingBattleTag = "Admin#1",
+            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, AsObserver = false, FloTv = "custom" },
+        });
+
+        var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions, Is.Not.Null);
+        Assert.That(restrictions!["asPlayer"]!.Value<bool>(), Is.True);
+        Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.False);
+        Assert.That(restrictions["floTv"]!.Value<string>(), Is.EqualTo("custom"));
+
+        Assert.That(result.Restrictions, Is.Not.Null);
+        Assert.That(result.Restrictions.AsPlayer, Is.True);
+        Assert.That(result.Restrictions.FloTv, Is.EqualTo("custom"));
+    }
+
+    [Test]
+    public async Task UpsertOmitsRestrictionsWhenNull()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        await CreateClient(handler).UpsertCommercialLicenseTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        {
+            note = "n",
+            notify = false,
+            actingBattleTag = "Admin#1",
+        });
+
+        // NullValueHandling.Ignore: matchmaking sees no key and keeps the stored restrictions.
+        Assert.That(JObject.Parse(handler.RequestBodies[0]).ContainsKey("restrictions"), Is.False);
     }
 
     [Test]
