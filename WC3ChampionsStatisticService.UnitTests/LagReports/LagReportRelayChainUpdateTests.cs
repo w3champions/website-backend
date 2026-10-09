@@ -11,7 +11,7 @@ namespace WC3ChampionsStatisticService.Tests.LagReports;
 
 /// <summary>
 /// Renders the per-player relay-chain update without a database: the write must target only
-/// the entries of one flo player, so an early leaver's chain never touches anyone else's.
+/// the entries of one verified flo player, so an early leaver's chain never touches anyone else's.
 /// </summary>
 [TestFixture]
 public class LagReportRelayChainUpdateTests
@@ -24,7 +24,7 @@ public class LagReportRelayChainUpdateTests
     {
         var chain = Chain(RelayedConnection(1, 2));
 
-        var (update, options) = LagReportRepository.BuildRelayChainUpdate(5, chain);
+        var (update, options) = LagReportRepository.BuildRelayChainUpdate(5, "A#1", chain);
 
         var rendered = update.Render(Args).AsBsonDocument;
         var set = rendered["$set"].AsBsonDocument;
@@ -39,7 +39,7 @@ public class LagReportRelayChainUpdateTests
 
         var filter = options.ArrayFilters.Single()
             .Render(BsonDocumentSerializer.Instance, BsonSerializer.SerializerRegistry);
-        Assert.That(filter, Is.EqualTo(new BsonDocument("p.FloPlayerId", 5)));
+        Assert.That(filter, Is.EqualTo(new BsonDocument { { "p.FloPlayerId", 5 }, { "p.BattleTag", "A#1" } }));
     }
 
     [Test]

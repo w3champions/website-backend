@@ -160,6 +160,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         var collection = CreateCollection<LagReport>();
         var projection = Builders<LagReport>.Projection
             .Include(r => r.Id)
+            .Include("Players.BattleTag")
             .Include("Players.FloPlayerId")
             .Include("Players.RelayChain");
         return await collection.Find(r => r.FloGameId == floGameId)
@@ -167,10 +168,10 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             .FirstOrDefaultAsync();
     }
 
-    public async Task UpdatePlayerRelayChain(string reportId, int floPlayerId, PlayerRelayChain chain)
+    public async Task UpdatePlayerRelayChain(string reportId, int floPlayerId, string battleTag, PlayerRelayChain chain)
     {
         var collection = CreateCollection<LagReport>();
-        var (update, options) = BuildRelayChainUpdate(floPlayerId, chain);
+        var (update, options) = BuildRelayChainUpdate(floPlayerId, battleTag, chain);
         var result = await collection.UpdateOneAsync(Builders<LagReport>.Filter.Eq(r => r.Id, reportId), update, options);
         if (result.MatchedCount == 0)
         {
@@ -178,14 +179,14 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         }
     }
 
-    internal static (UpdateDefinition<LagReport> Update, UpdateOptions Options) BuildRelayChainUpdate(int floPlayerId, PlayerRelayChain chain)
+    internal static (UpdateDefinition<LagReport> Update, UpdateOptions Options) BuildRelayChainUpdate(int floPlayerId, string battleTag, PlayerRelayChain chain)
     {
         var update = Builders<LagReport>.Update
             .Set(r => r.Players.AllMatchingElements("p").RelayChain, chain)
             .Set(r => r.UpdatedAt, DateTime.UtcNow);
         var options = new UpdateOptions
         {
-            ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument("p.FloPlayerId", floPlayerId))],
+            ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument { { "p.FloPlayerId", floPlayerId }, { "p.BattleTag", battleTag } })],
         };
         return (update, options);
     }

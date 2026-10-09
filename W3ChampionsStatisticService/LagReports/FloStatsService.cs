@@ -23,6 +23,9 @@ public interface IFloStatsService
 {
     Task<List<ServerSidePingData>> FetchGamePingData(int floGameId);
     Task FetchAndStoreIfNeeded(int floGameId, LagReportRepository repo);
+
+    /// <summary>flo player id → name (the battletag) for a game; null if unavailable.</summary>
+    Task<Dictionary<int, string>> FetchGamePlayers(int floGameId);
 }
 
 [Trace]
@@ -42,7 +45,14 @@ public class FloStatsService : IFloStatsService
     /// Returns null if the game is not found (evicted from LRU) or on any error; an empty list
     /// means the snapshot was read but held no ping samples.
     /// </summary>
-    public async Task<List<ServerSidePingData>> FetchGamePingData(int floGameId)
+    public async Task<List<ServerSidePingData>> FetchGamePingData(int floGameId) =>
+        await FetchSnapshot(floGameId) is { } snapshot ? ParsePingData(snapshot) : null;
+
+    public async Task<Dictionary<int, string>> FetchGamePlayers(int floGameId) =>
+        await FetchSnapshot(floGameId) is { } snapshot ? ParsePlayers(snapshot) : null;
+
+    // The game's GameSnapshotWithStats payload, or null if flo-stats has no such game or fails.
+    private async Task<JsonElement?> FetchSnapshot(int floGameId)
     {
         try
         {
@@ -110,7 +120,7 @@ public class FloStatsService : IFloStatsService
                 return null;
             }
 
-            return ParsePingData(payload);
+            return payload;
         }
         catch (OperationCanceledException)
         {
@@ -172,7 +182,7 @@ public class FloStatsService : IFloStatsService
         return pingData;
     }
 
-    internal static List<ServerSidePingData> ParsePingData(JsonElement payload)
+    internal static Dictionary<int, string> ParsePlayers(JsonElement payload)
     {
         var playerNames = new Dictionary<int, string>();
         if (payload.TryGetProperty("game", out var game) &&
@@ -185,6 +195,12 @@ public class FloStatsService : IFloStatsService
                 playerNames[id] = name;
             }
         }
+        return playerNames;
+    }
+
+    internal static List<ServerSidePingData> ParsePingData(JsonElement payload)
+    {
+        var playerNames = ParsePlayers(payload);
 
         var byPlayer = new Dictionary<int, List<ServerPingSample>>();
 
