@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +23,7 @@ namespace WC3ChampionsStatisticService.Tests.Admin;
 public class CommercialLicenseControllerTests
 {
     private const string TaggedPlayerJson =
-        "{\"battleTag\":\"Grubby#1234\",\"note\":\"n\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#1\",\"updatedAt\":\"2026-10-08T10:00:00.000Z\"}";
+        "{\"battleTag\":\"Grubby#1234\",\"note\":\"n\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#1\",\"updatedAt\":\"2026-10-08T10:00:00.000Z\",\"restrictions\":{\"asPlayer\":false,\"asObserver\":false,\"floTv\":\"none\"}}";
 
     [Test]
     public void AllEndpointsRequireCommercialLicensePermission()
@@ -53,6 +54,7 @@ public class CommercialLicenseControllerTests
         var players = (System.Collections.Generic.List<CommercialLicenseTaggedPlayerDto>)((OkObjectResult)result).Value!;
         Assert.That(players, Has.Count.EqualTo(1));
         Assert.That(players[0].battleTag, Is.EqualTo("Grubby#1234"));
+        Assert.That(players[0].Restrictions.FloTv, Is.EqualTo("none"));
         Assert.That(handler.Requests[0].Headers.Contains("x-admin-secret"), Is.True);
     }
 
@@ -106,6 +108,97 @@ public class CommercialLicenseControllerTests
 
         var body = JObject.Parse(handler.RequestBodies[0]);
         Assert.That(body["note"]!.Value<string>(), Is.EqualTo(""));
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerForwardsRestrictions()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, AsObserver = true, FloTv = "all" },
+        }, "Admin#1");
+
+        var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions, Is.Not.Null);
+        Assert.That(restrictions!["asPlayer"]!.Value<bool>(), Is.True);
+        Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.True);
+        Assert.That(restrictions["floTv"]!.Value<string>(), Is.EqualTo("all"));
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerOmitsRestrictionsWhenAbsent()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = true }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(JObject.Parse(handler.RequestBodies[0]).ContainsKey("restrictions"), Is.False);
+    }
+
+    [TestCase("none")]
+    [TestCase("custom")]
+    [TestCase("all")]
+    public async Task PutTaggedPlayerAcceptsEachValidFloTv(string floTv)
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictions { FloTv = floTv },
+        }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        Assert.That(JObject.Parse(handler.RequestBodies[0])["restrictions"]!["floTv"]!.Value<string>(), Is.EqualTo(floTv));
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("ALL")]
+    [TestCase("everyone")]
+    public async Task PutTaggedPlayerRejectsInvalidFloTvBeforeProxying(string floTv)
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, FloTv = floTv },
+        }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(JObject.FromObject(((BadRequestObjectResult)result).Value!)["error"]!.Value<string>(),
+            Is.EqualTo("restrictions.floTv must be one of none, custom, all"));
+        Assert.That(handler.Requests, Is.Empty);
+    }
+
+    [Test]
+    public async Task ResponsesSerializeRestrictionsAsCamelCaseJson()
+    {
+        var put = await CreateController(new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson))
+            .PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = true }, "Admin#1");
+        var get = await CreateController(new StubMatchmakingHandler(HttpStatusCode.OK, $"[{TaggedPlayerJson}]")).GetTaggedPlayers();
+
+        foreach (var value in new[] { ((OkObjectResult)put).Value, ((OkObjectResult)get).Value })
+        {
+            var json = JsonSerializer.Serialize(value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            var restrictions = JToken.Parse(json).SelectToken("..restrictions");
+            Assert.That(restrictions, Is.Not.Null);
+            Assert.That(restrictions!["asPlayer"]!.Value<bool>(), Is.False);
+            Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.False);
+            Assert.That(restrictions["floTv"]!.Value<string>(), Is.EqualTo("none"));
+        }
     }
 
     [Test]

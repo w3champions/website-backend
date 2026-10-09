@@ -33,11 +33,15 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
         if (body?.Notify == null)
             return BadRequest(new { error = "invalid_request" });
 
+        if (body.Restrictions is { FloTv: not ("none" or "custom" or "all") })
+            return BadRequest(new { error = "restrictions.floTv must be one of none, custom, all" });
+
         var request = new CommercialLicenseTaggedPlayerRequest
         {
             note = body.Note ?? "",
             notify = body.Notify.Value,
             actingBattleTag = battleTag,
+            Restrictions = body.Restrictions,
         };
         return Ok(await _matchmakingServiceClient.UpsertCommercialLicenseTaggedPlayer(targetBattleTag, request));
     }
@@ -63,4 +67,7 @@ public class CommercialLicenseTaggedPlayerBody
 {
     public string Note { get; set; }
     public bool? Notify { get; set; }
+
+    /// <summary>Optional. When absent it is not forwarded and matchmaking keeps the stored restrictions.</summary>
+    public CommercialLicenseRestrictions Restrictions { get; set; }
 }
