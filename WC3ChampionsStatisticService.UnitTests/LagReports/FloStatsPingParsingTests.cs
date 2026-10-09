@@ -79,4 +79,23 @@ public class FloStatsPingParsingTests
         Assert.IsNotNull(result);
         Assert.IsEmpty(result);
     }
+
+    [Test]
+    public void ParsePlayers_MapsFloIdsToBattleTags()
+    {
+        var players = FloStatsService.ParsePlayers(Parse(Snapshot));
+
+        Assert.That(players, Has.Count.EqualTo(2));
+        Assert.That(players[1], Is.EqualTo("Alice#1234"));
+        Assert.That(players[2], Is.EqualTo("Bob#5678"));
+    }
+
+    [Test]
+    public void ParseOrNull_MalformedSnapshotGivesNullInsteadOfThrowing()
+    {
+        var malformed = Parse("""{ "stats": { "ping": [ { "time": 1, "data": [ { "min": 1 } ] } ] } }""");
+
+        Assert.That(FloStatsService.ParseOrNull(malformed, FloStatsService.ParsePingData, 7), Is.Null);
+        Assert.That(FloStatsService.ParseOrNull(Parse(Snapshot), FloStatsService.ParsePlayers, 7), Has.Count.EqualTo(2));
+    }
 }

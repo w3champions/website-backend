@@ -112,6 +112,15 @@ public class LagReportPlayer
 
     /// <summary>All diagnostics data collected by the flo client during the game.</summary>
     public PlayerDiagnostics Diagnostics { get; set; }
+
+    /// <summary>The player's flo id, the key of the relay telemetry query. Null on old reports.</summary>
+    public int? FloPlayerId { get; set; }
+
+    /// <summary>
+    /// Per-hop relay telemetry from the flo controller. Null until a fetch succeeds; filled
+    /// in after the player's submit and refreshed at match end.
+    /// </summary>
+    public PlayerRelayChain RelayChain { get; set; }
 }
 
 /// <summary>
@@ -139,6 +148,9 @@ public class PlayerDiagnostics
 
     /// <summary>Stalls the hosting flo-node detected in itself — see <see cref="HostStallData"/>.</summary>
     public List<HostStallData> HostStalls { get; set; } = [];
+
+    /// <summary>Version of the flo client that produced the report; null from older clients.</summary>
+    public string ClientVersion { get; set; }
 }
 
 /// <summary>

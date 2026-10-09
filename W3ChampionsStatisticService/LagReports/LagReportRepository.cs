@@ -5,13 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using Serilog;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.LagReports;
 
 [Trace]
-public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IRequiresIndexes
+public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IRequiresIndexes, ILagReportRelayStore
 {
     public string CollectionName => "LagReport";
 
@@ -153,6 +155,42 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         await collection.UpdateOneAsync(filter, update);
     }
 
+    public async Task<LagReport> GetForRelayTelemetry(int floGameId)
+    {
+        var collection = CreateCollection<LagReport>();
+        var projection = Builders<LagReport>.Projection
+            .Include(r => r.Id)
+            .Include("Players.BattleTag")
+            .Include("Players.FloPlayerId")
+            .Include("Players.RelayChain");
+        return await collection.Find(r => r.FloGameId == floGameId)
+            .Project<LagReport>(projection)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task UpdatePlayerRelayChain(string reportId, int floPlayerId, IReadOnlyCollection<string> battleTags, PlayerRelayChain chain)
+    {
+        var collection = CreateCollection<LagReport>();
+        var (update, options) = BuildRelayChainUpdate(floPlayerId, battleTags, chain);
+        var result = await collection.UpdateOneAsync(Builders<LagReport>.Filter.Eq(r => r.Id, reportId), update, options);
+        if (result.MatchedCount == 0)
+        {
+            Log.Warning("LagReportRepository: report {ReportId} vanished before its relay chain for player {PlayerId} was stored", reportId, floPlayerId);
+        }
+    }
+
+    internal static (UpdateDefinition<LagReport> Update, UpdateOptions Options) BuildRelayChainUpdate(int floPlayerId, IReadOnlyCollection<string> battleTags, PlayerRelayChain chain)
+    {
+        var update = Builders<LagReport>.Update
+            .Set(r => r.Players.AllMatchingElements("p").RelayChain, chain)
+            .Set(r => r.UpdatedAt, DateTime.UtcNow);
+        var options = new UpdateOptions
+        {
+            ArrayFilters = [new BsonDocumentArrayFilterDefinition<BsonDocument>(new BsonDocument { { "p.FloPlayerId", floPlayerId }, { "p.BattleTag", new BsonDocument("$in", new BsonArray(battleTags)) } })],
+        };
+        return (update, options);
+    }
+
     public async Task<(List<LagReport> Items, long Total)> GetReports(LagReportQueryRequest req)
     {
         var collection = CreateCollection<LagReport>();
@@ -171,7 +209,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         var sort = Builders<LagReport>.Sort.Descending(r => r.CreatedAt);
 
         // The list view only needs the LagEvents/ConnectionEvents counts, never the
-        // heavy per-player MTR/ping arrays. Excluding them avoids deserializing (and
+        // heavy per-player MTR/ping arrays or relay chains. Excluding them avoids deserializing (and
         // then discarding) multi-megabyte diagnostics payloads on every page.
         // HostStalls is deliberately NOT excluded: it is the same size class as the
         // event arrays that stay (same 200-entry cap, six scalar fields, no per-hop
@@ -181,6 +219,7 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
             .Exclude("Players.Diagnostics.AllServerBaselines")
             .Exclude("Players.Diagnostics.ReverseMtr")
             .Exclude("Players.Diagnostics.PingHistory")
+            .Exclude("Players.RelayChain")
             .Exclude(r => r.ServerSidePing);
 
         var itemsTask = collection.Find(filter)

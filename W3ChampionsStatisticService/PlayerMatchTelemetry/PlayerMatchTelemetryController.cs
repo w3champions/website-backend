@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Bson;
@@ -64,6 +65,12 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
             SampleCounts = new BsonBinaryData(ts.SampleCounts),
             DroppedUnmatchedCount = submission.DroppedUnmatchedCount,
             SubmittedAt = DateTime.UtcNow,
+            TransportStats = MapTransportStats(submission.TransportStats),
+            ClientVersion = submission.ClientVersion,
+            LauncherVersion = submission.LauncherVersion,
+            Routing = submission.Routing is { } r
+                ? new MatchTelemetryRouting { ProxyName = r.ProxyName, ProxyAddress = r.ProxyAddress, ConnectionKind = r.ConnectionKind }
+                : null,
         };
 
         await _repo.UpsertPlayerEntryAsync(
@@ -90,6 +97,23 @@ public class PlayerMatchTelemetryController(IPlayerMatchTelemetryRepository repo
         if (doc is null) return NotFound();
         return Ok(PlayerMatchTelemetryMapper.ToResponseDto(doc));
     }
+
+    private static TransportStatsEntry MapTransportStats(TransportStatsDto ts) => ts is null ? null : new TransportStatsEntry
+    {
+        Kind = ts.Kind,
+        BucketCount = ts.GameTimeOffsetsMs.Length,
+        GameTimeOffsetsMs = new BsonBinaryData(EncodeU32Le(ts.GameTimeOffsetsMs)),
+        SampleCounts = new BsonBinaryData(ts.SampleCounts),
+        SrttMaxMs = new BsonBinaryData(EncodeU16Le(ts.SrttMaxMs)),
+        RttvarMaxMs = ts.RttvarMaxMs is null ? null : new BsonBinaryData(EncodeU16Le(ts.RttvarMaxMs)),
+        Kinds = ts.Kinds is null ? null : new BsonBinaryData(ts.Kinds.Select(k => (byte)k).ToArray()),
+        RetransDelta = ts.RetransDelta is null ? null : new BsonBinaryData(EncodeU16Le(ts.RetransDelta)),
+        LostMax = ts.LostMax is null ? null : new BsonBinaryData(EncodeU16Le(ts.LostMax)),
+        UnackedMax = ts.UnackedMax is null ? null : new BsonBinaryData(EncodeU16Le(ts.UnackedMax)),
+        RxBytesDelta = new BsonBinaryData(EncodeU32Le(ts.RxBytesDelta)),
+        TxBytesDelta = new BsonBinaryData(EncodeU32Le(ts.TxBytesDelta)),
+        StallSecs = new BsonBinaryData(ts.StallSecs),
+    };
 
     /// <summary>
     /// Encodes a <see cref="uint"/>[] as little-endian bytes via <see cref="Buffer.BlockCopy"/>.

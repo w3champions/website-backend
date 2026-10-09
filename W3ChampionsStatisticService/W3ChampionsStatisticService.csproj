@@ -7,6 +7,9 @@
     <PackageReference Include="AspNetCore.Authentication.Basic" />
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Castle.Core" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Net.Client" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="All" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Http" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.WebApiCompatShim" />
@@ -26,6 +29,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore.Swagger" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="Protos/flo_controller.proto" GrpcServices="Client" />
   </ItemGroup>
   <ItemGroup>
     <Content Update="countries.json">
