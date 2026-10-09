@@ -1,3 +1,4 @@
+using W3C.Domain;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using System;
@@ -17,7 +18,6 @@ namespace W3ChampionsStatisticService.Admin;
 public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IAdminRepository
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
-    private static readonly string AdminSecret = Environment.GetEnvironmentVariable("ADMIN_SECRET") ?? "300C018C-6321-4BAB-B289-9CB3DB760CBB";
 
     public async Task<List<ProxiesResponse>> GetProxies()
     {
@@ -35,7 +35,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<FloProxies> GetProxiesFor(string battleTag)
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
@@ -72,7 +72,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
         // send request to mm with all the node values
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var serializedObject = JsonConvert.SerializeObject(newProxiesBeingAdded);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
@@ -86,7 +86,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     private async Task<List<ProxiesData>> GetProxiesFromMatchmaking()
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/flo/proxies";
         var result = await httpClient.GetAsync(url);
         var content = await result.Content.ReadAsStringAsync();
@@ -113,7 +113,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<GlobalChatBanResponse> GetChatBans(string query, string nextId)
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         string url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         if (query != null)
         {
@@ -162,7 +162,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan)
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         var serializedObject = JsonConvert.SerializeObject(chatBan);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
@@ -175,7 +175,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<HttpStatusCode> DeleteChatBan(string id)
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/flo/globalChatBans/{id}";
         var result = await httpClient.DeleteAsync(url);
         return result.StatusCode;
@@ -184,7 +184,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<List<SmurfDetection.IgnoredIdentifier>> GetIgnoredIdentifiers(string type, string continuationToken)
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifiers";
         if (continuationToken != null)
         {
@@ -228,7 +228,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<List<string>> GetPossibleIdentifierTypes()
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/smurf-detection/possible-identifier-types";
         var result = await httpClient.GetAsync(url);
         await result.ThrowIfError();
@@ -241,7 +241,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     public async Task<SmurfDetection.SmurfDetectionResult> QuerySmurfsFor(string identifierType, string identifier, bool includeExplanation = false, int iterationDepth = 1)
     {
         var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var generateExplanation = includeExplanation ? "true" : "false";
         var url = $"{MatchmakingApiUrl}/admin/smurf-detection/query-smurfs?identifierType={identifierType}&identifier={HttpUtility.UrlEncode(identifier)}&generateExplanation={generateExplanation}&iterationDepth={iterationDepth}";
         var result = await httpClient.GetAsync(url);
@@ -278,7 +278,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
     private static HttpRequestMessage CreateAdminRequest(HttpMethod method, string url)
     {
         var request = new HttpRequestMessage(method, url);
-        request.Headers.Add("x-admin-secret", AdminSecret);
+        AdminSecretProvider.AddTo(request.Headers);
         return request;
     }
 
