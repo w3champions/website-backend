@@ -49,10 +49,13 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
     private readonly SemaphoreSlim _fetchSlots = new(MaxConcurrentFetches);
 
     /// <summary>
-    /// A submit after the match-end event is the player's last trigger, and their connections
-    /// may still be closing then, so it retries a few times while the chain stays incomplete.
+    /// A submit after the match-end event is the player's last trigger, and connections may still
+    /// be closing at either trigger, so both retry a few times while the chain stays incomplete.
     /// </summary>
     internal TimeSpan[] LateRetryDelays { get; set; } = [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(4)];
+
+    /// <summary>The most recent background match-end retry; exposed for tests.</summary>
+    internal Task PendingRefreshRetries { get; private set; } = Task.CompletedTask;
 
     public async Task FetchForPlayer(int floGameId, int floPlayerId)
     {
@@ -66,13 +69,18 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
     }
 
     // Returns true while the player's chain is still worth fetching again.
-    private async Task<bool> FetchCoalesced(int floGameId, int floPlayerId, Dictionary<int, string> roster)
+    private async Task<bool> FetchCoalesced(int floGameId, int floPlayerId, Dictionary<int, string> roster, bool mayJoin = true)
     {
         var key = (floGameId, floPlayerId);
-        var lazy = _inflight.GetOrAdd(key, k => new Lazy<Task<bool>>(() => FetchAndStoreBounded(k.GameId, k.PlayerId, roster)));
+        var mine = new Lazy<Task<bool>>(() => FetchAndStoreBounded(floGameId, floPlayerId, roster));
+        var lazy = _inflight.GetOrAdd(key, mine);
         try
         {
-            return await lazy.Value;
+            var incomplete = await lazy.Value;
+            // The joined fetch may have read the report before this caller's entry was added.
+            return ReferenceEquals(lazy, mine) || !mayJoin || incomplete
+                ? incomplete
+                : await FetchCoalesced(floGameId, floPlayerId, roster, mayJoin: false);
         }
         catch (Exception ex)
         {
@@ -133,10 +141,32 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
             return;
         }
 
-        // Sequential: the controller runs only a few walks at once and rejects the rest.
-        foreach (var playerId in playerIds)
+        // Concurrent; _fetchSlots keeps the controller under its walk limit.
+        var results = await Task.WhenAll(playerIds.Select(id => FetchCoalesced(floGameId, id, roster)));
+        var incomplete = playerIds.Where((_, i) => results[i]).ToList();
+        if (incomplete.Count > 0 && LateRetryDelays.Length > 0)
         {
-            await FetchCoalesced(floGameId, playerId, roster);
+            // Connections are often still closing when the match ends. Retry in the background
+            // so the read-model handler is not held for minutes.
+            PendingRefreshRetries = RetryIncomplete(floGameId, incomplete, roster);
+        }
+    }
+
+    private async Task RetryIncomplete(int floGameId, List<int> playerIds, Dictionary<int, string> roster)
+    {
+        try
+        {
+            foreach (var delay in LateRetryDelays)
+            {
+                await Task.Delay(delay);
+                var results = await Task.WhenAll(playerIds.Select(id => FetchCoalesced(floGameId, id, roster)));
+                playerIds = playerIds.Where((_, i) => results[i]).ToList();
+                if (playerIds.Count == 0) return;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "RelayTelemetry: match-end retries for game {GameId} failed", floGameId);
         }
     }
 

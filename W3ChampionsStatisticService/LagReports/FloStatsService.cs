@@ -46,10 +46,10 @@ public class FloStatsService : IFloStatsService
     /// means the snapshot was read but held no ping samples.
     /// </summary>
     public async Task<List<ServerSidePingData>> FetchGamePingData(int floGameId) =>
-        await FetchSnapshot(floGameId) is { } snapshot ? ParsePingData(snapshot) : null;
+        await FetchSnapshot(floGameId) is { } snapshot ? ParseOrNull(snapshot, ParsePingData, floGameId) : null;
 
     public async Task<Dictionary<int, string>> FetchGamePlayers(int floGameId) =>
-        await FetchSnapshot(floGameId) is { } snapshot ? ParsePlayers(snapshot) : null;
+        await FetchSnapshot(floGameId) is { } snapshot ? ParseOrNull(snapshot, ParsePlayers, floGameId) : null;
 
     // The game's GameSnapshotWithStats payload, or null if flo-stats has no such game or fails.
     private async Task<JsonElement?> FetchSnapshot(int floGameId)
@@ -180,6 +180,20 @@ public class FloStatsService : IFloStatsService
         }
 
         return pingData;
+    }
+
+    // A snapshot missing a field throws in GetProperty; callers rely on null for every failure.
+    internal static T ParseOrNull<T>(JsonElement snapshot, Func<JsonElement, T> parse, int floGameId) where T : class
+    {
+        try
+        {
+            return parse(snapshot);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or KeyNotFoundException or FormatException)
+        {
+            Log.Warning(ex, "FloStatsService: malformed snapshot for game {GameId}", floGameId);
+            return null;
+        }
     }
 
     internal static Dictionary<int, string> ParsePlayers(JsonElement payload)

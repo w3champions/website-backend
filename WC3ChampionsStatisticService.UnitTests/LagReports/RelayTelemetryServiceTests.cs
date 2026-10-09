@@ -208,10 +208,14 @@ public class RelayTelemetryServiceTests
     [Test]
     public async Task FetchForPlayer_ConcurrentCallsShareOneFetch()
     {
-        StoredReport(Player(5));
+        PlayerRelayChain stored = null;
+        _store.Setup(s => s.GetForRelayTelemetry(FloGameId))
+            .ReturnsAsync(() => new LagReport { Id = ReportId, FloGameId = FloGameId, Players = [Player(5, stored)] });
         var gate = new TaskCompletionSource<GetGameRelayTelemetryReply>();
         _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).Returns(gate.Task);
-        ExpectStore(5);
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()))
+            .Callback<string, int, IReadOnlyCollection<string>, PlayerRelayChain>((_, _, _, c) => stored = c)
+            .Returns(Task.CompletedTask);
 
         var first = _service.FetchForPlayer(FloGameId, 5);
         var second = _service.FetchForPlayer(FloGameId, 5);
@@ -360,7 +364,81 @@ public class RelayTelemetryServiceTests
         _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Exactly(3));
     }
 
+    [Test]
+    public async Task FetchForPlayer_JoiningAnInflightFetchStillCoversTheNewEntry()
+    {
+        // A second submission lands while the first one's fetch is running: the fetch read the
+        // report before the second entry existed, so the joiner must cover it afterwards.
+        PlayerRelayChain stored = null;
+        var reads = 0;
+        _store.Setup(s => s.GetForRelayTelemetry(FloGameId)).ReturnsAsync(() => ++reads == 1
+            ? new LagReport { Id = ReportId, FloGameId = FloGameId, Players = [Player(5)] }
+            : new LagReport { Id = ReportId, FloGameId = FloGameId, Players = [Player(5, stored), Player(5)] });
+        var gate = new TaskCompletionSource<GetGameRelayTelemetryReply>();
+        _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).Returns(gate.Task);
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()))
+            .Callback<string, int, IReadOnlyCollection<string>, PlayerRelayChain>((_, _, _, c) => stored = c)
+            .Returns(Task.CompletedTask);
+
+        var first = _service.FetchForPlayer(FloGameId, 5);
+        var second = _service.FetchForPlayer(FloGameId, 5);
+        gate.SetResult(ReplyWithNodeLeg(5, 3));
+        await Task.WhenAll(first, second);
+
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Once);
+        _store.Verify(s => s.UpdatePlayerRelayChain(ReportId, 5, Tags("P5#1"), It.IsAny<PlayerRelayChain>()), Times.Exactly(2));
+    }
+
     // ── RefreshOpen ───────────────────────────────────────────────────
+
+    [Test]
+    public async Task RefreshOpen_RetriesPlayersWhoseChainIsStillIncomplete()
+    {
+        _service.LateRetryDelays = [TimeSpan.Zero, TimeSpan.Zero];
+        PlayerRelayChain stored = null;
+        _store.Setup(s => s.GetForRelayTelemetry(FloGameId))
+            .ReturnsAsync(() => new LagReport { Id = ReportId, FloGameId = FloGameId, Players = [Player(6, stored)] });
+        _client.SetupSequence(c => c.GetGameRelayTelemetry(FloGameId, 6))
+            .ReturnsAsync(ReplyWithNodeLeg(6, 4, RelayLegStatus.PendingClose))
+            .ReturnsAsync(ReplyWithNodeLeg(6, 6));
+        _store.Setup(s => s.UpdatePlayerRelayChain(ReportId, 6, Tags("P6#1"), It.IsAny<PlayerRelayChain>()))
+            .Callback<string, int, IReadOnlyCollection<string>, PlayerRelayChain>((_, _, _, c) => stored = c)
+            .Returns(Task.CompletedTask);
+
+        await _service.RefreshOpen(FloGameId);
+        await _service.PendingRefreshRetries;
+
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 6), Times.Exactly(2));
+        Assert.That(stored.Connections[0].Legs[0].Status, Is.EqualTo(RelayLegStatus.Measured));
+    }
+
+    [Test]
+    public async Task RefreshOpen_RefreshesPlayersConcurrentlyWithinTheBound()
+    {
+        var players = Enumerable.Range(1, RelayTelemetryService.MaxConcurrentFetches).ToArray();
+        StoredReport(players.Select(id => Player(id)).ToArray());
+        var allStarted = new TaskCompletionSource();
+        var started = 0;
+        var gate = new TaskCompletionSource();
+        foreach (var id in players)
+        {
+            var playerId = id;
+            _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, playerId)).Returns(async () =>
+            {
+                if (Interlocked.Increment(ref started) == players.Length) allStarted.SetResult();
+                await gate.Task;
+                return ReplyWithNodeLeg(playerId, 1);
+            });
+            ExpectStore(playerId);
+        }
+
+        var refresh = _service.RefreshOpen(FloGameId);
+        var allInFlight = await Task.WhenAny(allStarted.Task, Task.Delay(TimeSpan.FromSeconds(2))) == allStarted.Task;
+        gate.SetResult();
+        await refresh;
+
+        Assert.That(allInFlight, Is.True, "the players' fetches overlap instead of running one after another");
+    }
 
     [Test]
     public async Task RefreshOpen_FailedRosterLookupIsNotRepeatedPerPlayer()
