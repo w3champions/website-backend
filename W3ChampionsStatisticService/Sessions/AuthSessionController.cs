@@ -22,10 +22,10 @@ namespace W3ChampionsStatisticService.Sessions;
 ///   429         : per-battleTag mint rate limit exceeded (10 / minute)
 ///   Ticket      : single-use, 60s TTL. The client hands it to SignalR's accessTokenFactory so it
 ///                 arrives as ?access_token=&lt;ticket&gt; on /websiteBackendHub, where
-///                 WebsiteBackendHub.OnConnectedAsync consumes it exactly once. That hub is
-///                 TICKET-ONLY (no raw-JWT fallback): the launcher is its sole client, browsers
-///                 use REST + Bearer and never open the WebSocket, and the cutover is lock-step
-///                 with the forced launcher update.
+///                 WebsiteBackendHub.OnConnectedAsync consumes it exactly once. The hub is
+///                 ticket-only: a raw JWT in access_token is rejected (AuthorizationFailed +
+///                 abort), like chat-service's ChatHub. The launcher is the hub's sole client; browsers use REST +
+///                 Bearer and never open the WebSocket.
 /// ====================================================================================
 /// </summary>
 [ApiController]
@@ -57,7 +57,7 @@ public class AuthSessionController(
         }
 
         // Validate the signature only. Expiry is deliberately NOT enforced: this is not an admin path, and
-        // players keep using old tokens - same as the other non-admin filters and the hub's raw-JWT path.
+        // players keep using old tokens - same as the other non-admin filters.
         // GetUserByToken THROWS on bad/garbage tokens (it never returns null) — treat any failure as 401.
         // No ticket is minted for an unvalidated caller.
         W3CUserAuthenticationDto identity;
