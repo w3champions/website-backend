@@ -1,6 +1,8 @@
 using AspNetCore.Authentication.Basic;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace W3ChampionsStatisticService.WebApi.Authorization;
@@ -25,7 +27,7 @@ public static class BasicAuthConfiguration
                 {
                     OnValidateCredentials = (context) =>
                     {
-                        if (context.Username == username && context.Password == password)
+                        if (CredentialsMatch(username, password, context.Username, context.Password))
                         {
                             var claims = new[] { new System.Security.Claims.Claim("role", "MetricsReader") };
                             context.Principal = new System.Security.Claims.ClaimsPrincipal(
@@ -53,4 +55,16 @@ public static class BasicAuthConfiguration
 
         return services;
     }
+
+    /// <summary>
+    /// Constant-time credential check. Both values are hashed first so neither the comparison time nor a
+    /// length mismatch reveals anything about the expected credentials.
+    /// </summary>
+    public static bool CredentialsMatch(string expectedUsername, string expectedPassword, string username, string password) =>
+        FixedTimeEquals(expectedUsername, username) & FixedTimeEquals(expectedPassword, password);
+
+    private static bool FixedTimeEquals(string expected, string provided) =>
+        CryptographicOperations.FixedTimeEquals(
+            SHA256.HashData(Encoding.UTF8.GetBytes(expected ?? "")),
+            SHA256.HashData(Encoding.UTF8.GetBytes(provided ?? "")));
 }
