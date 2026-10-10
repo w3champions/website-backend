@@ -221,6 +221,37 @@ public class MatchmakingServiceClientCommercialEventsTests
     }
 
     [Test]
+    public void PlainOperationCanceledExceptionAlsoThrowsGatewayTimeoutPassthrough()
+    {
+        var handler = new ThrowingMatchmakingHandler(new OperationCanceledException("timeout"));
+
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(handler).GetCommercialEventAllocations());
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.GatewayTimeout));
+        Assert.That(ex.InnerException, Is.InstanceOf<OperationCanceledException>());
+    }
+
+    [TestCase("")]
+    [TestCase("null")]
+    public void ObjectEndpointRejectsEmptyOrNullSuccessBodyWithBadGateway(string body)
+    {
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).GetCommercialEvent("e1"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+        Assert.That(ex.Body, Is.Null);
+    }
+
+    [Test]
+    public async Task ListEndpointTreatsJsonNullAsEmptyList()
+    {
+        var events = await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, "null")).GetCommercialEvents(null, null, null, null);
+
+        Assert.That(events, Is.Empty);
+    }
+
+    [Test]
     public void SuccessBodyThatDoesNotMatchTheDtoThrowsBadGatewayPassthrough()
     {
         var handler = new StubMatchmakingHandler(HttpStatusCode.OK, """{"unexpected":"object instead of array"}""");

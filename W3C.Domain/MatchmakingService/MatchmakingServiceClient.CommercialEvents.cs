@@ -35,7 +35,7 @@ public partial class MatchmakingServiceClient
     };
 
     public async Task<List<CommercialEventAllocationDto>> GetCommercialEventAllocations() =>
-        await SendCommercialEvents<List<CommercialEventAllocationDto>>(HttpMethod.Get, "/allocations") ?? [];
+        await SendCommercialEventsList<CommercialEventAllocationDto>(HttpMethod.Get, "/allocations");
 
     public Task<CommercialEventAllocationDto> CreateCommercialEventAllocation(CommercialEventAllocationRequest request, string actingBattleTag) =>
         SendCommercialEvents<CommercialEventAllocationDto>(HttpMethod.Post, "/allocations", WithActingBattleTag(request, actingBattleTag));
@@ -56,10 +56,10 @@ public partial class MatchmakingServiceClient
         SendCommercialEventsRaw(HttpMethod.Delete, $"/allocations/{PathSegment(allocationId)}", WithActingBattleTag(null, actingBattleTag));
 
     public async Task<List<CommercialEventPeriodUsageDto>> GetCommercialEventAllocationPeriods(string allocationId) =>
-        await SendCommercialEvents<List<CommercialEventPeriodUsageDto>>(HttpMethod.Get, $"/allocations/{PathSegment(allocationId)}/periods") ?? [];
+        await SendCommercialEventsList<CommercialEventPeriodUsageDto>(HttpMethod.Get, $"/allocations/{PathSegment(allocationId)}/periods");
 
     public async Task<List<CommercialEventDto>> GetCommercialEvents(string status, string phase, string allocationId, string q) =>
-        await SendCommercialEvents<List<CommercialEventDto>>(HttpMethod.Get, "/events" + Query(("status", status), ("phase", phase), ("allocationId", allocationId), ("q", q))) ?? [];
+        await SendCommercialEventsList<CommercialEventDto>(HttpMethod.Get, "/events" + Query(("status", status), ("phase", phase), ("allocationId", allocationId), ("q", q)));
 
     public Task<CommercialEventDetailDto> GetCommercialEvent(string eventId) =>
         SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Get, $"/events/{PathSegment(eventId)}");
@@ -95,21 +95,21 @@ public partial class MatchmakingServiceClient
         SendCommercialEvents<CommercialEventGamesPageDto>(HttpMethod.Get, $"/events/{PathSegment(eventId)}/games" + Query(("cursor", cursor), ("limit", limit)));
 
     public async Task<List<CommercialEventActiveGameDto>> GetActiveCommercialEventGames() =>
-        await SendCommercialEvents<List<CommercialEventActiveGameDto>>(HttpMethod.Get, "/games/active") ?? [];
+        await SendCommercialEventsList<CommercialEventActiveGameDto>(HttpMethod.Get, "/games/active");
 
     public Task TerminateCommercialEventGame(string matchId, string actingBattleTag) =>
         SendCommercialEventsRaw(HttpMethod.Post, $"/games/{PathSegment(matchId)}/terminate", WithActingBattleTag(null, actingBattleTag));
 
     public async Task<List<CommercialEventAuditEntryDto>> GetCommercialEventAudit(string eventId, string allocationId) =>
-        await SendCommercialEvents<List<CommercialEventAuditEntryDto>>(HttpMethod.Get, "/audit" + Query(("eventId", eventId), ("allocationId", allocationId))) ?? [];
+        await SendCommercialEventsList<CommercialEventAuditEntryDto>(HttpMethod.Get, "/audit" + Query(("eventId", eventId), ("allocationId", allocationId)));
 
     // A read, so no acting admin: the body is serialized directly instead of through WithActingBattleTag.
     // A null list is omitted by NullValueHandling.Ignore, and matchmaking answers 400 INVALID_REQUEST {field: 'battleTags'}.
     public async Task<List<CommercialEventRoleHintsDto>> GetCommercialEventRoleHints(IEnumerable<string> battleTags) =>
-        await SendCommercialEvents<List<CommercialEventRoleHintsDto>>(
+        await SendCommercialEventsList<CommercialEventRoleHintsDto>(
             HttpMethod.Post,
             "/roles/lookup",
-            JsonConvert.SerializeObject(new CommercialEventRoleLookupRequest { BattleTags = battleTags?.ToList() }, CommercialEventsBodySettings)) ?? [];
+            JsonConvert.SerializeObject(new CommercialEventRoleLookupRequest { BattleTags = battleTags?.ToList() }, CommercialEventsBodySettings));
 
     // Forwards only non-empty values, each escaped; matchmaking validates them.
     private static string Query(params (string Name, string Value)[] parameters)
@@ -132,7 +132,17 @@ public partial class MatchmakingServiceClient
         return JsonConvert.SerializeObject(json, CommercialEventsBodySettings);
     }
 
+    // Object endpoints: an empty or JSON null success body is contract drift, so it is a 502 rather than a null result.
     private async Task<T> SendCommercialEvents<T>(HttpMethod method, string path, string jsonBody = null)
+        where T : class =>
+        await SendCommercialEventsLenient<T>(method, path, jsonBody)
+        ?? throw new MatchmakingPassthroughException(HttpStatusCode.BadGateway, null);
+
+    // Collection endpoints: an empty or JSON null success body means an empty list.
+    private async Task<List<TItem>> SendCommercialEventsList<TItem>(HttpMethod method, string path, string jsonBody = null) =>
+        await SendCommercialEventsLenient<List<TItem>>(method, path, jsonBody) ?? [];
+
+    private async Task<T> SendCommercialEventsLenient<T>(HttpMethod method, string path, string jsonBody)
         where T : class
     {
         var content = await SendCommercialEventsRaw(method, path, jsonBody);
@@ -166,7 +176,8 @@ public partial class MatchmakingServiceClient
         {
             throw new MatchmakingPassthroughException(HttpStatusCode.BadGateway, null, ex);
         }
-        catch (TaskCanceledException ex)
+        // HttpClient documents OperationCanceledException for timeouts; TaskCanceledException derives from it.
+        catch (OperationCanceledException ex)
         {
             throw new MatchmakingPassthroughException(HttpStatusCode.GatewayTimeout, null, ex);
         }
