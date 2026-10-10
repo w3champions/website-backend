@@ -28,7 +28,8 @@ public static class HttpClientServiceCollectionExtensions
 
     public static readonly IReadOnlyDictionary<string, TimeSpan> Timeouts = new Dictionary<string, TimeSpan>
     {
-        [HttpClientNames.Matchmaking] = TimeSpan.FromSeconds(15),
+        // Regular calls answer in < 1.5 s (p98), but admin smurf queries have been observed at ~30 s.
+        [HttpClientNames.Matchmaking] = TimeSpan.FromSeconds(30),
         [HttpClientNames.MatchmakingLogs] = TimeSpan.FromSeconds(60),
         // On the hot path of player profile requests: fail fast rather than pile requests up.
         [HttpClientNames.Identification] = TimeSpan.FromSeconds(5),

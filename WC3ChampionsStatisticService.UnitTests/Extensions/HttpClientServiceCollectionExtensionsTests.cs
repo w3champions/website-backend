@@ -19,7 +19,7 @@ public class HttpClientServiceCollectionExtensionsTests
         return services.BuildServiceProvider();
     }
 
-    [TestCase(HttpClientNames.Matchmaking, 15)]
+    [TestCase(HttpClientNames.Matchmaking, 30)]
     [TestCase(HttpClientNames.MatchmakingLogs, 60)]
     [TestCase(HttpClientNames.Identification, 5)]
     [TestCase(HttpClientNames.Chat, 10)]
