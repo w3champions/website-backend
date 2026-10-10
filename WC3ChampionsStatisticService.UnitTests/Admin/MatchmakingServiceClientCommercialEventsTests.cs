@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -216,6 +217,293 @@ public class MatchmakingServiceClientCommercialEventsTests
 
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.GatewayTimeout));
         Assert.That(ex.Body, Is.Null);
+    }
+
+    [Test]
+    public async Task GetEventsForwardsOnlyNonEmptyFiltersEscaped()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.Events);
+
+        var events = await CreateClient(handler).GetCommercialEvents("open", "", null, "Friday & co");
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/events", "?status=open&q=Friday%20%26%20co");
+        var commercialEvent = events.Single();
+        Assert.That(commercialEvent.Id, Is.EqualTo("EV-7K3M"));
+        Assert.That(commercialEvent.Name, Is.EqualTo("Friday Showmatch"));
+        Assert.That(commercialEvent.Kind, Is.EqualTo("show-matches"));
+        Assert.That(commercialEvent.PrizePoolUsd, Is.EqualTo(500));
+        Assert.That(commercialEvent.StartsAt, Is.EqualTo(Utc(2026, 10, 9, 18)));
+        Assert.That(commercialEvent.EndsAt, Is.EqualTo(Utc(2026, 10, 9, 23)));
+        Assert.That(commercialEvent.MaxGames, Is.EqualTo(10));
+        Assert.That(commercialEvent.AllocationId, Is.EqualTo("alloc-1"));
+        Assert.That(commercialEvent.AllocationName, Is.EqualTo("Weekly showmatches"));
+        Assert.That(commercialEvent.Status, Is.EqualTo("open"));
+        Assert.That(commercialEvent.Phase, Is.EqualTo("active"));
+        Assert.That(commercialEvent.Consumed, Is.EqualTo(3));
+        Assert.That(commercialEvent.Held, Is.EqualTo(1));
+        Assert.That(commercialEvent.Invalid, Is.EqualTo(2));
+        Assert.That(commercialEvent.CreatedBy, Is.EqualTo("Organizer#1234"));
+        Assert.That(commercialEvent.CreatedVia, Is.EqualTo("launcher"));
+        Assert.That(commercialEvent.SuspensionMessage, Is.Null);
+        Assert.That(commercialEvent.ClosedAt, Is.Null);
+    }
+
+    [Test]
+    public async Task GetEventsWithoutFiltersSendsNoQuery()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, "[]");
+
+        var events = await CreateClient(handler).GetCommercialEvents(null, null, null, null);
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/events");
+        Assert.That(events, Is.Empty);
+    }
+
+    [Test]
+    public async Task GetEventParsesTheDetailWithPeopleAndSuspension()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.EventDetail);
+
+        var detail = await CreateClient(handler).GetCommercialEvent("EV-7K3M");
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/events/EV-7K3M");
+        Assert.That(detail.Status, Is.EqualTo("suspended"));
+        Assert.That(detail.Phase, Is.Null);
+        Assert.That(detail.SuspensionMessage, Is.EqualTo("Paused while we review the results"));
+        Assert.That(detail.SuspendedBy, Is.EqualTo("Admin#1"));
+        Assert.That(detail.SuspendedAt, Is.EqualTo(Utc(2026, 10, 9, 19)));
+        Assert.That(detail.AdminNote, Is.EqualTo("Reported on Discord"));
+        Assert.That(detail.Organizers, Is.EqualTo(new[] { "Organizer#1234" }));
+        Assert.That(detail.Delegates.Single().BattleTag, Is.EqualTo("Delegate#2345"));
+        Assert.That(detail.Hosts.Single().BattleTag, Is.EqualTo("Host#3456"));
+        Assert.That(detail.Hosts.Single().AddedBy, Is.EqualTo("Delegate#2345"));
+    }
+
+    [Test]
+    public async Task CreateEventPostsTheBodyWithActingBattleTag()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.Created, CommercialEventsTestJson.EventDetail);
+
+        var detail = await CreateClient(handler).CreateCommercialEvent(new CommercialEventCreateRequest
+        {
+            AllocationId = "alloc-1",
+            Name = "Friday Showmatch",
+            Kind = "show-matches",
+            PrizePoolUsd = 500,
+            StartsAt = Utc(2026, 10, 9, 18),
+            EndsAt = Utc(2026, 10, 9, 23),
+            MaxGames = 10,
+        }, "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Post, "/admin/commercial-events/events");
+        var body = JObject.Parse(handler.RequestBodies[0]);
+        Assert.That(body.Properties().Select(p => p.Name), Is.EquivalentTo(new[]
+        {
+            "allocationId", "name", "kind", "prizePoolUsd", "startsAt", "endsAt", "maxGames", "actingBattleTag",
+        }));
+        Assert.That(body["allocationId"]!.Value<string>(), Is.EqualTo("alloc-1"));
+        Assert.That(body["prizePoolUsd"]!.Value<int>(), Is.EqualTo(500));
+        Assert.That(body["actingBattleTag"]!.Value<string>(), Is.EqualTo("Admin#1"));
+        Assert.That(handler.RequestBodies[0], Does.Contain("\"startsAt\":\"2026-10-09T18:00:00.000Z\""));
+        Assert.That(detail.Id, Is.EqualTo("EV-7K3M"));
+    }
+
+    [Test]
+    public async Task UpdateEventSendsOnlyTheGivenFields()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.EventDetail);
+
+        await CreateClient(handler).UpdateCommercialEvent("EV-7K3M", new CommercialEventUpdateRequest { Name = "Friday Night Showmatch" }, "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Put, "/admin/commercial-events/events/EV-7K3M");
+        Assert.That(handler.RequestBodies[0], Is.EqualTo("""{"name":"Friday Night Showmatch","actingBattleTag":"Admin#1"}"""));
+    }
+
+    [Test]
+    public async Task MoveEventPostsTheTargetAllocation()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.EventDetail);
+
+        await CreateClient(handler).MoveCommercialEvent("EV-7K3M", new CommercialEventMoveRequest { AllocationId = "alloc-2" }, "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Post, "/admin/commercial-events/events/EV-7K3M/move");
+        Assert.That(handler.RequestBodies[0], Is.EqualTo("""{"allocationId":"alloc-2","actingBattleTag":"Admin#1"}"""));
+    }
+
+    [Test]
+    public async Task CloseAndUnsuspendPostOnlyTheActingBattleTag()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.EventDetail);
+        var client = CreateClient(handler);
+
+        await client.CloseCommercialEvent("EV-7K3M", "Admin#1");
+        await client.UnsuspendCommercialEvent("EV-7K3M", "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Post, "/admin/commercial-events/events/EV-7K3M/close");
+        AssertRequest(handler, 1, HttpMethod.Post, "/admin/commercial-events/events/EV-7K3M/unsuspend");
+        Assert.That(handler.RequestBodies, Is.EqualTo(new[] { ActingOnlyBody, ActingOnlyBody }));
+    }
+
+    [Test]
+    public async Task SuspendEventPostsTheMessageAndNote()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.EventDetail);
+
+        await CreateClient(handler).SuspendCommercialEvent("EV-7K3M", new CommercialEventSuspendRequest
+        {
+            SuspensionMessage = "Paused while we review the results",
+            AdminNote = "Reported on Discord",
+        }, "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Post, "/admin/commercial-events/events/EV-7K3M/suspend");
+        Assert.That(handler.RequestBodies[0], Is.EqualTo(
+            """{"suspensionMessage":"Paused while we review the results","adminNote":"Reported on Discord","actingBattleTag":"Admin#1"}"""));
+    }
+
+    [Test]
+    public async Task GetPeopleParsesOrganizersDelegatesAndHosts()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.People);
+
+        var people = await CreateClient(handler).GetCommercialEventPeople("EV-7K3M");
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/events/EV-7K3M/people");
+        Assert.That(people.Organizers, Is.EqualTo(new[] { "Organizer#1234" }));
+        Assert.That(people.Delegates.Single().BattleTag, Is.EqualTo("Delegate#2345"));
+        Assert.That(people.Delegates.Single().AddedAt, Is.EqualTo(Utc(2026, 10, 8, 11)));
+        Assert.That(people.Hosts.Single().BattleTag, Is.EqualTo("Host#3456"));
+    }
+
+    [Test]
+    public async Task PersonRoutesEscapeTheBattleTag()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.People);
+        var client = CreateClient(handler);
+
+        await client.AddCommercialEventPerson("EV-7K3M", "Grubby#1234", new CommercialEventPersonRequest { Role = "host" }, "Admin#1");
+        await client.RemoveCommercialEventPerson("EV-7K3M", "Grubby#1234", "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Put, "/admin/commercial-events/events/EV-7K3M/people/Grubby%231234");
+        AssertRequest(handler, 1, HttpMethod.Delete, "/admin/commercial-events/events/EV-7K3M/people/Grubby%231234");
+        Assert.That(handler.RequestBodies[0], Is.EqualTo("""{"role":"host","actingBattleTag":"Admin#1"}"""));
+        Assert.That(handler.RequestBodies[1], Is.EqualTo(ActingOnlyBody));
+    }
+
+    [Test]
+    public async Task GetGamesForwardsCursorAndLimitAndParsesThePage()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.GamesPage);
+
+        var page = await CreateClient(handler).GetCommercialEventGames("EV-7K3M", "abc/+=", "25");
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/events/EV-7K3M/games", "?cursor=abc%2F%2B%3D&limit=25");
+        Assert.That(page.NextCursor, Is.EqualTo("c2"));
+        var game = page.Games.Single();
+        Assert.That(game.MatchId, Is.EqualTo("m-1"));
+        Assert.That(game.LobbyName, Is.EqualTo("Showmatch 1"));
+        Assert.That(game.StartedAt, Is.EqualTo(Utc(2026, 10, 9, 18, 5)));
+        Assert.That(game.Outcome, Is.EqualTo("valid"));
+        Assert.That(game.InvalidReason, Is.Null);
+        Assert.That(game.LengthSeconds, Is.EqualTo(312));
+        Assert.That(game.NamesHidden, Is.False);
+        Assert.That(game.Host, Is.EqualTo("Host#3456"));
+        Assert.That(game.Teams, Has.Count.EqualTo(2));
+        Assert.That(game.Teams[0].PlayerCount, Is.EqualTo(1));
+        Assert.That(game.Teams[0].Players.Single().BattleTag, Is.EqualTo("Grubby#1234"));
+        Assert.That(game.Teams[0].Players.Single().Won, Is.False);
+        Assert.That(game.Teams[1].Players.Single().Won, Is.True);
+        Assert.That(game.ObserverCount, Is.EqualTo(1));
+        Assert.That(game.Observers, Is.EqualTo(new[] { "Caster#1111" }));
+        Assert.That(game.Computers, Is.EqualTo(0));
+        Assert.That(game.ViewerCount, Is.EqualTo(42));
+        Assert.That(game.WatchedSecondsTotal, Is.EqualTo(12600));
+        Assert.That(game.WatchedSecondsAvg, Is.EqualTo(300));
+    }
+
+    [Test]
+    public async Task GetActiveGamesParsesDtos()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.ActiveGames);
+
+        var games = await CreateClient(handler).GetActiveCommercialEventGames();
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/games/active");
+        var game = games.Single();
+        Assert.That(game.MatchId, Is.EqualTo("m-2"));
+        Assert.That(game.EventId, Is.EqualTo("EV-7K3M"));
+        Assert.That(game.EventName, Is.EqualTo("Friday Showmatch"));
+        Assert.That(game.Host, Is.EqualTo("Host#3456"));
+        Assert.That(game.LobbyName, Is.EqualTo("Showmatch 2"));
+        Assert.That(game.StartedAt, Is.EqualTo(Utc(2026, 10, 9, 19)));
+        Assert.That(game.Players, Is.EqualTo(new[] { "Grubby#1234", "Moon#5678" }));
+        Assert.That(game.Observers, Is.Empty);
+        Assert.That(game.ViewerCount, Is.EqualTo(17));
+    }
+
+    [Test]
+    public async Task TerminatePostsTheActingBattleTagAndAcceptsNoContent()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.NoContent);
+
+        await CreateClient(handler).TerminateCommercialEventGame("m-2", "Admin#1");
+
+        AssertRequest(handler, 0, HttpMethod.Post, "/admin/commercial-events/games/m-2/terminate");
+        Assert.That(handler.RequestBodies[0], Is.EqualTo(ActingOnlyBody));
+    }
+
+    [Test]
+    public async Task GetAuditForwardsTheGivenScopeAndParsesEntries()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.Audit);
+
+        var entries = await CreateClient(handler).GetCommercialEventAudit(null, "alloc-1");
+
+        AssertRequest(handler, 0, HttpMethod.Get, "/admin/commercial-events/audit", "?allocationId=alloc-1");
+        var entry = entries.Single();
+        Assert.That(entry.Id, Is.EqualTo("aud-1"));
+        Assert.That(entry.At, Is.EqualTo(Utc(2026, 10, 9, 19)));
+        Assert.That(entry.Actor, Is.EqualTo("Admin#1"));
+        Assert.That(entry.ActorRole, Is.EqualTo("admin"));
+        Assert.That(entry.Action, Is.EqualTo("event-updated"));
+        Assert.That(entry.EventId, Is.EqualTo("EV-7K3M"));
+        Assert.That(entry.AllocationId, Is.Null);
+        Assert.That(entry.Details, Is.Not.Null);
+    }
+
+    [Test]
+    public async Task AuditDetailsSurviveTheSystemTextJsonResponseToTheWebsite()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.Audit);
+
+        var entries = await CreateClient(handler).GetCommercialEventAudit("EV-7K3M", null);
+
+        // ASP.NET writes website responses with System.Text.Json, which cannot serialize a Newtonsoft JObject.
+        var websiteJson = JsonSerializer.Serialize(entries, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var expected = JToken.Parse(CommercialEventsTestJson.Audit)[0]!["details"];
+        var actual = JToken.Parse(websiteJson)[0]!["details"];
+        Assert.That(JToken.DeepEquals(actual, expected), Is.True, websiteJson);
+        // Date strings inside details are passed through unchanged, milliseconds included.
+        Assert.That(websiteJson, Does.Contain("\"from\":\"2026-10-09T23:00:00.000Z\""));
+        Assert.That(handler.Requests[0].RequestUri!.Query, Is.EqualTo("?eventId=EV-7K3M"));
+    }
+
+    [Test]
+    public async Task GetRoleHintsPostsTheBattleTagsWithoutActingBattleTag()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, CommercialEventsTestJson.RoleHints);
+
+        var hints = await CreateClient(handler).GetCommercialEventRoleHints(["Grubby#1234", "Moon#5678"]);
+
+        // Index P41: a read with a JSON body; no query string and no actingBattleTag.
+        AssertRequest(handler, 0, HttpMethod.Post, "/admin/commercial-events/roles/lookup");
+        Assert.That(handler.RequestBodies[0], Is.EqualTo("""{"battleTags":["Grubby#1234","Moon#5678"]}"""));
+        Assert.That(hints.Select(h => h.BattleTag), Is.EqualTo(new[] { "Grubby#1234", "Moon#5678" }));
+        Assert.That(hints[0].OrganizerOf.Single().AllocationId, Is.EqualTo("alloc-1"));
+        Assert.That(hints[0].OrganizerOf.Single().AllocationName, Is.EqualTo("Weekly showmatches"));
+        Assert.That(hints[0].DelegateOf, Is.Empty);
+        Assert.That(hints[0].HostOf.Single().EventId, Is.EqualTo("EV-7K3M"));
+        Assert.That(hints[0].HostOf.Single().EventName, Is.EqualTo("Friday Showmatch"));
+        Assert.That(hints[1].HostOf, Is.Empty);
     }
 
     private static void AssertRequest(StubMatchmakingHandler handler, int index, HttpMethod method, string path, string query = "")

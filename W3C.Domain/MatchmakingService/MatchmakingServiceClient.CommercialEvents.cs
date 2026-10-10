@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -56,6 +57,69 @@ public partial class MatchmakingServiceClient
 
     public async Task<List<CommercialEventPeriodUsageDto>> GetCommercialEventAllocationPeriods(string allocationId) =>
         await SendCommercialEvents<List<CommercialEventPeriodUsageDto>>(HttpMethod.Get, $"/allocations/{PathSegment(allocationId)}/periods") ?? [];
+
+    public async Task<List<CommercialEventDto>> GetCommercialEvents(string status, string phase, string allocationId, string q) =>
+        await SendCommercialEvents<List<CommercialEventDto>>(HttpMethod.Get, "/events" + Query(("status", status), ("phase", phase), ("allocationId", allocationId), ("q", q))) ?? [];
+
+    public Task<CommercialEventDetailDto> GetCommercialEvent(string eventId) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Get, $"/events/{PathSegment(eventId)}");
+
+    public Task<CommercialEventDetailDto> CreateCommercialEvent(CommercialEventCreateRequest request, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Post, "/events", WithActingBattleTag(request, actingBattleTag));
+
+    public Task<CommercialEventDetailDto> UpdateCommercialEvent(string eventId, CommercialEventUpdateRequest request, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Put, $"/events/{PathSegment(eventId)}", WithActingBattleTag(request, actingBattleTag));
+
+    public Task<CommercialEventDetailDto> MoveCommercialEvent(string eventId, CommercialEventMoveRequest request, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Post, $"/events/{PathSegment(eventId)}/move", WithActingBattleTag(request, actingBattleTag));
+
+    public Task<CommercialEventDetailDto> CloseCommercialEvent(string eventId, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Post, $"/events/{PathSegment(eventId)}/close", WithActingBattleTag(null, actingBattleTag));
+
+    public Task<CommercialEventDetailDto> SuspendCommercialEvent(string eventId, CommercialEventSuspendRequest request, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Post, $"/events/{PathSegment(eventId)}/suspend", WithActingBattleTag(request, actingBattleTag));
+
+    public Task<CommercialEventDetailDto> UnsuspendCommercialEvent(string eventId, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventDetailDto>(HttpMethod.Post, $"/events/{PathSegment(eventId)}/unsuspend", WithActingBattleTag(null, actingBattleTag));
+
+    public Task<CommercialEventPeopleDto> GetCommercialEventPeople(string eventId) =>
+        SendCommercialEvents<CommercialEventPeopleDto>(HttpMethod.Get, $"/events/{PathSegment(eventId)}/people");
+
+    public Task<CommercialEventPeopleDto> AddCommercialEventPerson(string eventId, string battleTag, CommercialEventPersonRequest request, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventPeopleDto>(HttpMethod.Put, $"/events/{PathSegment(eventId)}/people/{PathSegment(battleTag)}", WithActingBattleTag(request, actingBattleTag));
+
+    public Task<CommercialEventPeopleDto> RemoveCommercialEventPerson(string eventId, string battleTag, string actingBattleTag) =>
+        SendCommercialEvents<CommercialEventPeopleDto>(HttpMethod.Delete, $"/events/{PathSegment(eventId)}/people/{PathSegment(battleTag)}", WithActingBattleTag(null, actingBattleTag));
+
+    public Task<CommercialEventGamesPageDto> GetCommercialEventGames(string eventId, string cursor, string limit) =>
+        SendCommercialEvents<CommercialEventGamesPageDto>(HttpMethod.Get, $"/events/{PathSegment(eventId)}/games" + Query(("cursor", cursor), ("limit", limit)));
+
+    public async Task<List<CommercialEventActiveGameDto>> GetActiveCommercialEventGames() =>
+        await SendCommercialEvents<List<CommercialEventActiveGameDto>>(HttpMethod.Get, "/games/active") ?? [];
+
+    public Task TerminateCommercialEventGame(string matchId, string actingBattleTag) =>
+        SendCommercialEventsRaw(HttpMethod.Post, $"/games/{PathSegment(matchId)}/terminate", WithActingBattleTag(null, actingBattleTag));
+
+    public async Task<List<CommercialEventAuditEntryDto>> GetCommercialEventAudit(string eventId, string allocationId) =>
+        await SendCommercialEvents<List<CommercialEventAuditEntryDto>>(HttpMethod.Get, "/audit" + Query(("eventId", eventId), ("allocationId", allocationId))) ?? [];
+
+    // A read, so no acting admin: the body is serialized directly instead of through WithActingBattleTag.
+    // A null list is omitted by NullValueHandling.Ignore, and matchmaking answers 400 INVALID_REQUEST {field: 'battleTags'}.
+    public async Task<List<CommercialEventRoleHintsDto>> GetCommercialEventRoleHints(IEnumerable<string> battleTags) =>
+        await SendCommercialEvents<List<CommercialEventRoleHintsDto>>(
+            HttpMethod.Post,
+            "/roles/lookup",
+            JsonConvert.SerializeObject(new CommercialEventRoleLookupRequest { BattleTags = battleTags?.ToList() }, CommercialEventsBodySettings)) ?? [];
+
+    // Forwards only non-empty values, each escaped; matchmaking validates them.
+    private static string Query(params (string Name, string Value)[] parameters)
+    {
+        var pairs = parameters
+            .Where(parameter => !string.IsNullOrEmpty(parameter.Value))
+            .Select(parameter => $"{parameter.Name}={Uri.EscapeDataString(parameter.Value)}")
+            .ToList();
+        return pairs.Count == 0 ? "" : "?" + string.Join("&", pairs);
+    }
 
     // Kestrel has already decoded route values; re-encode them so '#' and friends survive as one path segment.
     private static string PathSegment(string value) => Uri.EscapeDataString(value);
