@@ -6,13 +6,10 @@ The statistic-service is the backend for the W3Champions Launcher and Website pr
 You need mongodb to run the service. If you do not have a local mongo container, start one up with
 
 ```
-docker run mongo
+docker run -d -p 27017:27017 mongo
 ```
-and your local service should be able to connect to this default mongo address. The default is our open test db with connectionstring `mongodb://157.90.1.251:3513`
-
-If you have your own MongoDb, you need to run the service with a Env Variable Called "MONGO_CONNECTION_STRING" and
-set it to the corresponding connection string. You can also just replace the line in the Program.cs with your own
-connection string.
+and point the service at it. The service fails fast at startup unless the Env Variable "MONGO_CONNECTION_STRING" is set
+(e.g. `mongodb://localhost:27017`).
 
 CAUTION:
 When running locally, the readmodel handling is turned off, unless you set the corresponding env variable. But only
