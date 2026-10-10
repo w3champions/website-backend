@@ -13,6 +13,8 @@ public static class HttpClientNames
     public const string Identification = "identification";
     public const string Chat = "chat";
     public const string Update = "update";
+    /// <summary>Map uploads: streams the admin's request body through, so it includes their upload time.</summary>
+    public const string UpdateUpload = "update-upload";
     public const string Replay = "replay";
     public const string War3Info = "war3info";
 }

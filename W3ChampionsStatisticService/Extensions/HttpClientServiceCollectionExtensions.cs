@@ -34,8 +34,10 @@ public static class HttpClientServiceCollectionExtensions
         // On the hot path of player profile requests: fail fast rather than pile requests up.
         [HttpClientNames.Identification] = TimeSpan.FromSeconds(5),
         [HttpClientNames.Chat] = TimeSpan.FromSeconds(10),
-        // Map uploads (multipart, up to the 128 MiB request limit) go through this client.
-        [HttpClientNames.Update] = TimeSpan.FromSeconds(60),
+        [HttpClientNames.Update] = TimeSpan.FromSeconds(15),
+        // Map uploads stream the admin's multipart body (up to the 128 MiB request limit) straight
+        // through, so the timeout covers their upload time too: 128 MiB in 15 min needs ~1.2 Mbit/s.
+        [HttpClientNames.UpdateUpload] = TimeSpan.FromMinutes(15),
         // Replay downloads: observed p99.9 of the proxying endpoint is ~16 s.
         [HttpClientNames.Replay] = TimeSpan.FromSeconds(30),
         [HttpClientNames.War3Info] = TimeSpan.FromSeconds(15),

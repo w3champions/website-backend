@@ -14,6 +14,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";
 
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Update);
+    private readonly HttpClient _uploadClient = httpClientFactory.CreateClient(HttpClientNames.UpdateUpload);
 
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {
@@ -39,7 +40,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         AdminSecretProvider.AddTo(request.Headers);
         request.Content = req.Content;
-        var response = await _httpClient.SendAsync(request);
+        var response = await _uploadClient.SendAsync(request);
 
         var content = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
