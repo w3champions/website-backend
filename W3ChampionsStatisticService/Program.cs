@@ -374,12 +374,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 app.MapMetrics().RequireAuthorization(BasicAuthConfiguration.ReadMetricsPolicy);
 
-app.UseCors(builder =>
-    builder
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .SetIsOriginAllowed(_ => true)
-        .AllowCredentials());
+app.UseCors(CorsPolicyConfiguration.Configure);
 
 app.MapControllers();
 
