@@ -243,6 +243,45 @@ public class MatchmakingServiceClientCommercialEventsTests
         Assert.That(ex.Body, Is.Null);
     }
 
+    [TestCase("{}")]
+    [TestCase("""{"eventId":"e1","name":"Cup"}""")]
+    public void ObjectEndpointRejectsBodyMissingRequiredFieldsWithBadGateway(string body)
+    {
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).GetCommercialEvent("e1"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+        Assert.That(ex.Body, Is.Null);
+        Assert.That(ex.InnerException, Is.InstanceOf<Newtonsoft.Json.JsonException>());
+    }
+
+    [Test]
+    public void ListEndpointRejectsItemMissingRequiredFieldsWithBadGateway()
+    {
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, "[{}]")).GetCommercialEvents(null, null, null, null));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+    }
+
+    [Test]
+    public async Task OptionalAndNullableFieldsMayBeAbsent()
+    {
+        const string body = """
+            {"id":"e1","name":"Cup","kind":"other","prizePoolUsd":0,"startsAt":"2026-10-01T00:00:00.000Z","endsAt":"2026-10-02T00:00:00.000Z",
+             "maxGames":5,"allocationId":"a1","allocationName":"A","status":"closed","consumed":0,"held":0,"invalid":0,
+             "createdBy":"x#1","createdVia":"admin","createdAt":"2026-09-01T00:00:00.000Z","updatedBy":"x#1","updatedAt":"2026-09-01T00:00:00.000Z",
+             "organizers":[],"delegates":[],"hosts":[]}
+            """;
+
+        var detail = await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).GetCommercialEvent("e1");
+
+        Assert.That(detail.Id, Is.EqualTo("e1"));
+        Assert.That(detail.Phase, Is.Null);
+        Assert.That(detail.AdminNote, Is.Null);
+        Assert.That(detail.ClosedAt, Is.Null);
+    }
+
     [Test]
     public async Task ListEndpointTreatsJsonNullAsEmptyList()
     {
