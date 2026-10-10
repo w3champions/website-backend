@@ -22,7 +22,8 @@ public static class RelayChainMerge
 
     private static readonly HashSet<string> RetryStatuses = [RelayLegStatus.PendingClose, RelayLegStatus.NodeUnavailable];
 
-    // Statuses that report lost access to data, not a newer verdict about it.
+    // Statuses that report lost access to data, not a newer verdict about it. They replace
+    // only a measured status: any other old status is not a verdict worth keeping over them.
     private static readonly HashSet<string> DataLossStatuses = [RelayLegStatus.Expired, RelayLegStatus.NodeUnavailable, RelayLegStatus.NodeTooOld];
 
     /// <summary>
@@ -42,9 +43,8 @@ public static class RelayChainMerge
     /// that is still closing or a node that did not answer resolves by itself, a stale status
     /// waits for the next trigger.
     /// </summary>
-    public static bool IsStillClosing(PlayerRelayChain chain) => NeedsRefresh(chain) &&
-        chain.Connections != null &&
-        chain.Connections.SelectMany(c => c.Legs ?? []).Any(l =>
+    public static bool IsStillClosing(PlayerRelayChain chain) => chain?.Connections != null &&
+        chain.Connections.Where(c => !IsFinal(c)).SelectMany(c => c.Legs ?? []).Any(l =>
             RetryStatuses.Contains(l.Status) || IsOpenNodeSeries(l.Near) || IsOpenNodeSeries(l.Far));
 
     private static bool IsFinal(RelayConnectionData connection)
@@ -117,7 +117,7 @@ public static class RelayChainMerge
     {
         FromLabel = next.FromLabel,
         ToLabel = next.ToLabel,
-        Status = DataLossStatuses.Contains(next.Status) && CoveredSecs([old]) > 0 ? old.Status : next.Status,
+        Status = DataLossStatuses.Contains(next.Status) && old.Status == RelayLegStatus.Measured && CoveredSecs([old]) > 0 ? old.Status : next.Status,
         Near = PickSeries(old.Near, next.Near),
         Far = PickSeries(old.Far, next.Far),
         Close = next.Close ?? old.Close,
