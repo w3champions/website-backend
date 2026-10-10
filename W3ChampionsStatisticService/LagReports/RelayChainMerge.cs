@@ -125,8 +125,7 @@ public static class RelayChainMerge
     // A terminal verdict survives a later loss of access; a non-terminal one must not hide
     // the fresh status, or a transient failure would read as unchanged.
     private static bool KeepsOldStatus(RelayLegData old, RelayLegData next, bool isLast) =>
-        DataLossStatuses.Contains(next.Status) && IsFinal(old, isLast) &&
-        (old.Status == RelayLegStatus.Expired || CoveredSecs([old]) > 0);
+        DataLossStatuses.Contains(next.Status) && IsFinal(old, isLast);
 
     private static RelaySeriesData PickSeries(RelaySeriesData old, RelaySeriesData next) =>
         Covered(old) > Covered(next) ? old : next ?? old;

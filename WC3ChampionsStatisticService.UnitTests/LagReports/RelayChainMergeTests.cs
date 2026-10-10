@@ -156,6 +156,18 @@ public class RelayChainMergeTests
         Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.False);
     }
 
+    [TestCase(RelayLegStatus.NodeUnavailable)]
+    [TestCase(RelayLegStatus.NodeTooOld)]
+    public void Merge_MeasuredLegWithoutBucketsStaysFinalOverALaterLossOfAccess(string freshStatus)
+    {
+        var old = RelayedConnection(1, 0);
+        var fresh = RelayedConnection(1, 0, freshStatus);
+
+        var merged = RelayChainMerge.Merge(Chain(old), Chain(fresh));
+
+        Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.False);
+    }
+
     [Test]
     public void IsStillClosing_OnlyTransientStates()
     {
