@@ -63,8 +63,9 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 
 ### Key Technologies
 - **.NET 8.0** with ASP.NET Core
-- **MongoDB** for persistence (default test DB: `mongodb://157.90.1.251:3513`)
+- **MongoDB** for persistence (`MONGO_CONNECTION_STRING` is required, no default)
 - **SignalR** for real-time communication (WebsiteBackendHub at `/websiteBackendHub`)
+- **Outbound HTTP** only via `IHttpClientFactory` named clients (`W3C.Domain/HttpClientNames.cs`), registered with explicit timeouts in `Extensions/HttpClientServiceCollectionExtensions.cs`; never `new HttpClient()`, and put per-call headers (e.g. the admin secret) on the request, not on `DefaultRequestHeaders`
 - **JWT Bearer Authentication** with Battle.net OAuth
 - **Serilog** for structured logging
 - **Prometheus** metrics

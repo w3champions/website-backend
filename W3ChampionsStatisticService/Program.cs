@@ -18,6 +18,7 @@ using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3C.Domain.UpdateService;
 
+using W3ChampionsStatisticService;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Admin.Jobs;
 using W3ChampionsStatisticService.Admin.Logs;
@@ -107,10 +108,8 @@ builder.Services.AddSwaggerGen(f =>
 });
 
 // Configure and add MongoDB
-string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
-MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
-mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
-mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
+string mongoConnectionString = MongoConnectionStringResolver.Resolve(Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING"));
+MongoClientSettings mongoSettings = MongoClientSettingsFactory.Create(mongoConnectionString);
 
 builder.Services.AddW3CTracing(WEBSITE_BACKEND_HUB_PATH, mongoSettings);
 
@@ -123,7 +122,8 @@ builder.Services.AddSignalR();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddHttpClient();
+// Every outbound HttpClient gets explicit timeouts; resolve clients by HttpClientNames.
+builder.Services.AddW3CHttpClients();
 
 builder.Services.AddSpecialBsonRegistrations();
 
@@ -374,12 +374,7 @@ app.UseAuthorization();
 app.UseHttpMetrics();
 app.MapMetrics().RequireAuthorization(BasicAuthConfiguration.ReadMetricsPolicy);
 
-app.UseCors(builder =>
-    builder
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .SetIsOriginAllowed(_ => true)
-        .AllowCredentials());
+app.UseCors(CorsPolicyConfiguration.Configure);
 
 app.MapControllers();
 
