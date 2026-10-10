@@ -220,7 +220,7 @@ public class RelayChainMergeTests
         var merged = RelayChainMerge.Merge(existing, fresh);
 
         var legs = merged.Connections[0].Legs;
-        Assert.That(legs.Select(l => l.Status), Is.All.EqualTo(RelayLegStatus.PendingClose));
+        Assert.That(legs.Select(l => l.Status), Is.All.EqualTo(RelayLegStatus.Expired));
         Assert.That(legs[1].Far.BucketCount, Is.EqualTo(30));
     }
 
@@ -235,7 +235,7 @@ public class RelayChainMergeTests
         var merged = RelayChainMerge.Merge(existing, fresh);
 
         var legs = merged.Connections[0].Legs;
-        Assert.That(legs[0].Status, Is.EqualTo(RelayLegStatus.PendingClose));
+        Assert.That(legs[0].Status, Is.EqualTo(RelayLegStatus.Expired));
         Assert.That(legs[0].Far.BucketCount, Is.EqualTo(30));
         Assert.That(legs[1].Status, Is.EqualTo(RelayLegStatus.Measured));
         Assert.That(legs[1].Far.BucketCount, Is.EqualTo(40));
