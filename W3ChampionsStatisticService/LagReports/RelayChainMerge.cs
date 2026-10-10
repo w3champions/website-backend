@@ -25,13 +25,41 @@ public static class RelayChainMerge
     // Statuses that report lost access to data, not a newer verdict about it.
     private static readonly HashSet<string> DataLossStatuses = [RelayLegStatus.Expired, RelayLegStatus.NodeUnavailable, RelayLegStatus.NodeTooOld];
 
+    /// <summary>
+    /// Whether a trigger (submit, match end, match cancel) should fetch the chain again: unless
+    /// every leg is terminal, a controller or host update since the last fetch may have improved
+    /// it. Any status not known to be terminal counts as open, including ones from a newer controller.
+    /// </summary>
     public static bool NeedsRefresh(PlayerRelayChain chain)
     {
         if (chain?.Connections == null || chain.Connections.Count == 0) return true;
 
-        return chain.Connections.SelectMany(c => c.Legs ?? []).Any(l =>
-            RetryStatuses.Contains(l.Status) || IsOpenNodeSeries(l.Near) || IsOpenNodeSeries(l.Far));
+        return chain.Connections.Any(c => !IsFinal(c));
     }
+
+    /// <summary>
+    /// Whether a fetch just made is worth repeating within the same trigger: only a connection
+    /// that is still closing or a node that did not answer resolves by itself, a stale status
+    /// waits for the next trigger.
+    /// </summary>
+    public static bool IsStillClosing(PlayerRelayChain chain) => NeedsRefresh(chain) &&
+        chain.Connections != null &&
+        chain.Connections.SelectMany(c => c.Legs ?? []).Any(l =>
+            RetryStatuses.Contains(l.Status) || IsOpenNodeSeries(l.Near) || IsOpenNodeSeries(l.Far));
+
+    private static bool IsFinal(RelayConnectionData connection)
+    {
+        var legs = connection.Legs ?? [];
+        return legs.Count > 0 && legs.Select((leg, i) => IsFinal(leg, isLast: i == legs.Count - 1)).All(final => final);
+    }
+
+    // Close is the far relay's close line, so the leg into the game node never has one.
+    private static bool IsFinal(RelayLegData leg, bool isLast) => leg.Status switch
+    {
+        RelayLegStatus.Expired => true,
+        RelayLegStatus.Measured => (isLast || leg.Close != null) && !IsOpenNodeSeries(leg.Near) && !IsOpenNodeSeries(leg.Far),
+        _ => false,
+    };
 
     // Only the game node's own series says the connection is still open: a relay may keep its
     // socket entry a little longer and must not cause a refresh of a finished connection.
