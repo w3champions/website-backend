@@ -151,6 +151,7 @@ public class CommercialEventsControllerTests
         Assert.That(json["members"]![0]!["battleTag"]!.Value<string>(), Is.EqualTo("Organizer#1234"));
         Assert.That(json["currentPeriod"]!["available"]!.Value<int>(), Is.EqualTo(14));
         Assert.That(json["resetsAt"]!.Value<DateTime>(), Is.EqualTo(new DateTime(2026, 10, 15, 0, 0, 0, DateTimeKind.Utc)));
+        Assert.That(JsonSerializer.Serialize(((OkObjectResult)result).Value, WebJson), Does.Contain("\"resetsAt\":\"2026-10-15T00:00:00Z\""));
     }
 
     [Test]
@@ -254,6 +255,8 @@ public class CommercialEventsControllerTests
 
         AssertInvalidSegment(await controller.UpdateAllocation(value, new CommercialEventAllocationRequest(), "Admin#1"), "allocationId");
         AssertInvalidSegment(await controller.AddAllocationMember("alloc-1", value, "Admin#1"), "battleTag");
+        AssertInvalidSegment(await controller.AddAllocationMember(value, "Grubby#1234", "Admin#1"), "allocationId");
+        AssertInvalidSegment(await controller.RemoveAllocationMember("alloc-1", value, "Admin#1"), "battleTag");
         AssertInvalidSegment(await controller.RemoveAllocationMember(value, "Grubby#1234", "Admin#1"), "allocationId");
         AssertInvalidSegment(await controller.EndAllocation(value, "Admin#1"), "allocationId");
         AssertInvalidSegment(await controller.DeleteAllocation(value, "Admin#1"), "allocationId");
@@ -524,7 +527,9 @@ public class CommercialEventsControllerTests
         AssertInvalidSegment(await controller.UnsuspendEvent(value, "Admin#1"), "eventId");
         AssertInvalidSegment(await controller.GetEventPeople(value), "eventId");
         AssertInvalidSegment(await controller.AddEventPerson("EV-7K3M", value, new CommercialEventPersonRequest(), "Admin#1"), "battleTag");
+        AssertInvalidSegment(await controller.AddEventPerson(value, "Grubby#1234", new CommercialEventPersonRequest(), "Admin#1"), "eventId");
         AssertInvalidSegment(await controller.RemoveEventPerson(value, "Grubby#1234", "Admin#1"), "eventId");
+        AssertInvalidSegment(await controller.RemoveEventPerson("EV-7K3M", value, "Admin#1"), "battleTag");
         AssertInvalidSegment(await controller.GetEventGames(value, null, null), "eventId");
         AssertInvalidSegment(await controller.TerminateGame(value, "Admin#1"), "matchId");
         Assert.That(handler.Requests, Is.Empty);

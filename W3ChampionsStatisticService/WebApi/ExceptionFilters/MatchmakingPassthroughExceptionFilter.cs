@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.WebUtilities;
+using Serilog;
 using W3C.Domain.MatchmakingService;
 
 namespace W3ChampionsStatisticService.WebApi.ExceptionFilters;
@@ -13,6 +14,7 @@ namespace W3ChampionsStatisticService.WebApi.ExceptionFilters;
 /// </summary>
 public sealed class MatchmakingPassthroughExceptionFilter : ExceptionFilterAttribute
 {
+    internal const string FallbackErrorText = "Matchmaking service error";
     internal const string InternalErrorBody = "{\"error\":\"Matchmaking service error\",\"code\":\"INTERNAL\"}";
 
     public override void OnException(ExceptionContext context)
@@ -20,6 +22,10 @@ public sealed class MatchmakingPassthroughExceptionFilter : ExceptionFilterAttri
         if (context.Exception is not MatchmakingPassthroughException passthrough) return;
 
         var status = (int)passthrough.StatusCode;
+        if (status >= 500)
+        {
+            Log.Warning(passthrough, "Matchmaking commercial-events request failed with status {StatusCode}", status);
+        }
         context.Result = new ContentResult
         {
             StatusCode = status,
@@ -30,7 +36,13 @@ public sealed class MatchmakingPassthroughExceptionFilter : ExceptionFilterAttri
     }
 
     private static string ClientErrorBody(int status, string body) =>
-        IsJsonObject(body) ? body : JsonSerializer.Serialize(new { error = ReasonPhrases.GetReasonPhrase(status) });
+        IsJsonObject(body) ? body : JsonSerializer.Serialize(new { error = ReasonPhraseOrFallback(status) });
+
+    private static string ReasonPhraseOrFallback(int status)
+    {
+        var phrase = ReasonPhrases.GetReasonPhrase(status);
+        return string.IsNullOrEmpty(phrase) ? FallbackErrorText : phrase;
+    }
 
     private static bool IsJsonObject(string body)
     {

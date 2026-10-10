@@ -136,7 +136,16 @@ public partial class MatchmakingServiceClient
         where T : class
     {
         var content = await SendCommercialEventsRaw(method, path, jsonBody);
-        return string.IsNullOrEmpty(content) ? null : JsonConvert.DeserializeObject<T>(content, CommercialEventsResponseSettings);
+        if (string.IsNullOrEmpty(content)) return null;
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(content, CommercialEventsResponseSettings);
+        }
+        catch (JsonException ex)
+        {
+            // A success body that does not match the DTO (contract drift) is an upstream fault, not a website bug.
+            throw new MatchmakingPassthroughException(HttpStatusCode.BadGateway, null, ex);
+        }
     }
 
     private async Task<string> SendCommercialEventsRaw(HttpMethod method, string path, string jsonBody = null)

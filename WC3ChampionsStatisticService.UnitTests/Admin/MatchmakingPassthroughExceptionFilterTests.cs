@@ -52,6 +52,7 @@ public class MatchmakingPassthroughExceptionFilterTests
     [TestCase(HttpStatusCode.BadRequest, "", "Bad Request")]
     [TestCase(HttpStatusCode.BadRequest, null, "Bad Request")]
     [TestCase(HttpStatusCode.BadRequest, "[1,2]", "Bad Request")]
+    [TestCase((HttpStatusCode)477, "<html>unknown status</html>", "Matchmaking service error")]
     public void ClientErrorsWithoutAJsonObjectBodyAnswerTheReasonPhrase(HttpStatusCode status, string body, string reasonPhrase)
     {
         var context = RunFilter(new MatchmakingPassthroughException(status, body));

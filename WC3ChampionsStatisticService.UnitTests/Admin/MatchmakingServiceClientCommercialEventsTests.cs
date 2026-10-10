@@ -217,6 +217,20 @@ public class MatchmakingServiceClientCommercialEventsTests
 
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.GatewayTimeout));
         Assert.That(ex.Body, Is.Null);
+        Assert.That(ex.InnerException, Is.InstanceOf<TaskCanceledException>());
+    }
+
+    [Test]
+    public void SuccessBodyThatDoesNotMatchTheDtoThrowsBadGatewayPassthrough()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, """{"unexpected":"object instead of array"}""");
+
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(handler).GetCommercialEventAllocations());
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+        Assert.That(ex.Body, Is.Null);
+        Assert.That(ex.InnerException, Is.InstanceOf<Newtonsoft.Json.JsonException>());
     }
 
     [Test]

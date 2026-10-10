@@ -372,10 +372,14 @@ public class CommercialLicenseControllerTests
     {
         var json = TaggedPlayerJson.Replace("\"notify\":true,", "\"notify\":true,\"commercialEventNotice\":true,");
         var get = await CreateController(new StubMatchmakingHandler(HttpStatusCode.OK, $"[{json}]")).GetTaggedPlayers();
+        var put = await CreateController(new StubMatchmakingHandler(HttpStatusCode.OK, json))
+            .PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody { Note = "n", Notify = true }, "Admin#1");
 
         var getJson = JsonSerializer.Serialize(((OkObjectResult)get).Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var putJson = JsonSerializer.Serialize(((OkObjectResult)put).Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.That(JToken.Parse(getJson)[0]!["commercialEventNotice"]!.Value<bool>(), Is.True);
+        Assert.That(JToken.Parse(putJson)["commercialEventNotice"]!.Value<bool>(), Is.True);
     }
 
     private static void AssertBadRequestError(IActionResult result, string expectedError)
