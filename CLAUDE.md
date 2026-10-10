@@ -124,6 +124,11 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - Multiple consumers: website frontend, launcher, potentially other services
 - Breaking API changes require coordination across repositories
 
+### Commercial license and commercial events
+- `Admin/CommercialLicenseController.cs` (tagged accounts) and `Admin/CommercialEventsController.cs` (allocations, events, people, games, audit, role hints) proxy the matchmaking admin API behind `EPermission.CommercialLicense`. matchmaking-service owns all data and rules; the system is documented in `../matchmaking-service/docs/commercial-events.md`.
+- Battle-tag route values are named `targetBattleTag`, because `BearerHasPermissionFilter` overwrites any action argument named `battleTag` with the acting admin, which is forwarded as `actingBattleTag`. Path values are re-encoded with `Uri.EscapeDataString`.
+- Commercial-events endpoints answer matchmaking 4xx errors with matchmaking's JSON body verbatim and 5xx errors with `{"error":"Matchmaking service error","code":"INTERNAL"}` (`MatchmakingPassthroughExceptionFilter`). Other endpoints use `HandleMMError`.
+
 ### Service Registration
 - Services registered in `Program.cs` and feature-specific extension methods
 - Rewards services in `RewardServiceExtensions.cs`

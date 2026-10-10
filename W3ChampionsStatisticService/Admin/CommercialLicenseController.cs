@@ -59,6 +59,7 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
                 AsObserver = restrictions.AsObserver.Value,
                 FloTv = restrictions.FloTv,
             },
+            CommercialEventNotice = body.CommercialEventNotice,
         };
         return Ok(await _matchmakingServiceClient.UpsertCommercialLicenseTaggedPlayer(targetBattleTag, request));
     }
@@ -87,6 +88,9 @@ public class CommercialLicenseTaggedPlayerBody
 
     /// <summary>Optional. When absent it is not forwarded and matchmaking keeps the stored restrictions.</summary>
     public CommercialLicenseRestrictionsBody Restrictions { get; set; }
+
+    /// <summary>Optional. When absent or null it is not forwarded and matchmaking keeps the stored value.</summary>
+    public bool? CommercialEventNotice { get; set; }
 }
 
 /// <summary>Inbound restrictions: nullable flags so a missing value is detectable instead of binding to false.</summary>
