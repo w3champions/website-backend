@@ -9,7 +9,7 @@ You need mongodb to run the service. If you do not have a local mongo container,
 docker run mongo
 ```
 and point the service at it. The service fails fast at startup unless the Env Variable "MONGO_CONNECTION_STRING" is set
-(e.g. `mongodb://localhost:27017`). Our open test db is available at `mongodb://157.90.1.251:3513`.
+(e.g. `mongodb://localhost:27017`).
 
 CAUTION:
 When running locally, the readmodel handling is turned off, unless you set the corresponding env variable. But only

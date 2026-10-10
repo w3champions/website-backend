@@ -1,4 +1,3 @@
-using W3ChampionsStatisticService;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -19,6 +18,7 @@ using W3C.Domain.MatchmakingService;
 using W3C.Domain.Repositories;
 using W3C.Domain.UpdateService;
 
+using W3ChampionsStatisticService;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Admin.Jobs;
 using W3ChampionsStatisticService.Admin.Logs;
