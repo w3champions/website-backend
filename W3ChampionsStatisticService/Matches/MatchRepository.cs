@@ -5,6 +5,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using W3C.Contracts.GameObjects;
 using W3C.Contracts.Matchmaking;
@@ -58,6 +59,14 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
                     .Text(x => x.Team2Players)
                     .Text(x => x.Team3Players)
                     .Text(x => x.Team4Players)
+            ),
+
+            // Per-player queries: the match-history list (LoadFor) and the
+            // opponent search both filter by a player's battleTag and season.
+            new CreateIndexModel<Matchup>(
+                Builders<Matchup>.IndexKeys
+                    .Ascending("Teams.Players.BattleTag")
+                    .Descending(x => x.Season)
             )
         };
 
@@ -138,6 +147,119 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         var mongoCollection = CreateCollection<Matchup>();
         var filter = BuildPlayerMatchupFilter(playerId, opponentId, gateWay, gameMode, playerRace, opponentRace, season, hero, playerIncludeRandom, opponentIncludeRandom);
         return mongoCollection.CountDocumentsAsync(filter);
+    }
+
+    // Finds the players a given player shares finished matches with, filtered by
+    // a (case-insensitive) battleTag fragment and ordered by shared match count.
+    // The aggregation only ever touches the player's own matches of that season,
+    // so it stays cheap even for very active players.
+    //
+    // MatchCount, Wins and Losses are scoped to the given game mode (all modes
+    // when Undefined), but opponents are still suggested from every mode: the
+    // mode-scoped count can be 0 and the client says so, instead of the opponent
+    // silently becoming unfindable. Wins/Losses are the searched player's record
+    // across the shared matches — allies share the same result.
+    public async Task<List<OpponentInfo>> SearchOpponentsFor(
+        string battleTag,
+        string search,
+        int season,
+        GateWay gateWay = GateWay.Undefined,
+        GameMode gameMode = GameMode.Undefined,
+        int limit = 10)
+    {
+        var mongoCollection = CreateCollection<Matchup>();
+        var builder = Builders<Matchup>.Filter;
+        var playerMatchesFilter = builder.Where(m => m.Teams.Any(team => team.Players.Any(player => player.BattleTag == battleTag)))
+            & builder.Where(m => m.Season == season)
+            & builder.Where(m => gateWay == GateWay.Undefined || m.GateWay == gateWay);
+
+        // Everyone the player shared those matches with, except the player
+        // themselves; a non-empty search narrows to a case-insensitive fragment,
+        // an empty one returns the most played opponents.
+        var battleTagCondition = new BsonDocument { { "$ne", battleTag } };
+        if (!string.IsNullOrEmpty(search))
+        {
+            battleTagCondition.Add("$regex", Regex.Escape(search));
+            battleTagCondition.Add("$options", "i");
+        }
+        var opponentFilter = new BsonDocument { { "Teams.Players.BattleTag", battleTagCondition } };
+
+        var inMode = gameMode == GameMode.Undefined
+            ? (BsonValue)true
+            : new BsonDocument("$eq", new BsonArray { "$GameMode", (int)gameMode });
+
+        var inModeCount = new BsonDocument("$cond", new BsonArray { inMode, 1, 0 });
+        var inModeWin = new BsonDocument("$cond", new BsonArray
+        {
+            new BsonDocument("$and", new BsonArray
+            {
+                inMode,
+                new BsonDocument("$eq", new BsonArray { "$PlayerWon", true })
+            }),
+            1,
+            0
+        });
+
+        // Whether the searched player won a match, resolved before the unwinds
+        // while the match still has all its teams.
+        var playerWon = new BsonDocument("$let", new BsonDocument
+        {
+            {
+                "vars", new BsonDocument("self", new BsonDocument("$arrayElemAt", new BsonArray
+                {
+                    new BsonDocument("$filter", new BsonDocument
+                    {
+                        {
+                            "input", new BsonDocument("$reduce", new BsonDocument
+                            {
+                                { "input", "$Teams.Players" },
+                                { "initialValue", new BsonArray() },
+                                { "in", new BsonDocument("$concatArrays", new BsonArray { "$$value", "$$this" }) }
+                            })
+                        },
+                        { "as", "player" },
+                        { "cond", new BsonDocument("$eq", new BsonArray { "$$player.BattleTag", battleTag }) }
+                    }),
+                    0
+                }))
+            },
+            { "in", "$$self.Won" }
+        });
+
+        return await mongoCollection.Aggregate()
+            .Match(playerMatchesFilter)
+            // Drop everything but the battleTags, mode and the player's result
+            // before unwinding so the rest of the pipeline never carries full
+            // match documents.
+            .Project(new BsonDocument
+            {
+                { "Teams.Players.BattleTag", 1 },
+                { "GameMode", 1 },
+                { "PlayerWon", playerWon }
+            })
+            .Unwind("Teams")
+            .Unwind("Teams.Players")
+            .Match(opponentFilter)
+            .Group(new BsonDocument
+            {
+                { "_id", "$Teams.Players.BattleTag" },
+                { "MatchCount", new BsonDocument("$sum", inModeCount) },
+                { "Wins", new BsonDocument("$sum", inModeWin) },
+                { "TotalCount", new BsonDocument("$sum", 1) }
+            })
+            // In-mode opponents first, then whoever shares the most matches overall.
+            .Sort(new BsonDocument { { "MatchCount", -1 }, { "TotalCount", -1 }, { "_id", 1 } })
+            .Limit(limit)
+            .Project(new BsonDocument
+            {
+                { "_id", 0 },
+                { "BattleTag", "$_id" },
+                { "MatchCount", 1 },
+                { "Wins", 1 },
+                { "Losses", new BsonDocument("$subtract", new BsonArray { "$MatchCount", "$Wins" }) }
+            })
+            .As<OpponentInfo>()
+            .ToListAsync();
     }
 
     private FilterDefinition<Matchup> BuildPlayerMatchupFilter(
