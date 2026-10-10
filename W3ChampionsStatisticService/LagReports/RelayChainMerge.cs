@@ -25,13 +25,46 @@ public static class RelayChainMerge
     // Statuses that report lost access to data, not a newer verdict about it.
     private static readonly HashSet<string> DataLossStatuses = [RelayLegStatus.Expired, RelayLegStatus.NodeUnavailable, RelayLegStatus.NodeTooOld];
 
+    /// <summary>
+    /// Whether a trigger (submit, match end, match cancel) should fetch the chain again: unless
+    /// every leg is terminal, a controller or host update since the last fetch may have improved
+    /// it. Any status not known to be terminal counts as open, including ones from a newer controller.
+    /// </summary>
     public static bool NeedsRefresh(PlayerRelayChain chain)
     {
         if (chain?.Connections == null || chain.Connections.Count == 0) return true;
 
-        return chain.Connections.SelectMany(c => c.Legs ?? []).Any(l =>
-            RetryStatuses.Contains(l.Status) || IsOpenNodeSeries(l.Near) || IsOpenNodeSeries(l.Far));
+        return chain.Connections.Any(c => !IsFinal(c));
     }
+
+    /// <summary>
+    /// Whether a fetch just made is worth repeating within the same trigger: only a connection
+    /// that is still closing or a node that did not answer resolves by itself, a stale status
+    /// waits for the next trigger.
+    /// </summary>
+    public static bool IsStillClosing(PlayerRelayChain chain) => chain?.Connections != null &&
+        chain.Connections.Any(c => (c.Legs ?? []).Select((l, i) => (l, i)).Any(x =>
+            !IsFinal(x.l, isLast: x.i == c.Legs.Count - 1) && IsTransient(x.l)));
+
+    // An open node series only means "closing" on a measured leg: on any other status the
+    // series may be an older fetch's leftover that the fresh verdict has superseded.
+    private static bool IsTransient(RelayLegData leg) =>
+        RetryStatuses.Contains(leg.Status) ||
+        (leg.Status == RelayLegStatus.Measured && (IsOpenNodeSeries(leg.Near) || IsOpenNodeSeries(leg.Far)));
+
+    private static bool IsFinal(RelayConnectionData connection)
+    {
+        var legs = connection.Legs ?? [];
+        return legs.Count > 0 && legs.Select((leg, i) => IsFinal(leg, isLast: i == legs.Count - 1)).All(final => final);
+    }
+
+    // Close is the far relay's close line, so the leg into the game node never has one.
+    private static bool IsFinal(RelayLegData leg, bool isLast) => leg.Status switch
+    {
+        RelayLegStatus.Expired => true,
+        RelayLegStatus.Measured => (isLast || leg.Close != null) && !IsOpenNodeSeries(leg.Near) && !IsOpenNodeSeries(leg.Far),
+        _ => false,
+    };
 
     // Only the game node's own series says the connection is still open: a relay may keep its
     // socket entry a little longer and must not cause a refresh of a finished connection.
@@ -80,20 +113,25 @@ public static class RelayChainMerge
         return new RelayConnectionData
         {
             ConnectedUnixMs = next.ConnectedUnixMs,
-            Legs = old.Legs.Zip(next.Legs).Select(p => MergeLeg(p.First, p.Second)).ToList(),
+            Legs = old.Legs.Zip(next.Legs).Select((p, i) => MergeLeg(p.First, p.Second, isLast: i == old.Legs.Count - 1)).ToList(),
         };
     }
 
     // The two ends come from different nodes, so one can expire while the other still answers.
-    private static RelayLegData MergeLeg(RelayLegData old, RelayLegData next) => new()
+    private static RelayLegData MergeLeg(RelayLegData old, RelayLegData next, bool isLast) => new()
     {
         FromLabel = next.FromLabel,
         ToLabel = next.ToLabel,
-        Status = DataLossStatuses.Contains(next.Status) && CoveredSecs([old]) > 0 ? old.Status : next.Status,
+        Status = KeepsOldStatus(old, next, isLast) ? old.Status : next.Status,
         Near = PickSeries(old.Near, next.Near),
         Far = PickSeries(old.Far, next.Far),
         Close = next.Close ?? old.Close,
     };
+
+    // A terminal verdict survives a later loss of access; a non-terminal one must not hide
+    // the fresh status, or a transient failure would read as unchanged.
+    private static bool KeepsOldStatus(RelayLegData old, RelayLegData next, bool isLast) =>
+        DataLossStatuses.Contains(next.Status) && IsFinal(old, isLast);
 
     private static RelaySeriesData PickSeries(RelaySeriesData old, RelaySeriesData next) =>
         Covered(old) > Covered(next) ? old : next ?? old;

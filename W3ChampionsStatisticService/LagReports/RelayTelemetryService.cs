@@ -219,7 +219,7 @@ public class RelayTelemetryService(IFloControllerRelayClient client, ILagReportR
 
         var merged = RelayChainMerge.Merge(existing, RelayChainMapper.FromReply(reply, DateTime.UtcNow));
         await store.UpdatePlayerRelayChain(report.Id, floPlayerId, Tags(entries), merged);
-        return RelayChainMerge.NeedsRefresh(merged);
+        return RelayChainMerge.IsStillClosing(merged);
     }
 
     // A player who submitted twice has two entries; every update writes all of them.

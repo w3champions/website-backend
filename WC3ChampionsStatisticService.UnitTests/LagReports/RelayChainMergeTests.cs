@@ -32,16 +32,181 @@ public class RelayChainMergeTests
 
     [TestCase(RelayLegStatus.PendingClose, true)]
     [TestCase(RelayLegStatus.NodeUnavailable, true)]
+    [TestCase(RelayLegStatus.OneSided, true)]
+    [TestCase(RelayLegStatus.UnmeasuredNoFloNode, true)]
+    [TestCase(RelayLegStatus.UnmeasuredPortRewritten, true)]
+    [TestCase(RelayLegStatus.NodeTooOld, true)]
+    [TestCase(RelayLegStatus.HopLimit, true)]
+    [TestCase("unmeasured_quic_relay", true)]
+    [TestCase("a_status_from_the_future", true)]
+    [TestCase(null, true)]
     [TestCase(RelayLegStatus.Measured, false)]
-    [TestCase(RelayLegStatus.OneSided, false)]
     [TestCase(RelayLegStatus.Expired, false)]
-    [TestCase(RelayLegStatus.UnmeasuredNoFloNode, false)]
-    [TestCase(RelayLegStatus.UnmeasuredPortRewritten, false)]
-    [TestCase(RelayLegStatus.NodeTooOld, false)]
-    [TestCase(RelayLegStatus.HopLimit, false)]
     public void NeedsRefresh_ByLegStatus(string status, bool expected)
     {
         Assert.That(RelayChainMerge.NeedsRefresh(Chain(RelayedConnection(1, 10, status))), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void NeedsRefresh_MeasuredClientLegDoesNotMakeAChainFinalWhileALaterLegCanImprove()
+    {
+        var connection = RelayedConnection(1, 10);
+        connection.Legs[0].Close = new RelayCloseLineData();
+        connection.Legs[1].Status = RelayLegStatus.NodeTooOld;
+
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(connection)), Is.True);
+    }
+
+    [Test]
+    public void NeedsRefresh_AnyUnfinishedConnectionKeepsTheChainOpen()
+    {
+        var chain = Chain(RelayedConnection(1, 10), RelayedConnection(2, 10, RelayLegStatus.OneSided));
+
+        Assert.That(RelayChainMerge.NeedsRefresh(chain), Is.True);
+    }
+
+    [Test]
+    public void NeedsRefresh_MeasuredRelayedLegNeedsItsCloseLine()
+    {
+        // Only the leg into the game node has no close line; a leg into a relay is measured
+        // from the relay's close line, so a measured one without it is incomplete.
+        var connection = RelayedConnection(1, 10);
+        connection.Legs[0].Close = new RelayCloseLineData();
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(connection)), Is.False);
+
+        connection.Legs[0].Close = null;
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(connection)), Is.True);
+    }
+
+    [Test]
+    public void NeedsRefresh_ConnectionWithoutLegsIsNotFinal()
+    {
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(new RelayConnectionData { ConnectedUnixMs = 1 })), Is.True);
+    }
+
+    [Test]
+    public void NeedsRefresh_DirectConnectionIsFinalWithoutCloseLine()
+    {
+        var direct = new RelayConnectionData
+        {
+            ConnectedUnixMs = 1,
+            Legs = [Leg("client", "node-1", RelayLegStatus.Measured, null, Series("node_player", 10))],
+        };
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(direct)), Is.False);
+
+        direct.Legs[0].Far.ClosedUnixMs = 0;
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(direct)), Is.True);
+    }
+
+    [Test]
+    public void IsStillClosing_FalseForAFinalChainWithAnOpenSeriesOnAnExpiredLeg()
+    {
+        var connection = RelayedConnection(1, 10, RelayLegStatus.Expired);
+        connection.Legs[1].Far.ClosedUnixMs = 0;
+
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(connection)), Is.False);
+    }
+
+    [Test]
+    public void IsStillClosing_IgnoresAnOpenSeriesOnADifferentFinalConnection()
+    {
+        var expired = RelayedConnection(1, 10, RelayLegStatus.Expired);
+        expired.Legs[1].Far.ClosedUnixMs = 0;
+        var stale = RelayedConnection(2, 10, RelayLegStatus.OneSided);
+
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(expired, stale)), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(expired, stale)), Is.False);
+    }
+
+    [TestCase(RelayLegStatus.OneSided)]
+    [TestCase(RelayLegStatus.PendingClose)]
+    public void Merge_FreshExpiredOrUnavailableReplacesAnOldNonMeasuredStatus(string oldStatus)
+    {
+        var existing = Chain(RelayedConnection(1, 10, oldStatus));
+        var fresh = Chain(RelayedConnection(1, 10, RelayLegStatus.Expired));
+        var merged = RelayChainMerge.Merge(existing, fresh);
+        Assert.That(merged.Connections[0].Legs.Select(l => l.Status), Has.All.EqualTo(RelayLegStatus.Expired));
+
+        fresh = Chain(RelayedConnection(1, 10, RelayLegStatus.NodeUnavailable));
+        merged = RelayChainMerge.Merge(existing, fresh);
+        Assert.That(RelayChainMerge.IsStillClosing(merged), Is.True);
+    }
+
+    [Test]
+    public void Merge_MeasuredLegMissingItsCloseLineYieldsToAFreshNodeUnavailable()
+    {
+        var old = RelayedConnection(1, 10);
+        old.Legs[0].Close = null;
+        var fresh = RelayedConnection(1, 10, RelayLegStatus.NodeUnavailable);
+        fresh.Legs[0].Close = null;
+
+        var merged = RelayChainMerge.Merge(Chain(old), Chain(fresh));
+
+        Assert.That(RelayChainMerge.IsStillClosing(merged), Is.True);
+    }
+
+    [Test]
+    public void Merge_ExpiredLegStaysExpiredWhenARefreshCannotReachItsNode()
+    {
+        var existing = Chain(RelayedConnection(1, 10, RelayLegStatus.Expired));
+        var fresh = Chain(RelayedConnection(1, 10, RelayLegStatus.NodeUnavailable));
+
+        var merged = RelayChainMerge.Merge(existing, fresh);
+
+        Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.False);
+    }
+
+    [TestCase(RelayLegStatus.NodeUnavailable)]
+    [TestCase(RelayLegStatus.NodeTooOld)]
+    public void Merge_MeasuredLegWithoutBucketsStaysFinalOverALaterLossOfAccess(string freshStatus)
+    {
+        var old = RelayedConnection(1, 0);
+        var fresh = RelayedConnection(1, 0, freshStatus);
+
+        var merged = RelayChainMerge.Merge(Chain(old), Chain(fresh));
+
+        Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.False);
+    }
+
+    [Test]
+    public void IsStillClosing_IgnoresAnOpenSeriesOnAFinalLegOfANonFinalConnection()
+    {
+        var connection = RelayedConnection(1, 10);
+        connection.Legs[0].Status = RelayLegStatus.OneSided;
+        connection.Legs[1].Status = RelayLegStatus.Expired;
+        connection.Legs[1].Far.ClosedUnixMs = 0;
+
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(connection)), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(connection)), Is.False);
+    }
+
+    [Test]
+    public void IsStillClosing_FreshStaleVerdictOverARetainedOpenSeriesWaitsForTheNextTrigger()
+    {
+        var existing = Chain(RelayedConnection(1, 30, RelayLegStatus.PendingClose, closedUnixMs: 0));
+        var fresh = Chain(RelayedConnection(1, 5, RelayLegStatus.NodeTooOld));
+
+        var merged = RelayChainMerge.Merge(existing, fresh);
+
+        Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(merged), Is.False);
+    }
+
+    [Test]
+    public void IsStillClosing_OnlyTransientStates()
+    {
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(RelayedConnection(1, 10, RelayLegStatus.PendingClose))), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(RelayedConnection(1, 10, RelayLegStatus.NodeUnavailable))), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(RelayedConnection(1, 10, RelayLegStatus.NodeTooOld))), Is.False);
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(RelayedConnection(1, 10, "unmeasured_quic_relay"))), Is.False);
+    }
+
+    [Test]
+    public void Merge_StoresAnUnknownStatusVerbatim()
+    {
+        var merged = RelayChainMerge.Merge(null, Chain(RelayedConnection(1, 10, "unmeasured_quic_relay")));
+
+        Assert.That(merged.Connections[0].Legs.Select(l => l.Status), Has.All.EqualTo("unmeasured_quic_relay"));
     }
 
     [Test]
@@ -115,7 +280,7 @@ public class RelayChainMergeTests
         var merged = RelayChainMerge.Merge(existing, fresh);
 
         var legs = merged.Connections[0].Legs;
-        Assert.That(legs.Select(l => l.Status), Is.All.EqualTo(RelayLegStatus.PendingClose));
+        Assert.That(legs.Select(l => l.Status), Is.All.EqualTo(RelayLegStatus.Expired));
         Assert.That(legs[1].Far.BucketCount, Is.EqualTo(30));
     }
 
@@ -130,7 +295,7 @@ public class RelayChainMergeTests
         var merged = RelayChainMerge.Merge(existing, fresh);
 
         var legs = merged.Connections[0].Legs;
-        Assert.That(legs[0].Status, Is.EqualTo(RelayLegStatus.PendingClose));
+        Assert.That(legs[0].Status, Is.EqualTo(RelayLegStatus.Expired));
         Assert.That(legs[0].Far.BucketCount, Is.EqualTo(30));
         Assert.That(legs[1].Status, Is.EqualTo(RelayLegStatus.Measured));
         Assert.That(legs[1].Far.BucketCount, Is.EqualTo(40));
