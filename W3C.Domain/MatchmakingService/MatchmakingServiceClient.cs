@@ -21,7 +21,7 @@ using W3C.Domain.Tracing;
 namespace W3C.Domain.MatchmakingService;
 
 [Trace]
-public class MatchmakingServiceClient
+public partial class MatchmakingServiceClient
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
     private readonly JsonSerializerSettings _jsonSerializerSettings;
