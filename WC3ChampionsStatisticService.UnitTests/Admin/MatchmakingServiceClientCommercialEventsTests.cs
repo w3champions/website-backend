@@ -264,6 +264,18 @@ public class MatchmakingServiceClientCommercialEventsTests
         Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
     }
 
+    [TestCase("""[{"battleTag":"a#1","organizerOf":[{"allocationId":"a1"}],"delegateOf":[],"hostOf":[]}]""")]
+    [TestCase("""[{"battleTag":"a#1","organizerOf":[],"delegateOf":[{"eventName":"Cup"}],"hostOf":[]}]""")]
+    [TestCase("""[{"battleTag":"a#1","organizerOf":[],"delegateOf":[],"hostOf":[{}]}]""")]
+    [TestCase("""[{"organizerOf":[],"delegateOf":[],"hostOf":[]}]""")]
+    public void RoleHintsRejectIncompleteNestedAndTopLevelFieldsWithBadGateway(string body)
+    {
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).GetCommercialEventRoleHints(["a#1"]));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+    }
+
     [Test]
     public async Task OptionalAndNullableFieldsMayBeAbsent()
     {

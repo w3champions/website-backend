@@ -300,13 +300,17 @@ public class CommercialEventAuditEntryDto
 
 public class CommercialEventAllocationRefDto
 {
+    [JsonProperty(Required = Required.Always)]
     public string AllocationId { get; set; }
+    [JsonProperty(Required = Required.Always)]
     public string AllocationName { get; set; }
 }
 
 public class CommercialEventRefDto
 {
+    [JsonProperty(Required = Required.Always)]
     public string EventId { get; set; }
+    [JsonProperty(Required = Required.Always)]
     public string EventName { get; set; }
 }
 
