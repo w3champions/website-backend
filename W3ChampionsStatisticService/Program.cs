@@ -1,3 +1,4 @@
+using W3ChampionsStatisticService;
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -107,8 +108,8 @@ builder.Services.AddSwaggerGen(f =>
 });
 
 // Configure and add MongoDB
-string mongoConnectionString = Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING") ?? "mongodb://157.90.1.251:3513"; // "mongodb://localhost:27017";
-MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString.Replace("'", ""));
+string mongoConnectionString = MongoConnectionStringResolver.Resolve(Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING"));
+MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString);
 mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
 mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
 
