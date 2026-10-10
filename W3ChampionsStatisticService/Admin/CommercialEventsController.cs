@@ -82,6 +82,121 @@ public class CommercialEventsController(MatchmakingServiceClient matchmakingServ
         return Ok(await _matchmakingServiceClient.GetCommercialEventAllocationPeriods(allocationId));
     }
 
+    [HttpGet("events")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetEvents([FromQuery] string status, [FromQuery] string phase, [FromQuery] string allocationId, [FromQuery] string q) =>
+        Ok(await _matchmakingServiceClient.GetCommercialEvents(status, phase, allocationId, q));
+
+    [HttpGet("events/{eventId}")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetEvent([FromRoute] string eventId)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.GetCommercialEvent(eventId));
+    }
+
+    [HttpPost("events")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> CreateEvent([FromBody] CommercialEventCreateRequest body, [NoTrace] string battleTag) =>
+        StatusCode(StatusCodes.Status201Created, await _matchmakingServiceClient.CreateCommercialEvent(body, battleTag));
+
+    [HttpPut("events/{eventId}")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> UpdateEvent([FromRoute] string eventId, [FromBody] CommercialEventUpdateRequest body, [NoTrace] string battleTag)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.UpdateCommercialEvent(eventId, body, battleTag));
+    }
+
+    [HttpPost("events/{eventId}/move")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> MoveEvent([FromRoute] string eventId, [FromBody] CommercialEventMoveRequest body, [NoTrace] string battleTag)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.MoveCommercialEvent(eventId, body, battleTag));
+    }
+
+    [HttpPost("events/{eventId}/close")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> CloseEvent([FromRoute] string eventId, [NoTrace] string battleTag)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.CloseCommercialEvent(eventId, battleTag));
+    }
+
+    [HttpPost("events/{eventId}/suspend")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> SuspendEvent([FromRoute] string eventId, [FromBody] CommercialEventSuspendRequest body, [NoTrace] string battleTag)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.SuspendCommercialEvent(eventId, body, battleTag));
+    }
+
+    [HttpPost("events/{eventId}/unsuspend")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> UnsuspendEvent([FromRoute] string eventId, [NoTrace] string battleTag)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.UnsuspendCommercialEvent(eventId, battleTag));
+    }
+
+    [HttpGet("events/{eventId}/people")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetEventPeople([FromRoute] string eventId)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.GetCommercialEventPeople(eventId));
+    }
+
+    [HttpPut("events/{eventId}/people/{targetBattleTag}")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> AddEventPerson([FromRoute] string eventId, [FromRoute] string targetBattleTag, [FromBody] CommercialEventPersonRequest body, [NoTrace] string battleTag)
+    {
+        if ((InvalidSegment("eventId", eventId) ?? InvalidSegment("battleTag", targetBattleTag)) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.AddCommercialEventPerson(eventId, targetBattleTag, body, battleTag));
+    }
+
+    [HttpDelete("events/{eventId}/people/{targetBattleTag}")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> RemoveEventPerson([FromRoute] string eventId, [FromRoute] string targetBattleTag, [NoTrace] string battleTag)
+    {
+        if ((InvalidSegment("eventId", eventId) ?? InvalidSegment("battleTag", targetBattleTag)) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.RemoveCommercialEventPerson(eventId, targetBattleTag, battleTag));
+    }
+
+    [HttpGet("events/{eventId}/games")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetEventGames([FromRoute] string eventId, [FromQuery] string cursor, [FromQuery] string limit)
+    {
+        if (InvalidSegment("eventId", eventId) is { } invalid) return invalid;
+        return Ok(await _matchmakingServiceClient.GetCommercialEventGames(eventId, cursor, limit));
+    }
+
+    [HttpGet("games/active")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetActiveGames() =>
+        Ok(await _matchmakingServiceClient.GetActiveCommercialEventGames());
+
+    [HttpPost("games/{matchId}/terminate")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> TerminateGame([FromRoute] string matchId, [NoTrace] string battleTag)
+    {
+        if (InvalidSegment("matchId", matchId) is { } invalid) return invalid;
+        await _matchmakingServiceClient.TerminateCommercialEventGame(matchId, battleTag);
+        return NoContent();
+    }
+
+    [HttpGet("audit")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetAudit([FromQuery] string eventId, [FromQuery] string allocationId) =>
+        Ok(await _matchmakingServiceClient.GetCommercialEventAudit(eventId, allocationId));
+
+    // A read with a JSON body (index P41): no acting admin is taken or forwarded. matchmaking validates battleTags.
+    [HttpPost("roles/lookup")]
+    [BearerHasPermissionFilter(Permission = EPermission.CommercialLicense)]
+    public async Task<IActionResult> GetRoleHints([FromBody] CommercialEventRoleLookupRequest body) =>
+        Ok(await _matchmakingServiceClient.GetCommercialEventRoleHints(body.BattleTags));
+
     // Dot segments collapse in System.Uri and would send the admin-secret request to a different matchmaking path.
     // The body uses matchmaking's INVALID_REQUEST shape, so the website handles it like any matchmaking error.
     private static BadRequestObjectResult InvalidSegment(string field, string value) =>
