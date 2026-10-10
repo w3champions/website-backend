@@ -338,6 +338,46 @@ public class CommercialLicenseControllerTests
             Assert.That(error, Is.Not.Null.And.Not.Empty);
     }
 
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task PutTaggedPlayerForwardsCommercialEventNotice(bool commercialEventNotice)
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            CommercialEventNotice = commercialEventNotice,
+        }, "Admin#1");
+
+        Assert.That(JObject.Parse(handler.RequestBodies[0])["commercialEventNotice"]!.Value<bool>(), Is.EqualTo(commercialEventNotice));
+    }
+
+    [TestCase("{\"note\":\"n\",\"notify\":true}")]
+    [TestCase("{\"note\":\"n\",\"notify\":true,\"commercialEventNotice\":null}")]
+    public async Task PutTaggedPlayerOmitsCommercialEventNoticeWhenAbsentOrNull(string json)
+    {
+        var body = JsonSerializer.Deserialize<CommercialLicenseTaggedPlayerBody>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        await CreateController(handler).PutTaggedPlayer("Grubby#1234", body, "Admin#1");
+
+        Assert.That(JObject.Parse(handler.RequestBodies[0]).ContainsKey("commercialEventNotice"), Is.False);
+    }
+
+    [Test]
+    public async Task ResponsesSerializeCommercialEventNoticeAsCamelCaseJson()
+    {
+        var json = TaggedPlayerJson.Replace("\"notify\":true,", "\"notify\":true,\"commercialEventNotice\":true,");
+        var get = await CreateController(new StubMatchmakingHandler(HttpStatusCode.OK, $"[{json}]")).GetTaggedPlayers();
+
+        var getJson = JsonSerializer.Serialize(((OkObjectResult)get).Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.That(JToken.Parse(getJson)[0]!["commercialEventNotice"]!.Value<bool>(), Is.True);
+    }
+
     private static void AssertBadRequestError(IActionResult result, string expectedError)
     {
         Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());

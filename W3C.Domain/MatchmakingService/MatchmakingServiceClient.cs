@@ -917,6 +917,9 @@ public class CommercialLicenseTaggedPlayerDto
     public string updatedBy { get; set; }
     public DateTime updatedAt { get; set; }
     public CommercialLicenseRestrictions Restrictions { get; set; }
+
+    /// <summary>Always sent by matchmaking; false when never set.</summary>
+    public bool CommercialEventNotice { get; set; }
 }
 
 public class CommercialLicenseTaggedPlayerRequest
@@ -927,6 +930,9 @@ public class CommercialLicenseTaggedPlayerRequest
 
     /// <summary>Null is omitted from the JSON (NullValueHandling.Ignore), which makes matchmaking keep the stored restrictions.</summary>
     public CommercialLicenseRestrictions Restrictions { get; set; }
+
+    /// <summary>Null is omitted from the JSON, which makes matchmaking keep the stored value (false for a new tag).</summary>
+    public bool? CommercialEventNotice { get; set; }
 }
 
 public class PlayerWarningDeliveryAttempt
