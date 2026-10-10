@@ -13,7 +13,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string UpdateServiceUrl = Environment.GetEnvironmentVariable("UPDATE_API") ?? "https://update-service.test.w3champions.com";
 
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Update);
 
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {

@@ -29,7 +29,7 @@ public class MatchmakingServiceClient
     private readonly HttpClient _httpClient;
     public MatchmakingServiceClient(IHttpClientFactory httpClientFactory)
     {
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClientFactory.CreateClient(HttpClientNames.Matchmaking);
 
         _jsonSerializerSettings = new JsonSerializerSettings()
         {

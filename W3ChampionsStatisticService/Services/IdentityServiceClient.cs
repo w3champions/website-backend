@@ -7,16 +7,17 @@ using System.Threading.Tasks;
 using System.Web;
 using Newtonsoft.Json;
 using W3C.Contracts.Admin.Permission;
+using W3C.Domain;
 using W3C.Domain.Tracing;
 
 namespace W3ChampionsStatisticService.Services;
 
 [Trace]
-public class IdentityServiceClient(HttpClient httpClient = null)
+public class IdentityServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string IdentityApiUrl = Environment.GetEnvironmentVariable("IDENTIFICATION_SERVICE_URI") ?? "https://identification-service.test.w3champions.com";
 
-    private readonly HttpClient _httpClient = httpClient ?? new HttpClient();
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Identification);
 
     // The caller's JWT is forwarded as a per-request Bearer header; it must never appear in the URL.
     private static HttpRequestMessage CreatePermissionsRequest(HttpMethod method, string query, string authorization)

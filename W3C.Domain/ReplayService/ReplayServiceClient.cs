@@ -13,7 +13,7 @@ namespace W3C.Domain.UpdateService;
 public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
 {
     private static readonly string ReplayServiceUrl = Environment.GetEnvironmentVariable("REPLAY_API") ?? "https://replay-service.test.w3champions.com";
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Replay);
 
     // The admin secret is sent as a per-request header; it must never appear in the URL.
     private static HttpRequestMessage CreateRequest(string path)

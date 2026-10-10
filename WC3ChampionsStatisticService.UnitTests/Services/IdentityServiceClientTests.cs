@@ -9,6 +9,8 @@ using Moq.Protected;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
 using W3ChampionsStatisticService.Services;
+using W3C.Domain;
+using WC3ChampionsStatisticService.Tests.Admin;
 
 namespace WC3ChampionsStatisticService.Tests.Services;
 
@@ -27,7 +29,7 @@ public class IdentityServiceClientTests
                 Content = new StringContent("{\"id\":\"TORREN#11438\"}", System.Text.Encoding.UTF8, "application/json")
             });
 
-        var client = new IdentityServiceClient(new HttpClient(handler.Object));
+        var client = new IdentityServiceClient(new StubHttpClientFactory(new HttpClient(handler.Object)));
         var canonical = await client.ResolveCanonicalBattleTag("torren#11438");
 
         Assert.AreEqual("TORREN#11438", canonical);
@@ -41,7 +43,7 @@ public class IdentityServiceClientTests
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.NotFound));
 
-        var client = new IdentityServiceClient(new HttpClient(handler.Object));
+        var client = new IdentityServiceClient(new StubHttpClientFactory(new HttpClient(handler.Object)));
         var canonical = await client.ResolveCanonicalBattleTag("nonexistent#9999");
 
         Assert.IsNull(canonical);
@@ -67,7 +69,7 @@ public class IdentityServiceClientTests
             {
                 Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
             });
-        return (new IdentityServiceClient(new HttpClient(handler.Object)), requests, bodies);
+        return (new IdentityServiceClient(new StubHttpClientFactory(new HttpClient(handler.Object))), requests, bodies);
     }
 
     private static void AssertBearerAndNoTokenInUrl(HttpRequestMessage request, HttpMethod method)
@@ -138,9 +140,20 @@ public class IdentityServiceClientTests
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
-        var client = new IdentityServiceClient(new HttpClient(handler.Object));
+        var client = new IdentityServiceClient(new StubHttpClientFactory(new HttpClient(handler.Object)));
 
         Assert.ThrowsAsync<HttpRequestException>(async () =>
             await client.ResolveCanonicalBattleTag("torren#11438"));
+    }
+
+    [Test]
+    public async Task UsesTheNamedIdentificationClient()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.NotFound);
+        var factory = new RecordingHttpClientFactory(handler);
+
+        await new IdentityServiceClient(factory).ResolveCanonicalBattleTag("someone#1");
+
+        Assert.That(factory.RequestedNames, Is.EqualTo(new[] { HttpClientNames.Identification }));
     }
 }

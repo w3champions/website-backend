@@ -124,7 +124,8 @@ builder.Services.AddSignalR();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddHttpClient();
+// Every outbound HttpClient gets explicit timeouts; resolve clients by HttpClientNames.
+builder.Services.AddW3CHttpClients();
 
 builder.Services.AddSpecialBsonRegistrations();
 
