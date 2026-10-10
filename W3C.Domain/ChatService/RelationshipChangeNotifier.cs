@@ -22,7 +22,7 @@ public class RelationshipChangeNotifier(IHttpClientFactory httpClientFactory, Ch
     private const int MaxAttempts = 2; // initial + one retry (best-effort per spec §14)
 
     private readonly ChatPingSettings _settings = settings;
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Chat);
 
     /// <summary>Test seam: the in-flight (or completed) background dispatch task, assigned by
     /// <see cref="NotifyChange"/> before it returns. <see cref="Task.CompletedTask"/> when disabled

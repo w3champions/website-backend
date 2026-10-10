@@ -16,10 +16,9 @@ public class VersionRepository(MongoClient mongoClient) : MongoDbRepositoryBase(
     {
         var database = CreateClient();
         var mongoCollection = database.GetCollection<VersionDto>(_collection);
-        var version = (await mongoCollection.FindAsync(c =>
+        var version = await (await mongoCollection.FindAsync(c =>
             c.HandlerName == HandlerName<T>()))
-            .FirstOrDefaultAsync()?
-            .Result;
+            .FirstOrDefaultAsync();
         var lastVersion = version?.LastVersion ?? ObjectId.Empty.ToString();
         return new HandlerVersion(lastVersion, version?.Season ?? 0, version?.Stopped ?? false);
     }

@@ -28,7 +28,7 @@ public class ChatServiceClient : IChatServiceClient
 
     public ChatServiceClient(IHttpClientFactory httpClientFactory)
     {
-        _httpClient = httpClientFactory.CreateClient();
+        _httpClient = httpClientFactory.CreateClient(HttpClientNames.Chat);
 
         _jsonSerializerSettings = new JsonSerializerSettings()
         {

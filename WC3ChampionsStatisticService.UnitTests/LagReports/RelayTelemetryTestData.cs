@@ -54,13 +54,14 @@ internal static class RelayTelemetryTestData
         PackedBuckets = PackHealthy(buckets),
     };
 
-    internal static RelayLegData Leg(string from, string to, string status, RelaySeriesData near, RelaySeriesData far) => new()
+    internal static RelayLegData Leg(string from, string to, string status, RelaySeriesData near, RelaySeriesData far, RelayCloseLineData close = null) => new()
     {
         FromLabel = from,
         ToLabel = to,
         Status = status,
         Near = near,
         Far = far,
+        Close = close,
     };
 
     /// <summary>client → relay → node, both legs measured and closed.</summary>
@@ -69,7 +70,7 @@ internal static class RelayTelemetryTestData
         ConnectedUnixMs = connectedUnixMs,
         Legs =
         [
-            Leg("client", "relay-a", status, null, Series("haproxy_fe", buckets, closedUnixMs)),
+            Leg("client", "relay-a", status, null, Series("haproxy_fe", buckets, closedUnixMs), new RelayCloseLineData()),
             Leg("relay-a", "node-1", status, Series("haproxy_be", buckets, closedUnixMs), Series("node_player", buckets, closedUnixMs)),
         ],
     };

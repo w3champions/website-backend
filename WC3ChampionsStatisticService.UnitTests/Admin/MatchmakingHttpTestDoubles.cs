@@ -37,3 +37,15 @@ internal sealed class ThrowingMatchmakingHandler(Exception exception) : HttpMess
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
         Task.FromException<HttpResponseMessage>(exception);
 }
+
+/// <summary>Hands out clients over one shared handler and records which named client was asked for.</summary>
+internal sealed class RecordingHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+{
+    public List<string> RequestedNames { get; } = [];
+
+    public HttpClient CreateClient(string name)
+    {
+        RequestedNames.Add(name);
+        return new HttpClient(handler, disposeHandler: false);
+    }
+}

@@ -353,6 +353,33 @@ public class RelayTelemetryServiceTests
     }
 
     [Test]
+    public async Task FetchForPlayer_ChainStoredBeforeAHostUpdateIsFetchedAgainOnTheNextTrigger()
+    {
+        var stale = Chain(RelayedConnection(1, 10, RelayLegStatus.NodeTooOld));
+        StoredReport(Player(5, stale));
+        _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).ReturnsAsync(ReplyWithNodeLeg(5, 12));
+        ExpectStore(5);
+
+        await _service.FetchForPlayer(FloGameId, 5);
+
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Once);
+    }
+
+    [Test]
+    public async Task FetchForPlayer_UnimprovedStaleChainIsNotRetriedWithinOneTrigger()
+    {
+        _service.LateRetryDelays = [TimeSpan.Zero, TimeSpan.Zero];
+        var stored = Chain(RelayedConnection(1, 10, "unmeasured_quic_relay"));
+        StoredReport(Player(5, stored));
+        _client.Setup(c => c.GetGameRelayTelemetry(FloGameId, 5)).ReturnsAsync(ReplyWithNodeLeg(5, 12, "unmeasured_quic_relay"));
+        ExpectStore(5);
+
+        await _service.FetchForPlayer(FloGameId, 5);
+
+        _client.Verify(c => c.GetGameRelayTelemetry(FloGameId, 5), Times.Once);
+    }
+
+    [Test]
     public async Task FetchForPlayer_LateRetriesAreBounded()
     {
         _service.LateRetryDelays = [TimeSpan.Zero, TimeSpan.Zero];

@@ -17,7 +17,7 @@ public class BattleTagResolverTests
     [SetUp]
     public void SetUp()
     {
-        _identityClientMock = new Mock<IdentityServiceClient>(new System.Net.Http.HttpClient());
+        _identityClientMock = new Mock<IdentityServiceClient>(new WC3ChampionsStatisticService.Tests.Admin.StubHttpClientFactory(new System.Net.Http.HttpClient()));
         _cache = new MemoryCache(new MemoryCacheOptions());
         _resolver = new BattleTagResolver(_identityClientMock.Object, _cache);
     }

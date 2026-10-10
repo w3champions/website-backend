@@ -15,9 +15,20 @@ using W3ChampionsStatisticService.Extensions;
 namespace W3ChampionsStatisticService.Admin;
 
 [Trace]
-public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IAdminRepository
+public class AdminRepository(MongoClient mongoClient, IHttpClientFactory httpClientFactory) : MongoDbRepositoryBase(mongoClient), IAdminRepository
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
+
+    // The admin secret goes on each request (CreateAdminRequest), never on DefaultRequestHeaders:
+    // factory clients share state across calls.
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Matchmaking);
+
+    private async Task<HttpResponseMessage> SendAdminAsync(HttpMethod method, string url, HttpContent content = null)
+    {
+        using var request = CreateAdminRequest(method, url);
+        request.Content = content;
+        return await _httpClient.SendAsync(request);
+    }
 
     public async Task<List<ProxiesResponse>> GetProxies()
     {
@@ -34,10 +45,8 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     public async Task<FloProxies> GetProxiesFor(string battleTag)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
-        var result = await httpClient.GetAsync(url);
+        var result = await SendAdminAsync(HttpMethod.Get, url);
         var content = await result.Content.ReadAsStringAsync();
 
         if (result.StatusCode == HttpStatusCode.NotFound) return new FloProxies();
@@ -71,24 +80,20 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         }
 
         // send request to mm with all the node values
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/player/{HttpUtility.UrlEncode(battleTag)}/flo-proxies";
         var serializedObject = JsonConvert.SerializeObject(newProxiesBeingAdded);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
         var byteContent = new ByteArrayContent(buffer);
         byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-        var result = await httpClient.PutAsync(url, byteContent);
+        var result = await SendAdminAsync(HttpMethod.Put, url, byteContent);
 
         return newProxiesBeingAdded;
     }
 
     private async Task<List<ProxiesData>> GetProxiesFromMatchmaking()
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/flo/proxies";
-        var result = await httpClient.GetAsync(url);
+        var result = await SendAdminAsync(HttpMethod.Get, url);
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<List<ProxiesData>>(content);
@@ -112,8 +117,6 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     public async Task<GlobalChatBanResponse> GetChatBans(string query, string nextId)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         string url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         if (query != null)
         {
@@ -123,7 +126,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         {
             url += $"?nextId={nextId}";
         }
-        HttpResponseMessage result = await httpClient.GetAsync(url);
+        HttpResponseMessage result = await SendAdminAsync(HttpMethod.Get, url);
         string content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
         var deserializeObject = JsonConvert.DeserializeObject<PlayerChatBanWrapper>(content);
@@ -161,30 +164,24 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     public async Task<HttpStatusCode> PutChatBan(ChatBanPutDto chatBan)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/flo/globalChatBans";
         var serializedObject = JsonConvert.SerializeObject(chatBan);
         var buffer = System.Text.Encoding.UTF8.GetBytes(serializedObject);
         var byteContent = new ByteArrayContent(buffer);
         byteContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-        var result = await httpClient.PostAsync(url, byteContent);
+        var result = await SendAdminAsync(HttpMethod.Post, url, byteContent);
         return result.StatusCode;
     }
 
     public async Task<HttpStatusCode> DeleteChatBan(string id)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/flo/globalChatBans/{id}";
-        var result = await httpClient.DeleteAsync(url);
+        var result = await SendAdminAsync(HttpMethod.Delete, url);
         return result.StatusCode;
     }
 
     public async Task<List<SmurfDetection.IgnoredIdentifier>> GetIgnoredIdentifiers(string type, string continuationToken)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifiers";
         if (continuationToken != null)
         {
@@ -198,7 +195,7 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
         {
             throw new ArgumentException("Either type or continuationToken must be provided");
         }
-        var result = await httpClient.GetAsync(url);
+        var result = await SendAdminAsync(HttpMethod.Get, url);
         await result.ThrowIfError();
         string content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return [];
@@ -208,9 +205,8 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     public async Task<SmurfDetection.IgnoredIdentifier> AddIgnoredIdentifier(string type, string identifier, string reason, string author)
     {
-        var httpClient = new HttpClient();
         using var request = BuildAddIgnoredIdentifierRequest(type, identifier, reason, author);
-        var result = await httpClient.SendAsync(request);
+        var result = await _httpClient.SendAsync(request);
         await result.ThrowIfError();
         string content = await result.Content.ReadAsStringAsync();
         return ParseAddIgnoredIdentifierResponse(content);
@@ -218,19 +214,16 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     public async Task<HttpStatusCode> DeleteIgnoredIdentifier(string id)
     {
-        var httpClient = new HttpClient();
         using var request = BuildDeleteIgnoredIdentifierRequest(id);
-        var result = await httpClient.SendAsync(request);
+        var result = await _httpClient.SendAsync(request);
         await result.ThrowIfError();
         return result.StatusCode;
     }
 
     public async Task<List<string>> GetPossibleIdentifierTypes()
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/smurf-detection/possible-identifier-types";
-        var result = await httpClient.GetAsync(url);
+        var result = await SendAdminAsync(HttpMethod.Get, url);
         await result.ThrowIfError();
         string content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return [];
@@ -240,11 +233,9 @@ public class AdminRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mo
 
     public async Task<SmurfDetection.SmurfDetectionResult> QuerySmurfsFor(string identifierType, string identifier, bool includeExplanation = false, int iterationDepth = 1)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var generateExplanation = includeExplanation ? "true" : "false";
         var url = $"{MatchmakingApiUrl}/admin/smurf-detection/query-smurfs?identifierType={identifierType}&identifier={HttpUtility.UrlEncode(identifier)}&generateExplanation={generateExplanation}&iterationDepth={iterationDepth}";
-        var result = await httpClient.GetAsync(url);
+        var result = await SendAdminAsync(HttpMethod.Get, url);
         await result.ThrowIfError();
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;

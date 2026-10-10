@@ -13,16 +13,24 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.Admin.Logs;
 
 [Trace]
-public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), ILogsRepository
+public class LogsRepository(MongoClient mongoClient, IHttpClientFactory httpClientFactory) : MongoDbRepositoryBase(mongoClient), ILogsRepository
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
 
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.MatchmakingLogs);
+
+    // The admin secret goes on each request, never on the shared client's DefaultRequestHeaders.
+    private async Task<HttpResponseMessage> GetAdminAsync(string url)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        AdminSecretProvider.AddTo(request.Headers);
+        return await _httpClient.SendAsync(request);
+    }
+
     public async Task<List<string>> GetLogfileNames()
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/logs";
-        var response = await httpClient.GetAsync(url);
+        var response = await GetAdminAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return new List<string> { "Unable to get logfiles." };
         if (response.StatusCode != HttpStatusCode.OK)
@@ -35,10 +43,8 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
 
     public async Task<List<string>> GetLogContent(string logfileName)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/logs/{logfileName}";
-        var response = await httpClient.GetAsync(url);
+        var response = await GetAdminAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return new List<string> { "Unable to get log content." };
         if (response.StatusCode != HttpStatusCode.OK)
@@ -51,10 +57,8 @@ public class LogsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mon
 
     public async Task<Stream> DownloadLog(string logfileName)
     {
-        var httpClient = new HttpClient();
-        AdminSecretProvider.AddTo(httpClient.DefaultRequestHeaders);
         var url = $"{MatchmakingApiUrl}/admin/logs/download/{logfileName}";
-        var response = await httpClient.GetAsync(url);
+        var response = await GetAdminAsync(url);
         var content = await response.Content.ReadAsStringAsync();
         if (response.StatusCode != HttpStatusCode.OK)
         {
