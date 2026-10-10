@@ -109,9 +109,7 @@ builder.Services.AddSwaggerGen(f =>
 
 // Configure and add MongoDB
 string mongoConnectionString = MongoConnectionStringResolver.Resolve(Environment.GetEnvironmentVariable("MONGO_CONNECTION_STRING"));
-MongoClientSettings mongoSettings = MongoClientSettings.FromConnectionString(mongoConnectionString);
-mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
-mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
+MongoClientSettings mongoSettings = MongoClientSettingsFactory.Create(mongoConnectionString);
 
 builder.Services.AddW3CTracing(WEBSITE_BACKEND_HUB_PATH, mongoSettings);
 
