@@ -169,6 +169,30 @@ public class RelayChainMergeTests
     }
 
     [Test]
+    public void IsStillClosing_IgnoresAnOpenSeriesOnAFinalLegOfANonFinalConnection()
+    {
+        var connection = RelayedConnection(1, 10);
+        connection.Legs[0].Status = RelayLegStatus.OneSided;
+        connection.Legs[1].Status = RelayLegStatus.Expired;
+        connection.Legs[1].Far.ClosedUnixMs = 0;
+
+        Assert.That(RelayChainMerge.NeedsRefresh(Chain(connection)), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(Chain(connection)), Is.False);
+    }
+
+    [Test]
+    public void IsStillClosing_FreshStaleVerdictOverARetainedOpenSeriesWaitsForTheNextTrigger()
+    {
+        var existing = Chain(RelayedConnection(1, 30, RelayLegStatus.PendingClose, closedUnixMs: 0));
+        var fresh = Chain(RelayedConnection(1, 5, RelayLegStatus.NodeTooOld));
+
+        var merged = RelayChainMerge.Merge(existing, fresh);
+
+        Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.True);
+        Assert.That(RelayChainMerge.IsStillClosing(merged), Is.False);
+    }
+
+    [Test]
     public void IsStillClosing_OnlyTransientStates()
     {
         Assert.That(RelayChainMerge.IsStillClosing(Chain(RelayedConnection(1, 10, RelayLegStatus.PendingClose))), Is.True);

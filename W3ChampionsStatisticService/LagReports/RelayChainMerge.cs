@@ -43,8 +43,14 @@ public static class RelayChainMerge
     /// waits for the next trigger.
     /// </summary>
     public static bool IsStillClosing(PlayerRelayChain chain) => chain?.Connections != null &&
-        chain.Connections.Where(c => !IsFinal(c)).SelectMany(c => c.Legs ?? []).Any(l =>
-            RetryStatuses.Contains(l.Status) || IsOpenNodeSeries(l.Near) || IsOpenNodeSeries(l.Far));
+        chain.Connections.Any(c => (c.Legs ?? []).Select((l, i) => (l, i)).Any(x =>
+            !IsFinal(x.l, isLast: x.i == c.Legs.Count - 1) && IsTransient(x.l)));
+
+    // An open node series only means "closing" on a measured leg: on any other status the
+    // series may be an older fetch's leftover that the fresh verdict has superseded.
+    private static bool IsTransient(RelayLegData leg) =>
+        RetryStatuses.Contains(leg.Status) ||
+        (leg.Status == RelayLegStatus.Measured && (IsOpenNodeSeries(leg.Near) || IsOpenNodeSeries(leg.Far)));
 
     private static bool IsFinal(RelayConnectionData connection)
     {
