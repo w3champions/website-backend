@@ -277,6 +277,39 @@ public class MatchmakingServiceClientCommercialEventsTests
     }
 
     [Test]
+    public void GamesPageRejectsGameMissingLobbyNameWithBadGateway()
+    {
+        var body = CommercialEventsTestJson.GamesPage.Replace("\"lobbyName\":\"Showmatch 1\",", "");
+
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).GetCommercialEventGames("e1", null, null));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+    }
+
+    [Test]
+    public void AuditRejectsEntryMissingDetailsWithBadGateway()
+    {
+        const string body = """[{"id":"x","at":"2026-10-01T00:00:00.000Z","actor":"a#1","actorRole":"admin","action":"event-closed"}]""";
+
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).GetCommercialEventAudit(null, null));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+    }
+
+    [Test]
+    public void AllocationRejectsBodyMissingNullableCurrentPeriodKeyWithBadGateway()
+    {
+        var body = CommercialEventsTestJson.Allocation.Replace("\"currentPeriod\"", "\"currentPeriodRenamed\"");
+
+        var ex = Assert.ThrowsAsync<MatchmakingPassthroughException>(async () =>
+            await CreateClient(new StubMatchmakingHandler(HttpStatusCode.OK, body)).CreateCommercialEventAllocation(new CommercialEventAllocationRequest(), "Admin#1"));
+
+        Assert.That(ex!.StatusCode, Is.EqualTo(HttpStatusCode.BadGateway));
+    }
+
+    [Test]
     public async Task OptionalAndNullableFieldsMayBeAbsent()
     {
         const string body = """

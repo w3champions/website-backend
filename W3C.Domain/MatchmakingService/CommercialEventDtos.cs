@@ -75,8 +75,10 @@ public class CommercialEventAllocationDto
     public List<CommercialEventRoleEntryDto> Members { get; set; }
 
     /// <summary>Upcoming: the first period; active: the current one; expired: null.</summary>
+    [JsonProperty(Required = Required.AllowNull)]
     public CommercialEventPeriodUsageDto CurrentPeriod { get; set; }
 
+    [JsonProperty(Required = Required.AllowNull)]
     public DateTime? ResetsAt { get; set; }
     [JsonProperty(Required = Required.Always)]
     public string CreatedBy { get; set; }
@@ -205,6 +207,7 @@ public class CommercialEventGameDto
 {
     [JsonProperty(Required = Required.Always)]
     public string MatchId { get; set; }
+    [JsonProperty(Required = Required.Always)]
     public string LobbyName { get; set; }
     [JsonProperty(Required = Required.Always)]
     public DateTime StartedAt { get; set; }
@@ -294,6 +297,7 @@ public class CommercialEventAuditEntryDto
     /// Free-form JSON object. ExpandoObject rather than JObject because website responses are written by
     /// System.Text.Json, which serializes a JObject as nested empty arrays.
     /// </summary>
+    [JsonProperty(Required = Required.Always)]
     [JsonConverter(typeof(ExpandoObjectConverter))]
     public ExpandoObject Details { get; set; }
 }
