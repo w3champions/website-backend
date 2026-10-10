@@ -6,7 +6,7 @@ The statistic-service is the backend for the W3Champions Launcher and Website pr
 You need mongodb to run the service. If you do not have a local mongo container, start one up with
 
 ```
-docker run mongo
+docker run -d -p 27017:27017 mongo
 ```
 and point the service at it. The service fails fast at startup unless the Env Variable "MONGO_CONNECTION_STRING" is set
 (e.g. `mongodb://localhost:27017`).
