@@ -133,6 +133,30 @@ public class RelayChainMergeTests
     }
 
     [Test]
+    public void Merge_MeasuredLegMissingItsCloseLineYieldsToAFreshNodeUnavailable()
+    {
+        var old = RelayedConnection(1, 10);
+        old.Legs[0].Close = null;
+        var fresh = RelayedConnection(1, 10, RelayLegStatus.NodeUnavailable);
+        fresh.Legs[0].Close = null;
+
+        var merged = RelayChainMerge.Merge(Chain(old), Chain(fresh));
+
+        Assert.That(RelayChainMerge.IsStillClosing(merged), Is.True);
+    }
+
+    [Test]
+    public void Merge_ExpiredLegStaysExpiredWhenARefreshCannotReachItsNode()
+    {
+        var existing = Chain(RelayedConnection(1, 10, RelayLegStatus.Expired));
+        var fresh = Chain(RelayedConnection(1, 10, RelayLegStatus.NodeUnavailable));
+
+        var merged = RelayChainMerge.Merge(existing, fresh);
+
+        Assert.That(RelayChainMerge.NeedsRefresh(merged), Is.False);
+    }
+
+    [Test]
     public void IsStillClosing_OnlyTransientStates()
     {
         Assert.That(RelayChainMerge.IsStillClosing(Chain(RelayedConnection(1, 10, RelayLegStatus.PendingClose))), Is.True);

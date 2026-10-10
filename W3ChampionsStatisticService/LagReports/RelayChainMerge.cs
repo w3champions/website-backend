@@ -22,8 +22,7 @@ public static class RelayChainMerge
 
     private static readonly HashSet<string> RetryStatuses = [RelayLegStatus.PendingClose, RelayLegStatus.NodeUnavailable];
 
-    // Statuses that report lost access to data, not a newer verdict about it. They replace
-    // only a measured status: any other old status is not a verdict worth keeping over them.
+    // Statuses that report lost access to data, not a newer verdict about it.
     private static readonly HashSet<string> DataLossStatuses = [RelayLegStatus.Expired, RelayLegStatus.NodeUnavailable, RelayLegStatus.NodeTooOld];
 
     /// <summary>
@@ -108,20 +107,26 @@ public static class RelayChainMerge
         return new RelayConnectionData
         {
             ConnectedUnixMs = next.ConnectedUnixMs,
-            Legs = old.Legs.Zip(next.Legs).Select(p => MergeLeg(p.First, p.Second)).ToList(),
+            Legs = old.Legs.Zip(next.Legs).Select((p, i) => MergeLeg(p.First, p.Second, isLast: i == old.Legs.Count - 1)).ToList(),
         };
     }
 
     // The two ends come from different nodes, so one can expire while the other still answers.
-    private static RelayLegData MergeLeg(RelayLegData old, RelayLegData next) => new()
+    private static RelayLegData MergeLeg(RelayLegData old, RelayLegData next, bool isLast) => new()
     {
         FromLabel = next.FromLabel,
         ToLabel = next.ToLabel,
-        Status = DataLossStatuses.Contains(next.Status) && old.Status == RelayLegStatus.Measured && CoveredSecs([old]) > 0 ? old.Status : next.Status,
+        Status = KeepsOldStatus(old, next, isLast) ? old.Status : next.Status,
         Near = PickSeries(old.Near, next.Near),
         Far = PickSeries(old.Far, next.Far),
         Close = next.Close ?? old.Close,
     };
+
+    // A terminal verdict survives a later loss of access; a non-terminal one must not hide
+    // the fresh status, or a transient failure would read as unchanged.
+    private static bool KeepsOldStatus(RelayLegData old, RelayLegData next, bool isLast) =>
+        DataLossStatuses.Contains(next.Status) && IsFinal(old, isLast) &&
+        (old.Status == RelayLegStatus.Expired || CoveredSecs([old]) > 0);
 
     private static RelaySeriesData PickSeries(RelaySeriesData old, RelaySeriesData next) =>
         Covered(old) > Covered(next) ? old : next ?? old;
