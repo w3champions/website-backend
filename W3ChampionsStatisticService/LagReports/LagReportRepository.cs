@@ -214,6 +214,8 @@ public class LagReportRepository(MongoClient mongoClient) : MongoDbRepositoryBas
         // HostStalls is deliberately NOT excluded: it is the same size class as the
         // event arrays that stay (same 200-entry cap, six scalar fields, no per-hop
         // nesting), and it is the one diagnostic the list itself wants to surface.
+        // TransportSwitches stays for the same reason: a handful of entries per player,
+        // and the list shows their count.
         var projection = Builders<LagReport>.Projection
             .Exclude("Players.Diagnostics.TargetMtr")
             .Exclude("Players.Diagnostics.AllServerBaselines")

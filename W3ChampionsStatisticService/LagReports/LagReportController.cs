@@ -30,6 +30,7 @@ public class LagReportController(
     private const int MaxPingHistoryEntries = 5000;
     private const int MaxConnectionEvents = 200;
     private const int MaxHostStalls = 200;
+    private const int MaxTransportSwitches = 200;
     private const int MaxAnnotations = 200;
     private const int MaxIssueCategories = 20;
     private const int MaxTagsPerReport = 20;
@@ -142,6 +143,7 @@ public class LagReportController(
         if ((diag.PingHistory?.Count ?? 0) > MaxPingHistoryEntries) return "Too many ping_history";
         if ((diag.ConnectionEvents?.Count ?? 0) > MaxConnectionEvents) return "Too many connection_events";
         if ((diag.HostStalls?.Count ?? 0) > MaxHostStalls) return "Too many host_stalls";
+        if ((diag.TransportSwitches?.Count ?? 0) > MaxTransportSwitches) return "Too many transport_switches";
         if ((dto.Annotations?.Count ?? 0) > MaxAnnotations) return "Too many annotations";
         if ((dto.Categories?.Count ?? 0) > MaxIssueCategories) return "Too many categories";
         if ((dto.ConnectionIssueTags?.Count ?? 0) > MaxTagsPerReport) return "Too many tags";
@@ -177,6 +179,16 @@ public class LagReportController(
         {
             if (hostStall.Outcome?.Length > MaxShortStringLength) return "host_stall outcome too long";
         }
+        // Same for the open strings of a transport switch (see TransportSwitchDto.Reason).
+        foreach (var transportSwitch in diag.TransportSwitches ?? [])
+        {
+            if (transportSwitch.From?.Length > MaxShortStringLength
+                || transportSwitch.To?.Length > MaxShortStringLength
+                || transportSwitch.Reason?.Length > MaxShortStringLength)
+            {
+                return "transport_switch field too long";
+            }
+        }
 
         return null;
     }
@@ -197,6 +209,7 @@ public class LagReportController(
         LagEventCount = p.Diagnostics?.LagEvents?.Count ?? 0,
         ConnectionEventCount = p.Diagnostics?.ConnectionEvents?.Count ?? 0,
         HostStallCount = p.Diagnostics?.HostStalls?.Count ?? 0,
+        TransportSwitchCount = p.Diagnostics?.TransportSwitches?.Count ?? 0,
     };
 
     internal static LagReportPlayer MapToPlayer(LagReportSubmissionDto dto, string battleTag)
@@ -291,6 +304,14 @@ public class LagReportController(
                     PlayersTotal = s.PlayersTotal,
                     PlayersFlagged = s.PlayersFlagged,
                     Outcome = s.Outcome,
+                }).ToList(),
+                TransportSwitches = (diag.TransportSwitches ?? []).Select(t => new TransportSwitchData
+                {
+                    Timestamp = t.Timestamp,
+                    GameTimeOffsetMs = t.GameTimeOffsetMs,
+                    From = t.From,
+                    To = t.To,
+                    Reason = t.Reason,
                 }).ToList(),
                 ClientVersion = diag.ClientVersion,
             },
