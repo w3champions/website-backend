@@ -48,7 +48,7 @@ public class AuthSessionControllerTests
     }
 
     [Test]
-    public void ValidJwt_Returns200_WithSingleUseTicketAnd60Seconds()
+    public void ValidJwt_Returns200_WithTicket60SecondsAndRedemptionCap()
     {
         var authService = AuthReturning("peter#123");
         var ticketStore = new TicketStore();
@@ -66,11 +66,14 @@ public class AuthSessionControllerTests
         Assert.AreEqual(60, response.ExpiresInSeconds);
         Assert.IsNotNull(response.Ticket);
         Assert.AreEqual(64, response.Ticket.Length);
+        Assert.AreEqual(SessionLimits.TicketMaxRedemptions, response.MaxRedemptions,
+            "maxRedemptions tells the launcher this server allows ticket reuse.");
 
-        // The minted ticket must be single-use against the SAME store the controller minted from.
-        Assert.IsTrue(ticketStore.TryConsume(response.Ticket, DateTime.UtcNow, out var identity));
+        // The minted ticket must be redeemable against the SAME store the controller minted from, by
+        // one connection at a time.
+        Assert.IsTrue(ticketStore.TryRedeem(response.Ticket, "conn-1", DateTime.UtcNow, out var identity));
         Assert.AreEqual("peter#123", identity.BattleTag);
-        Assert.IsFalse(ticketStore.TryConsume(response.Ticket, DateTime.UtcNow, out _), "single-use");
+        Assert.IsFalse(ticketStore.TryRedeem(response.Ticket, "conn-2", DateTime.UtcNow, out _), "one holder at a time");
     }
 
     [Test]

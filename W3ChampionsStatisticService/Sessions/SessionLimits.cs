@@ -10,11 +10,19 @@ namespace W3ChampionsStatisticService.Sessions;
 /// </summary>
 public static class SessionLimits
 {
-    /// <summary>Auth ticket TTL in seconds (one-time). Surfaced to the client as ExpiresInSeconds.</summary>
+    /// <summary>Auth ticket TTL in seconds, counted from mint and never extended. Surfaced to the client
+    /// as ExpiresInSeconds.</summary>
     public const int TicketTtlSeconds = 60;
 
-    /// <summary>Auth ticket TTL (one-time). Derived from <see cref="TicketTtlSeconds"/> so the two never drift.</summary>
+    /// <summary>Auth ticket TTL. Derived from <see cref="TicketTtlSeconds"/> so the two never drift.</summary>
     public static readonly TimeSpan TicketTtl = TimeSpan.FromSeconds(TicketTtlSeconds);
+
+    /// <summary>Most presentations a ticket accepts inside its TTL, failed ones included (see
+    /// <see cref="TicketStore"/>). Lets the launcher's reconnect loop (first retry within 10s, then
+    /// 2.5-7.5s, 5-15s, 10-30s) reuse one ticket for about a minute instead of minting per attempt.
+    /// Surfaced to the client as MaxRedemptions, which is how a launcher knows this server allows
+    /// reuse. Matches chat-service's ChatLimits.TicketMaxRedemptions.</summary>
+    public const int TicketMaxRedemptions = 5;
 
     /// <summary>Ticket mint rate limit: fixed window per validated battleTag. 10/min tolerates
     /// reconnect flapping (matches chat-service's per-battleTag value).</summary>

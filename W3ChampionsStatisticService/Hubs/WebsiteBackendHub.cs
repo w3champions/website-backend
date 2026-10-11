@@ -65,13 +65,14 @@ public class WebsiteBackendHub(
     {
         await _tracingService.ExecuteWithSpanAsync(this, async () =>
         {
-            // Ticket-only auth (WB-1): access_token must be a single-use ticket minted via
-            // POST /auth/session. A raw JWT (or anything else) is rejected, like chat-service's ChatHub.
+            // Ticket-only auth (WB-1): access_token must be a ticket minted via POST /auth/session.
+            // A raw JWT (or anything else) is rejected, like chat-service's ChatHub. This connection
+            // holds the ticket until OnDisconnectedAsync releases it (redemption rules on TicketStore).
             var accessToken = _contextAccessor?.HttpContext?.Request.Query["access_token"].ToString();
             W3CUserAuthenticationDto w3cUserAuthentication = null;
             if (!string.IsNullOrEmpty(accessToken))
             {
-                if (_ticketStore.TryConsume(accessToken, DateTime.UtcNow, out var ticketIdentity))
+                if (_ticketStore.TryRedeem(accessToken, Context.ConnectionId, DateTime.UtcNow, out var ticketIdentity))
                 {
                     w3cUserAuthentication = ticketIdentity;
                 }
@@ -620,6 +621,11 @@ public class WebsiteBackendHub(
 
     public override async Task OnDisconnectedAsync(Exception exception)
     {
+        // Free the ticket so a reconnect inside its TTL can redeem it again. If OnConnectedAsync threw
+        // after redeeming, SignalR skips this method and the ticket stays held: its next presentation
+        // revokes it, and the launcher mints a new one.
+        _ticketStore.Release(Context.ConnectionId);
+
         var user = _connections.GetUser(Context.ConnectionId);
         if (user != null)
         {
