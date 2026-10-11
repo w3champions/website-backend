@@ -1126,8 +1126,8 @@ public class WebsiteBackendHubTests
         // Assert: connected as the TICKET identity.
         mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
         Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
-        // Single-use: the ticket must have been burned on consume.
-        Assert.IsFalse(ticketStore.TryConsume(ticket, DateTime.UtcNow, out _));
+        // conn1 now holds the ticket, so no other connection can redeem it.
+        Assert.IsFalse(ticketStore.TryRedeem(ticket, "conn-other", DateTime.UtcNow, out _));
     }
 
     [Test]
@@ -1153,11 +1153,11 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
-    public async Task OnConnectedAsync_ReplayedTicket_Rejected_NoSecondConnect()
+    public async Task OnConnectedAsync_TicketReplayedWhileHeld_Rejected_NoSecondConnect()
     {
-        // Arrange: a ticket is consumed by a first successful connect, then the SAME ticket is
-        // replayed on a second connect. Single-use must hold at the hub boundary, so a sniffed /
-        // replayed ticket cannot be reused: the second connect is rejected, never registered.
+        // Arrange: a first connect redeems the ticket and stays open, then the SAME ticket is
+        // replayed on a second connect. One holder at a time must hold at the hub boundary, so a
+        // sniffed ticket can't open a parallel session: the second connect is rejected.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
         var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
@@ -1165,19 +1165,56 @@ public class WebsiteBackendHubTests
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
 
-        // First connect consumes (burns) the ticket.
+        // First connect redeems and holds the ticket.
         var firstHub = CreateHub(friendCommandHandler);
         SetHubContext(firstHub, "conn1");
         await firstHub.OnConnectedAsync();
         Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
 
-        // Second connect replays the now-burned ticket.
+        // Second connect replays the held ticket.
         var secondHub = CreateHub(friendCommandHandler);
         SetHubContext(secondHub, "conn2");
         await secondHub.OnConnectedAsync();
 
         // Assert: replay rejected — the second connection was never registered.
         Assert.That(connections.GetUser("conn2"), Is.Null);
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
+
+        // The replay revoked the ticket: even after the holder leaves, it can't be redeemed again.
+        await firstHub.OnDisconnectedAsync(null);
+        var thirdHub = CreateHub(friendCommandHandler);
+        SetHubContext(thirdHub, "conn3");
+        await thirdHub.OnConnectedAsync();
+        Assert.That(connections.GetUser("conn3"), Is.Null);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_ReconnectAfterDisconnect_ReusesTicket()
+    {
+        // Arrange: the launcher's reconnect loop presents the same ticket again after its first
+        // connection dropped. Inside the TTL that must work, so a reconnect burst doesn't mint.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+        var firstHub = CreateHub(friendCommandHandler);
+        SetHubContext(firstHub, "conn1");
+        await firstHub.OnConnectedAsync();
+        await firstHub.OnDisconnectedAsync(null);
+        Assert.That(connections.GetUser("conn1"), Is.Null);
+
+        // Act: reconnect with the same ticket.
+        var secondHub = CreateHub(friendCommandHandler);
+        SetHubContext(secondHub, "conn2");
+        await secondHub.OnConnectedAsync();
+
+        // Assert: both connects succeeded with the ticket identity.
+        Assert.That(connections.GetUser("conn2")?.BattleTag, Is.EqualTo("Ticket#1"));
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Exactly(2));
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Never);
     }
 
     // Helper mock for HubCallerContext

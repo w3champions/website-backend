@@ -10,19 +10,22 @@ namespace W3ChampionsStatisticService.Sessions;
 /// <summary>
 /// Secure ticket-mint endpoint (WB-1). Lets the launcher authenticate to the WebsiteBackendHub
 /// SignalR hub WITHOUT ever handing a raw long-lived JWT to JavaScript / a query string: the JWT is
-/// exchanged once (over an Authorization header) for a short-lived single-use ticket, and only the
-/// ticket rides the WebSocket URL. Mirrors the already-shipped chat-service AuthSessionController.
+/// exchanged once (over an Authorization header) for a short-lived ticket, and only the ticket rides
+/// the WebSocket URL. Mirrors the already-shipped chat-service AuthSessionController.
 ///
 /// ===== CLIENT CONTRACT (pinned — launcher LE-2 builds against this exact shape) =====
 ///   Verb / path : POST /auth/session
 ///   Auth header : Authorization: Bearer &lt;W3C JWT&gt;   (signature enforced, expiry is not)
 ///   Request body: EMPTY
-///   200 OK      : { "ticket": "&lt;64 hex chars&gt;", "expiresInSeconds": 60 }
+///   200 OK      : { "ticket": "&lt;64 hex chars&gt;", "expiresInSeconds": 60, "maxRedemptions": 5 }
 ///   401         : missing / non-Bearer / invalid JWT
 ///   429         : per-battleTag mint rate limit exceeded (10 / minute)
-///   Ticket      : single-use, 60s TTL. The client hands it to SignalR's accessTokenFactory so it
+///   Ticket      : 60s TTL from mint. The client hands it to SignalR's accessTokenFactory so it
 ///                 arrives as ?access_token=&lt;ticket&gt; on /websiteBackendHub, where
-///                 WebsiteBackendHub.OnConnectedAsync consumes it exactly once. The hub is
+///                 WebsiteBackendHub.OnConnectedAsync redeems it. A ticket can be presented up to
+///                 maxRedemptions times inside its TTL, one connection at a time (rules on
+///                 TicketStore), so a reconnecting launcher can reuse it. Launchers that predate
+///                 maxRedemptions mint per attempt, which still works. The hub is
 ///                 ticket-only: a raw JWT in access_token is rejected (AuthorizationFailed +
 ///                 abort), like chat-service's ChatHub. The launcher is the hub's sole client; browsers use REST +
 ///                 Bearer and never open the WebSocket.
@@ -94,6 +97,7 @@ public class AuthSessionController(
         {
             Ticket = _ticketStore.Mint(identity, now),
             ExpiresInSeconds = SessionLimits.TicketTtlSeconds,
+            MaxRedemptions = SessionLimits.TicketMaxRedemptions,
         });
     }
 }
@@ -102,4 +106,8 @@ public class TicketResponse
 {
     public string Ticket { get; set; }
     public int ExpiresInSeconds { get; set; }
+
+    /// <summary>Presentations the ticket accepts inside its TTL. Its presence tells the launcher it may
+    /// reuse the ticket across reconnects; older servers omit it and burn the ticket on first use.</summary>
+    public int MaxRedemptions { get; set; }
 }
