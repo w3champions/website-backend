@@ -222,4 +222,58 @@ public class MatchmakingServiceClientCommercialLicenseTests
         // No custom message leaked from the empty body: same as the framework default.
         Assert.That(ex.Message, Is.EqualTo(new HttpRequestException().Message));
     }
+
+    [Test]
+    public async Task GetTaggedPlayersParsesCommercialEventNotice()
+    {
+        var json = TaggedPlayerJson.Replace("\"notify\":true,", "\"notify\":true,\"commercialEventNotice\":true,");
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, $"[{json}]");
+
+        var players = await CreateClient(handler).GetCommercialLicenseTaggedPlayers();
+
+        Assert.That(players[0].CommercialEventNotice, Is.True);
+    }
+
+    [Test]
+    public async Task GetTaggedPlayersReadsMissingCommercialEventNoticeAsFalse()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, $"[{TaggedPlayerJson}]");
+
+        var players = await CreateClient(handler).GetCommercialLicenseTaggedPlayers();
+
+        Assert.That(players[0].CommercialEventNotice, Is.False);
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task UpsertSendsCommercialEventNoticeWhenSet(bool commercialEventNotice)
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        await CreateClient(handler).UpsertCommercialLicenseTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        {
+            note = "n",
+            notify = false,
+            actingBattleTag = "Admin#1",
+            CommercialEventNotice = commercialEventNotice,
+        });
+
+        Assert.That(JObject.Parse(handler.RequestBodies[0])["commercialEventNotice"]!.Value<bool>(), Is.EqualTo(commercialEventNotice));
+    }
+
+    [Test]
+    public async Task UpsertOmitsCommercialEventNoticeWhenNull()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        await CreateClient(handler).UpsertCommercialLicenseTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        {
+            note = "n",
+            notify = false,
+            actingBattleTag = "Admin#1",
+        });
+
+        // Omitted, so matchmaking keeps the stored value (false for a new tag).
+        Assert.That(JObject.Parse(handler.RequestBodies[0]).ContainsKey("commercialEventNotice"), Is.False);
+    }
 }

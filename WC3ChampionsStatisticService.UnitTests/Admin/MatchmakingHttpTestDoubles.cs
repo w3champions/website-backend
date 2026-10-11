@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -28,6 +29,13 @@ internal sealed class StubMatchmakingHandler(HttpStatusCode statusCode = HttpSta
             Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
         };
     }
+}
+
+/// <summary>Fails every request the way HttpClient does when matchmaking is unreachable or times out.</summary>
+internal sealed class ThrowingMatchmakingHandler(Exception exception) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromException<HttpResponseMessage>(exception);
 }
 
 /// <summary>Hands out clients over one shared handler and records which named client was asked for.</summary>
