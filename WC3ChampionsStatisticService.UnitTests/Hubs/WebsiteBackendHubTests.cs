@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http;
 using Moq;
 using W3ChampionsStatisticService.Hubs;
+using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
 using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.PersonalSettings;
@@ -104,6 +105,7 @@ public class WebsiteBackendHubTests
     private TestFriendListCache friendListCache;
     private TestFriendRepository friendRepository;
     private TracingService tracingService;
+    private Mock<INetworkDiagnosticsDelivery> netDiagDelivery;
     private Mock<IHubCallerClients> mockClients;
     private Mock<ISingleClientProxy> mockCaller;
     private Mock<IClientProxy> mockFriendsProxy;
@@ -134,6 +136,7 @@ public class WebsiteBackendHubTests
             .ReturnsAsync((string input) => input);
         relationshipNotifier = new Mock<IRelationshipChangeNotifier>();
         ticketStore = new TicketStore();
+        netDiagDelivery = new Mock<INetworkDiagnosticsDelivery>();
     }
 
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
@@ -147,7 +150,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            netDiagDelivery.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         return hub;
@@ -471,7 +475,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            netDiagDelivery.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -530,7 +535,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            netDiagDelivery.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -592,7 +598,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            netDiagDelivery.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -649,7 +656,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            netDiagDelivery.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -1059,7 +1067,8 @@ public class WebsiteBackendHubTests
             tracingService,
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
-            ticketStore
+            ticketStore,
+            netDiagDelivery.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
@@ -1128,6 +1137,74 @@ public class WebsiteBackendHubTests
         Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
         // conn1 now holds the ticket, so no other connection can redeem it.
         Assert.IsFalse(ticketStore.TryRedeem(ticket, "conn-other", DateTime.UtcNow, out _));
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_CallsNetDiagDeliveryWithTicketIdentity()
+    {
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        SetHubContext(hub, "conn1");
+
+        await hub.OnConnectedAsync();
+
+        netDiagDelivery.Verify(d => d.OnUserConnectedAsync("Ticket#1"), Times.Once);
+    }
+
+    [Test]
+    public void OnConnectedAsync_NetDiagDeliveryThrows_StillConnects()
+    {
+        // Mongo down during the diagnostics on-connect path must not cost the user the hub connection.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+        netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).ThrowsAsync(new TimeoutException("mongo down"));
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        SetHubContext(hub, "conn1");
+
+        Assert.DoesNotThrowAsync(() => hub.OnConnectedAsync());
+
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
+        Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
+    }
+
+    [Test]
+    public void OnConnectedAsync_NetDiagDeliveryThrowsSynchronously_StillConnects()
+    {
+        // A delivery that throws before returning a task is contained the same way.
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+        netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).Throws(new InvalidOperationException("boom"));
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        SetHubContext(hub, "conn1");
+
+        Assert.DoesNotThrowAsync(() => hub.OnConnectedAsync());
+
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_RejectedConnection_DoesNotCallNetDiagDelivery()
+    {
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString("?access_token=not-a-ticket");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        SetHubContext(hub, "conn1");
+
+        await hub.OnConnectedAsync();
+
+        netDiagDelivery.Verify(d => d.OnUserConnectedAsync(It.IsAny<string>()), Times.Never);
     }
 
     [Test]

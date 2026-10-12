@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
 using W3ChampionsStatisticService.Friends;
+using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Sessions;
@@ -29,7 +30,8 @@ public class WebsiteBackendHub(
     TracingService tracingService,
     IBattleTagResolver battleTagResolver,
     IRelationshipChangeNotifier relationshipChangeNotifier,
-    ITicketStore ticketStore
+    ITicketStore ticketStore,
+    INetworkDiagnosticsDelivery netDiagDelivery
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -59,6 +61,7 @@ public class WebsiteBackendHub(
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
     private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
     private readonly ITicketStore _ticketStore = ticketStore;
+    private readonly INetworkDiagnosticsDelivery _netDiagDelivery = netDiagDelivery;
 
     [NoTrace]
     public override async Task OnConnectedAsync()
@@ -85,6 +88,7 @@ public class WebsiteBackendHub(
             }
             WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
             await LoginAsAuthenticated(user);
+            await DeliverNetworkDiagnosticsAsync(user.BattleTag);
         }, forceNewRoot: true);
         await base.OnConnectedAsync();
     }
@@ -93,6 +97,19 @@ public class WebsiteBackendHub(
     {
         _connections.Add(Context.ConnectionId, user);
         await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString());
+    }
+
+    // Diagnostics must never cost the user the hub connection (Review Focus 5): log and carry on.
+    private async Task DeliverNetworkDiagnosticsAsync(string battleTag)
+    {
+        try
+        {
+            await _netDiagDelivery.OnUserConnectedAsync(battleTag);
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Network diagnostics on-connect delivery failed for {BattleTag}", battleTag);
+        }
     }
 
     // Required for backwards compatibility

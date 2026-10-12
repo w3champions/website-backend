@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using W3C.Domain.Repositories;
 using W3ChampionsStatisticService.Extensions;
+using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
 using W3ChampionsStatisticService.NetworkDiagnostics.GeoIp;
 using W3ChampionsStatisticService.NetworkDiagnostics.Persistence;
 using W3ChampionsStatisticService.NetworkDiagnostics.Runs;
@@ -30,6 +31,9 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
             targetsConfig.GeoIpCityDbPath, targetsConfig.GeoIpAsnDbPath,
             sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<MaxMindGeoIpLookup>>()));
         services.AddTransient<IFloNodeSource, MatchmakingFloNodeSource>();
+        services.AddSingleton<IRandom, SystemRandom>();
+        // Plain AddSingleton, no tracing interception: this service handles measurement tokens (A10).
+        services.AddSingleton<INetworkDiagnosticsDelivery, NetworkDiagnosticsDelivery>();
         return services;
     }
 }
