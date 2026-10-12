@@ -19,6 +19,13 @@ public interface INetworkDiagnosticsResultRepository
     Task<NetworkDiagnosticRawSeries> GetRawSeriesAsync(string id);
     Task<List<NetworkDiagnosticIpInfo>> IpInfoAsync(string runId, IReadOnlyCollection<string> ips);
     Task<Dictionary<string, ClientGeo>> ClientGeoByMeasurementAsync(IReadOnlyCollection<string> measurementIds);
+    /// <summary>Newest first; skips page * pageSize (zero-based page, A5). Total counts every match.</summary>
+    Task<(List<NetworkDiagnosticMeasurement> Items, long Total)> ListMeasurementsAsync(FilterDefinition<NetworkDiagnosticMeasurement> filter, int page, int pageSize);
+    /// <summary>
+    /// The measurements of the newest <paramref name="limit"/> observations matching the filter (P6: never an
+    /// unbounded scan). Truncated is true when that many rows were read, so older matches may be missing.
+    /// </summary>
+    Task<(List<string> Ids, bool Truncated)> MeasurementIdsAsync(FilterDefinition<NetworkDiagnosticObservation> filter, int limit);
 }
 
 [Trace]

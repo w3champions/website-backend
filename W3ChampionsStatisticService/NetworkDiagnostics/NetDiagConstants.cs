@@ -50,4 +50,12 @@ public static class NetDiagConstants
     public const int MaxBattleTagsPerRun = 500;
     public const int MaxCustomTargets = 50;
     public const int MaxTargetsPerRun = 200;
+
+    /// <summary>
+    /// Most observation rows one admin query reads before it groups them (newest first). A query that reaches it
+    /// answers with <see cref="TruncatedHeader"/>.
+    /// </summary>
+    public const int MaxScannedObservations = 200_000;
+    /// <summary>Response header, value "true": the answer was computed from the newest <see cref="MaxScannedObservations"/> matching rows only.</summary>
+    public const string TruncatedHeader = "X-NetDiag-Truncated";
 }

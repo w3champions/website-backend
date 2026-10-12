@@ -8,6 +8,12 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Api;
 /// <summary>Status code + JSON body; the controller turns it into an ObjectResult.</summary>
 public sealed record NetDiagResult(int StatusCode, object Body)
 {
+    /// <summary>
+    /// A bounded lookup behind this answer stopped at its limit, so older matches may be missing. Sent as the
+    /// <see cref="NetDiagConstants.TruncatedHeader"/> response header; the body keeps its C6 shape.
+    /// </summary>
+    public bool Truncated { get; init; }
+
     public static NetDiagResult Ok(object body) => new(200, body);
     public static NetDiagResult Created(object body) => new(201, body);
     public static NetDiagResult Error(int status, string error) => new(status, new { error });

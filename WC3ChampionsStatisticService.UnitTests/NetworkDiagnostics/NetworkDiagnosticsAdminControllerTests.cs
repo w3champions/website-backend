@@ -14,6 +14,7 @@ using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.NetworkDiagnostics;
 using W3ChampionsStatisticService.NetworkDiagnostics.Api;
+using W3ChampionsStatisticService.NetworkDiagnostics.Results;
 using W3ChampionsStatisticService.NetworkDiagnostics.Runs;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -25,6 +26,7 @@ public class NetworkDiagnosticsAdminControllerTests
     private const string ValidBody = """{"audience":{"kind":"SampleCount","count":5},"targets":{"floNodeIds":[12],"customTargets":[{"ip":"10.0.0.5"}]},"methods":["IcmpMtr"],"windowSeconds":90,"unknownProperty":1}""";
 
     private Mock<INetworkDiagnosticsRunService> _service;
+    private Mock<INetworkDiagnosticsQueryService> _queries;
     private NetworkDiagnosticsAdminController _controller;
 
     [SetUp]
@@ -32,7 +34,8 @@ public class NetworkDiagnosticsAdminControllerTests
     {
         // Strict: an action that answers 400 on its own must not have reached the service.
         _service = new Mock<INetworkDiagnosticsRunService>(MockBehavior.Strict);
-        _controller = new NetworkDiagnosticsAdminController(_service.Object)
+        _queries = new Mock<INetworkDiagnosticsQueryService>(MockBehavior.Strict);
+        _controller = new NetworkDiagnosticsAdminController(_service.Object, _queries.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -175,6 +178,8 @@ public class NetworkDiagnosticsAdminControllerTests
             await _controller.ListRuns(null, null, null),
             await _controller.GetRun("r1"),
             await _controller.CancelRun("r1"),
+            await _controller.ListMeasurements(new NetDiagQuery()),
+            await _controller.GetMeasurement("m1"),
         ];
 
         foreach (var result in results)
@@ -235,6 +240,59 @@ public class NetworkDiagnosticsAdminControllerTests
     }
 
     [Test]
+    public async Task ListMeasurements_PassesTheBoundFilterAndPaging_AndMapsTheBody()
+    {
+        var filter = new NetDiagQuery { BattleTag = "Name#1234", RunId = ["r1"] };
+        _queries.Setup(q => q.ListMeasurementsAsync(filter, 3, 50)).ReturnsAsync(NetDiagResult.Ok(new PageDto<MeasurementSummaryDto>([], 7)));
+
+        var result = (ObjectResult)await _controller.ListMeasurements(filter, 3, 50);
+
+        Assert.AreEqual((200, """{"items":[],"total":7}"""), (result.StatusCode, Json(result)));
+        Assert.IsFalse(_controller.Response.Headers.ContainsKey("X-NetDiag-Truncated"));
+    }
+
+    [Test]
+    public async Task ListMeasurements_Defaults_AreTheFirstPageOf25()
+    {
+        _queries.Setup(q => q.ListMeasurementsAsync(It.IsAny<NetDiagQuery>(), 0, 25)).ReturnsAsync(NetDiagResult.Ok(new PageDto<MeasurementSummaryDto>([], 0)));
+
+        Assert.AreEqual(200, ((ObjectResult)await _controller.ListMeasurements(new NetDiagQuery())).StatusCode);
+    }
+
+    // P6: a bounded lookup that hit its limit is announced in a header; the body keeps its C6 shape.
+    [Test]
+    public async Task ListMeasurements_TruncatedResult_SetsTheHeader_AndKeepsTheBody()
+    {
+        _queries.Setup(q => q.ListMeasurementsAsync(It.IsAny<NetDiagQuery>(), 0, 25))
+            .ReturnsAsync(NetDiagResult.Ok(new PageDto<MeasurementSummaryDto>([], 0)) with { Truncated = true });
+
+        var result = (ObjectResult)await _controller.ListMeasurements(new NetDiagQuery { TargetKey = "flo:12" });
+
+        Assert.AreEqual((200, """{"items":[],"total":0}"""), (result.StatusCode, Json(result)));
+        Assert.AreEqual("true", _controller.Response.Headers["X-NetDiag-Truncated"].ToString());
+        Assert.AreEqual("X-NetDiag-Truncated", NetDiagConstants.TruncatedHeader);
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task GetMeasurement_PassesIdAndRaw_AndMapsStatusAndBody(bool raw)
+    {
+        _queries.Setup(q => q.GetMeasurementAsync("m1", raw)).ReturnsAsync(NetDiagResult.Error(404, "not_found"));
+
+        var result = (ObjectResult)await _controller.GetMeasurement("m1", raw);
+
+        Assert.AreEqual((404, """{"error":"not_found"}"""), (result.StatusCode, Json(result)));
+    }
+
+    [Test]
+    public async Task GetMeasurement_RawDefaultsToFalse()
+    {
+        _queries.Setup(q => q.GetMeasurementAsync("m1", false)).ReturnsAsync(NetDiagResult.Ok(new { }));
+
+        Assert.AreEqual(200, ((ObjectResult)await _controller.GetMeasurement("m1")).StatusCode);
+    }
+
+    [Test]
     public async Task Targets_GetRun_Cancel_MapStatusAndBody()
     {
         _service.Setup(s => s.GetTargetsAsync()).ReturnsAsync(NetDiagResult.Error(502, "matchmaking_unavailable"));
@@ -258,7 +316,7 @@ public class NetworkDiagnosticsAdminControllerTests
             .Where(m => m.DeclaringType == typeof(NetworkDiagnosticsAdminController) && m.IsPublic && !m.IsStatic)
             .ToList();
 
-        Assert.AreEqual(5, actions.Count);
+        Assert.AreEqual(7, actions.Count);
         foreach (var action in actions)
         {
             var filter = action.GetCustomAttributes(typeof(BearerHasPermissionFilter), false).Cast<BearerHasPermissionFilter>().SingleOrDefault();

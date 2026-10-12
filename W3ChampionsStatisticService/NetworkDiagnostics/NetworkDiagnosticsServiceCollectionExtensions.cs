@@ -7,6 +7,7 @@ using W3ChampionsStatisticService.Extensions;
 using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
 using W3ChampionsStatisticService.NetworkDiagnostics.GeoIp;
 using W3ChampionsStatisticService.NetworkDiagnostics.Persistence;
+using W3ChampionsStatisticService.NetworkDiagnostics.Results;
 using W3ChampionsStatisticService.NetworkDiagnostics.Runs;
 using W3ChampionsStatisticService.NetworkDiagnostics.Submission;
 
@@ -42,6 +43,8 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         services.AddTransient<INetworkDiagnosticsRunService, NetworkDiagnosticsRunService>();
         // Plain AddTransient as well: the submission service receives the measurement token (A10).
         services.AddTransient<INetworkDiagnosticsSubmissionService, NetworkDiagnosticsSubmissionService>();
+        // Read-only queries over stored results: no argument or type here carries a token, so tracing is safe (A10).
+        services.AddInterceptedTransient<INetworkDiagnosticsQueryService, NetworkDiagnosticsQueryService>();
         // gzip request bodies of the C5 submit; UseNetworkDiagnosticsRequestDecompression mounts it for that path only.
         services.AddRequestDecompression();
         services.AddHostedService(sp => new NetworkDiagnosticsDispatcher(

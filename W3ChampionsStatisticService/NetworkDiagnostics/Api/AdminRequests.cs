@@ -24,13 +24,15 @@ public static class AdminRequests
 
     /// <summary>
     /// Null when every bound value parsed; otherwise 400 naming the first parameter that did not (P8). Without this
-    /// an unparsable page, pageSize, from or to would silently run with its default.
+    /// an unparsable page, pageSize, from or to would silently run with its default. The name is the C6 camelCase
+    /// one: a property of a complex [FromQuery] model reports its error under the property name ("NodeId").
     /// </summary>
     public static NetDiagResult InvalidQuery(ModelStateDictionary modelState)
     {
         if (modelState.ErrorCount == 0) return null;
         var key = modelState.Where(e => e.Value is { Errors.Count: > 0 }).Select(e => e.Key).Order(StringComparer.Ordinal).First();
         if (key.Length > MaxReportedKeyLength) key = key[..MaxReportedKeyLength];
+        key = JsonNamingPolicy.CamelCase.ConvertName(key);
         return NetDiagResult.Error(400, $"invalid query parameter: {key}");
     }
 

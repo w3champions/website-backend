@@ -53,7 +53,7 @@ public class ResultBuilderTests
     }
 
     [Test]
-    public void Measurement_MtrProbeStatsComeFromTheTargetHop_AndSamplesAreNotStored()
+    public void Measurement_MtrProbeStatsComeFromTheTargetHop()
     {
         var probes = BuildFull().Measurement.Targets[0].Paths[0].Probes;
         var mtr = probes[0];
@@ -62,8 +62,6 @@ public class ResultBuilderTests
         Assert.AreEqual(50.0, mtr.Hops[0].Stats.LossPct);
         Assert.AreEqual(15.0, mtr.Stats.P50Ms);     // hop 3 = 1.2.3.4: 15000 µs, 17000 µs
         Assert.AreEqual(16.0, mtr.Stats.AvgMs);
-        Assert.IsNull(mtr.Samples);
-        Assert.IsTrue(mtr.Hops.All(h => h.Samples == null));
 
         var ping = probes[1];
         Assert.AreEqual(2, ping.Stats.Sent);

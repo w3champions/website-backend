@@ -98,4 +98,155 @@ public class NetworkDiagnosticsResultRepositoryMongoTests
         Assert.AreEqual(Now, kept.FirstSeenAt);
         Assert.IsEmpty(await _repo.IpInfoAsync("run-2", ["1.2.3.4"]));
     }
+
+    private IMongoCollection<T> Collection<T>(string name) => _client.GetDatabase("W3Champions-Statistic-Service").GetCollection<T>(name);
+
+    private Task InsertMeasurements(params NetworkDiagnosticMeasurement[] measurements) =>
+        Collection<NetworkDiagnosticMeasurement>(NetDiagConstants.MeasurementsCollection).InsertManyAsync(measurements);
+
+    private Task InsertObservations(params NetworkDiagnosticObservation[] observations) =>
+        Collection<NetworkDiagnosticObservation>(NetDiagConstants.ObservationsCollection).InsertManyAsync(observations);
+
+    private static NetworkDiagnosticMeasurement Measurement(string id, int hoursAfterNow, string country = "DE") => new()
+    {
+        Id = id,
+        RunId = "run-1",
+        BattleTag = "Name#1234",
+        SubmittedAt = Now.AddHours(hoursAfterNow),
+        ExpiresAt = Now.AddDays(365),
+        ClientGeo = new ClientGeo { Country = country },
+    };
+
+    private static NetworkDiagnosticObservation Observation(string measurementId, int hoursAfterNow, string method = "TcpPing") => new()
+    {
+        Id = ObjectId.GenerateNewId(),
+        MeasurementId = measurementId,
+        RunId = "run-1",
+        SubmittedAt = Now.AddHours(hoursAfterNow),
+        ExpiresAt = Now.AddDays(365),
+        TargetKey = "flo:12",
+        Method = method,
+    };
+
+    // A5: zero-based page (skip page * pageSize), newest first, total over every match.
+    [Test]
+    public async Task ListMeasurements_NewestFirst_ZeroBasedPages_AndTheTotalOfAllMatches()
+    {
+        await InsertMeasurements(Measurement("m0", 0), Measurement("m1", 1), Measurement("m2", 2), Measurement("m3", 3), Measurement("m4", 4));
+        var all = NetDiagFilters.Measurements(new NetDiagQuery(), null);
+
+        var (first, total) = await _repo.ListMeasurementsAsync(all, 0, 2);
+        var (second, _) = await _repo.ListMeasurementsAsync(all, 1, 2);
+        var (third, _) = await _repo.ListMeasurementsAsync(all, 2, 2);
+        var (beyond, totalBeyond) = await _repo.ListMeasurementsAsync(all, 3, 2);
+
+        Assert.AreEqual(5, total);
+        Assert.AreEqual(new[] { "m4", "m3" }, first.Select(m => m.Id).ToArray());
+        Assert.AreEqual(new[] { "m2", "m1" }, second.Select(m => m.Id).ToArray());
+        Assert.AreEqual(new[] { "m0" }, third.Select(m => m.Id).ToArray());
+        Assert.IsEmpty(beyond);
+        Assert.AreEqual(5, totalBeyond);
+    }
+
+    // A5 against real documents: from is inclusive, to is exclusive.
+    [Test]
+    public async Task ListMeasurements_TimeWindow_IncludesFrom_ExcludesTo()
+    {
+        await InsertMeasurements(Measurement("m0", 0), Measurement("m1", 1), Measurement("m2", 2), Measurement("m3", 3));
+        var window = NetDiagFilters.Measurements(new NetDiagQuery { From = Now.AddHours(1), To = Now.AddHours(3) }, null);
+
+        var (items, total) = await _repo.ListMeasurementsAsync(window, 0, 25);
+
+        Assert.AreEqual(2, total);
+        Assert.AreEqual(new[] { "m2", "m1" }, items.Select(m => m.Id).ToArray());
+    }
+
+    // The shared filter set against the documents a real submit writes: every field path exists as rendered.
+    [Test]
+    public async Task SharedFilters_MatchTheDocumentsOfARealResult()
+    {
+        await _repo.InsertResultAsync(Built());
+        await InsertMeasurements(Measurement("other", 1, country: "GB"));
+        await InsertObservations(Observation("other", 1, method: "IcmpMtr"));
+        var query = new NetDiagQuery
+        {
+            BattleTag = "Name#1234",
+            RunId = ["run-1", "run-9"],
+            TargetKey = "flo:12",
+            NodeId = 12,
+            TargetIp = "1.2.3.4",
+            Path = "direct",
+            Method = "TcpPing",
+            Country = "GB",
+            Asn = 20712,
+            Os = "windows",
+            AdapterType = "ethernet",
+            Vpn = true,
+            From = Now,
+            To = Now.AddSeconds(1),
+        };
+
+        var (ids, truncated) = await _repo.MeasurementIdsAsync(NetDiagFilters.Observations(query), 100);
+        var (items, total) = await _repo.ListMeasurementsAsync(NetDiagFilters.Measurements(query, ids), 0, 25);
+
+        Assert.AreEqual(new[] { SubmissionFixtures.MeasurementId }, ids.ToArray());
+        Assert.IsFalse(truncated);
+        Assert.AreEqual(1, total);
+        Assert.AreEqual(SubmissionFixtures.MeasurementId, items.Single().Id);
+        Assert.AreEqual(20712, items.Single().ClientGeo.Asn);
+
+        // Each filter alone can also exclude the real result.
+        foreach (var miss in new[]
+                 {
+                     query with { NodeId = 13 }, query with { Path = "proxied" }, query with { Method = "TcpTraceroute" },
+                     query with { TargetIp = "9.9.9.9" }, query with { TargetKey = "flo:13" },
+                 })
+        {
+            Assert.IsEmpty((await _repo.MeasurementIdsAsync(NetDiagFilters.Observations(miss), 100)).Ids, miss.ToString());
+        }
+        foreach (var miss in new[]
+                 {
+                     query with { Country = "DE" }, query with { Asn = 1 }, query with { Os = "macos" }, query with { AdapterType = "wifi" },
+                     query with { Vpn = false }, query with { BattleTag = "Other#1" }, query with { RunId = ["run-9"] }, query with { To = Now },
+                 })
+        {
+            Assert.AreEqual(0, (await _repo.ListMeasurementsAsync(NetDiagFilters.Measurements(miss, ids), 0, 25)).Total, miss.ToString());
+        }
+    }
+
+    // P6: the lookup reads at most `limit` matching rows, newest first, and says when it read that many.
+    [Test]
+    public async Task MeasurementIds_ReadsOnlyTheNewestRowsUpToTheLimit_AndReportsReachingIt()
+    {
+        await InsertObservations(
+            Observation("newest", 3), Observation("newest", 3),
+            Observation("middle", 2),
+            Observation("oldest", 1),
+            Observation("other-method", 4, method: "IcmpMtr"));
+        var filter = NetDiagFilters.Observations(new NetDiagQuery { Method = "TcpPing" });
+
+        var all = await _repo.MeasurementIdsAsync(filter, 10);
+        var three = await _repo.MeasurementIdsAsync(filter, 3);
+        var two = await _repo.MeasurementIdsAsync(filter, 2);
+        var exactly = await _repo.MeasurementIdsAsync(filter, 4);
+
+        CollectionAssert.AreEquivalent(new[] { "newest", "middle", "oldest" }, all.Ids);
+        Assert.IsFalse(all.Truncated);
+        CollectionAssert.AreEquivalent(new[] { "newest", "middle" }, three.Ids);
+        Assert.IsTrue(three.Truncated);
+        CollectionAssert.AreEquivalent(new[] { "newest" }, two.Ids);
+        Assert.IsTrue(two.Truncated);
+        // Reading exactly `limit` rows cannot tell "all of them" from "more exist": it is reported as reached.
+        CollectionAssert.AreEquivalent(new[] { "newest", "middle", "oldest" }, exactly.Ids);
+        Assert.IsTrue(exactly.Truncated);
+    }
+
+    [Test]
+    public async Task MeasurementIds_NoMatch_IsEmptyAndNotTruncated()
+    {
+        var (ids, truncated) = await _repo.MeasurementIdsAsync(NetDiagFilters.Observations(new NetDiagQuery { Method = "TcpPing" }), 10);
+
+        Assert.IsEmpty(ids);
+        Assert.IsFalse(truncated);
+    }
 }

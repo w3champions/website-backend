@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using W3ChampionsStatisticService.NetworkDiagnostics.Submission;
@@ -26,9 +25,6 @@ public record MeasuredHop
     public int Ttl { get; init; }
     public string Ip { get; init; }
     public StatsDto Stats { get; init; }
-    /// <summary>Only in API output with raw=true: [offsetMs, rttMs | null]. Never stored here.</summary>
-    [BsonIgnore, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<double?[]> Samples { get; init; }
 }
 
 [BsonIgnoreExtraElements]
@@ -40,8 +36,6 @@ public record MeasuredProbe
     /// <summary>Null for traceroute-only methods (C6).</summary>
     public StatsDto Stats { get; init; }
     public List<MeasuredHop> Hops { get; init; } = [];
-    [BsonIgnore, JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public List<double?[]> Samples { get; init; }
 }
 
 [BsonIgnoreExtraElements]

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.NetworkDiagnostics.Results;
 using W3ChampionsStatisticService.NetworkDiagnostics.Runs;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -16,7 +17,7 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Api;
 /// </summary>
 [Route("api/network-diagnostics")]
 [Trace]
-public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService runService) : ControllerBase
+public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService runService, INetworkDiagnosticsQueryService queryService) : ControllerBase
 {
     [HttpGet("targets")]
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
@@ -49,11 +50,33 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
     public Task<IActionResult> CancelRun(string id) => Answer(() => runService.CancelRunAsync(id));
 
+    /// <summary>
+    /// The C6 shared filter set binds as one complex model: a "battleTag" action parameter would receive the acting
+    /// admin from the permission filter instead of the player asked for.
+    /// </summary>
+    [HttpGet("measurements")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
+    public Task<IActionResult> ListMeasurements(
+        [FromQuery] NetDiagQuery filter, [FromQuery] int page = 0, [FromQuery] int pageSize = NetDiagPaging.DefaultPageSize) =>
+        Answer(() => queryService.ListMeasurementsAsync(filter, page, pageSize));
+
+    [HttpGet("measurements/{id}")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
+    public Task<IActionResult> GetMeasurement(string id, [FromQuery] bool raw = false) =>
+        Answer(() => queryService.GetMeasurementAsync(id, raw));
+
     internal static IActionResult Map(NetDiagResult result) => new ObjectResult(result.Body) { StatusCode = result.StatusCode };
 
-    /// <summary>P8: a query value that did not bind answers 400 instead of running the action with a default.</summary>
-    private async Task<IActionResult> Answer(Func<Task<NetDiagResult>> action) =>
-        Map(AdminRequests.InvalidQuery(ModelState) ?? await action());
+    /// <summary>
+    /// P8: a query value that did not bind answers 400 instead of running the action with a default.
+    /// P6: an answer computed from a lookup that stopped at its limit says so in a header.
+    /// </summary>
+    private async Task<IActionResult> Answer(Func<Task<NetDiagResult>> action)
+    {
+        var result = AdminRequests.InvalidQuery(ModelState) ?? await action();
+        if (result.Truncated) Response.Headers[NetDiagConstants.TruncatedHeader] = "true";
+        return Map(result);
+    }
 
     private static DateTime? AsUtc(DateTime? value) => value is { } v ? NetDiagTime.AsUtc(v) : null;
 }
