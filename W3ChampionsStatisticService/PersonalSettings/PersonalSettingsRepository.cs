@@ -11,8 +11,20 @@ using W3C.Domain.Tracing;
 namespace W3ChampionsStatisticService.PersonalSettings;
 
 [Trace]
-public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPersonalSettingsRepository
+public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbRepositoryBase(mongoClient), IPersonalSettingsRepository, IRequiresIndexes
 {
+    public string CollectionName => nameof(PersonalSetting);
+
+    public async Task EnsureIndexesAsync()
+    {
+        var keys = Builders<PersonalSetting>.IndexKeys;
+        await CreateCollection<PersonalSetting>().Indexes.CreateManyAsync(new[]
+        {
+            new CreateIndexModel<PersonalSetting>(keys.Ascending("SpecialPictures.PictureId"), new CreateIndexOptions { Name = "portrait_ownership" }),
+            new CreateIndexModel<PersonalSetting>(keys.Ascending(p => p.ProfilePicture.Race).Ascending(p => p.ProfilePicture.PictureId), new CreateIndexOptions { Name = "selected_portrait" })
+        });
+    }
+
     public async Task<PersonalSetting> Load(string battletag)
     {
         PersonalSetting personalSettings = await LoadFirst<PersonalSetting>(battletag);
@@ -89,6 +101,11 @@ public class PersonalSettingsRepository(MongoClient mongoClient) : MongoDbReposi
 
     public Task SaveMany(List<PersonalSetting> settings)
     {
+        foreach (var setting in settings)
+        {
+            setting.RaceWins = null;
+            setting.LastUpdated = DateTimeOffset.UtcNow;
+        }
         return UpsertMany(settings);
     }
 

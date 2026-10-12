@@ -36,9 +36,19 @@ public class S3Service : IS3Service
         return listObjectsResponse.S3Objects.Select(x => new CloudFile
         {
             Name = x.Key.Substring(x.Key.LastIndexOf('/') + 1), // Do not include the prefix
-            Size = x.Size / 1024, // Size in kilobytes
+            Size = x.Size / 1024, // Retained for existing clients.
+            SizeBytes = x.Size,
             LastModified = x.LastModified,
+            PreviewPath = GetPreviewPath(x.Key),
         }).ToList();
+    }
+
+    // The website's public resource URL already selects the prod/test integration root.
+    internal static string GetPreviewPath(string key)
+    {
+        const string marker = "integration/";
+        var index = key.IndexOf(marker, StringComparison.Ordinal);
+        return index >= 0 ? key.Substring(index + marker.Length) : null;
     }
 
     public async Task UploadFile([NoTrace] UploadFileRequest file)
@@ -55,6 +65,7 @@ public class S3Service : IS3Service
             Key = $"{S3Prefix}{file.Name}",
             CannedACL = S3CannedACL.PublicRead,
             DisablePayloadSigning = true,
+            ContentType = file.ImageContentType(),
         };
         using var ms = new MemoryStream(bytes);
         putObjectRequest.InputStream = ms;

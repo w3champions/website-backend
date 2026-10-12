@@ -49,7 +49,10 @@ public class PortraitRepository(MongoClient mongoClient) : MongoDbRepositoryBase
         {
             if (existingPortraits.Any(x => x.Id == id.ToString()))
             {
-                await Upsert(new PortraitDefinition(id, _group));
+                // Preserve replacement history when editing groups.
+                await CreateCollection<PortraitDefinition>().UpdateOneAsync(
+                    p => p.Id == id.ToString(),
+                    Builders<PortraitDefinition>.Update.Set(p => p.Groups, _group));
             }
         }
     }

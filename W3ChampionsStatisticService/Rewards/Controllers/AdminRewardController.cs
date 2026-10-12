@@ -24,6 +24,7 @@ public class AdminRewardController(
     IRewardAssignmentRepository assignmentRepo,
     IPatreonAccountLinkRepository patreonLinkRepo,
     IProductMappingRepository productMappingRepo,
+    IProductMappingUserAssociationRepository associationRepo,
     IProductMappingReconciliationService reconciliationService,
     PatreonDriftDetectionService patreonDriftService,
     IAuditLogService auditLogService,
@@ -32,6 +33,7 @@ public class AdminRewardController(
 {
     private readonly IRewardAssignmentRepository _assignmentRepo = assignmentRepo;
     private readonly IPatreonAccountLinkRepository _patreonLinkRepo = patreonLinkRepo;
+    private readonly IProductMappingUserAssociationRepository _associationRepo = associationRepo;
     private readonly IProductMappingRepository _productMappingRepo = productMappingRepo;
     private readonly IProductMappingReconciliationService _reconciliationService = reconciliationService;
     private readonly PatreonDriftDetectionService _patreonDriftService = patreonDriftService;
@@ -180,15 +182,12 @@ public class AdminRewardController(
         {
             var links = await _patreonLinkRepo.GetAll();
 
-            var response = links.Select(link => new PatreonAccountLinkDto
-            {
-                Id = link.Id.ToString(),
-                BattleTag = link.BattleTag,
-                PatreonUserId = link.PatreonUserId,
-                LinkedAt = link.LinkedAt,
-                LastSyncAt = link.LastSyncAt,
-                Metadata = link.Metadata
-            });
+            var associationsTask = _associationRepo.GetActiveForUsers("patreon", links.Select(link => link.BattleTag));
+            var mappingsTask = _productMappingRepo.GetByProviderId("patreon");
+            await Task.WhenAll(associationsTask, mappingsTask);
+            var associations = associationsTask.Result.ToLookup(association => association.UserId);
+            var mappings = mappingsTask.Result.ToDictionary(mapping => mapping.Id);
+            var response = links.Select(link => PatreonAccountLinkDto.FromLocalState(link, associations[link.BattleTag], mappings)).ToList();
 
             return Ok(new
             {
