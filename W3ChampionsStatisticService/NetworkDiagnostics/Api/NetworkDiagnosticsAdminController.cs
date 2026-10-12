@@ -1,7 +1,9 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
@@ -16,10 +18,15 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Api;
 /// action checks its own input through <see cref="Answer"/>.
 /// BearerHasPermissionFilter writes the acting admin into the "battleTag" action argument; only the action that
 /// records who created a run declares it (an unused parameter fails the IDE0060 format gate).
+/// MVC never reads a body as a form here: POST runs reads its JSON body itself, whatever the content type says.
 /// </summary>
 [Route("api/network-diagnostics")]
 [Trace]
-public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService runService, INetworkDiagnosticsQueryService queryService) : ControllerBase
+[DisableFormValueModelBinding]
+public class NetworkDiagnosticsAdminController(
+    INetworkDiagnosticsRunService runService,
+    INetworkDiagnosticsQueryService queryService,
+    ILogger<NetworkDiagnosticsAdminController> log) : ControllerBase
 {
     [HttpGet("targets")]
     [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
@@ -113,7 +120,9 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
     /// gave up on after <see cref="NetDiagConstants.AdminQueryMaxTime"/> answers 503 instead of an unhandled 500.
     /// </summary>
     /// <param name="onOk">Builds the answer of a 200 whose body is not written as JSON; every other answer is mapped as usual.</param>
-    private async Task<IActionResult> Answer(Func<Task<NetDiagResult>> action, Func<NetDiagResult, IActionResult> onOk = null)
+    /// <param name="actionName">The calling action, for the log line of a timeout.</param>
+    private async Task<IActionResult> Answer(
+        Func<Task<NetDiagResult>> action, Func<NetDiagResult, IActionResult> onOk = null, [CallerMemberName] string actionName = null)
     {
         NetDiagResult result;
         try
@@ -122,6 +131,10 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
         }
         catch (MongoException e) when (IsExecutionTimeout(e))
         {
+            // The action and the kind of failure only: the query string carries BattleTags and IPs, and the driver's
+            // message can quote the command.
+            log.LogWarning("Network diagnostics: admin query {Action} exceeded the {Seconds} s time limit ({Kind}); answered 503 {Error}",
+                actionName, NetDiagConstants.AdminQueryMaxTime.TotalSeconds, e.GetType().Name, NetDiagConstants.QueryTimeoutError);
             result = NetDiagResult.Error(503, NetDiagConstants.QueryTimeoutError);
         }
         catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)

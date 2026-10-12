@@ -37,6 +37,7 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
     private WebApplication _app;
     private HttpClient _http;
     private Mock<INetworkDiagnosticsQueryService> _queries;
+    private Mock<INetworkDiagnosticsRunService> _runService;
     private NetDiagQuery _seenQuery;
     private (int Page, int PageSize) _seenPaging;
 
@@ -55,7 +56,8 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
                 parts.FeatureProviders.Clear();
                 parts.FeatureProviders.Add(new OnlyTheAdminController());
             });
-        builder.Services.AddSingleton(Mock.Of<INetworkDiagnosticsRunService>());
+        _runService = new Mock<INetworkDiagnosticsRunService>();
+        builder.Services.AddSingleton(_runService.Object);
         builder.Services.AddSingleton(_queries.Object);
 
         _app = builder.Build();
@@ -76,6 +78,7 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
     public void SetUp()
     {
         _queries.Reset();
+        _runService.Reset();
         _seenQuery = null;
         _seenPaging = default;
         _queries.Setup(q => q.ListMeasurementsAsync(It.IsAny<NetDiagQuery>(), It.IsAny<int>(), It.IsAny<int>()))
@@ -110,6 +113,33 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
         var window = FilterRender.Render(NetDiagFilters.Measurements(_seenQuery, []))["SubmittedAt"];
         Assert.AreEqual(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), window["$gte"].ToUniversalTime());
         Assert.AreEqual(new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc), window["$lt"].ToUniversalTime());
+    }
+
+    // The body of POST runs is read by the action, whatever the content type says (api.md: "content type is not
+    // checked"). For a form content type MVC's form value provider would otherwise consume the body first and the
+    // action would see an empty one.
+    [TestCase("application/json")]
+    [TestCase("application/x-www-form-urlencoded")]
+    [TestCase("multipart/form-data; boundary=x")]
+    [TestCase("text/plain")]
+    public async Task CreateRun_TheJsonBodyIsParsed_WhateverTheContentType(string contentType)
+    {
+        CreateRunRequest seen = null;
+        string seenAdmin = null;
+        _runService.Setup(s => s.CreateRunAsync(It.IsAny<CreateRunRequest>(), It.IsAny<string>()))
+            .Callback<CreateRunRequest, string>((request, admin) => (seen, seenAdmin) = (request, admin))
+            .ReturnsAsync(new NetDiagResult(201, new { id = "r1" }));
+        using var content = new ByteArrayContent(
+            """{"audience":{"kind":"SampleCount","count":5},"targets":{"floNodeIds":[12]},"methods":["IcmpMtr"],"windowSeconds":90}"""u8.ToArray());
+        content.Headers.TryAddWithoutValidation("Content-Type", contentType);
+
+        using var response = await _http.PostAsync("/api/network-diagnostics/runs", content);
+
+        Assert.AreEqual((201, """{"id":"r1"}"""), ((int)response.StatusCode, await response.Content.ReadAsStringAsync()));
+        Assert.IsNotNull(seen, "the action saw an empty body");
+        Assert.AreEqual((AudienceKind.SampleCount, 5, 90), (seen.Audience.Kind, seen.Audience.Count!.Value, seen.WindowSeconds!.Value));
+        Assert.AreEqual(new[] { 12 }, seen.Targets.FloNodeIds);
+        Assert.AreEqual(ActingAdmin, seenAdmin);
     }
 
     [Test]

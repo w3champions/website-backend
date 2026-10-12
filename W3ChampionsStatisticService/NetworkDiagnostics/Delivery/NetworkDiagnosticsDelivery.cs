@@ -41,6 +41,21 @@ public static class DeliveryRules
         if (now < a.DeliverAfter || now >= a.DeliverBy) return false;
         return !run.IsFleet || a.DeliveredAt != null || (run.WindowEnd is { } end && now < end);
     }
+
+    /// <summary>
+    /// True for a Pending assignment that no later push can deliver: its run does not exist (the run insert failed
+    /// after the assignment insert), its run is cancelled (the cancel's sweep failed), or it belongs to a fleet run
+    /// whose window closed before its first delivery (A6; WindowEnd itself is outside the window).
+    /// A missing run counts only once the assignment is due for <see cref="NetDiagConstants.OrphanGrace"/>: a run
+    /// that is being created has its assignments stored a moment before the run itself.
+    /// </summary>
+    public static bool NeverDeliverable(NetworkDiagnosticAssignment a, NetworkDiagnosticRun run, DateTime now)
+    {
+        if (a.Status != AssignmentStatus.Pending) return false;
+        if (run == null) return a.DeliverAfter + NetDiagConstants.OrphanGrace <= now;
+        if (run.CancelledAt != null) return true;
+        return run.IsFleet && a.DeliveredAt == null && run.WindowEnd is { } end && now >= end;
+    }
 }
 
 public interface INetworkDiagnosticsDelivery
@@ -50,8 +65,10 @@ public interface INetworkDiagnosticsDelivery
 
     /// <summary>
     /// The one push loop (on-connect and dispatcher): looks each run up once, pushes every assignment that
-    /// <see cref="DeliveryRules.IsDeliverable"/> allows, and marks first deliveries. A failure for one assignment is
-    /// logged and the rest are still pushed. Returns how many assignments reached at least one connection.
+    /// <see cref="DeliveryRules.IsDeliverable"/> allows, and marks first deliveries. An assignment that can never be
+    /// pushed again (<see cref="DeliveryRules.NeverDeliverable"/>) is expired, so it does not come back in the
+    /// dispatcher's next batch. A failure for one assignment is logged and the rest are still pushed. Returns how
+    /// many assignments reached at least one connection.
     /// </summary>
     Task<int> PushDueAsync(IReadOnlyCollection<NetworkDiagnosticAssignment> assignments, DateTime now);
 
@@ -92,6 +109,7 @@ public sealed class NetworkDiagnosticsDelivery(
     public async Task<int> PushDueAsync(IReadOnlyCollection<NetworkDiagnosticAssignment> due, DateTime now)
     {
         var runCache = new Dictionary<string, NetworkDiagnosticRun>();
+        var swept = new HashSet<string>();
         var pushed = 0;
         foreach (var assignment in due)
         {
@@ -101,6 +119,12 @@ public sealed class NetworkDiagnosticsDelivery(
                 {
                     run = await runs.GetAsync(assignment.RunId);
                     runCache[assignment.RunId] = run;
+                }
+                if (DeliveryRules.NeverDeliverable(assignment, run, now))
+                {
+                    // One sweep per run and call covers every such assignment of the run, in this batch or not.
+                    if (swept.Add(assignment.RunId)) await ExpireNeverDeliverableAsync(assignment.RunId, run);
+                    continue;
                 }
                 if (run != null && DeliveryRules.IsDeliverable(assignment, run, now) && await PushAsync(assignment, run))
                 {
@@ -189,12 +213,44 @@ public sealed class NetworkDiagnosticsDelivery(
         var current = await runs.GetAsync(runId);
         if (current?.CancelledAt == null) return false;
 
-        var expired = await assignments.ExpireAllPendingAsync(runId);
+        await ExpireAndCountAsync(runId, assignments.ExpireAllPendingAsync);
+        return true;
+    }
+
+    /// <summary>
+    /// What <see cref="DeliveryRules.NeverDeliverable"/> found, expired for the whole run: every Pending assignment
+    /// of a missing or cancelled run; of a fleet run past its window only the never delivered ones, because a
+    /// delivered one may still be submitted until DeliverBy.
+    /// </summary>
+    private async Task ExpireNeverDeliverableAsync(string runId, NetworkDiagnosticRun run)
+    {
+        if (run == null)
+        {
+            // No run, so no counter. Run id only: the assignments carry tokens.
+            var orphans = await assignments.ExpireAllPendingAsync(runId);
+            log.LogWarning("Network diagnostics: expired {Expired} assignments of run {RunId}, which does not exist", orphans, runId);
+            return;
+        }
+        var expired = await ExpireAndCountAsync(runId, run.CancelledAt != null ? assignments.ExpireAllPendingAsync : assignments.ExpireUndeliveredAsync);
+        if (expired > 0)
+        {
+            log.LogInformation("Network diagnostics: expired {Expired} assignments of run {RunId} that could no longer be delivered", expired, runId);
+        }
+    }
+
+    /// <summary>
+    /// The one place that expires a run's assignments outside the DeliverBy sweep and puts them on its expired
+    /// counter. The update reports only the documents it changed, so concurrent or repeated sweeps never count an
+    /// assignment twice.
+    /// </summary>
+    private async Task<int> ExpireAndCountAsync(string runId, Func<string, Task<int>> expire)
+    {
+        var expired = await expire(runId);
         if (expired > 0)
         {
             await runs.IncrementCountersAsync(runId, expired: expired);
         }
-        return true;
+        return expired;
     }
 
     private static NetworkDiagnosticsRequestDto ToDto(NetworkDiagnosticAssignment a, NetworkDiagnosticRun run) => new(

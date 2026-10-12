@@ -14,7 +14,8 @@ public interface INetworkDiagnosticsSubmissionService
 {
     /// <param name="readBody">
     /// Reads and parses the request body; returns the submission or the text of a 400. It is called only after the
-    /// caller proved to own the measurement and to hold its token, so nothing is read or inflated for anyone else.
+    /// caller proved to own the measurement and to hold its token, and only while the slot can still be submitted:
+    /// nothing is read or inflated for anyone else, nor for a slot that is already used, expired or cancelled.
     /// </param>
     /// <param name="remoteIp">The peer's public IPv4 address, or null; used when the body reports no public_ipv4.</param>
     Task<NetDiagResult> SubmitAsync(
@@ -53,15 +54,17 @@ public sealed class NetworkDiagnosticsSubmissionService(
         var existing = await assignments.GetAsync(routeMeasurementId);
         if (existing == null || existing.BattleTag != actingPlayer || !MeasurementTokens.Matches(existing.Token, token)) return Forbidden;
 
+        // The slot's state comes before the body: the token stays valid after a submit, and its holder must not be
+        // able to make the server inflate and parse 8 MB per request for a slot that can only answer 409.
+        var now = time.GetUtcNow().UtcDateTime;
+        var rejection = Rejection(existing, now);
+        if (rejection != null) return rejection;
+
         var (dto, bodyError) = await readBody();
         if (bodyError != null) return NetDiagResult.Error(400, bodyError);
         // Nothing below runs on a body that is over a cap.
         var invalid = SubmissionValidator.ValidateSubmission(dto, routeMeasurementId);
         if (invalid != null) return NetDiagResult.Error(400, invalid);
-
-        var now = time.GetUtcNow().UtcDateTime;
-        var rejection = Rejection(existing, now);
-        if (rejection != null) return rejection;
 
         // Everything that can fail on the content is done while the slot is still Pending: a failure here is a 500
         // the launcher can retry. `now` is also what the conditional update stores as SubmittedAt.

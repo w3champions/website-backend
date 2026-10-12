@@ -107,11 +107,18 @@ public partial class NetworkDiagnosticsResultRepository(MongoClient mongoClient)
         {
             await IpInfo.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false });
         }
-        catch (MongoBulkWriteException e) when (e.WriteErrors.All(w => w.Category == ServerErrorCategory.DuplicateKey))
+        catch (MongoBulkWriteException e) when (OnlyDuplicateKeys(e))
         {
             // Two concurrent submits upserting the same (RunId, Ip): the loser's row already exists, which is the goal.
         }
     }
+
+    /// <summary>
+    /// True when the bulk write failed on duplicate keys and on nothing else. A failure without any write error (a
+    /// write-concern error alone) is not one: "all of no errors" would otherwise pass as a duplicate.
+    /// </summary>
+    public static bool OnlyDuplicateKeys(MongoBulkWriteException e) =>
+        e.WriteErrors.Count > 0 && e.WriteErrors.All(w => w.Category == ServerErrorCategory.DuplicateKey);
 
     public Task<NetworkDiagnosticMeasurement> GetMeasurementAsync(string id) =>
         Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.Eq(x => x.Id, id), AdminFind).FirstOrDefaultAsync();

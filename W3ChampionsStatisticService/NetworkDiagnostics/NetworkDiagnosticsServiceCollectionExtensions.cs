@@ -36,7 +36,7 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         services.AddSingleton<IRandom, SystemRandom>();
         // Plain AddSingleton, no tracing interception: this service handles measurement tokens (A10).
         services.AddSingleton<INetworkDiagnosticsDelivery, NetworkDiagnosticsDelivery>();
-        // Plain AddSingleton as well (tokens). The optional TimeSpan? ctor parameter needs a factory.
+        // Plain AddSingleton as well (tokens).
         services.AddSingleton<INetworkDiagnosticsScheduler, NetworkDiagnosticsScheduler>();
         // Plain AddTransient, no tracing interception: it creates assignments and so sees their tokens (A10).
         // The controller's [Trace] gives the span.
@@ -47,6 +47,7 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         services.AddInterceptedTransient<INetworkDiagnosticsQueryService, NetworkDiagnosticsQueryService>();
         // gzip request bodies of the C5 submit; UseNetworkDiagnosticsRequestDecompression mounts it for that path only.
         services.AddRequestDecompression();
+        // A factory: the container cannot supply the dispatcher's optional TimeSpan? interval parameter.
         services.AddHostedService(sp => new NetworkDiagnosticsDispatcher(
             sp.GetRequiredService<INetworkDiagnosticsScheduler>(),
             sp.GetRequiredService<TimeProvider>(),

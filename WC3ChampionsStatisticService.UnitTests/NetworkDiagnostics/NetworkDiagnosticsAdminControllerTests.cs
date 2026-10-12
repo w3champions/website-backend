@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
@@ -30,6 +31,7 @@ public class NetworkDiagnosticsAdminControllerTests
     private Mock<INetworkDiagnosticsRunService> _service;
     private Mock<INetworkDiagnosticsQueryService> _queries;
     private NetworkDiagnosticsAdminController _controller;
+    private ListLogger<NetworkDiagnosticsAdminController> _log;
 
     [SetUp]
     public void SetUp()
@@ -37,7 +39,8 @@ public class NetworkDiagnosticsAdminControllerTests
         // Strict: an action that answers 400 on its own must not have reached the service.
         _service = new Mock<INetworkDiagnosticsRunService>(MockBehavior.Strict);
         _queries = new Mock<INetworkDiagnosticsQueryService>(MockBehavior.Strict);
-        _controller = new NetworkDiagnosticsAdminController(_service.Object, _queries.Object)
+        _log = new ListLogger<NetworkDiagnosticsAdminController>();
+        _controller = new NetworkDiagnosticsAdminController(_service.Object, _queries.Object, _log)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -276,7 +279,7 @@ public class NetworkDiagnosticsAdminControllerTests
 
         IActionResult[] results =
         [
-            await _controller.ListMeasurements(new NetDiagQuery { Method = "TcpPing" }),
+            await _controller.ListMeasurements(new NetDiagQuery { Method = "TcpPing", BattleTag = "Name#1234", TargetIp = "203.0.113.9" }),
             await _controller.GetMeasurement("m1"),
             await _controller.GetRun("r1"),
             await _controller.ListRuns(null, null, null),
@@ -287,6 +290,28 @@ public class NetworkDiagnosticsAdminControllerTests
             Assert.AreEqual((503, """{"error":"query_timeout"}"""), (((ObjectResult)result).StatusCode, Json(result)));
         }
         Assert.IsFalse(_controller.Response.Headers.ContainsKey("X-NetDiag-Truncated"));
+
+        // One warning per timed-out request names the action, so a slow query shows up in the log. It carries neither
+        // filter values nor a BattleTag, and not the driver's message (which can quote the command).
+        var warnings = _log.AllText.Split('\n');
+        string[] actions = ["ListMeasurements", "GetMeasurement", "GetRun", "ListRuns"];
+        Assert.AreEqual(actions.Length, _log.Count(LogLevel.Warning));
+        Assert.AreEqual(actions.Length, warnings.Length, "one line each: no exception text is attached");
+        for (var i = 0; i < actions.Length; i++) StringAssert.Contains($" {actions[i]} ", warnings[i]);
+        foreach (var leaked in new[] { "TcpPing", "Name#1234", "203.0.113.9", "command failed", "operation exceeded" })
+        {
+            StringAssert.DoesNotContain(leaked, _log.AllText);
+        }
+    }
+
+    [Test]
+    public async Task AnAnswerThatIsNotATimeout_LogsNothing()
+    {
+        _service.Setup(s => s.GetRunAsync("r1")).ReturnsAsync(NetDiagResult.Error(404, "not_found"));
+
+        await _controller.GetRun("r1");
+
+        Assert.AreEqual(0, _log.Count(LogLevel.Warning));
     }
 
     // A caller that hung up is not a failure of the service: no unhandled exception, no query_timeout.

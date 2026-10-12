@@ -86,10 +86,6 @@ public static class ObservationFormats
         _ => null,
     };
 
-    public static string ToCsv(IEnumerable<ObservationDto> rows) => Csv.Preamble + Csv.Render(rows);
-
-    public static string ToNdjson(IEnumerable<ObservationDto> rows) => Ndjson.Preamble + Ndjson.Render(rows);
-
     private static string Cell(object value) => value switch
     {
         null => "",

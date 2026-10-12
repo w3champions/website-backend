@@ -45,7 +45,7 @@ public class ObservationStreamResultTests
 
         await Execute(rows, ObservationFormats.Csv);
 
-        Assert.AreEqual(ObservationFormats.ToCsv([ObservationDto.From(Obs("m1")), ObservationDto.From(Obs("m2")), ObservationDto.From(Obs("m3"))]), Written);
+        Assert.AreEqual(ObservationText.ToCsv([ObservationDto.From(Obs("m1")), ObservationDto.From(Obs("m2")), ObservationDto.From(Obs("m3"))]), Written);
         Assert.AreEqual((200, "text/csv; charset=utf-8"), (_http.Response.StatusCode, _http.Response.ContentType));
         Assert.IsFalse(_lifetime.Aborted);
     }

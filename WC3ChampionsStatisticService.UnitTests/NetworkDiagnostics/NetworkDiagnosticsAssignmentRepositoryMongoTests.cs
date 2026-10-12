@@ -44,6 +44,32 @@ public class NetworkDiagnosticsAssignmentRepositoryMongoTests
         Assert.IsTrue(indexes.Any(i => i["key"].AsBsonDocument.Names.SequenceEqual(["RunId", "BattleTag"]) && i.GetValue("unique", false).ToBoolean()));
     }
 
+    // The WindowEnd sweep of the push loop: only Pending assignments of that run that were never delivered.
+    [Test]
+    public async Task ExpireUndelivered_ExpiresOnlyNeverDeliveredPendingOnesOfTheRun()
+    {
+        var undelivered = New(tag: "A#1111");
+        var alsoUndelivered = New(tag: "B#2222");
+        var delivered = New(tag: "C#3333");
+        var submitted = New(tag: "D#4444");
+        var otherRun = New(runId: "run-2", tag: "A#1111");
+        await _repo.InsertManyAsync([undelivered, alsoUndelivered, delivered, submitted, otherRun]);
+        Assert.IsTrue(await _repo.TryMarkDeliveredAsync(delivered.Id, Now));
+        Assert.IsNotNull(await _repo.TrySubmitAsync(submitted.Id, submitted.BattleTag, Now));
+
+        Assert.AreEqual(2, await _repo.ExpireUndeliveredAsync("run-1"));
+        Assert.AreEqual(0, await _repo.ExpireUndeliveredAsync("run-1"), "a second sweep finds nothing: the count is exact");
+
+        Assert.AreEqual(AssignmentStatus.Expired, (await _repo.GetAsync(undelivered.Id)).Status);
+        Assert.AreEqual(AssignmentStatus.Expired, (await _repo.GetAsync(alsoUndelivered.Id)).Status);
+        Assert.AreEqual(AssignmentStatus.Pending, (await _repo.GetAsync(delivered.Id)).Status);
+        Assert.AreEqual(AssignmentStatus.Submitted, (await _repo.GetAsync(submitted.Id)).Status);
+        Assert.AreEqual(AssignmentStatus.Pending, (await _repo.GetAsync(otherRun.Id)).Status);
+        // What was expired no longer reaches the dispatcher's push batch.
+        Assert.AreEqual(new[] { otherRun.Id },
+            (await _repo.DueUndeliveredAsync(["A#1111", "B#2222", "C#3333", "D#4444"], Now, 500)).Select(a => a.Id).ToArray());
+    }
+
     [Test]
     public async Task TrySubmit_SecondCallFails()
     {

@@ -31,12 +31,12 @@ public class NetDiagTargetsConfigTests
     {
         var cfg = NetDiagTargetsConfig.FromEnvironment(Env(new()
         {
-            ["NETDIAG_CORE_SERVERS"] = """[{"key":"bigboi","label":"bigboi","ip":"157.90.1.251","tcpPort":443}]""",
+            ["NETDIAG_CORE_SERVERS"] = """[{"key":"bigboi","label":"bigboi","ip":"203.0.113.10","tcpPort":443}]""",
             ["NETDIAG_BASELINES"] = """[{"key":"cloudflare","label":"Cloudflare 1.1.1.1","region":"global","ip":"1.1.1.1","tcpPort":443}]""",
             ["GEOIP_CITY_DB_PATH"] = "/x/city.mmdb",
         }));
 
-        Assert.AreEqual(new CoreServerConfig { Key = "bigboi", Label = "bigboi", Ip = "157.90.1.251", TcpPort = 443 }, cfg.CoreServers.Single());
+        Assert.AreEqual(new CoreServerConfig { Key = "bigboi", Label = "bigboi", Ip = "203.0.113.10", TcpPort = 443 }, cfg.CoreServers.Single());
         Assert.AreEqual("global", cfg.Baselines.Single().Region);
         Assert.AreEqual("/x/city.mmdb", cfg.GeoIpCityDbPath);
     }
@@ -61,7 +61,7 @@ public class NetDiagTargetsConfigTests
     {
         var cfg = NetDiagTargetsConfig.FromEnvironment(Env(new()
         {
-            ["NETDIAG_CORE_SERVERS"] = """[{"key":"bigboi","label":"bigboi","ip":"157.90.1.251","tcpPort":443}]""",
+            ["NETDIAG_CORE_SERVERS"] = """[{"key":"bigboi","label":"bigboi","ip":"203.0.113.10","tcpPort":443}]""",
         }));
         var targets = new RunTargets
         {
@@ -74,16 +74,16 @@ public class NetDiagTargetsConfigTests
 
         Assert.AreEqual(new[]
         {
-            new RunEndpoint { TargetKey = "core:bigboi", Label = "bigboi", Ip = "157.90.1.251", TcpPort = 443 },
+            new RunEndpoint { TargetKey = "core:bigboi", Label = "bigboi", Ip = "203.0.113.10", TcpPort = 443 },
             new RunEndpoint { TargetKey = "baseline:cloudflare", Label = "Cloudflare 1.1.1.1", Ip = "1.1.1.1", TcpPort = 443 },
             new RunEndpoint { TargetKey = "custom:10.0.0.5:443", Label = "10.0.0.5:443", Ip = "10.0.0.5", TcpPort = 443 },
         }, endpoints);
     }
 
     // The launcher drops a whole push when an endpoint's label is null, so a missing or blank label becomes the key.
-    [TestCase("""[{"key":"bigboi","ip":"157.90.1.251","tcpPort":443}]""")]
-    [TestCase("""[{"key":"bigboi","label":null,"ip":"157.90.1.251","tcpPort":443}]""")]
-    [TestCase("""[{"key":"bigboi","label":"  ","ip":"157.90.1.251","tcpPort":443}]""")]
+    [TestCase("""[{"key":"bigboi","ip":"203.0.113.10","tcpPort":443}]""")]
+    [TestCase("""[{"key":"bigboi","label":null,"ip":"203.0.113.10","tcpPort":443}]""")]
+    [TestCase("""[{"key":"bigboi","label":"  ","ip":"203.0.113.10","tcpPort":443}]""")]
     public void MissingLabel_FallsBackToTheKey(string json)
     {
         var cfg = NetDiagTargetsConfig.FromEnvironment(Env(new() { ["NETDIAG_CORE_SERVERS"] = json, ["NETDIAG_BASELINES"] = json }));

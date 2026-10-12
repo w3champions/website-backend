@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -83,6 +84,100 @@ public class NetworkDiagnosticsSchedulerTests
         // Deliverability, per-assignment failure handling and run lookup live in PushDueAsync (Task 9).
         _delivery.Verify(d => d.PushDueAsync(It.Is<IReadOnlyCollection<NetworkDiagnosticAssignment>>(l => l.Count == 2 && l.Contains(first) && l.Contains(second)), Now), Times.Once);
         _delivery.Verify(d => d.PushAsync(It.IsAny<NetworkDiagnosticAssignment>(), It.IsAny<NetworkDiagnosticRun>()), Times.Never);
+    }
+
+    /// <summary>The real scheduler and delivery service over an in-memory assignment collection; returns what was pushed.</summary>
+    private (NetworkDiagnosticsScheduler Scheduler, InMemoryAssignments Assignments, List<string> PushedMeasurementIds) RealPushStack()
+    {
+        var assignments = new InMemoryAssignments();
+        var pushed = new List<string>();
+        var proxy = new Mock<IClientProxy>();
+        proxy.Setup(p => p.SendCoreAsync(NetDiagConstants.HubEventName, It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object[], CancellationToken>((_, args, _) => pushed.Add(((NetworkDiagnosticsRequestDto)args[0]).MeasurementId))
+            .Returns(Task.CompletedTask);
+        var clients = new Mock<IHubClients>();
+        clients.Setup(c => c.Clients(It.IsAny<IReadOnlyList<string>>())).Returns(proxy.Object);
+        var hub = new Mock<IHubContext<WebsiteBackendHub>>();
+        hub.Setup(h => h.Clients).Returns(clients.Object);
+        var clock = new FixedTimeProvider(new DateTimeOffset(Now));
+        var delivery = new NetworkDiagnosticsDelivery(hub.Object, _connections, _runs.Object, assignments, clock, new QueueRandom(0.0),
+            NullLogger<NetworkDiagnosticsDelivery>.Instance);
+        var scheduler = new NetworkDiagnosticsScheduler(_connections, _runs.Object, assignments, delivery, clock, new QueueRandom(0.0),
+            NullLogger<NetworkDiagnosticsScheduler>.Instance);
+        return (scheduler, assignments, pushed);
+    }
+
+    // The push batch is the 500 oldest due assignments. Ones that can never be pushed (their run was never stored,
+    // or it was cancelled and the sweep failed) must leave the batch for good: here they are more than two batches
+    // deep and all older than the one assignment of a healthy run.
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Tick_AssignmentsThatCanNeverBePushed_NeverBlockALaterRunsPush(bool cancelledInsteadOfMissing)
+    {
+        const int users = 400;
+        string[] deadRuns = ["dead-1", "dead-2", "dead-3"];
+        var tags = Enumerable.Range(0, users).Select(i => $"Player{i}#1000").ToArray();
+        Online(tags);
+        var (scheduler, assignments, pushed) = RealPushStack();
+        for (var r = 0; r < deadRuns.Length; r++)
+        {
+            foreach (var tag in tags)
+            {
+                assignments.Rows.Add(AssignmentFactory.Create(deadRuns[r], tag, Now.AddMinutes(-30 + r), Now.AddDays(14)));
+            }
+            _runs.Setup(x => x.GetAsync(deadRuns[r])).ReturnsAsync(cancelledInsteadOfMissing
+                ? new NetworkDiagnosticRun { Id = deadRuns[r], Audience = new RunAudience { Kind = AudienceKind.Users }, Targets = new RunTargets(), CancelledAt = Now.AddHours(-1) }
+                : null);
+        }
+        var healthy = new NetworkDiagnosticRun { Id = "healthy", Audience = new RunAudience { Kind = AudienceKind.Users }, Targets = new RunTargets(), WindowSeconds = 60 };
+        _runs.Setup(x => x.GetAsync("healthy")).ReturnsAsync(healthy);
+        var wanted = AssignmentFactory.Create("healthy", tags[0], Now.AddMinutes(-1), Now.AddDays(14));
+        assignments.Rows.Add(wanted);
+        Assert.Greater(deadRuns.Length * users, 2 * NetworkDiagnosticsScheduler.PushBatchLimit);
+
+        await scheduler.TickAsync(CancellationToken.None);
+        await scheduler.TickAsync(CancellationToken.None);
+
+        Assert.AreEqual(new[] { wanted.Id }, pushed);
+        Assert.IsNotNull(assignments.Rows.Single(a => a.Id == wanted.Id).DeliveredAt);
+        Assert.IsTrue(assignments.Rows.Where(a => a.RunId != "healthy").All(a => a.Status == AssignmentStatus.Expired));
+        foreach (var dead in deadRuns)
+        {
+            // A cancelled run counts what the sweep expired, exactly once; a run that does not exist has no counter.
+            _runs.Verify(x => x.IncrementCountersAsync(dead, 0, 0, 0, users), cancelledInsteadOfMissing ? Times.Once : Times.Never);
+        }
+        _runs.Verify(x => x.IncrementCountersAsync("healthy", 0, 1, 0, 0), Times.Once);
+    }
+
+    // Undelivered fleet assignments between WindowEnd and DeliverBy get no first delivery any more (A6); they leave
+    // the batch as well, and the run's expired counter gets them once.
+    [Test]
+    public async Task Tick_FleetAssignmentsNeverDeliveredByWindowEnd_AreExpiredAndCounted_AndDoNotBlockTheBatch()
+    {
+        const int users = 600;
+        var tags = Enumerable.Range(0, users).Select(i => $"Player{i}#1000").ToArray();
+        Online(tags);
+        var (scheduler, assignments, pushed) = RealPushStack();
+        var closed = CountRun(users, 0) with { Id = "closed", WindowStart = Now.AddMinutes(-31), WindowEnd = Now.AddMinutes(-1) };
+        _runs.Setup(x => x.GetAsync("closed")).ReturnsAsync(closed);
+        foreach (var tag in tags)
+        {
+            assignments.Rows.Add(AssignmentFactory.Create("closed", tag, Now.AddMinutes(-20), DeliveryRules.FleetDeliverBy(closed)));
+        }
+        // Delivered before the window closed: its launcher may still submit during the grace period.
+        var delivered = AssignmentFactory.Create("closed", "Late#2000", Now.AddMinutes(-20), DeliveryRules.FleetDeliverBy(closed)) with { DeliveredAt = Now.AddMinutes(-5) };
+        assignments.Rows.Add(delivered);
+        _runs.Setup(x => x.GetAsync("healthy")).ReturnsAsync(new NetworkDiagnosticRun { Id = "healthy", Audience = new RunAudience { Kind = AudienceKind.Users }, Targets = new RunTargets() });
+        var wanted = AssignmentFactory.Create("healthy", tags[0], Now.AddMinutes(-1), Now.AddDays(14));
+        assignments.Rows.Add(wanted);
+
+        await scheduler.TickAsync(CancellationToken.None);
+        await scheduler.TickAsync(CancellationToken.None);
+
+        Assert.AreEqual(new[] { wanted.Id }, pushed);
+        Assert.AreEqual(users, assignments.Rows.Count(a => a.RunId == "closed" && a.Status == AssignmentStatus.Expired));
+        Assert.AreEqual(AssignmentStatus.Pending, assignments.Rows.Single(a => a.Id == delivered.Id).Status);
+        _runs.Verify(x => x.IncrementCountersAsync("closed", 0, 0, 0, users), Times.Once);
     }
 
     [Test]

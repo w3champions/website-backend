@@ -23,6 +23,11 @@ public interface INetworkDiagnosticsAssignmentRepository
     Task<NetworkDiagnosticAssignment> TrySubmitAsync(string id, string battleTag, DateTime now);
     Task<Dictionary<string, int>> ExpireOverdueAsync(DateTime now);
     Task<int> ExpireAllPendingAsync(string runId);
+    /// <summary>
+    /// Expires the run's Pending assignments that were never delivered and returns how many. Delivered ones stay
+    /// Pending: their launcher may still submit until DeliverBy.
+    /// </summary>
+    Task<int> ExpireUndeliveredAsync(string runId);
 }
 
 [Trace]
@@ -112,6 +117,11 @@ public class NetworkDiagnosticsAssignmentRepository(MongoClient mongoClient)
     public async Task<int> ExpireAllPendingAsync(string runId) =>
         (int)(await Collection.UpdateManyAsync(
             F.Eq(x => x.RunId, runId) & F.Eq(x => x.Status, AssignmentStatus.Pending),
+            U.Set(x => x.Status, AssignmentStatus.Expired))).ModifiedCount;
+
+    public async Task<int> ExpireUndeliveredAsync(string runId) =>
+        (int)(await Collection.UpdateManyAsync(
+            F.Eq(x => x.RunId, runId) & F.Eq(x => x.Status, AssignmentStatus.Pending) & F.Eq(x => x.DeliveredAt, null),
             U.Set(x => x.Status, AssignmentStatus.Expired))).ModifiedCount;
 
     public Task EnsureIndexesAsync()

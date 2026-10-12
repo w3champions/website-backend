@@ -11,11 +11,6 @@ public class FloNodeInfo
     public string Name { get; set; }
     public string Location { get; set; }
     public string CountryId { get; set; }
-
-    /// <summary>The node's IP address (MM splits flo's "ip:port" into ipAddress + port). Null when MM omits it.</summary>
-    public string IpAddress { get; set; }
-
-    public int? Port { get; set; }
     public FloNodeInfoSettings Settings { get; set; } = new();
 }
 

@@ -106,7 +106,15 @@ public sealed class NetworkDiagnosticsRunService(
 
         // Assignments first: a crash in between leaves orphans that expire, never a run that claims assignments it lacks.
         await assignments.InsertManyAsync(created);
-        await runs.InsertAsync(run);
+        try
+        {
+            await runs.InsertAsync(run);
+        }
+        catch
+        {
+            await ExpireOrphansAsync(run.Id);
+            throw;
+        }
         log.LogInformation("Network diagnostics run {RunId} created by {CreatedBy}: {Kind}, {Assigned} assignments, {Targets} targets",
             run.Id, createdBy, run.Audience.Kind, created.Count, targetCount);
 
@@ -114,6 +122,24 @@ public sealed class NetworkDiagnosticsRunService(
         // now: push the users that are online; the others get it when they connect.
         if (!isFleet) await PushToOnlineUsersAsync(run, created, now);
         return NetDiagResult.Created(RunDto.From(run));
+    }
+
+    /// <summary>
+    /// The run was not stored, so its assignments belong to no run: they are expired at once instead of waiting for
+    /// DeliverBy. Never throws: the caller rethrows the failure of the run insert, which is the one the admin must
+    /// see. Whatever stays Pending here is expired by the push loop when it meets an assignment without a run.
+    /// </summary>
+    private async Task ExpireOrphansAsync(string runId)
+    {
+        try
+        {
+            var expired = await assignments.ExpireAllPendingAsync(runId);
+            log.LogWarning("Network diagnostics: storing run {RunId} failed; its {Expired} assignments were expired", runId, expired);
+        }
+        catch (Exception e)
+        {
+            log.LogError(e, "Network diagnostics: storing run {RunId} failed and expiring its assignments failed as well; the dispatcher expires them when they come due", runId);
+        }
     }
 
     /// <summary>
@@ -199,9 +225,11 @@ public sealed class NetworkDiagnosticsRunService(
         var cancelled = await runs.TryCancelAsync(id, Now());
         if (cancelled == null)
         {
-            return await runs.GetAsync(id) == null
-                ? NetDiagResult.Error(404, "not_found")
-                : NetDiagResult.Error(409, "already_cancelled");
+            if (await runs.GetAsync(id) == null) return NetDiagResult.Error(404, "not_found");
+            // The earlier cancel may have failed between setting CancelledAt and the sweep below. The sweep is
+            // idempotent and counts only what it expires, so the retry completes it; a failure here is a 500 again.
+            await delivery.ExpireIfCancelledAsync(id);
+            return NetDiagResult.Error(409, "already_cancelled");
         }
         var expired = await assignments.ExpireAllPendingAsync(id);
         if (expired > 0) await runs.IncrementCountersAsync(id, expired: expired);

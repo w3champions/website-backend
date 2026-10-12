@@ -209,6 +209,23 @@ public class NetworkDiagnosticsResultsControllerTests
         VerifyNothingStored();
     }
 
+    // A used or expired slot is answered from its state alone: nothing is read from the request, inflated or parsed,
+    // so a body that would be a 400 (here: not gzip at all) is a 409 as well.
+    [TestCase(AssignmentStatus.Submitted, "already_submitted")]
+    [TestCase(AssignmentStatus.Expired, "expired")]
+    public async Task AFinishedSlot_409_BeforeTheBodyIsRead(string status, string error)
+    {
+        _assignment = _assignment with { Status = status };
+        var body = new ReadCountingStream(Utf8("not gzip, not json"));
+
+        var result = await Submit(body);
+
+        Assert.AreEqual(409, result.StatusCode);
+        Assert.AreEqual($$"""{"error":"{{error}}"}""", Json(result));
+        Assert.AreEqual(0, body.Reads, "no read call reached the request stream");
+        VerifyNothingStored();
+    }
+
     [Test]
     public async Task InsertFailure_500()
     {

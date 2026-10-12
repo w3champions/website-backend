@@ -57,7 +57,7 @@ public class NetworkDiagnosticsDeliveryTests
         Id = "run-1",
         Audience = new RunAudience { Kind = AudienceKind.Users, BattleTags = ["Name#1234"] },
         Targets = new RunTargets { FloNodeIds = [12], CoreServers = ["bigboi"], IncludeDefaultGateway = true },
-        ResolvedEndpoints = [new RunEndpoint { TargetKey = "core:bigboi", Label = "bigboi", Ip = "157.90.1.251", TcpPort = 443 }],
+        ResolvedEndpoints = [new RunEndpoint { TargetKey = "core:bigboi", Label = "bigboi", Ip = "203.0.113.10", TcpPort = 443 }],
         Methods = ["IcmpMtr", "TcpPing"],
         WindowSeconds = 60,
     };
@@ -72,6 +72,9 @@ public class NetworkDiagnosticsDeliveryTests
 
     private static NetworkDiagnosticAssignment Assignment(string runId = "run-1") =>
         AssignmentFactory.Create(runId, "Name#1234", Now.AddMinutes(-1), Now.AddDays(14));
+
+    /// <summary>An assignment of a run that was never stored, due long enough that the run cannot still be on its way.</summary>
+    private static NetworkDiagnosticAssignment Orphan() => Assignment("gone") with { DeliverAfter = Now - NetDiagConstants.OrphanGrace };
 
     // SendAsync(method, arg) is an extension that calls SendCoreAsync(method, new[] { arg }, ct).
     private NetworkDiagnosticsRequestDto SentPayload(int call = 0) =>
@@ -316,6 +319,128 @@ public class NetworkDiagnosticsDeliveryTests
         Assert.IsEmpty(_proxy.Invocations);
     }
 
+    // A cancel whose sweep failed leaves Pending assignments in a cancelled run. They can never be pushed, so the
+    // push loop finishes the sweep (once per run) instead of meeting them again on every tick.
+    [Test]
+    public async Task PushDue_CancelledRun_ExpiresItsPendingLeftovers_AndCountsThemOnce()
+    {
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        _runs.Setup(r => r.GetAsync("run-1")).ReturnsAsync(UsersRun() with { CancelledAt = Now.AddMinutes(-1) });
+        _assignments.Setup(x => x.ExpireAllPendingAsync("run-1")).ReturnsAsync(2);
+
+        Assert.AreEqual(0, await _delivery.PushDueAsync([Assignment(), Assignment()], Now));
+
+        Assert.IsEmpty(_proxy.Invocations);
+        _assignments.Verify(x => x.ExpireAllPendingAsync("run-1"), Times.Once);
+        _runs.Verify(r => r.IncrementCountersAsync("run-1", 0, 0, 0, 2), Times.Once);
+    }
+
+    // Assignments whose run was never stored (the run insert failed after the assignment insert) are expired, once
+    // per run id. There is no run, so there is no counter to update.
+    [Test]
+    public async Task PushDue_RunDoesNotExist_ExpiresTheOrphans_WithoutACounter()
+    {
+        var log = new ListLogger<NetworkDiagnosticsDelivery>();
+        var delivery = Delivery(log);
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        var first = Orphan();
+        var second = Orphan();
+        _runs.Setup(r => r.GetAsync("gone")).ReturnsAsync((NetworkDiagnosticRun)null);
+        _assignments.Setup(x => x.ExpireAllPendingAsync("gone")).ReturnsAsync(2);
+
+        Assert.AreEqual(0, await delivery.PushDueAsync([first, second], Now));
+
+        Assert.IsEmpty(_proxy.Invocations);
+        _assignments.Verify(x => x.ExpireAllPendingAsync("gone"), Times.Once);
+        _runs.Verify(r => r.IncrementCountersAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        Assert.AreEqual(1, log.Count(LogLevel.Warning));
+        StringAssert.Contains("gone", log.AllText);
+        StringAssert.DoesNotContain(first.Token, log.AllText);
+    }
+
+    // A run is stored one round trip after its assignments. A push in between (dispatcher tick, a user connecting)
+    // sees due assignments without a run: they are left alone until the run is certain never to arrive.
+    [TestCase(-1, false)]  // one tick short of the grace: could still be a run that is being created
+    [TestCase(0, true)]
+    [TestCase(1, true)]
+    public async Task PushDue_RunDoesNotExist_OnlyAssignmentsDueForTheOrphanGraceAreExpired(long ticksPastTheGrace, bool expired)
+    {
+        var dueSince = NetDiagConstants.OrphanGrace + TimeSpan.FromTicks(ticksPastTheGrace);
+        _runs.Setup(r => r.GetAsync("gone")).ReturnsAsync((NetworkDiagnosticRun)null);
+
+        Assert.AreEqual(0, await _delivery.PushDueAsync([Assignment("gone") with { DeliverAfter = Now - dueSince }], Now));
+
+        _assignments.Verify(x => x.ExpireAllPendingAsync("gone"), expired ? Times.Once : Times.Never);
+    }
+
+    // A6: a fleet assignment gets no first delivery after WindowEnd, so from then on an undelivered one is dead
+    // weight until DeliverBy (15 min later). It is expired and counted; WindowEnd itself is already outside the window.
+    [TestCase(1, true)]    // one tick before WindowEnd: still pushed
+    [TestCase(0, false)]   // at WindowEnd: expired
+    [TestCase(-1, false)]  // after WindowEnd: expired
+    public async Task PushDue_FleetRunPastWindowEnd_ExpiresNeverDeliveredAssignments_AndCountsThem(long ticksUntilWindowEnd, bool pushed)
+    {
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        var run = FleetRun(Now.AddTicks(ticksUntilWindowEnd));
+        var undelivered = AssignmentFactory.Create(run.Id, "Name#1234", Now.AddMinutes(-20), DeliveryRules.FleetDeliverBy(run));
+        _runs.Setup(r => r.GetAsync(run.Id)).ReturnsAsync(run);
+        _assignments.Setup(x => x.ExpireUndeliveredAsync(run.Id)).ReturnsAsync(3);
+
+        Assert.AreEqual(pushed ? 2 : 0, await _delivery.PushDueAsync([undelivered, undelivered with { Id = "second" }], Now));
+
+        Assert.AreEqual(pushed ? 2 : 0, _proxy.Invocations.Count);
+        _assignments.Verify(x => x.ExpireUndeliveredAsync(run.Id), pushed ? Times.Never : Times.Once);
+        _runs.Verify(r => r.IncrementCountersAsync(run.Id, 0, 0, 0, 3), pushed ? Times.Never : Times.Once);
+        // Never the run-wide sweep: delivered assignments of the run may still be submitted until DeliverBy.
+        _assignments.Verify(x => x.ExpireAllPendingAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task PushDue_FleetRunPastWindowEnd_ADeliveredAssignmentIsRePushed_AndNothingIsExpired()
+    {
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        var run = FleetRun(Now.AddMinutes(-5));
+        var delivered = AssignmentFactory.Create(run.Id, "Name#1234", Now.AddMinutes(-20), DeliveryRules.FleetDeliverBy(run)) with { DeliveredAt = Now.AddMinutes(-10) };
+        _runs.Setup(r => r.GetAsync(run.Id)).ReturnsAsync(run);
+
+        Assert.AreEqual(1, await _delivery.PushDueAsync([delivered], Now));
+
+        _assignments.Verify(x => x.ExpireUndeliveredAsync(It.IsAny<string>()), Times.Never);
+        _assignments.Verify(x => x.ExpireAllPendingAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    // An explicit audience has no window: its assignments stay deliverable for the whole 14 days.
+    [Test]
+    public async Task PushDue_UsersRun_NeverExpiresAnUndeliveredAssignment()
+    {
+        _runs.Setup(r => r.GetAsync("run-1")).ReturnsAsync(UsersRun());
+
+        Assert.AreEqual(0, await _delivery.PushDueAsync([Assignment()], Now), "the user is offline");
+
+        _assignments.Verify(x => x.ExpireUndeliveredAsync(It.IsAny<string>()), Times.Never);
+        _assignments.Verify(x => x.ExpireAllPendingAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    // Ruling P4 holds for the sweeps too: one that fails is logged and the assignments of other runs are still pushed.
+    [Test]
+    public async Task PushDue_ExpiringOneRunsLeftoversThrows_TheOtherRunsAreStillPushed()
+    {
+        var log = new ListLogger<NetworkDiagnosticsDelivery>();
+        var delivery = Delivery(log);
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        var orphan = Orphan();
+        var live = Assignment();
+        _runs.Setup(r => r.GetAsync("gone")).ReturnsAsync((NetworkDiagnosticRun)null);
+        _runs.Setup(r => r.GetAsync("run-1")).ReturnsAsync(UsersRun());
+        _assignments.Setup(x => x.ExpireAllPendingAsync("gone")).ThrowsAsync(new TimeoutException("mongo"));
+
+        Assert.AreEqual(1, await delivery.PushDueAsync([orphan, Orphan(), live], Now));
+
+        Assert.AreEqual(live.Id, SentPayload().MeasurementId);
+        _assignments.Verify(x => x.ExpireAllPendingAsync("gone"), Times.Once, "one attempt per run and call; the next tick retries");
+        StringAssert.DoesNotContain(orphan.Token, log.AllText);
+    }
+
     // Cancel race (Task 6 review): a late-joiner insert that loses against a concurrent cancel must not stay Pending.
     [Test]
     public async Task OnConnected_LateJoiner_RunCancelledWhileInserting_TheFreshAssignmentIsExpired()
@@ -457,7 +582,7 @@ public class NetworkDiagnosticsDeliveryTests
         Assert.IsTrue(spec.GetProperty("includeDefaultGateway").GetBoolean());
         var endpoint = spec.GetProperty("endpoints")[0];
         Assert.AreEqual("core:bigboi", endpoint.GetProperty("targetKey").GetString());
-        Assert.AreEqual("157.90.1.251", endpoint.GetProperty("ip").GetString());
+        Assert.AreEqual("203.0.113.10", endpoint.GetProperty("ip").GetString());
         Assert.AreEqual("bigboi", endpoint.GetProperty("label").GetString());
         Assert.AreEqual(443, endpoint.GetProperty("tcpPort").GetInt32());
     }

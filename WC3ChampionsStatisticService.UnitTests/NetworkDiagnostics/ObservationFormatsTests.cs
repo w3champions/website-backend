@@ -71,7 +71,7 @@ public class ObservationFormatsTests
     [Test]
     public void Csv_HeaderThenRows_InvariantCulture_Rfc4180Quoting_EmptyNulls()
     {
-        var csv = ObservationFormats.ToCsv([ObservationDto.From(Row())]);
+        var csv = ObservationText.ToCsv([ObservationDto.From(Row())]);
         var lines = csv.Split("\r\n");
 
         Assert.AreEqual(string.Join(",", ObservationFormats.CsvColumns), lines[0]);
@@ -86,7 +86,7 @@ public class ObservationFormatsTests
     {
         var plain = Row() with { City = "London", AsnOrg = "AAISP" };
 
-        var lines = ObservationFormats.ToCsv([ObservationDto.From(plain), ObservationDto.From(new NetworkDiagnosticObservation())]).Split("\r\n");
+        var lines = ObservationText.ToCsv([ObservationDto.From(plain), ObservationDto.From(new NetworkDiagnosticObservation())]).Split("\r\n");
 
         Assert.AreEqual(C6ColumnCount, lines[0].Split(',').Length);
         Assert.AreEqual(C6ColumnCount, lines[1].Split(',').Length);
@@ -104,7 +104,7 @@ public class ObservationFormatsTests
     [TestCase("a=b", "a=b")]
     public void Csv_FormulaLikeCells_ArePrefixedWithAQuote(string value, string expectedCell)
     {
-        var csv = ObservationFormats.ToCsv([ObservationDto.From(Row() with { Reason = value })]);
+        var csv = ObservationText.ToCsv([ObservationDto.From(Row() with { Reason = value })]);
 
         StringAssert.Contains($",ok,{expectedCell},10,9,", csv[(csv.IndexOf("\r\n", StringComparison.Ordinal) + 2)..]);
         StringAssert.Contains(",51.5142,-0.0931,", csv, "numeric cells are never prefixed");
@@ -139,7 +139,7 @@ public class ObservationFormatsTests
             Lon = -2.5,
         };
 
-        var cells = ObservationFormats.ToCsv([ObservationDto.From(hostile)]).Split("\r\n")[1].Split(',');
+        var cells = ObservationText.ToCsv([ObservationDto.From(hostile)]).Split("\r\n")[1].Split(',');
 
         var stringColumns = typeof(ObservationDto).GetProperties().Where(p => p.PropertyType == typeof(string)).Select(p => JsonNamingPolicy.CamelCase.ConvertName(p.Name)).ToList();
         Assert.AreEqual(18, stringColumns.Count);
@@ -154,7 +154,7 @@ public class ObservationFormatsTests
     [Test]
     public void Ndjson_OneCamelCaseObjectPerLine()
     {
-        var lines = ObservationFormats.ToNdjson([ObservationDto.From(Row()), ObservationDto.From(Row())]).Split('\n');
+        var lines = ObservationText.ToNdjson([ObservationDto.From(Row()), ObservationDto.From(Row())]).Split('\n');
 
         Assert.AreEqual(3, lines.Length);
         Assert.AreEqual("m1", JsonDocument.Parse(lines[1]).RootElement.GetProperty("measurementId").GetString());

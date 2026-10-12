@@ -225,6 +225,25 @@ public class SubmissionServiceTests
 
         Assert.AreEqual(409, result.StatusCode);
         Assert.AreEqual("""{"error":"already_submitted"}""", BodyOf(result));
+        Assert.AreEqual(0, _bodyReads, "a used slot is answered without reading the body");
+        VerifyNoConditionalUpdate();
+        VerifyNothingWritten();
+    }
+
+    // The holder of a used or expired slot's token cannot make the server inflate and parse 8 MB per request: the
+    // slot's state is answered before the body is touched, so even an unreadable body is a 409, not a 400.
+    [TestCase(AssignmentStatus.Submitted, 14, "already_submitted")]
+    [TestCase(AssignmentStatus.Expired, 14, "expired")]
+    [TestCase(AssignmentStatus.Pending, 0, "expired")]
+    public async Task FinishedSlot_409_WithZeroBodyBytesRead(string status, int deliverByDays, string error)
+    {
+        _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync(_assignment with { Status = status, DeliverBy = Now.AddDays(deliverByDays) });
+
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(null, "payload_too_large"), SocketIp);
+
+        Assert.AreEqual(409, result.StatusCode);
+        Assert.AreEqual($$"""{"error":"{{error}}"}""", BodyOf(result));
+        Assert.AreEqual(0, _bodyReads);
         VerifyNoConditionalUpdate();
         VerifyNothingWritten();
     }
@@ -288,6 +307,7 @@ public class SubmissionServiceTests
 
         Assert.AreEqual(409, result.StatusCode);
         Assert.AreEqual("""{"error":"expired"}""", BodyOf(result));
+        Assert.AreEqual(0, _bodyReads, "an expired slot is answered without reading the body");
         VerifyNoConditionalUpdate();
         VerifyNothingWritten();
     }

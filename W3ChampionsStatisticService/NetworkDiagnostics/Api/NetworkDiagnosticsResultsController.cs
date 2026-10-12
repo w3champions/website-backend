@@ -9,7 +9,8 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Api;
 
 /// <summary>
 /// C5 launcher submit. The player authenticates with their own JWT (401 from the filter); the measurement token
-/// travels in a header. The body is read by hand, and only after the service checked owner and token: gzip is undone
+/// travels in a header. The body is read by hand, and only after the service checked owner, token and that the slot
+/// is still open (a used or expired one answers 409 with the body unread): gzip is undone
 /// by the request decompression middleware mounted for this path, the read stops one byte past the 8 MB cap, and the
 /// JSON is snake_case (not MVC's [FromBody]). MVC itself never touches the body (no form binding).
 /// No [ApiController]: errors are always {"error": …} (Deviation 4).
@@ -37,7 +38,8 @@ public class NetworkDiagnosticsResultsController(INetworkDiagnosticsSubmissionSe
     {
         // After UseForwardedHeaders this is the client address the reverse proxy reported.
         var remoteIp = NetDiagIp.PublicIpv4Of(HttpContext.Connection.RemoteIpAddress);
-        // The service calls the reader only once the caller is known to own the measurement and to hold its token.
+        // The service calls the reader only once the caller is known to own the measurement and to hold its token,
+        // and the slot can still be submitted.
         var result = await submissions.SubmitAsync(
             measurementId,
             InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext).BattleTag,

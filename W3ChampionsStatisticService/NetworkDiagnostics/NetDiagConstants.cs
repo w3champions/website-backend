@@ -41,6 +41,12 @@ public static class NetDiagConstants
     public static readonly TimeSpan FleetWindow = TimeSpan.FromMinutes(30);
     /// <summary>Fleet DeliverBy = WindowEnd + this, so a slot drawn near WindowEnd can still finish and submit (Deviation 11, contract A6).</summary>
     public static readonly TimeSpan FleetSubmitGrace = TimeSpan.FromMinutes(15);
+    /// <summary>
+    /// How long after its DeliverAfter an assignment without a run is left alone. A run is stored one database round
+    /// trip after its assignments, so a push that runs in between sees due assignments whose run is not there yet;
+    /// only after this time is the run certain never to arrive.
+    /// </summary>
+    public static readonly TimeSpan OrphanGrace = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan Retention = TimeSpan.FromDays(365);
     public static readonly TimeSpan RawRetention = TimeSpan.FromDays(90);
     public static readonly TimeSpan DispatchInterval = TimeSpan.FromSeconds(5);
@@ -84,6 +90,10 @@ public static class NetDiagConstants
     /// order past such ids would skip them for good.
     /// </summary>
     public static readonly TimeSpan ObservationSettleMargin = TimeSpan.FromSeconds(30);
-    /// <summary>Response header of the ndjson and csv observation forms: the cursor of the next page; absent on the last page (C6).</summary>
+    /// <summary>
+    /// Response header of the ndjson and csv observation forms: the cursor of the next page (C6). Absent on the last
+    /// page, and also when the page ends at the settle boundary (<see cref="ObservationSettleMargin"/>): the rows
+    /// behind it are not returned yet, so there is no next page to name.
+    /// </summary>
     public const string NextCursorHeader = "X-Next-Cursor";
 }

@@ -32,12 +32,8 @@ public class FloNodesClientTests
         Assert.AreEqual("US East 4", nodes[0].Name);
         Assert.AreEqual("Ashburn", nodes[0].Location);
         Assert.AreEqual("US", nodes[0].CountryId);
-        Assert.AreEqual("1.2.3.4", nodes[0].IpAddress);
-        Assert.AreEqual(3549, nodes[0].Port);
         Assert.IsFalse(nodes[0].Settings.IsDisabled);
         Assert.IsTrue(nodes[1].Settings.IsDisabled);
-        Assert.IsNull(nodes[1].IpAddress);
-        Assert.IsNull(nodes[1].Port);
     }
 
     [Test]

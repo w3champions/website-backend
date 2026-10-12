@@ -6,7 +6,9 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -62,15 +64,24 @@ public class NetworkDiagnosticsRunServiceTests
         _players.Setup(p => p.GetPlayerBattleTagsAsync(It.IsAny<ICollection<string>>())).ReturnsAsync(new Dictionary<string, PlayerOverallStats>());
         _settings.Setup(s => s.LoadMany(It.IsAny<string[]>())).ReturnsAsync([]);
         var config = new NetDiagTargetsConfig(
-            [new CoreServerConfig { Key = "bigboi", Label = "bigboi", Ip = "157.90.1.251", TcpPort = 443 }],
+            [new CoreServerConfig { Key = "bigboi", Label = "bigboi", Ip = "203.0.113.10", TcpPort = 443 }],
             NetDiagTargetsConfig.DefaultBaselines, "/geoip/c.mmdb", "/geoip/a.mmdb");
+        _config = config;
         _service = ServiceWith(config);
     }
 
-    private NetworkDiagnosticsRunService ServiceWith(NetDiagTargetsConfig config) =>
-        new(_runs.Object, _assignments.Object, _results.Object, _delivery.Object, _floNodes.Object,
+    private NetDiagTargetsConfig _config;
+
+    private NetworkDiagnosticsRunService ServiceWith(
+        NetDiagTargetsConfig config, INetworkDiagnosticsDelivery delivery = null, ILogger<NetworkDiagnosticsRunService> log = null) =>
+        new(_runs.Object, _assignments.Object, _results.Object, delivery ?? _delivery.Object, _floNodes.Object,
             _players.Object, _settings.Object, config, _connections,
-            new FixedTimeProvider(new DateTimeOffset(Now)), new QueueRandom(0.0), NullLogger<NetworkDiagnosticsRunService>.Instance);
+            new FixedTimeProvider(new DateTimeOffset(Now)), new QueueRandom(0.0), log ?? NullLogger<NetworkDiagnosticsRunService>.Instance);
+
+    /// <summary>The real delivery service over this fixture's repository doubles: cancel and delivery share one expire-and-count helper.</summary>
+    private NetworkDiagnosticsDelivery RealDelivery() =>
+        new(Mock.Of<IHubContext<WebsiteBackendHub>>(), _connections, _runs.Object, _assignments.Object,
+            new FixedTimeProvider(new DateTimeOffset(Now)), new QueueRandom(0.0), NullLogger<NetworkDiagnosticsDelivery>.Instance);
 
     private void KnownPlayers(params string[] tags) =>
         _players.Setup(p => p.GetPlayerBattleTagsAsync(It.IsAny<ICollection<string>>()))
@@ -165,7 +176,7 @@ public class NetworkDiagnosticsRunServiceTests
     {
         KnownPlayers("Name#1234");
         var config = new NetDiagTargetsConfig(
-            [new CoreServerConfig { Key = "nolabel", Ip = "157.90.1.251", TcpPort = 65535 }],
+            [new CoreServerConfig { Key = "nolabel", Ip = "203.0.113.10", TcpPort = 65535 }],
             [new BaselineConfig { Key = "blank", Label = " ", Ip = "1.1.1.1", TcpPort = 1 }], "/geoip/c.mmdb", "/geoip/a.mmdb");
         NetworkDiagnosticRun stored = null;
         _runs.Setup(r => r.InsertAsync(It.IsAny<NetworkDiagnosticRun>())).Callback<NetworkDiagnosticRun>(r => stored = r).Returns(Task.CompletedTask);
@@ -410,6 +421,85 @@ public class NetworkDiagnosticsRunServiceTests
         var dto = (RunDto)result.Body;
         Assert.AreEqual(Now, dto.CancelledAt);
         Assert.AreEqual(3, dto.Counters.Expired, "the answer carries the counters after the sweep");
+    }
+
+    // The sweep of a cancel failed after CancelledAt was set: the run is cancelled but its assignments are still
+    // Pending (and a delivered one could still be submitted, against spec section 5.4). The admin's retry finishes
+    // the sweep; it still answers 409, and further retries never count the same assignments again.
+    [Test]
+    public async Task Cancel_WhoseSweepFailed_IsCompletedByTheRetry_AndCountedOnce()
+    {
+        var run = new NetworkDiagnosticRun { Id = "r1", Audience = new RunAudience { Kind = AudienceKind.All }, Targets = new RunTargets(), WindowSeconds = 60, CancelledAt = Now };
+        _runs.SetupSequence(r => r.TryCancelAsync("r1", Now)).ReturnsAsync(run).ReturnsAsync((NetworkDiagnosticRun)null).ReturnsAsync((NetworkDiagnosticRun)null);
+        _runs.Setup(r => r.GetAsync("r1")).ReturnsAsync(run);
+        _assignments.SetupSequence(a => a.ExpireAllPendingAsync("r1"))
+            .ThrowsAsync(new TimeoutException("mongo"))
+            .ReturnsAsync(4)
+            .ReturnsAsync(0);
+        var service = ServiceWith(_config, RealDelivery());
+
+        Assert.ThrowsAsync<TimeoutException>(() => service.CancelRunAsync("r1"));
+        _runs.Verify(r => r.IncrementCountersAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+
+        var retry = await service.CancelRunAsync("r1");
+        var again = await service.CancelRunAsync("r1");
+
+        Assert.AreEqual((409, """{"error":"already_cancelled"}"""), (retry.StatusCode, ErrorOf(retry)));
+        Assert.AreEqual((409, """{"error":"already_cancelled"}"""), (again.StatusCode, ErrorOf(again)));
+        _assignments.Verify(a => a.ExpireAllPendingAsync("r1"), Times.Exactly(3));
+        _runs.Verify(r => r.IncrementCountersAsync("r1", 0, 0, 0, 4), Times.Once);
+        _runs.Verify(r => r.IncrementCountersAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+    }
+
+    // The retry's sweep fails as well: still a failure the admin can retry, never a 409 that hides Pending leftovers.
+    [Test]
+    public void Cancel_RetryWhoseSweepFailsAgain_IsStillAFailure()
+    {
+        var run = new NetworkDiagnosticRun { Id = "r1", Audience = new RunAudience { Kind = AudienceKind.All }, Targets = new RunTargets(), WindowSeconds = 60, CancelledAt = Now };
+        _runs.Setup(r => r.TryCancelAsync("r1", Now)).ReturnsAsync((NetworkDiagnosticRun)null);
+        _runs.Setup(r => r.GetAsync("r1")).ReturnsAsync(run);
+        _assignments.Setup(a => a.ExpireAllPendingAsync("r1")).ThrowsAsync(new TimeoutException("mongo"));
+
+        Assert.ThrowsAsync<TimeoutException>(() => ServiceWith(_config, RealDelivery()).CancelRunAsync("r1"));
+    }
+
+    // Assignments are stored before the run. When the run insert fails they belong to no run: they are expired at
+    // once so they never reach a launcher or the dispatcher's push batch, and the admin sees the original failure.
+    [Test]
+    public void Create_RunInsertFails_ExpiresTheOrphanAssignments_AndRethrows()
+    {
+        KnownPlayers("Name#1234", "Other#5678");
+        Online("Name#1234");
+        var calls = new List<string>();
+        _runs.Setup(r => r.InsertAsync(It.IsAny<NetworkDiagnosticRun>())).Callback(() => calls.Add("insert run")).ThrowsAsync(new TimeoutException("run insert"));
+        _assignments.Setup(a => a.ExpireAllPendingAsync(It.IsAny<string>())).Callback<string>(id => calls.Add("expire " + id)).ReturnsAsync(2);
+
+        var thrown = Assert.ThrowsAsync<TimeoutException>(
+            () => _service.CreateRunAsync(Request(new RunAudience { Kind = AudienceKind.Users, BattleTags = ["Name#1234", "Other#5678"] }), "Admin#1"));
+
+        Assert.AreEqual("run insert", thrown.Message);
+        Assert.AreEqual(2, _inserted.Count);
+        Assert.AreEqual(new[] { "insert run", "expire " + _inserted[0].RunId }, calls);
+        // No run exists, so there is no counter to update and nothing to push.
+        _runs.Verify(r => r.IncrementCountersAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        _delivery.VerifyNoOtherCalls();
+    }
+
+    [Test]
+    public void Create_RunInsertFails_AndTheCleanupFailsToo_TheOriginalExceptionSurfaces_AndTheCleanupIsLogged()
+    {
+        KnownPlayers("Name#1234");
+        var log = new ListLogger<NetworkDiagnosticsRunService>();
+        _runs.Setup(r => r.InsertAsync(It.IsAny<NetworkDiagnosticRun>())).ThrowsAsync(new TimeoutException("run insert"));
+        _assignments.Setup(a => a.ExpireAllPendingAsync(It.IsAny<string>())).ThrowsAsync(new InvalidOperationException("cleanup"));
+
+        var thrown = Assert.ThrowsAsync<TimeoutException>(
+            () => ServiceWith(_config, log: log).CreateRunAsync(Request(new RunAudience { Kind = AudienceKind.Users, BattleTags = ["Name#1234"] }), "Admin#1"));
+
+        Assert.AreEqual("run insert", thrown.Message);
+        Assert.AreEqual(1, log.Count(LogLevel.Error));
+        StringAssert.Contains(_inserted[0].RunId, log.AllText);
+        StringAssert.DoesNotContain(_inserted[0].Token, log.AllText);
     }
 
     [Test]
