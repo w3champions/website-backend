@@ -98,7 +98,7 @@ public class ResultBuilderTests
 
         var unsupported = probes[2];
         Assert.AreEqual("unsupported", unsupported.Outcome);
-        Assert.AreEqual(0, unsupported.Stats.Sent);
+        Assert.IsNull(unsupported.Stats, "nothing was sent, so there are no statistics");
     }
 
     [Test]
@@ -262,7 +262,7 @@ public class ResultBuilderTests
         Assert.IsNull(obs.LossPct);
         Assert.AreEqual(0, obs.HopCount);
         Assert.IsNull(obs.LastHopIp);
-        Assert.AreEqual(0, built.Measurement.Targets[0].Paths[0].Probes[0].Stats.Sent);
+        Assert.IsNull(built.Measurement.Targets[0].Paths[0].Probes[0].Stats);
         Assert.IsEmpty(built.RawSeries.Series);
     }
 
@@ -294,6 +294,112 @@ public class ResultBuilderTests
     }
 
     [Test]
+    public void SystemPresentButVpnNull_VpnSuspectedIsUnknownOnMeasurementAndObservations()
+    {
+        var dto = SubmissionFixtures.Parse(SubmissionFixtures.FullJson);
+        dto = dto with { System = dto.System with { Vpn = null } };
+
+        var built = ResultBuilder.Build(dto, Assignment, SubmittedAt, null, Geo);
+
+        Assert.IsNull(built.Measurement.VpnSuspected);
+        Assert.IsTrue(built.Observations.All(o => o.VpnSuspected == null));
+    }
+
+    [Test]
+    public void VpnObjectWithoutSuspectedFlag_IsUnknown()
+    {
+        var dto = SubmissionFixtures.Parse(SubmissionFixtures.FullJson);
+        dto = dto with { System = dto.System with { Vpn = new NetDiagVpn { Evidence = ["x"] } } };
+
+        Assert.IsNull(ResultBuilder.Build(dto, Assignment, SubmittedAt, null, Geo).Measurement.VpnSuspected);
+    }
+
+    [Test]
+    public void VpnReportedFalse_StaysFalse_AndTrueStaysTrue()
+    {
+        var dto = SubmissionFixtures.Parse(SubmissionFixtures.FullJson);
+
+        foreach (var flag in new[] { true, false })
+        {
+            var built = ResultBuilder.Build(dto with { System = dto.System with { Vpn = new NetDiagVpn { Suspected = flag } } }, Assignment, SubmittedAt, null, Geo);
+            Assert.AreEqual(flag, built.Measurement.VpnSuspected);
+            Assert.IsTrue(built.Observations.All(o => o.VpnSuspected == flag));
+        }
+    }
+
+    [Test]
+    public void ProbeWithoutSamples_HasNoStats_ButTheObservationKeepsNumericCountsAndNullStatistics()
+    {
+        foreach (var method in new[] { "TcpPing", "FloUdpPing" })
+        {
+            foreach (var samples in new List<long?[]>[] { null, [] })
+            {
+                var built = BuildSingle(new NetDiagProbeDto { Method = method, Outcome = "unsupported", Samples = samples });
+                var obs = built.Observations.Single();
+
+                Assert.IsNull(built.Measurement.Targets[0].Paths[0].Probes[0].Stats, method);
+                Assert.AreEqual((0, 0), (obs.Sent, obs.Received));
+                Assert.IsNull(obs.LossPct);
+                Assert.IsNull(obs.MinMs);
+                Assert.IsNull(obs.AvgMs);
+                Assert.IsNull(obs.MaxMs);
+                Assert.IsNull(obs.StddevMs);
+                Assert.IsNull(obs.P50Ms);
+                Assert.IsNull(obs.P90Ms);
+                Assert.IsNull(obs.P95Ms);
+                Assert.IsNull(obs.P99Ms);
+                Assert.IsNull(obs.JitterMs);
+            }
+        }
+    }
+
+    [Test]
+    public void ProbeThatSentSamplesAndLostAll_KeepsStats_WithFullLoss()
+    {
+        var built = BuildSingle(new NetDiagProbeDto { Method = "TcpPing", Outcome = "unreachable", Samples = [new long?[] { 0, null }, new long?[] { 1, null }] });
+
+        var stats = built.Measurement.Targets[0].Paths[0].Probes[0].Stats;
+        Assert.AreEqual((2, 0, 100.0), (stats.Sent, stats.Received, stats.LossPct));
+        Assert.AreEqual(100.0, built.Observations.Single().LossPct);
+    }
+
+    [Test]
+    public void MtrWhereEveryHopHasNoSamples_HasNoProbeStats_AndZeroCountObservation()
+    {
+        var built = BuildSingle(new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "unreachable",
+            Hops = [new NetDiagHopDto { Ttl = 1, Ip = "10.0.0.1" }, new NetDiagHopDto { Ttl = 2, Ip = "10.0.0.2", Samples = [] }],
+        });
+
+        var probe = built.Measurement.Targets[0].Paths[0].Probes[0];
+        var obs = built.Observations.Single();
+        Assert.IsNull(probe.Stats);
+        Assert.IsTrue(probe.Hops.All(h => h.Stats == null));
+        Assert.AreEqual((0, 0, 2), (obs.Sent, obs.Received, obs.HopCount));
+        Assert.IsNull(obs.LossPct);
+        Assert.IsNull(obs.P50Ms);
+    }
+
+    [Test]
+    public void HopWithoutSamples_HasNoStats_WhileHopsWithSamplesKeepTheirs()
+    {
+        var built = BuildSingle(new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops = [new NetDiagHopDto { Ttl = 1, Ip = "10.0.0.1" }, new NetDiagHopDto { Ttl = 2, Ip = "10.0.0.2", Samples = [] }, new NetDiagHopDto { Ttl = 3, Ip = "10.0.0.3", Samples = [new long?[] { 0, 5000 }] }],
+        });
+
+        var probe = built.Measurement.Targets[0].Paths[0].Probes[0];
+        Assert.IsNull(probe.Hops[0].Stats);
+        Assert.IsNull(probe.Hops[1].Stats);
+        Assert.AreEqual(5.0, probe.Hops[2].Stats.P50Ms);
+        Assert.AreEqual(5.0, probe.Stats.P50Ms);
+    }
+
+    [Test]
     public void NullSystemAndOs_BuildWithoutThrowing()
     {
         var dto = SubmissionFixtures.Minimal(SubmissionFixtures.MeasurementId) with { Os = null, System = null, FloSnapshot = null, Targets = null };
@@ -303,7 +409,7 @@ public class ResultBuilderTests
         Assert.IsNull(m.OsInfo);
         Assert.IsNull(m.System);
         Assert.IsNull(m.PrimaryAdapterType);
-        Assert.IsFalse(m.VpnSuspected);
+        Assert.IsNull(m.VpnSuspected, "no system object: VPN state is unknown, not false");
         Assert.IsNull(m.ClientGeo);
         Assert.AreEqual(0, m.TargetCount);
         Assert.IsEmpty(m.FloSnapshot);

@@ -62,6 +62,7 @@ public static class AggregateBuilder
             { "count", new BsonDocument("$sum", 1) },
             { "p50s", new BsonDocument("$push", "$" + nameof(NetworkDiagnosticObservation.P50Ms)) },
             { "losses", new BsonDocument("$push", "$" + nameof(NetworkDiagnosticObservation.LossPct)) },
+            { "lossRows", CountWhere(new BsonDocument("$isNumber", "$" + nameof(NetworkDiagnosticObservation.LossPct))) },
             { "lossOver1", CountWhere(new BsonDocument("$gt", new BsonArray { "$" + nameof(NetworkDiagnosticObservation.LossPct), LossShareThresholdPct })) },
             { "unreachable", CountWhere(new BsonDocument("$eq", new BsonArray { "$" + nameof(NetworkDiagnosticObservation.Outcome), NetDiagConstants.OutcomeUnreachable })) },
             // $max, not $first: it skips null, so rows without an ASN name do not blank the name of the group.
@@ -75,6 +76,7 @@ public static class AggregateBuilder
             { "count", new BsonDocument("$sum", "$count") },
             { "p50s", new BsonDocument("$push", "$p50s") },
             { "losses", new BsonDocument("$push", "$losses") },
+            { "lossRows", new BsonDocument("$sum", "$lossRows") },
             { "lossOver1", new BsonDocument("$sum", "$lossOver1") },
             { "unreachable", new BsonDocument("$sum", "$unreachable") },
             { "asnOrg", new BsonDocument("$max", "$asnOrg") },
@@ -90,6 +92,7 @@ public static class AggregateBuilder
         var id = row["_id"].AsBsonDocument;
         var key = keys.ToDictionary(k => k, k => id.TryGetValue(k, out var v) ? BsonTypeMapper.MapToDotNetValue(v) : null);
         var count = row["count"].ToInt32();
+        var lossRows = row["lossRows"].ToInt32();
         var p50s = Sorted(row["p50s"].AsBsonArray);
         var losses = Sorted(row["losses"].AsBsonArray);
 
@@ -99,7 +102,8 @@ public static class AggregateBuilder
             Round(SeriesStats.NearestRank(p50s, 50), ValueDecimals),
             Round(SeriesStats.NearestRank(p50s, 90), ValueDecimals),
             Round(SeriesStats.NearestRank(losses, 50), ValueDecimals),
-            Math.Round(row["lossOver1"].ToInt32() / (double)count, ShareDecimals),
+            // Rows that sent nothing have no loss figure: they stay out of the denominator (but count as rows).
+            lossRows == 0 ? 0 : Math.Round(row["lossOver1"].ToInt32() / (double)lossRows, ShareDecimals),
             Math.Round(row["unreachable"].ToInt32() / (double)count, ShareDecimals),
             keys.Contains("asn") && row.TryGetValue("asnOrg", out var org) && org.IsString ? org.AsString : null,
             Round(Number(row, "lat"), PositionDecimals),

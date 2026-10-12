@@ -67,6 +67,7 @@ public class NetworkDiagnosticsQueryMongoTests
             Asn = asn,
             AsnOrg = asn == 3320 ? "Deutsche Telekom AG" : "Telstra",
             Path = path,
+            VpnSuspected = false,
             Method = "IcmpMtr",
             Outcome = outcome,
             TargetKey = "flo:12",
@@ -153,6 +154,51 @@ public class NetworkDiagnosticsQueryMongoTests
         var byVpn = (AggregateResponseDto)(await _service.AggregateAsync(new NetDiagQuery(), "vpn,city")).Body;
         Assert.AreEqual(new object[] { false, null, 6 }, new[] { byVpn.Rows[0].Key["vpn"], byVpn.Rows[0].Key["city"], byVpn.Rows[0].Count });
         Assert.AreEqual(new object[] { true, "Berlin", 1 }, new[] { byVpn.Rows[1].Key["vpn"], byVpn.Rows[1].Key["city"], byVpn.Rows[1].Count });
+    }
+
+    // Unknown VPN state (null) is a group of its own, apart from false and true; the vpn filter never matches it.
+    [Test]
+    public async Task Aggregate_UnknownVpn_IsItsOwnNullGroup_AndTheVpnFilterIgnoresIt()
+    {
+        await _observations.InsertManyAsync(
+        [
+            Obs("u1", asn: 50, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "rv") with { VpnSuspected = null },
+            Obs("u2", asn: 50, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "rv") with { VpnSuspected = null },
+            Obs("f1", asn: 50, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "rv") with { VpnSuspected = false },
+            Obs("t1", asn: 50, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "rv") with { VpnSuspected = true },
+        ]);
+
+        var rows = ((AggregateResponseDto)(await _service.AggregateAsync(new NetDiagQuery { RunId = ["rv"] }, "vpn")).Body).Rows;
+        var matched = async (bool vpn) =>
+            (await _observations.Find(NetDiagFilters.Observations(new NetDiagQuery { RunId = ["rv"], Vpn = vpn })).ToListAsync()).Select(o => o.MeasurementId).Order().ToList();
+
+        Assert.AreEqual(3, rows.Count);
+        Assert.AreEqual(2, rows.Single(r => r.Key["vpn"] == null).Count);
+        Assert.AreEqual(1, rows.Single(r => r.Key["vpn"] is false).Count);
+        Assert.AreEqual(1, rows.Single(r => r.Key["vpn"] is true).Count);
+        Assert.AreEqual(new[] { "f1" }, await matched(false));
+        Assert.AreEqual(new[] { "t1" }, await matched(true));
+    }
+
+    // Rows that sent nothing carry null loss and RTT: they count as rows but never pull the medians or the loss share toward 0.
+    [Test]
+    public async Task Aggregate_RowsThatSentNothing_DoNotPullLossOrRttTowardZero()
+    {
+        await _observations.InsertManyAsync(
+        [
+            Obs("s1", asn: 60, path: "direct", p50: 40, loss: 50, lat: 1, lon: 1, run: "rz"),
+            Obs("s2", asn: 60, path: "direct", p50: 20, loss: 2, lat: 1, lon: 1, run: "rz"),
+            Obs("z1", asn: 60, path: "direct", p50: 0, loss: 0, lat: 1, lon: 1, run: "rz") with { Sent = 0, P50Ms = null, LossPct = null },
+            Obs("z2", asn: 60, path: "direct", p50: 0, loss: 0, lat: 1, lon: 1, run: "rz") with { Sent = 0, P50Ms = null, LossPct = null },
+        ]);
+
+        var row = ((AggregateResponseDto)(await _service.AggregateAsync(new NetDiagQuery { RunId = ["rz"] }, "asn")).Body).Rows.Single();
+
+        Assert.AreEqual(4, row.Count);
+        Assert.AreEqual(20.0, row.P50MsMedian);
+        Assert.AreEqual(40.0, row.P50MsP90);
+        Assert.AreEqual(2.0, row.LossPctMedian);
+        Assert.AreEqual(1.0, row.ShareLossOver1Pct);
     }
 
     // P6: only the newest `scanLimit` matching rows are grouped, and at most `maxRows` groups come back, largest first.

@@ -98,7 +98,7 @@ nd runs -X POST -H 'Content-Type: application/json' -d '{
 | `targetKey`, `nodeId`, `targetIp` | target-level: what was measured (`nodeId=12` equals `targetKey=flo:12`) |
 | `path` | exactly `direct` or `proxied` |
 | `method` | exactly one of the six method names above |
-| `country`, `city`, `asn`, `os`, `adapterType`, `vpn` | client-level: who measured (`asn` numeric, `vpn=true/false`) |
+| `country`, `city`, `asn`, `os`, `adapterType`, `vpn` | client-level: who measured (`asn` numeric, `vpn=true/false`; the filter never matches rows whose VPN state is unknown, and `groupBy=vpn` lists them as key `vpn: null`) |
 | `from`, `to` | on `submittedAt`; `from` inclusive, `to` exclusive |
 
 Only the names in this table are filters; any other name is ignored without an error. `battleTag`, `country`,
@@ -130,7 +130,7 @@ With `raw=true`, probes and hops carry `samples: [[offsetMs, rttMs|null]]` (null
 there is never a `samples` key.
 
 `StatsDto`: `{sent, received, lossPct, lastMs, minMs, avgMs, maxMs, stddevMs, p50Ms, p90Ms, p95Ms, p99Ms, jitterMs}`.
-Percentiles are nearest-rank over successful samples. `lossPct` is null when nothing was sent. All
+Percentiles are nearest-rank over successful samples. `lossPct` is null when nothing was sent. A probe or hop that sent nothing has `stats: null` (not a zero-filled object); a probe that sent and lost everything has `sent` N, `received` 0, `lossPct` 100. `vpnSuspected` is `true`/`false`/null (null = unknown). All
 `*Ms` are null when nothing succeeded. Traceroute-method probes have `stats: null` (see hops).
 
 ## Observations (one row per target x path x probe)
@@ -170,7 +170,7 @@ It returns `{groupBy, rows: [{key, count, p50MsMedian, p50MsP90, lossPctMedian, 
 - `key` is an object with one entry per `groupBy` key, e.g. `{"asn": 3320, "path": "direct"}`;
 - `count` is the number of observations;
 - `p50MsMedian` / `p50MsP90`: median and 90th percentile of the observations' `p50Ms`; `lossPctMedian`: median of `lossPct`;
-- `shareLossOver1Pct` and `shareUnreachable` are **fractions 0-1** (share of observations with `lossPct` > 1, share with outcome `unreachable`), not percentages;
+- `shareLossOver1Pct` and `shareUnreachable` are **fractions 0-1** (`shareLossOver1Pct` = share of the observations that sent samples, i.e. `lossPct` not null, with `lossPct` > 1; 0 when none sent. `shareUnreachable` = share of all observations with outcome `unreachable`), not percentages;
 - `lat`/`lon`: centroid (average across the group's measurements); `asnOrg` is set only when grouping by `asn`;
 - rows are capped at 1000.
 

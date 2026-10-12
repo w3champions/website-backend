@@ -10,14 +10,14 @@ and the JSON/ndjson property names are the same list, in exactly this order.
 | `country`, `city`, `lat`, `lon`, `asn`, `asnOrg` | GeoLite2 of `clientIp` at submit time (null when unknown) |
 | `os` | OS family as reported by the launcher (e.g. `windows`, `macos`) |
 | `primaryAdapterType` | kind of the adapter holding the default route (`ethernet`, `wifi`, ...) |
-| `vpnSuspected` | launcher heuristics (e.g. a tunnel adapter holds the default route) |
+| `vpnSuspected` | launcher heuristics (e.g. a tunnel adapter holds the default route); `true`/`false` as reported, **null = unknown** (the result carried no VPN information; never read null as "no VPN"). Rows stored before this rule may hold `false` for unknown |
 | `targetKey`, `targetLabel`, `targetIp` | what was measured; `targetIp` = the ICMP endpoint for Icmp*, the TCP host for Tcp*, the UDP host for FloUdpPing |
 | `path` | exactly `direct` or `proxied` |
 | `routeLabel` | flo route label for proxied paths (e.g. `US East 4 -> US East 3`) |
 | `method` | `IcmpTraceroute`, `IcmpMtr`, `TcpTraceroute`, `TcpMtr`, `TcpPing`, `FloUdpPing` |
 | `outcome`, `reason` | `outcome` is `ok`, `unsupported`, `unreachable`, `timeout` or `error`; `reason` is an open-ended string explaining a non-ok outcome (e.g. `os_requires_admin`); do not assume a fixed set |
-| `sent`, `received`, `lossPct` | probe counts; `lossPct` null when `sent` = 0 |
-| `minMs`, `avgMs`, `maxMs`, `stddevMs`, `p50Ms`, `p90Ms`, `p95Ms`, `p99Ms`, `jitterMs` | RTT stats in ms, null when nothing succeeded. `jitterMs` = mean absolute difference of consecutive successful samples |
+| `sent`, `received`, `lossPct` | probe counts (0 when nothing was sent); `lossPct` null when `sent` = 0 |
+| `minMs`, `avgMs`, `maxMs`, `stddevMs`, `p50Ms`, `p90Ms`, `p95Ms`, `p99Ms`, `jitterMs` | RTT stats in ms, null when nothing succeeded or nothing was sent. `jitterMs` = mean absolute difference of consecutive successful samples |
 | `hopCount` | number of hops in the trace (0 for ping methods) |
 | `lastHopIp`, `lastHopAsn` | the **final hop** (below); null when it never answered |
 
@@ -32,7 +32,7 @@ starting with `=`, `+`, `-`, `@`, tab or CR is prefixed with `'` (spreadsheet fo
 **Where the stats come from:**
 - `TcpPing`, `FloUdpPing`: the probe's own series.
 - `IcmpMtr`, `TcpMtr`, `IcmpTraceroute`, `TcpTraceroute`: the **final hop**. That is the target (the lowest-TTL hop whose IP equals `targetIp` and that answered); else the last hop that answered; else the deepest hop (all lost, so `lossPct` 100). Traceroute rounds are few samples, so their percentiles are coarse. In `GET measurements/{id}` the traceroute-method probe itself has `stats: null`; the per-hop stats are under `hops`.
-- `outcome` other than `ok`: usually `sent` = 0 and every stat null. Count them via `shareUnreachable` (only the `unreachable` outcome) or by filtering ndjson locally; there is no `outcome` query filter.
+- `outcome` other than `ok`: usually `sent` = 0 and every derived stat (`lossPct`, `*Ms`) null. In the aggregate such rows count in `count` but contribute no loss or RTT value and are left out of the `shareLossOver1Pct` denominator. Count them via `shareUnreachable` (only the `unreachable` outcome) or by filtering ndjson locally; there is no `outcome` query filter.
 
 Paths and what they measure:
 - `direct`: from the player's machine straight to the target.

@@ -48,6 +48,10 @@ public class AggregateBuilderTests
         Assert.AreEqual(new BsonDocument("$sum", 1), stage["count"]);
         Assert.AreEqual(new BsonDocument("$push", "$P50Ms"), stage["p50s"]);
         Assert.AreEqual(new BsonDocument("$push", "$LossPct"), stage["losses"]);
+        // Rows that sent nothing have a null LossPct and stay out of the loss-share denominator.
+        Assert.AreEqual(
+            new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { new BsonDocument("$isNumber", "$LossPct"), 1, 0 })),
+            stage["lossRows"]);
         // $max skips null: one measurement without an ASN name must not blank the name of the group.
         Assert.AreEqual(new BsonDocument("$max", "$AsnOrg"), stage["asnOrg"]);
         Assert.AreEqual(new BsonDocument("$first", "$Lat"), stage["lat"]);
@@ -65,12 +69,13 @@ public class AggregateBuilderTests
         Assert.AreEqual(new BsonDocument("$sum", "$count"), stage["count"]);
         Assert.AreEqual(new BsonDocument("$push", "$p50s"), stage["p50s"]);
         Assert.AreEqual(new BsonDocument("$push", "$losses"), stage["losses"]);
+        Assert.AreEqual(new BsonDocument("$sum", "$lossRows"), stage["lossRows"]);
         Assert.AreEqual(new BsonDocument("$max", "$asnOrg"), stage["asnOrg"]);
         Assert.AreEqual(new BsonDocument("$avg", "$lat"), stage["lat"]);
         Assert.AreEqual(new BsonDocument("$avg", "$lon"), stage["lon"]);
         // Nothing in the final group grows with the number of measurements except the two value lists.
         CollectionAssert.AreEquivalent(
-            new[] { "_id", "count", "p50s", "losses", "lossOver1", "unreachable", "asnOrg", "lat", "lon" },
+            new[] { "_id", "count", "p50s", "losses", "lossRows", "lossOver1", "unreachable", "asnOrg", "lat", "lon" },
             stage.Names.ToArray());
     }
 
@@ -84,6 +89,7 @@ public class AggregateBuilderTests
             // One inner list per measurement.
             { "p50s", new BsonArray { new BsonArray { 10.0, 30.0 }, new BsonArray { BsonNull.Value, 20.0 } } },
             { "losses", new BsonArray { new BsonArray { 0.0, 0.0 }, new BsonArray { 5.0, BsonNull.Value } } },
+            { "lossRows", 3 },
             { "lossOver1", 1 },
             { "unreachable", 1 },
             { "asnOrg", "Deutsche Telekom AG" },
@@ -99,7 +105,7 @@ public class AggregateBuilderTests
         Assert.AreEqual(20.0, dto.P50MsMedian);      // sorted 10,20,30: rank ceil(1.5)=2
         Assert.AreEqual(30.0, dto.P50MsP90);         // rank ceil(2.7)=3
         Assert.AreEqual(0.0, dto.LossPctMedian);     // sorted 0,0,5: rank 2
-        Assert.AreEqual(0.25, dto.ShareLossOver1Pct);
+        Assert.AreEqual(0.3333, dto.ShareLossOver1Pct);   // 1 of the 3 rows that sent something; the 4th row sent nothing
         Assert.AreEqual(0.25, dto.ShareUnreachable);
         Assert.AreEqual("Deutsche Telekom AG", dto.AsnOrg);
         Assert.AreEqual(53.0, dto.Lat);
@@ -115,6 +121,7 @@ public class AggregateBuilderTests
             { "count", 2 },
             { "p50s", new BsonArray { new BsonArray { BsonNull.Value }, new BsonArray() } },
             { "losses", new BsonArray() },
+            { "lossRows", 0 },
             { "lossOver1", 0 },
             { "unreachable", 2 },
             { "asnOrg", "X" },
@@ -134,6 +141,29 @@ public class AggregateBuilderTests
         Assert.AreEqual(1.0, dto.ShareUnreachable);
     }
 
+    // A row that sent nothing has no loss figure: it counts as a row but is not "a row without loss".
+    [Test]
+    public void Finalize_RowsThatSentNothing_DoNotDiluteTheLossShare()
+    {
+        var row = new BsonDocument
+        {
+            { "_id", new BsonDocument("path", "direct") },
+            { "count", 4 },
+            { "p50s", new BsonArray { new BsonArray { 10.0, BsonNull.Value, BsonNull.Value } } },
+            { "losses", new BsonArray { new BsonArray { 50.0, BsonNull.Value, BsonNull.Value } } },
+            { "lossRows", 1 },
+            { "lossOver1", 1 },
+            { "unreachable", 0 },
+        };
+
+        var dto = AggregateBuilder.Finalize(row, ["path"]);
+
+        Assert.AreEqual(4, dto.Count);
+        Assert.AreEqual(1.0, dto.ShareLossOver1Pct);
+        Assert.AreEqual(50.0, dto.LossPctMedian);
+        Assert.AreEqual(10.0, dto.P50MsMedian);
+    }
+
     // A field no row of the group has is absent from the group id (not null): the key is still listed.
     [Test]
     public void Finalize_KeyFieldAbsentFromTheGroupId_IsNull()
@@ -144,6 +174,7 @@ public class AggregateBuilderTests
             { "count", 1 },
             { "p50s", new BsonArray() },
             { "losses", new BsonArray() },
+            { "lossRows", 0 },
             { "lossOver1", 0 },
             { "unreachable", 0 },
         };
@@ -166,6 +197,7 @@ public class AggregateBuilderTests
             { "count", 10 },
             { "p50s", new BsonArray { new BsonArray(values.AsEnumerable().Reverse()) } },
             { "losses", new BsonArray() },
+            { "lossRows", 0 },
             { "lossOver1", 0 },
             { "unreachable", 0 },
         };
@@ -195,6 +227,7 @@ public class AggregateBuilderTests
             { "count", measurements * rowsPerMeasurement },
             { "p50s", Lists() },
             { "losses", Lists() },
+            { "lossRows", measurements * rowsPerMeasurement },
             { "lossOver1", measurements * rowsPerMeasurement },
             { "unreachable", measurements * rowsPerMeasurement },
             { "asnOrg", longest },

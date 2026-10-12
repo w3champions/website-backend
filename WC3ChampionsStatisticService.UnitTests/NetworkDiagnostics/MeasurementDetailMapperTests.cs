@@ -43,6 +43,57 @@ public class MeasurementDetailMapperTests
         Assert.AreEqual(1, s.Restarts);
     }
 
+    [Test]
+    public void Summary_UnknownVpn_IsNullInTheJson_NotFalse()
+    {
+        var m = Built().Measurement with { VpnSuspected = null };
+
+        using var doc = JsonDocument.Parse(Json(MeasurementDetailMapper.Summary(m)));
+
+        Assert.IsNull(MeasurementDetailMapper.Summary(m).VpnSuspected);
+        Assert.AreEqual(JsonValueKind.Null, doc.RootElement.GetProperty("vpnSuspected").ValueKind);
+    }
+
+    [Test]
+    public void Detail_UnknownVpn_IsNullInTheJson()
+    {
+        var built = Built();
+
+        using var doc = JsonDocument.Parse(Json(MeasurementDetailMapper.Detail(built.Measurement with { VpnSuspected = null }, built.RawSeries, IpInfo, includeRaw: false)));
+
+        Assert.AreEqual(JsonValueKind.Null, doc.RootElement.GetProperty("vpnSuspected").ValueKind);
+    }
+
+    [Test]
+    public void Detail_ProbeAndHopWithoutStats_SerializeStatsNull()
+    {
+        var m = Built().Measurement;
+        var probe = m.Targets[0].Paths[0].Probes[0] with { Stats = null, Hops = [new MeasuredHop { Ttl = 1, Ip = "10.0.0.1", Stats = null }] };
+        m = m with { Targets = [m.Targets[0] with { Paths = [m.Targets[0].Paths[0] with { Probes = [probe] }] }] };
+
+        using var doc = JsonDocument.Parse(Json(MeasurementDetailMapper.Detail(m, null, IpInfo, includeRaw: false)));
+
+        var jsonProbe = doc.RootElement.GetProperty("targets")[0].GetProperty("paths")[0].GetProperty("probes")[0];
+        Assert.AreEqual(JsonValueKind.Null, jsonProbe.GetProperty("stats").ValueKind);
+        Assert.AreEqual(JsonValueKind.Null, jsonProbe.GetProperty("hops")[0].GetProperty("stats").ValueKind);
+    }
+
+    // Documents stored before the "no samples, no stats" rule hold a zero-filled stats object: serve them as null too.
+    [Test]
+    public void Detail_StoredZeroSentStats_AreServedAsNull_ForProbeAndHop()
+    {
+        var m = Built().Measurement;
+        var zero = new StatsDto();
+        var probe = m.Targets[0].Paths[0].Probes[0] with { Stats = zero, Hops = [new MeasuredHop { Ttl = 1, Ip = "10.0.0.1", Stats = zero }, new MeasuredHop { Ttl = 2, Ip = "1.2.3.4", Stats = new StatsDto { Sent = 2, Received = 0, LossPct = 100 } }] };
+        m = m with { Targets = [m.Targets[0] with { Paths = [m.Targets[0].Paths[0] with { Probes = [probe] }] }] };
+
+        var served = MeasurementDetailMapper.Detail(m, null, IpInfo, includeRaw: false).Targets[0].Paths[0].Probes[0];
+
+        Assert.IsNull(served.Stats);
+        Assert.IsNull(served.Hops[0].Stats);
+        Assert.AreEqual(100.0, served.Hops[1].Stats.LossPct, "a hop that sent and lost everything keeps its stats");
+    }
+
     // C6: exactly these keys, camelCase.
     [Test]
     public void Summary_SerializesTheC6Keys()

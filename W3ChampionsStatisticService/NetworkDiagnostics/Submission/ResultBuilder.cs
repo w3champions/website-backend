@@ -77,7 +77,7 @@ public static class ResultBuilder
             Os = dto.Os?.Family,
             OsInfo = dto.Os,
             PrimaryAdapterType = system?.Adapters?.FirstOrDefault(a => a.HasDefaultRoute == true)?.Kind,
-            VpnSuspected = system?.Vpn?.Suspected ?? false,
+            VpnSuspected = system?.Vpn?.Suspected,
             LauncherVersion = dto.LauncherVersion,
             AttemptStartedAt = dto.AttemptStartedAt,
             WindowStartedAt = dto.WindowStartedAt,
@@ -149,7 +149,7 @@ public static class ResultBuilder
         var hops = probe.Hops ?? [];
         var targetIp = TargetIpFor(probe.Method, endpoints);
         var hopStats = hops.Select(h => SeriesStats.Compute(SubmissionValidator.ToSamples(h.Samples))).ToList();
-        var measuredHops = hops.Select((h, i) => new MeasuredHop { Ttl = h.Ttl, Ip = h.Ip, Stats = hopStats[i] }).ToList();
+        var measuredHops = hops.Select((h, i) => new MeasuredHop { Ttl = h.Ttl, Ip = h.Ip, Stats = hopStats[i].Sent == 0 ? null : hopStats[i] }).ToList();
         var hopBased = hops.Count > 0 || IsHopMethod(probe.Method);
 
         StatsDto observationStats;
@@ -165,7 +165,8 @@ public static class ResultBuilder
             observationStats = SeriesStats.Compute(SubmissionValidator.ToSamples(probe.Samples));
         }
 
-        var probeStats = NetDiagConstants.TracerouteMethods.Contains(probe.Method ?? "") ? null : observationStats;
+        // Nothing sent means no statistics: a zero-filled object would read as a measurement.
+        var probeStats = NetDiagConstants.TracerouteMethods.Contains(probe.Method ?? "") || observationStats.Sent == 0 ? null : observationStats;
         var measured = new MeasuredProbe { Method = probe.Method, Outcome = probe.Outcome, Reason = probe.Reason, Stats = probeStats, Hops = measuredHops };
         return new ProbeAnalysis(measured, observationStats, targetIp, finalHopIp, hops.Count);
     }

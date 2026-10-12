@@ -69,7 +69,7 @@ public record NetworkDiagnosticMeasurement
     public string Os { get; init; }
     public NetDiagOs OsInfo { get; init; }
     public string PrimaryAdapterType { get; init; }
-    public bool VpnSuspected { get; init; }
+    public bool? VpnSuspected { get; init; }
     public string LauncherVersion { get; init; }
     public DateTime? AttemptStartedAt { get; init; }
     public DateTime? WindowStartedAt { get; init; }
@@ -142,7 +142,7 @@ public record NetworkDiagnosticObservation
     public string AsnOrg { get; init; }
     public string Os { get; init; }
     public string PrimaryAdapterType { get; init; }
-    public bool VpnSuspected { get; init; }
+    public bool? VpnSuspected { get; init; }
     public string TargetKey { get; init; }
     public int? NodeId { get; init; }
     public string TargetLabel { get; init; }

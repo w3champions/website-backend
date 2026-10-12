@@ -242,6 +242,7 @@ public class ObservationQueryServiceTests
         { "count", count },
         { "p50s", new BsonArray { new BsonArray { 10.0 } } },
         { "losses", new BsonArray { new BsonArray { 0.0 } } },
+        { "lossRows", 1 },
         { "lossOver1", 0 },
         { "unreachable", 0 },
     };

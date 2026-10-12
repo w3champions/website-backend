@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Results;
 /// <summary>C6 MeasurementSummaryDto. <c>Restarts</c> is long like the stored value (an unsigned 32-bit counter on the wire, P10).</summary>
 public record MeasurementSummaryDto(
     string MeasurementId, string RunId, string BattleTag, DateTime SubmittedAt, string ClientIp, ClientGeo ClientGeo,
-    string Os, string PrimaryAdapterType, bool VpnSuspected, int TargetCount, long Restarts);
+    string Os, string PrimaryAdapterType, bool? VpnSuspected, int TargetCount, long Restarts);
 
 /// <summary>One [offsetMs, rttMs | null] pair per sample. Serialized only when set: an absent series has no key (A4).</summary>
 public record HopDetailDto(int Ttl, string Ip, StatsDto Stats)
@@ -29,7 +29,7 @@ public record TargetDetailDto(string TargetKey, string Label, List<PathDetailDto
 /// <summary>C6 MeasurementDetailDto: summary fields + C5 context + ipInfo + targets (+ samples when raw=true).</summary>
 public record MeasurementDetailDto(
     string MeasurementId, string RunId, string BattleTag, DateTime SubmittedAt, string ClientIp, ClientGeo ClientGeo,
-    string Os, string PrimaryAdapterType, bool VpnSuspected, int TargetCount, long Restarts,
+    string Os, string PrimaryAdapterType, bool? VpnSuspected, int TargetCount, long Restarts,
     NetDiagOs OsInfo, string LauncherVersion, DateTime? AttemptStartedAt, DateTime? WindowStartedAt, DateTime? WindowEndedAt,
     NetDiagPacing Pacing, NetDiagSystem System, List<NetDiagFloSnapshotRow> FloSnapshot, string DefaultGateway,
     Dictionary<string, ClientGeo> IpInfo, List<TargetDetailDto> Targets)
@@ -56,8 +56,8 @@ public static class MeasurementDetailMapper
 
         var targets = (m.Targets ?? []).Select((target, ti) => new TargetDetailDto(target.TargetKey, target.Label,
             (target.Paths ?? []).Select((path, pi) => new PathDetailDto(path.Path, path.RouteLabel, path.Endpoints,
-                (path.Probes ?? []).Select((probe, ri) => new ProbeDetailDto(probe.Method, probe.Outcome, probe.Reason, probe.Stats,
-                    (probe.Hops ?? []).Select((hop, hi) => new HopDetailDto(hop.Ttl, hop.Ip, hop.Stats) { Samples = HopSeries(ti, pi, ri, hi) }).ToList())
+                (path.Probes ?? []).Select((probe, ri) => new ProbeDetailDto(probe.Method, probe.Outcome, probe.Reason, NoStatsWhenNothingSent(probe.Stats),
+                    (probe.Hops ?? []).Select((hop, hi) => new HopDetailDto(hop.Ttl, hop.Ip, NoStatsWhenNothingSent(hop.Stats)) { Samples = HopSeries(ti, pi, ri, hi) }).ToList())
                 {
                     Samples = ProbeSeries(ti, pi, ri),
                 }).ToList())).ToList())).ToList();
@@ -76,6 +76,9 @@ public static class MeasurementDetailMapper
             RawExpired = includeRaw && raw == null ? true : null,
         };
     }
+
+    /// <summary>Nothing sent means no statistics; also for documents stored before ResultBuilder stopped writing zero-filled objects.</summary>
+    private static StatsDto NoStatsWhenNothingSent(StatsDto stats) => stats is { Sent: 0 } ? null : stats;
 
     /// <summary>The IPs whose IpInfo rows the detail view needs: client + every hop.</summary>
     public static List<string> IpsOf(NetworkDiagnosticMeasurement m) =>
