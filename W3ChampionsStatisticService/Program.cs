@@ -29,6 +29,7 @@ using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.Ladder;
 using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.NetworkDiagnostics;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
@@ -174,6 +175,7 @@ builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.LagReports.
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, W3ChampionsStatisticService.LagReports.LagReportRepository>();
 builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.PlayerMatchTelemetry.IPlayerMatchTelemetryRepository, W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetryRepository>();
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, W3ChampionsStatisticService.PlayerMatchTelemetry.PlayerMatchTelemetryRepository>();
+builder.Services.AddNetworkDiagnostics();
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IFloStatsService, W3ChampionsStatisticService.LagReports.FloStatsService>();
 builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.LagReports.ILagReportRelayStore, W3ChampionsStatisticService.LagReports.LagReportRepository>();
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IFloControllerRelayClient, W3ChampionsStatisticService.LagReports.FloControllerRelayClient>();

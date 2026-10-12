@@ -1,0 +1,129 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using MongoDB.Driver;
+using W3C.Domain.Repositories;
+using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.NetworkDiagnostics.Results;
+using W3ChampionsStatisticService.NetworkDiagnostics.Submission;
+
+namespace W3ChampionsStatisticService.NetworkDiagnostics.Persistence;
+
+public interface INetworkDiagnosticsResultRepository
+{
+    /// <summary>The result carries the client IP and geo, so it stays out of traces (P13). The attribute sits on the interface because the tracing proxy reads it there.</summary>
+    Task InsertResultAsync([NoTrace] BuiltResult result);
+    Task UpsertIpInfoAsync(IReadOnlyCollection<NetworkDiagnosticIpInfo> rows);
+    Task<NetworkDiagnosticMeasurement> GetMeasurementAsync(string id);
+    Task<NetworkDiagnosticRawSeries> GetRawSeriesAsync(string id);
+    Task<List<NetworkDiagnosticIpInfo>> IpInfoAsync(string runId, IReadOnlyCollection<string> ips);
+    Task<Dictionary<string, ClientGeo>> ClientGeoByMeasurementAsync(IReadOnlyCollection<string> measurementIds);
+}
+
+[Trace]
+public partial class NetworkDiagnosticsResultRepository(MongoClient mongoClient)
+    : MongoDbRepositoryBase(mongoClient), INetworkDiagnosticsResultRepository, IRequiresIndexes
+{
+    public string CollectionName => NetDiagConstants.MeasurementsCollection;
+
+    private IMongoCollection<NetworkDiagnosticMeasurement> Measurements => CreateCollection<NetworkDiagnosticMeasurement>(NetDiagConstants.MeasurementsCollection);
+    private IMongoCollection<NetworkDiagnosticRawSeries> RawSeries => CreateCollection<NetworkDiagnosticRawSeries>(NetDiagConstants.RawSeriesCollection);
+    private IMongoCollection<NetworkDiagnosticIpInfo> IpInfo => CreateCollection<NetworkDiagnosticIpInfo>(NetDiagConstants.IpInfoCollection);
+    private IMongoCollection<NetworkDiagnosticObservation> Observations => CreateCollection<NetworkDiagnosticObservation>(NetDiagConstants.ObservationsCollection);
+
+    /// <summary>Measurement first (its _id = measurementId makes a replay fail loudly), then raw, then observations.</summary>
+    public async Task InsertResultAsync([NoTrace] BuiltResult result)
+    {
+        await Measurements.InsertOneAsync(result.Measurement);
+        await RawSeries.InsertOneAsync(result.RawSeries);
+        if (result.Observations.Count > 0)
+        {
+            await Observations.InsertManyAsync(result.Observations, new InsertManyOptions { IsOrdered = false });
+        }
+    }
+
+    public async Task UpsertIpInfoAsync(IReadOnlyCollection<NetworkDiagnosticIpInfo> rows)
+    {
+        if (rows.Count == 0) return;
+        var writes = rows.Select(r => new UpdateOneModel<NetworkDiagnosticIpInfo>(
+            Builders<NetworkDiagnosticIpInfo>.Filter.Eq(x => x.RunId, r.RunId) & Builders<NetworkDiagnosticIpInfo>.Filter.Eq(x => x.Ip, r.Ip),
+            Builders<NetworkDiagnosticIpInfo>.Update
+                .SetOnInsert(x => x.Id, r.Id)
+                .SetOnInsert(x => x.Asn, r.Asn)
+                .SetOnInsert(x => x.AsnOrg, r.AsnOrg)
+                .SetOnInsert(x => x.Country, r.Country)
+                .SetOnInsert(x => x.City, r.City)
+                .SetOnInsert(x => x.Lat, r.Lat)
+                .SetOnInsert(x => x.Lon, r.Lon)
+                .SetOnInsert(x => x.GeoDbBuild, r.GeoDbBuild)
+                .SetOnInsert(x => x.FirstSeenAt, r.FirstSeenAt)
+                .SetOnInsert(x => x.ExpiresAt, r.ExpiresAt))
+        { IsUpsert = true });
+        try
+        {
+            await IpInfo.BulkWriteAsync(writes, new BulkWriteOptions { IsOrdered = false });
+        }
+        catch (MongoBulkWriteException e) when (e.WriteErrors.All(w => w.Category == ServerErrorCategory.DuplicateKey))
+        {
+            // Two concurrent submits upserting the same (RunId, Ip): the loser's row already exists, which is the goal.
+        }
+    }
+
+    public Task<NetworkDiagnosticMeasurement> GetMeasurementAsync(string id) =>
+        Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync();
+
+    public Task<NetworkDiagnosticRawSeries> GetRawSeriesAsync(string id) =>
+        RawSeries.Find(Builders<NetworkDiagnosticRawSeries>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync();
+
+    public Task<List<NetworkDiagnosticIpInfo>> IpInfoAsync(string runId, IReadOnlyCollection<string> ips) =>
+        IpInfo.Find(Builders<NetworkDiagnosticIpInfo>.Filter.Eq(x => x.RunId, runId) & Builders<NetworkDiagnosticIpInfo>.Filter.In(x => x.Ip, ips)).ToListAsync();
+
+    public async Task<Dictionary<string, ClientGeo>> ClientGeoByMeasurementAsync(IReadOnlyCollection<string> measurementIds)
+    {
+        var rows = await Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.In(x => x.Id, measurementIds))
+            .Project(x => new { x.Id, x.ClientGeo }).ToListAsync();
+        return rows.Where(r => r.ClientGeo != null).ToDictionary(r => r.Id, r => r.ClientGeo);
+    }
+
+    public async Task EnsureIndexesAsync()
+    {
+        var ttl = new CreateIndexOptions { ExpireAfter = TimeSpan.Zero };
+
+        var m = Builders<NetworkDiagnosticMeasurement>.IndexKeys;
+        await Measurements.Indexes.CreateManyAsync(
+        [
+            new(m.Ascending(x => x.ExpiresAt), ttl),
+            new(m.Ascending(x => x.RunId).Descending(x => x.SubmittedAt)),
+            new(m.Ascending(x => x.BattleTag).Descending(x => x.SubmittedAt)),
+            new(m.Descending(x => x.SubmittedAt)),
+            new(m.Ascending(x => x.ClientGeo.Country)),
+            new(m.Ascending(x => x.ClientGeo.Asn)),
+        ]);
+
+        await RawSeries.Indexes.CreateOneAsync(new CreateIndexModel<NetworkDiagnosticRawSeries>(
+            Builders<NetworkDiagnosticRawSeries>.IndexKeys.Ascending(x => x.ExpiresAt), ttl));
+
+        var i = Builders<NetworkDiagnosticIpInfo>.IndexKeys;
+        await IpInfo.Indexes.CreateManyAsync(
+        [
+            new(i.Ascending(x => x.ExpiresAt), ttl),
+            new(i.Ascending(x => x.RunId).Ascending(x => x.Ip), new CreateIndexOptions { Unique = true }),
+        ]);
+
+        var o = Builders<NetworkDiagnosticObservation>.IndexKeys;
+        await Observations.Indexes.CreateManyAsync(
+        [
+            new(o.Ascending(x => x.ExpiresAt), ttl),
+            new(o.Ascending(x => x.MeasurementId)),
+            new(o.Ascending(x => x.RunId).Ascending(x => x.TargetKey)),
+            new(o.Ascending(x => x.TargetKey).Descending(x => x.SubmittedAt)),
+            new(o.Ascending(x => x.Asn).Ascending(x => x.TargetKey)),
+            new(o.Ascending(x => x.Country).Ascending(x => x.TargetKey)),
+            new(o.Ascending(x => x.BattleTag).Descending(x => x.SubmittedAt)),
+            new(o.Descending(x => x.SubmittedAt)),
+            // Spec section 4.6 (P14).
+            new(o.Ascending(x => x.TargetKey).Ascending(x => x.Path).Ascending(x => x.Method).Ascending(x => x.SubmittedAt)),
+        ]);
+    }
+}
