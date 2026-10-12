@@ -15,7 +15,12 @@ public class PatreonAccountLinkDtoTests
         var link = new PatreonAccountLink("Player#1", "patreon-user") { LastSyncAt = DateTime.UtcNow };
         ProductMappingUserAssociation Association(string user = "Player#1", string provider = "patreon", AssociationStatus status = AssociationStatus.Active, DateTime? expiry = null) => new()
         {
-            UserId = user, ProviderId = provider, ProviderProductId = "tier-gold", ProductMappingId = "mapping-gold", Status = status, ExpiresAt = expiry
+            UserId = user,
+            ProviderId = provider,
+            ProviderProductId = "tier-gold",
+            ProductMappingId = "mapping-gold",
+            Status = status,
+            ExpiresAt = expiry
         };
         var associations = new[] { Association(), Association(), Association("Other#1"), Association(provider: "kofi"), Association(status: AssociationStatus.Revoked), Association(expiry: DateTime.UtcNow.AddDays(-1)) };
         var mappings = new Dictionary<string, ProductMapping> { ["mapping-gold"] = new() { ProductName = "Gold Patreon Tier" } };

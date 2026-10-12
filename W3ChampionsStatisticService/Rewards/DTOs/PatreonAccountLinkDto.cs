@@ -28,8 +28,13 @@ public class PatreonAccountLinkDto
             }).OrderBy(tier => tier.Title).ToList();
         return new PatreonAccountLinkDto
         {
-            Id = link.Id.ToString(), BattleTag = link.BattleTag, PatreonUserId = link.PatreonUserId,
-            LinkedAt = link.LinkedAt, LastSyncAt = link.LastSyncAt, Metadata = link.Metadata, SyncedTiers = tiers
+            Id = link.Id.ToString(),
+            BattleTag = link.BattleTag,
+            PatreonUserId = link.PatreonUserId,
+            LinkedAt = link.LinkedAt,
+            LastSyncAt = link.LastSyncAt,
+            Metadata = link.Metadata,
+            SyncedTiers = tiers
         };
     }
 }

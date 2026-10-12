@@ -110,7 +110,9 @@ public class PortraitReplacementTests
     {
         var reward = new Reward
         {
-            ModuleId = "portrait_reward", DisplayId = "Gold", IsActive = true,
+            ModuleId = "portrait_reward",
+            DisplayId = "Gold",
+            IsActive = true,
             Parameters = new Dictionary<string, object> { ["portraitIds"] = new[] { 120, 121, 122 }, ["other"] = "untouched" }
         };
         await _database.GetCollection<Reward>(nameof(Reward)).InsertOneAsync(reward);
@@ -211,7 +213,9 @@ public class PortraitReplacementTests
         await _database.GetCollection<PortraitDefinition>(nameof(PortraitDefinition)).DeleteOneAsync(p => p.Id == "121");
         await _database.GetCollection<Reward>(nameof(Reward)).InsertOneAsync(new Reward
         {
-            ModuleId = "portrait_reward", DisplayId = "Future grant", IsActive = false,
+            ModuleId = "portrait_reward",
+            DisplayId = "Future grant",
+            IsActive = false,
             Parameters = new Dictionary<string, object> { ["portraitIds"] = new[] { 121, 121, 123 } }
         });
         await new PersonalSettingsRepository(_client).EnsureIndexesAsync();
@@ -245,7 +249,9 @@ public class PortraitReplacementTests
         var handler = new PortraitCommandHandler(new PersonalSettingsRepository(_client), new PortraitRepository(_client));
         await handler.UpsertSpecialPortraits(new PortraitsCommand
         {
-            BnetTags = new List<string> { "Selected#1" }, Portraits = new List<int> { 120 }, Tooltip = "Edited tooltip"
+            BnetTags = new List<string> { "Selected#1" },
+            Portraits = new List<int> { 120 },
+            Tooltip = "Edited tooltip"
         });
         var selected = await Load("Selected#1");
         Assert.That(selected.SpecialPictures.Single().Description, Is.EqualTo("Edited tooltip"));
@@ -279,7 +285,9 @@ public class PortraitReplacementTests
         var handler = new PortraitCommandHandler(settings, new PortraitRepository(_client));
         await handler.UpsertSpecialPortraits(new PortraitsCommand
         {
-            BnetTags = new List<string> { "FirstGrant#1" }, Portraits = new List<int> { 120 }, Tooltip = "Custom"
+            BnetTags = new List<string> { "FirstGrant#1" },
+            Portraits = new List<int> { 120 },
+            Tooltip = "Custom"
         });
         var player = await settings.Find("FirstGrant#1");
         Assert.That(player.SpecialPictures.Single().PictureId, Is.EqualTo(120));
@@ -289,7 +297,8 @@ public class PortraitReplacementTests
         var before = player.LastUpdated;
         await handler.DeleteSpecialPortraits(new PortraitsCommand
         {
-            BnetTags = new List<string> { player.Id }, Portraits = new List<int> { 120 }
+            BnetTags = new List<string> { player.Id },
+            Portraits = new List<int> { 120 }
         });
         var removed = await settings.Find(player.Id);
         Assert.That(removed.SpecialPictures, Is.Empty);
