@@ -170,7 +170,7 @@ It returns `{groupBy, rows: [{key, count, p50MsMedian, p50MsP90, lossPctMedian, 
 - `key` is an object with one entry per `groupBy` key, e.g. `{"asn": 3320, "path": "direct"}`;
 - `count` is the number of observations;
 - `p50MsMedian` / `p50MsP90`: median and 90th percentile of the observations' `p50Ms`; `lossPctMedian`: median of `lossPct`;
-- `shareLossOver1Pct` and `shareUnreachable` are **fractions 0-1** (share of observations with `lossPct` > 1, share with outcome `unreachable`), not percentages;
+- `shareLossOver1Pct` and `shareUnreachable` are **fractions 0-1** (`shareLossOver1Pct` = share of the observations that sent samples, i.e. `lossPct` not null, with `lossPct` > 1; 0 when none sent. `shareUnreachable` = share of all observations with outcome `unreachable`), not percentages;
 - `lat`/`lon`: centroid (average across the group's measurements); `asnOrg` is set only when grouping by `asn`;
 - rows are capped at 1000.
 

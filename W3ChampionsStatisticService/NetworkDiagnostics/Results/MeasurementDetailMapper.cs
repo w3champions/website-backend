@@ -56,8 +56,8 @@ public static class MeasurementDetailMapper
 
         var targets = (m.Targets ?? []).Select((target, ti) => new TargetDetailDto(target.TargetKey, target.Label,
             (target.Paths ?? []).Select((path, pi) => new PathDetailDto(path.Path, path.RouteLabel, path.Endpoints,
-                (path.Probes ?? []).Select((probe, ri) => new ProbeDetailDto(probe.Method, probe.Outcome, probe.Reason, probe.Stats,
-                    (probe.Hops ?? []).Select((hop, hi) => new HopDetailDto(hop.Ttl, hop.Ip, hop.Stats) { Samples = HopSeries(ti, pi, ri, hi) }).ToList())
+                (path.Probes ?? []).Select((probe, ri) => new ProbeDetailDto(probe.Method, probe.Outcome, probe.Reason, NoStatsWhenNothingSent(probe.Stats),
+                    (probe.Hops ?? []).Select((hop, hi) => new HopDetailDto(hop.Ttl, hop.Ip, NoStatsWhenNothingSent(hop.Stats)) { Samples = HopSeries(ti, pi, ri, hi) }).ToList())
                 {
                     Samples = ProbeSeries(ti, pi, ri),
                 }).ToList())).ToList())).ToList();
@@ -76,6 +76,9 @@ public static class MeasurementDetailMapper
             RawExpired = includeRaw && raw == null ? true : null,
         };
     }
+
+    /// <summary>Nothing sent means no statistics; also for documents stored before ResultBuilder stopped writing zero-filled objects.</summary>
+    private static StatsDto NoStatsWhenNothingSent(StatsDto stats) => stats is { Sent: 0 } ? null : stats;
 
     /// <summary>The IPs whose IpInfo rows the detail view needs: client + every hop.</summary>
     public static List<string> IpsOf(NetworkDiagnosticMeasurement m) =>

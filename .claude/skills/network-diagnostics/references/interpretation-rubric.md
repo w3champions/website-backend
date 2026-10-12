@@ -24,7 +24,7 @@ Check every finding against section 1 before you report it.
   filter: such rows have no latency stats and drop out of the percentiles, but they still count in
   `count`. Fetch ndjson and filter with `jq 'select(.outcome=="ok")'` when you need the success-only view.
   `shareUnreachable` counts only the `unreachable` outcome (not `timeout`, `error` or `unsupported`).
-- **VPN-suspected clients** measure the VPN's path. Use `vpn=false` for ISP-level conclusions.
+- **VPN-suspected clients** measure the VPN's path. Use `vpn=false` for ISP-level conclusions, but `vpn=false` excludes rows whose VPN state is unknown (`vpnSuspected` null): compare against `groupBy=vpn` to see how large the null group is. Measurements stored before this change may carry `false` for unknown.
 - **GeoLite2 city/ASN is approximate**, especially for mobile and CGNAT ranges. Use it to group, not to
   identify a person's location.
 - **Units:** all `*Ms` are milliseconds; adapter `rxBps`/`txBps` are bits per second; `lossPct` is a

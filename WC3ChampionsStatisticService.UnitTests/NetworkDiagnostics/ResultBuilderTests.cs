@@ -364,6 +364,25 @@ public class ResultBuilderTests
     }
 
     [Test]
+    public void MtrWhereEveryHopHasNoSamples_HasNoProbeStats_AndZeroCountObservation()
+    {
+        var built = BuildSingle(new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "unreachable",
+            Hops = [new NetDiagHopDto { Ttl = 1, Ip = "10.0.0.1" }, new NetDiagHopDto { Ttl = 2, Ip = "10.0.0.2", Samples = [] }],
+        });
+
+        var probe = built.Measurement.Targets[0].Paths[0].Probes[0];
+        var obs = built.Observations.Single();
+        Assert.IsNull(probe.Stats);
+        Assert.IsTrue(probe.Hops.All(h => h.Stats == null));
+        Assert.AreEqual((0, 0, 2), (obs.Sent, obs.Received, obs.HopCount));
+        Assert.IsNull(obs.LossPct);
+        Assert.IsNull(obs.P50Ms);
+    }
+
+    [Test]
     public void HopWithoutSamples_HasNoStats_WhileHopsWithSamplesKeepTheirs()
     {
         var built = BuildSingle(new NetDiagProbeDto

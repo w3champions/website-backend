@@ -48,6 +48,10 @@ public class AggregateBuilderTests
         Assert.AreEqual(new BsonDocument("$sum", 1), stage["count"]);
         Assert.AreEqual(new BsonDocument("$push", "$P50Ms"), stage["p50s"]);
         Assert.AreEqual(new BsonDocument("$push", "$LossPct"), stage["losses"]);
+        // Rows that sent nothing have a null LossPct and stay out of the loss-share denominator.
+        Assert.AreEqual(
+            new BsonDocument("$sum", new BsonDocument("$cond", new BsonArray { new BsonDocument("$isNumber", "$LossPct"), 1, 0 })),
+            stage["lossRows"]);
         // $max skips null: one measurement without an ASN name must not blank the name of the group.
         Assert.AreEqual(new BsonDocument("$max", "$AsnOrg"), stage["asnOrg"]);
         Assert.AreEqual(new BsonDocument("$first", "$Lat"), stage["lat"]);
@@ -65,6 +69,7 @@ public class AggregateBuilderTests
         Assert.AreEqual(new BsonDocument("$sum", "$count"), stage["count"]);
         Assert.AreEqual(new BsonDocument("$push", "$p50s"), stage["p50s"]);
         Assert.AreEqual(new BsonDocument("$push", "$losses"), stage["losses"]);
+        Assert.AreEqual(new BsonDocument("$sum", "$lossRows"), stage["lossRows"]);
         Assert.AreEqual(new BsonDocument("$max", "$asnOrg"), stage["asnOrg"]);
         Assert.AreEqual(new BsonDocument("$avg", "$lat"), stage["lat"]);
         Assert.AreEqual(new BsonDocument("$avg", "$lon"), stage["lon"]);
