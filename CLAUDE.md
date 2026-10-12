@@ -113,6 +113,9 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - `REWARD_PATREON_CLIENT_ID` - Patreon OAuth client ID
 - `REWARD_PATREON_CLIENT_SECRET` - Patreon OAuth client secret
 - `REPLAY_EXPORT_INDEXES` - `off` skips the background build of the replay export indexes
+- `NETDIAG_CORE_SERVERS` - JSON array `[{key,label,ip,tcpPort}]` of core servers measurable by network diagnostics (default `[]`). Malformed JSON, duplicate keys or invalid IPv4/ports stop startup
+- `NETDIAG_BASELINES` - JSON array `[{key,label,region,ip,tcpPort}]`; defaults to the built-in public resolvers (`cloudflare`, `google`, `quad9`, `alidns`, `dnspod`, `yandex`)
+- `GEOIP_CITY_DB_PATH` / `GEOIP_ASN_DB_PATH` - GeoLite2 files (defaults `/geoip/GeoLite2-City.mmdb`, `/geoip/GeoLite2-ASN.mmdb`), kept fresh by the `geoipupdate` sidecar in docker-compose-files. Missing files never fail startup: results are stored without geo until they appear
 
 ## Important Notes
 
@@ -136,6 +139,12 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - A download is a ticket (`POST tickets`, bearer) plus a plain `GET download/{ticket}` that streams the ZIP. At most 2 exports stream at the same time.
 - Finished downloads go to the `ReplayExports` collection (no ZIP is kept). `ReplayExportIndexService` builds the search indexes 30 s after the start, unless `REPLAY_EXPORT_INDEXES=off` or the disk is short.
 - Tests use Mongo2Go (`FullyQualifiedName~ReplayExport`), never a shared database.
+
+### Network diagnostics
+- Feature folder `W3ChampionsStatisticService/NetworkDiagnostics/`. Admin API `api/network-diagnostics/*` (`targets`, `runs`, `measurements`, `observations`, `aggregate`) behind `EPermission.Proxies`; a missing permission answers 401. The launcher submits results with `POST api/network-diagnostics/results/{measurementId}` (per-assignment token, never logged and never in an admin response). Requests reach launchers as the hub event `NetworkDiagnosticsRequest`, due slots are pushed by the 5 s `NetworkDiagnosticsDispatcher`.
+- Admin reads are limited to 15 s (503 `query_timeout`); aggregates and target-filtered measurement lookups look at the newest 200 000 matching observations and say so with the `X-NetDiag-Truncated: true` header.
+- Logic lives in pure classes (validators, `SeriesStats`, `ResultBuilder`, `AggregateBuilder`, `AudiencePlanner`) with plain NUnit tests. Mongo behaviour is tested in `*MongoTests` fixtures (Mongo2Go: CI runs them, they do not run on arm64 macs); filter with `--filter "FullyQualifiedName~NetworkDiagnostics"`, never an unfiltered `dotnet test`.
+- LLM access: the `network-diagnostics` skill in `.claude/skills/network-diagnostics/`.
 
 ### Service Registration
 - Services registered in `Program.cs` and feature-specific extension methods
