@@ -8,6 +8,7 @@ using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
 using W3ChampionsStatisticService.NetworkDiagnostics.GeoIp;
 using W3ChampionsStatisticService.NetworkDiagnostics.Persistence;
 using W3ChampionsStatisticService.NetworkDiagnostics.Runs;
+using W3ChampionsStatisticService.NetworkDiagnostics.Submission;
 
 namespace W3ChampionsStatisticService.NetworkDiagnostics;
 
@@ -39,6 +40,10 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         // Plain AddTransient, no tracing interception: it creates assignments and so sees their tokens (A10).
         // The controller's [Trace] gives the span.
         services.AddTransient<INetworkDiagnosticsRunService, NetworkDiagnosticsRunService>();
+        // Plain AddTransient as well: the submission service receives the measurement token (A10).
+        services.AddTransient<INetworkDiagnosticsSubmissionService, NetworkDiagnosticsSubmissionService>();
+        // gzip request bodies of the C5 submit; UseNetworkDiagnosticsRequestDecompression mounts it for that path only.
+        services.AddRequestDecompression();
         services.AddHostedService(sp => new NetworkDiagnosticsDispatcher(
             sp.GetRequiredService<INetworkDiagnosticsScheduler>(),
             sp.GetRequiredService<TimeProvider>(),

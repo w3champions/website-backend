@@ -370,6 +370,9 @@ app.Use(
 
 app.UseRouting();
 
+// gzip request bodies are accepted by the network-diagnostics result submission only.
+app.UseNetworkDiagnosticsRequestDecompression();
+
 // Add Rewards exception handling middleware
 app.UseMiddleware<RewardsExceptionHandlingMiddleware>();
 
