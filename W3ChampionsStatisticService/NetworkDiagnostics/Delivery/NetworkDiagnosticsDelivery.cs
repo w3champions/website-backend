@@ -200,7 +200,7 @@ public sealed class NetworkDiagnosticsDelivery(
     private static NetworkDiagnosticsRequestDto ToDto(NetworkDiagnosticAssignment a, NetworkDiagnosticRun run) => new(
         a.Id,
         a.Token, // A10: the stored token, identical on every re-push
-        AsUtc(a.DeliverBy),
+        NetDiagTime.AsUtc(a.DeliverBy), // the launcher needs an explicit UTC instant ("…Z")
         new NetworkDiagnosticsSpecDto(
             run.Methods ?? [],
             run.AllowDuringGame,
@@ -209,17 +209,6 @@ public sealed class NetworkDiagnosticsDelivery(
             run.Targets?.AllFloNodes ?? false,
             run.ResolvedEndpoints ?? [],
             run.Targets?.IncludeDefaultGateway ?? false));
-
-    /// <summary>
-    /// The launcher needs an explicit UTC instant ("…Z"). Stored instants are UTC and the Mongo driver reads them back
-    /// with Kind=Utc; an Unspecified kind is therefore taken as UTC, a Local one is converted.
-    /// </summary>
-    private static DateTime AsUtc(DateTime value) => value.Kind switch
-    {
-        DateTimeKind.Utc => value,
-        DateTimeKind.Local => value.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
-    };
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 }

@@ -22,13 +22,23 @@ public record BaselineConfig
     public int TcpPort { get; init; }
 }
 
-/// <summary>C7 environment: target lists and GeoLite2 paths.</summary>
+/// <summary>
+/// C7 environment: target lists and GeoLite2 paths. Every instance is valid: keys are unique and non-blank, IPs are
+/// dotted-quad IPv4, ports are in 1-65535 and a missing label is the key. Runs freeze these values into the hub push,
+/// and a launcher drops a whole push that carries a null label or a port outside that range.
+/// </summary>
 public sealed record NetDiagTargetsConfig(
     IReadOnlyList<CoreServerConfig> CoreServers,
     IReadOnlyList<BaselineConfig> Baselines,
     string GeoIpCityDbPath,
     string GeoIpAsnDbPath)
 {
+    public IReadOnlyList<CoreServerConfig> CoreServers { get; } =
+        Checked(CoreServersVariable, CoreServers, c => (c.Key, c.Ip, c.TcpPort)).Select(c => c with { Label = LabelOr(c.Label, c.Key) }).ToList();
+
+    public IReadOnlyList<BaselineConfig> Baselines { get; } =
+        Checked(BaselinesVariable, Baselines, b => (b.Key, b.Ip, b.TcpPort)).Select(b => b with { Label = LabelOr(b.Label, b.Key) }).ToList();
+
     public const string CoreServersVariable = "NETDIAG_CORE_SERVERS";
     public const string BaselinesVariable = "NETDIAG_BASELINES";
     public const string CityDbVariable = "GEOIP_CITY_DB_PATH";
@@ -49,13 +59,9 @@ public sealed record NetDiagTargetsConfig(
 
     public static NetDiagTargetsConfig FromEnvironment(Func<string, string> env)
     {
-        var core = Parse<CoreServerConfig>(env(CoreServersVariable), CoreServersVariable) ?? [];
-        var baselines = Parse<BaselineConfig>(env(BaselinesVariable), BaselinesVariable) ?? DefaultBaselines.ToList();
-        Check(CoreServersVariable, core.Select(c => (c.Key, c.Ip, c.TcpPort)));
-        Check(BaselinesVariable, baselines.Select(b => (b.Key, b.Ip, b.TcpPort)));
         return new NetDiagTargetsConfig(
-            core,
-            baselines,
+            Parse<CoreServerConfig>(env(CoreServersVariable), CoreServersVariable) ?? [],
+            Parse<BaselineConfig>(env(BaselinesVariable), BaselinesVariable) ?? DefaultBaselines,
             NonEmpty(env(CityDbVariable)) ?? "/geoip/GeoLite2-City.mmdb",
             NonEmpty(env(AsnDbVariable)) ?? "/geoip/GeoLite2-ASN.mmdb");
     }
@@ -80,9 +86,7 @@ public sealed record NetDiagTargetsConfig(
         if (string.IsNullOrWhiteSpace(raw)) return null;
         try
         {
-            var list = JsonSerializer.Deserialize<List<T>>(raw, Json) ?? [];
-            if (list.Contains(default)) throw new InvalidOperationException($"{variable} contains a null entry");
-            return list;
+            return JsonSerializer.Deserialize<List<T>>(raw, Json) ?? [];
         }
         catch (JsonException e)
         {
@@ -90,18 +94,24 @@ public sealed record NetDiagTargetsConfig(
         }
     }
 
-    private static void Check(string variable, IEnumerable<(string Key, string Ip, int Port)> entries)
+    /// <summary><paramref name="variable"/> names the list in the messages; a null list is empty.</summary>
+    private static IReadOnlyList<T> Checked<T>(string variable, IReadOnlyList<T> entries, Func<T, (string Key, string Ip, int Port)> describe)
+        where T : class
     {
-        var list = entries.ToList();
-        foreach (var (key, ip, port) in list)
+        entries ??= [];
+        if (entries.Contains(null)) throw new InvalidOperationException($"{variable} contains a null entry");
+        foreach (var (key, ip, port) in entries.Select(describe))
         {
             if (string.IsNullOrWhiteSpace(key)) throw new InvalidOperationException($"{variable}: every entry needs a key");
             if (!NetDiagIp.IsStrictIpv4(ip)) throw new InvalidOperationException($"{variable}: '{key}' has an invalid IPv4 '{ip}'");
             if (port is < 1 or > 65535) throw new InvalidOperationException($"{variable}: '{key}' has an invalid tcpPort {port}");
         }
-        var duplicate = list.GroupBy(e => e.Key).FirstOrDefault(g => g.Count() > 1);
+        var duplicate = entries.GroupBy(e => describe(e).Key).FirstOrDefault(g => g.Count() > 1);
         if (duplicate != null) throw new InvalidOperationException($"{variable}: duplicate key '{duplicate.Key}'");
+        return entries;
     }
+
+    private static string LabelOr(string label, string key) => string.IsNullOrWhiteSpace(label) ? key : label;
 
     private static string NonEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

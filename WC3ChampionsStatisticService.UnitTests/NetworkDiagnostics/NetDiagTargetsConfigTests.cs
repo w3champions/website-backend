@@ -80,6 +80,41 @@ public class NetDiagTargetsConfigTests
         }, endpoints);
     }
 
+    // The launcher drops a whole push when an endpoint's label is null, so a missing or blank label becomes the key.
+    [TestCase("""[{"key":"bigboi","ip":"157.90.1.251","tcpPort":443}]""")]
+    [TestCase("""[{"key":"bigboi","label":null,"ip":"157.90.1.251","tcpPort":443}]""")]
+    [TestCase("""[{"key":"bigboi","label":"  ","ip":"157.90.1.251","tcpPort":443}]""")]
+    public void MissingLabel_FallsBackToTheKey(string json)
+    {
+        var cfg = NetDiagTargetsConfig.FromEnvironment(Env(new() { ["NETDIAG_CORE_SERVERS"] = json, ["NETDIAG_BASELINES"] = json }));
+
+        Assert.AreEqual("bigboi", cfg.CoreServers.Single().Label);
+        Assert.AreEqual("bigboi", cfg.Baselines.Single().Label);
+        Assert.AreEqual(new[] { "bigboi", "bigboi" },
+            cfg.ResolveEndpoints(new RunTargets { CoreServers = ["bigboi"], Baselines = ["bigboi"] }).Select(e => e.Label));
+    }
+
+    // The rules hold for every instance, not only for one read from the environment: runs freeze these values and
+    // push them to launchers, which reject a port outside 1-65535.
+    [Test]
+    public void Constructor_ValidatesLikeFromEnvironment()
+    {
+        CoreServerConfig Core(string key = "a", string ip = "1.1.1.1", int port = 443) => new() { Key = key, Ip = ip, TcpPort = port };
+        NetDiagTargetsConfig Build(IReadOnlyList<CoreServerConfig> core, IReadOnlyList<BaselineConfig> baselines) => new(core, baselines, "c", "a");
+
+        Assert.Throws<InvalidOperationException>(() => Build([Core(port: 0)], []));
+        Assert.Throws<InvalidOperationException>(() => Build([Core(port: 65536)], []));
+        Assert.Throws<InvalidOperationException>(() => Build([Core(ip: "1.1.1")], []));
+        Assert.Throws<InvalidOperationException>(() => Build([Core(key: " ")], []));
+        Assert.Throws<InvalidOperationException>(() => Build([Core(), Core()], []));
+        Assert.Throws<InvalidOperationException>(() => Build([null], []));
+        Assert.Throws<InvalidOperationException>(() => Build([], [new BaselineConfig { Key = "b", Ip = "1.1.1.1", TcpPort = 70000 }]));
+        var ok = Build([Core(port: 1), Core(key: "b", port: 65535)], null);
+        Assert.AreEqual(new[] { "a", "b" }, ok.CoreServers.Select(c => c.Label));
+        Assert.IsEmpty(ok.Baselines);
+        Assert.IsEmpty(Build(null, []).CoreServers);
+    }
+
     [Test]
     public void UnknownKeys_AreReportedWithTheirKind()
     {

@@ -36,6 +36,9 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         services.AddSingleton<INetworkDiagnosticsDelivery, NetworkDiagnosticsDelivery>();
         // Plain AddSingleton as well (tokens). The optional TimeSpan? ctor parameter needs a factory.
         services.AddSingleton<INetworkDiagnosticsScheduler, NetworkDiagnosticsScheduler>();
+        // Plain AddTransient, no tracing interception: it creates assignments and so sees their tokens (A10).
+        // The controller's [Trace] gives the span.
+        services.AddTransient<INetworkDiagnosticsRunService, NetworkDiagnosticsRunService>();
         services.AddHostedService(sp => new NetworkDiagnosticsDispatcher(
             sp.GetRequiredService<INetworkDiagnosticsScheduler>(),
             sp.GetRequiredService<TimeProvider>(),
