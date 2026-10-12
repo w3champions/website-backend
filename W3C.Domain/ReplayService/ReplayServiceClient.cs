@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using W3C.Contracts.Replay;
@@ -23,16 +24,16 @@ public class ReplayServiceClient(IHttpClientFactory httpClientFactory)
         return request;
     }
 
-    public async Task<Stream> GenerateReplay(int gameId)
+    public async Task<Stream> GenerateReplay(int gameId, CancellationToken cancellationToken = default)
     {
         // Mirrors GetStreamAsync: stream the body and throw on a non-success status. The body
         // is copied into a MemoryStream, so the response can be disposed before returning.
         using var request = CreateRequest($"/generate/{gameId}");
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (!response.IsSuccessStatusCode) ThrowForFailure(response, $"the replay of game {gameId}");
-        await using var stream = await response.Content.ReadAsStreamAsync();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         var memStream = new MemoryStream();
-        await stream.CopyToAsync(memStream);
+        await stream.CopyToAsync(memStream, cancellationToken);
         memStream.Seek(0, SeekOrigin.Begin);
         return memStream;
     }

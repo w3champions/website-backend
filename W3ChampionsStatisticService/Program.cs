@@ -224,6 +224,11 @@ builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimitin
 builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
 builder.Services.AddInterceptedSingleton<ReplayServiceClient>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportRepository>();
+builder.Services.AddSingleton<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportTicketStore>();
+// Builds the replay export indexes in the background, after the start (see ReplayExportIndexes).
+builder.Services.AddSingleton<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportIndexes>();
+builder.Services.AddHostedService<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportIndexService>();
 builder.Services.AddInterceptedTransient<MatchQueryHandler>();
 builder.Services.AddInterceptedSingleton<IChatServiceClient, ChatServiceClient>();
 builder.Services.AddInterceptedTransient<PlayerStatisticsService>();

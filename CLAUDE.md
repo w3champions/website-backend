@@ -112,6 +112,7 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - `IS_DEVELOPMENT` - Disables read model handlers when true
 - `REWARD_PATREON_CLIENT_ID` - Patreon OAuth client ID
 - `REWARD_PATREON_CLIENT_SECRET` - Patreon OAuth client secret
+- `REPLAY_EXPORT_INDEXES` - `off` skips the background build of the replay export indexes
 
 ## Important Notes
 
@@ -129,6 +130,12 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - `Admin/CommercialLicenseController.cs` (tagged accounts) and `Admin/CommercialEventsController.cs` (allocations, events, people, games, audit, role hints) proxy the matchmaking admin API behind `EPermission.CommercialLicense`. matchmaking-service owns all data and rules; the system is documented in `../matchmaking-service/docs/commercial-events.md`.
 - Battle-tag route values are named `targetBattleTag`, because `BearerHasPermissionFilter` overwrites any action argument named `battleTag` with the acting admin, which is forwarded as `actingBattleTag`. Path values are re-encoded with `Uri.EscapeDataString`.
 - Commercial-events endpoints answer matchmaking 4xx errors with matchmaking's JSON body verbatim and 5xx errors with `{"error":"Matchmaking service error","code":"INTERNAL"}` (`MatchmakingPassthroughExceptionFilter`). Other endpoints use `HandleMMError`.
+
+### Replay export
+- `Admin/ReplayExport/` is the admin bulk download of replays (permission `Replays`). Mongo `Matchup` selects the games; replay-service builds each .w3g, as for the single-replay download.
+- A download is a ticket (`POST tickets`, bearer) plus a plain `GET download/{ticket}` that streams the ZIP. At most 2 exports stream at the same time.
+- Finished downloads go to the `ReplayExports` collection (no ZIP is kept). `ReplayExportIndexService` builds the search indexes 30 s after the start, unless `REPLAY_EXPORT_INDEXES=off` or the disk is short.
+- Tests use Mongo2Go (`FullyQualifiedName~ReplayExport`), never a shared database.
 
 ### Service Registration
 - Services registered in `Program.cs` and feature-specific extension methods
