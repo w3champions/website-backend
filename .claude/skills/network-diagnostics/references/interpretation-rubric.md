@@ -15,7 +15,7 @@ Check every finding against section 1 before you report it.
   final-hop stats across methods, not hop lists.
 - **Proxied paths:** ICMP and TCP methods stop at the first relay. Only `FloUdpPing` is end to end.
   A great proxied `IcmpMtr` says nothing about the relay-to-node leg.
-- **One measurement is an anecdote.** Fleet conclusions need `count` >= 20 per group. Always state the
+- **One measurement is an anecdote.** Rule of thumb (not a backend rule): aim for `count` >= 20 per group before a fleet conclusion. Always state the
   count next to the number. `count` counts observations (several per measurement when a measurement has several paths/probes), so also keep the number of distinct measurements in mind.
 - **High `p99Ms` with a clean `p50Ms` and `p90Ms`** is usually a single stall (Wi-Fi scan, CPU spike).
   Check `system.cpu.usagePct`, `wifi` and whether `restarts` > 0 before calling it a path problem.
@@ -54,8 +54,10 @@ Bad to everything: last mile. Bad only to one node: that node's path or provider
 
 A stateful TCP-aware appliance (DPI, DDoS scrubbing, SYN-proxy) on the provider uplink holds TCP
 segments. Players on TCP see hundreds of ms while ICMP and UDP look perfect.
-- Signature: final-hop `TcpMtr`/`TcpPing` p50/p90 far above `IcmpMtr` to the same target (healthy is about 1x;
-  flo's russia-west incident measured 6.8x at the destination hop), while baselines show TCP close to ICMP.
+- Signature: `TcpPing` (or final-hop `TcpMtr`, macOS only) p50/p90 far above `IcmpMtr` to the same target
+  (healthy is about 1x; a past flo node incident measured 6.8x at the destination hop; figure from flo's
+  `lag-investigation` rubric), while baselines show TCP close to ICMP. `TcpMtr` cannot run on Windows, so use
+  `TcpPing` for this test and do not treat a missing `TcpMtr` row as a finding.
 - **Judge p50 and p90.** The stalls are intermittent, so a median-only check passes a broken node.
 - If ICMP is *also* bad, it is ordinary congestion or routing, not a middlebox.
 - Hand-off: this is a provider issue; continue with flo's `lag-investigation` skill (transit

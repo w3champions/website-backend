@@ -20,6 +20,7 @@ nd measurements -G --data-urlencode 'battleTag=Name#1234' --data-urlencode 'page
   `pageSize must be in 1-100`, `page is too large`.
 - `from` is inclusive, `to` is exclusive, ISO-8601 UTC (e.g. `2026-10-01T00:00:00Z`).
 - An unparsable query value answers 400 `{"error":"invalid query parameter: <key>"}`.
+- **Parameter names outside the filter table are silently ignored, with no error.** A misspelled or invented filter (`outcome=ok`, `node=12`, `isp=...`) returns 200 with the filter dropped, so the response covers more data than intended. Copy parameter names exactly from the table.
 - Every read is limited to 15 s server-side: a slow query answers 503 `{"error":"query_timeout"}`.
   Narrow the filter (run id, target key, time range) and retry; do not loop.
 - Aggregate and target-filtered measurement lookups consider at most the newest 200 000 matching
@@ -48,7 +49,7 @@ nd runs -X POST -H 'Content-Type: application/json' -d '{
   "audience": { "kind": "Users", "battleTags": ["Name#1234"] },
   "targets": { "floNodeIds": [12], "allFloNodes": false, "coreServers": ["core-key"], "baselines": ["cloudflare"],
                "customTargets": [{ "ip": "203.0.113.10", "tcpPort": 443 }], "includeDefaultGateway": true },
-  "methods": ["IcmpMtr", "TcpMtr", "TcpPing", "FloUdpPing"],
+  "methods": ["IcmpMtr", "TcpPing", "FloUdpPing"],
   "allowDuringGame": false,
   "windowSeconds": 60
 }' | jq .
@@ -60,11 +61,17 @@ nd runs -X POST -H 'Content-Type: application/json' -d '{
   - `SamplePercent` with `percent` in (0, 100];
   - `All` (**only with the user's explicit confirmation**).
 - `methods`: non-empty subset of `IcmpTraceroute`, `IcmpMtr`, `TcpTraceroute`, `TcpMtr`, `TcpPing`, `FloUdpPing`.
+  Support matrix (design spec sections 2 and 6.1; the backend accepts any combination, the launcher answers `unsupported` where it cannot):
+  - `TcpTraceroute` / `TcpMtr` are impossible on Windows without admin (outcome `unsupported`, reason `os_requires_admin`); they work on macOS. **Most players are on Windows: use `TcpPing` for the TCP-versus-ICMP comparison, and treat a missing `TcpMtr` row as a client limitation, not a finding.**
+  - `FloUdpPing` works for flo nodes only (`unsupported` for core, baseline, custom and gateway targets).
+  - The `gateway` target supports ICMP only (`IcmpMtr`, `IcmpTraceroute`).
+  - `proxied` paths exist only for flo nodes with an active route override.
 - `targets`: at least one of `floNodeIds`, `allFloNodes`, `coreServers`, `baselines`, `customTargets`, `includeDefaultGateway`. `core`/`baseline` values are the `key`s from `GET targets`. Custom targets need a dotted-quad IPv4 and an optional `tcpPort` (1-65535, default 443). At most 50 custom targets and 200 targets in total.
 - `windowSeconds`: 30-300 (default 60). A measurement takes about `windowSeconds + 15` s (`expectedDurationSeconds`).
 - `allowDuringGame` (default false) lets the launcher measure while a game is running.
 - `Users` runs: assignments are deliverable for 14 days; online users get the request at once, others when they connect. Fleet runs (`SampleCount`/`SamplePercent`/`All`) draw from players online at creation, spread slots over a 30-minute window, add players who log in during it, and accept results until 15 minutes after the window end.
 - 201 returns a `RunDto`: `{id, createdAt, createdBy, audience, targets, methods, allowDuringGame, windowSeconds, windowStart, windowEnd, cancelledAt, counters: {assigned, delivered, submitted, expired}, expectedDurationSeconds}`.
+- 502 `matchmaking_unavailable` when `floNodeIds` or `allFloNodes` is used and the flo node list cannot be fetched (retry later).
 - 400 errors (all `{"error": ...}`):
   - `invalid_json`, `payload_too_large`, `body is required`;
   - `audience is required`, `targets is required`, `methods must not be empty`, `unknown method: <m>`;
@@ -94,6 +101,10 @@ nd runs -X POST -H 'Content-Type: application/json' -d '{
 | `country`, `city`, `asn`, `os`, `adapterType`, `vpn` | client-level: who measured (`asn` numeric, `vpn=true/false`) |
 | `from`, `to` | on `submittedAt`; `from` inclusive, `to` exclusive |
 
+Only the names in this table are filters; any other name is ignored without an error. `battleTag`, `country`,
+`city`, `os`, `adapterType`, `targetKey`, `targetIp` match **exactly and case-sensitively**: copy the value from
+`clientGeo`, `ipInfo` or measurement detail output (e.g. the `country` string a measurement reports) instead of guessing it.
+
 There is **no `outcome` filter**. Anything other than `direct`/`proxied` for `path`, or an unknown
 method name, answers 400 `invalid query parameter: path` / `method`. To look at failed probes, fetch
 observations (`format=ndjson`) and filter locally with `jq 'select(.outcome != "ok")'`.
@@ -108,7 +119,7 @@ computed from observations (newest 200 000; check `X-NetDiag-Truncated`). A filt
 
 `GET measurements/{id}?raw=false|true` returns the summary fields plus:
 - `osInfo {family, name, version}`, `launcherVersion`, `attemptStartedAt`, `windowStartedAt`, `windowEndedAt`;
-- `pacing`, `system` (`cpu`, `memory`, `uptimeS`, `clockSkewMs`, `adapters`, `wifi`, `vpn`, `antivirus`), `floSnapshot` (the launcher's flo ping table at measurement time), `defaultGateway`;
+- `pacing`, `system` (`cpu`, `memory`, `uptimeS`, `clockSkewMs`, `launcherProxyConfigured`, `adapters`, `wifi`, `vpn`, `antivirus`), `floSnapshot` (the launcher's flo ping table at measurement time), `defaultGateway`;
 - `ipInfo` (IP -> `{asn, asnOrg, country, city, lat, lon, geoDbBuild}` for the client and every hop) and `targets[].paths[].probes[]`.
 
 `clientGeo` is `{country, city, lat, lon, asn, asnOrg, geoDbBuild}`. Each target is `{targetKey, label, paths[]}`; each path `{path, routeLabel, endpoints, probes[]}`; each probe `{method, outcome, reason, stats, hops[{ttl, ip, stats}]}`.
@@ -126,14 +137,16 @@ Percentiles are nearest-rank over successful samples. `lossPct` is null when not
 
 `GET observations?<filters>&cursor=&limit=1000&format=json|ndjson|csv`
 - `limit` 1-5000 (default 1000), else 400 `limit must be in 1-5000`. `format` default `json`; anything else 400 `invalid query parameter: format`.
-- `json`: `{items, nextCursor}`; `nextCursor` is null on the last page.
-- `ndjson` / `csv`: rows streamed in the body (csv has a header row); the next cursor is in the `X-Next-Cursor` response header, absent on the last page.
+- `json`: `{items, nextCursor}`; `nextCursor` is null when the limit did not end the page.
+- `ndjson` / `csv`: rows streamed in the body (csv has a header row); the next cursor is in the `X-Next-Cursor` response header, absent when the limit did not end the page.
 - `cursor` is the opaque value from the previous page; a malformed one is 400 `invalid query parameter: cursor`.
-- Rows come in insertion order (not sorted by time).
+- Rows come in `_id` (insertion) order, not sorted by time.
+- **Settle margin:** only rows older than 30 s are returned, so the rows of a just-submitted measurement appear about 30 s later. `measurements`, `measurements/{id}` and `aggregate` are not delayed.
+- **Cursors:** a next cursor is announced only when `limit` ended the page. No cursor (`nextCursor` null / no `X-Next-Cursor` header) means the export is complete as of now minus 30 s. Do **not** poll in a loop for more: to pick up newer rows later, call again with the last cursor you received (it stays valid), or start again without one.
 
 ```bash
 nd observations -G --data-urlencode "runId=$RUN" --data-urlencode format=csv --data-urlencode limit=5000 -D headers.txt -o page1.csv
-grep -i '^x-next-cursor' headers.txt        # absent = last page
+grep -i '^x-next-cursor' headers.txt        # absent = complete as of now minus 30 s
 nd observations -G --data-urlencode "runId=$RUN" --data-urlencode format=csv --data-urlencode limit=5000 \
    --data-urlencode "cursor=$(grep -i '^x-next-cursor' headers.txt | cut -d' ' -f2 | tr -d '\r')" -o page2.csv
 ```

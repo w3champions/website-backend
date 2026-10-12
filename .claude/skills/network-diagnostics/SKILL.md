@@ -14,8 +14,9 @@ through each flo proxy route. Results are enriched with GeoLite2 (country, city,
 
 1. **Read-only, except for creating runs.** You may `GET` anything and `POST runs`. Never
    `POST runs/{id}/cancel` unless the user asks, and never call any other API.
-2. **Never create an `All` run without the user's explicit confirmation in this conversation.** It
-   measures every online player. Prefer `SampleCount` (e.g. 50-200) or `SamplePercent`.
+2. **Never create an `All` run without the user's explicit confirmation in this conversation** (design
+   spec section 9). It measures every online player. Prefer `SampleCount` or `SamplePercent`, keep
+   them small, and tell the user what you created.
 3. **`Users` runs measure named players.** Only create them for players the user named. Do not
    enumerate players to measure.
 4. **A single intermediate hop's loss is not evidence.** Read `references/interpretation-rubric.md`
@@ -42,7 +43,8 @@ curl -sS -H "Authorization: Bearer $W3C_ADMIN_TOKEN" "$W3C_API/api/network-diagn
 - `502 {"error":"matchmaking_unavailable"}`: the flo node list could not be fetched. Retry later.
 - `503 {"error":"query_timeout"}`: every read is limited to 15 s server-side. Narrow it (run id,
   target key, time range, method) and retry once; do not loop.
-- `400 {"error":"invalid query parameter: <key>"}`: an unparsable or unknown value for `<key>`.
+- `400 {"error":"invalid query parameter: <key>"}`: `<key>` has an unparsable value, or (`path`, `method`, `groupBy`, `format`, `cursor`) a value outside the allowed set.
+- **Unknown parameter names are silently ignored** (`outcome=ok`, `node=12`, `isp=...` return 200 with the filter dropped, so the answer covers more data than you meant). Copy parameter names exactly from the filter table in `references/api.md`.
 
 ## Check for truncation
 
@@ -66,7 +68,7 @@ and the numbers cover only the newest rows. Always look at response headers for 
    it. Poll `GET runs/{id}` every 1-2 minutes and read `counters` (`assigned / delivered /
    submitted / expired`). No tight loops.
 5. **Analyse** with `aggregate` (fleet) or `measurements/{id}` (one user), then `observations` for
-   row-level detail. Use `format=csv` or `ndjson` when you want to compute with a script.
+   row-level detail (observation rows appear about 30 s after submit, see `references/api.md`). Use `format=csv` or `ndjson` when you want to compute with a script.
 6. **Interpret** with `references/interpretation-rubric.md`. Always compare against a baseline or a
    second node before blaming one.
 7. **Report** with the verdict template at the end of the rubric.
