@@ -110,6 +110,9 @@ public class DiagnosticsDataDto
     [JsonPropertyName("host_stalls")]
     public List<HostStallDto> HostStalls { get; set; } = [];
 
+    [JsonPropertyName("transport_switches")]
+    public List<TransportSwitchDto> TransportSwitches { get; set; } = [];
+
     [JsonPropertyName("client_version")]
     public string ClientVersion { get; set; }
 }
@@ -140,6 +143,30 @@ public class HostStallDto
     /// </summary>
     [JsonPropertyName("outcome")]
     public string Outcome { get; set; }
+}
+
+public class TransportSwitchDto
+{
+    [JsonPropertyName("timestamp")]
+    public DateTimeOffset Timestamp { get; set; }
+
+    [JsonPropertyName("game_time_offset")]
+    public long GameTimeOffsetMs { get; set; }
+
+    [JsonPropertyName("from")]
+    public string From { get; set; }
+
+    [JsonPropertyName("to")]
+    public string To { get; set; }
+
+    /// <summary>
+    /// Why the stream switched. A plain string and NOT an enum, as <see cref="HostStallDto.Outcome"/>:
+    /// an unknown enum member would turn into a 400 that rejects the WHOLE submission, so one new
+    /// reason from a newer client would silently destroy every report it touches. The same holds
+    /// for <see cref="From"/> and <see cref="To"/>.
+    /// </summary>
+    [JsonPropertyName("reason")]
+    public string Reason { get; set; }
 }
 
 public class LagEventDto
@@ -327,4 +354,5 @@ public class LagReportPlayerSummary
     public int LagEventCount { get; set; }
     public int ConnectionEventCount { get; set; }
     public int HostStallCount { get; set; }
+    public int TransportSwitchCount { get; set; }
 }

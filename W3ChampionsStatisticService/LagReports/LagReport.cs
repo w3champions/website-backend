@@ -149,6 +149,9 @@ public class PlayerDiagnostics
     /// <summary>Stalls the hosting flo-node detected in itself — see <see cref="HostStallData"/>.</summary>
     public List<HostStallData> HostStalls { get; set; } = [];
 
+    /// <summary>Changes of the game stream's transport, in order — see <see cref="TransportSwitchData"/>.</summary>
+    public List<TransportSwitchData> TransportSwitches { get; set; } = [];
+
     /// <summary>Version of the flo client that produced the report; null from older clients.</summary>
     public string ClientVersion { get; set; }
 }
@@ -183,6 +186,34 @@ public class HostStallData
     /// See <see cref="HostStallDto.Outcome"/>.
     /// </summary>
     public string Outcome { get; set; }
+}
+
+/// <summary>
+/// The player's game stream changed transport (TCP/QUIC): flo-client moved it to its standby
+/// stream, or a reconnect came back over the other transport. Measured by this player's client,
+/// so it describes this player's connection only.
+/// </summary>
+public class TransportSwitchData
+{
+    [BsonRepresentation(BsonType.Array)]
+    public DateTimeOffset Timestamp { get; set; }
+
+    /// <summary>Milliseconds since game start.</summary>
+    public long GameTimeOffsetMs { get; set; }
+
+    /// <summary>Transport before the switch: "TCP" or "QUIC".</summary>
+    public string From { get; set; }
+
+    /// <summary>Transport after the switch: "TCP" or "QUIC".</summary>
+    public string To { get; set; }
+
+    /// <summary>
+    /// Why the stream switched: "failover", "upgrade", "degraded" or "reconnect". From, To and
+    /// Reason are free-form strings and NOT enums on purpose, for the same reason as
+    /// <see cref="HostStallData.Outcome"/>: a newer client may send a value this build has never
+    /// heard of. See <see cref="TransportSwitchDto.Reason"/>.
+    /// </summary>
+    public string Reason { get; set; }
 }
 
 /// <summary>A !lag event: the moment the player entered the command.</summary>
