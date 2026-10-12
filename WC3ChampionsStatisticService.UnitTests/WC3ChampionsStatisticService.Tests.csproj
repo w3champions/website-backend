@@ -24,6 +24,10 @@
     <None Update="Rewards\Fixtures\Payloads\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- MaxMind-DB test-data (Apache-2.0 OR MIT), https://github.com/maxmind/MaxMind-DB/tree/main/test-data -->
+    <None Update="NetworkDiagnostics\GeoIp\*.mmdb">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
