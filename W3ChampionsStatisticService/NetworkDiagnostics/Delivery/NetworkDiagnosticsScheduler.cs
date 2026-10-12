@@ -36,7 +36,7 @@ public sealed class NetworkDiagnosticsScheduler(
         var online = connections.GetOnlineBattleTags();
         await RunStep("push", () => PushDueAsync(online, now), cancellationToken);
         await RunStep("top-up", () => TopUpAsync(online, now, cancellationToken), cancellationToken);
-        await RunStep("expire", () => ExpireAsync(now, cancellationToken), cancellationToken);
+        await RunStep("expire", () => ExpireAsync(now), cancellationToken);
     }
 
     /// <summary>A failing step is logged and the next one still runs. Cancellation is never swallowed.</summary>
@@ -65,43 +65,71 @@ public sealed class NetworkDiagnosticsScheduler(
     private async Task TopUpAsync(List<string> online, DateTime now, CancellationToken ct)
     {
         if (online.Count == 0) return;
-        foreach (var run in await runs.ActiveFleetRunsAsync(now))
+        foreach (var listed in await runs.ActiveFleetRunsAsync(now))
         {
             ct.ThrowIfCancellationRequested();
-            // A6: top-up stops at WindowEnd even though DeliverBy runs 15 min longer.
-            if (run.Audience.Kind != AudienceKind.SampleCount || run.CancelledAt != null
-                || run.WindowStart > now || run.WindowEnd is not { } windowEnd || windowEnd <= now) continue;
+            if (!IsOpenCountRun(listed, now)) continue;
 
-            var pending = await assignments.CountPendingUndeliveredAsync(run.Id, online, now);
+            // Pending first, then a fresh run: a first delivery landing in between is counted in both, which can only
+            // under-assign (the next tick tops up); the reverse order could over-assign.
+            var pending = await assignments.CountPendingUndeliveredAsync(listed.Id, online, now);
+            var run = await runs.GetAsync(listed.Id);
+            if (run == null || !IsOpenCountRun(run, now)) continue;
+
             var need = AudiencePlanner.TopUpNeed(run.Audience.Count!.Value, run.Counters.Delivered, pending);
             if (need == 0) continue;
 
             var assigned = (await assignments.AssignedBattleTagsAsync(run.Id)).ToHashSet(StringComparer.Ordinal);
             var candidates = online.Where(tag => !assigned.Contains(tag)).ToList();
             var inserted = 0;
-            foreach (var tag in AudiencePlanner.PickRandom(candidates, need, random))
+            try
             {
-                ct.ThrowIfCancellationRequested();
-                var slot = AudiencePlanner.RandomSlot(now, windowEnd, random);
-                if (await assignments.TryInsertAsync(AssignmentFactory.Create(run.Id, tag, slot, DeliveryRules.FleetDeliverBy(run))))
+                foreach (var tag in AudiencePlanner.PickRandom(candidates, need, random))
                 {
-                    inserted++;
+                    ct.ThrowIfCancellationRequested();
+                    var slot = AudiencePlanner.RandomSlot(now, run.WindowEnd!.Value, random);
+                    if (await assignments.TryInsertAsync(AssignmentFactory.Create(run.Id, tag, slot, DeliveryRules.FleetDeliverBy(run))))
+                    {
+                        inserted++;
+                    }
                 }
             }
-            if (inserted > 0)
+            finally
             {
-                await runs.IncrementCountersAsync(run.Id, assigned: inserted);
-                log.LogInformation("Network diagnostics: topped up run {RunId} with {Count} assignments", run.Id, inserted);
+                // Whatever was inserted must be counted and cancel-checked, even when the loop was interrupted.
+                if (inserted > 0)
+                {
+                    await TryAsync(() => runs.IncrementCountersAsync(run.Id, assigned: inserted), "assigned counter", run.Id);
+                    await TryAsync(() => delivery.ExpireIfCancelledAsync(run.Id), "cancel re-check", run.Id);
+                    log.LogInformation("Network diagnostics: topped up run {RunId} with {Count} assignments", run.Id, inserted);
+                }
             }
         }
     }
 
-    private async Task ExpireAsync(DateTime now, CancellationToken ct)
+    // A6: top-up stops at WindowEnd even though DeliverBy runs 15 min longer.
+    private static bool IsOpenCountRun(NetworkDiagnosticRun run, DateTime now) =>
+        run.Audience.Kind == AudienceKind.SampleCount && run.CancelledAt == null
+        && run.WindowStart <= now && run.WindowEnd is { } end && end > now;
+
+    private async Task ExpireAsync(DateTime now)
     {
+        // The statuses are already flipped when this returns, so every run's counter must be attempted, uninterrupted.
         foreach (var (runId, count) in await assignments.ExpireOverdueAsync(now))
         {
-            ct.ThrowIfCancellationRequested();
-            await runs.IncrementCountersAsync(runId, expired: count);
+            await TryAsync(() => runs.IncrementCountersAsync(runId, expired: count), "expired counter", runId);
+        }
+    }
+
+    private async Task TryAsync(Func<Task> action, string what, string runId)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception e)
+        {
+            log.LogError(e, "Network diagnostics dispatcher: {What} update for run {RunId} failed", what, runId);
         }
     }
 }

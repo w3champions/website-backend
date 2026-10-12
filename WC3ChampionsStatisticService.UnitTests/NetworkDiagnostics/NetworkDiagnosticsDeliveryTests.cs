@@ -340,6 +340,29 @@ public class NetworkDiagnosticsDeliveryTests
     }
 
     [Test]
+    public async Task ExpireIfCancelled_CancelledRun_ExpiresPendingAndCountsThem()
+    {
+        _runs.Setup(r => r.GetAsync("fleet-1")).ReturnsAsync(FleetRun(Now.AddMinutes(10)) with { CancelledAt = Now });
+        _assignments.Setup(x => x.ExpireAllPendingAsync("fleet-1")).ReturnsAsync(2);
+
+        var cancelled = await _delivery.ExpireIfCancelledAsync("fleet-1");
+
+        Assert.IsTrue(cancelled);
+        _runs.Verify(r => r.IncrementCountersAsync("fleet-1", 0, 0, 0, 2), Times.Once);
+    }
+
+    [Test]
+    public async Task ExpireIfCancelled_ActiveOrMissingRun_DoesNothing()
+    {
+        _runs.Setup(r => r.GetAsync("fleet-1")).ReturnsAsync(FleetRun(Now.AddMinutes(10)));
+
+        Assert.IsFalse(await _delivery.ExpireIfCancelledAsync("fleet-1"));
+        Assert.IsFalse(await _delivery.ExpireIfCancelledAsync("gone"));
+
+        _assignments.Verify(x => x.ExpireAllPendingAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
     public async Task OnConnected_LateJoiner_CancelAlreadyExpiredTheFreshAssignment_ExpiredIsNotCountedTwice()
     {
         var run = FleetRun(Now.AddMinutes(10));

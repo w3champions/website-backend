@@ -56,6 +56,19 @@ public class NetworkDiagnosticsSchedulerTests
         Counters = new RunCounters { Delivered = delivered },
     };
 
+    private void ActiveRun(NetworkDiagnosticRun run)
+    {
+        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ReturnsAsync([run]);
+        _runs.Setup(r => r.GetAsync(run.Id)).ReturnsAsync(run);
+    }
+
+    private void TopUpSetup(NetworkDiagnosticRun run, int pending, params string[] assigned)
+    {
+        ActiveRun(run);
+        _assignments.Setup(a => a.CountPendingUndeliveredAsync(run.Id, It.IsAny<IReadOnlyCollection<string>>(), Now)).ReturnsAsync(pending);
+        _assignments.Setup(a => a.AssignedBattleTagsAsync(run.Id)).ReturnsAsync(assigned.ToList());
+    }
+
     [Test]
     public async Task Tick_HandsTheWholeDueBatchToTheDeliveryService_P4()
     {
@@ -85,7 +98,7 @@ public class NetworkDiagnosticsSchedulerTests
     {
         Online("A#1111", "B#2222", "C#3333", "D#4444");
         var run = CountRun(count: 3, delivered: 1);
-        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ReturnsAsync([run]);
+        ActiveRun(run);
         _assignments.Setup(a => a.CountPendingUndeliveredAsync(run.Id, It.IsAny<IReadOnlyCollection<string>>(), Now)).ReturnsAsync(1);
         _assignments.Setup(a => a.AssignedBattleTagsAsync(run.Id)).ReturnsAsync(["A#1111", "B#2222"]);
         var inserted = new List<NetworkDiagnosticAssignment>();
@@ -106,7 +119,7 @@ public class NetworkDiagnosticsSchedulerTests
     {
         Online("A#1111");
         var run = CountRun(count: 2, delivered: 1);
-        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ReturnsAsync([run]);
+        ActiveRun(run);
         _assignments.Setup(a => a.CountPendingUndeliveredAsync(run.Id, It.IsAny<IReadOnlyCollection<string>>(), Now)).ReturnsAsync(1);
 
         await _scheduler.TickAsync(CancellationToken.None);
@@ -146,6 +159,139 @@ public class NetworkDiagnosticsSchedulerTests
 
         _runs.Verify(r => r.IncrementCountersAsync("run-1", 0, 0, 0, 3), Times.Once);
         _runs.Verify(r => r.IncrementCountersAsync("run-2", 0, 0, 0, 1), Times.Once);
+    }
+
+    [Test]
+    public async Task Tick_Expiry_AFailingIncrement_DoesNotDropTheOtherRunsCounters()
+    {
+        _assignments.Setup(a => a.ExpireOverdueAsync(Now)).ReturnsAsync(new Dictionary<string, int> { ["run-1"] = 3, ["run-2"] = 1 });
+        _runs.Setup(r => r.IncrementCountersAsync("run-1", 0, 0, 0, 3)).ThrowsAsync(new TimeoutException());
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _runs.Verify(r => r.IncrementCountersAsync("run-2", 0, 0, 0, 1), Times.Once);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_SecondInsertThrows_TheFirstIsStillCounted_AndCancelChecked()
+    {
+        Online("A#1111", "B#2222", "C#3333");
+        var run = CountRun(count: 3, delivered: 0);
+        TopUpSetup(run, pending: 0);
+        _assignments.SetupSequence(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>()))
+            .ReturnsAsync(true).ThrowsAsync(new TimeoutException());
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _runs.Verify(r => r.IncrementCountersAsync(run.Id, 1, 0, 0, 0), Times.Once);
+        _delivery.Verify(d => d.ExpireIfCancelledAsync(run.Id), Times.Once);
+        _assignments.Verify(a => a.ExpireOverdueAsync(Now), Times.Once, "the later step still runs");
+    }
+
+    [Test]
+    public void Tick_TopUp_CancelledMidLoop_TheInsertedOnesAreStillCounted()
+    {
+        Online("A#1111", "B#2222");
+        using var cts = new CancellationTokenSource();
+        var run = CountRun(count: 2, delivered: 0);
+        TopUpSetup(run, pending: 0);
+        _assignments.Setup(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>()))
+            .Callback<NetworkDiagnosticAssignment>(_ => cts.Cancel()).ReturnsAsync(true);
+
+        Assert.ThrowsAsync<OperationCanceledException>(() => _scheduler.TickAsync(cts.Token));
+
+        _runs.Verify(r => r.IncrementCountersAsync(run.Id, 1, 0, 0, 0), Times.Once);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_RunsTheCancelRaceGuardOnlyWhenSomethingWasInserted()
+    {
+        Online("A#1111");
+        var run = CountRun(count: 1, delivered: 0);
+        TopUpSetup(run, pending: 0);
+        _assignments.Setup(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>())).ReturnsAsync(false);
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _delivery.Verify(d => d.ExpireIfCancelledAsync(It.IsAny<string>()), Times.Never);
+        _runs.Verify(r => r.IncrementCountersAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never, "a lost insert race is not counted");
+    }
+
+    [Test]
+    public async Task Tick_TopUp_CountsOnlyWonInserts()
+    {
+        Online("A#1111", "B#2222");
+        var run = CountRun(count: 2, delivered: 0);
+        TopUpSetup(run, pending: 0);
+        _assignments.SetupSequence(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>())).ReturnsAsync(false).ReturnsAsync(true);
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _runs.Verify(r => r.IncrementCountersAsync(run.Id, 1, 0, 0, 0), Times.Once);
+        _delivery.Verify(d => d.ExpireIfCancelledAsync(run.Id), Times.Once);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_FewerCandidatesThanNeed_AssignsWhatItHas()
+    {
+        Online("A#1111", "B#2222");
+        var run = CountRun(count: 5, delivered: 0);
+        TopUpSetup(run, pending: 0, "A#1111");
+        _assignments.Setup(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>())).ReturnsAsync(true);
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _assignments.Verify(a => a.TryInsertAsync(It.Is<NetworkDiagnosticAssignment>(x => x.BattleTag == "B#2222")), Times.Once);
+        _assignments.Verify(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>()), Times.Once);
+        _runs.Verify(r => r.IncrementCountersAsync(run.Id, 1, 0, 0, 0), Times.Once);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_CancelledRun_IsSkipped()
+    {
+        Online("A#1111");
+        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ReturnsAsync([CountRun(5, 0) with { CancelledAt = Now.AddSeconds(-1) }]);
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _assignments.Verify(a => a.CountPendingUndeliveredAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<DateTime>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_WindowNotOpenYet_IsSkipped()
+    {
+        Online("A#1111");
+        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ReturnsAsync([CountRun(5, 0) with { WindowStart = Now.AddSeconds(1) }]);
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _assignments.Verify(a => a.CountPendingUndeliveredAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<DateTime>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_UsesTheDeliveredCountFromAFreshRunRead()
+    {
+        Online("A#1111");
+        var stale = CountRun(count: 1, delivered: 0);
+        TopUpSetup(stale, pending: 0);
+        _runs.Setup(r => r.GetAsync(stale.Id)).ReturnsAsync(CountRun(count: 1, delivered: 1));
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _assignments.Verify(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Tick_TopUp_RunCancelledBetweenListAndRead_IsSkipped()
+    {
+        Online("A#1111");
+        var listed = CountRun(count: 1, delivered: 0);
+        TopUpSetup(listed, pending: 0);
+        _runs.Setup(r => r.GetAsync(listed.Id)).ReturnsAsync(listed with { CancelledAt = Now });
+
+        await _scheduler.TickAsync(CancellationToken.None);
+
+        _assignments.Verify(a => a.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>()), Times.Never);
     }
 
     [Test]

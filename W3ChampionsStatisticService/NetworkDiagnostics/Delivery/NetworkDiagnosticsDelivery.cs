@@ -57,6 +57,12 @@ public interface INetworkDiagnosticsDelivery
 
     /// <summary>Late-joiner assignment for open fleet runs, then push of every due assignment.</summary>
     Task OnUserConnectedAsync(string battleTag);
+
+    /// <summary>
+    /// Cancel-race guard (§5.4) for callers that insert assignments into a run: re-reads the run and, when it was
+    /// cancelled meanwhile, expires its Pending assignments and counts them. True when the run is cancelled.
+    /// </summary>
+    Task<bool> ExpireIfCancelledAsync(string runId);
 }
 
 /// <summary>Registered with plain AddSingleton (no tracing interception): it handles tokens. Never log a token.</summary>
@@ -174,15 +180,21 @@ public sealed class NetworkDiagnosticsDelivery(
     /// </summary>
     private async Task ExpireIfCancelledMeanwhileAsync(string runId, string battleTag)
     {
+        if (!await ExpireIfCancelledAsync(runId)) return;
+        log.LogInformation("Network diagnostics: run {RunId} was cancelled while {BattleTag} joined late; the assignment is expired", runId, battleTag);
+    }
+
+    public async Task<bool> ExpireIfCancelledAsync(string runId)
+    {
         var current = await runs.GetAsync(runId);
-        if (current?.CancelledAt == null) return;
+        if (current?.CancelledAt == null) return false;
 
         var expired = await assignments.ExpireAllPendingAsync(runId);
         if (expired > 0)
         {
             await runs.IncrementCountersAsync(runId, expired: expired);
         }
-        log.LogInformation("Network diagnostics: run {RunId} was cancelled while {BattleTag} joined late; the assignment is expired", runId, battleTag);
+        return true;
     }
 
     private static NetworkDiagnosticsRequestDto ToDto(NetworkDiagnosticAssignment a, NetworkDiagnosticRun run) => new(

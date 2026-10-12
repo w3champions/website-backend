@@ -34,5 +34,9 @@ public sealed class NetworkDiagnosticsDispatcher(
         {
             // Host shutdown.
         }
+        catch (Exception e) when (stoppingToken.IsCancellationRequested)
+        {
+            log.LogWarning(e, "Network diagnostics dispatcher failed while stopping");
+        }
     }
 }
