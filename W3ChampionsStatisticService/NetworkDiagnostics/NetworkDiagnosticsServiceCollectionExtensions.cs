@@ -29,6 +29,7 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         services.AddSingleton<IGeoIpLookup>(sp => new MaxMindGeoIpLookup(
             targetsConfig.GeoIpCityDbPath, targetsConfig.GeoIpAsnDbPath,
             sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<MaxMindGeoIpLookup>>()));
+        services.AddTransient<IFloNodeSource, MatchmakingFloNodeSource>();
         return services;
     }
 }
