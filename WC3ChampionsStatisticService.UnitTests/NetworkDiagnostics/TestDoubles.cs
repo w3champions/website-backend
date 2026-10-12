@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 using W3ChampionsStatisticService.NetworkDiagnostics;
 
 namespace WC3ChampionsStatisticService.Tests.NetworkDiagnostics;
@@ -9,6 +12,13 @@ public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
 {
     public DateTimeOffset Now { get; set; } = now;
     public override DateTimeOffset GetUtcNow() => Now;
+}
+
+/// <summary>A filter as the server receives it.</summary>
+public static class FilterRender
+{
+    public static BsonDocument Render<T>(FilterDefinition<T> filter) =>
+        filter.Render(new RenderArgs<T>(BsonSerializer.SerializerRegistry.GetSerializer<T>(), BsonSerializer.SerializerRegistry));
 }
 
 /// <summary>Returns queued doubles in order, then repeats the last one. Next(max) = floor(NextDouble()*max).</summary>

@@ -33,8 +33,11 @@ public static class AdminRequests
         var key = modelState.Where(e => e.Value is { Errors.Count: > 0 }).Select(e => e.Key).Order(StringComparer.Ordinal).First();
         if (key.Length > MaxReportedKeyLength) key = key[..MaxReportedKeyLength];
         key = JsonNamingPolicy.CamelCase.ConvertName(key);
-        return NetDiagResult.Error(400, $"invalid query parameter: {key}");
+        return InvalidParameter(key);
     }
+
+    /// <summary>The one 400 for a query value that is not acceptable, whether it failed to bind or names nothing known.</summary>
+    public static NetDiagResult InvalidParameter(string key) => NetDiagResult.Error(400, $"invalid query parameter: {key}");
 
     /// <summary>
     /// Reads a camelCase JSON body of at most <see cref="MaxBodyBytes"/>, whatever the content type. An absent body and

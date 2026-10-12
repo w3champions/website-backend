@@ -103,7 +103,7 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
         Assert.AreEqual((2, 50), _seenPaging);
 
         // A5: the instants are the UTC ones that were sent, whatever the server's time zone.
-        var window = NetDiagFilters.Render(NetDiagFilters.Measurements(_seenQuery, []))["SubmittedAt"];
+        var window = FilterRender.Render(NetDiagFilters.Measurements(_seenQuery, []))["SubmittedAt"];
         Assert.AreEqual(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc), window["$gte"].ToUniversalTime());
         Assert.AreEqual(new DateTime(2026, 10, 2, 0, 0, 0, DateTimeKind.Utc), window["$lt"].ToUniversalTime());
     }
@@ -129,7 +129,7 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
 
         Assert.AreEqual(true, _seenQuery.Vpn);
         Assert.AreEqual(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
-            NetDiagFilters.Render(NetDiagFilters.Observations(_seenQuery))["SubmittedAt"]["$gte"].ToUniversalTime());
+            FilterRender.Render(NetDiagFilters.Observations(_seenQuery))["SubmittedAt"]["$gte"].ToUniversalTime());
     }
 
     // Empty values are what a cleared form field sends: they are no filter and no error.

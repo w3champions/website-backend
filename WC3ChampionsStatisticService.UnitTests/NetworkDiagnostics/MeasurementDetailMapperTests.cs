@@ -129,6 +129,10 @@ public class MeasurementDetailMapperTests
             root.EnumerateObject().Select(p => p.Name).ToArray());
         CollectionAssert.AreEquivalent(new[] { "asn", "asnOrg", "country", "city", "lat", "lon", "geoDbBuild" },
             root.GetProperty("ipInfo").GetProperty("1.2.3.4").EnumerateObject().Select(p => p.Name).ToArray());
+        // The C5 leaf records are written camelCase too.
+        Assert.AreEqual(6000, root.GetProperty("pacing").GetProperty("mtrRoundMs").GetInt64());
+        Assert.AreEqual("US East 4", root.GetProperty("floSnapshot")[0].GetProperty("nodeName").GetString());
+        Assert.AreEqual(12.5, root.GetProperty("system").GetProperty("cpu").GetProperty("usagePct").GetDouble());
         var probe = root.GetProperty("targets")[0].GetProperty("paths")[0].GetProperty("probes")[0];
         Assert.AreEqual(new[] { "method", "outcome", "reason", "stats", "hops" }, probe.EnumerateObject().Select(p => p.Name).ToArray());
         Assert.AreEqual(new[] { "ttl", "ip", "stats", "samples" }, probe.GetProperty("hops")[0].EnumerateObject().Select(p => p.Name).ToArray());

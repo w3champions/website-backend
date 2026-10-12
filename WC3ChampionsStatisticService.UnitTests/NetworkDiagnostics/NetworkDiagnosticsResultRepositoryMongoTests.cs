@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Mongo2Go;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 using NUnit.Framework;
 using W3ChampionsStatisticService.NetworkDiagnostics;
 using W3ChampionsStatisticService.NetworkDiagnostics.Persistence;
@@ -21,12 +23,17 @@ public class NetworkDiagnosticsResultRepositoryMongoTests
     private MongoDbRunner _runner;
     private MongoClient _client;
     private NetworkDiagnosticsResultRepository _repo;
+    private ConcurrentQueue<BsonDocument> _commands;
 
     [SetUp]
     public async Task SetUp()
     {
         _runner = MongoDbRunner.Start();
-        _client = new MongoClient(_runner.ConnectionString);
+        _commands = new ConcurrentQueue<BsonDocument>();
+        var settings = MongoClientSettings.FromConnectionString(_runner.ConnectionString);
+        // Every command as it goes to the server: what the options of a query really carry.
+        settings.ClusterConfigurator = cluster => cluster.Subscribe<CommandStartedEvent>(e => _commands.Enqueue(e.Command.ToBsonDocument().DeepClone().AsBsonDocument));
+        _client = new MongoClient(settings);
         _repo = new NetworkDiagnosticsResultRepository(_client);
         await _repo.EnsureIndexesAsync();
     }
@@ -97,6 +104,119 @@ public class NetworkDiagnosticsResultRepositoryMongoTests
         Assert.AreEqual(1, kept.Asn);
         Assert.AreEqual(Now, kept.FirstSeenAt);
         Assert.IsEmpty(await _repo.IpInfoAsync("run-2", ["1.2.3.4"]));
+    }
+
+    /// <summary>The commands sent on the named collection since the last call, oldest first.</summary>
+    private List<BsonDocument> CommandsOn(string collection)
+    {
+        var sent = new List<BsonDocument>();
+        while (_commands.TryDequeue(out var command))
+        {
+            if (command.ElementCount > 0 && command.GetElement(0).Value == collection) sent.Add(command);
+        }
+        return sent;
+    }
+
+    private static readonly long MaxTimeMs = (long)NetDiagConstants.AdminQueryMaxTime.TotalMilliseconds;
+
+    private static void AssertEveryCommandCarriesTheTimeLimit(List<BsonDocument> commands, params string[] expectedCommandNames)
+    {
+        Assert.AreEqual(expectedCommandNames, commands.Select(c => c.GetElement(0).Name).ToArray());
+        foreach (var command in commands)
+        {
+            Assert.AreEqual(MaxTimeMs, command.GetValue("maxTimeMS", -1).ToInt64(), command.GetElement(0).Name);
+        }
+    }
+
+    // Ruling a: 15 s, on every admin read. Limits bound what a query returns; only this bounds what it examines.
+    [Test]
+    public async Task EveryAdminRead_CarriesTheServerSideTimeLimit()
+    {
+        Assert.AreEqual(15_000, MaxTimeMs);
+        await _repo.InsertResultAsync(Built());
+        var filtered = NetDiagFilters.Measurements(new NetDiagQuery { Os = "windows" }, null);
+        var everything = NetDiagFilters.Measurements(new NetDiagQuery(), null);
+        var observations = NetDiagFilters.Observations(new NetDiagQuery { Method = "TcpPing" });
+        CommandsOn(NetDiagConstants.MeasurementsCollection);
+
+        await _repo.ListMeasurementsAsync(filtered, 0, 25);
+        AssertEveryCommandCarriesTheTimeLimit(CommandsOn(NetDiagConstants.MeasurementsCollection), "aggregate", "find");
+
+        await _repo.ListMeasurementsAsync(everything, 0, 25);
+        AssertEveryCommandCarriesTheTimeLimit(CommandsOn(NetDiagConstants.MeasurementsCollection), "count", "find");
+
+        await _repo.MeasurementIdsAsync(observations, 100);
+        AssertEveryCommandCarriesTheTimeLimit(CommandsOn(NetDiagConstants.ObservationsCollection), "aggregate");
+
+        await _repo.GetMeasurementAsync(SubmissionFixtures.MeasurementId);
+        await _repo.ClientGeoByMeasurementAsync([SubmissionFixtures.MeasurementId]);
+        AssertEveryCommandCarriesTheTimeLimit(CommandsOn(NetDiagConstants.MeasurementsCollection), "find", "find");
+
+        await _repo.GetRawSeriesAsync(SubmissionFixtures.MeasurementId);
+        AssertEveryCommandCarriesTheTimeLimit(CommandsOn(NetDiagConstants.RawSeriesCollection), "find");
+
+        await _repo.IpInfoAsync("run-1", ["1.2.3.4"]);
+        AssertEveryCommandCarriesTheTimeLimit(CommandsOn(NetDiagConstants.IpInfoCollection), "find");
+    }
+
+    // Ruling e: the unfiltered list (the default view) reads the total from the collection's metadata.
+    [Test]
+    public async Task ListMeasurements_EmptyFilter_TakesTheTotalFromTheCollectionEstimate()
+    {
+        await InsertMeasurements(Measurement("m0", 0), Measurement("m1", 1), Measurement("m2", 2));
+        CommandsOn(NetDiagConstants.MeasurementsCollection);
+
+        var (items, total) = await _repo.ListMeasurementsAsync(NetDiagFilters.Measurements(new NetDiagQuery(), null), 0, 2);
+
+        Assert.AreEqual(3, total);
+        Assert.AreEqual(2, items.Count);
+        var count = CommandsOn(NetDiagConstants.MeasurementsCollection).First();
+        Assert.AreEqual("count", count.GetElement(0).Name);
+        Assert.IsFalse(count.Contains("query"), "an estimate, not a filtered count");
+    }
+
+    // Ruling e: a filtered total is counted, but only up to the cap, so no count reads the whole collection.
+    [Test]
+    public async Task ListMeasurements_Filtered_CountsTheMatches_UpToTheCap()
+    {
+        await InsertMeasurements(Measurement("m0", 0), Measurement("m1", 1, country: "GB"), Measurement("m2", 2));
+        CommandsOn(NetDiagConstants.MeasurementsCollection);
+
+        var (items, total) = await _repo.ListMeasurementsAsync(NetDiagFilters.Measurements(new NetDiagQuery { Country = "DE" }, null), 0, 1);
+
+        Assert.AreEqual(2, total);
+        Assert.AreEqual("m2", items.Single().Id);
+        var count = CommandsOn(NetDiagConstants.MeasurementsCollection).First();
+        Assert.AreEqual("aggregate", count.GetElement(0).Name);
+        var stages = count["pipeline"].AsBsonArray.Select(stage => stage.AsBsonDocument).ToList();
+        Assert.AreEqual(new BsonDocument("ClientGeo.Country", "DE"), stages[0]["$match"]);
+        Assert.AreEqual(100_000, stages.Single(stage => stage.Contains("$limit"))["$limit"].ToInt64());
+        Assert.AreEqual(100_000, NetDiagConstants.MaxCountedMeasurements);
+        Assert.Less(stages.FindIndex(stage => stage.Contains("$limit")), stages.FindIndex(stage => stage.Contains("$group")), "the cap applies before counting");
+    }
+
+    // Ruling d: the targetIp filter has its own index, newest first.
+    [Test]
+    public async Task EnsureIndexes_ObservationsHaveTheTargetIpTimeIndex()
+    {
+        var indexes = await (await Collection<BsonDocument>(NetDiagConstants.ObservationsCollection).Indexes.ListAsync()).ToListAsync();
+
+        Assert.IsTrue(indexes.Any(i => i["key"].AsBsonDocument == new BsonDocument { { "TargetIp", 1 }, { "SubmittedAt", -1 } }));
+    }
+
+    // Ruling c against real documents: nodeId is answered through TargetKey and finds the same rows.
+    [Test]
+    public async Task MeasurementIds_NodeIdFilter_FindsTheFloTargetsObservations()
+    {
+        await _repo.InsertResultAsync(Built());
+
+        var hit = await _repo.MeasurementIdsAsync(NetDiagFilters.Observations(new NetDiagQuery { NodeId = 12 }), 100);
+        var miss = await _repo.MeasurementIdsAsync(NetDiagFilters.Observations(new NetDiagQuery { NodeId = 1 }), 100);
+
+        Assert.AreEqual(new[] { SubmissionFixtures.MeasurementId }, hit.Ids.ToArray());
+        Assert.IsEmpty(miss.Ids);
+        var stored = await Collection<NetworkDiagnosticObservation>(NetDiagConstants.ObservationsCollection).Find(o => o.TargetKey == "flo:12").ToListAsync();
+        Assert.IsTrue(stored.Count > 0 && stored.All(o => o.NodeId == 12));
     }
 
     private IMongoCollection<T> Collection<T>(string name) => _client.GetDatabase("W3Champions-Statistic-Service").GetCollection<T>(name);

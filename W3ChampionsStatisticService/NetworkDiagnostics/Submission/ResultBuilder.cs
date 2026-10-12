@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using MongoDB.Bson;
 using W3ChampionsStatisticService.NetworkDiagnostics.Results;
@@ -204,6 +205,17 @@ public static class ResultBuilder
         }
     }
 
+    /// <summary>
+    /// N only for the canonical key "flo:N". A key that merely parses ("flo:012", "flo:+12") names no node, so
+    /// NodeId == N and TargetKey == "flo:N" are the same statement and the node filter can use the TargetKey index.
+    /// </summary>
+    private static int? FloNodeIdOf(string targetKey) =>
+        targetKey?.StartsWith(NetDiagConstants.FloTargetKeyPrefix, StringComparison.Ordinal) == true
+        && int.TryParse(targetKey.AsSpan(NetDiagConstants.FloTargetKeyPrefix.Length), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var node)
+        && NetDiagConstants.FloTargetKey(node) == targetKey
+            ? node
+            : null;
+
     private static NetworkDiagnosticObservation Observation(
         NetworkDiagnosticMeasurement m, NetDiagTargetDto target, NetDiagPathDto path, NetDiagProbeDto probe, ProbeAnalysis a, long? lastHopAsn)
     {
@@ -226,7 +238,7 @@ public static class ResultBuilder
             PrimaryAdapterType = m.PrimaryAdapterType,
             VpnSuspected = m.VpnSuspected,
             TargetKey = target.TargetKey,
-            NodeId = target.TargetKey?.StartsWith("flo:", StringComparison.Ordinal) == true && int.TryParse(target.TargetKey[4..], out var node) ? node : null,
+            NodeId = FloNodeIdOf(target.TargetKey),
             TargetLabel = target.Label,
             TargetIp = a.TargetIp,
             Path = path.Path,

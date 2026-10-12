@@ -19,13 +19,19 @@ public interface INetworkDiagnosticsResultRepository
     Task<NetworkDiagnosticRawSeries> GetRawSeriesAsync(string id);
     Task<List<NetworkDiagnosticIpInfo>> IpInfoAsync(string runId, IReadOnlyCollection<string> ips);
     Task<Dictionary<string, ClientGeo>> ClientGeoByMeasurementAsync(IReadOnlyCollection<string> measurementIds);
-    /// <summary>Newest first; skips page * pageSize (zero-based page, A5). Total counts every match.</summary>
-    Task<(List<NetworkDiagnosticMeasurement> Items, long Total)> ListMeasurementsAsync(FilterDefinition<NetworkDiagnosticMeasurement> filter, int page, int pageSize);
     /// <summary>
-    /// The measurements of the newest <paramref name="limit"/> observations matching the filter (P6: never an
-    /// unbounded scan). Truncated is true when that many rows were read, so older matches may be missing.
+    /// Newest first; skips page * pageSize (zero-based page, A5). Total is the collection's estimated size for an
+    /// empty filter and otherwise the number of matches, counted up to <see cref="NetDiagConstants.MaxCountedMeasurements"/>.
+    /// The filter carries a player's BattleTag, so it stays out of traces.
     /// </summary>
-    Task<(List<string> Ids, bool Truncated)> MeasurementIdsAsync(FilterDefinition<NetworkDiagnosticObservation> filter, int limit);
+    Task<(List<NetworkDiagnosticMeasurement> Items, long Total)> ListMeasurementsAsync([NoTrace] FilterDefinition<NetworkDiagnosticMeasurement> filter, int page, int pageSize);
+    /// <summary>
+    /// The measurements of the newest <paramref name="limit"/> observations matching the filter. Truncated is true
+    /// when that many rows matched, so older matches may be missing. The limit bounds the rows that MATCH, not the
+    /// rows the server examines to find them: a filter no index serves examines rows until the server-side time
+    /// limit (<see cref="NetDiagConstants.AdminQueryMaxTime"/>) ends the query with a MongoExecutionTimeoutException.
+    /// </summary>
+    Task<(List<string> Ids, bool Truncated)> MeasurementIdsAsync([NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit);
 }
 
 [Trace]
@@ -78,17 +84,17 @@ public partial class NetworkDiagnosticsResultRepository(MongoClient mongoClient)
     }
 
     public Task<NetworkDiagnosticMeasurement> GetMeasurementAsync(string id) =>
-        Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync();
+        Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.Eq(x => x.Id, id), AdminFind).FirstOrDefaultAsync();
 
     public Task<NetworkDiagnosticRawSeries> GetRawSeriesAsync(string id) =>
-        RawSeries.Find(Builders<NetworkDiagnosticRawSeries>.Filter.Eq(x => x.Id, id)).FirstOrDefaultAsync();
+        RawSeries.Find(Builders<NetworkDiagnosticRawSeries>.Filter.Eq(x => x.Id, id), AdminFind).FirstOrDefaultAsync();
 
     public Task<List<NetworkDiagnosticIpInfo>> IpInfoAsync(string runId, IReadOnlyCollection<string> ips) =>
-        IpInfo.Find(Builders<NetworkDiagnosticIpInfo>.Filter.Eq(x => x.RunId, runId) & Builders<NetworkDiagnosticIpInfo>.Filter.In(x => x.Ip, ips)).ToListAsync();
+        IpInfo.Find(Builders<NetworkDiagnosticIpInfo>.Filter.Eq(x => x.RunId, runId) & Builders<NetworkDiagnosticIpInfo>.Filter.In(x => x.Ip, ips), AdminFind).ToListAsync();
 
     public async Task<Dictionary<string, ClientGeo>> ClientGeoByMeasurementAsync(IReadOnlyCollection<string> measurementIds)
     {
-        var rows = await Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.In(x => x.Id, measurementIds))
+        var rows = await Measurements.Find(Builders<NetworkDiagnosticMeasurement>.Filter.In(x => x.Id, measurementIds), AdminFind)
             .Project(x => new { x.Id, x.ClientGeo }).ToListAsync();
         return rows.Where(r => r.ClientGeo != null).ToDictionary(r => r.Id, r => r.ClientGeo);
     }
@@ -129,6 +135,8 @@ public partial class NetworkDiagnosticsResultRepository(MongoClient mongoClient)
             new(o.Ascending(x => x.Country).Ascending(x => x.TargetKey)),
             new(o.Ascending(x => x.BattleTag).Descending(x => x.SubmittedAt)),
             new(o.Descending(x => x.SubmittedAt)),
+            // The targetIp filter of the admin queries, newest first.
+            new(o.Ascending(x => x.TargetIp).Descending(x => x.SubmittedAt)),
             // Spec section 4.6 (P14).
             new(o.Ascending(x => x.TargetKey).Ascending(x => x.Path).Ascending(x => x.Method).Ascending(x => x.SubmittedAt)),
         ]);

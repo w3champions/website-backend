@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.NetworkDiagnostics.Results;
@@ -69,14 +70,29 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
 
     /// <summary>
     /// P8: a query value that did not bind answers 400 instead of running the action with a default.
-    /// P6: an answer computed from a lookup that stopped at its limit says so in a header.
+    /// P6: an answer computed from a lookup that stopped at its limit says so in a header, and a query the server
+    /// gave up on after <see cref="NetDiagConstants.AdminQueryMaxTime"/> answers 503 instead of an unhandled 500.
     /// </summary>
     private async Task<IActionResult> Answer(Func<Task<NetDiagResult>> action)
     {
-        var result = AdminRequests.InvalidQuery(ModelState) ?? await action();
+        NetDiagResult result;
+        try
+        {
+            result = AdminRequests.InvalidQuery(ModelState) ?? await action();
+        }
+        catch (MongoException e) when (IsExecutionTimeout(e))
+        {
+            result = NetDiagResult.Error(503, NetDiagConstants.QueryTimeoutError);
+        }
         if (result.Truncated) Response.Headers[NetDiagConstants.TruncatedHeader] = "true";
         return Map(result);
     }
+
+    private const int MaxTimeMsExpiredCode = 50;
+
+    /// <summary>The driver raises MongoExecutionTimeoutException for maxTimeMS; some command paths surface the bare command error.</summary>
+    private static bool IsExecutionTimeout(MongoException e) =>
+        e is MongoExecutionTimeoutException or MongoCommandException { Code: MaxTimeMsExpiredCode };
 
     private static DateTime? AsUtc(DateTime? value) => value is { } v ? NetDiagTime.AsUtc(v) : null;
 }

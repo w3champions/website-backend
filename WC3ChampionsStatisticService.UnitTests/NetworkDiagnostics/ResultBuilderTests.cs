@@ -52,6 +52,34 @@ public class ResultBuilderTests
         Assert.AreEqual(256, m.FloSnapshot.Single().Samples);
     }
 
+    // NodeId N and TargetKey "flo:N" are the same statement (the admin node filter relies on it): a key that only
+    // parses as a number names no node.
+    [TestCase("flo:12", 12)]
+    [TestCase("flo:0", 0)]
+    [TestCase("flo:-3", -3)]
+    [TestCase("flo:012", null)]
+    [TestCase("flo:+12", null)]
+    [TestCase("flo: 12", null)]
+    [TestCase("flo:12 ", null)]
+    [TestCase("flo:1,2", null)]
+    [TestCase("flo:", null)]
+    [TestCase("FLO:12", null)]
+    [TestCase("core:12", null)]
+    [TestCase("gateway", null)]
+    [TestCase(null, null)]
+    public void Observation_NodeId_OnlyForTheCanonicalFloKey(string targetKey, int? expected)
+    {
+        var dto = SubmissionFixtures.Minimal(SubmissionFixtures.MeasurementId) with
+        {
+            Targets = [new NetDiagTargetDto { TargetKey = targetKey, Paths = [new NetDiagPathDto { Path = "direct", Probes = [new NetDiagProbeDto { Method = "TcpPing" }] }] }],
+        };
+
+        var observation = ResultBuilder.Build(dto, Assignment, SubmittedAt, null, Geo).Observations.Single();
+
+        Assert.AreEqual(expected, observation.NodeId);
+        if (expected is { } node) Assert.AreEqual(targetKey, NetDiagConstants.FloTargetKey(node));
+    }
+
     [Test]
     public void Measurement_MtrProbeStatsComeFromTheTargetHop()
     {

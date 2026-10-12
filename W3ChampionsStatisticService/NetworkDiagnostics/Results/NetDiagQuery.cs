@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 
 namespace W3ChampionsStatisticService.NetworkDiagnostics.Results;
@@ -37,6 +35,17 @@ public record NetDiagQuery
     public bool HasTargetFilters =>
         !string.IsNullOrEmpty(TargetKey) || NodeId != null || !string.IsNullOrEmpty(TargetIp)
         || !string.IsNullOrEmpty(Path) || !string.IsNullOrEmpty(Method);
+
+    /// <summary>
+    /// The C6 name of the first filter whose value names nothing that can be stored, else null. Path and method are
+    /// matched exactly as stored, so a typo or another casing would otherwise scan for matches that cannot exist.
+    /// </summary>
+    public string InvalidParameter()
+    {
+        if (!string.IsNullOrEmpty(Path) && !NetDiagConstants.AllPaths.Contains(Path)) return "path";
+        if (!string.IsNullOrEmpty(Method) && !NetDiagConstants.AllMethods.Contains(Method)) return "method";
+        return null;
+    }
 }
 
 public static class NetDiagFilters
@@ -67,8 +76,11 @@ public static class NetDiagFilters
     {
         var f = Builders<NetworkDiagnosticObservation>.Filter;
         var parts = ClientLevel(q, ObservationFields, NullIfEmpty(q.MeasurementId));
-        if (!string.IsNullOrEmpty(q.TargetKey)) parts.Add(f.Eq(x => x.TargetKey, q.TargetKey));
-        if (q.NodeId != null) parts.Add(f.Eq(x => x.NodeId, q.NodeId));
+        // An observation's NodeId is N exactly when its TargetKey is "flo:N" (ResultBuilder), and TargetKey leads
+        // two indexes while NodeId leads none: the node filter is asked through the key.
+        var targetKeys = new[] { q.TargetKey, q.NodeId is { } node ? NetDiagConstants.FloTargetKey(node) : null }
+            .Where(key => !string.IsNullOrEmpty(key)).Distinct(StringComparer.Ordinal);
+        foreach (var key in targetKeys) parts.Add(f.Eq(x => x.TargetKey, key));
         if (!string.IsNullOrEmpty(q.TargetIp)) parts.Add(f.Eq(x => x.TargetIp, q.TargetIp));
         if (!string.IsNullOrEmpty(q.Path)) parts.Add(f.Eq(x => x.Path, q.Path));
         if (!string.IsNullOrEmpty(q.Method)) parts.Add(f.Eq(x => x.Method, q.Method));
@@ -90,10 +102,6 @@ public static class NetDiagFilters
         }
         return All(ClientLevel(q, MeasurementFields, ids));
     }
-
-    /// <summary>The filter as the server receives it (tests and logs).</summary>
-    public static BsonDocument Render<T>(FilterDefinition<T> filter) =>
-        filter.Render(new RenderArgs<T>(BsonSerializer.SerializerRegistry.GetSerializer<T>(), BsonSerializer.SerializerRegistry));
 
     /// <param name="measurementIds">Null for no id clause; an empty collection matches nothing.</param>
     private static List<FilterDefinition<T>> ClientLevel<T>(NetDiagQuery q, ClientFields<T> fields, IReadOnlyCollection<string> measurementIds)

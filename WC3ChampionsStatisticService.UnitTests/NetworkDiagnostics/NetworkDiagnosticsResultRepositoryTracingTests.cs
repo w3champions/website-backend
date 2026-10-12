@@ -20,4 +20,14 @@ public class NetworkDiagnosticsResultRepositoryTracingTests
 
         Assert.IsNotNull(parameter.GetCustomAttribute<NoTraceAttribute>());
     }
+
+    // The admin filters carry the BattleTag and IPs asked for; they stay out of trace tags as well.
+    [TestCase(nameof(INetworkDiagnosticsResultRepository.ListMeasurementsAsync))]
+    [TestCase(nameof(INetworkDiagnosticsResultRepository.MeasurementIdsAsync))]
+    public void AdminQueries_FilterParameter_IsNoTraceOnTheInterface(string method)
+    {
+        var parameter = typeof(INetworkDiagnosticsResultRepository).GetMethod(method)!.GetParameters().Single(p => p.Name == "filter");
+
+        Assert.IsNotNull(parameter.GetCustomAttribute<NoTraceAttribute>());
+    }
 }

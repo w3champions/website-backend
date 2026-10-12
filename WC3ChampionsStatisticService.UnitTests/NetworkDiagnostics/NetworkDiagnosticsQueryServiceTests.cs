@@ -28,6 +28,7 @@ public class NetworkDiagnosticsQueryServiceTests
 
     private Mock<INetworkDiagnosticsResultRepository> _results;
     private NetworkDiagnosticsQueryService _service;
+    private FixedTimeProvider _time;
     private BsonDocument _seenMeasurementFilter;
     private BsonDocument _seenObservationFilter;
 
@@ -39,14 +40,15 @@ public class NetworkDiagnosticsQueryServiceTests
         _seenMeasurementFilter = null;
         _seenObservationFilter = null;
         _results.Setup(r => r.ListMeasurementsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticMeasurement>>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Callback<FilterDefinition<NetworkDiagnosticMeasurement>, int, int>((f, _, _) => _seenMeasurementFilter = NetDiagFilters.Render(f))
+            .Callback<FilterDefinition<NetworkDiagnosticMeasurement>, int, int>((f, _, _) => _seenMeasurementFilter = FilterRender.Render(f))
             .ReturnsAsync((new List<NetworkDiagnosticMeasurement>(), 0L));
-        _service = new NetworkDiagnosticsQueryService(_results.Object);
+        _time = new FixedTimeProvider(Now);
+        _service = new NetworkDiagnosticsQueryService(_results.Object, _time);
     }
 
     private void ObservationLookupReturns(List<string> ids, bool truncated) =>
         _results.Setup(r => r.MeasurementIdsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), It.IsAny<int>()))
-            .Callback<FilterDefinition<NetworkDiagnosticObservation>, int>((f, _) => _seenObservationFilter = NetDiagFilters.Render(f))
+            .Callback<FilterDefinition<NetworkDiagnosticObservation>, int>((f, _) => _seenObservationFilter = FilterRender.Render(f))
             .ReturnsAsync((ids, truncated));
 
     private static BuiltResult Built() => ResultBuilder.Build(
@@ -131,6 +133,18 @@ public class NetworkDiagnosticsQueryServiceTests
         _results.VerifyNoOtherCalls();
     }
 
+    // An unknown path or method can match nothing (exact match on stored values): refused before any query.
+    [TestCase("Direct", null, "path")]
+    [TestCase(null, "tcpping", "method")]
+    public async Task ListMeasurements_UnknownPathOrMethod_400NamingTheParameter_BeforeAnyQuery(string path, string method, string key)
+    {
+        var result = await _service.ListMeasurementsAsync(new NetDiagQuery { Path = path, Method = method }, 0, 25);
+
+        Assert.AreEqual(400, result.StatusCode);
+        Assert.AreEqual($"invalid query parameter: {key}", JsonSerializer.SerializeToElement(result.Body).GetProperty("error").GetString());
+        _results.VerifyNoOtherCalls();
+    }
+
     [Test]
     public async Task GetMeasurement_Missing_404()
     {
@@ -182,6 +196,7 @@ public class NetworkDiagnosticsQueryServiceTests
     public async Task GetMeasurement_WithRaw_AfterTheRawSeriesExpired_SaysSo()
     {
         var built = Built();
+        _time.Now = Now + NetDiagConstants.RawRetention;
         _results.Setup(r => r.GetMeasurementAsync(built.Measurement.Id)).ReturnsAsync(built.Measurement);
         _results.Setup(r => r.GetRawSeriesAsync(built.Measurement.Id)).ReturnsAsync((NetworkDiagnosticRawSeries)null);
         _results.Setup(r => r.IpInfoAsync("run-1", It.IsAny<IReadOnlyCollection<string>>())).ReturnsAsync([]);
@@ -189,6 +204,27 @@ public class NetworkDiagnosticsQueryServiceTests
         var detail = (MeasurementDetailDto)(await _service.GetMeasurementAsync(built.Measurement.Id, raw: true)).Body;
 
         Assert.AreEqual(true, detail.RawExpired);
+        Assert.IsNull(detail.Targets[0].Paths[0].Probes[0].Hops[0].Samples);
+    }
+
+    // The result is written in three inserts without a transaction: a measurement whose raw document is missing
+    // inside the 90 days never had one. That is "no samples", and must not be shown as "expired".
+    [Test]
+    public async Task GetMeasurement_WithRaw_RawMissingInsideTheRetention_IsNotReportedAsExpired()
+    {
+        var built = Built();
+        _time.Now = Now + NetDiagConstants.RawRetention - TimeSpan.FromSeconds(1);
+        _results.Setup(r => r.GetMeasurementAsync(built.Measurement.Id)).ReturnsAsync(built.Measurement);
+        _results.Setup(r => r.GetRawSeriesAsync(built.Measurement.Id)).ReturnsAsync((NetworkDiagnosticRawSeries)null);
+        _results.Setup(r => r.IpInfoAsync("run-1", It.IsAny<IReadOnlyCollection<string>>())).ReturnsAsync([]);
+
+        var detail = (MeasurementDetailDto)(await _service.GetMeasurementAsync(built.Measurement.Id, raw: true)).Body;
+
+        Assert.IsNull(detail.RawExpired);
+        var probes = detail.Targets[0].Paths[0].Probes;
+        Assert.IsTrue(probes[0].Hops.All(h => h.Samples is { Count: 0 }), "the hop series are empty, not absent");
+        Assert.IsNull(probes[1].Samples);
+        StringAssert.DoesNotContain("rawExpired", JsonSerializer.Serialize(detail, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
     // A measurement without any IP (no client IP, no hops) needs no IpInfo query.

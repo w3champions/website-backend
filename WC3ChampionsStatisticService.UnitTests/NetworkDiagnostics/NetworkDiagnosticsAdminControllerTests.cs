@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
@@ -249,6 +251,53 @@ public class NetworkDiagnosticsAdminControllerTests
 
         Assert.AreEqual((200, """{"items":[],"total":7}"""), (result.StatusCode, Json(result)));
         Assert.IsFalse(_controller.Response.Headers.ContainsKey("X-NetDiag-Truncated"));
+    }
+
+    private static readonly MongoDB.Driver.Core.Connections.ConnectionId Connection =
+        new(new MongoDB.Driver.Core.Servers.ServerId(new MongoDB.Driver.Core.Clusters.ClusterId(1), new System.Net.DnsEndPoint("localhost", 27017)));
+
+    private static MongoCommandException CommandError(int code) =>
+        new(Connection, "command failed", new BsonDocument("find", "x"), new BsonDocument { { "ok", 0 }, { "code", code } });
+
+    private static readonly object[] ExecutionTimeouts =
+    [
+        new MongoExecutionTimeoutException(Connection, "operation exceeded time limit"),
+        CommandError(50),
+    ];
+
+    // Ruling a: a query the server stopped at its time limit is a 503 the caller can retry narrower, on every action.
+    [TestCaseSource(nameof(ExecutionTimeouts))]
+    public async Task EveryAction_MongoExecutionTimeout_503QueryTimeout(MongoException timeout)
+    {
+        _queries.Setup(q => q.ListMeasurementsAsync(It.IsAny<NetDiagQuery>(), It.IsAny<int>(), It.IsAny<int>())).ThrowsAsync(timeout);
+        _queries.Setup(q => q.GetMeasurementAsync("m1", false)).ThrowsAsync(timeout);
+        _service.Setup(s => s.GetRunAsync("r1")).ThrowsAsync(timeout);
+        _service.Setup(s => s.ListRunsAsync(null, null, null, 0, 25)).ThrowsAsync(timeout);
+
+        IActionResult[] results =
+        [
+            await _controller.ListMeasurements(new NetDiagQuery { Method = "TcpPing" }),
+            await _controller.GetMeasurement("m1"),
+            await _controller.GetRun("r1"),
+            await _controller.ListRuns(null, null, null),
+        ];
+
+        foreach (var result in results)
+        {
+            Assert.AreEqual((503, """{"error":"query_timeout"}"""), (((ObjectResult)result).StatusCode, Json(result)));
+        }
+        Assert.IsFalse(_controller.Response.Headers.ContainsKey("X-NetDiag-Truncated"));
+    }
+
+    // Only the time limit is mapped: any other database error stays an error.
+    [Test]
+    public void OtherMongoErrors_AreNotTurnedInto503()
+    {
+        _queries.Setup(q => q.GetMeasurementAsync("m1", false)).ThrowsAsync(CommandError(13));
+        _queries.Setup(q => q.GetMeasurementAsync("m2", false)).ThrowsAsync(new MongoException("connection lost"));
+
+        Assert.ThrowsAsync<MongoCommandException>(() => _controller.GetMeasurement("m1"));
+        Assert.ThrowsAsync<MongoException>(() => _controller.GetMeasurement("m2"));
     }
 
     [Test]
