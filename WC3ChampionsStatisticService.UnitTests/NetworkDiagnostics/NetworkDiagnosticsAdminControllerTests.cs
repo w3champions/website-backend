@@ -289,6 +289,53 @@ public class NetworkDiagnosticsAdminControllerTests
         Assert.IsFalse(_controller.Response.Headers.ContainsKey("X-NetDiag-Truncated"));
     }
 
+    // A caller that hung up is not a failure of the service: no unhandled exception, no query_timeout.
+    [Test]
+    public async Task ClientGone_CancelledQuery_Answers499()
+    {
+        using var gone = new CancellationTokenSource();
+        var token = gone.Token;
+        _controller.HttpContext.RequestAborted = token;
+        gone.Cancel();
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "path", token)).ThrowsAsync(new OperationCanceledException(token));
+        _queries.Setup(q => q.GetObservationsAsync(It.IsAny<NetDiagQuery>(), null, 1000, token)).ThrowsAsync(new TaskCanceledException());
+        _queries.Setup(q => q.OpenObservationStreamAsync(It.IsAny<NetDiagQuery>(), null, 1000, token)).ThrowsAsync(new OperationCanceledException(token));
+
+        IActionResult[] results =
+        [
+            await _controller.Aggregate(new NetDiagQuery(), "path"),
+            await _controller.GetObservations(new NetDiagQuery()),
+            await _controller.GetObservations(new NetDiagQuery(), format: "csv"),
+        ];
+
+        foreach (var result in results)
+        {
+            Assert.AreEqual(499, ((StatusCodeResult)result).StatusCode);
+        }
+    }
+
+    [Test]
+    public void Cancellation_NotFromTheCaller_StaysAnError()
+    {
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "path", It.IsAny<CancellationToken>())).ThrowsAsync(new OperationCanceledException());
+
+        Assert.ThrowsAsync<OperationCanceledException>(() => _controller.Aggregate(new NetDiagQuery(), "path"));
+    }
+
+    [Test]
+    public async Task GetObservations_Streamed_SetsTheCursorHeaderAndTheStreamResult()
+    {
+        var rows = new FakeCursor<NetworkDiagnosticObservation>();
+        _queries.Setup(q => q.OpenObservationStreamAsync(It.IsAny<NetDiagQuery>(), "c", 7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NetDiagResult.Ok(new ObservationStream(rows, "next")));
+
+        var result = await _controller.GetObservations(new NetDiagQuery(), "c", 7, "ndjson");
+
+        Assert.IsInstanceOf<ObservationStreamResult>(result);
+        Assert.AreEqual("next", _controller.Response.Headers["X-Next-Cursor"].ToString());
+        Assert.AreEqual("X-Next-Cursor", NetDiagConstants.NextCursorHeader);
+    }
+
     // Only the time limit is mapped: any other database error stays an error.
     [Test]
     public void OtherMongoErrors_AreNotTurnedInto503()
@@ -365,7 +412,7 @@ public class NetworkDiagnosticsAdminControllerTests
             .Where(m => m.DeclaringType == typeof(NetworkDiagnosticsAdminController) && m.IsPublic && !m.IsStatic)
             .ToList();
 
-        Assert.AreEqual(7, actions.Count);
+        Assert.AreEqual(9, actions.Count);
         foreach (var action in actions)
         {
             var filter = action.GetCustomAttributes(typeof(BearerHasPermissionFilter), false).Cast<BearerHasPermissionFilter>().SingleOrDefault();

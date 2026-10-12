@@ -77,4 +77,6 @@ public static class NetDiagConstants
     public const string QueryTimeoutError = "query_timeout";
     /// <summary>Response header, value "true": the answer was computed from the newest <see cref="MaxScannedObservations"/> matching rows only.</summary>
     public const string TruncatedHeader = "X-NetDiag-Truncated";
+    /// <summary>Response header of the ndjson and csv observation forms: the cursor of the next page; absent on the last page (C6).</summary>
+    public const string NextCursorHeader = "X-Next-Cursor";
 }

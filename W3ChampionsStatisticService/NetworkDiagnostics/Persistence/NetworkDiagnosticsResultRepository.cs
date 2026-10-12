@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
@@ -32,6 +34,30 @@ public interface INetworkDiagnosticsResultRepository
     /// limit (<see cref="NetDiagConstants.AdminQueryMaxTime"/>) ends the query with a MongoExecutionTimeoutException.
     /// </summary>
     Task<(List<string> Ids, bool Truncated)> MeasurementIdsAsync([NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit);
+    /// <summary>The first <paramref name="limit"/> matching rows after <paramref name="after"/>, in _id (insertion) order.</summary>
+    Task<List<NetworkDiagnosticObservation>> ObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, int limit, [NoTrace] CancellationToken cancellationToken);
+    /// <summary>
+    /// The _id of the <paramref name="limit"/>-th matching row after <paramref name="after"/> when at least one more
+    /// row follows it, else null: the page of that size is then the last one.
+    /// </summary>
+    Task<ObjectId?> ObservationPageEndAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, int limit, [NoTrace] CancellationToken cancellationToken);
+    /// <summary>
+    /// Like <see cref="ObservationsAsync"/>, but returns the open server cursor (its first batch is already read) and
+    /// stops at <paramref name="upTo"/> inclusive when given. The caller disposes it.
+    /// </summary>
+    Task<IAsyncCursor<NetworkDiagnosticObservation>> OpenObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, ObjectId? upTo, int limit, [NoTrace] CancellationToken cancellationToken);
+    /// <summary>
+    /// Runs the <c>$group</c> stages over the newest <paramref name="scanLimit"/> matching rows and returns at most
+    /// <paramref name="maxRows"/> final groups, largest "count" first.
+    /// </summary>
+    Task<List<BsonDocument>> AggregateObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, [NoTrace] IReadOnlyList<BsonDocument> groupStages,
+        int scanLimit, int maxRows, [NoTrace] CancellationToken cancellationToken);
+    /// <summary>The number of matching rows; counting stops at <paramref name="limit"/>.</summary>
+    Task<long> CountObservationsAsync([NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit, [NoTrace] CancellationToken cancellationToken);
 }
 
 [Trace]

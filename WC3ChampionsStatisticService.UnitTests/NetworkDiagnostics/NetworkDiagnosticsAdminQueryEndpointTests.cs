@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -10,6 +12,8 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.NetworkDiagnostics.Api;
@@ -202,6 +206,241 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
         var (status, body, _) = await Get("/api/network-diagnostics/measurements/nope");
 
         Assert.AreEqual((404, """{"error":"not_found"}"""), (status, body));
+    }
+
+    private static NetworkDiagnosticObservation Obs(string measurementId) => new()
+    {
+        Id = ObjectId.GenerateNewId(),
+        MeasurementId = measurementId,
+        RunId = "r1",
+        BattleTag = "Name#1234",
+        SubmittedAt = new DateTime(2026, 10, 12, 10, 2, 0, DateTimeKind.Utc),
+        TargetKey = "flo:12",
+        Path = "direct",
+        Method = "TcpPing",
+        Outcome = "ok",
+        Reason = "=cmd",
+        Sent = 10,
+        Received = 10,
+    };
+
+    private const string ObservationsUrl = "/api/network-diagnostics/observations";
+
+    // The website's request (NetworkDiagnosticsService.getObservations): shared filters, format=json, cursor, limit.
+    [Test]
+    public async Task GetObservations_Json_BindsFiltersCursorAndLimit_AndAnswersItemsAndNextCursor()
+    {
+        NetDiagQuery seen = null;
+        _queries.Setup(q => q.GetObservationsAsync(It.IsAny<NetDiagQuery>(), "507f1f77bcf86cd799439011", 5000, It.IsAny<CancellationToken>()))
+            .Callback<NetDiagQuery, string, int, CancellationToken>((query, _, _, _) => seen = query)
+            .ReturnsAsync(NetDiagResult.Ok(new ObservationPage([ObservationDto.From(Obs("m1"))], "507f1f77bcf86cd799439012")));
+
+        var (status, body, response) = await Get($"{ObservationsUrl}?battleTag=Name%231234&runId=r1&nodeId=12&format=json&cursor=507f1f77bcf86cd799439011&limit=5000");
+
+        Assert.AreEqual(200, status);
+        StringAssert.StartsWith("""{"items":[{"measurementId":"m1","runId":"r1","battleTag":"Name#1234","submittedAt":"2026-10-12T10:02:00Z",""", body);
+        StringAssert.EndsWith("""],"nextCursor":"507f1f77bcf86cd799439012"}""", body);
+        Assert.AreEqual("application/json", response.Content.Headers.ContentType!.MediaType);
+        // The player filtered for, not the acting admin.
+        Assert.AreEqual(("Name#1234", 12), (seen.BattleTag, seen.NodeId));
+        Assert.AreEqual(new[] { "r1" }, seen.RunId);
+        Assert.IsFalse(response.Headers.Contains("X-Next-Cursor"), "the JSON form carries the cursor in the body");
+    }
+
+    [TestCase("")]
+    [TestCase("?format=")]
+    public async Task GetObservations_Defaults_AreJson_NoCursor_Limit1000(string query)
+    {
+        _queries.Setup(q => q.GetObservationsAsync(It.IsAny<NetDiagQuery>(), null, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NetDiagResult.Ok(new ObservationPage([], null)));
+
+        var (status, body, _) = await Get(ObservationsUrl + query);
+
+        Assert.AreEqual((200, """{"items":[],"nextCursor":null}"""), (status, body));
+    }
+
+    private void StreamAnswers(IAsyncCursor<NetworkDiagnosticObservation> rows, string nextCursor, string cursor = null, int limit = 1000) =>
+        _queries.Setup(q => q.OpenObservationStreamAsync(It.IsAny<NetDiagQuery>(), cursor, limit, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NetDiagResult.Ok(new ObservationStream(rows, nextCursor)));
+
+    [Test]
+    public async Task GetObservations_Csv_StreamsHeaderAndEveryBatch_WithTheCursorInTheHeader()
+    {
+        var rows = new FakeCursor<NetworkDiagnosticObservation>(() => [Obs("m1"), Obs("m2")], () => [Obs("m3")]);
+        StreamAnswers(rows, "507f1f77bcf86cd799439012", cursor: "507f1f77bcf86cd799439011", limit: 3);
+
+        var (status, body, response) = await Get($"{ObservationsUrl}?format=csv&limit=3&cursor=507f1f77bcf86cd799439011");
+
+        var lines = body.Split("\r\n");
+        Assert.AreEqual(200, status);
+        Assert.AreEqual("text/csv; charset=utf-8", response.Content.Headers.ContentType!.ToString());
+        Assert.AreEqual("507f1f77bcf86cd799439012", response.Headers.GetValues("X-Next-Cursor").Single());
+        Assert.AreEqual(string.Join(",", ObservationFormats.CsvColumns), lines[0]);
+        Assert.AreEqual(new[] { "m1", "m2", "m3" }, lines.Skip(1).Take(3).Select(l => l.Split(',')[0]));
+        // Review Focus 6, on the wire.
+        StringAssert.Contains(",ok,'=cmd,10,10,", lines[1]);
+        Assert.AreEqual(5, lines.Length);
+        Assert.AreEqual("", lines[4]);
+        Assert.IsTrue(rows.Disposed, "the cursor is released with the request");
+        _queries.Verify(q => q.GetObservationsAsync(It.IsAny<NetDiagQuery>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GetObservations_Ndjson_StreamsOneObjectPerLine_AndTheLastPageHasNoCursorHeader()
+    {
+        StreamAnswers(new FakeCursor<NetworkDiagnosticObservation>(() => [Obs("m1")], () => [Obs("m2")]), null);
+
+        var (status, body, response) = await Get($"{ObservationsUrl}?format=ndjson");
+
+        var lines = body.Split('\n');
+        Assert.AreEqual(200, status);
+        Assert.AreEqual("application/x-ndjson; charset=utf-8", response.Content.Headers.ContentType!.ToString());
+        Assert.IsFalse(response.Headers.Contains("X-Next-Cursor"));
+        Assert.AreEqual(3, lines.Length);
+        Assert.AreEqual("m2", System.Text.Json.JsonDocument.Parse(lines[1]).RootElement.GetProperty("measurementId").GetString());
+        Assert.AreEqual("", lines[2]);
+    }
+
+    [Test]
+    public async Task GetObservations_Ndjson_NoRows_IsAnEmptyBody()
+    {
+        StreamAnswers(new FakeCursor<NetworkDiagnosticObservation>(), null);
+
+        var (status, body, _) = await Get($"{ObservationsUrl}?format=ndjson");
+
+        Assert.AreEqual((200, ""), (status, body));
+    }
+
+    // The status line and the first rows are gone when a later batch fails. The connection is cut instead of ended:
+    // the client gets a transport error, never a body that looks complete.
+    [TestCase("csv")]
+    [TestCase("ndjson")]
+    public async Task GetObservations_Streamed_DatabaseErrorMidStream_CutsTheConnection(string format)
+    {
+        var rows = new FakeCursor<NetworkDiagnosticObservation>(() => [Obs("m1")], () => throw new MongoException("connection lost"));
+        StreamAnswers(rows, null);
+
+        using var response = await _http.GetAsync($"{ObservationsUrl}?format={format}", HttpCompletionOption.ResponseHeadersRead);
+
+        Assert.AreEqual(200, (int)response.StatusCode, "the rows before the error were already on the wire");
+        Assert.That(async () => await response.Content.ReadAsStringAsync(), Throws.InstanceOf<HttpRequestException>().Or.InstanceOf<IOException>());
+        Assert.AreEqual(2, rows.BatchesRead);
+        Assert.IsTrue(rows.Disposed);
+    }
+
+    // Before the first byte nothing is lost: the usual error answers apply to the streamed formats too.
+    [Test]
+    public async Task GetObservations_Streamed_ErrorBeforeTheFirstRow_IsAnOrdinaryErrorAnswer()
+    {
+        _queries.Setup(q => q.OpenObservationStreamAsync(It.IsAny<NetDiagQuery>(), "x", 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AdminRequests.InvalidParameter("cursor"));
+        _queries.Setup(q => q.OpenObservationStreamAsync(It.IsAny<NetDiagQuery>(), null, 1000, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new MongoExecutionTimeoutException(Connection, "operation exceeded time limit"));
+
+        var invalid = await Get($"{ObservationsUrl}?format=csv&cursor=x");
+        var timeout = await Get($"{ObservationsUrl}?format=ndjson");
+
+        Assert.AreEqual((400, """{"error":"invalid query parameter: cursor"}"""), (invalid.Status, invalid.Body));
+        Assert.IsFalse(invalid.Response.Headers.Contains("X-Next-Cursor"));
+        Assert.AreEqual((503, """{"error":"query_timeout"}"""), (timeout.Status, timeout.Body));
+    }
+
+    private static readonly MongoDB.Driver.Core.Connections.ConnectionId Connection =
+        new(new MongoDB.Driver.Core.Servers.ServerId(new MongoDB.Driver.Core.Clusters.ClusterId(1), new System.Net.DnsEndPoint("localhost", 27017)));
+
+    // P8.
+    [TestCase("format=xml", "format")]
+    [TestCase("format=CSV", "format")]
+    [TestCase("format=json,csv", "format")]
+    [TestCase("limit=abc", "limit")]
+    [TestCase("limit=1.5", "limit")]
+    [TestCase("limit=99999999999", "limit")]
+    [TestCase("format=csv&asn=x", "asn")]
+    [TestCase("format=xml&vpn=maybe", "vpn")]
+    public async Task GetObservations_UnparsableOrUnknownValue_400NamingTheParameter(string query, string key)
+    {
+        var (status, body, _) = await Get($"{ObservationsUrl}?{query}");
+
+        Assert.AreEqual((400, $$"""{"error":"invalid query parameter: {{key}}"}"""), (status, body));
+        Assert.IsEmpty(_queries.Invocations);
+    }
+
+    [Test]
+    public async Task GetObservations_ServiceError_KeepsStatusAndErrorShape()
+    {
+        _queries.Setup(q => q.GetObservationsAsync(It.IsAny<NetDiagQuery>(), null, 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NetDiagResult.Error(400, "limit must be in 1-5000"));
+
+        var (status, body, _) = await Get($"{ObservationsUrl}?limit=0");
+
+        Assert.AreEqual((400, """{"error":"limit must be in 1-5000"}"""), (status, body));
+    }
+
+    // The website's request (NetworkDiagnosticsService.getAggregate): groupBy joined with commas plus the shared filters.
+    [Test]
+    public async Task Aggregate_BindsGroupByAndFilters_AndAnswersGroupByAndRows()
+    {
+        NetDiagQuery seen = null;
+        var row = new AggregateRowDto(new() { ["asn"] = 3320L, ["vpn"] = false, ["city"] = null }, 42, 22.1, 41, 0, 0.05, 0, "Deutsche Telekom AG", 52.1, 13);
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "asn,vpn,city", It.IsAny<CancellationToken>()))
+            .Callback<NetDiagQuery, string, CancellationToken>((query, _, _) => seen = query)
+            .ReturnsAsync(NetDiagResult.Ok(new AggregateResponseDto(["asn", "vpn", "city"], [row])));
+
+        var (status, body, response) = await Get("/api/network-diagnostics/aggregate?runId=r1&battleTag=Name%231234&groupBy=asn%2Cvpn%2Ccity");
+
+        Assert.AreEqual(200, status);
+        Assert.AreEqual(
+            """{"groupBy":["asn","vpn","city"],"rows":[{"key":{"asn":3320,"vpn":false,"city":null},"count":42,"p50MsMedian":22.1,"p50MsP90":41,"lossPctMedian":0,"shareLossOver1Pct":0.05,"shareUnreachable":0,"asnOrg":"Deutsche Telekom AG","lat":52.1,"lon":13}]}""",
+            body);
+        Assert.AreEqual("Name#1234", seen.BattleTag);
+        Assert.AreEqual(new[] { "r1" }, seen.RunId);
+        Assert.IsFalse(response.Headers.Contains("X-NetDiag-Truncated"));
+    }
+
+    [Test]
+    public async Task Aggregate_Truncated_SendsTheHeader_AndErrorsKeepTheirShape()
+    {
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "path", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NetDiagResult.Ok(new AggregateResponseDto(["path"], [])) with { Truncated = true });
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AdminRequests.InvalidParameter("groupBy"));
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "os", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new MongoExecutionTimeoutException(Connection, "operation exceeded time limit"));
+
+        var truncated = await Get("/api/network-diagnostics/aggregate?groupBy=path");
+        var missing = await Get("/api/network-diagnostics/aggregate");
+        var unparsable = await Get("/api/network-diagnostics/aggregate?groupBy=path&nodeId=abc");
+        var timeout = await Get("/api/network-diagnostics/aggregate?groupBy=os");
+
+        Assert.AreEqual((200, """{"groupBy":["path"],"rows":[]}"""), (truncated.Status, truncated.Body));
+        Assert.AreEqual("true", truncated.Response.Headers.GetValues("X-NetDiag-Truncated").Single());
+        Assert.AreEqual((400, """{"error":"invalid query parameter: groupBy"}"""), (missing.Status, missing.Body));
+        Assert.AreEqual((400, """{"error":"invalid query parameter: nodeId"}"""), (unparsable.Status, unparsable.Body));
+        Assert.AreEqual((503, """{"error":"query_timeout"}"""), (timeout.Status, timeout.Body));
+    }
+
+    // The request's cancellation token reaches the service: a caller that hangs up stops the query.
+    [Test]
+    public async Task ClientHangsUp_CancelsTheQuery()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "path", It.IsAny<CancellationToken>()))
+            .Returns<NetDiagQuery, string, CancellationToken>(async (_, _, token) =>
+            {
+                await using var registration = token.Register(() => cancelled.TrySetResult());
+                entered.TrySetResult();
+                await Task.Delay(Timeout.Infinite, token);
+                return NetDiagResult.Ok(new AggregateResponseDto(["path"], []));
+            });
+        using var hangUp = new CancellationTokenSource();
+        var request = _http.GetAsync("/api/network-diagnostics/aggregate?groupBy=path", hangUp.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        hangUp.Cancel();
+
+        Assert.That(async () => await request, Throws.InstanceOf<OperationCanceledException>());
+        await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
     private sealed class OnlyTheAdminController : ControllerFeatureProvider

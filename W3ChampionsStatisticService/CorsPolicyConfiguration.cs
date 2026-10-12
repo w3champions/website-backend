@@ -1,5 +1,6 @@
 using System;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using W3ChampionsStatisticService.NetworkDiagnostics;
 
 namespace W3ChampionsStatisticService;
 
@@ -18,5 +19,8 @@ public static class CorsPolicyConfiguration
             .AllowAnyMethod()
             .SetIsOriginAllowed(_ => true)
             .AllowCredentials()
-            .SetPreflightMaxAge(PreflightMaxAge);
+            .SetPreflightMaxAge(PreflightMaxAge)
+            // Response headers a script of another origin (the website) may read; a browser hides all others
+            // except the few safelisted ones.
+            .WithExposedHeaders(NetDiagConstants.TruncatedHeader, NetDiagConstants.NextCursorHeader);
 }

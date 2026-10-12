@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using W3C.Contracts.Admin.Permission;
@@ -66,6 +67,44 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
     public Task<IActionResult> GetMeasurement(string id, [FromQuery] bool raw = false) =>
         Answer(() => queryService.GetMeasurementAsync(id, raw));
 
+    /// <summary>
+    /// C6: shared filters plus cursor, limit and format. json answers { items, nextCursor }; ndjson and csv stream one
+    /// row per line and carry the next cursor in <see cref="NetDiagConstants.NextCursorHeader"/>.
+    /// </summary>
+    [HttpGet("observations")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
+    public Task<IActionResult> GetObservations(
+        [FromQuery] NetDiagQuery filter, [FromQuery] string cursor = null,
+        [FromQuery] int limit = NetworkDiagnosticsQueryService.DefaultObservationLimit, [FromQuery] string format = ObservationFormats.JsonName)
+    {
+        var aborted = HttpContext.RequestAborted;
+        if (string.IsNullOrEmpty(format) || format == ObservationFormats.JsonName)
+        {
+            return Answer(() => queryService.GetObservationsAsync(filter, cursor, limit, aborted));
+        }
+        var streamed = ObservationFormats.Streamed(format);
+        return Answer(
+            () => streamed == null
+                ? Task.FromResult(AdminRequests.InvalidParameter("format"))
+                : queryService.OpenObservationStreamAsync(filter, cursor, limit, aborted),
+            opened =>
+            {
+                var stream = (ObservationStream)opened.Body;
+                // Released with the request, whether or not the result gets to run.
+                Response.RegisterForDispose(stream.Rows);
+                if (stream.NextCursor != null) Response.Headers[NetDiagConstants.NextCursorHeader] = stream.NextCursor;
+                return new ObservationStreamResult(stream.Rows, streamed);
+            });
+    }
+
+    [HttpGet("aggregate")]
+    [BearerHasPermissionFilter(Permission = EPermission.Proxies)]
+    public Task<IActionResult> Aggregate([FromQuery] NetDiagQuery filter, [FromQuery] string groupBy)
+    {
+        var aborted = HttpContext.RequestAborted;
+        return Answer(() => queryService.AggregateAsync(filter, groupBy, aborted));
+    }
+
     internal static IActionResult Map(NetDiagResult result) => new ObjectResult(result.Body) { StatusCode = result.StatusCode };
 
     /// <summary>
@@ -73,7 +112,8 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
     /// P6: an answer computed from a lookup that stopped at its limit says so in a header, and a query the server
     /// gave up on after <see cref="NetDiagConstants.AdminQueryMaxTime"/> answers 503 instead of an unhandled 500.
     /// </summary>
-    private async Task<IActionResult> Answer(Func<Task<NetDiagResult>> action)
+    /// <param name="onOk">Builds the answer of a 200 whose body is not written as JSON; every other answer is mapped as usual.</param>
+    private async Task<IActionResult> Answer(Func<Task<NetDiagResult>> action, Func<NetDiagResult, IActionResult> onOk = null)
     {
         NetDiagResult result;
         try
@@ -84,9 +124,17 @@ public class NetworkDiagnosticsAdminController(INetworkDiagnosticsRunService run
         {
             result = NetDiagResult.Error(503, NetDiagConstants.QueryTimeoutError);
         }
+        catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            // The caller hung up and the query was cancelled with the request: nobody reads this answer.
+            return new StatusCodeResult(ClientClosedRequest);
+        }
         if (result.Truncated) Response.Headers[NetDiagConstants.TruncatedHeader] = "true";
-        return Map(result);
+        return result.StatusCode == StatusCodes.Status200OK && onOk != null ? onOk(result) : Map(result);
     }
+
+    /// <summary>The de-facto status (nginx) for a request whose client went away; it only shows up in logs and metrics.</summary>
+    private const int ClientClosedRequest = 499;
 
     private const int MaxTimeMsExpiredCode = 50;
 

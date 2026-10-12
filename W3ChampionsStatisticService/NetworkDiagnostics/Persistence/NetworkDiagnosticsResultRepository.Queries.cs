@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.NetworkDiagnostics.Results;
@@ -49,5 +51,60 @@ public partial class NetworkDiagnosticsResultRepository
             .Group(x => x.MeasurementId, g => new { MeasurementId = g.Key, Rows = g.LongCount() })
             .ToListAsync();
         return (groups.Select(g => g.MeasurementId).ToList(), groups.Sum(g => g.Rows) >= limit);
+    }
+
+    /// <summary>Rows per round trip of an observation read: what a streamed export holds in memory at a time.</summary>
+    private const int ObservationBatchSize = 500;
+
+    public async Task<List<NetworkDiagnosticObservation>> ObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, int limit, [NoTrace] CancellationToken cancellationToken)
+    {
+        using var cursor = await OpenObservationsAsync(filter, after, null, limit, cancellationToken);
+        return await cursor.ToListAsync(cancellationToken);
+    }
+
+    public async Task<ObjectId?> ObservationPageEndAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, int limit, [NoTrace] CancellationToken cancellationToken)
+    {
+        // The last row of the page and the row after it.
+        var ids = await Observations.Find(IdRange(filter, after, null), AdminFind)
+            .SortBy(x => x.Id).Skip(limit - 1).Limit(2).Project(x => x.Id).ToListAsync(cancellationToken);
+        return ids.Count == 2 ? ids[0] : null;
+    }
+
+    public Task<IAsyncCursor<NetworkDiagnosticObservation>> OpenObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, ObjectId? upTo, int limit, [NoTrace] CancellationToken cancellationToken) =>
+        Observations.Find(IdRange(filter, after, upTo), new FindOptions { MaxTime = NetDiagConstants.AdminQueryMaxTime, BatchSize = ObservationBatchSize })
+            .SortBy(x => x.Id).Limit(limit).ToCursorAsync(cancellationToken);
+
+    public Task<List<BsonDocument>> AggregateObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, [NoTrace] IReadOnlyList<BsonDocument> groupStages,
+        int scanLimit, int maxRows, [NoTrace] CancellationToken cancellationToken)
+    {
+        // As in MeasurementIdsAsync: at most `scanLimit` matching rows, newest first, reach the groups (P6).
+        var pipeline = Observations.Aggregate(new AggregateOptions { AllowDiskUse = true, MaxTime = NetDiagConstants.AdminQueryMaxTime })
+            .Match(filter)
+            .SortByDescending(x => x.SubmittedAt)
+            .Limit(scanLimit)
+            .As<BsonDocument>();
+        foreach (var group in groupStages)
+        {
+            pipeline = pipeline.AppendStage<BsonDocument>(new BsonDocument("$group", group));
+        }
+        return pipeline
+            .Sort(new BsonDocument { { "count", -1 }, { "_id", 1 } })
+            .Limit(maxRows)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<long> CountObservationsAsync([NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit, [NoTrace] CancellationToken cancellationToken) =>
+        Observations.CountDocumentsAsync(filter, new CountOptions { Limit = limit, MaxTime = NetDiagConstants.AdminQueryMaxTime }, cancellationToken);
+
+    private static FilterDefinition<NetworkDiagnosticObservation> IdRange(FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, ObjectId? upTo)
+    {
+        var f = Builders<NetworkDiagnosticObservation>.Filter;
+        if (after is { } lower) filter &= f.Gt(x => x.Id, lower);
+        if (upTo is { } upper) filter &= f.Lte(x => x.Id, upper);
+        return filter;
     }
 }
