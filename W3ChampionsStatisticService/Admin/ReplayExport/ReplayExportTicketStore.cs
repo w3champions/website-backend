@@ -1,0 +1,62 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using Microsoft.Extensions.Caching.Memory;
+using MongoDB.Bson;
+
+namespace W3ChampionsStatisticService.Admin.ReplayExport;
+
+public class ReplayExportTicket
+{
+    public List<ObjectId> MatchIds { get; init; } = [];
+    public string RequestedBy { get; init; }
+    public string Label { get; init; }
+    public string Description { get; init; }
+    public ReplayExportFilter Filter { get; init; }
+
+    /// <summary>Set for a repeat download of a download in the history; null for a new download.</summary>
+    public string ExportId { get; init; }
+}
+
+/// <summary>
+/// Short-lived, single-use download tickets. The browser downloads the ZIP with a plain GET (so it streams
+/// to disk and shows native progress), and a plain GET cannot carry the bearer token. The admin gets a
+/// ticket with an authenticated POST, and the GET presents the ticket instead.
+///
+/// Tickets live in memory: they only need to last until the browser starts the download, on the instance that
+/// issued them.
+/// </summary>
+public class ReplayExportTicketStore(IMemoryCache cache)
+{
+    public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(5);
+
+    private readonly IMemoryCache _cache = cache;
+    private readonly object _takeLock = new();
+
+    public (string Ticket, DateTimeOffset ExpiresAt) Create(ReplayExportTicket ticket)
+    {
+        var id = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        var expiresAt = DateTimeOffset.UtcNow.Add(Lifetime);
+        _cache.Set(Key(id), ticket, expiresAt);
+        return (id, expiresAt);
+    }
+
+    /// <summary>True when the ticket exists and has not expired. The ticket stays in the store.</summary>
+    public bool Exists(string id) => !string.IsNullOrEmpty(id) && _cache.TryGetValue(Key(id), out ReplayExportTicket _);
+
+    /// <summary>Returns the ticket and removes it, or null if it does not exist or has expired.</summary>
+    public ReplayExportTicket Take(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return null;
+
+        // Two requests with the same ticket at the same time: only one of them gets it.
+        lock (_takeLock)
+        {
+            if (!_cache.TryGetValue(Key(id), out ReplayExportTicket ticket)) return null;
+            _cache.Remove(Key(id));
+            return ticket;
+        }
+    }
+
+    private static string Key(string id) => $"replay-export-ticket:{id}";
+}
