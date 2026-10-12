@@ -21,6 +21,10 @@ namespace WC3ChampionsStatisticService.Tests.NetworkDiagnostics;
 [TestFixture]
 public class ObservationQueryServiceTests
 {
+    private static readonly DateTime Now = new(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    /// <summary>Rows with a smaller _id are settled at <see cref="Now"/>: every page ends before it.</summary>
+    private static readonly ObjectId Settled = NetworkDiagnosticsQueryService.SettledBoundary(Now);
+
     private Mock<INetworkDiagnosticsResultRepository> _results;
     private NetworkDiagnosticsQueryService _service;
 
@@ -29,7 +33,30 @@ public class ObservationQueryServiceTests
     {
         // Strict: a request answered with 400 must not have run any query.
         _results = new Mock<INetworkDiagnosticsResultRepository>(MockBehavior.Strict);
-        _service = new NetworkDiagnosticsQueryService(_results.Object, TimeProvider.System);
+        _service = new NetworkDiagnosticsQueryService(_results.Object, new FixedTimeProvider(Now));
+    }
+
+    private static BsonDocument IdRange(ObjectId? after = null, ObjectId? upTo = null)
+    {
+        var range = new BsonDocument();
+        if (after is { } lower) range.Add("$gt", lower);
+        if (upTo is { } upper) range.Add("$lte", upper);
+        range.Add("$lt", Settled);
+        return range;
+    }
+
+    // Ids are created before their rows are stored, so a row can appear behind newer ones: only ids older than the
+    // settle margin are paged over.
+    [Test]
+    public void SettledBoundary_IsTheSmallestIdOfTheSecondOneSettleMarginAgo()
+    {
+        var boundary = NetworkDiagnosticsQueryService.SettledBoundary(new DateTimeOffset(Now));
+
+        Assert.AreEqual(TimeSpan.FromSeconds(30), NetDiagConstants.ObservationSettleMargin);
+        Assert.AreEqual(Now.AddSeconds(-30), boundary.CreationTime);
+        Assert.AreEqual(new byte[8], boundary.ToByteArray()[4..]);
+        Assert.That(boundary, Is.LessThan(ObjectId.GenerateNewId(Now.AddSeconds(-30))));
+        Assert.That(boundary, Is.GreaterThan(ObjectId.GenerateNewId(Now.AddSeconds(-31))));
     }
 
     private static NetworkDiagnosticObservation Obs(string measurementId) =>
@@ -37,9 +64,9 @@ public class ObservationQueryServiceTests
 
     private static string ErrorOf(NetDiagResult result) => JsonSerializer.SerializeToElement(result.Body).GetProperty("error").GetString();
 
-    private void PageReturns(ObjectId? after, int fetched, List<NetworkDiagnosticObservation> rows, Action<BsonDocument> seeFilter = null) =>
-        _results.Setup(r => r.ObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), after, fetched, It.IsAny<CancellationToken>()))
-            .Callback<FilterDefinition<NetworkDiagnosticObservation>, ObjectId?, int, CancellationToken>((f, _, _, _) => seeFilter?.Invoke(FilterRender.Render(f)))
+    private void PageReturns(int fetched, List<NetworkDiagnosticObservation> rows, Action<BsonDocument> seeFilter = null) =>
+        _results.Setup(r => r.ObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), fetched, It.IsAny<CancellationToken>()))
+            .Callback<FilterDefinition<NetworkDiagnosticObservation>, int, CancellationToken>((f, _, _) => seeFilter?.Invoke(FilterRender.Render(f)))
             .ReturnsAsync(rows);
 
     // P8 for the cursor; the limit follows the pageSize precedent (a parsed number outside its range names the range).
@@ -88,7 +115,7 @@ public class ObservationQueryServiceTests
     {
         var rows = new List<NetworkDiagnosticObservation> { Obs("m0"), Obs("m1"), Obs("m2") };
         BsonDocument filter = null;
-        PageReturns(null, 3, rows, f => filter = f);
+        PageReturns(3, rows, f => filter = f);
 
         var result = await _service.GetObservationsAsync(new NetDiagQuery { NodeId = 12, BattleTag = "Name#1234" }, null, 2);
 
@@ -97,28 +124,32 @@ public class ObservationQueryServiceTests
         Assert.AreEqual(new[] { "m0", "m1" }, page.Items.Select(o => o.MeasurementId));
         Assert.AreEqual(rows[1].Id.ToString(), page.NextCursor);
         Assert.IsFalse(result.Truncated);
-        // The shared filter builder: nodeId is asked through the target key.
-        Assert.AreEqual(new BsonDocument { { "BattleTag", "Name#1234" }, { "TargetKey", "flo:12" } }, filter);
+        // The shared filter builder (nodeId is asked through the target key), and only settled rows.
+        Assert.AreEqual(new BsonDocument { { "BattleTag", "Name#1234" }, { "TargetKey", "flo:12" }, { "_id", IdRange() } }, filter);
         StringAssert.StartsWith("""{"items":[{"measurementId":"m0",""", JsonSerializer.Serialize(page, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
+    // Fewer rows than asked: the settle boundary (or the end of the data) ended the page, not the limit. No cursor is
+    // announced, so a client is not sent polling for rows that are not settled yet.
     [Test]
-    public async Task GetObservations_Cursor_ContinuesAfterThatRow_AndTheLastPageHasNoCursor()
+    public async Task GetObservations_Cursor_ContinuesAfterThatRow_AndAPageNotEndedByTheLimitHasNoCursor()
     {
         var cursor = ObjectId.GenerateNewId();
-        PageReturns(cursor, 3, [Obs("m2"), Obs("m3")]);
+        BsonDocument filter = null;
+        PageReturns(3, [Obs("m2"), Obs("m3")], f => filter = f);
 
         var page = (ObservationPage)(await _service.GetObservationsAsync(new NetDiagQuery(), cursor.ToString(), 2)).Body;
 
         Assert.AreEqual(new[] { "m2", "m3" }, page.Items.Select(o => o.MeasurementId));
         Assert.IsNull(page.NextCursor);
+        Assert.AreEqual(new BsonDocument("_id", IdRange(after: cursor)), filter);
         StringAssert.EndsWith("""],"nextCursor":null}""", JsonSerializer.Serialize(page, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 
     [Test]
     public async Task GetObservations_NullQueryAndTheLargestLimit_AreAccepted()
     {
-        PageReturns(null, NetworkDiagnosticsQueryService.MaxObservationLimit + 1, []);
+        PageReturns(NetworkDiagnosticsQueryService.MaxObservationLimit + 1, []);
 
         var result = await _service.GetObservationsAsync(null, "", NetworkDiagnosticsQueryService.MaxObservationLimit);
 
@@ -127,19 +158,20 @@ public class ObservationQueryServiceTests
     }
 
     // The next cursor travels in a response header, so it is known before the first row is read: the page end is
-    // looked up first and the stream is bounded by it.
+    // looked up first. The stream then runs to that row inclusive and WITHOUT a row limit: a row that turns up inside
+    // the range after the lookup makes the page one row longer instead of cutting off the row the cursor names.
     [Test]
-    public async Task OpenObservationStream_MoreRowsExist_BoundsTheStreamAtThePageEnd_WhichIsTheNextCursor()
+    public async Task OpenObservationStream_MoreRowsExist_StreamsUpToThePageEnd_WithoutARowLimit_AndItIsTheNextCursor()
     {
         var after = ObjectId.GenerateNewId();
         var pageEnd = ObjectId.GenerateNewId();
         var rows = new FakeCursor<NetworkDiagnosticObservation>();
         BsonDocument probed = null, opened = null;
-        _results.Setup(r => r.ObservationPageEndAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), after, 50, It.IsAny<CancellationToken>()))
-            .Callback<FilterDefinition<NetworkDiagnosticObservation>, ObjectId?, int, CancellationToken>((f, _, _, _) => probed = FilterRender.Render(f))
+        _results.Setup(r => r.ObservationPageEndAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), 50, It.IsAny<CancellationToken>()))
+            .Callback<FilterDefinition<NetworkDiagnosticObservation>, int, CancellationToken>((f, _, _) => probed = FilterRender.Render(f))
             .ReturnsAsync(pageEnd);
-        _results.Setup(r => r.OpenObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), after, pageEnd, 50, It.IsAny<CancellationToken>()))
-            .Callback<FilterDefinition<NetworkDiagnosticObservation>, ObjectId?, ObjectId?, int, CancellationToken>((f, _, _, _, _) => opened = FilterRender.Render(f))
+        _results.Setup(r => r.OpenObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), null, It.IsAny<CancellationToken>()))
+            .Callback<FilterDefinition<NetworkDiagnosticObservation>, int?, CancellationToken>((f, _, _) => opened = FilterRender.Render(f))
             .ReturnsAsync(rows);
 
         var result = await _service.OpenObservationStreamAsync(new NetDiagQuery { RunId = ["r1"] }, after.ToString(), 50);
@@ -148,23 +180,27 @@ public class ObservationQueryServiceTests
         Assert.AreEqual(200, result.StatusCode);
         Assert.AreSame(rows, stream.Rows);
         Assert.AreEqual(pageEnd.ToString(), stream.NextCursor);
-        Assert.AreEqual(new BsonDocument("RunId", new BsonDocument("$in", new BsonArray { "r1" })), probed);
-        Assert.AreEqual(probed, opened);
+        var runs = new BsonDocument("$in", new BsonArray { "r1" });
+        Assert.AreEqual(new BsonDocument { { "RunId", runs }, { "_id", IdRange(after: after) } }, probed);
+        Assert.AreEqual(new BsonDocument { { "RunId", runs }, { "_id", IdRange(after: after, upTo: pageEnd) } }, opened);
     }
 
     [Test]
-    public async Task OpenObservationStream_LastPage_IsUnboundedAbove_AndHasNoCursor()
+    public async Task OpenObservationStream_NoFullPageOfSettledRows_StreamsAtMostTheLimit_AndHasNoCursor()
     {
         var rows = new FakeCursor<NetworkDiagnosticObservation>();
-        _results.Setup(r => r.ObservationPageEndAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), null, 50, It.IsAny<CancellationToken>()))
+        BsonDocument opened = null;
+        _results.Setup(r => r.ObservationPageEndAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), 50, It.IsAny<CancellationToken>()))
             .ReturnsAsync((ObjectId?)null);
-        _results.Setup(r => r.OpenObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), null, null, 50, It.IsAny<CancellationToken>()))
+        _results.Setup(r => r.OpenObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), 50, It.IsAny<CancellationToken>()))
+            .Callback<FilterDefinition<NetworkDiagnosticObservation>, int?, CancellationToken>((f, _, _) => opened = FilterRender.Render(f))
             .ReturnsAsync(rows);
 
         var stream = (ObservationStream)(await _service.OpenObservationStreamAsync(new NetDiagQuery(), null, 50)).Body;
 
         Assert.AreSame(rows, stream.Rows);
         Assert.IsNull(stream.NextCursor);
+        Assert.AreEqual(new BsonDocument("_id", IdRange()), opened);
     }
 
     [Test]
@@ -172,9 +208,9 @@ public class ObservationQueryServiceTests
     {
         using var cancelled = new CancellationTokenSource();
         var token = cancelled.Token;
-        _results.Setup(r => r.ObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), null, 2, token)).ReturnsAsync([]);
-        _results.Setup(r => r.ObservationPageEndAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), null, 1, token)).ReturnsAsync((ObjectId?)null);
-        _results.Setup(r => r.OpenObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), null, null, 1, token))
+        _results.Setup(r => r.ObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), 2, token)).ReturnsAsync([]);
+        _results.Setup(r => r.ObservationPageEndAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), 1, token)).ReturnsAsync((ObjectId?)null);
+        _results.Setup(r => r.OpenObservationsAsync(It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), 1, token))
             .ReturnsAsync(new FakeCursor<NetworkDiagnosticObservation>());
         _results.Setup(r => r.AggregateObservationsAsync(
                 It.IsAny<FilterDefinition<NetworkDiagnosticObservation>>(), It.IsAny<IReadOnlyList<BsonDocument>>(), It.IsAny<int>(), It.IsAny<int>(), token))

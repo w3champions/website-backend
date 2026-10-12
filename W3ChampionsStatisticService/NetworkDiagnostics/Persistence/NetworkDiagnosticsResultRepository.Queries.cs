@@ -53,28 +53,27 @@ public partial class NetworkDiagnosticsResultRepository
         return (groups.Select(g => g.MeasurementId).ToList(), groups.Sum(g => g.Rows) >= limit);
     }
 
-    /// <summary>Rows per round trip of an observation read: what a streamed export holds in memory at a time.</summary>
+    /// <summary>Rows per round trip of a streamed observation read: what an export holds in memory at a time.</summary>
     private const int ObservationBatchSize = 500;
 
-    public async Task<List<NetworkDiagnosticObservation>> ObservationsAsync(
-        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, int limit, [NoTrace] CancellationToken cancellationToken)
-    {
-        using var cursor = await OpenObservationsAsync(filter, after, null, limit, cancellationToken);
-        return await cursor.ToListAsync(cancellationToken);
-    }
+    public Task<List<NetworkDiagnosticObservation>> ObservationsAsync(
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit, [NoTrace] CancellationToken cancellationToken) =>
+        // The whole page is kept in memory anyway, so it is fetched in one batch.
+        Observations.Find(filter, new FindOptions { MaxTime = NetDiagConstants.AdminQueryMaxTime, BatchSize = limit })
+            .SortBy(x => x.Id).Limit(limit).ToListAsync(cancellationToken);
 
     public async Task<ObjectId?> ObservationPageEndAsync(
-        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, int limit, [NoTrace] CancellationToken cancellationToken)
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit, [NoTrace] CancellationToken cancellationToken)
     {
         // The last row of the page and the row after it.
-        var ids = await Observations.Find(IdRange(filter, after, null), AdminFind)
+        var ids = await Observations.Find(filter, AdminFind)
             .SortBy(x => x.Id).Skip(limit - 1).Limit(2).Project(x => x.Id).ToListAsync(cancellationToken);
         return ids.Count == 2 ? ids[0] : null;
     }
 
     public Task<IAsyncCursor<NetworkDiagnosticObservation>> OpenObservationsAsync(
-        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, ObjectId? upTo, int limit, [NoTrace] CancellationToken cancellationToken) =>
-        Observations.Find(IdRange(filter, after, upTo), new FindOptions { MaxTime = NetDiagConstants.AdminQueryMaxTime, BatchSize = ObservationBatchSize })
+        [NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int? limit, [NoTrace] CancellationToken cancellationToken) =>
+        Observations.Find(filter, new FindOptions { MaxTime = NetDiagConstants.AdminQueryMaxTime, BatchSize = ObservationBatchSize })
             .SortBy(x => x.Id).Limit(limit).ToCursorAsync(cancellationToken);
 
     public Task<List<BsonDocument>> AggregateObservationsAsync(
@@ -99,12 +98,4 @@ public partial class NetworkDiagnosticsResultRepository
 
     public Task<long> CountObservationsAsync([NoTrace] FilterDefinition<NetworkDiagnosticObservation> filter, int limit, [NoTrace] CancellationToken cancellationToken) =>
         Observations.CountDocumentsAsync(filter, new CountOptions { Limit = limit, MaxTime = NetDiagConstants.AdminQueryMaxTime }, cancellationToken);
-
-    private static FilterDefinition<NetworkDiagnosticObservation> IdRange(FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, ObjectId? upTo)
-    {
-        var f = Builders<NetworkDiagnosticObservation>.Filter;
-        if (after is { } lower) filter &= f.Gt(x => x.Id, lower);
-        if (upTo is { } upper) filter &= f.Lte(x => x.Id, upper);
-        return filter;
-    }
 }

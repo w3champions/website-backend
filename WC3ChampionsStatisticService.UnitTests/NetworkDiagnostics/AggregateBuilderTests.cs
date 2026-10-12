@@ -48,6 +48,8 @@ public class AggregateBuilderTests
         Assert.AreEqual(new BsonDocument("$sum", 1), stage["count"]);
         Assert.AreEqual(new BsonDocument("$push", "$P50Ms"), stage["p50s"]);
         Assert.AreEqual(new BsonDocument("$push", "$LossPct"), stage["losses"]);
+        // $max skips null: one measurement without an ASN name must not blank the name of the group.
+        Assert.AreEqual(new BsonDocument("$max", "$AsnOrg"), stage["asnOrg"]);
         Assert.AreEqual(new BsonDocument("$first", "$Lat"), stage["lat"]);
         Assert.AreEqual(new BsonDocument("$first", "$Lon"), stage["lon"]);
     }
@@ -63,6 +65,7 @@ public class AggregateBuilderTests
         Assert.AreEqual(new BsonDocument("$sum", "$count"), stage["count"]);
         Assert.AreEqual(new BsonDocument("$push", "$p50s"), stage["p50s"]);
         Assert.AreEqual(new BsonDocument("$push", "$losses"), stage["losses"]);
+        Assert.AreEqual(new BsonDocument("$max", "$asnOrg"), stage["asnOrg"]);
         Assert.AreEqual(new BsonDocument("$avg", "$lat"), stage["lat"]);
         Assert.AreEqual(new BsonDocument("$avg", "$lon"), stage["lon"]);
         // Nothing in the final group grows with the number of measurements except the two value lists.

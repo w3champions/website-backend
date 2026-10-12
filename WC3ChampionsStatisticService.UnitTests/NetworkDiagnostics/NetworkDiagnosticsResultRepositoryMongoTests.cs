@@ -204,6 +204,15 @@ public class NetworkDiagnosticsResultRepositoryMongoTests
         Assert.IsTrue(indexes.Any(i => i["key"].AsBsonDocument == new BsonDocument { { "TargetIp", 1 }, { "SubmittedAt", -1 } }));
     }
 
+    // Observation pages are sorted by _id; this serves the common "rows of these runs" export without a sort.
+    [Test]
+    public async Task EnsureIndexes_ObservationsHaveTheRunIdIdIndex()
+    {
+        var indexes = await (await Collection<BsonDocument>(NetDiagConstants.ObservationsCollection).Indexes.ListAsync()).ToListAsync();
+
+        Assert.IsTrue(indexes.Any(i => i["key"].AsBsonDocument == new BsonDocument { { "RunId", 1 }, { "_id", 1 } }));
+    }
+
     // Ruling c against real documents: nodeId is answered through TargetKey and finds the same rows.
     [Test]
     public async Task MeasurementIds_NodeIdFilter_FindsTheFloTargetsObservations()

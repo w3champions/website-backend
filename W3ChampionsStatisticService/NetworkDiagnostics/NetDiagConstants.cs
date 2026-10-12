@@ -77,6 +77,13 @@ public static class NetDiagConstants
     public const string QueryTimeoutError = "query_timeout";
     /// <summary>Response header, value "true": the answer was computed from the newest <see cref="MaxScannedObservations"/> matching rows only.</summary>
     public const string TruncatedHeader = "X-NetDiag-Truncated";
+    /// <summary>
+    /// How long an observation's _id must have existed before paging returns the row. The id is created when the
+    /// result is built, the row is stored several database round trips later (assignment update, measurement and raw
+    /// series inserts), so within this time rows can still appear behind ids that are already stored. Paging in _id
+    /// order past such ids would skip them for good.
+    /// </summary>
+    public static readonly TimeSpan ObservationSettleMargin = TimeSpan.FromSeconds(30);
     /// <summary>Response header of the ndjson and csv observation forms: the cursor of the next page; absent on the last page (C6).</summary>
     public const string NextCursorHeader = "X-Next-Cursor";
 }

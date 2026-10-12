@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace W3ChampionsStatisticService.NetworkDiagnostics.Results;
@@ -85,6 +86,20 @@ public static class NetDiagFilters
         if (!string.IsNullOrEmpty(q.Path)) parts.Add(f.Eq(x => x.Path, q.Path));
         if (!string.IsNullOrEmpty(q.Method)) parts.Add(f.Eq(x => x.Method, q.Method));
         return All(parts);
+    }
+
+    /// <summary>
+    /// Narrows an observation filter to an _id range: after (exclusive), upTo (inclusive), before (exclusive). Rows
+    /// are paged in _id order, which is the order their results were built in.
+    /// </summary>
+    public static FilterDefinition<NetworkDiagnosticObservation> IdRange(
+        FilterDefinition<NetworkDiagnosticObservation> filter, ObjectId? after, ObjectId? upTo, ObjectId? before)
+    {
+        var f = Builders<NetworkDiagnosticObservation>.Filter;
+        if (after is { } lower) filter &= f.Gt(x => x.Id, lower);
+        if (upTo is { } last) filter &= f.Lte(x => x.Id, last);
+        if (before is { } upper) filter &= f.Lt(x => x.Id, upper);
+        return filter;
     }
 
     /// <param name="idsMatchingTargetFilters">

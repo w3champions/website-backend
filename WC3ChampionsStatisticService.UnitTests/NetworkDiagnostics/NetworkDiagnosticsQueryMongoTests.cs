@@ -26,6 +26,7 @@ public class NetworkDiagnosticsQueryMongoTests
     private NetworkDiagnosticsResultRepository _repo;
     private NetworkDiagnosticsQueryService _service;
     private ConcurrentQueue<BsonDocument> _commands;
+    private FixedTimeProvider _time;
 
     [SetUp]
     public async Task SetUp()
@@ -38,7 +39,9 @@ public class NetworkDiagnosticsQueryMongoTests
         var client = new MongoClient(settings);
         _repo = new NetworkDiagnosticsResultRepository(client);
         await _repo.EnsureIndexesAsync();
-        _service = new NetworkDiagnosticsQueryService(_repo, TimeProvider.System);
+        // The seeded rows get ids of the real clock; an hour later every one of them is settled.
+        _time = new FixedTimeProvider(DateTimeOffset.UtcNow.AddHours(1));
+        _service = new NetworkDiagnosticsQueryService(_repo, _time);
         _observations = client.GetDatabase("W3Champions-Statistic-Service").GetCollection<NetworkDiagnosticObservation>(NetDiagConstants.ObservationsCollection);
 
         var rows = new List<NetworkDiagnosticObservation>();
@@ -194,9 +197,9 @@ public class NetworkDiagnosticsQueryMongoTests
         await _repo.AggregateObservationsAsync(filter, AggregateBuilder.GroupStages(["asn"]), 200_000, 1000, CancellationToken.None);
         var aggregate = Commands().Single();
         await _repo.CountObservationsAsync(filter, 200_000, CancellationToken.None);
-        await _repo.ObservationsAsync(filter, null, 3, CancellationToken.None);
-        await _repo.ObservationPageEndAsync(filter, null, 3, CancellationToken.None);
-        using (await _repo.OpenObservationsAsync(filter, null, null, 3, CancellationToken.None)) { }
+        await _repo.ObservationsAsync(filter, 3, CancellationToken.None);
+        await _repo.ObservationPageEndAsync(filter, 3, CancellationToken.None);
+        using (await _repo.OpenObservationsAsync(filter, 3, CancellationToken.None)) { }
         var others = Commands();
 
         Assert.AreEqual("aggregate", aggregate.GetElement(0).Name);
@@ -208,6 +211,9 @@ public class NetworkDiagnosticsQueryMongoTests
         Assert.AreEqual(1000, aggregate["pipeline"][6]["$limit"].ToInt32());
         Assert.IsTrue(aggregate["allowDiskUse"].ToBoolean());
         Assert.AreEqual(new[] { "aggregate", "find", "find", "find" }, others.Select(c => c.GetElement(0).Name));
+        // A page that is buffered anyway comes in one round trip; a stream in batches.
+        Assert.AreEqual(3, others[1]["batchSize"].ToInt32());
+        Assert.AreEqual(500, others[3]["batchSize"].ToInt32());
         foreach (var command in others.Append(aggregate))
         {
             Assert.AreEqual((long)NetDiagConstants.AdminQueryMaxTime.TotalMilliseconds, command.GetValue("maxTimeMS", -1).ToInt64(), command.GetElement(0).Name);
@@ -262,19 +268,118 @@ public class NetworkDiagnosticsQueryMongoTests
         Assert.AreEqual((Seeded.Length + limit - 1) / limit, pages);
     }
 
-    // The keyset is the _id: rows inserted while a client pages land after every cursor already handed out.
-    [Test]
-    public async Task Observations_RowsInsertedWhilePaging_AreSeenOnce_AndNothingRepeats()
+    private static readonly DateTime Base = new(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+    private static NetworkDiagnosticObservation At(string m, int secondsAfterBase, string run) =>
+        Obs(m, asn: 1, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: run) with { Id = ObjectId.GenerateNewId(Base.AddSeconds(secondsAfterBase)) };
+
+    /// <summary>One page in either form: the JSON page or the streamed one.</summary>
+    private async Task<(List<string> Rows, string NextCursor)> Page(bool streamed, NetDiagQuery query, string cursor, int limit)
     {
-        var query = new NetDiagQuery { RunId = ["r1"] };
-        var first = (ObservationPage)(await _service.GetObservationsAsync(query, null, 4)).Body;
-        await _observations.InsertOneAsync(Obs("late", asn: 3320, path: "direct", p50: 1, loss: 0, lat: 52, lon: 13, minutesAfterNow: -60));
+        if (!streamed)
+        {
+            var page = (ObservationPage)(await _service.GetObservationsAsync(query, cursor, limit)).Body;
+            return (page.Items.Select(o => o.MeasurementId).ToList(), page.NextCursor);
+        }
+        var stream = (ObservationStream)(await _service.OpenObservationStreamAsync(query, cursor, limit)).Body;
+        using var rows = stream.Rows;
+        return ((await rows.ToListAsync()).Select(o => o.MeasurementId).ToList(), stream.NextCursor);
+    }
 
-        var second = (ObservationPage)(await _service.GetObservationsAsync(query, first.NextCursor, 4)).Body;
+    // An observation's _id is created when its result is built; the row is stored several round trips later. A
+    // submit that built its ids first can therefore store them after a later submit's rows were already paged over.
+    // Pages hold back ids younger than the settle margin, so such a row is not skipped.
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Observations_ARowStoredLate_WithAnOlderIdThanRowsAlreadyStored_IsNotSkipped(bool streamed)
+    {
+        var query = new NetDiagQuery { RunId = ["settle"] };
+        await _observations.InsertManyAsync([At("old1", -100, "settle"), At("old2", -99, "settle"), At("old3", -98, "settle"), At("b", 10, "settle")]);
+        var late = At("a-late", 5, "settle");
 
-        Assert.AreEqual(new[] { "m0", "m1", "m2", "m3" }, first.Items.Select(o => o.MeasurementId));
-        Assert.AreEqual(new[] { "m4", "m9", "late" }, second.Items.Select(o => o.MeasurementId));
-        Assert.IsNull(second.NextCursor);
+        // 20 s after Base: "b" (10 s old) and the still unstored "a-late" (15 s old) are inside the margin.
+        _time.Now = Base.AddSeconds(20);
+        var first = await Page(streamed, query, null, 2);
+        var second = await Page(streamed, query, first.NextCursor, 2);
+        await _observations.InsertOneAsync(late);
+        // Later, with the cursor obtained before the late row existed.
+        _time.Now = Base.AddSeconds(60);
+        var afterwards = await Page(streamed, query, first.NextCursor, 10);
+
+        Assert.AreEqual(new[] { "old1", "old2" }, first.Rows);
+        Assert.IsNotNull(first.NextCursor);
+        Assert.AreEqual(new[] { "old3" }, second.Rows, "b is not settled yet: paging past it would skip a-late");
+        Assert.IsNull(second.NextCursor, "the settle boundary ended the page: no cursor, no polling loop");
+        Assert.AreEqual(new[] { "old3", "a-late", "b" }, afterwards.Rows);
+        Assert.IsNull(afterwards.NextCursor);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Observations_OnlyRowsOlderThanTheSettleMargin_AreReturned(bool streamed)
+    {
+        var query = new NetDiagQuery { RunId = ["margin"] };
+        await _observations.InsertManyAsync([At("31s", -31, "margin"), At("30s", -30, "margin"), At("29s", -29, "margin"), At("now", 0, "margin")]);
+        _time.Now = Base;
+
+        var all = await Page(streamed, query, null, 10);
+        var exactlyFull = await Page(streamed, query, null, 1);
+        _time.Now = Base.AddSeconds(1);
+        var oneSecondLater = await Page(streamed, query, null, 1);
+
+        // A row whose id is exactly one margin old is not settled yet (the boundary is exclusive).
+        Assert.AreEqual(new[] { "31s" }, all.Rows);
+        Assert.IsNull(all.NextCursor);
+        Assert.AreEqual(new[] { "31s" }, exactlyFull.Rows);
+        Assert.IsNull(exactlyFull.NextCursor, "the only row after it is not settled: the boundary ended the page, not the limit");
+        Assert.AreEqual(new[] { "31s" }, oneSecondLater.Rows);
+        Assert.IsNotNull(oneSecondLater.NextCursor, "now a settled row follows");
+    }
+
+    [Test]
+    public async Task Observations_NothingSettledYet_IsAnEmptyLastPage()
+    {
+        _time.Now = DateTimeOffset.UtcNow.AddSeconds(-5);
+
+        var page = (ObservationPage)(await _service.GetObservationsAsync(new NetDiagQuery { RunId = ["r1"] }, null, 4)).Body;
+
+        Assert.IsEmpty(page.Items);
+        Assert.IsNull(page.NextCursor);
+    }
+
+    // The streamed page announces its last row as the cursor before it reads the rows. A row that turns up inside the
+    // page after that lookup makes the page a row longer; the announced row is never cut off.
+    [Test]
+    public async Task OpenObservations_UpToAPageEnd_ReturnsEveryRowOfTheRange_AlsoOneStoredAfterTheLookup()
+    {
+        await _observations.InsertManyAsync([At("p1", 1, "range"), At("p3", 3, "range"), At("p5", 5, "range")]);
+        var filter = NetDiagFilters.Observations(new NetDiagQuery { RunId = ["range"] });
+        var pageEnd = await _repo.ObservationPageEndAsync(filter, 2, CancellationToken.None);
+        await _observations.InsertOneAsync(At("p2-late", 2, "range"));
+
+        using var cursor = await _repo.OpenObservationsAsync(NetDiagFilters.IdRange(filter, null, pageEnd, null), null, CancellationToken.None);
+        var rows = await cursor.ToListAsync();
+
+        Assert.AreEqual(new[] { "p1", "p2-late", "p3" }, rows.Select(o => o.MeasurementId));
+        Assert.AreEqual(pageEnd, rows[^1].Id, "the row the cursor names is part of the page");
+    }
+
+    // One measurement without an ASN name does not blank the name of its group.
+    [Test]
+    public async Task Aggregate_AsnOrg_IsTakenFromAnyMeasurementThatHasOne()
+    {
+        await _observations.InsertManyAsync(
+        [
+            Obs("n1", asn: 9, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "org") with { AsnOrg = null },
+            Obs("n2", asn: 9, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "org") with { AsnOrg = "Named" },
+            Obs("n3", asn: 9, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "org") with { AsnOrg = null },
+            Obs("n4", asn: 8, path: "direct", p50: 1, loss: 0, lat: 1, lon: 1, run: "org") with { AsnOrg = null },
+        ]);
+
+        var rows = ((AggregateResponseDto)(await _service.AggregateAsync(new NetDiagQuery { RunId = ["org"] }, "asn")).Body).Rows;
+
+        Assert.AreEqual(new object[] { 9L, 3, "Named" }, new object[] { rows[0].Key["asn"], rows[0].Count, rows[0].AsnOrg });
+        Assert.AreEqual(new object[] { 8L, 1, null }, new object[] { rows[1].Key["asn"], rows[1].Count, rows[1].AsnOrg });
     }
 
     // A cursor is only a position: a well-formed one that names no row neither fails nor widens the query.
@@ -302,22 +407,25 @@ public class NetworkDiagnosticsQueryMongoTests
         Assert.IsEmpty(none.Items, "to is exclusive (A5)");
     }
 
-    // The stream is bounded by the page end it announced: rows that appear or vanish after the lookup cannot push
-    // the stream past the cursor the client was given.
     [Test]
-    public async Task OpenObservations_StopsAtTheUpperBound_AndStartsAfterTheLowerOne()
+    public async Task ObservationReads_HonourTheIdRange_AndThePageEndIsTheLastRowOfAFullPageWithAFollower()
     {
         var filter = NetDiagFilters.Observations(new NetDiagQuery { RunId = ["r1"] });
-        var ids = (await _repo.ObservationsAsync(filter, null, 10, CancellationToken.None)).Select(o => o.Id).ToList();
+        var ids = (await _repo.ObservationsAsync(filter, 10, CancellationToken.None)).Select(o => o.Id).ToList();
+        FilterDefinition<NetworkDiagnosticObservation> Range(ObjectId? after = null, ObjectId? upTo = null, ObjectId? before = null) =>
+            NetDiagFilters.IdRange(filter, after, upTo, before);
 
-        using var bounded = await _repo.OpenObservationsAsync(filter, ids[0], ids[2], 10, CancellationToken.None);
+        using var bounded = await _repo.OpenObservationsAsync(Range(ids[0], ids[2]), 10, CancellationToken.None);
         var rows = await bounded.ToListAsync();
+        var settled = await _repo.ObservationsAsync(Range(before: ids[2]), 10, CancellationToken.None);
 
         Assert.AreEqual(new[] { "m1", "m2" }, rows.Select(o => o.MeasurementId));
-        Assert.AreEqual(ids[1], await _repo.ObservationPageEndAsync(filter, null, 2, CancellationToken.None));
-        Assert.AreEqual(ids[4], await _repo.ObservationPageEndAsync(filter, ids[2], 2, CancellationToken.None));
-        Assert.IsNull(await _repo.ObservationPageEndAsync(filter, ids[3], 2, CancellationToken.None), "exactly a full last page");
-        Assert.IsNull(await _repo.ObservationPageEndAsync(filter, null, 10, CancellationToken.None));
+        Assert.AreEqual(new[] { "m0", "m1" }, settled.Select(o => o.MeasurementId), "before is exclusive");
+        Assert.AreEqual(ids[1], await _repo.ObservationPageEndAsync(filter, 2, CancellationToken.None));
+        Assert.AreEqual(ids[4], await _repo.ObservationPageEndAsync(Range(ids[2]), 2, CancellationToken.None));
+        Assert.IsNull(await _repo.ObservationPageEndAsync(Range(ids[3]), 2, CancellationToken.None), "exactly a full last page");
+        Assert.IsNull(await _repo.ObservationPageEndAsync(Range(before: ids[2]), 2, CancellationToken.None), "the row after the page is not settled");
+        Assert.IsNull(await _repo.ObservationPageEndAsync(filter, 10, CancellationToken.None));
     }
 
     // The export is read in batches from the server while it is written out, not loaded at once.
@@ -329,7 +437,7 @@ public class NetworkDiagnosticsQueryMongoTests
         var filter = NetDiagFilters.Observations(new NetDiagQuery { RunId = ["big"] });
         Commands();
 
-        using var cursor = await _repo.OpenObservationsAsync(filter, null, null, 5000, CancellationToken.None);
+        using var cursor = await _repo.OpenObservationsAsync(filter, 5000, CancellationToken.None);
         var batches = new List<int>();
         while (await cursor.MoveNextAsync())
         {
@@ -349,7 +457,7 @@ public class NetworkDiagnosticsQueryMongoTests
         cancelled.Cancel();
 
         Assert.That(
-            async () => await _repo.OpenObservationsAsync(NetDiagFilters.Observations(new NetDiagQuery()), null, null, 10, cancelled.Token),
+            async () => await _repo.OpenObservationsAsync(NetDiagFilters.Observations(new NetDiagQuery()), 10, cancelled.Token),
             Throws.InstanceOf<OperationCanceledException>());
     }
 }

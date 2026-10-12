@@ -64,7 +64,8 @@ public static class AggregateBuilder
             { "losses", new BsonDocument("$push", "$" + nameof(NetworkDiagnosticObservation.LossPct)) },
             { "lossOver1", CountWhere(new BsonDocument("$gt", new BsonArray { "$" + nameof(NetworkDiagnosticObservation.LossPct), LossShareThresholdPct })) },
             { "unreachable", CountWhere(new BsonDocument("$eq", new BsonArray { "$" + nameof(NetworkDiagnosticObservation.Outcome), NetDiagConstants.OutcomeUnreachable })) },
-            { "asnOrg", new BsonDocument("$first", "$" + nameof(NetworkDiagnosticObservation.AsnOrg)) },
+            // $max, not $first: it skips null, so rows without an ASN name do not blank the name of the group.
+            { "asnOrg", new BsonDocument("$max", "$" + nameof(NetworkDiagnosticObservation.AsnOrg)) },
             { "lat", new BsonDocument("$first", "$" + nameof(NetworkDiagnosticObservation.Lat)) },
             { "lon", new BsonDocument("$first", "$" + nameof(NetworkDiagnosticObservation.Lon)) },
         };
@@ -76,7 +77,7 @@ public static class AggregateBuilder
             { "losses", new BsonDocument("$push", "$losses") },
             { "lossOver1", new BsonDocument("$sum", "$lossOver1") },
             { "unreachable", new BsonDocument("$sum", "$unreachable") },
-            { "asnOrg", new BsonDocument("$first", "$asnOrg") },
+            { "asnOrg", new BsonDocument("$max", "$asnOrg") },
             { "lat", new BsonDocument("$avg", "$lat") },
             { "lon", new BsonDocument("$avg", "$lon") },
         };

@@ -1,3 +1,5 @@
+using System;
+using System.Buffers.Binary;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,13 +15,29 @@ public sealed partial class NetworkDiagnosticsQueryService
     public const int DefaultObservationLimit = 1000;
     public const int MaxObservationLimit = 5000;
 
+    /// <summary>
+    /// The smallest _id of the second one settle margin before <paramref name="now"/>. Pages end before it: see
+    /// <see cref="NetDiagConstants.ObservationSettleMargin"/>.
+    /// </summary>
+    public static ObjectId SettledBoundary(DateTimeOffset now)
+    {
+        // An ObjectId starts with its creation time as big-endian seconds; the other eight bytes stay zero.
+        var bytes = new byte[ObjectIdBytes];
+        BinaryPrimitives.WriteUInt32BigEndian(bytes, (uint)(now - NetDiagConstants.ObservationSettleMargin).ToUnixTimeSeconds());
+        return new ObjectId(bytes);
+    }
+
+    private const int ObjectIdBytes = 12;
+
     public async Task<NetDiagResult> GetObservationsAsync([NoTrace] NetDiagQuery query, string cursor, int limit, [NoTrace] CancellationToken cancellationToken = default)
     {
         var (range, invalid) = ObservationRange(query, cursor, limit);
         if (invalid != null) return invalid;
 
-        // One row more than asked tells whether a next page exists.
-        var rows = await results.ObservationsAsync(range.Filter, range.After, limit + 1, cancellationToken);
+        // One row more than asked tells whether the limit ended the page. Only then is there a next cursor: a page
+        // ended by the settle boundary is complete as of now minus the margin, and a cursor would send the client
+        // polling for rows that are not settled yet.
+        var rows = await results.ObservationsAsync(range.Rows(), limit + 1, cancellationToken);
         var page = rows.Take(limit).ToList();
         var next = rows.Count > limit ? page[^1].Id.ToString() : null;
         return NetDiagResult.Ok(new ObservationPage(page.Select(ObservationDto.From).ToList(), next));
@@ -31,10 +49,13 @@ public sealed partial class NetworkDiagnosticsQueryService
         if (invalid != null) return invalid;
 
         // The next cursor is a response header, so it must be known before the first row is written: the end of the
-        // page is looked up first, and the stream is bounded by it. Rows that appear or expire between the two
-        // queries can then only shorten the page, never move it past the cursor the client was given.
-        var pageEnd = await results.ObservationPageEndAsync(range.Filter, range.After, limit, cancellationToken);
-        var rows = await results.OpenObservationsAsync(range.Filter, range.After, pageEnd, limit, cancellationToken);
+        // page is looked up first (null when the limit does not end the page). The rows are then read up to that row
+        // inclusive and without a row limit: should a row still turn up inside the range after the lookup, the page
+        // gets one row longer, and the row the cursor names is always part of it.
+        var pageEnd = await results.ObservationPageEndAsync(range.Rows(), limit, cancellationToken);
+        var rows = pageEnd is { } last
+            ? await results.OpenObservationsAsync(range.Rows(upTo: last), null, cancellationToken)
+            : await results.OpenObservationsAsync(range.Rows(), limit, cancellationToken);
         return NetDiagResult.Ok(new ObservationStream(rows, pageEnd?.ToString()));
     }
 
@@ -59,21 +80,26 @@ public sealed partial class NetworkDiagnosticsQueryService
         return NetDiagResult.Ok(new AggregateResponseDto(keys, rows)) with { Truncated = truncated };
     }
 
-    /// <summary>The filter and the position a page starts after, or the 400 for a bad filter, limit or cursor.</summary>
-    private static ((FilterDefinition<NetworkDiagnosticObservation> Filter, ObjectId? After) Range, NetDiagResult Invalid) ObservationRange(
-        NetDiagQuery query, string cursor, int limit)
+    /// <summary>What one page reads: the shared filters, after the cursor's row, and only settled rows.</summary>
+    private sealed record PageRange(FilterDefinition<NetworkDiagnosticObservation> Filter, ObjectId? After, ObjectId Settled)
+    {
+        public FilterDefinition<NetworkDiagnosticObservation> Rows(ObjectId? upTo = null) => NetDiagFilters.IdRange(Filter, After, upTo, Settled);
+    }
+
+    /// <summary>The range of the page asked for, or the 400 for a bad filter, limit or cursor.</summary>
+    private (PageRange Range, NetDiagResult Invalid) ObservationRange(NetDiagQuery query, string cursor, int limit)
     {
         query ??= new NetDiagQuery();
-        if (limit is < 1 or > MaxObservationLimit) return (default, NetDiagResult.Error(400, "limit must be in 1-5000"));
-        if (query.InvalidParameter() is { } key) return (default, AdminRequests.InvalidParameter(key));
+        if (limit is < 1 or > MaxObservationLimit) return (null, NetDiagResult.Error(400, "limit must be in 1-5000"));
+        if (query.InvalidParameter() is { } key) return (null, AdminRequests.InvalidParameter(key));
         ObjectId? after = null;
         if (!string.IsNullOrEmpty(cursor))
         {
             // The cursor is the _id of the last row of the previous page. Anything that is not an ObjectId is refused;
             // a well-formed one only ever narrows the filter.
-            if (!ObjectId.TryParse(cursor, out var parsed)) return (default, AdminRequests.InvalidParameter("cursor"));
+            if (!ObjectId.TryParse(cursor, out var parsed)) return (null, AdminRequests.InvalidParameter("cursor"));
             after = parsed;
         }
-        return ((NetDiagFilters.Observations(query), after), null);
+        return (new PageRange(NetDiagFilters.Observations(query), after, SettledBoundary(time.GetUtcNow())), null);
     }
 }

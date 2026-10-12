@@ -21,9 +21,11 @@ public interface INetworkDiagnosticsQueryService
     Task<NetDiagResult> GetMeasurementAsync(string id, bool raw);
 
     /// <summary>
-    /// One page of observation rows in insertion order (the body is an <see cref="ObservationPage"/>). The cursor is
-    /// the opaque <c>nextCursor</c> of the previous page: rows inserted while a client pages come after every cursor
-    /// handed out, so no row repeats.
+    /// One page of observation rows in _id order (the body is an <see cref="ObservationPage"/>). The cursor is the
+    /// opaque <c>nextCursor</c> of the previous page. Only rows whose _id is older than
+    /// <see cref="NetDiagConstants.ObservationSettleMargin"/> are returned, so a row stored late is not skipped and
+    /// no row repeats. A next cursor exists only when the limit ended the page; a cursor stays valid and later
+    /// returns the rows that have settled since.
     /// </summary>
     Task<NetDiagResult> GetObservationsAsync([NoTrace] NetDiagQuery query, string cursor, int limit, [NoTrace] CancellationToken cancellationToken = default);
 
