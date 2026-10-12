@@ -34,4 +34,12 @@ public class CorsPolicyConfigurationTests
         Assert.That(policy.IsOriginAllowed("https://w3champions.com"), Is.True);
         Assert.That(policy.IsOriginAllowed("tauri://localhost"), Is.True);
     }
+
+    // A browser hides every response header that is not safelisted from cross-origin script. The website (another
+    // origin) reads these two of the network diagnostics API.
+    [Test]
+    public void NetworkDiagnosticsResponseHeaders_AreReadableByCrossOriginScript()
+    {
+        CollectionAssert.AreEquivalent(new[] { "X-NetDiag-Truncated", "X-Next-Cursor" }, Build().ExposedHeaders);
+    }
 }

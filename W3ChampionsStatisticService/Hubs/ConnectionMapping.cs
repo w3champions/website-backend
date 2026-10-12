@@ -64,12 +64,28 @@ public class ConnectionMapping
         _lock.EnterReadLock();
         try
         {
-            // It's possible for a single user to have multiple websocket connections,
-            if (_onlineUsersByBattleTag.TryGetValue(battleTag, out var connections))
-            {
-                return connections;
-            }
-            return new HashSet<string>();
+            // A user can hold several websocket connections. Return a copy: the stored set is
+            // mutated under the write lock after this read lock is released.
+            return _onlineUsersByBattleTag.TryGetValue(battleTag, out var connections)
+                ? new HashSet<string>(connections)
+                : new HashSet<string>();
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
+    }
+
+    public List<string> GetOnlineBattleTags()
+    {
+        _lock.EnterReadLock();
+        try
+        {
+            return _onlineUsersByBattleTag
+                .Where(kv => kv.Value.Count > 0)
+                .Select(kv => kv.Key)
+                .OrderBy(tag => tag, System.StringComparer.Ordinal)
+                .ToList();
         }
         finally
         {

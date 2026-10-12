@@ -22,26 +22,29 @@ public class InjectActingPlayerFromAuthCodeFilter(IW3CAuthenticationService auth
         try
         {
             var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
-            if (token != null)
+            if (token == null)
             {
-                var res = _authService.GetUserByToken(token, false);
-                if (res == null)
-                {
-                    context.Result = new UnauthorizedObjectResult(new ErrorResult("Unable to retrieve user from token"));
-                    return;
-                }
-                // Inject into HttpContext.Items to avoid dependening on the function parameters.
-                context.HttpContext.Items[ActingPlayerUserKey] = res;
-
-                // TODO: We should retire this approach as it forces POST instead of GET.
-                var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
-                if (actingPlayerContent != null)
-                {
-                    context.ActionArguments["actingPlayer"] = res.BattleTag;
-                }
-
-                await next.Invoke();
+                // Without this the action is skipped but nothing sets a result, so MVC answered 200 with an empty body.
+                context.Result = new UnauthorizedObjectResult(new ErrorResult("Missing bearer token"));
+                return;
             }
+            var res = _authService.GetUserByToken(token, false);
+            if (res == null)
+            {
+                context.Result = new UnauthorizedObjectResult(new ErrorResult("Unable to retrieve user from token"));
+                return;
+            }
+            // Inject into HttpContext.Items to avoid dependening on the function parameters.
+            context.HttpContext.Items[ActingPlayerUserKey] = res;
+
+            // TODO: We should retire this approach as it forces POST instead of GET.
+            var actingPlayerContent = context.ActionDescriptor.Parameters.FirstOrDefault(a => a.Name == "actingPlayer");
+            if (actingPlayerContent != null)
+            {
+                context.ActionArguments["actingPlayer"] = res.BattleTag;
+            }
+
+            await next.Invoke();
         }
         catch (Exception ex)
         {

@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
 using W3ChampionsStatisticService.Friends;
+using W3ChampionsStatisticService.NetworkDiagnostics;
+using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Sessions;
@@ -29,7 +32,8 @@ public class WebsiteBackendHub(
     TracingService tracingService,
     IBattleTagResolver battleTagResolver,
     IRelationshipChangeNotifier relationshipChangeNotifier,
-    ITicketStore ticketStore
+    ITicketStore ticketStore,
+    INetworkDiagnosticsDelivery netDiagDelivery
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -59,6 +63,10 @@ public class WebsiteBackendHub(
     private readonly IBattleTagResolver _battleTagResolver = battleTagResolver;
     private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
     private readonly ITicketStore _ticketStore = ticketStore;
+    private readonly INetworkDiagnosticsDelivery _netDiagDelivery = netDiagDelivery;
+
+    /// <summary>Upper bound for the on-connect diagnostics delivery. Settable so tests need not wait for it.</summary>
+    internal TimeSpan NetDiagOnConnectBound { get; set; } = NetDiagConstants.OnConnectDeliveryBound;
 
     [NoTrace]
     public override async Task OnConnectedAsync()
@@ -85,6 +93,7 @@ public class WebsiteBackendHub(
             }
             WebSocketUser user = new() { BattleTag = w3cUserAuthentication.BattleTag, ConnectionId = Context.ConnectionId };
             await LoginAsAuthenticated(user);
+            await DeliverNetworkDiagnosticsAsync(user.BattleTag);
         }, forceNewRoot: true);
         await base.OnConnectedAsync();
     }
@@ -93,6 +102,35 @@ public class WebsiteBackendHub(
     {
         _connections.Add(Context.ConnectionId, user);
         await Clients.Caller.SendAsync(WebsiteBackendSocketResponseType.Connected.ToString());
+    }
+
+    // Diagnostics must never cost the user the hub connection (Review Focus 5): log and carry on. The catch
+    // contains exceptions and the bound contains hangs: SignalR dispatches this connection's invocations only after
+    // OnConnectedAsync returns, so a stalled Mongo call must not hold it.
+    private async Task DeliverNetworkDiagnosticsAsync(string battleTag)
+    {
+        try
+        {
+            var delivery = _netDiagDelivery.OnUserConnectedAsync(battleTag);
+            try
+            {
+                await delivery.WaitAsync(NetDiagOnConnectBound);
+            }
+            catch (TimeoutException) when (!delivery.IsCompleted)
+            {
+                // The delivery pushes through IHubContext, so it can finish after this method has returned.
+                Log.Warning("Network diagnostics on-connect delivery for {BattleTag} is taking too long; it continues in the background", battleTag);
+                _ = delivery.ContinueWith(
+                    failed => Log.Warning(failed.Exception!.GetBaseException(), "Network diagnostics on-connect delivery failed for {BattleTag}", battleTag),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Warning(e, "Network diagnostics on-connect delivery failed for {BattleTag}", battleTag);
+        }
     }
 
     // Required for backwards compatibility
