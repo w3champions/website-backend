@@ -229,6 +229,11 @@ builder.Services.AddSingleton<W3ChampionsStatisticService.Admin.ReplayExport.Rep
 // Builds the replay export indexes in the background, after the start (see ReplayExportIndexes).
 builder.Services.AddSingleton<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportIndexes>();
 builder.Services.AddHostedService<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportIndexService>();
+// Replay store: Stripe Checkout (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET). Without the key the store sells nothing.
+builder.Services.AddSingleton<W3ChampionsStatisticService.ReplayStore.IReplayPayments, W3ChampionsStatisticService.ReplayStore.StripeReplayPayments>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.ReplayStore.ReplayOrderRepository>();
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, W3ChampionsStatisticService.ReplayStore.ReplayOrderRepository>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.ReplayStore.ReplayOrderFulfillment>();
 builder.Services.AddInterceptedTransient<MatchQueryHandler>();
 builder.Services.AddInterceptedSingleton<IChatServiceClient, ChatServiceClient>();
 builder.Services.AddInterceptedTransient<PlayerStatisticsService>();

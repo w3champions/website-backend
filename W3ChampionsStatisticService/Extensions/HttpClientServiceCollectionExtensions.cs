@@ -41,6 +41,8 @@ public static class HttpClientServiceCollectionExtensions
         // Replay downloads: observed p99.9 of the proxying endpoint is ~16 s.
         [HttpClientNames.Replay] = TimeSpan.FromSeconds(30),
         [HttpClientNames.War3Info] = TimeSpan.FromSeconds(15),
+        // A buyer waits for the payment page. Stripe.net sends a failed call again (same idempotency key).
+        [HttpClientNames.Stripe] = TimeSpan.FromSeconds(20),
     };
 
     public static IServiceCollection AddW3CHttpClients(this IServiceCollection services)

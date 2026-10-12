@@ -113,6 +113,9 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - `REWARD_PATREON_CLIENT_ID` - Patreon OAuth client ID
 - `REWARD_PATREON_CLIENT_SECRET` - Patreon OAuth client secret
 - `REPLAY_EXPORT_INDEXES` - `off` skips the background build of the replay export indexes
+- `STRIPE_SECRET_KEY` - Stripe secret key of the replay store (`sk_test_…` for test mode, `sk_live_…` in production). Without it, the store shows its prices but takes no payment (`checkout` answers 503)
+- `STRIPE_WEBHOOK_SECRET` - `whsec_…` of the Stripe webhook endpoint `api/replay-store/stripe/webhook`
+- `STRIPE_API_BASE` - only for local tests against a stand-in of the Stripe API
 
 ## Important Notes
 
@@ -133,9 +136,20 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 
 ### Replay export
 - `Admin/ReplayExport/` is the admin bulk download of replays (permission `Replays`). Mongo `Matchup` selects the games; replay-service builds each .w3g, as for the single-replay download.
-- A download is a ticket (`POST tickets`, bearer) plus a plain `GET download/{ticket}` that streams the ZIP. At most 2 exports stream at the same time.
+- A download is a ticket (`POST tickets`, bearer) plus a plain `GET download/{ticket}` that streams the ZIP. The admin export and the store each have 2 slots, and a ticket downloads only on the route of the controller that gave it (`Scope`), so buyers cannot take admin slots; one user runs one download at a time, and a new ticket replaces the user's unused one. A client slower than 16 KB/s loses the download.
 - Finished downloads go to the `ReplayExports` collection (no ZIP is kept). `ReplayExportIndexService` builds the search indexes 30 s after the start, unless `REPLAY_EXPORT_INDEXES=off` or the disk is short.
 - Tests use Mongo2Go (`FullyQualifiedName~ReplayExport`), never a shared database.
+
+### Replay store
+- `ReplayStore/` is the replay store (`api/replay-store`, page `/replays` on the website): a signed-in user searches like the admin export and pays with Stripe Checkout (hosted page) before the download. `ReplayExportControllerBase` holds the search, ticket and ZIP code that both controllers share.
+- Not open to all users yet: `[BearerSignedIn(OnlyWithPermission = StorePreviewPermission)]` lets only admins with the Replays permission in (others get 403). For the launch, remove `OnlyWithPermission` and open `useReplayStoreAccess` on the website.
+- Price: `ReplayExportPricing` ($0.02 per replay, $5.00 minimum, USD, at most 5,000 per purchase). The server sets the price; only games with a replay (`FloMatchId > 0`) count. At most 10 payment pages per user and hour; at most 4 searches at the same time.
+- Flow: `POST checkout` saves a `ReplayOrders` document (Pending) and opens the Stripe session (32 min; Stripe's minimum is 30). Stripe sends the buyer back to `/replays?order=…&session_id=…`; the page calls `POST orders/{id}/confirm`, and the webhook (`checkout.session.completed`, `…async_payment_succeeded`, `…async_payment_failed`, `…expired`) does the same when the buyer does not come back. Both ask Stripe for the session, check amount, currency and session id, and save the purchase once: a `ReplayExports` record with `_id` = order id and `Charged = true` (a duplicate key means it is saved already).
+- A purchase downloads again at no cost from `GET purchases` / `POST purchases/{id}/tickets`. The buyer sees only their own downloads of it, not those of admins.
+- `options` needs no sign-in, so it is cached for 10 minutes per game mode (the map names read the matches of the season).
+- The webhook reads only `type` and `data.object.id` (after `EventUtility.ValidateSignature`), so the API version of the Stripe endpoint does not matter. `confirm` asks Stripe at most once per order in 2 s.
+- Payment methods come from the Stripe Dashboard (cards, wallets, PayPal for accounts in Europe); the code sets none. The return URL is the request's Origin when it is `https://w3champions.com`, `https://*.w3champions.com` or a loopback address.
+- Stripe calls go through the named HttpClient `HttpClientNames.Stripe` (20 s). Tests: `FullyQualifiedName~ReplayStore` (Mongo2Go and a fake `IReplayPayments`).
 
 ### Service Registration
 - Services registered in `Program.cs` and feature-specific extension methods

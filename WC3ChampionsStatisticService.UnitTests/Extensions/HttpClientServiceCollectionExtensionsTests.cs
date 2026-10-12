@@ -27,6 +27,7 @@ public class HttpClientServiceCollectionExtensionsTests
     [TestCase(HttpClientNames.UpdateUpload, 15 * 60)]
     [TestCase(HttpClientNames.Replay, 30)]
     [TestCase(HttpClientNames.War3Info, 15)]
+    [TestCase(HttpClientNames.Stripe, 20)]
     public void NamedClient_HasExplicitTimeout(string name, int expectedSeconds)
     {
         using var provider = BuildProvider();

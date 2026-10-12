@@ -3,8 +3,8 @@ using System;
 namespace W3ChampionsStatisticService.Admin.ReplayExport;
 
 /// <summary>
-/// The list price of a replay download. Nobody pays yet: only admins can download, and admins download for
-/// free. The page shows the price, and the history keeps it, so a public paid download can start from here.
+/// The price of a replay download. Admins download for free on the admin page; buyers pay it in the replay
+/// store. The history keeps the price of each download.
 /// </summary>
 public static class ReplayExportPricing
 {
@@ -23,6 +23,9 @@ public class ReplayExportPrices
     public decimal PricePerReplay { get; set; } = ReplayExportPricing.PricePerReplay;
     public decimal MinimumPrice { get; set; } = ReplayExportPricing.MinimumPrice;
 
-    /// <summary>True when the user does not pay. Today that is every user: the page is for admins only.</summary>
-    public bool Free { get; set; } = true;
+    /// <summary>True when the user does not pay: the admin page.</summary>
+    public bool Free { get; set; }
+
+    /// <summary>False when the replay store cannot take payments (no payment provider is set up).</summary>
+    public bool Available { get; set; } = true;
 }

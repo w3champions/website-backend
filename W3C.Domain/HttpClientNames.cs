@@ -17,4 +17,6 @@ public static class HttpClientNames
     public const string UpdateUpload = "update-upload";
     public const string Replay = "replay";
     public const string War3Info = "war3info";
+    /// <summary>The Stripe API, for the replay store payments.</summary>
+    public const string Stripe = "stripe";
 }
