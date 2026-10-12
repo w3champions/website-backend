@@ -19,7 +19,7 @@ public static class CreateRunValidator
             CoreServers = (r.Targets.CoreServers ?? []).Distinct().ToList(),
             Baselines = (r.Targets.Baselines ?? []).Distinct().ToList(),
             CustomTargets = (r.Targets.CustomTargets ?? [])
-                .Select(c => c with { TcpPort = c.TcpPort ?? NetDiagConstants.DefaultCustomTcpPort })
+                .Select(c => c == null ? null : c with { TcpPort = c.TcpPort ?? NetDiagConstants.DefaultCustomTcpPort })
                 .Distinct()
                 .ToList(),
         };
@@ -72,12 +72,18 @@ public static class CreateRunValidator
 
     private static string ValidateTargets(RunTargets t)
     {
-        var any = t.FloNodeIds.Count > 0 || t.AllFloNodes || t.CoreServers.Count > 0 || t.Baselines.Count > 0
-            || t.CustomTargets.Count > 0 || t.IncludeDefaultGateway;
+        var flo = t.FloNodeIds ?? [];
+        var core = t.CoreServers ?? [];
+        var baselines = t.Baselines ?? [];
+        var custom = t.CustomTargets ?? [];
+        var any = flo.Count > 0 || t.AllFloNodes || core.Count > 0 || baselines.Count > 0 || custom.Count > 0 || t.IncludeDefaultGateway;
         if (!any) return "at least one target is required";
-        if (t.CustomTargets.Count > NetDiagConstants.MaxCustomTargets) return "at most 50 custom targets";
-        foreach (var c in t.CustomTargets)
+        if (core.Any(string.IsNullOrEmpty)) return "invalid core server key";
+        if (baselines.Any(string.IsNullOrEmpty)) return "invalid baseline key";
+        if (custom.Count > NetDiagConstants.MaxCustomTargets) return "at most 50 custom targets";
+        foreach (var c in custom)
         {
+            if (c == null) return "invalid custom target";
             if (!NetDiagIp.IsStrictIpv4(c.Ip)) return $"invalid custom target ip: {Clip(c.Ip)}";
             if (c.TcpPort is < 1 or > 65535) return "custom target port must be in 1-65535";
         }

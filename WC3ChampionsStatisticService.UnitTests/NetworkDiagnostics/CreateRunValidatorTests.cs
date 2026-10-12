@@ -101,6 +101,45 @@ public class CreateRunValidatorTests
         Assert.AreEqual(expected, Validate(Valid() with { Targets = new RunTargets { CustomTargets = [new CustomTarget { Ip = ip, TcpPort = port }] } }));
 
     [Test]
+    public void NullCustomTargetElement_Is400_NotAnException() =>
+        Assert.AreEqual("invalid custom target", Validate(Valid() with { Targets = new RunTargets { CustomTargets = [null] } }));
+
+    [Test]
+    public void NullCoreServerElement_IsRejected() =>
+        Assert.AreEqual("invalid core server key", Validate(Valid() with { Targets = new RunTargets { CoreServers = [null] } }));
+
+    [Test]
+    public void NullBaselineElement_IsRejected() =>
+        Assert.AreEqual("invalid baseline key", Validate(Valid() with { Targets = new RunTargets { Baselines = [""] } }));
+
+    [Test]
+    public void NullTargetLists_AreNormalizedAndMeanNoTargets() =>
+        Assert.AreEqual("at least one target is required", Validate(Valid() with { Targets = new RunTargets { FloNodeIds = null, CoreServers = null, Baselines = null, CustomTargets = null } }));
+
+    [Test]
+    public void Validate_OnNonNormalizedNullLists_DoesNotThrow() =>
+        Assert.AreEqual("at least one target is required", CreateRunValidator.Validate(Valid() with { Targets = new RunTargets() }));
+
+    [Test]
+    public void NullMethodElement_IsUnknownMethod() =>
+        Assert.AreEqual("unknown method: null", Validate(Valid() with { Methods = [null] }));
+
+    [Test]
+    public void NullMethods_Rejected() => Assert.AreEqual("methods must not be empty", Validate(Valid() with { Methods = null }));
+
+    [Test]
+    public void NullBattleTagElement_IsInvalidBattleTag() =>
+        Assert.AreEqual("invalid battleTag: null", Validate(Valid() with { Audience = new RunAudience { Kind = AudienceKind.Users, BattleTags = [null] } }));
+
+    [Test]
+    public void NullBattleTagList_IsRejected() =>
+        Assert.AreEqual("battleTags must hold 1-500 tags", Validate(Valid() with { Audience = new RunAudience { Kind = AudienceKind.Users, BattleTags = null } }));
+
+    [Test]
+    public void NullAudienceKind_IsUnknown() =>
+        Assert.AreEqual("unknown audience kind", Validate(Valid() with { Audience = new RunAudience() }));
+
+    [Test]
     public void PrivateCustomIpIsAllowed() =>
         Assert.IsNull(Validate(Valid() with { Targets = new RunTargets { CustomTargets = [new CustomTarget { Ip = "192.168.0.10", TcpPort = 22 }] } }));
 
