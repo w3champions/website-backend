@@ -342,12 +342,15 @@ public class SubmissionServiceTests
         StringAssert.Contains("run-1", _log.AllText);
     }
 
-    // The lookup has nothing (files missing): the result is stored without geo.
-    [Test]
-    public async Task GeoIpHasNothing_StillStores_WithNullGeo()
+    // Review Focus 4: GeoIP is enrichment. A lookup that has nothing (files missing) or that throws costs neither the
+    // result nor a retry: it is stored without geo.
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task GeoIpUnavailable_StillStores_WithNullGeo(bool lookupThrows)
     {
         TheConditionalUpdateSucceeds();
-        _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns((IReadOnlyDictionary<string, ClientGeo>)null);
+        if (lookupThrows) _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Throws(new InvalidOperationException("geo"));
+        else _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns((IReadOnlyDictionary<string, ClientGeo>)null);
 
         var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
@@ -357,14 +360,21 @@ public class SubmissionServiceTests
         Assert.AreEqual(4, _built.Observations.Count);
         _results.Verify(r => r.UpsertIpInfoAsync(It.Is<IReadOnlyCollection<NetworkDiagnosticIpInfo>>(rows => rows.Count == 0)), Times.Once);
         Assert.AreEqual(0, _log.Count(LogLevel.Error));
+        Assert.AreEqual(lookupThrows ? 1 : 0, _log.Count(LogLevel.Warning));
+        if (lookupThrows)
+        {
+            StringAssert.Contains(Id, _log.AllText);
+            StringAssert.Contains("run-1", _log.AllText);
+            StringAssert.DoesNotContain("81.2.69.160", _log.AllText);
+        }
     }
 
-    // Everything that can fail on the content runs before the conditional update: the slot stays Pending, so the
+    // Building the documents runs before the conditional update: when it fails the slot stays Pending, so the
     // launcher's retry of this 500 can still succeed.
     [Test]
-    public async Task PreparingTheResultFails_500_AndTheSlotStaysPending()
+    public async Task BuildingTheResultFails_500_AndTheSlotStaysPending()
     {
-        _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Throws(new InvalidOperationException("geo"));
+        _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns(new GeoThatFailsOnRead());
 
         var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
@@ -377,6 +387,19 @@ public class SubmissionServiceTests
         StringAssert.Contains("run-1", _log.AllText);
         StringAssert.Contains(Player, _log.AllText);
         StringAssert.DoesNotContain(_token, _log.AllText);
+    }
+
+    /// <summary>Lists no entries (so the IP-info rows are built) but throws when ResultBuilder.Build looks an IP up.</summary>
+    private sealed class GeoThatFailsOnRead : IReadOnlyDictionary<string, ClientGeo>
+    {
+        public ClientGeo this[string key] => throw new InvalidOperationException("build");
+        public IEnumerable<string> Keys => [];
+        public IEnumerable<ClientGeo> Values => [];
+        public int Count => 0;
+        public bool ContainsKey(string key) => throw new InvalidOperationException("build");
+        public bool TryGetValue(string key, out ClientGeo value) => throw new InvalidOperationException("build");
+        public IEnumerator<KeyValuePair<string, ClientGeo>> GetEnumerator() => Enumerable.Empty<KeyValuePair<string, ClientGeo>>().GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     // The update may have been applied although its reply was lost: the retry then gets 409. That must be in the log.

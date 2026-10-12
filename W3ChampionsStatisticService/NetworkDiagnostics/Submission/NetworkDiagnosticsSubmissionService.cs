@@ -70,7 +70,7 @@ public sealed class NetworkDiagnosticsSubmissionService(
         try
         {
             var clientIp = ResultBuilder.ChooseClientIp(dto, remoteIp);
-            var geo = geoIp.Lookup(ResultBuilder.LookupIps(dto, clientIp)) ?? NoGeo;
+            var geo = LookupGeo(ResultBuilder.LookupIps(dto, clientIp), existing);
             ipInfo = ResultBuilder.IpInfoRows(existing.RunId, geo, now);
             built = ResultBuilder.Build(dto, existing, now, clientIp, geo);
         }
@@ -133,6 +133,20 @@ public sealed class NetworkDiagnosticsSubmissionService(
 
         log.LogInformation("Network diagnostics: measurement {MeasurementId} of run {RunId} submitted by {BattleTag}", assignment.Id, assignment.RunId, assignment.BattleTag);
         return NetDiagResult.Created(new { measurementId = assignment.Id });
+    }
+
+    /// <summary>GeoIP is enrichment only: when the lookup has nothing or fails, the result is stored without geo. Never null.</summary>
+    private IReadOnlyDictionary<string, ClientGeo> LookupGeo(List<string> ips, NetworkDiagnosticAssignment assignment)
+    {
+        try
+        {
+            return geoIp.Lookup(ips) ?? NoGeo;
+        }
+        catch (Exception e)
+        {
+            log.LogWarning(e, "Network diagnostics: GeoIP lookup failed for measurement {MeasurementId} of run {RunId}; storing it without geo", assignment.Id, assignment.RunId);
+            return NoGeo;
+        }
     }
 
     /// <summary>Null when the assignment can still be submitted.</summary>
