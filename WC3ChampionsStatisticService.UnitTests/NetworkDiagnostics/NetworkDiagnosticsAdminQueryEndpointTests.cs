@@ -311,7 +311,8 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
         StringAssert.Contains(",ok,'=cmd,10,10,", lines[1]);
         Assert.AreEqual(5, lines.Length);
         Assert.AreEqual("", lines[4]);
-        Assert.IsTrue(rows.Disposed, "the cursor is released with the request");
+        // The server releases the cursor after it ended the response, which the client may see first.
+        await rows.WhenDisposed.WaitAsync(ServerSideTimeout);
         _queries.Verify(q => q.GetObservationsAsync(It.IsAny<NetDiagQuery>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -341,21 +342,43 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
         Assert.AreEqual((200, ""), (status, body));
     }
 
-    // The status line and the first rows are gone when a later batch fails. The connection is cut instead of ended:
-    // the client gets a transport error, never a body that looks complete.
+    private static readonly TimeSpan ServerSideTimeout = TimeSpan.FromSeconds(10);
+
+    // A later batch fails after the status line and the first rows were written. The server then aborts the
+    // connection instead of ending the response, so the client never holds a body that ended normally.
+    // What the client sees of the aborted response is a race it cannot influence, and both outcomes are legitimate:
+    // bytes the server had written but the socket had not sent yet are discarded by the abort. Either the head made
+    // it out (status 200, then reading the body fails), or nothing did (the request itself fails; this is the usual
+    // outcome on Linux, the other one on macOS). ObservationStreamResultTests pins the server side of it without a
+    // socket: the rows before the error are written, then the connection is aborted.
+    // Every attempt gets a fresh failing cursor: an HTTP client may repeat a GET whose connection broke before any
+    // answer byte arrived, and the repeat must fail the same way.
     [TestCase("csv")]
     [TestCase("ndjson")]
-    public async Task GetObservations_Streamed_DatabaseErrorMidStream_CutsTheConnection(string format)
+    public async Task GetObservations_Streamed_DatabaseErrorMidStream_NeverEndsAsACompleteBody(string format)
     {
-        var rows = new FakeCursor<NetworkDiagnosticObservation>(() => [Obs("m1")], () => throw new MongoException("connection lost"));
-        StreamAnswers(rows, null);
+        var cursors = new System.Collections.Concurrent.ConcurrentQueue<FakeCursor<NetworkDiagnosticObservation>>();
+        _queries.Setup(q => q.OpenObservationStreamAsync(It.IsAny<NetDiagQuery>(), null, 1000, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                var rows = new FakeCursor<NetworkDiagnosticObservation>(() => [Obs("m1")], () => throw new MongoException("connection lost"));
+                cursors.Enqueue(rows);
+                return NetDiagResult.Ok(new ObservationStream(rows, null));
+            });
 
-        using var response = await _http.GetAsync($"{ObservationsUrl}?format={format}", HttpCompletionOption.ResponseHeadersRead);
+        async Task<string> WholeBody()
+        {
+            using var response = await _http.GetAsync($"{ObservationsUrl}?format={format}", HttpCompletionOption.ResponseHeadersRead);
+            return await response.Content.ReadAsStringAsync();
+        }
 
-        Assert.AreEqual(200, (int)response.StatusCode, "the rows before the error were already on the wire");
-        Assert.That(async () => await response.Content.ReadAsStringAsync(), Throws.InstanceOf<HttpRequestException>().Or.InstanceOf<IOException>());
-        Assert.AreEqual(2, rows.BatchesRead);
-        Assert.IsTrue(rows.Disposed);
+        Assert.That(WholeBody, Throws.InstanceOf<HttpRequestException>().Or.InstanceOf<IOException>());
+        Assert.IsNotEmpty(cursors);
+        foreach (var rows in cursors)
+        {
+            await rows.WhenDisposed.WaitAsync(ServerSideTimeout);
+            Assert.AreEqual(2, rows.BatchesRead, "the failing batch was reached");
+        }
     }
 
     // Before the first byte nothing is lost: the usual error answers apply to the streamed formats too.

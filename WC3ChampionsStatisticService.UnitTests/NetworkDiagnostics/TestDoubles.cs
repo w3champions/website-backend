@@ -88,7 +88,16 @@ public sealed class FakeCursor<T>(params Func<IEnumerable<T>>[] batches) : IAsyn
         }
     }
 
-    public void Dispose() => Disposed = true;
+    /// <summary>Completes when the cursor is disposed. A server releases it after the response has ended, so a client that just read the response awaits this instead of looking at <see cref="Disposed"/>.</summary>
+    public Task WhenDisposed => _disposed.Task;
+
+    private readonly TaskCompletionSource _disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public void Dispose()
+    {
+        Disposed = true;
+        _disposed.TrySetResult();
+    }
 }
 
 /// <summary>
