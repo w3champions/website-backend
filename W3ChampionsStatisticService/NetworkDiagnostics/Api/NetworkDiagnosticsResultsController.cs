@@ -9,9 +9,10 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Api;
 
 /// <summary>
 /// C5 launcher submit. The player authenticates with their own JWT (401 from the filter); the measurement token
-/// travels in a header. The body is read by hand after the filter let the caller in: gzip is undone by the request
-/// decompression middleware mounted for this path, the read stops one byte past the 8 MB cap, and the JSON is
-/// snake_case (not MVC's [FromBody]). No [ApiController]: errors are always {"error": …} (Deviation 4).
+/// travels in a header. The body is read by hand, and only after the service checked owner and token: gzip is undone
+/// by the request decompression middleware mounted for this path, the read stops one byte past the 8 MB cap, and the
+/// JSON is snake_case (not MVC's [FromBody]). MVC itself never touches the body (no form binding).
+/// No [ApiController]: errors are always {"error": …} (Deviation 4).
 /// </summary>
 [Route("api/network-diagnostics")]
 [Trace]
@@ -26,19 +27,23 @@ public class NetworkDiagnosticsResultsController(INetworkDiagnosticsSubmissionSe
     public const long MaxWireBytes = SubmissionValidator.MaxBodyBytes + 64 * 1024;
 
     [HttpPost("results/{measurementId}")]
+    [DisableFormValueModelBinding]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxWireBytes)]
     public async Task<IActionResult> Submit(
-        string measurementId,
-        string actingPlayer,
+        [FromRoute] string measurementId,
         [FromHeader(Name = TokenHeader)][NoTrace] string measurementToken,
         CancellationToken cancellationToken)
     {
-        var (dto, error) = await SubmissionBodyReader.ReadAsync(Request.Body, SubmissionValidator.MaxBodyBytes, cancellationToken);
-        if (error != null) return NetworkDiagnosticsAdminController.Map(NetDiagResult.Error(400, error));
-
         // After UseForwardedHeaders this is the client address the reverse proxy reported.
-        var remoteIp = NetDiagIp.Ipv4Of(HttpContext.Connection.RemoteIpAddress);
-        return NetworkDiagnosticsAdminController.Map(await submissions.SubmitAsync(measurementId, actingPlayer, measurementToken, dto, remoteIp));
+        var remoteIp = NetDiagIp.PublicIpv4Of(HttpContext.Connection.RemoteIpAddress);
+        // The service calls the reader only once the caller is known to own the measurement and to hold its token.
+        var result = await submissions.SubmitAsync(
+            measurementId,
+            InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext).BattleTag,
+            measurementToken,
+            () => SubmissionBodyReader.ReadAsync(Request.Body, SubmissionValidator.MaxBodyBytes, cancellationToken),
+            remoteIp);
+        return NetworkDiagnosticsAdminController.Map(result);
     }
 }

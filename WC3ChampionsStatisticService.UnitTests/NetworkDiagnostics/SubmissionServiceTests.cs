@@ -55,6 +55,7 @@ public class SubmissionServiceTests
         _runs = new Mock<INetworkDiagnosticsRunRepository>();
         _results = new Mock<INetworkDiagnosticsResultRepository>();
         _built = null;
+        _bodyReads = 0;
         _results.Setup(r => r.InsertResultAsync(It.IsAny<BuiltResult>())).Callback<BuiltResult>(b => _built = b).Returns(Task.CompletedTask);
         _geo = new Mock<IGeoIpLookup>();
         _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns(new Dictionary<string, ClientGeo>
@@ -65,6 +66,15 @@ public class SubmissionServiceTests
         _service = new NetworkDiagnosticsSubmissionService(_assignments.Object, _runs.Object, _results.Object, _geo.Object,
             new FixedTimeProvider(new DateTimeOffset(Now)), _log);
     }
+
+    private int _bodyReads;
+
+    /// <summary>The controller's body reader: counts how often the service asked for the body.</summary>
+    private Func<Task<(NetDiagSubmission Dto, string Error)>> Body(NetDiagSubmission dto, string error = null) => () =>
+    {
+        _bodyReads++;
+        return Task.FromResult((dto, error));
+    };
 
     private static NetDiagSubmission Full() => SubmissionFixtures.Parse(SubmissionFixtures.FullJson);
 
@@ -87,12 +97,24 @@ public class SubmissionServiceTests
     [Test]
     public async Task Valid_Returns201_AndWritesEachDocumentOnce()
     {
-        TheConditionalUpdateSucceeds();
+        var calls = new List<string>();
+        _assignments.Setup(a => a.TrySubmitAsync(Id, Player, Now)).Callback(() => calls.Add("update"))
+            .ReturnsAsync(_assignment with { Status = AssignmentStatus.Submitted, SubmittedAt = Now });
+        _results.Setup(r => r.InsertResultAsync(It.IsAny<BuiltResult>())).Callback<BuiltResult>(b => { _built = b; calls.Add("insert"); }).Returns(Task.CompletedTask);
+        _results.Setup(r => r.UpsertIpInfoAsync(It.IsAny<IReadOnlyCollection<NetworkDiagnosticIpInfo>>())).Callback(() => calls.Add("ipInfo")).Returns(Task.CompletedTask);
+        _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Callback(() => calls.Add("geo")).Returns(new Dictionary<string, ClientGeo>
+        {
+            ["81.2.69.160"] = new() { Country = "GB", Asn = 20712 },
+            ["1.2.3.4"] = new() { Country = "US", Asn = 13335 },
+        });
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(201, result.StatusCode);
         Assert.AreEqual($$"""{"measurementId":"{{Id}}"}""", BodyOf(result));
+        // Only the insert sits between the conditional update and the answer that matters; enrichment comes after it.
+        CollectionAssert.AreEqual(new[] { "geo", "update", "insert", "ipInfo" }, calls);
+        Assert.AreEqual(1, _bodyReads);
         Assert.AreEqual("run-1", _built.Measurement.RunId);
         Assert.AreEqual(Now, _built.Measurement.SubmittedAt);
         Assert.AreEqual("81.2.69.160", _built.Measurement.ClientIp, "reported public_ipv4 wins over the socket address");
@@ -106,11 +128,27 @@ public class SubmissionServiceTests
     [Test]
     public async Task InvalidPayload_400_BeforeAnyUpdate()
     {
-        var result = await _service.SubmitAsync("other-id", Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full() with { MeasurementId = "other-id" }), SocketIp);
 
         Assert.AreEqual(400, result.StatusCode);
         Assert.AreEqual("""{"error":"measurement_id does not match the URL"}""", BodyOf(result));
         VerifyNoConditionalUpdate();
+        VerifyNothingWritten();
+    }
+
+    // What the body reader could not read or parse is the 400 it names.
+    [TestCase("payload_too_large")]
+    [TestCase("Malformed JSON")]
+    [TestCase("Missing body")]
+    public async Task UnreadableBody_400_BeforeAnyUpdate(string readerError)
+    {
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(null, readerError), SocketIp);
+
+        Assert.AreEqual(400, result.StatusCode);
+        Assert.AreEqual($$"""{"error":"{{readerError}}"}""", BodyOf(result));
+        _geo.Verify(g => g.Lookup(It.IsAny<IEnumerable<string>>()), Times.Never);
+        VerifyNoConditionalUpdate();
+        VerifyNothingWritten();
     }
 
     // The route id, the body's measurement_id and the assignment id are compared as they are: no case folding.
@@ -119,7 +157,7 @@ public class SubmissionServiceTests
     {
         _assignments.Setup(a => a.GetAsync(It.IsAny<string>())).ReturnsAsync(_assignment);
 
-        var result = await _service.SubmitAsync(Id.ToUpperInvariant(), Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id.ToUpperInvariant(), Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(400, result.StatusCode);
         VerifyNoConditionalUpdate();
@@ -132,7 +170,7 @@ public class SubmissionServiceTests
     {
         var dto = Full() with { Targets = Enumerable.Repeat(new NetDiagTargetDto { TargetKey = "gateway" }, 201).ToList() };
 
-        var result = await _service.SubmitAsync(Id, Player, _token, dto, SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(dto), SocketIp);
 
         Assert.AreEqual("""{"error":"Too many targets"}""", BodyOf(result));
         _geo.Verify(g => g.Lookup(It.IsAny<IEnumerable<string>>()), Times.Never);
@@ -146,10 +184,12 @@ public class SubmissionServiceTests
     [TestCase("AAAA")]                                          // wrong length
     public async Task WrongOrMissingToken_403_BeforeAnyUpdate(string token)
     {
-        var result = await _service.SubmitAsync(Id, Player, token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, token, Body(Full()), SocketIp);
 
         Assert.AreEqual(403, result.StatusCode);
         Assert.AreEqual("""{"error":"forbidden"}""", BodyOf(result));
+        Assert.AreEqual(0, _bodyReads, "the body is not read for a caller without the token");
+        if (string.IsNullOrEmpty(token)) _assignments.Verify(a => a.GetAsync(It.IsAny<string>()), Times.Never);
         VerifyNoConditionalUpdate();
         VerifyNothingWritten();
     }
@@ -159,7 +199,8 @@ public class SubmissionServiceTests
     {
         var wrong = _token[..^1] + (_token[^1] == 'A' ? 'B' : 'A');
 
-        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, wrong, Full(), SocketIp)).StatusCode);
+        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, wrong, Body(Full()), SocketIp)).StatusCode);
+        Assert.AreEqual(0, _bodyReads);
         VerifyNoConditionalUpdate();
         VerifyNothingWritten();
     }
@@ -171,7 +212,8 @@ public class SubmissionServiceTests
     {
         _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync(_assignment with { Status = status });
 
-        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, "wrong", Full(), SocketIp)).StatusCode);
+        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, "wrong", Body(Full()), SocketIp)).StatusCode);
+        Assert.AreEqual(0, _bodyReads);
     }
 
     [Test]
@@ -179,7 +221,7 @@ public class SubmissionServiceTests
     {
         _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync(_assignment with { Status = AssignmentStatus.Submitted, SubmittedAt = Now.AddMinutes(-1) });
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(409, result.StatusCode);
         Assert.AreEqual("""{"error":"already_submitted"}""", BodyOf(result));
@@ -196,7 +238,7 @@ public class SubmissionServiceTests
             .ReturnsAsync(_assignment with { Status = AssignmentStatus.Submitted, SubmittedAt = Now });
         _assignments.Setup(a => a.TrySubmitAsync(Id, Player, Now)).ReturnsAsync((NetworkDiagnosticAssignment)null);
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(409, result.StatusCode);
         Assert.AreEqual("""{"error":"already_submitted"}""", BodyOf(result));
@@ -212,7 +254,7 @@ public class SubmissionServiceTests
             .ReturnsAsync(_assignment with { Status = AssignmentStatus.Expired });
         _assignments.Setup(a => a.TrySubmitAsync(Id, Player, Now)).ReturnsAsync((NetworkDiagnosticAssignment)null);
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(409, result.StatusCode);
         Assert.AreEqual("""{"error":"expired"}""", BodyOf(result));
@@ -224,10 +266,10 @@ public class SubmissionServiceTests
     public async Task Token_IsNeverLogged()
     {
         _assignments.Setup(a => a.TrySubmitAsync(Id, Player, Now)).ReturnsAsync(_assignment);
-        await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
         _results.Setup(r => r.InsertResultAsync(It.IsAny<BuiltResult>())).ThrowsAsync(new TimeoutException("mongo"));
-        await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
-        await _service.SubmitAsync(Id, Player, "wrong", Full(), SocketIp);
+        await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
+        await _service.SubmitAsync(Id, Player, "wrong", Body(Full()), SocketIp);
 
         Assert.AreEqual(1, _log.Count(LogLevel.Information));
         Assert.AreEqual(1, _log.Count(LogLevel.Error));
@@ -242,7 +284,7 @@ public class SubmissionServiceTests
     {
         _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync(_assignment with { Status = status, DeliverBy = Now.AddDays(deliverByDays) });
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(409, result.StatusCode);
         Assert.AreEqual("""{"error":"expired"}""", BodyOf(result));
@@ -254,14 +296,15 @@ public class SubmissionServiceTests
     public async Task SomeoneElsesAssignment_Or_Unknown_403()
     {
         _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync(_assignment with { BattleTag = "Other#1111" });
-        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp)).StatusCode);
+        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp)).StatusCode);
 
         // BattleTags are matched exactly, no case folding.
         _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync(_assignment with { BattleTag = Player.ToUpperInvariant() });
-        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp)).StatusCode);
+        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp)).StatusCode);
 
         _assignments.Setup(a => a.GetAsync(Id)).ReturnsAsync((NetworkDiagnosticAssignment)null);
-        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp)).StatusCode);
+        Assert.AreEqual(403, (await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp)).StatusCode);
+        Assert.AreEqual(0, _bodyReads, "the body is not read for someone else's or an unknown measurement");
         VerifyNoConditionalUpdate();
         VerifyNothingWritten();
     }
@@ -272,7 +315,7 @@ public class SubmissionServiceTests
         _assignments.Setup(a => a.TrySubmitAsync(Id, Player, Now)).ReturnsAsync(_assignment);
         _results.Setup(r => r.InsertResultAsync(It.IsAny<BuiltResult>())).ThrowsAsync(new TimeoutException("mongo"));
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(500, result.StatusCode);
         Assert.AreEqual("""{"error":"internal_error"}""", BodyOf(result));
@@ -280,6 +323,7 @@ public class SubmissionServiceTests
         StringAssert.Contains(Id, _log.AllText);
         StringAssert.Contains("run-1", _log.AllText);
         StringAssert.Contains(Player, _log.AllText);
+        _results.Verify(r => r.UpsertIpInfoAsync(It.IsAny<IReadOnlyCollection<NetworkDiagnosticIpInfo>>()), Times.Never);
         _runs.Verify(r => r.IncrementCountersAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
     }
 
@@ -290,7 +334,7 @@ public class SubmissionServiceTests
         TheConditionalUpdateSucceeds();
         _runs.Setup(r => r.IncrementCountersAsync("run-1", 0, 0, 1, 0)).ThrowsAsync(new TimeoutException("mongo"));
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(201, result.StatusCode);
         Assert.IsNotNull(_built);
@@ -298,16 +342,14 @@ public class SubmissionServiceTests
         StringAssert.Contains("run-1", _log.AllText);
     }
 
-    // Review Focus 4: GeoIP being unavailable never costs a result.
-    [TestCase(false)]
-    [TestCase(true)]
-    public async Task GeoIpUnavailable_StillStores_WithNullGeo(bool lookupThrows)
+    // The lookup has nothing (files missing): the result is stored without geo.
+    [Test]
+    public async Task GeoIpHasNothing_StillStores_WithNullGeo()
     {
         TheConditionalUpdateSucceeds();
-        if (lookupThrows) _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Throws(new InvalidOperationException("geo"));
-        else _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns((IReadOnlyDictionary<string, ClientGeo>)null);
+        _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns((IReadOnlyDictionary<string, ClientGeo>)null);
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full(), SocketIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
 
         Assert.AreEqual(201, result.StatusCode);
         Assert.AreEqual("81.2.69.160", _built.Measurement.ClientIp);
@@ -317,7 +359,61 @@ public class SubmissionServiceTests
         Assert.AreEqual(0, _log.Count(LogLevel.Error));
     }
 
-    // P5: without a reported public_ipv4 the socket's IPv4 is the client IP; without either it stays null.
+    // Everything that can fail on the content runs before the conditional update: the slot stays Pending, so the
+    // launcher's retry of this 500 can still succeed.
+    [Test]
+    public async Task PreparingTheResultFails_500_AndTheSlotStaysPending()
+    {
+        _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Throws(new InvalidOperationException("geo"));
+
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
+
+        Assert.AreEqual(500, result.StatusCode);
+        Assert.AreEqual("""{"error":"internal_error"}""", BodyOf(result));
+        VerifyNoConditionalUpdate();
+        VerifyNothingWritten();
+        Assert.AreEqual(1, _log.Count(LogLevel.Error));
+        StringAssert.Contains(Id, _log.AllText);
+        StringAssert.Contains("run-1", _log.AllText);
+        StringAssert.Contains(Player, _log.AllText);
+        StringAssert.DoesNotContain(_token, _log.AllText);
+    }
+
+    // The update may have been applied although its reply was lost: the retry then gets 409. That must be in the log.
+    [Test]
+    public async Task TheConditionalUpdateThrows_500_LoggedWithMeasurementRunAndBattleTag()
+    {
+        _assignments.Setup(a => a.TrySubmitAsync(Id, Player, Now)).ThrowsAsync(new TimeoutException("mongo"));
+
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
+
+        Assert.AreEqual(500, result.StatusCode);
+        Assert.AreEqual("""{"error":"internal_error"}""", BodyOf(result));
+        VerifyNothingWritten();
+        Assert.AreEqual(1, _log.Count(LogLevel.Error));
+        StringAssert.Contains(Id, _log.AllText);
+        StringAssert.Contains("run-1", _log.AllText);
+        StringAssert.Contains(Player, _log.AllText);
+        StringAssert.DoesNotContain(_token, _log.AllText);
+    }
+
+    // The IP info is a cache of enrichment data; the result itself is stored.
+    [Test]
+    public async Task IpInfoFailureAfterTheInsert_Still201_AndLogged()
+    {
+        TheConditionalUpdateSucceeds();
+        _results.Setup(r => r.UpsertIpInfoAsync(It.IsAny<IReadOnlyCollection<NetworkDiagnosticIpInfo>>())).ThrowsAsync(new TimeoutException("mongo"));
+
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full()), SocketIp);
+
+        Assert.AreEqual(201, result.StatusCode);
+        Assert.IsNotNull(_built);
+        _runs.Verify(r => r.IncrementCountersAsync("run-1", 0, 0, 1, 0), Times.Once);
+        Assert.AreEqual(1, _log.Count(LogLevel.Error));
+        StringAssert.Contains(Id, _log.AllText);
+    }
+
+    // P5: without a reported public_ipv4 the peer's public IPv4 is the client IP; without either it stays null.
     [TestCase(SocketIp, SocketIp)]
     [TestCase(null, null)]
     public async Task NoReportedPublicIp_FallsBackToTheSocketIpv4(string remoteIp, string expected)
@@ -328,7 +424,7 @@ public class SubmissionServiceTests
             .Callback<IEnumerable<string>>(ips => lookedUp = ips.ToList())
             .Returns(new Dictionary<string, ClientGeo>());
 
-        var result = await _service.SubmitAsync(Id, Player, _token, Full() with { PublicIpv4 = null }, remoteIp);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(Full() with { PublicIpv4 = null }), remoteIp);
 
         Assert.AreEqual(201, result.StatusCode);
         Assert.AreEqual(expected, _built.Measurement.ClientIp);
@@ -370,7 +466,7 @@ public class SubmissionServiceTests
         TheConditionalUpdateSucceeds();
         _geo.Setup(g => g.Lookup(It.IsAny<IEnumerable<string>>())).Returns(new Dictionary<string, ClientGeo>());
 
-        var result = await _service.SubmitAsync(Id, Player, _token, SubmissionFixtures.Parse(json), null);
+        var result = await _service.SubmitAsync(Id, Player, _token, Body(SubmissionFixtures.Parse(json)), null);
 
         Assert.AreEqual(201, result.StatusCode, BodyOf(result));
         Assert.AreEqual(Id, _built.Measurement.Id);
