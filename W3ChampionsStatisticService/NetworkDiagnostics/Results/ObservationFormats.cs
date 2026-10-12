@@ -16,7 +16,7 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Results;
 public record ObservationDto(
     string MeasurementId, string RunId, string BattleTag, DateTime SubmittedAt, string ClientIp,
     string Country, string City, double? Lat, double? Lon, long? Asn, string AsnOrg, string Os,
-    string PrimaryAdapterType, bool VpnSuspected, string TargetKey, string TargetLabel, string TargetIp, string Path, string RouteLabel, string Method,
+    string PrimaryAdapterType, bool? VpnSuspected, string TargetKey, string TargetLabel, string TargetIp, string Path, string RouteLabel, string Method,
     string Outcome, string Reason, int Sent, int Received, double? LossPct, double? MinMs, double? AvgMs, double? MaxMs, double? StddevMs,
     double? P50Ms, double? P90Ms, double? P95Ms, double? P99Ms,
     double? JitterMs, int HopCount, string LastHopIp, long? LastHopAsn)

@@ -80,6 +80,31 @@ public class ObservationFormatsTests
         Assert.AreEqual("", lines[2], "the file ends with a line break");
     }
 
+    [Test]
+    public void UnknownVpn_IsNullInJson_NullInNdjson_AndAnEmptyCsvCell()
+    {
+        var dto = ObservationDto.From(Row() with { VpnSuspected = null, City = "London" });
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(dto, options));
+        using var ndjson = JsonDocument.Parse(ObservationFormats.Ndjson.Line(dto));
+        var header = ObservationFormats.CsvColumns.ToList();
+        var csvCells = ObservationFormats.Csv.Line(dto).TrimEnd('\r', '\n').Split(',');
+
+        Assert.AreEqual(JsonValueKind.Null, json.RootElement.GetProperty("vpnSuspected").ValueKind);
+        Assert.AreEqual(JsonValueKind.Null, ndjson.RootElement.GetProperty("vpnSuspected").ValueKind);
+        Assert.AreEqual("ethernet,,flo:12", string.Join(",", csvCells.Skip(header.IndexOf("primaryAdapterType")).Take(3)));
+    }
+
+    [Test]
+    public void KnownVpn_RendersTrueAndFalse()
+    {
+        var idx = ObservationFormats.CsvColumns.ToList().IndexOf("vpnSuspected");
+
+        Assert.AreEqual("true", ObservationFormats.Csv.Line(ObservationDto.From(Row() with { City = "London" })).Split(',')[idx]);
+        Assert.AreEqual("false", ObservationFormats.Csv.Line(ObservationDto.From(Row() with { VpnSuspected = false, City = "London" })).Split(',')[idx]);
+    }
+
     // One list drives the header and the cells: a row cannot have more or fewer cells than the header has columns.
     [Test]
     public void Csv_EveryRowHasOneCellPerColumn()

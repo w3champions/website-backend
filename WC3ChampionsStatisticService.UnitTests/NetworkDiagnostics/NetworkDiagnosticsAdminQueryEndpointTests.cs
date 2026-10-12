@@ -143,6 +143,19 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
     }
 
     [Test]
+    public async Task ListMeasurements_UnknownVpn_IsNullInTheBody()
+    {
+        var summary = new MeasurementSummaryDto("m1", "r1", "Name#1234", DateTime.UnixEpoch, null, null, null, null, null, 0, 0);
+        _queries.Setup(q => q.ListMeasurementsAsync(It.IsAny<NetDiagQuery>(), It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(NetDiagResult.Ok(new PageDto<MeasurementSummaryDto>([summary], 1)));
+
+        var (status, body, _) = await Get("/api/network-diagnostics/measurements");
+
+        Assert.AreEqual(200, status);
+        StringAssert.Contains("\"vpnSuspected\":null", body);
+    }
+
+    [Test]
     public async Task ListMeasurements_NoQuery_IsAnEmptyFilterOnTheFirstPage()
     {
         var (status, _, response) = await Get("/api/network-diagnostics/measurements");
@@ -427,6 +440,19 @@ public class NetworkDiagnosticsAdminQueryEndpointTests
         var (status, body, _) = await Get($"{ObservationsUrl}?limit=0");
 
         Assert.AreEqual((400, """{"error":"limit must be in 1-5000"}"""), (status, body));
+    }
+
+    [Test]
+    public async Task Aggregate_UnknownVpnGroup_HasANullKey()
+    {
+        var row = new AggregateRowDto(new() { ["vpn"] = null }, 3, null, null, null, 0, 0, null, null, null);
+        _queries.Setup(q => q.AggregateAsync(It.IsAny<NetDiagQuery>(), "vpn", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(NetDiagResult.Ok(new AggregateResponseDto(["vpn"], [row])));
+
+        var (status, body, _) = await Get("/api/network-diagnostics/aggregate?groupBy=vpn");
+
+        Assert.AreEqual(200, status);
+        StringAssert.Contains("""{"key":{"vpn":null},"count":3""", body);
     }
 
     // The website's request (NetworkDiagnosticsService.getAggregate): groupBy joined with commas plus the shared filters.

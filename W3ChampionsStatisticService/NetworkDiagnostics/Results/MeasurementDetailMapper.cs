@@ -9,7 +9,7 @@ namespace W3ChampionsStatisticService.NetworkDiagnostics.Results;
 /// <summary>C6 MeasurementSummaryDto. <c>Restarts</c> is long like the stored value (an unsigned 32-bit counter on the wire, P10).</summary>
 public record MeasurementSummaryDto(
     string MeasurementId, string RunId, string BattleTag, DateTime SubmittedAt, string ClientIp, ClientGeo ClientGeo,
-    string Os, string PrimaryAdapterType, bool VpnSuspected, int TargetCount, long Restarts);
+    string Os, string PrimaryAdapterType, bool? VpnSuspected, int TargetCount, long Restarts);
 
 /// <summary>One [offsetMs, rttMs | null] pair per sample. Serialized only when set: an absent series has no key (A4).</summary>
 public record HopDetailDto(int Ttl, string Ip, StatsDto Stats)
@@ -29,7 +29,7 @@ public record TargetDetailDto(string TargetKey, string Label, List<PathDetailDto
 /// <summary>C6 MeasurementDetailDto: summary fields + C5 context + ipInfo + targets (+ samples when raw=true).</summary>
 public record MeasurementDetailDto(
     string MeasurementId, string RunId, string BattleTag, DateTime SubmittedAt, string ClientIp, ClientGeo ClientGeo,
-    string Os, string PrimaryAdapterType, bool VpnSuspected, int TargetCount, long Restarts,
+    string Os, string PrimaryAdapterType, bool? VpnSuspected, int TargetCount, long Restarts,
     NetDiagOs OsInfo, string LauncherVersion, DateTime? AttemptStartedAt, DateTime? WindowStartedAt, DateTime? WindowEndedAt,
     NetDiagPacing Pacing, NetDiagSystem System, List<NetDiagFloSnapshotRow> FloSnapshot, string DefaultGateway,
     Dictionary<string, ClientGeo> IpInfo, List<TargetDetailDto> Targets)

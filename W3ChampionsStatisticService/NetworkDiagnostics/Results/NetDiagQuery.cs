@@ -61,7 +61,7 @@ public static class NetDiagFilters
         Expression<Func<T, long?>> Asn,
         Expression<Func<T, string>> Os,
         Expression<Func<T, string>> AdapterType,
-        Expression<Func<T, bool>> Vpn,
+        Expression<Func<T, bool?>> Vpn,
         Expression<Func<T, DateTime>> SubmittedAt);
 
     private static readonly ClientFields<NetworkDiagnosticObservation> ObservationFields = new(
