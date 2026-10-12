@@ -10,16 +10,33 @@ namespace WC3ChampionsStatisticService.Tests.Admin.ReplayExport;
 public class ReplayExportTicketStoreTests
 {
     [Test]
-    public void Exists_KeepsTheTicket()
+    public void Peek_KeepsTheTicket()
     {
         var store = new ReplayExportTicketStore(new MemoryCache(new MemoryCacheOptions()));
         var (ticket, _) = store.Create(new ReplayExportTicket { RequestedBy = "admin#1" });
 
-        Assert.IsTrue(store.Exists(ticket));
+        Assert.AreEqual("admin#1", store.Peek(ticket)?.RequestedBy);
         Assert.AreEqual("admin#1", store.Take(ticket)?.RequestedBy);
-        Assert.IsFalse(store.Exists(ticket));
+        Assert.IsNull(store.Peek(ticket));
         Assert.IsNull(store.Take(ticket));
-        Assert.IsFalse(store.Exists(null));
+        Assert.IsNull(store.Peek(null));
+    }
+
+    [Test]
+    public void Create_ReplacesTheUnusedTicketOfTheSameUser()
+    {
+        var store = new ReplayExportTicketStore(new MemoryCache(new MemoryCacheOptions()));
+        var (first, _) = store.Create(new ReplayExportTicket { RequestedBy = "buyer#1" });
+        var (other, _) = store.Create(new ReplayExportTicket { RequestedBy = "buyer#2" });
+        var (second, _) = store.Create(new ReplayExportTicket { RequestedBy = "buyer#1" });
+
+        Assert.IsNull(store.Peek(first));
+        Assert.IsNotNull(store.Peek(other));
+        Assert.IsNotNull(store.Take(second));
+
+        // A used ticket is gone already: the next one replaces nothing.
+        var (third, _) = store.Create(new ReplayExportTicket { RequestedBy = "buyer#1" });
+        Assert.IsNotNull(store.Take(third));
     }
 
     [Test]

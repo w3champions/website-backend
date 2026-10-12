@@ -62,6 +62,16 @@ public class ReplayExportRepository(
     private readonly IMatchRepository _matchRepository = matchRepository;
     private readonly IRankRepository _rankRepository = rankRepository;
 
+    /// <summary>The choices of the search form for <paramref name="gameMode"/>, and the prices of the page.</summary>
+    public async Task<ReplayExportOptions> LoadOptions(GameMode gameMode, ReplayExportPrices prices) => new()
+    {
+        Patches = await LoadPatchOptions(),
+        Seasons = await LoadSeasons(),
+        MapNames = await LoadMapNames(gameMode),
+        MaxQuantity = MaxQuantity,
+        Prices = prices,
+    };
+
     public async Task<List<ReplayExportPatchOption>> LoadPatchOptions()
     {
         return ReplayExportQuery.PatchOptions(await _patchRepository.LoadPatches());
@@ -178,9 +188,10 @@ public class ReplayExportRepository(
 
     /// <summary>
     /// The games of the user's past downloads that the filter leaves out: all of them, or the selected ones.
-    /// Downloads of other users never count.
+    /// Downloads of other users never count. <paramref name="onlyPurchases"/>: only the paid purchases (the
+    /// store), not the free admin downloads.
     /// </summary>
-    public async Task<HashSet<ObjectId>> LoadExcludedIds(ReplayExportFilter filter, string battleTag)
+    public async Task<HashSet<ObjectId>> LoadExcludedIds(ReplayExportFilter filter, string battleTag, bool onlyPurchases = false)
     {
         var ids = new HashSet<ObjectId>();
         if (!filter.ExcludePastDownloads) return ids;
@@ -189,7 +200,7 @@ public class ReplayExportRepository(
             .Select(id => ObjectId.TryParse(id, out var objectId) ? objectId : ObjectId.Empty)
             .Where(id => id != ObjectId.Empty)
             .ToList();
-        var downloads = Builders<ReplayExportRecord>.Filter.Eq(e => e.RequestedBy, battleTag);
+        var downloads = onlyPurchases ? PurchasesOf(battleTag) : Builders<ReplayExportRecord>.Filter.Eq(e => e.RequestedBy, battleTag);
         if (exportIds.Count > 0) downloads &= Builders<ReplayExportRecord>.Filter.In(e => e.Id, exportIds);
 
         var exported = await Exports.Find(downloads).Project(e => e.MatchIds).ToListAsync();
@@ -200,6 +211,30 @@ public class ReplayExportRepository(
     /// <summary>The user's past downloads, newest first, without the game ids.</summary>
     public Task<List<ReplayExportSummary>> LoadExports(string battleTag) =>
         LoadSummaries(Builders<ReplayExportRecord>.Filter.Eq(e => e.RequestedBy, battleTag), 500);
+
+    /// <summary>
+    /// The user's paid purchases from the replay store, newest first. Free admin downloads are not purchases.
+    /// Admins can download a purchase too (all-exports): the buyer sees only their own downloads.
+    /// </summary>
+    public async Task<List<ReplayExportSummary>> LoadPurchases(string battleTag)
+    {
+        var purchases = await LoadSummaries(PurchasesOf(battleTag), 500);
+        foreach (var purchase in purchases)
+        {
+            var own = purchase.Downloads.Where(d => d.By == battleTag).ToList();
+            if (own.Count == purchase.Downloads.Count) continue;
+            purchase.Downloads = own;
+            purchase.DownloadCount = own.Count;
+            purchase.LastDownloadedAt = own.Count > 0 ? own.Max(d => d.At) : default;
+        }
+        return purchases;
+    }
+
+    /// <summary>For the account menu of every signed-in user: uses the RequestedBy index.</summary>
+    public Task<long> CountPurchases(string battleTag) => Exports.CountDocumentsAsync(PurchasesOf(battleTag));
+
+    private static FilterDefinition<ReplayExportRecord> PurchasesOf(string battleTag) =>
+        Builders<ReplayExportRecord>.Filter.Eq(e => e.RequestedBy, battleTag) & Builders<ReplayExportRecord>.Filter.Eq(e => e.Charged, true);
 
     /// <summary>For admins: the downloads of all users, or of one user, newest first.</summary>
     public Task<List<ReplayExportSummary>> LoadAllExports(string user)
@@ -267,6 +302,38 @@ public class ReplayExportRepository(
     }
 
     public Task SaveExport(ReplayExportRecord record) => Exports.InsertOneAsync(record);
+
+    /// <summary>
+    /// Saves a paid purchase. Returns false when the record exists already: the webhook and the return page
+    /// can both save the same purchase, also at the same time.
+    /// </summary>
+    public async Task<bool> SavePurchase(ReplayExportRecord record)
+    {
+        try
+        {
+            await Exports.InsertOneAsync(record);
+            return true;
+        }
+        catch (MongoWriteException ex) when (ex.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The ids of the games that exist and have a FLO replay, in the order of <paramref name="ids"/>. Only the
+    /// ids: a purchase checks up to 5,000 games.
+    /// </summary>
+    public async Task<List<ObjectId>> ReplayableIds(IReadOnlyList<ObjectId> ids)
+    {
+        if (ids.Count == 0) return [];
+        var found = await CreateCollection<Matchup>()
+            .Find(Builders<Matchup>.Filter.In(m => m.Id, ids) & Builders<Matchup>.Filter.Gt(m => m.FloMatchId, 0))
+            .Project(Builders<Matchup>.Projection.Include(m => m.Id))
+            .ToListAsync();
+        var replayable = found.Select(d => d["_id"].AsObjectId).ToHashSet();
+        return ids.Where(replayable.Contains).ToList();
+    }
 
     /// <summary>Records a repeat download. It adds no games: they are the games of the first download.</summary>
     public Task MarkDownloadedAgain(ObjectId id, string by)
