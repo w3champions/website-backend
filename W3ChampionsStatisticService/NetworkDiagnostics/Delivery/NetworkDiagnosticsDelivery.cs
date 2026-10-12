@@ -114,7 +114,25 @@ public sealed class NetworkDiagnosticsDelivery(
     public async Task OnUserConnectedAsync(string battleTag)
     {
         var now = Now();
-        foreach (var run in await runs.ActiveFleetRunsAsync(now))
+        await AssignToOpenFleetRunsAsync(battleTag, now);
+        await PushDueAsync(await assignments.DueForAsync(battleTag, now), now);
+    }
+
+    /// <summary>Never throws: a late-joiner failure must not cost the user the push of assignments that are already due.</summary>
+    private async Task AssignToOpenFleetRunsAsync(string battleTag, DateTime now)
+    {
+        List<NetworkDiagnosticRun> fleetRuns;
+        try
+        {
+            fleetRuns = await runs.ActiveFleetRunsAsync(now);
+        }
+        catch (Exception e)
+        {
+            log.LogWarning(e, "Network diagnostics: reading the open fleet runs for late joiner {BattleTag} failed", battleTag);
+            return;
+        }
+
+        foreach (var run in fleetRuns)
         {
             try
             {
@@ -125,8 +143,6 @@ public sealed class NetworkDiagnosticsDelivery(
                 log.LogWarning(e, "Network diagnostics: late-joiner assignment of {BattleTag} to run {RunId} failed", battleTag, run.Id);
             }
         }
-
-        await PushDueAsync(await assignments.DueForAsync(battleTag, now), now);
     }
 
     private async Task TryAssignLateJoinerAsync(NetworkDiagnosticRun run, string battleTag, DateTime now)
@@ -138,9 +154,16 @@ public sealed class NetworkDiagnosticsDelivery(
         var assignment = AssignmentFactory.Create(run.Id, battleTag, slot, DeliveryRules.FleetDeliverBy(run));
         if (!await assignments.TryInsertAsync(assignment)) return;
 
-        await runs.IncrementCountersAsync(run.Id, assigned: 1);
-        log.LogInformation("Network diagnostics: late joiner {BattleTag} assigned to run {RunId} at {Slot:o}", battleTag, run.Id, slot);
-        await ExpireIfCancelledMeanwhileAsync(run.Id, battleTag);
+        try
+        {
+            await runs.IncrementCountersAsync(run.Id, assigned: 1);
+            log.LogInformation("Network diagnostics: late joiner {BattleTag} assigned to run {RunId} at {Slot:o}", battleTag, run.Id, slot);
+        }
+        finally
+        {
+            // In a finally: the assignment exists, so the cancel re-check must run even when the counter update failed.
+            await ExpireIfCancelledMeanwhileAsync(run.Id, battleTag);
+        }
     }
 
     /// <summary>
@@ -165,15 +188,26 @@ public sealed class NetworkDiagnosticsDelivery(
     private static NetworkDiagnosticsRequestDto ToDto(NetworkDiagnosticAssignment a, NetworkDiagnosticRun run) => new(
         a.Id,
         a.Token, // A10: the stored token, identical on every re-push
-        a.DeliverBy,
+        AsUtc(a.DeliverBy),
         new NetworkDiagnosticsSpecDto(
-            run.Methods,
+            run.Methods ?? [],
             run.AllowDuringGame,
             run.WindowSeconds,
             run.Targets?.FloNodeIds ?? [],
             run.Targets?.AllFloNodes ?? false,
-            run.ResolvedEndpoints,
+            run.ResolvedEndpoints ?? [],
             run.Targets?.IncludeDefaultGateway ?? false));
+
+    /// <summary>
+    /// The launcher needs an explicit UTC instant ("…Z"). Stored instants are UTC and the Mongo driver reads them back
+    /// with Kind=Utc; an Unspecified kind is therefore taken as UTC, a Local one is converted.
+    /// </summary>
+    private static DateTime AsUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+    };
 
     private DateTime Now() => time.GetUtcNow().UtcDateTime;
 }

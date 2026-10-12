@@ -36,6 +36,11 @@ public static class NetDiagConstants
     public static readonly TimeSpan Retention = TimeSpan.FromDays(365);
     public static readonly TimeSpan RawRetention = TimeSpan.FromDays(90);
     public static readonly TimeSpan DispatchInterval = TimeSpan.FromSeconds(5);
+    /// <summary>
+    /// How long a hub connect waits for the on-connect delivery. SignalR dispatches a connection's invocations only
+    /// after OnConnectedAsync returns, so a stalled Mongo call must not hold the connection longer than this.
+    /// </summary>
+    public static readonly TimeSpan OnConnectDeliveryBound = TimeSpan.FromSeconds(5);
 
     public const int DefaultWindowSeconds = 60;
     public const int MinWindowSeconds = 30;

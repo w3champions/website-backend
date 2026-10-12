@@ -424,6 +424,7 @@ public class NetworkDiagnosticsDeliveryTests
         Assert.AreEqual(a.Id, root.GetProperty("measurementId").GetString());
         Assert.AreEqual(a.Token, root.GetProperty("token").GetString());
         Assert.AreEqual(a.DeliverBy, root.GetProperty("deliverBy").GetDateTime());
+        StringAssert.EndsWith("Z", root.GetProperty("deliverBy").GetString(), "the launcher needs an explicit UTC instant");
         var spec = root.GetProperty("spec");
         Assert.AreEqual("IcmpMtr", spec.GetProperty("methods")[0].GetString());
         Assert.IsFalse(spec.GetProperty("allowDuringGame").GetBoolean());
@@ -434,7 +435,82 @@ public class NetworkDiagnosticsDeliveryTests
         var endpoint = spec.GetProperty("endpoints")[0];
         Assert.AreEqual("core:bigboi", endpoint.GetProperty("targetKey").GetString());
         Assert.AreEqual("157.90.1.251", endpoint.GetProperty("ip").GetString());
+        Assert.AreEqual("bigboi", endpoint.GetProperty("label").GetString());
         Assert.AreEqual(443, endpoint.GetProperty("tcpPort").GetInt32());
+    }
+
+    // Stored instants are UTC. Whatever DateTimeKind reaches the DTO, the wire value is that UTC instant with a "Z".
+    [TestCase(DateTimeKind.Unspecified)]
+    [TestCase(DateTimeKind.Utc)]
+    public async Task Push_DeliverBy_IsSentAsUtcWithZ_ForUtcOrUnspecifiedKind(DateTimeKind kind)
+    {
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        var a = Assignment() with { DeliverBy = new DateTime(2026, 10, 26, 12, 0, 0, kind) };
+
+        await _delivery.PushAsync(a, UsersRun());
+
+        Assert.AreEqual(DateTimeKind.Utc, SentPayload().DeliverBy.Kind);
+        Assert.AreEqual("\"2026-10-26T12:00:00Z\"", System.Text.Json.JsonSerializer.Serialize(SentPayload().DeliverBy));
+    }
+
+    [Test]
+    public async Task Push_DeliverBy_LocalKind_IsConvertedToTheSameUtcInstant()
+    {
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        var utc = new DateTime(2026, 10, 26, 12, 0, 0, DateTimeKind.Utc);
+        var a = Assignment() with { DeliverBy = utc.ToLocalTime() };
+
+        await _delivery.PushAsync(a, UsersRun());
+
+        Assert.AreEqual(DateTimeKind.Utc, SentPayload().DeliverBy.Kind);
+        Assert.AreEqual(utc, SentPayload().DeliverBy);
+    }
+
+    // The launcher's #[serde(default)] covers an absent key, not an explicit null.
+    [Test]
+    public async Task Push_RunWithNullLists_SendsEmptyArraysNotNull()
+    {
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+
+        await _delivery.PushAsync(Assignment(), UsersRun() with { Methods = null, ResolvedEndpoints = null, Targets = null });
+
+        var spec = SentPayload().Spec;
+        Assert.IsEmpty(spec.Methods);
+        Assert.IsEmpty(spec.Endpoints);
+        Assert.IsEmpty(spec.FloNodeIds);
+    }
+
+    [Test]
+    public async Task OnConnected_FleetRunQueryThrows_StillPushesDueAssignments()
+    {
+        var log = new ListLogger<NetworkDiagnosticsDelivery>();
+        var delivery = Delivery(log);
+        _connections.Add("c1", new WebSocketUser { BattleTag = "Name#1234", ConnectionId = "c1" });
+        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ThrowsAsync(new TimeoutException("mongo hiccup"));
+        var a = Assignment();
+        _assignments.Setup(x => x.DueForAsync("Name#1234", Now)).ReturnsAsync([a]);
+        _runs.Setup(r => r.GetAsync("run-1")).ReturnsAsync(UsersRun());
+
+        await delivery.OnUserConnectedAsync("Name#1234");
+
+        Assert.AreEqual(a.Id, SentPayload().MeasurementId);
+        StringAssert.Contains("Name#1234", log.AllText);
+    }
+
+    [Test]
+    public async Task OnConnected_LateJoiner_CounterUpdateThrows_TheCancelReCheckStillRuns()
+    {
+        var run = FleetRun(Now.AddMinutes(10));
+        _runs.Setup(r => r.ActiveFleetRunsAsync(Now)).ReturnsAsync([run]);
+        _runs.Setup(r => r.GetAsync("fleet-1")).ReturnsAsync(run with { CancelledAt = Now });
+        _runs.Setup(r => r.IncrementCountersAsync("fleet-1", 1, 0, 0, 0)).ThrowsAsync(new TimeoutException("mongo hiccup"));
+        _assignments.Setup(x => x.ExistsAsync("fleet-1", "Name#1234")).ReturnsAsync(false);
+        _assignments.Setup(x => x.TryInsertAsync(It.IsAny<NetworkDiagnosticAssignment>())).ReturnsAsync(true);
+        _assignments.Setup(x => x.ExpireAllPendingAsync("fleet-1")).ReturnsAsync(1);
+
+        await _delivery.OnUserConnectedAsync("Name#1234");
+
+        _assignments.Verify(x => x.ExpireAllPendingAsync("fleet-1"), Times.Once);
     }
 }
 

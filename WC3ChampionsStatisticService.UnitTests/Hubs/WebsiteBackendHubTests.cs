@@ -1192,6 +1192,61 @@ public class WebsiteBackendHubTests
         mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
     }
 
+    // Fix round 1: the try/catch contains exceptions, the bound contains hangs (a stalled Mongo socket). SignalR
+    // dispatches a connection's invocations only after OnConnectedAsync returns.
+    [Test]
+    public async Task OnConnectedAsync_NetDiagDeliveryNeverCompletes_StillReturnsWithinTheBound()
+    {
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+        var hub = CreateHub(friendCommandHandler);
+        hub.NetDiagOnConnectBound = TimeSpan.FromMilliseconds(20);
+        var neverCompletes = new TaskCompletionSource();
+        netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).Returns(neverCompletes.Task);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        SetHubContext(hub, "conn1");
+        var sink = new CollectingSink();
+        var previousLogger = Serilog.Log.Logger;
+        Serilog.Log.Logger = new Serilog.LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
+        try
+        {
+            // The outer WaitAsync only turns a regression (an unbounded await) into a failure instead of a hung run.
+            await hub.OnConnectedAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+            mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
+            Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
+            Assert.AreEqual(1, sink.Events.Count, "one line for the timeout");
+            Assert.That(sink.Events[0].Properties.Keys, Is.EquivalentTo(new[] { "BattleTag" }), "the timeout line names only the BattleTag");
+
+            // The abandoned work fails later: that failure is observed and logged, not left as an unobserved task exception.
+            neverCompletes.SetException(new InvalidOperationException("late failure"));
+
+            Assert.AreEqual(2, sink.Events.Count);
+            Assert.IsInstanceOf<InvalidOperationException>(sink.Events[1].Exception);
+            Assert.That(sink.Events[1].Properties.Keys, Is.EquivalentTo(new[] { "BattleTag" }));
+        }
+        finally
+        {
+            Serilog.Log.Logger = previousLogger;
+        }
+    }
+
+    [Test]
+    public void NetDiagOnConnectBound_DefaultsToFiveSeconds()
+    {
+        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
+
+        Assert.AreEqual(TimeSpan.FromSeconds(5), CreateHub(friendCommandHandler).NetDiagOnConnectBound);
+    }
+
+    private sealed class CollectingSink : Serilog.Core.ILogEventSink
+    {
+        public List<Serilog.Events.LogEvent> Events { get; } = [];
+        public void Emit(Serilog.Events.LogEvent logEvent) { lock (Events) Events.Add(logEvent); }
+    }
+
     [Test]
     public async Task OnConnectedAsync_RejectedConnection_DoesNotCallNetDiagDelivery()
     {
