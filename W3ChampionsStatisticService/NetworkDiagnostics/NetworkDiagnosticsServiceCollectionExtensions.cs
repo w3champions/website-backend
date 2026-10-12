@@ -34,6 +34,12 @@ public static class NetworkDiagnosticsServiceCollectionExtensions
         services.AddSingleton<IRandom, SystemRandom>();
         // Plain AddSingleton, no tracing interception: this service handles measurement tokens (A10).
         services.AddSingleton<INetworkDiagnosticsDelivery, NetworkDiagnosticsDelivery>();
+        // Plain AddSingleton as well (tokens). The optional TimeSpan? ctor parameter needs a factory.
+        services.AddSingleton<INetworkDiagnosticsScheduler, NetworkDiagnosticsScheduler>();
+        services.AddHostedService(sp => new NetworkDiagnosticsDispatcher(
+            sp.GetRequiredService<INetworkDiagnosticsScheduler>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<ILogger<NetworkDiagnosticsDispatcher>>()));
         return services;
     }
 }
