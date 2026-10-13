@@ -10,7 +10,7 @@ and the JSON/ndjson property names are the same list, in exactly this order.
 | `country`, `city`, `lat`, `lon`, `asn`, `asnOrg` | GeoLite2 of `clientIp` at submit time (null when unknown) |
 | `os` | OS family as reported by the launcher (e.g. `windows`, `macos`) |
 | `primaryAdapterType` | kind of the adapter holding the default route (`ethernet`, `wifi`, ...) |
-| `vpnSuspected` | launcher heuristics (e.g. a tunnel adapter holds the default route); `true`/`false` as reported, **null = unknown** (the result carried no VPN information; never read null as "no VPN"). Rows stored before this rule may hold `false` for unknown |
+| `vpnSuspected` | set by the launcher when the OS routes 1.1.1.1 or a measured target through a VPN/tunnel interface (the `system.vpn.evidence` list holds the route facts and any VPN client/service found, but those no longer decide it; results from launchers before this change used the older heuristic: any VPN client/service, or a tunnel holding the default route); `true`/`false` as reported, **null = unknown** (the result carried no VPN information; never read null as "no VPN"). Rows stored before this rule may hold `false` for unknown |
 | `targetKey`, `targetLabel`, `targetIp` | what was measured; `targetIp` = the ICMP endpoint for Icmp*, the TCP host for Tcp*, the UDP host for FloUdpPing |
 | `path` | exactly `direct` or `proxied` |
 | `routeLabel` | flo route label for proxied paths (e.g. `US East 4 -> US East 3`) |
