@@ -27,7 +27,7 @@ public class PortraitReplacementService(MongoClient mongoClient, IS3Service stor
         Builders<PersonalSetting>.Filter.Eq(p => p.ProfilePicture.Race, AvatarCategory.Special) &
         Builders<PersonalSetting>.Filter.Eq(p => p.ProfilePicture.PictureId, id);
 
-    private static FilterDefinition<PersonalSetting> Affected(int id) =>
+    internal static FilterDefinition<PersonalSetting> Affected(int id) =>
         Builders<PersonalSetting>.Filter.ElemMatch(p => p.SpecialPictures, p => p.PictureId == id) | Selected(id);
 
     public async Task<PortraitReplacementPreview> Preview(int oldId)
@@ -116,7 +116,7 @@ public class PortraitReplacementService(MongoClient mongoClient, IS3Service stor
             rewardCounts.GetValueOrDefault(id))).ToList();
     }
 
-    public async Task<PortraitReplacementResult> Replace(int oldId, int newId)
+    public async Task<PortraitReplacementResult> Replace(int oldId, int newId, bool removeOldAssignments = false)
     {
         if (oldId == newId) throw new ValidationException("The replacement must have a different portrait ID.");
         var old = await FindPortrait(oldId);
@@ -150,8 +150,8 @@ public class PortraitReplacementService(MongoClient mongoClient, IS3Service stor
                     .Set(r => r.UpdatedAt, DateTime.UtcNow));
         }
 
-        // Both fields are changed in one atomic update per player. Keep old grants for recovery.
-        var update = await CreateCollection<PersonalSetting>().UpdateManyAsync(Affected(oldId), PlayerUpdate(oldId, newId));
+        // Transfer the tooltip and selected picture atomically; optionally retire the old grant.
+        var update = await CreateCollection<PersonalSetting>().UpdateManyAsync(Affected(oldId), PlayerUpdate(oldId, newId, removeOldAssignments));
         return new PortraitReplacementResult(update.ModifiedCount, rewards.Count);
     }
 
@@ -176,7 +176,7 @@ public class PortraitReplacementService(MongoClient mongoClient, IS3Service stor
         return affected;
     }
 
-    internal static UpdateDefinition<PersonalSetting> PlayerUpdate(int oldId, int newId)
+    internal static UpdateDefinition<PersonalSetting> PlayerUpdate(int oldId, int newId, bool removeOldAssignments = false)
     {
         var pictures = new BsonDocument("$ifNull", new BsonArray { "$SpecialPictures", new BsonArray() });
         var oldPicture = new BsonDocument("$arrayElemAt", new BsonArray
@@ -210,17 +210,21 @@ public class PortraitReplacementService(MongoClient mongoClient, IS3Service stor
         });
         var changed = new BsonDocument("$or", new BsonArray
         {
-            new BsonDocument("$not", new BsonArray { hasNew }), selectedOld
+            new BsonDocument("$not", new BsonArray { hasNew }), selectedOld,
+            removeOldAssignments ? new BsonDocument("$in", new BsonArray { oldId, new BsonDocument("$map", new BsonDocument { { "input", pictures }, { "as", "picture" }, { "in", "$$picture.PictureId" } }) }) : BsonBoolean.False
         });
         // PersonalSetting stores DateTimeOffset as [ticks, offsetMinutes]. Advance its
         // change-feed timestamp only when a grant or selected profile actually changes.
         var timestamp = new BsonArray { DateTimeOffset.UtcNow.Ticks, 0 };
+        var grants = new BsonDocument("$cond", new BsonArray
+            { hasNew, pictures, new BsonDocument("$concatArrays", new BsonArray { pictures, new BsonArray { newPicture } }) });
+        BsonValue finalGrants = removeOldAssignments ? new BsonDocument("$filter", new BsonDocument
+            { { "input", grants }, { "as", "picture" }, { "cond", new BsonDocument("$ne", new BsonArray { "$$picture.PictureId", oldId }) } }) : grants;
         PipelineDefinition<PersonalSetting, PersonalSetting> pipeline = new[]
         {
             new BsonDocument("$set", new BsonDocument
             {
-                { "SpecialPictures", new BsonDocument("$cond", new BsonArray
-                    { hasNew, pictures, new BsonDocument("$concatArrays", new BsonArray { pictures, new BsonArray { newPicture } }) }) },
+                { "SpecialPictures", finalGrants },
                 { "ProfilePicture", new BsonDocument("$cond", new BsonArray
                     { selectedOld, new BsonDocument("$mergeObjects", new BsonArray
                         { "$ProfilePicture", new BsonDocument("PictureId", newId) }), "$ProfilePicture" }) },

@@ -10,6 +10,7 @@ using NUnit.Framework;
 using W3C.Domain.CommonValueObjects;
 using W3C.Domain.Rewards.Entities;
 using W3ChampionsStatisticService.Admin.CloudStorage.S3;
+using W3ChampionsStatisticService.Admin.CloudStorage.Alibaba;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.Rewards.Portraits;
 
@@ -170,6 +171,124 @@ public class PortraitReplacementTests
         Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => _service.Replace(120, 120));
         Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => _service.Replace(120, 999));
         _storage.Verify(s => s.DownloadFile(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ReplacementCanRemoveOldGrantsWithoutLosingTooltipsOrSelection()
+    {
+        var both = Player("Both#1", true, AvatarCategory.Special, 120);
+        both.SpecialPictures = new[] { new SpecialPicture(120, "old"), new SpecialPicture(121, "existing") };
+        await SavePlayers(Player("Selected#1", true, AvatarCategory.Special, 120), both);
+        await _service.Replace(120, 121, true);
+        var selected = await Load("Selected#1");
+        Assert.That(selected.SpecialPictures.Single().PictureId, Is.EqualTo(121));
+        Assert.That(selected.SpecialPictures.Single().Description, Is.EqualTo("Personal tooltip"));
+        Assert.That(selected.ProfilePicture.PictureId, Is.EqualTo(121));
+        Assert.That((await Load("Both#1")).SpecialPictures.Single().Description, Is.EqualTo("existing"));
+        Assert.That((await _service.Replace(120, 121, true)).UpdatedPlayers, Is.Zero);
+        Assert.That((await Load("Selected#1")).LastUpdated, Is.EqualTo(selected.LastUpdated));
+    }
+
+    [Test]
+    public async Task CleanupRemovesAllReferencesAndOnlyResetsSelectedSpecialPictures()
+    {
+        var sameNumber = Player("OtherRace#1", true, AvatarCategory.HU, 120);
+        await SavePlayers(Player("Selected#1", true, AvatarCategory.Special, 120), sameNumber,
+            Player("SelectedOnly#1", false, AvatarCategory.Special, 120), Player("Unrelated#1", false, AvatarCategory.Starter, 2));
+        var reward = new Reward { ModuleId = "portrait_reward", DisplayId = "test", Parameters = new Dictionary<string, object> { ["portraitIds"] = new[] { 120, 121 }, ["other"] = "keep" } };
+        await _database.GetCollection<Reward>(nameof(Reward)).InsertOneAsync(reward);
+        var alibaba = new Mock<IAlibabaService>();
+        var cleanup = new PortraitCleanupService(_client, _storage.Object, alibaba.Object);
+        var request = new PortraitCleanupRequest(true, true, true, true);
+        var result = await cleanup.Cleanup(120, request);
+        Assert.That(result.UpdatedPlayers, Is.EqualTo(3));
+        Assert.That(result.UpdatedRewards, Is.EqualTo(1));
+        Assert.That(result.Warnings, Is.Empty);
+        Assert.That((await Load("Selected#1")).SpecialPictures, Is.Empty);
+        Assert.That((await Load("Selected#1")).ProfilePicture.Race, Is.EqualTo(AvatarCategory.Starter));
+        Assert.That((await Load("SelectedOnly#1")).ProfilePicture.PictureId, Is.EqualTo(1));
+        Assert.That((await Load("OtherRace#1")).ProfilePicture.Race, Is.EqualTo(AvatarCategory.HU));
+        Assert.That((await Load("OtherRace#1")).ProfilePicture.PictureId, Is.EqualTo(120));
+        Assert.That((await Load("Unrelated#1")).ProfilePicture.PictureId, Is.EqualTo(2));
+        Assert.That((await _service.AssetStatuses(new List<int> { 120 })).Single(), Is.EqualTo(new PortraitAssetStatus(120, false, 0, 0, 0)));
+        var storedReward = await _database.GetCollection<Reward>(nameof(Reward)).Find(r => r.Id == reward.Id).FirstAsync();
+        Assert.That(storedReward.Parameters["other"], Is.EqualTo("keep"));
+        _storage.Verify(s => s.DeleteFile("SPECIAL_120.jpg"), Times.Once);
+        alibaba.Verify(s => s.DeleteFile("SPECIAL_120.jpg"), Times.Once);
+        var retry = await cleanup.Cleanup(120, request);
+        Assert.That(retry.UpdatedPlayers, Is.Zero);
+        Assert.That(retry.UpdatedRewards, Is.Zero);
+    }
+
+    [Test]
+    public async Task CleanupDisablesRewardsWhoseLastPortraitWasRemoved()
+    {
+        var reward = new Reward
+        {
+            ModuleId = "portrait_reward",
+            DisplayId = "Only portrait",
+            IsActive = true,
+            Parameters = new Dictionary<string, object> { ["portraitIds"] = new[] { 120 }, ["other"] = "keep" }
+        };
+        await _database.GetCollection<Reward>(nameof(Reward)).InsertOneAsync(reward);
+        var cleanup = new PortraitCleanupService(_client, _storage.Object, new Mock<IAlibabaService>().Object);
+        await cleanup.Cleanup(120, new PortraitCleanupRequest(false, true, false, false));
+        var stored = await _database.GetCollection<Reward>(nameof(Reward)).Find(r => r.Id == reward.Id).FirstAsync();
+        Assert.That(stored.IsActive, Is.False);
+        Assert.That(System.Text.Json.JsonSerializer.SerializeToElement(stored.Parameters["portraitIds"]).GetArrayLength(), Is.Zero);
+        Assert.That(stored.Parameters["other"], Is.EqualTo("keep"));
+    }
+
+    [Test]
+    public async Task CleanupCanRemoveTheDefinitionWithoutRemovingPlayerGrantsOrStorage()
+    {
+        await SavePlayers(Player("Selected#1", true, AvatarCategory.Special, 120));
+        var alibaba = new Mock<IAlibabaService>();
+        var cleanup = new PortraitCleanupService(_client, _storage.Object, alibaba.Object);
+        await cleanup.Cleanup(120, new PortraitCleanupRequest(false, true, false, false));
+        Assert.That((await _service.AssetStatuses(new List<int> { 120 })).Single(), Is.EqualTo(new PortraitAssetStatus(120, false, 1, 1, 0)));
+        _storage.Verify(s => s.DeleteFile(It.IsAny<string>()), Times.Never);
+        alibaba.Verify(s => s.DeleteFile(It.IsAny<string>()), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task CleanupWithStorageFailureStillRemovesAssignmentsAndCanRetry(bool alibabaFailure)
+    {
+        await SavePlayers(Player("Selected#1", true, AvatarCategory.Special, 120));
+        var alibaba = new Mock<IAlibabaService>();
+        if (alibabaFailure)
+            alibaba.Setup(s => s.DeleteFile("SPECIAL_120.jpg")).Throws(new IOException("unavailable"));
+        else
+            _storage.Setup(s => s.DeleteFile("SPECIAL_120.jpg")).ThrowsAsync(new IOException("unavailable"));
+        var cleanup = new PortraitCleanupService(_client, _storage.Object, alibaba.Object);
+        var request = new PortraitCleanupRequest(true, true, true, true);
+        var first = await cleanup.Cleanup(120, request);
+        Assert.That(first.Warnings.Count, Is.EqualTo(1));
+        Assert.That((await _service.Owners(120, 1, 25, null)).Total, Is.Zero);
+        Assert.That((await _service.AssetStatuses(new List<int> { 120 })).Single().InCatalogue, Is.False);
+        _storage.Verify(s => s.DeleteFile("SPECIAL_120.jpg"), Times.Once);
+        alibaba.Verify(s => s.DeleteFile("SPECIAL_120.jpg"), Times.Once);
+        _storage.Setup(s => s.DeleteFile("SPECIAL_120.jpg")).Returns(Task.CompletedTask);
+        alibaba.Setup(s => s.DeleteFile("SPECIAL_120.jpg")).Callback(() => { });
+        var retry = await cleanup.Cleanup(120, request);
+        Assert.That(retry.UpdatedPlayers, Is.Zero);
+        Assert.That(retry.Warnings, Is.Empty);
+    }
+
+    [Test]
+    public async Task CleanupSupportsFileOnlyAndReportsProviderFailures()
+    {
+        await SavePlayers(Player("Selected#1", true, AvatarCategory.Special, 120));
+        _storage.Setup(s => s.DeleteFile("SPECIAL_120.jpg")).ThrowsAsync(new IOException("unavailable"));
+        var alibaba = new Mock<IAlibabaService>();
+        alibaba.Setup(s => s.DeleteFile("SPECIAL_120.jpg")).Throws(new IOException("unavailable"));
+        var cleanup = new PortraitCleanupService(_client, _storage.Object, alibaba.Object);
+        var result = await cleanup.Cleanup(120, new PortraitCleanupRequest(false, false, true, true));
+        Assert.That(result.Warnings.Count, Is.EqualTo(2));
+        Assert.That((await _service.AssetStatuses(new List<int> { 120 })).Single(), Is.EqualTo(new PortraitAssetStatus(120, true, 1, 1, 0)));
+        Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => cleanup.Cleanup(120, new PortraitCleanupRequest(false, false, false, false)));
+        Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => cleanup.Cleanup(0, new PortraitCleanupRequest(true, true, true, true)));
     }
 
     [Test]

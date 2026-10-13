@@ -13,6 +13,7 @@ public class ReplacePortraitRequest
 {
     [Range(1, int.MaxValue)]
     public int NewPortraitId { get; set; }
+    public bool RemoveOldAssignments { get; set; }
 }
 
 [ApiController]
@@ -47,7 +48,7 @@ public class PortraitReplacementController(PortraitReplacementService replacemen
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> Replace(int oldId, [FromBody] ReplacePortraitRequest request)
     {
-        try { return Ok(await replacements.Replace(oldId, request.NewPortraitId)); }
+        try { return Ok(await replacements.Replace(oldId, request.NewPortraitId, request.RemoveOldAssignments)); }
         catch (ValidationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (FileNotFoundException) { return BadRequest(new { message = "The replacement image must be uploaded to S3 before assigning it." }); }
     }
