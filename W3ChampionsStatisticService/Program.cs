@@ -187,6 +187,8 @@ builder.Services.AddInterceptedSingleton<IOngoingMatchesCache, OngoingMatchesCac
 builder.Services.AddInterceptedTransient<HeroStatsQueryHandler>();
 builder.Services.AddInterceptedTransient<PortraitCommandHandler>();
 builder.Services.AddTransient<PortraitReplacementService>();
+builder.Services.AddTransient<PortraitCleanupService>();
+builder.Services.AddTransient<W3ChampionsStatisticService.Admin.CloudStorage.Alibaba.IAlibabaService, W3ChampionsStatisticService.Admin.CloudStorage.Alibaba.AlibabaService>();
 builder.Services.AddTransient<W3ChampionsStatisticService.Admin.CloudStorage.S3.IS3Service, W3ChampionsStatisticService.Admin.CloudStorage.S3.S3Service>();
 builder.Services.AddInterceptedTransient<MmrDistributionHandler>();
 builder.Services.AddInterceptedTransient<RankQueryHandler>();
