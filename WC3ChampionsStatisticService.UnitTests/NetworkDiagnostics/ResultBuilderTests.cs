@@ -281,6 +281,64 @@ public class ResultBuilderTests
         Assert.AreEqual(12.0, built.Measurement.Targets[0].Paths[0].Probes[0].Stats.P50Ms);
     }
 
+    // The null-ip replies are the target host's Time Exceeded, not answers of the probed service, so they do not
+    // make the destination reachable: the summary stays the unanswered target hop.
+    [Test]
+    public void FinalHop_NullIpRepliesBeforeAnUnansweredTargetHop_DoNotMakeTheTargetReachable()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 8, Ip = null, Samples = Series(60, answered: 7, rttUs: 9000) },
+                new NetDiagHopDto { Ttl = 9, Ip = "9.9.9.9", Samples = Series(60, answered: 0, rttUs: 0) },
+            ],
+        };
+        var obs = BuildSingle(probe).Observations.Single();
+
+        Assert.AreEqual((60, 0, 100.0), (obs.Sent, obs.Received, obs.LossPct));
+        Assert.IsNull(obs.LastHopIp);
+    }
+
+    [Test]
+    public void FinalHop_TargetIpHopWithoutSamples_IsNotChosen_TheLastAnsweringHopIs()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 1, Ip = "10.1.1.1", Samples = Series(60, answered: 60, rttUs: 5000) },
+                new NetDiagHopDto { Ttl = 2, Ip = "9.9.9.9", Samples = [] },
+            ],
+        };
+        var obs = BuildSingle(probe).Observations.Single();
+
+        Assert.AreEqual((60, 60), (obs.Sent, obs.Received));
+        Assert.AreEqual("10.1.1.1", obs.LastHopIp);
+    }
+
+    [Test]
+    public void FinalHop_SeveralUnansweredTargetIpHops_TheLowestTtlIsChosen()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 6, Ip = "9.9.9.9", Samples = Series(10, answered: 0, rttUs: 0) },
+                new NetDiagHopDto { Ttl = 5, Ip = "9.9.9.9", Samples = Series(60, answered: 0, rttUs: 0) },
+            ],
+        };
+        var obs = BuildSingle(probe).Observations.Single();
+
+        Assert.AreEqual((60, 0), (obs.Sent, obs.Received), "ttl 5 has the 60 samples");
+    }
+
     // n samples, the first `answered` of them with the given rtt (µs), the rest lost.
     private static List<long?[]> Series(int n, int answered, long rttUs) =>
         Enumerable.Range(0, n).Select(i => new long?[] { i * 1000L, i < answered ? rttUs : null }).ToList();
