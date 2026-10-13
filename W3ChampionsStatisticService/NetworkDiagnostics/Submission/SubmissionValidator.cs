@@ -13,11 +13,13 @@ public static class SubmissionValidator
     private const int MaxTargets = 200;
     private const int MaxPathsPerTarget = 2;
     private const int MaxProbesPerPath = 6;
-    private const int MaxHopsPerProbe = 30;
+    // 30 routers plus the destination hop the probe library appends.
+    private const int MaxHopsPerProbe = 31;
     private const int MaxSamplesPerSeries = 600;
     private const int MaxAdapters = 64;
     private const int MaxSnapshotRows = 300;
     private const int MaxStringLength = 500;
+    private const long MaxIcmpSendGapUs = 60_000_000;
     // The launcher's hop ttl is a u8 (P11).
     private const int MinTtl = 0;
     private const int MaxTtl = 255;
@@ -30,6 +32,7 @@ public static class SubmissionValidator
         if (targets.Count > MaxTargets) return "Too many targets";
         if ((dto.FloSnapshot?.Count ?? 0) > MaxSnapshotRows) return "Too many flo_snapshot rows";
         if ((dto.System?.Adapters?.Count ?? 0) > MaxAdapters) return "Too many adapters";
+        if (dto.Pacing?.IcmpSendGapUs is < 0 or > MaxIcmpSendGapUs) return "icmp_send_gap_us out of range";
 
         foreach (var target in targets)
         {

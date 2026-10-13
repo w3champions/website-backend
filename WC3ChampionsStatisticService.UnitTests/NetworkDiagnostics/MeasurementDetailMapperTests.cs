@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using NUnit.Framework;
 using W3ChampionsStatisticService.NetworkDiagnostics;
 using W3ChampionsStatisticService.NetworkDiagnostics.Results;
@@ -129,6 +131,7 @@ public class MeasurementDetailMapperTests
         Assert.AreEqual("windows", d.Os);
         Assert.AreEqual("192.168.1.1", d.DefaultGateway);
         Assert.AreEqual(6000, d.Pacing.MtrRoundMs);
+        Assert.AreEqual(2000, d.Pacing.IcmpSendGapUs);
         Assert.AreEqual("AMD Ryzen 7", d.System.Cpu.Model);
         Assert.AreEqual(new DateTime(2026, 10, 12, 10, 0, 0, DateTimeKind.Utc), d.AttemptStartedAt);
         Assert.AreEqual(new DateTime(2026, 10, 12, 10, 0, 15, DateTimeKind.Utc), d.WindowStartedAt);
@@ -182,6 +185,7 @@ public class MeasurementDetailMapperTests
             root.GetProperty("ipInfo").GetProperty("1.2.3.4").EnumerateObject().Select(p => p.Name).ToArray());
         // The C5 leaf records are written camelCase too.
         Assert.AreEqual(6000, root.GetProperty("pacing").GetProperty("mtrRoundMs").GetInt64());
+        Assert.AreEqual(2000, root.GetProperty("pacing").GetProperty("icmpSendGapUs").GetInt64());
         Assert.AreEqual("US East 4", root.GetProperty("floSnapshot")[0].GetProperty("nodeName").GetString());
         Assert.AreEqual(12.5, root.GetProperty("system").GetProperty("cpu").GetProperty("usagePct").GetDouble());
         var probe = root.GetProperty("targets")[0].GetProperty("paths")[0].GetProperty("probes")[0];
@@ -291,6 +295,23 @@ public class MeasurementDetailMapperTests
         };
 
         Assert.AreEqual(new[] { "9.9.9.9" }, MeasurementDetailMapper.IpsOf(m).ToArray());
+    }
+
+    // Documents stored before icmp_send_gap_us existed have no such element; they read back as null.
+    [Test]
+    public void Pacing_StoredWithoutIcmpSendGapUs_ReadsBackAsNull_AndIsReturnedAsNull()
+    {
+        var stored = new NetDiagPacing { MtrRoundMs = 6000, IcmpSendGapUs = 2000 }.ToBsonDocument();
+        stored.Remove(stored.Names.Single(n => n.Equals("IcmpSendGapUs", StringComparison.OrdinalIgnoreCase)));
+        var pacing = BsonSerializer.Deserialize<NetDiagPacing>(stored);
+        var m = new NetworkDiagnosticMeasurement { Id = "m1", RunId = "run-1", BattleTag = "Name#1234", SubmittedAt = Now, Pacing = pacing };
+
+        var d = MeasurementDetailMapper.Detail(m, raw: null, [], includeRaw: false);
+
+        Assert.AreEqual(6000, d.Pacing.MtrRoundMs);
+        Assert.IsNull(d.Pacing.IcmpSendGapUs);
+        using var doc = JsonDocument.Parse(Json(d));
+        Assert.AreEqual(JsonValueKind.Null, doc.RootElement.GetProperty("pacing").GetProperty("icmpSendGapUs").ValueKind);
     }
 
     // Documents read back from Mongo can lack whole sub-documents (A12: every optional part may be absent).

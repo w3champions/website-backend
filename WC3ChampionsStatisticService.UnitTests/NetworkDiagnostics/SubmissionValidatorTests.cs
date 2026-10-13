@@ -57,9 +57,30 @@ public class SubmissionValidatorTests
     }
 
     [Test]
-    public void TooManyHops()
+    public void ThirtyOneHops_AreAllowed_ThirtyRoutersPlusTheDestinationHop()
     {
         var hops = Enumerable.Range(1, 31).Select(t => new NetDiagHopDto { Ttl = t }).ToList();
+        Assert.IsNull(SubmissionValidator.ValidateSubmission(WithProbe(new NetDiagProbeDto { Method = "IcmpMtr", Hops = hops }), Id));
+    }
+
+    [TestCase(null)]
+    [TestCase(0L)]
+    [TestCase(2000L)]
+    [TestCase(60_000_000L)]
+    public void IcmpSendGapUs_InRangeOrNull_IsValid(long? gap) =>
+        Assert.IsNull(SubmissionValidator.ValidateSubmission(SubmissionFixtures.Minimal(Id) with { Pacing = new NetDiagPacing { IcmpSendGapUs = gap } }, Id));
+
+    [TestCase(-1L)]
+    [TestCase(60_000_001L)]
+    [TestCase(long.MaxValue)]
+    public void IcmpSendGapUs_NegativeOrAbsurd_IsRejected(long gap) =>
+        Assert.AreEqual("icmp_send_gap_us out of range",
+            SubmissionValidator.ValidateSubmission(SubmissionFixtures.Minimal(Id) with { Pacing = new NetDiagPacing { IcmpSendGapUs = gap } }, Id));
+
+    [Test]
+    public void TooManyHops()
+    {
+        var hops = Enumerable.Range(1, 32).Select(t => new NetDiagHopDto { Ttl = t }).ToList();
         Assert.AreEqual("Too many hops", SubmissionValidator.ValidateSubmission(WithProbe(new NetDiagProbeDto { Method = "IcmpMtr", Hops = hops }), Id));
     }
 

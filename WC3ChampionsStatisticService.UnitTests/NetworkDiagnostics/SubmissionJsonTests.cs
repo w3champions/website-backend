@@ -30,6 +30,7 @@ public class SubmissionJsonTests
         Assert.AreEqual(6000, d.Pacing.MtrRoundMs);
         Assert.AreEqual(1000, d.Pacing.PingIntervalMs);
         Assert.AreEqual(330, d.Pacing.Streams);
+        Assert.AreEqual(2000, d.Pacing.IcmpSendGapUs);
 
         var s = d.System;
         Assert.AreEqual("AMD Ryzen 7", s.Cpu.Model);
@@ -117,6 +118,11 @@ public class SubmissionJsonTests
         Assert.AreEqual("QuicPing", probe.Method);
         Assert.AreEqual("rate_limited", probe.Outcome);
     }
+
+    [TestCase("""{ "pacing": { "streams": 1 } }""")]
+    [TestCase("""{ "pacing": { "streams": 1, "icmp_send_gap_us": null } }""")]
+    public void IcmpSendGapUs_AbsentOrNull_IsNull(string json) =>
+        Assert.IsNull(SubmissionFixtures.Parse(json).Pacing.IcmpSendGapUs);
 
     // A12: unknown properties at every nesting level are ignored.
     [Test]

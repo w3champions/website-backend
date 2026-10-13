@@ -171,13 +171,17 @@ public static class ResultBuilder
         return new ProbeAnalysis(measured, observationStats, targetIp, finalHopIp, hops.Count);
     }
 
-    /// <summary>The target hop (lowest TTL that is the target and answered), else the last answering hop, else the deepest hop.</summary>
+    /// <summary>
+    /// The target hop (lowest TTL that is the target and answered), else a target hop that was probed but never
+    /// answered (so the summary reads 100 % loss), else the last answering hop, else the deepest hop.
+    /// </summary>
     private static int? FinalHopIndex(List<NetDiagHopDto> hops, List<StatsDto> stats, string targetIp)
     {
         if (hops.Count == 0) return null;
         var byTtl = Enumerable.Range(0, hops.Count).OrderBy(i => hops[i].Ttl).ToList();
         var target = byTtl.Where(i => stats[i].Received > 0 && targetIp != null && hops[i].Ip == targetIp).Cast<int?>().FirstOrDefault();
-        return target ?? byTtl.Where(i => stats[i].Received > 0).Cast<int?>().LastOrDefault() ?? byTtl[^1];
+        var unanswered = byTtl.Where(i => stats[i].Sent > 0 && targetIp != null && hops[i].Ip == targetIp).Cast<int?>().FirstOrDefault();
+        return target ?? unanswered ?? byTtl.Where(i => stats[i].Received > 0).Cast<int?>().LastOrDefault() ?? byTtl[^1];
     }
 
     private static bool IsHopMethod(string method) =>
