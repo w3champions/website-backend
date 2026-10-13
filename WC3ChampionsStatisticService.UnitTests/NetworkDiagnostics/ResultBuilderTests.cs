@@ -49,6 +49,7 @@ public class ResultBuilderTests
         Assert.AreEqual(1, m.TargetCount);
         Assert.AreEqual(1, m.Restarts);
         Assert.AreEqual(6000, m.Pacing.MtrRoundMs);
+        Assert.AreEqual(2000, m.Pacing.IcmpSendGapUs);
         Assert.AreEqual(256, m.FloSnapshot.Single().Samples);
     }
 
@@ -193,6 +194,96 @@ public class ResultBuilderTests
         Assert.AreEqual("10.1.1.1", obs.LastHopIp);
         Assert.AreEqual(5.0, obs.P50Ms);
     }
+
+    [Test]
+    public void FinalHop_IsTheUnansweredTargetHop_WhenTheTargetWasSeenButNeverAnswered()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 1, Ip = "192.168.1.1", Samples = Series(60, answered: 60, rttUs: 1000) },
+                new NetDiagHopDto { Ttl = 2, Ip = "10.1.1.1", Samples = Series(60, answered: 60, rttUs: 5000) },
+                new NetDiagHopDto { Ttl = 3, Ip = "9.9.9.9", Samples = Series(60, answered: 0, rttUs: 0) },
+            ],
+        };
+        var built = BuildSingle(probe);
+        var obs = built.Observations.Single();
+
+        Assert.AreEqual((60, 0, 100.0), (obs.Sent, obs.Received, obs.LossPct));
+        Assert.IsNull(obs.LastHopIp, "the hop did not answer");
+        Assert.AreEqual((60, 0), (built.Measurement.Targets[0].Paths[0].Probes[0].Stats.Sent, built.Measurement.Targets[0].Paths[0].Probes[0].Stats.Received));
+    }
+
+    [Test]
+    public void FinalHop_AnsweredTargetHop_WinsOverAnUnansweredOneAtAnotherTtl()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 4, Ip = "9.9.9.9", Samples = Series(60, answered: 0, rttUs: 0) },
+                new NetDiagHopDto { Ttl = 3, Ip = "9.9.9.9", Samples = Series(60, answered: 30, rttUs: 7000) },
+            ],
+        };
+        var obs = BuildSingle(probe).Observations.Single();
+
+        Assert.AreEqual((60, 30), (obs.Sent, obs.Received));
+        Assert.AreEqual("9.9.9.9", obs.LastHopIp);
+    }
+
+    [Test]
+    public void NullIpHop_WithAnsweredSamples_KeepsItsStats_AndIsNeverTheTargetHop()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 1, Ip = "192.168.1.1", Samples = Series(60, answered: 60, rttUs: 1000) },
+                new NetDiagHopDto { Ttl = 2, Ip = null, Samples = Series(60, answered: 7, rttUs: 9000) },
+            ],
+        };
+        var built = BuildSingle(probe);
+        var hop = built.Measurement.Targets[0].Paths[0].Probes[0].Hops[1];
+
+        Assert.IsNull(hop.Ip);
+        Assert.AreEqual((60, 7), (hop.Stats.Sent, hop.Stats.Received));
+        // No hop is the target, so the last answering hop is the summary, not the unanswered target fallback.
+        var obs = built.Observations.Single();
+        Assert.AreEqual((60, 7), (obs.Sent, obs.Received));
+        Assert.IsNull(obs.LastHopIp, "the summary hop has no ip");
+    }
+
+    [Test]
+    public void FinalHop_TargetHopAfterANullIpHop_ComesFromTheTargetHop()
+    {
+        var probe = new NetDiagProbeDto
+        {
+            Method = "IcmpMtr",
+            Outcome = "ok",
+            Hops =
+            [
+                new NetDiagHopDto { Ttl = 8, Ip = null, Samples = Series(60, answered: 7, rttUs: 9000) },
+                new NetDiagHopDto { Ttl = 9, Ip = "9.9.9.9", Samples = Series(60, answered: 60, rttUs: 12000) },
+            ],
+        };
+        var built = BuildSingle(probe);
+        var obs = built.Observations.Single();
+
+        Assert.AreEqual((60, 60, 0.0), (obs.Sent, obs.Received, obs.LossPct));
+        Assert.AreEqual("9.9.9.9", obs.LastHopIp);
+        Assert.AreEqual(12.0, built.Measurement.Targets[0].Paths[0].Probes[0].Stats.P50Ms);
+    }
+
+    // n samples, the first `answered` of them with the given rtt (µs), the rest lost.
+    private static List<long?[]> Series(int n, int answered, long rttUs) =>
+        Enumerable.Range(0, n).Select(i => new long?[] { i * 1000L, i < answered ? rttUs : null }).ToList();
 
     [Test]
     public void Traceroute_HasNoProbeStats_ButTheObservationUsesRoundOneOfTheFinalHop()

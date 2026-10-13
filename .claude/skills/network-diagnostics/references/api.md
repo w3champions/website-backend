@@ -119,10 +119,11 @@ computed from observations (newest 200 000; check `X-NetDiag-Truncated`). A filt
 
 `GET measurements/{id}?raw=false|true` returns the summary fields plus:
 - `osInfo {family, name, version}`, `launcherVersion`, `attemptStartedAt`, `windowStartedAt`, `windowEndedAt`;
-- `pacing`, `system` (`cpu`, `memory`, `uptimeS`, `clockSkewMs`, `launcherProxyConfigured`, `adapters`, `wifi`, `vpn`, `antivirus`), `floSnapshot` (the launcher's flo ping table at measurement time), `defaultGateway`;
+- `pacing` `{mtrRoundMs, pingIntervalMs, streams, icmpSendGapUs}` (`icmpSendGapUs`: microseconds between ICMP sends, 2000 on Windows; null on other platforms, from older launchers and for measurements stored before the field existed), `system` (`cpu`, `memory`, `uptimeS`, `clockSkewMs`, `launcherProxyConfigured`, `adapters`, `wifi`, `vpn`, `antivirus`), `floSnapshot` (the launcher's flo ping table at measurement time), `defaultGateway`;
 - `ipInfo` (IP -> `{asn, asnOrg, country, city, lat, lon, geoDbBuild}` for the client and every hop) and `targets[].paths[].probes[]`.
 
 `clientGeo` is `{country, city, lat, lon, asn, asnOrg, geoDbBuild}`. Each target is `{targetKey, label, paths[]}`; each path `{path, routeLabel, endpoints, probes[]}`; each probe `{method, outcome, reason, stats, hops[{ttl, ip, stats}]}`.
+A hop with `ip: null` may still have answered samples: it is a reply at that TTL that came from the target's own address before the destination hop. `ip: null` no longer means the hop was silent; check its `stats`. A path has at most 31 hops (30 routers plus the destination hop).
 `system.adapters[]` has `rxBps`/`txBps`: **bits** per second.
 
 With `raw=true`, probes and hops carry `samples: [[offsetMs, rttMs|null]]` (null = lost). Raw series are kept

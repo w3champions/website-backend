@@ -42,6 +42,8 @@ public record NetDiagPacing
     public long? MtrRoundMs { get; init; }
     public long? PingIntervalMs { get; init; }
     public long? Streams { get; init; }
+    /// <summary>Microseconds between ICMP sends. 2000 on Windows; null on other platforms and from older launchers.</summary>
+    public long? IcmpSendGapUs { get; init; }
 }
 
 [BsonIgnoreExtraElements]

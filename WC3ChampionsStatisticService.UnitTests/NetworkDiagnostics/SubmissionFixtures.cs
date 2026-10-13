@@ -22,7 +22,7 @@ public static class SubmissionFixtures
       "restarts": 1,
       "public_ipv4": "81.2.69.160",
       "default_gateway": "192.168.1.1",
-      "pacing": { "mtr_round_ms": 6000, "ping_interval_ms": 1000, "streams": 330 },
+      "pacing": { "mtr_round_ms": 6000, "ping_interval_ms": 1000, "streams": 330, "icmp_send_gap_us": 2000 },
       "system": {
         "cpu": { "model": "AMD Ryzen 7", "cores": 8, "usage_pct": 12.5 },
         "memory": { "total_mb": 32768, "used_mb": 14000 },
