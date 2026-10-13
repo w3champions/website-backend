@@ -32,6 +32,13 @@ public class PortraitCommandHandler(
         var settings = await _personalSettingsRepository.LoadMany(command.BnetTags.ToArray());
         var validPortraits = await _portraitRepository.LoadPortraitDefinitions();
 
+        // A player can exist before their first personal-settings document is created.
+        foreach (var battleTag in command.BnetTags.Distinct())
+        {
+            if (!settings.Any(s => s.Id == battleTag))
+                settings.Add(await _personalSettingsRepository.LoadOrCreate(battleTag));
+        }
+
         foreach (var playerSettings in settings)
         {
             var specialPortraitsList = playerSettings.SpecialPictures != null ? new List<SpecialPicture>(playerSettings.SpecialPictures) : [];

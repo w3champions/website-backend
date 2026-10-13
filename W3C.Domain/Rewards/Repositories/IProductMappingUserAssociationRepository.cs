@@ -62,6 +62,7 @@ public interface IProductMappingUserAssociationRepository
     /// <param name="status">Optional status filter</param>
     /// <returns>List of all associations</returns>
     Task<List<ProductMappingUserAssociation>> GetAll(AssociationStatus? status = null);
+    Task<List<ProductMappingUserAssociation>> GetActiveForUsers(string providerId, IEnumerable<string> userIds);
 
     /// <summary>
     /// Create a new association

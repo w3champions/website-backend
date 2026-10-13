@@ -33,7 +33,8 @@ public class AlibabaService : IAlibabaService
             .Select(x => new CloudFile
             {
                 Name = x.Key.Substring(x.Key.LastIndexOf('/') + 1), // Do not include the prefix
-                Size = x.Size / 1024, // Size in kilobytes
+                Size = x.Size / 1024, // Retained for existing clients.
+                SizeBytes = x.Size,
                 LastModified = x.LastModified
             }).ToList();
     }
@@ -44,6 +45,7 @@ public class AlibabaService : IAlibabaService
         byte[] bytes = Convert.FromBase64String(file.Content);
         using var ms = new MemoryStream(bytes);
         var putObjectRequest = new PutObjectRequest(alibabaBucketName, $"{alibabaPrefix}{file.Name}", ms);
+        putObjectRequest.Metadata = new ObjectMetadata { ContentType = file.ImageContentType() };
         PutObjectResult response = client.PutObject(putObjectRequest);
     }
 

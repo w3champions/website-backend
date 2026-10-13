@@ -10,6 +10,9 @@ public class PortraitDefinition(int _id, List<string> _group = null) : IIdentifi
     public string Id { get; set; } = _id.ToString();
 
     public List<string> Groups { get; set; } = _group;
+
+    [BsonIgnoreIfNull]
+    public int? ReplacementPortraitId { get; set; }
 }
 
 public class SinglePortraitDefinitionAndGroup

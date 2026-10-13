@@ -96,6 +96,15 @@ public class ProductMappingUserAssociationRepository(MongoClient mongoClient) : 
         return LoadAll<ProductMappingUserAssociation>();
     }
 
+    public Task<List<ProductMappingUserAssociation>> GetActiveForUsers(string providerId, IEnumerable<string> userIds)
+    {
+        var filters = Builders<ProductMappingUserAssociation>.Filter;
+        var filter = filters.Eq(a => a.ProviderId, providerId) & filters.In(a => a.UserId, userIds) &
+            filters.Eq(a => a.Status, AssociationStatus.Active) &
+            (filters.Eq(a => a.ExpiresAt, null) | filters.Gt(a => a.ExpiresAt, DateTime.UtcNow));
+        return CreateCollection<ProductMappingUserAssociation>().Find(filter).ToListAsync();
+    }
+
     public async Task<ProductMappingUserAssociation> Create(ProductMappingUserAssociation association)
     {
         await Insert(association);

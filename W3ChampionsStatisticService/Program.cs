@@ -181,10 +181,13 @@ builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.LagReports.
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IFloControllerRelayClient, W3ChampionsStatisticService.LagReports.FloControllerRelayClient>();
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IRelayTelemetryService, W3ChampionsStatisticService.LagReports.RelayTelemetryService>();
 builder.Services.AddInterceptedTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
+builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, PersonalSettingsRepository>();
 builder.Services.AddInterceptedTransient<IW3CAuthenticationService, W3CAuthenticationService>();
 builder.Services.AddInterceptedSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
 builder.Services.AddInterceptedTransient<HeroStatsQueryHandler>();
 builder.Services.AddInterceptedTransient<PortraitCommandHandler>();
+builder.Services.AddTransient<PortraitReplacementService>();
+builder.Services.AddTransient<W3ChampionsStatisticService.Admin.CloudStorage.S3.IS3Service, W3ChampionsStatisticService.Admin.CloudStorage.S3.S3Service>();
 builder.Services.AddInterceptedTransient<MmrDistributionHandler>();
 builder.Services.AddInterceptedTransient<RankQueryHandler>();
 builder.Services.AddInterceptedTransient<GameModeStatQueryHandler>();
