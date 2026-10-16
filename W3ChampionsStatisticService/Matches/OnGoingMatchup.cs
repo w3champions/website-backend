@@ -23,6 +23,7 @@ public class OnGoingMatchup : Matchup
             GateWay = match.gateway,
             GameMode = match.gameMode,
             StartTime = startTime,
+            FloMatchId = match.floGameId,
         };
 
         result.SetServerInfo(match, match.gameMode);

@@ -29,6 +29,9 @@ public class Matchup
     [JsonPropertyName("original-ongoing-match-id")]
     public string MatchId { get; set; }
     public int? FloMatchId { get; set; }
+    [BsonIgnore]
+    [JsonPropertyName("floGameId")]
+    public int? FloGameId => FloMatchId;
 
     [JsonIgnore]
     public TimeSpan Duration { get; set; }

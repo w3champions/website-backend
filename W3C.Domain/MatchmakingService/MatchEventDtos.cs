@@ -185,6 +185,7 @@ public class UnfinishedMatch : IMatchServerInfo
     public List<UnfinishedMatchPlayer> players { get; set; }
     public FloNode floNode { get; set; }
     public string serverProvider { get; set; }
+    public int? floGameId { get; set; }
 
     public List<IMatchPlayerServerInfo> PlayersServerInfo
     {
