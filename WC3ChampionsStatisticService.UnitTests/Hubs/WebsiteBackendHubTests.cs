@@ -60,10 +60,7 @@ public class TestFriendCommandHandler(TestFriendRepository repo, TestFriendListC
 
     public async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
     {
-        if (!friendlist.Friends.Contains(battleTag))
-        {
-            friendlist.Friends.Add(battleTag);
-        }
+        FriendCommandHandler.Befriend(friendlist, battleTag); // same in-memory rules as production
         await UpsertFriendList(friendlist);
         return friendlist;
     }
@@ -1559,7 +1556,7 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
-    public async Task AcceptIncomingFriendRequest_FromAdminBlockedInStorage_BecomesFriends()
+    public async Task AcceptIncomingFriendRequest_FromAdminBlockedInStorage_BecomesFriendsAndDormantBlockIsCleared()
     {
         MarkAdmin(AdminTag);
         var receiverList = new Friendlist("User#1");
@@ -1573,8 +1570,63 @@ public class WebsiteBackendHubTests
         await hub.AcceptIncomingFriendRequest(new FriendRequest(AdminTag, "User#1"));
 
         Assert.That(receiverList.Friends, Does.Contain(AdminTag));
+        Assert.That(receiverList.BlockedBattleTags, Is.Empty, "friends and stored blocks stay disjoint");
         Assert.That((await friendListCache.LoadFriendList(AdminTag)).Friends, Does.Contain("User#1"));
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // --- Friends and stored blocks stay disjoint for everyone (not only admins) --------------------
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_FromPlayerTheReceiverBlocked_ClearsReceiversBlock()
+    {
+        var receiverList = new Friendlist("User#1");
+        receiverList.BlockedBattleTags.AddRange(new[] { "Foe#2", "Other#3" });
+        friendListCache.Upsert(receiverList);
+        friendListCache.Upsert(new Friendlist("Foe#2"));
+        friendRequestCache.AddRequest(new FriendRequest("Foe#2", "User#1"));
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ReturnsAsync(new List<PersonalSetting>());
+        var hub = CreateConnectedHub("User#1");
+
+        await hub.AcceptIncomingFriendRequest(new FriendRequest("Foe#2", "User#1"));
+
+        Assert.That(receiverList.Friends, Is.EqualTo(new List<string> { "Foe#2" }));
+        Assert.That(receiverList.BlockedBattleTags, Is.EqualTo(new List<string> { "Other#3" }));
+        // chat-service drops the cached snapshot of both players on any change type, so FriendAdd covers the unblock.
+        relationshipNotifier.Verify(n => n.NotifyChange(RelationshipChangeType.FriendAdd, "User#1", "Foe#2"), Times.Once);
+    }
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_SenderHadBlockedReceiver_ClearsSendersBlock()
+    {
+        friendListCache.Upsert(new Friendlist("User#1"));
+        var senderList = new Friendlist("Sender#2");
+        senderList.BlockedBattleTags.Add("User#1");
+        friendListCache.Upsert(senderList);
+        friendRequestCache.AddRequest(new FriendRequest("Sender#2", "User#1"));
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ReturnsAsync(new List<PersonalSetting>());
+        var hub = CreateConnectedHub("User#1");
+
+        await hub.AcceptIncomingFriendRequest(new FriendRequest("Sender#2", "User#1"));
+
+        Assert.That(senderList.Friends, Is.EqualTo(new List<string> { "User#1" }));
+        Assert.That(senderList.BlockedBattleTags, Is.Empty);
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_ToPlayerTheSenderBlocked_DoesNotClearTheBlock()
+    {
+        personalSettingsRepo.Setup(r => r.Find("Foe#2")).ReturnsAsync(new PersonalSetting("Foe#2"));
+        var senderList = new Friendlist("User#1");
+        senderList.BlockedBattleTags.Add("Foe#2");
+        friendListCache.Upsert(senderList);
+        friendListCache.Upsert(new Friendlist("Foe#2"));
+        var hub = CreateConnectedHub("User#1");
+
+        await hub.MakeFriendRequest(new FriendRequest("User#1", "Foe#2"));
+
+        VerifyFriendRequestSent("Foe#2");
+        Assert.That(senderList.BlockedBattleTags, Is.EqualTo(new List<string> { "Foe#2" }));
     }
 
     [Test]
