@@ -286,6 +286,13 @@ if (!W3C.Domain.AdminSecretProvider.IsConfigured)
         W3C.Domain.AdminSecretProvider.VariableName);
 }
 
+// Outbound secret for identification-service's admin roster. No fallback: unset means no header is sent.
+if (!W3C.Domain.IdentificationInternalSecretProvider.IsConfigured)
+{
+    Log.Warning("{Variable} not set: admin roster cannot be loaded; admins can be blocked (fail open)",
+        W3C.Domain.IdentificationInternalSecretProvider.VariableName);
+}
+
 // Common services (audit logging, optimistic concurrency)
 builder.Services.AddCommonServices();
 
