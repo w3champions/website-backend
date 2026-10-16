@@ -67,6 +67,9 @@ public class WebsiteBackendHub(
     private readonly INetworkDiagnosticsDelivery _netDiagDelivery = netDiagDelivery;
     private readonly IAdminRoster _adminRoster = adminRoster;
 
+    /// <summary>Refusal copy sent when a user tries to block an admin (exact wire text).</summary>
+    public const string AdminsCantBeBlockedMessage = "Admins can't be blocked.";
+
     /// <summary>Upper bound for the on-connect diagnostics delivery. Settable so tests need not wait for it.</summary>
     internal TimeSpan NetDiagOnConnectBound { get; set; } = NetDiagConstants.OnConnectDeliveryBound;
 
@@ -410,14 +413,23 @@ public class WebsiteBackendHub(
         try
         {
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
-            CanBlock(currentUserFriendlist, req.Sender);
+            // Friend requests are not influenced by admin status: a request from an admin is still
+            // declined here, only the block step is refused.
+            var senderIsAdmin = await _adminRoster.IsAdmin(req.Sender);
+            if (!senderIsAdmin)
+            {
+                CanBlock(currentUserFriendlist, req.Sender);
+            }
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to block.");
             await _friendCommandHandler.DeleteFriendRequest(request);
 
-            currentUserFriendlist.BlockedBattleTags.Add(req.Sender);
-            await _friendCommandHandler.UpsertFriendList(currentUserFriendlist);
-            TryNotifyRelationshipChange(RelationshipChangeType.Block, req.Receiver, req.Sender);
+            if (!senderIsAdmin)
+            {
+                currentUserFriendlist.BlockedBattleTags.Add(req.Sender);
+                await _friendCommandHandler.UpsertFriendList(currentUserFriendlist);
+                TryNotifyRelationshipChange(RelationshipChangeType.Block, req.Receiver, req.Sender);
+            }
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await SendFriendResponseData(
@@ -425,7 +437,7 @@ public class WebsiteBackendHub(
                 currentUserFriendlist,
                 null,
                 receivedRequests,
-                $"Friend requests from {req.Sender} blocked!"
+                senderIsAdmin ? AdminsCantBeBlockedMessage : $"Friend requests from {req.Sender} blocked!"
             );
 
             var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
@@ -437,12 +449,15 @@ public class WebsiteBackendHub(
         }
     }
 
-    public async Task BlockPlayer(string battleTag)
+    /// <summary>Returns <c>true</c> iff the block was persisted (even if the follow-up response send fails).
+    /// Every refusal sends its message to the caller BEFORE returning: the launcher reads
+    /// friendResponseMessage as soon as this invocation resolves.</summary>
+    public async Task<bool> BlockPlayer(string battleTag)
     {
         var currentUser = _connections.GetUser(Context.ConnectionId)?.BattleTag;
         if (currentUser == null)
         {
-            return;
+            return false;
         }
 
         var canonicalBattleTag = await _battleTagResolver.ResolveCanonical(battleTag);
@@ -454,16 +469,21 @@ public class WebsiteBackendHub(
                 input = battleTag,
                 canonical = canonicalBattleTag
             });
-            return;
+            return false;
         }
         battleTag = canonicalBattleTag;
 
+        var blocked = false;
         try
         {
+            if (await _adminRoster.IsAdmin(battleTag))
+                throw new ValidationException(AdminsCantBeBlockedMessage);
+
             var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
             CanBlock(friendList, battleTag);
             friendList.BlockedBattleTags.Add(battleTag);
             await _friendCommandHandler.UpsertFriendList(friendList);
+            blocked = true;
             TryNotifyRelationshipChange(RelationshipChangeType.Block, currentUser, battleTag);
             await SendFriendResponseData(
                 Clients.Caller,
@@ -477,6 +497,7 @@ public class WebsiteBackendHub(
         {
             await Clients.Caller.SendAsync(FriendResponseType.FriendResponseMessage.ToString(), ex.Message);
         }
+        return blocked;
     }
 
     public async Task UnblockFriendRequestsFromPlayer(string battleTag)

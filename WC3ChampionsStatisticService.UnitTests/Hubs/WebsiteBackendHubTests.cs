@@ -1205,6 +1205,268 @@ public class WebsiteBackendHubTests
         Assert.That(cached.BlockedBattleTags, Is.EqualTo(new List<string> { "Admin#2" }));
     }
 
+    // --- Admin roster: admins can't be blocked; BlockPlayer reports whether it blocked ---------
+
+    private const string AdminTag = "Admin#1";
+
+    private void MarkAdmin(string battleTag)
+    {
+        SetAdmins(battleTag);
+        adminRoster.Setup(r => r.IsAdmin(battleTag)).ReturnsAsync(true);
+    }
+
+    private WebsiteBackendHub CreateConnectedHub(string battleTag)
+    {
+        var hub = CreateHub(new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache));
+        connections.Add("conn1", new WebSocketUser { BattleTag = battleTag, ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+        return hub;
+    }
+
+    private static object ReadAnonymousProperty(object source, string name) =>
+        source.GetType().GetProperty(name)?.GetValue(source);
+
+    [Test]
+    public async Task BlockPlayer_TargetIsAdmin_RefusesAndDoesNotPersist()
+    {
+        MarkAdmin(AdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        var result = await hub.BlockPlayer(AdminTag);
+
+        Assert.IsFalse(result);
+        Assert.That(friendList.BlockedBattleTags, Does.Not.Contain(AdminTag));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => a.Length == 1 && (string)a[0] == "Admins can't be blocked."), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData", It.IsAny<object[]>(), default), Times.Never);
+        relationshipNotifier.Verify(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        Assert.That(WebsiteBackendHub.AdminsCantBeBlockedMessage, Is.EqualTo("Admins can't be blocked."));
+    }
+
+    [Test]
+    public async Task BlockPlayer_AdminAlreadyBlockedInStorage_StillGetsAdminRefusal()
+    {
+        MarkAdmin(AdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.Add(AdminTag);
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        var result = await hub.BlockPlayer(AdminTag);
+
+        Assert.IsFalse(result);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => a.Length == 1 && (string)a[0] == "Admins can't be blocked."), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Once);
+        Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
+    }
+
+    [Test]
+    public async Task BlockPlayer_AdminRefusal_MessageSentBeforeResultCompletes()
+    {
+        MarkAdmin(AdminTag);
+        friendListCache.Upsert(new Friendlist("User#1234"));
+        var sendGate = new TaskCompletionSource();
+        mockCaller
+            .Setup(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(sendGate.Task);
+        var hub = CreateConnectedHub("User#1234");
+
+        var pending = hub.BlockPlayer(AdminTag);
+
+        // The launcher reads friendResponseMessage as soon as the invoke resolves, so the message must
+        // be sent (and awaited) before the result is produced.
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "Admins can't be blocked."), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.That(pending.IsCompleted, Is.False);
+        sendGate.SetResult();
+        Assert.IsFalse(await pending);
+    }
+
+    [Test]
+    public async Task BlockPlayer_ResolutionError_SentBeforeResultCompletes()
+    {
+        _battleTagResolverMock.Setup(r => r.ResolveCanonical("Ghost#1")).ReturnsAsync((string)null);
+        var sendGate = new TaskCompletionSource();
+        mockCaller
+            .Setup(c => c.SendCoreAsync("BattleTagResolutionError", It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(sendGate.Task);
+        var hub = CreateConnectedHub("User#1234");
+
+        var pending = hub.BlockPlayer("Ghost#1");
+
+        mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.That(pending.IsCompleted, Is.False);
+        sendGate.SetResult();
+        Assert.IsFalse(await pending);
+    }
+
+    [Test]
+    public async Task BlockPlayer_NonCanonicalAdminTag_ReturnsResolutionErrorNotRefusal()
+    {
+        MarkAdmin(AdminTag);
+        _battleTagResolverMock.Setup(r => r.ResolveCanonical("admin#1")).ReturnsAsync(AdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        var result = await hub.BlockPlayer("admin#1");
+
+        Assert.IsFalse(result);
+        mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError",
+            It.Is<object[]>(a => (string)ReadAnonymousProperty(a[0], "reason") == "non_canonical_battletag"), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Never);
+        adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
+        Assert.That(friendList.BlockedBattleTags, Is.Empty);
+    }
+
+    [Test]
+    public async Task BlockPlayer_UnknownTag_EmitsResolutionErrorAndReturnsFalse()
+    {
+        _battleTagResolverMock.Setup(r => r.ResolveCanonical("Ghost#1")).ReturnsAsync((string)null);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        var result = await hub.BlockPlayer("Ghost#1");
+
+        Assert.IsFalse(result);
+        Assert.That(friendList.BlockedBattleTags, Is.Empty);
+        adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Never);
+        mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError",
+            It.Is<object[]>(a => a.Length == 1
+                && (string)ReadAnonymousProperty(a[0], "reason") == "user_not_found"
+                && (string)ReadAnonymousProperty(a[0], "input") == "Ghost#1"), default), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockPlayer_NoConnectionUser_ReturnsFalse()
+    {
+        var hub = CreateHub(new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache));
+        SetHubContext(hub, "unknown-conn");
+
+        Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
+        adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task BlockPlayer_NonAdmin_ReturnsTrue()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        Assert.IsTrue(await hub.BlockPlayer("Blocked#5678"));
+        Assert.That(friendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => (string)a[3] == "Player Blocked#5678 blocked!"), default), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockPlayer_AlreadyBlocked_ReturnsFalse()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.Add("Blocked#5678");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "You have already blocked this player."), default), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockPlayer_PersistenceFails_ReturnsFalse()
+    {
+        var friendCommandHandlerMock = new Mock<IFriendCommandHandler>();
+        friendCommandHandlerMock
+            .Setup(h => h.LoadFriendList(It.IsAny<string>()))
+            .ReturnsAsync((string bt) => new Friendlist(bt));
+        friendCommandHandlerMock
+            .Setup(h => h.UpsertFriendList(It.IsAny<Friendlist>()))
+            .ThrowsAsync(new Exception("db down"));
+        var hub = CreateHub(friendCommandHandlerMock.Object);
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
+    }
+
+    [Test]
+    public async Task BlockPlayer_PersistedButResponseSendFails_ReturnsTrue()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        mockCaller
+            .Setup(c => c.SendCoreAsync("FriendResponseData", It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("connection gone"));
+        var hub = CreateConnectedHub("User#1234");
+
+        Assert.IsTrue(await hub.BlockPlayer("Blocked#5678"));
+        Assert.That(friendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
+    }
+
+    [Test]
+    public async Task BlockIncomingFriendRequest_FromAdmin_DeclinesRequestButDoesNotBlock()
+    {
+        MarkAdmin(AdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var req = new FriendRequest(AdminTag, "User#1234");
+        friendRequestCache.AddRequest(req);
+        var adminProxy = new Mock<ISingleClientProxy>();
+        mockClients.Setup(clients => clients.Client("conn2")).Returns(adminProxy.Object);
+        connections.Add("conn2", new WebSocketUser { BattleTag = AdminTag, ConnectionId = "conn2" });
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.BlockIncomingFriendRequest(new FriendRequest(AdminTag, "User#1234"));
+
+        Assert.IsFalse(await friendRequestCache.FriendRequestExists(new FriendRequest(AdminTag, "User#1234")));
+        Assert.That(friendList.BlockedBattleTags, Does.Not.Contain(AdminTag));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => (string)a[3] == "Admins can't be blocked."), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Never);
+        relationshipNotifier.Verify(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        // The admin still gets the usual sentRequests push (now without the declined request).
+        adminProxy.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => a[0] == null && a[1] is List<FriendRequest> && ((List<FriendRequest>)a[1]).Count == 0), default), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockIncomingFriendRequest_FromAdmin_NoPendingRequest_ReportsNotFound()
+    {
+        MarkAdmin(AdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.BlockIncomingFriendRequest(new FriendRequest(AdminTag, "User#1234"));
+
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "Could not find a friend request to block."), default), Times.Once);
+        Assert.That(friendList.BlockedBattleTags, Is.Empty);
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_FromAdminBlockedInStorage_StillRejected()
+    {
+        MarkAdmin(AdminTag);
+        personalSettingsRepo.Setup(r => r.Find("User#1")).ReturnsAsync(new PersonalSetting("User#1"));
+        var receiverList = new Friendlist("User#1");
+        receiverList.BlockedBattleTags.Add(AdminTag);
+        friendListCache.Upsert(receiverList);
+        var hub = CreateConnectedHub(AdminTag);
+
+        await hub.MakeFriendRequest(new FriendRequest(AdminTag, "User#1"));
+
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "This player is not accepting friend requests."), default), Times.Once);
+        Assert.IsFalse(await friendRequestCache.FriendRequestExists(new FriendRequest(AdminTag, "User#1")));
+    }
+
     // --- Ticket-only auth on OnConnectedAsync (WB-1: hard cutover, no raw-JWT fallback) ----------
     // The launcher is this hub's SOLE client; browsers use REST + Bearer and never open this
     // WebSocket. A raw JWT (or any non-ticket string) MUST be rejected — there is no fallback.
