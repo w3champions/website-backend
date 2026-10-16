@@ -789,7 +789,7 @@ public class WebsiteBackendHubTests
 
         connections.Add("connFriend", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "connFriend" });
 
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "User#1234" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "User#1234" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
@@ -1663,7 +1663,7 @@ public class WebsiteBackendHubTests
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
 
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
@@ -1678,7 +1678,39 @@ public class WebsiteBackendHubTests
         mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
         Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
         // conn1 now holds the ticket, so no other connection can redeem it.
-        Assert.IsFalse(ticketStore.TryRedeem(ticket, "conn-other", DateTime.UtcNow, out _));
+        Assert.IsFalse(ticketStore.TryRedeem(ticket, "conn-other", time.GetUtcNow().UtcDateTime, out _));
+    }
+
+    private async Task<WebsiteBackendHub> ConnectWithTicketMintedAgo(TimeSpan age, string connectionId)
+    {
+        var hub = CreateHub(new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache));
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
+        time.Advance(age);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
+        contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+        SetHubContext(hub, connectionId);
+        await hub.OnConnectedAsync();
+        return hub;
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_TicketPastTtl_Rejected_NoConnect()
+    {
+        await ConnectWithTicketMintedAgo(SessionLimits.TicketTtl + TimeSpan.FromTicks(1), "conn-late");
+
+        Assert.That(connections.GetUser("conn-late"), Is.Null);
+        mockCaller.Verify(c => c.SendCoreAsync("AuthorizationFailed", It.IsAny<object[]>(), default), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Never);
+    }
+
+    [Test]
+    public async Task OnConnectedAsync_TicketExactlyAtTtl_StillConnects()
+    {
+        await ConnectWithTicketMintedAgo(SessionLimits.TicketTtl, "conn-edge");
+
+        Assert.That(connections.GetUser("conn-edge")?.BattleTag, Is.EqualTo("Ticket#1"));
+        mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
     }
 
     [Test]
@@ -1686,7 +1718,7 @@ public class WebsiteBackendHubTests
     {
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
@@ -1704,7 +1736,7 @@ public class WebsiteBackendHubTests
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
         netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).ThrowsAsync(new TimeoutException("mongo down"));
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
@@ -1723,7 +1755,7 @@ public class WebsiteBackendHubTests
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
         netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).Throws(new InvalidOperationException("boom"));
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
@@ -1743,7 +1775,7 @@ public class WebsiteBackendHubTests
         var hub = CreateHub(friendCommandHandler);
         var neverCompletes = new TaskCompletionSource();
         netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).Returns(neverCompletes.Task);
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
@@ -1838,7 +1870,7 @@ public class WebsiteBackendHubTests
         // sniffed ticket can't open a parallel session: the second connect is rejected.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
@@ -1873,7 +1905,7 @@ public class WebsiteBackendHubTests
         // connection dropped. Inside the TTL that must work, so a reconnect burst doesn't mint.
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
 
-        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
+        var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, time.GetUtcNow().UtcDateTime);
         var httpContext = new DefaultHttpContext();
         httpContext.Request.QueryString = new QueryString($"?access_token={ticket}");
         contextAccessor.Setup(a => a.HttpContext).Returns(httpContext);

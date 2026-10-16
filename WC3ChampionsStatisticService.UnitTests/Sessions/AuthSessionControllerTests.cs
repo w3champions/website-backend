@@ -2,6 +2,7 @@ using System;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.Net.Http.Headers;
 using Moq;
 using NUnit.Framework;
@@ -33,8 +34,8 @@ public class AuthSessionControllerTests
 
     private static AuthSessionController BuildController(
         IW3CAuthenticationService authService, ITicketStore ticketStore, MintRateLimiter limiter,
-        string authorizationHeader) =>
-        new(authService, ticketStore, limiter)
+        string authorizationHeader, TimeProvider time = null) =>
+        new(authService, ticketStore, limiter, time ?? new FakeTimeProvider())
         {
             ControllerContext = new ControllerContext { HttpContext = BuildHttpContext(authorizationHeader) }
         };
@@ -53,7 +54,8 @@ public class AuthSessionControllerTests
         var authService = AuthReturning("peter#123");
         var ticketStore = new TicketStore();
         var limiter = new MintRateLimiter();
-        var controller = BuildController(authService.Object, ticketStore, limiter, "Bearer good-jwt");
+        var clock = new FakeTimeProvider();
+        var controller = BuildController(authService.Object, ticketStore, limiter, "Bearer good-jwt", clock);
 
         var result = controller.MintTicket();
 
@@ -71,9 +73,9 @@ public class AuthSessionControllerTests
 
         // The minted ticket must be redeemable against the SAME store the controller minted from, by
         // one connection at a time.
-        Assert.IsTrue(ticketStore.TryRedeem(response.Ticket, "conn-1", DateTime.UtcNow, out var identity));
+        Assert.IsTrue(ticketStore.TryRedeem(response.Ticket, "conn-1", clock.GetUtcNow().UtcDateTime, out var identity));
         Assert.AreEqual("peter#123", identity.BattleTag);
-        Assert.IsFalse(ticketStore.TryRedeem(response.Ticket, "conn-2", DateTime.UtcNow, out _), "one holder at a time");
+        Assert.IsFalse(ticketStore.TryRedeem(response.Ticket, "conn-2", clock.GetUtcNow().UtcDateTime, out _), "one holder at a time");
     }
 
     [Test]

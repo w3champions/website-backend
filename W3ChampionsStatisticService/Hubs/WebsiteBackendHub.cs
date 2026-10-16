@@ -87,7 +87,7 @@ public class WebsiteBackendHub(
             W3CUserAuthenticationDto w3cUserAuthentication = null;
             if (!string.IsNullOrEmpty(accessToken))
             {
-                if (_ticketStore.TryRedeem(accessToken, Context.ConnectionId, DateTime.UtcNow, out var ticketIdentity))
+                if (_ticketStore.TryRedeem(accessToken, Context.ConnectionId, _time.GetUtcNow().UtcDateTime, out var ticketIdentity))
                 {
                     w3cUserAuthentication = ticketIdentity;
                 }

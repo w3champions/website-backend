@@ -36,16 +36,18 @@ namespace W3ChampionsStatisticService.Sessions;
 public class AuthSessionController(
     IW3CAuthenticationService authService,
     ITicketStore ticketStore,
-    MintRateLimiter rateLimiter) : ControllerBase
+    MintRateLimiter rateLimiter,
+    TimeProvider time) : ControllerBase
 {
     private readonly IW3CAuthenticationService _authService = authService;
     private readonly ITicketStore _ticketStore = ticketStore;
     private readonly MintRateLimiter _rateLimiter = rateLimiter;
+    private readonly TimeProvider _time = time;
 
     [HttpPost("session")]
     public IActionResult MintTicket()
     {
-        var now = DateTime.UtcNow;
+        var now = _time.GetUtcNow().UtcDateTime;
 
         // Parse the Bearer token first. GetToken throws SecurityTokenValidationException on a
         // missing / non-Bearer header.
