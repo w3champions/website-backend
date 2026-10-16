@@ -55,6 +55,9 @@ steps:
     displayName: run tests
     inputs:
       command: 'test'
+      # Runner-level hang guard only: a hung test fails the run (with a dump) instead of stalling the
+      # agent. Tests themselves never depend on time.
+      arguments: '--blame-hang-timeout 10m'
 
   # Build Docker image from Dockerfile and push to Dockerhub
   - task: Docker@2
