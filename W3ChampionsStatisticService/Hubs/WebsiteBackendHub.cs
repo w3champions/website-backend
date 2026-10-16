@@ -227,8 +227,11 @@ public class WebsiteBackendHub(
                 $"Friend request sent to {req.Receiver}!"
             );
 
-            var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
-            await PushFriendRequestsToPlayer(req.Receiver, null, requestsReceivedByOtherPlayer);
+            await AfterCommitBestEffort("push received requests to the receiver", async () =>
+            {
+                var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
+                await PushFriendRequestsToPlayer(req.Receiver, null, requestsReceivedByOtherPlayer);
+            });
         }
         catch (Exception ex)
         {
@@ -273,8 +276,11 @@ public class WebsiteBackendHub(
                 $"Friend request to {req.Receiver} deleted!"
             );
 
-            var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
-            await PushFriendRequestsToPlayer(req.Receiver, null, requestsReceivedByOtherPlayer);
+            await AfterCommitBestEffort("push received requests to the receiver", async () =>
+            {
+                var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
+                await PushFriendRequestsToPlayer(req.Receiver, null, requestsReceivedByOtherPlayer);
+            });
         }
         catch (Exception ex)
         {
@@ -332,12 +338,17 @@ public class WebsiteBackendHub(
                 $"Friend request from {req.Sender} accepted!"
             );
 
-            List<FriendUser> receiverFriends = await GetFriends(req.Receiver);
-            await Clients.Caller.SendAsync(FriendResponseType.FriendsWithPictures.ToString(), receiverFriends);
-
-            await PushFriendsWithPicturesToPlayer(req.Sender);
-            var requestsSentByOtherPlayer = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
-            await PushFriendResponseDataToPlayer(req.Sender, admins, senderFriendlist, requestsSentByOtherPlayer);
+            await AfterCommitBestEffort("refresh the caller's friends with pictures", async () =>
+            {
+                List<FriendUser> receiverFriends = await GetFriends(req.Receiver);
+                await Clients.Caller.SendAsync(FriendResponseType.FriendsWithPictures.ToString(), receiverFriends);
+            });
+            await AfterCommitBestEffort("push friends with pictures to the sender", () => PushFriendsWithPicturesToPlayer(req.Sender));
+            await AfterCommitBestEffort("push friend data to the sender", async () =>
+            {
+                var requestsSentByOtherPlayer = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
+                await PushFriendResponseDataToPlayer(req.Sender, admins, senderFriendlist, requestsSentByOtherPlayer);
+            });
         }
         catch (Exception ex)
         {
@@ -382,8 +393,11 @@ public class WebsiteBackendHub(
                 $"Friend request from {req.Sender} denied!"
             );
 
-            var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
-            await PushFriendRequestsToPlayer(req.Sender, sentRequests, null);
+            await AfterCommitBestEffort("push sent requests to the sender", async () =>
+            {
+                var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
+                await PushFriendRequestsToPlayer(req.Sender, sentRequests, null);
+            });
         }
         catch (Exception ex)
         {
@@ -448,8 +462,11 @@ public class WebsiteBackendHub(
                 senderIsAdmin ? AdminsCantBeBlockedMessage : $"Friend requests from {req.Sender} blocked!"
             );
 
-            var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
-            await PushFriendRequestsToPlayer(req.Sender, sentRequests, null);
+            await AfterCommitBestEffort("push sent requests to the sender", async () =>
+            {
+                var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
+                await PushFriendRequestsToPlayer(req.Sender, sentRequests, null);
+            });
         }
         catch (Exception ex)
         {
@@ -598,12 +615,13 @@ public class WebsiteBackendHub(
                 $"Removed {friend} from friends."
             );
 
-            List<FriendUser> currentUserFriends = await GetFriends(currentUser);
-            await Clients.Caller.SendAsync(FriendResponseType.FriendsWithPictures.ToString(), currentUserFriends);
-
-            await PushFriendsWithPicturesToPlayer(friend);
-
-            await PushFriendResponseDataToPlayer(friend, admins, otherUserFriendlist);
+            await AfterCommitBestEffort("refresh the caller's friends with pictures", async () =>
+            {
+                List<FriendUser> currentUserFriends = await GetFriends(currentUser);
+                await Clients.Caller.SendAsync(FriendResponseType.FriendsWithPictures.ToString(), currentUserFriends);
+            });
+            await AfterCommitBestEffort("push friends with pictures to the removed friend", () => PushFriendsWithPicturesToPlayer(friend));
+            await AfterCommitBestEffort("push friend data to the removed friend", () => PushFriendResponseDataToPlayer(friend, admins, otherUserFriendlist));
         }
         catch (Exception ex)
         {
@@ -722,6 +740,17 @@ public class WebsiteBackendHub(
         {
             throw new ValidationException("You cannot block a player you are friends with.");
         }
+    }
+
+    /// <summary>A follow-up after the change was persisted and the caller was sent its success (counterpart
+    /// pushes, the caller's friends-with-pictures refresh). Never throws: the hub methods' catch-all would
+    /// otherwise send the caller an error FriendResponseMessage that overrides the success, so the client
+    /// would report a failure for a change that was saved. Each step is isolated so one failure doesn't
+    /// skip the rest.</summary>
+    private static async Task AfterCommitBestEffort(string step, Func<Task> followUp)
+    {
+        try { await followUp(); }
+        catch (Exception e) { Log.Warning(e, "Friend hub post-commit step failed (change already saved): {Step}", step); }
     }
 
     // Best-effort chat-service cache-invalidation ping (spec §6/§14). NEVER throws and NEVER

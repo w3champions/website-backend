@@ -401,6 +401,109 @@ public class WebsiteBackendHubTests
         }
     }
 
+    // --- Post-commit notifications are best-effort: the caller only ever gets the success ----------
+
+    /// <summary>Connects <paramref name="battleTag"/> on conn2 with a proxy whose every send throws.</summary>
+    private Mock<ISingleClientProxy> ConnectThrowingCounterpart(string battleTag)
+    {
+        var proxy = new Mock<ISingleClientProxy>();
+        proxy
+            .Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("counterpart connection gone"));
+        mockClients.Setup(clients => clients.Client("conn2")).Returns(proxy.Object);
+        connections.Add("conn2", new WebSocketUser { BattleTag = battleTag, ConnectionId = "conn2" });
+        return proxy;
+    }
+
+    private void AssertCallerGotOnlySuccess(string successMessage)
+    {
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => (string)a[3] == successMessage), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestCase("MakeFriendRequest", "Sender#1", "Receiver#1", "Friend request sent to Receiver#1!")]
+    [TestCase("DeleteOutgoingFriendRequest", "Sender#1", "Receiver#1", "Friend request to Receiver#1 deleted!")]
+    [TestCase("AcceptIncomingFriendRequest", "Receiver#1", "Sender#1", "Friend request from Sender#1 accepted!")]
+    [TestCase("DenyIncomingFriendRequest", "Receiver#1", "Sender#1", "Friend request from Sender#1 denied!")]
+    [TestCase("BlockIncomingFriendRequest", "Receiver#1", "Sender#1", "Friend requests from Sender#1 blocked!")]
+    public async Task FriendRequestFlow_CounterpartPushFails_CallerGetsOnlyTheSuccess(
+        string methodName, string caller, string counterpart, string successMessage)
+    {
+        friendListCache.Upsert(new Friendlist("Sender#1"));
+        friendListCache.Upsert(new Friendlist("Receiver#1"));
+        var req = new FriendRequest("Sender#1", "Receiver#1");
+        if (methodName != "MakeFriendRequest")
+        {
+            friendRequestCache.AddRequest(req);
+        }
+        personalSettingsRepo.Setup(r => r.Find("Receiver#1")).ReturnsAsync(new PersonalSetting("Receiver#1"));
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ReturnsAsync(new List<PersonalSetting>());
+        var counterpartProxy = ConnectThrowingCounterpart(counterpart);
+        var hub = CreateConnectedHub(caller);
+
+        var method = typeof(WebsiteBackendHub).GetMethod(methodName);
+        await (Task)method.Invoke(hub, new object[] { new FriendRequest("Sender#1", "Receiver#1") });
+
+        counterpartProxy.Verify(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce,
+            "the counterpart push was attempted (and threw)");
+        AssertCallerGotOnlySuccess(successMessage);
+    }
+
+    [Test]
+    public async Task RemoveFriend_CounterpartPushFails_CallerGetsOnlyTheSuccess()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("Friend#5678");
+        friendListCache.Upsert(friendList);
+        var otherList = new Friendlist("Friend#5678");
+        otherList.Friends.Add("User#1234");
+        friendListCache.Upsert(otherList);
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ReturnsAsync(new List<PersonalSetting>());
+        var counterpartProxy = ConnectThrowingCounterpart("Friend#5678");
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.RemoveFriend("Friend#5678");
+
+        counterpartProxy.Verify(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        AssertCallerGotOnlySuccess("Removed Friend#5678 from friends.");
+        Assert.That(friendList.Friends, Is.Empty);
+        Assert.That(otherList.Friends, Is.Empty);
+    }
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_FriendsWithPicturesRefreshFails_CallerGetsOnlyTheSuccess()
+    {
+        friendListCache.Upsert(new Friendlist("Sender#1"));
+        friendListCache.Upsert(new Friendlist("Receiver#1"));
+        friendRequestCache.AddRequest(new FriendRequest("Sender#1", "Receiver#1"));
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ThrowsAsync(new Exception("settings db down"));
+        var hub = CreateConnectedHub("Receiver#1");
+
+        await hub.AcceptIncomingFriendRequest(new FriendRequest("Sender#1", "Receiver#1"));
+
+        AssertCallerGotOnlySuccess("Friend request from Sender#1 accepted!");
+        Assert.That((await friendListCache.LoadFriendList("Receiver#1")).Friends, Does.Contain("Sender#1"));
+    }
+
+    [Test]
+    public async Task RemoveFriend_FriendsWithPicturesRefreshFails_CallerGetsOnlyTheSuccess()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.AddRange(new[] { "Friend#5678", "Pal#9" });
+        friendListCache.Upsert(friendList);
+        var otherList = new Friendlist("Friend#5678");
+        otherList.Friends.Add("User#1234");
+        friendListCache.Upsert(otherList);
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ThrowsAsync(new Exception("settings db down"));
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.RemoveFriend("Friend#5678");
+
+        AssertCallerGotOnlySuccess("Removed Friend#5678 from friends.");
+    }
+
     [Test]
     public async Task MakeFriendRequest_OverwritesPayloadSenderWithJwtBattleTag()
     {
