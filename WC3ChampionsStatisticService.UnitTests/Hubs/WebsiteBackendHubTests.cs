@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using W3ChampionsStatisticService.Hubs;
 using W3ChampionsStatisticService.NetworkDiagnostics.Delivery;
@@ -110,6 +111,7 @@ public class WebsiteBackendHubTests
     private Mock<IRelationshipChangeNotifier> relationshipNotifier;
     private TicketStore ticketStore;
     private Mock<IAdminRoster> adminRoster;
+    private FakeTimeProvider time;
 
     [SetUp]
     public void SetUp()
@@ -136,6 +138,7 @@ public class WebsiteBackendHubTests
         ticketStore = new TicketStore();
         netDiagDelivery = new Mock<INetworkDiagnosticsDelivery>();
         adminRoster = new Mock<IAdminRoster>();
+        time = new FakeTimeProvider();
         SetAdmins();
         adminRoster.Setup(r => r.IsAdmin(It.IsAny<string>())).ReturnsAsync(false);
     }
@@ -171,7 +174,8 @@ public class WebsiteBackendHubTests
             relationshipNotifier.Object,
             ticketStore,
             netDiagDelivery.Object,
-            adminRoster.Object
+            adminRoster.Object,
+            time
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         return hub;
@@ -497,7 +501,8 @@ public class WebsiteBackendHubTests
             relationshipNotifier.Object,
             ticketStore,
             netDiagDelivery.Object,
-            adminRoster.Object
+            adminRoster.Object,
+            time
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -558,7 +563,8 @@ public class WebsiteBackendHubTests
             relationshipNotifier.Object,
             ticketStore,
             netDiagDelivery.Object,
-            adminRoster.Object
+            adminRoster.Object,
+            time
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -622,7 +628,8 @@ public class WebsiteBackendHubTests
             relationshipNotifier.Object,
             ticketStore,
             netDiagDelivery.Object,
-            adminRoster.Object
+            adminRoster.Object,
+            time
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -681,7 +688,8 @@ public class WebsiteBackendHubTests
             relationshipNotifier.Object,
             ticketStore,
             netDiagDelivery.Object,
-            adminRoster.Object
+            adminRoster.Object,
+            time
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -1093,7 +1101,8 @@ public class WebsiteBackendHubTests
             relationshipNotifier.Object,
             ticketStore,
             netDiagDelivery.Object,
-            adminRoster.Object
+            adminRoster.Object,
+            time
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
@@ -1732,7 +1741,6 @@ public class WebsiteBackendHubTests
     {
         IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
         var hub = CreateHub(friendCommandHandler);
-        hub.NetDiagOnConnectBound = TimeSpan.FromMilliseconds(20);
         var neverCompletes = new TaskCompletionSource();
         netDiagDelivery.Setup(d => d.OnUserConnectedAsync(It.IsAny<string>())).Returns(neverCompletes.Task);
         var ticket = ticketStore.Mint(new W3CUserAuthenticationDto { BattleTag = "Ticket#1" }, DateTime.UtcNow);
@@ -1745,8 +1753,15 @@ public class WebsiteBackendHubTests
         Serilog.Log.Logger = new Serilog.LoggerConfiguration().WriteTo.Sink(sink).CreateLogger();
         try
         {
-            // The outer WaitAsync only turns a regression (an unbounded await) into a failure instead of a hung run.
-            await hub.OnConnectedAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            // Time only moves via the FakeTimeProvider: the connect is pending until exactly the bound.
+            var pending = hub.OnConnectedAsync();
+            netDiagDelivery.Verify(d => d.OnUserConnectedAsync("Ticket#1"), Times.Once);
+            Assert.IsFalse(pending.IsCompleted, "waits for the delivery");
+            time.Advance(WebsiteBackendHub.NetDiagOnConnectBound - TimeSpan.FromTicks(1));
+            Assert.IsFalse(pending.IsCompleted, "still waiting just before the bound");
+            time.Advance(TimeSpan.FromTicks(1));
+            Assert.IsTrue(pending.IsCompleted, "returns at the bound although the delivery never completes");
+            await pending;
 
             mockCaller.Verify(c => c.SendCoreAsync("Connected", It.IsAny<object[]>(), default), Times.Once);
             Assert.That(connections.GetUser("conn1")?.BattleTag, Is.EqualTo("Ticket#1"));
@@ -1767,11 +1782,9 @@ public class WebsiteBackendHubTests
     }
 
     [Test]
-    public void NetDiagOnConnectBound_DefaultsToFiveSeconds()
+    public void NetDiagOnConnectBound_IsFiveSeconds()
     {
-        IFriendCommandHandler friendCommandHandler = new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache);
-
-        Assert.AreEqual(TimeSpan.FromSeconds(5), CreateHub(friendCommandHandler).NetDiagOnConnectBound);
+        Assert.AreEqual(TimeSpan.FromSeconds(5), WebsiteBackendHub.NetDiagOnConnectBound);
     }
 
     private sealed class CollectingSink : Serilog.Core.ILogEventSink

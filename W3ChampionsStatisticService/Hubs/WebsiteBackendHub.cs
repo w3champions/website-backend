@@ -34,7 +34,8 @@ public class WebsiteBackendHub(
     IRelationshipChangeNotifier relationshipChangeNotifier,
     ITicketStore ticketStore,
     INetworkDiagnosticsDelivery netDiagDelivery,
-    IAdminRoster adminRoster
+    IAdminRoster adminRoster,
+    TimeProvider time
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -66,12 +67,13 @@ public class WebsiteBackendHub(
     private readonly ITicketStore _ticketStore = ticketStore;
     private readonly INetworkDiagnosticsDelivery _netDiagDelivery = netDiagDelivery;
     private readonly IAdminRoster _adminRoster = adminRoster;
+    private readonly TimeProvider _time = time;
 
     /// <summary>Refusal copy sent when a user tries to block an admin (exact wire text).</summary>
     public const string AdminsCantBeBlockedMessage = "Admins can't be blocked.";
 
-    /// <summary>Upper bound for the on-connect diagnostics delivery. Settable so tests need not wait for it.</summary>
-    internal TimeSpan NetDiagOnConnectBound { get; set; } = NetDiagConstants.OnConnectDeliveryBound;
+    /// <summary>Upper bound for the on-connect diagnostics delivery, measured on the injected <see cref="TimeProvider"/>.</summary>
+    internal static TimeSpan NetDiagOnConnectBound => NetDiagConstants.OnConnectDeliveryBound;
 
     [NoTrace]
     public override async Task OnConnectedAsync()
@@ -119,7 +121,7 @@ public class WebsiteBackendHub(
             var delivery = _netDiagDelivery.OnUserConnectedAsync(battleTag);
             try
             {
-                await delivery.WaitAsync(NetDiagOnConnectBound);
+                await delivery.WaitAsync(NetDiagOnConnectBound, _time);
             }
             catch (TimeoutException) when (!delivery.IsCompleted)
             {
