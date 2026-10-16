@@ -418,7 +418,7 @@ public class WebsiteBackendHub(
             var senderIsAdmin = await _adminRoster.IsAdmin(req.Sender);
             if (!senderIsAdmin)
             {
-                CanBlock(currentUserFriendlist, req.Sender);
+                CanBlock(await WithoutBlockedAdmins(currentUserFriendlist), req.Sender);
             }
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to block.");
@@ -480,7 +480,7 @@ public class WebsiteBackendHub(
                 throw new ValidationException(AdminsCantBeBlockedMessage);
 
             var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
-            CanBlock(friendList, battleTag);
+            CanBlock(await WithoutBlockedAdmins(friendList), battleTag);
             friendList.BlockedBattleTags.Add(battleTag);
             await _friendCommandHandler.UpsertFriendList(friendList);
             blocked = true;
@@ -642,11 +642,17 @@ public class WebsiteBackendHub(
         string message = null
     )
     {
-        var outbound = friendList == null
-            ? null
-            : FriendlistProjection.WithoutBlockedAdmins(friendList, await _adminRoster.GetAdminBattleTags());
+        var outbound = await WithoutBlockedAdmins(friendList);
         await target.SendAsync(FriendResponseType.FriendResponseData.ToString(), outbound, sentRequests, receivedRequests, message);
     }
+
+    /// <summary>The effective view of a stored Friendlist: admins can't be blocked, so a stored block of an
+    /// admin (made before that rule, or before the player became an admin) is dormant. Every outbound list
+    /// AND every server-side block decision reads this view; the stored list is never filtered, so such a
+    /// block takes effect again if the player stops being an admin. Uses the non-blocking roster (fails
+    /// open to "no admins", i.e. the stored list as-is).</summary>
+    private async Task<Friendlist> WithoutBlockedAdmins(Friendlist friendList) =>
+        friendList == null ? null : FriendlistProjection.WithoutBlockedAdmins(friendList, await _adminRoster.GetAdminBattleTags());
 
     private async Task PushFriendsWithPicturesToPlayer(string battleTag)
     {
@@ -657,8 +663,11 @@ public class WebsiteBackendHub(
         await Clients.Client(player.ConnectionId).SendAsync(FriendResponseType.FriendsWithPictures.ToString(), friends);
     }
 
-    private async Task CanMakeFriendRequest(Friendlist friendList, FriendRequest req)
+    /// <summary>Reads the receiver's effective blocks: a dormant block of an admin sender doesn't count.
+    /// Admin status is otherwise no privilege (BlockAllRequests still applies).</summary>
+    private async Task CanMakeFriendRequest(Friendlist storedFriendList, FriendRequest req)
     {
+        var friendList = await WithoutBlockedAdmins(storedFriendList);
         if (friendList.BlockAllRequests || friendList.BlockedBattleTags.Contains(req.Sender))
         {
             throw new ValidationException("This player is not accepting friend requests.");
@@ -674,6 +683,7 @@ public class WebsiteBackendHub(
         }
     }
 
+    /// <summary>Takes the effective view (<see cref="WithoutBlockedAdmins(Friendlist)"/>), never the stored list.</summary>
     private static void CanBlock(Friendlist friendList, string battleTag)
     {
         if (friendList.BlockedBattleTags.Contains(battleTag))

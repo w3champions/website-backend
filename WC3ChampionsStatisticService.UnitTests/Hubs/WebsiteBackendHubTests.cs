@@ -1453,10 +1453,38 @@ public class WebsiteBackendHubTests
         Assert.That(friendList.BlockedBattleTags, Is.Empty);
     }
 
+    // --- Admin roster: stored blocks of admins are dormant in every server-side decision ----------
+    // Non-destructive: storage keeps the entry, so it takes effect again if the user stops being an admin.
+
+    private void VerifyFriendRequestSent(string receiver) =>
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => (string)a[3] == $"Friend request sent to {receiver}!"), It.IsAny<CancellationToken>()), Times.Once);
+
+    private void VerifyFriendRequestRejected(string message) =>
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == message), It.IsAny<CancellationToken>()), Times.Once);
+
     [Test]
-    public async Task MakeFriendRequest_FromAdminBlockedInStorage_StillRejected()
+    public async Task MakeFriendRequest_FromAdminBlockedInStorage_IsAllowedAndStorageUntouched()
     {
         MarkAdmin(AdminTag);
+        personalSettingsRepo.Setup(r => r.Find("User#1")).ReturnsAsync(new PersonalSetting("User#1"));
+        var receiverList = new Friendlist("User#1");
+        receiverList.BlockedBattleTags.AddRange(new[] { "Foe#3", AdminTag });
+        friendListCache.Upsert(receiverList);
+        var hub = CreateConnectedHub(AdminTag);
+
+        await hub.MakeFriendRequest(new FriendRequest(AdminTag, "User#1"));
+
+        VerifyFriendRequestSent("User#1");
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.That(receiverList.BlockedBattleTags, Is.EqualTo(new List<string> { "Foe#3", AdminTag }));
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_FromAdminBlockedInStorage_RosterEmpty_StillRejected()
+    {
+        // Roster never loaded / identification-service down: fail open = nobody is an admin = old behaviour.
         personalSettingsRepo.Setup(r => r.Find("User#1")).ReturnsAsync(new PersonalSetting("User#1"));
         var receiverList = new Friendlist("User#1");
         receiverList.BlockedBattleTags.Add(AdminTag);
@@ -1465,8 +1493,101 @@ public class WebsiteBackendHubTests
 
         await hub.MakeFriendRequest(new FriendRequest(AdminTag, "User#1"));
 
-        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
-            It.Is<object[]>(a => (string)a[0] == "This player is not accepting friend requests."), It.IsAny<CancellationToken>()), Times.Once);
+        VerifyFriendRequestRejected("This player is not accepting friend requests.");
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_FromBlockedNonAdmin_StillRejectedWhileAdminsAreKnown()
+    {
+        MarkAdmin(AdminTag);
+        personalSettingsRepo.Setup(r => r.Find("User#1")).ReturnsAsync(new PersonalSetting("User#1"));
+        var receiverList = new Friendlist("User#1");
+        receiverList.BlockedBattleTags.AddRange(new[] { AdminTag, "Foe#3" });
+        friendListCache.Upsert(receiverList);
+        var hub = CreateConnectedHub("Foe#3");
+
+        await hub.MakeFriendRequest(new FriendRequest("Foe#3", "User#1"));
+
+        VerifyFriendRequestRejected("This player is not accepting friend requests.");
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_FromAdmin_ReceiverBlocksAllRequests_StillRejected()
+    {
+        // Admin status is not a friend-request privilege: only the block of an admin is dormant.
+        MarkAdmin(AdminTag);
+        personalSettingsRepo.Setup(r => r.Find("User#1")).ReturnsAsync(new PersonalSetting("User#1"));
+        friendListCache.Upsert(new Friendlist("User#1") { BlockAllRequests = true });
+        var hub = CreateConnectedHub(AdminTag);
+
+        await hub.MakeFriendRequest(new FriendRequest(AdminTag, "User#1"));
+
+        VerifyFriendRequestRejected("This player is not accepting friend requests.");
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_ToAdmin_FromUserWithStaleAdminBlock_IsAllowed()
+    {
+        MarkAdmin(AdminTag);
+        personalSettingsRepo.Setup(r => r.Find(AdminTag)).ReturnsAsync(new PersonalSetting(AdminTag));
+        var senderList = new Friendlist("User#1");
+        senderList.BlockedBattleTags.Add(AdminTag);
+        friendListCache.Upsert(senderList);
+        friendListCache.Upsert(new Friendlist(AdminTag));
+        var hub = CreateConnectedHub("User#1");
+
+        await hub.MakeFriendRequest(new FriendRequest("User#1", AdminTag));
+
+        VerifyFriendRequestSent(AdminTag);
+        Assert.That(senderList.BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_ToAdminWhoBlockedTheSender_StillRejected()
+    {
+        // An admin's own block of a normal user is a real block.
+        MarkAdmin(AdminTag);
+        personalSettingsRepo.Setup(r => r.Find(AdminTag)).ReturnsAsync(new PersonalSetting(AdminTag));
+        var adminList = new Friendlist(AdminTag);
+        adminList.BlockedBattleTags.Add("User#1");
+        friendListCache.Upsert(adminList);
+        var hub = CreateConnectedHub("User#1");
+
+        await hub.MakeFriendRequest(new FriendRequest("User#1", AdminTag));
+
+        VerifyFriendRequestRejected("This player is not accepting friend requests.");
+    }
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_FromAdminBlockedInStorage_BecomesFriends()
+    {
+        MarkAdmin(AdminTag);
+        var receiverList = new Friendlist("User#1");
+        receiverList.BlockedBattleTags.Add(AdminTag);
+        friendListCache.Upsert(receiverList);
+        friendListCache.Upsert(new Friendlist(AdminTag));
+        friendRequestCache.AddRequest(new FriendRequest(AdminTag, "User#1"));
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ReturnsAsync(new List<PersonalSetting>());
+        var hub = CreateConnectedHub("User#1");
+
+        await hub.AcceptIncomingFriendRequest(new FriendRequest(AdminTag, "User#1"));
+
+        Assert.That(receiverList.Friends, Does.Contain(AdminTag));
+        Assert.That((await friendListCache.LoadFriendList(AdminTag)).Friends, Does.Contain("User#1"));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task BlockPlayer_NonAdmin_WhenStoredListHoldsDormantAdminBlock_BlocksNormally()
+    {
+        MarkAdmin(AdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.Add(AdminTag);
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        Assert.IsTrue(await hub.BlockPlayer("Foe#3"));
+        Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag, "Foe#3" }));
     }
 
     // --- Ticket-only auth on OnConnectedAsync (WB-1: hard cutover, no raw-JWT fallback) ----------
