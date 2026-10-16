@@ -67,6 +67,7 @@ public class IdentityServiceClientAdminRosterTests
 
     [TestCase(null)]
     [TestCase("")]
+    [TestCase("   ")]
     public async Task GetAdminBattleTags_SecretUnset_SendsNoSecretHeader(string value)
     {
         Environment.SetEnvironmentVariable(IdentificationInternalSecretProvider.VariableName, value);
@@ -75,6 +76,7 @@ public class IdentityServiceClientAdminRosterTests
         await client.GetAdminBattleTags();
 
         Assert.IsFalse(handler.Requests.Single().Headers.Contains(SecretHeader));
+        Assert.IsFalse(IdentificationInternalSecretProvider.IsConfigured);
     }
 
     [TestCase(HttpStatusCode.Unauthorized)]
