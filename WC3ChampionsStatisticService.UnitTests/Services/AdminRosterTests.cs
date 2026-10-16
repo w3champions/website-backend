@@ -1,34 +1,35 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using NUnit.Framework;
 using Serilog.Events;
 using W3ChampionsStatisticService.Services;
-using WC3ChampionsStatisticService.Tests.NetworkDiagnostics;
 
 namespace WC3ChampionsStatisticService.Tests.Services;
 
+/// <summary>
+/// Deterministic: time only moves via <see cref="FakeTimeProvider.Advance"/> (which also fires the roster's
+/// FirstLoadWait timer), and fetches are gated with TaskCompletionSources. No real delays or timeouts.
+/// "Does not wait" is asserted as a synchronously completed task, never by racing a clock.
+/// </summary>
 [TestFixture]
 public class AdminRosterTests
 {
     private static readonly DateTimeOffset Start = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
-    // Turns a regression (an unbounded await on the request path) into a failure instead of a hung run.
-    private static readonly TimeSpan HangGuard = TimeSpan.FromSeconds(10);
-
     private Mock<IdentityServiceClient> _identityClientMock;
-    private FixedTimeProvider _clock;
+    private FakeTimeProvider _clock;
     private AdminRoster _roster;
 
     [SetUp]
     public void SetUp()
     {
         _identityClientMock = new Mock<IdentityServiceClient>(new WC3ChampionsStatisticService.Tests.Admin.StubHttpClientFactory(new HttpClient()));
-        _clock = new FixedTimeProvider(Start);
+        _clock = new FakeTimeProvider(Start);
         _roster = new AdminRoster(_identityClientMock.Object, _clock);
     }
 
@@ -51,12 +52,12 @@ public class AdminRosterTests
         return gate;
     }
 
-    private Task GateEntered() => _gateEntered.Task.WaitAsync(HangGuard);
+    private Task GateEntered() => _gateEntered.Task;
 
-    private void Advance(TimeSpan by) => _clock.Now += by;
+    private void Advance(TimeSpan by) => _clock.Advance(by);
 
     /// <summary>Lets the background refresh started by the previous call finish.</summary>
-    private Task Settle() => _roster.PendingRefresh.WaitAsync(HangGuard);
+    private Task Settle() => _roster.PendingRefresh;
 
     private async Task LoadInitial(params string[] tags)
     {
@@ -107,7 +108,9 @@ public class AdminRosterTests
 
         // Stale-while-revalidate: the expired set is served while the refresh runs.
         var gate = SetupGate();
-        Assert.IsTrue(await _roster.IsAdmin("Admin#1").WaitAsync(HangGuard));
+        var stale = _roster.IsAdmin("Admin#1");
+        Assert.IsTrue(stale.IsCompleted, "served without waiting for the refresh");
+        Assert.IsTrue(await stale);
         gate.SetResult(new List<string> { "New#2" });
         await Settle();
 
@@ -123,8 +126,12 @@ public class AdminRosterTests
         Advance(AdminRoster.Ttl);
 
         // The refresh never completes; callers must not wait for it.
-        Assert.IsTrue(await _roster.IsAdmin("Admin#1").WaitAsync(HangGuard));
-        Assert.IsTrue((await _roster.GetAdminBattleTags().WaitAsync(HangGuard)).Contains("Admin#1"));
+        var isAdmin = _roster.IsAdmin("Admin#1");
+        var tags = _roster.GetAdminBattleTags();
+        Assert.IsTrue(isAdmin.IsCompleted, "IsAdmin completed synchronously");
+        Assert.IsTrue(tags.IsCompleted, "GetAdminBattleTags completed synchronously");
+        Assert.IsTrue(await isAdmin);
+        Assert.IsTrue((await tags).Contains("Admin#1"));
         Assert.IsFalse(_roster.PendingRefresh.IsCompleted, "refresh still in flight");
 
         gate.SetResult(new List<string> { "Admin#1" });
@@ -139,7 +146,7 @@ public class AdminRosterTests
         Advance(AdminRoster.Ttl);
 
         var calls = Enumerable.Range(0, 20).Select(_ => Task.Run(() => _roster.IsAdmin("Admin#1"))).ToList();
-        await Task.WhenAll(calls).WaitAsync(HangGuard);
+        await Task.WhenAll(calls);
         await GateEntered();
         Advance(TimeSpan.FromSeconds(1));
         await _roster.GetAdminBattleTags();
@@ -199,16 +206,21 @@ public class AdminRosterTests
     }
 
     [Test]
-    public async Task NeverLoaded_SlowFirstLoad_FailsOpenAfterFirstLoadWait()
+    public async Task NeverLoaded_SlowFirstLoad_FailsOpenExactlyAtFirstLoadWait()
     {
         var gate = SetupGate();
 
-        var stopwatch = Stopwatch.StartNew();
-        Assert.IsFalse(await _roster.IsAdmin("Admin#1").WaitAsync(HangGuard));
-        stopwatch.Stop();
+        var pending = _roster.IsAdmin("Admin#1");
+        await GateEntered();
+        Assert.IsFalse(pending.IsCompleted, "waits for the in-flight first load");
 
-        Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)), "well under chat-service's 2s timeout");
-        Assert.That(stopwatch.Elapsed, Is.GreaterThanOrEqualTo(AdminRoster.FirstLoadWait - TimeSpan.FromMilliseconds(50)));
+        Advance(AdminRoster.FirstLoadWait - TimeSpan.FromTicks(1));
+        Assert.IsFalse(pending.IsCompleted, "still waiting just before FirstLoadWait");
+
+        Advance(TimeSpan.FromTicks(1));
+        Assert.IsTrue(pending.IsCompleted, "the wait is driven by the injected TimeProvider, not wall-clock time");
+        Assert.IsFalse(await pending, "fails open (no admins) once FirstLoadWait elapses");
+        Assert.IsFalse(_roster.PendingRefresh.IsCompleted, "the load keeps running");
 
         // The load keeps running in the background and is picked up once it lands.
         gate.SetResult(new List<string> { "Admin#1" });
@@ -244,8 +256,10 @@ public class AdminRosterTests
         Assert.IsFalse(_roster.PendingRefresh.IsCompleted);
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Once);
 
+        // No time passes, so FirstLoadWait can't expire: every caller gets the loaded set.
+        Assert.IsFalse(calls.Any(c => c.IsCompleted));
         gate.SetResult(new List<string> { "Admin#1" });
-        var results = await Task.WhenAll(calls).WaitAsync(HangGuard);
+        var results = await Task.WhenAll(calls);
 
         Assert.IsTrue(results.All(r => r));
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Once);
