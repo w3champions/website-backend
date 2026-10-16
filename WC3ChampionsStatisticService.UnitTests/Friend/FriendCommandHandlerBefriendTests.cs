@@ -43,4 +43,15 @@ public class FriendCommandHandlerBefriendTests
         Assert.That(list.Friends, Is.EqualTo(new List<string> { "New#3" }));
         Assert.That(list.BlockedBattleTags, Is.Null);
     }
+
+    [Test]
+    public void RemovesOwnBlockCaseInsensitively_IncludingEveryLegacyCaseVariant()
+    {
+        var list = new Friendlist("User#1");
+        list.BlockedBattleTags.AddRange(new[] { "new#3", "Foe#2", "NEW#3" });
+
+        FriendCommandHandler.Befriend(list, "New#3");
+
+        Assert.That(list.BlockedBattleTags, Is.EqualTo(new List<string> { "Foe#2" }));
+    }
 }

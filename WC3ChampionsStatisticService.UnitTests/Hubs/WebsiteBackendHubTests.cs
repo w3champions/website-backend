@@ -1743,6 +1743,64 @@ public class WebsiteBackendHubTests
         VerifyFriendRequestRejected("This player is not accepting friend requests.");
     }
 
+    // --- Block-list matching is case-insensitive (as in the admin projection) ---------------------
+
+    [Test]
+    public async Task UnblockFriendRequestsFromPlayer_LegacyCaseVariants_AllRemoved()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.AddRange(new[] { "foe#3", "Other#9", "FOE#3" });
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.UnblockFriendRequestsFromPlayer("Foe#3");
+
+        Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { "Other#9" }));
+        AssertCallerGotOnlySuccess("Friend requests from Foe#3 unblocked!");
+    }
+
+    [Test]
+    public async Task BlockPlayer_AlreadyBlockedWithDifferentCase_RefusedAsDuplicate()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.Add("blocked#5678");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
+        Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { "blocked#5678" }));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "You have already blocked this player."), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockPlayer_FriendStoredWithDifferentCase_Refused()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("pal#4");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        Assert.IsFalse(await hub.BlockPlayer("Pal#4"));
+        Assert.That(friendList.BlockedBattleTags, Is.Empty);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "You cannot block a player you are friends with."), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task MakeFriendRequest_FromSenderBlockedWithDifferentCase_Rejected()
+    {
+        personalSettingsRepo.Setup(r => r.Find("User#1")).ReturnsAsync(new PersonalSetting("User#1"));
+        var receiverList = new Friendlist("User#1");
+        receiverList.BlockedBattleTags.Add("foe#3");
+        friendListCache.Upsert(receiverList);
+        var hub = CreateConnectedHub("Foe#3");
+
+        await hub.MakeFriendRequest(new FriendRequest("Foe#3", "User#1"));
+
+        VerifyFriendRequestRejected("This player is not accepting friend requests.");
+    }
+
     [Test]
     public async Task MakeFriendRequest_FromBlockedNonAdmin_StillRejectedWhileAdminsAreKnown()
     {

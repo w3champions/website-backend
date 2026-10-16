@@ -553,9 +553,12 @@ public class WebsiteBackendHub(
         {
             var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
 
-            var itemToRemove =
-                friendList.BlockedBattleTags.SingleOrDefault(bTag => bTag == battleTag) ?? throw new ValidationException("Could not find a player to unblock.");
-            friendList.BlockedBattleTags.Remove(itemToRemove);
+            // Case-insensitive, and every legacy case variant goes: a leftover variant would keep blocking.
+            var removed = friendList.BlockedBattleTags.RemoveAll(bTag => string.Equals(bTag, battleTag, StringComparison.OrdinalIgnoreCase));
+            if (removed == 0)
+            {
+                throw new ValidationException("Could not find a player to unblock.");
+            }
 
             await _friendCommandHandler.UpsertFriendList(friendList);
             TryNotifyRelationshipChange(RelationshipChangeType.Unblock, currentUser, battleTag);
@@ -714,7 +717,7 @@ public class WebsiteBackendHub(
     private async Task CanMakeFriendRequest(Friendlist storedFriendList, AdminSnapshot admins, FriendRequest req)
     {
         var friendList = WithoutBlockedAdmins(storedFriendList, admins);
-        if (friendList.BlockAllRequests || friendList.BlockedBattleTags.Contains(req.Sender))
+        if (friendList.BlockAllRequests || friendList.BlockedBattleTags.Contains(req.Sender, StringComparer.OrdinalIgnoreCase))
         {
             throw new ValidationException("This player is not accepting friend requests.");
         }
@@ -729,14 +732,15 @@ public class WebsiteBackendHub(
         }
     }
 
-    /// <summary>Takes the effective view (<see cref="WithoutBlockedAdmins(Friendlist, AdminSnapshot)"/>), never the stored list.</summary>
+    /// <summary>Takes the effective view (<see cref="WithoutBlockedAdmins(Friendlist, AdminSnapshot)"/>), never the stored list.
+    /// BattleTags match case-insensitively, as in the admin projection.</summary>
     private static void CanBlock(Friendlist friendList, string battleTag)
     {
-        if (friendList.BlockedBattleTags.Contains(battleTag))
+        if (friendList.BlockedBattleTags.Contains(battleTag, StringComparer.OrdinalIgnoreCase))
         {
             throw new ValidationException("You have already blocked this player.");
         }
-        if (friendList.Friends.Contains(battleTag))
+        if (friendList.Friends.Contains(battleTag, StringComparer.OrdinalIgnoreCase))
         {
             throw new ValidationException("You cannot block a player you are friends with.");
         }
