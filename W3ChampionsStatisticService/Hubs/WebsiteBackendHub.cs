@@ -33,7 +33,8 @@ public class WebsiteBackendHub(
     IBattleTagResolver battleTagResolver,
     IRelationshipChangeNotifier relationshipChangeNotifier,
     ITicketStore ticketStore,
-    INetworkDiagnosticsDelivery netDiagDelivery
+    INetworkDiagnosticsDelivery netDiagDelivery,
+    IAdminRoster adminRoster
 ) : Hub
 {
     static WebsiteBackendHub()
@@ -64,6 +65,7 @@ public class WebsiteBackendHub(
     private readonly IRelationshipChangeNotifier _relationshipChangeNotifier = relationshipChangeNotifier;
     private readonly ITicketStore _ticketStore = ticketStore;
     private readonly INetworkDiagnosticsDelivery _netDiagDelivery = netDiagDelivery;
+    private readonly IAdminRoster _adminRoster = adminRoster;
 
     /// <summary>Upper bound for the on-connect diagnostics delivery. Settable so tests need not wait for it.</summary>
     internal TimeSpan NetDiagOnConnectBound { get; set; } = NetDiagConstants.OnConnectDeliveryBound;
@@ -149,7 +151,7 @@ public class WebsiteBackendHub(
         Friendlist friendList = await _friendCommandHandler.LoadFriendList(currentUser);
         List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
         List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
-        await Clients.Caller.SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests);
+        await SendFriendResponseData(Clients.Caller, friendList, sentRequests, receivedRequests);
     }
 
     // Required for backwards compatibility
@@ -315,8 +317,8 @@ public class WebsiteBackendHub(
 
             List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Receiver);
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
-            await Clients.Caller.SendAsync(
-                FriendResponseType.FriendResponseData.ToString(),
+            await SendFriendResponseData(
+                Clients.Caller,
                 currentUserFriendlist,
                 sentRequests,
                 receivedRequests,
@@ -418,8 +420,8 @@ public class WebsiteBackendHub(
             TryNotifyRelationshipChange(RelationshipChangeType.Block, req.Receiver, req.Sender);
 
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
-            await Clients.Caller.SendAsync(
-                FriendResponseType.FriendResponseData.ToString(),
+            await SendFriendResponseData(
+                Clients.Caller,
                 currentUserFriendlist,
                 null,
                 receivedRequests,
@@ -463,8 +465,8 @@ public class WebsiteBackendHub(
             friendList.BlockedBattleTags.Add(battleTag);
             await _friendCommandHandler.UpsertFriendList(friendList);
             TryNotifyRelationshipChange(RelationshipChangeType.Block, currentUser, battleTag);
-            await Clients.Caller.SendAsync(
-                FriendResponseType.FriendResponseData.ToString(),
+            await SendFriendResponseData(
+                Clients.Caller,
                 friendList,
                 null,
                 null,
@@ -509,8 +511,8 @@ public class WebsiteBackendHub(
             await _friendCommandHandler.UpsertFriendList(friendList);
             TryNotifyRelationshipChange(RelationshipChangeType.Unblock, currentUser, battleTag);
 
-            await Clients.Caller.SendAsync(
-                FriendResponseType.FriendResponseData.ToString(),
+            await SendFriendResponseData(
+                Clients.Caller,
                 friendList,
                 null,
                 null,
@@ -553,8 +555,8 @@ public class WebsiteBackendHub(
             otherUserFriendlist = await _friendCommandHandler.RemoveFriend(otherUserFriendlist, currentUser);
             TryNotifyRelationshipChange(RelationshipChangeType.FriendRemove, currentUser, friend);
 
-            await Clients.Caller.SendAsync(
-                FriendResponseType.FriendResponseData.ToString(),
+            await SendFriendResponseData(
+                Clients.Caller,
                 currentUserFriendlist,
                 null,
                 null,
@@ -605,9 +607,24 @@ public class WebsiteBackendHub(
         var player = _connections.GetUsers().FirstOrDefault(x => x.BattleTag == battleTag);
         if (player?.ConnectionId == null)
             return;
-        await Clients
-            .Client(player.ConnectionId)
-            .SendAsync(FriendResponseType.FriendResponseData.ToString(), friendList, sentRequests, receivedRequests, message);
+        await SendFriendResponseData(Clients.Client(player.ConnectionId), friendList, sentRequests, receivedRequests, message);
+    }
+
+    /// <summary>Every FriendResponseData carrying a Friendlist goes through here: admins are hidden from
+    /// the outbound BlockedBattleTags via a projected copy (the loaded Friendlist is cached and must never
+    /// be filtered in place).</summary>
+    private async Task SendFriendResponseData(
+        IClientProxy target,
+        Friendlist friendList,
+        List<FriendRequest> sentRequests,
+        List<FriendRequest> receivedRequests,
+        string message = null
+    )
+    {
+        var outbound = friendList == null
+            ? null
+            : FriendlistProjection.WithoutBlockedAdmins(friendList, await _adminRoster.GetAdminBattleTags());
+        await target.SendAsync(FriendResponseType.FriendResponseData.ToString(), outbound, sentRequests, receivedRequests, message);
     }
 
     private async Task PushFriendsWithPicturesToPlayer(string battleTag)

@@ -112,6 +112,7 @@ public class WebsiteBackendHubTests
     private Mock<IBattleTagResolver> _battleTagResolverMock;
     private Mock<IRelationshipChangeNotifier> relationshipNotifier;
     private TicketStore ticketStore;
+    private Mock<IAdminRoster> adminRoster;
 
     [SetUp]
     public void SetUp()
@@ -137,6 +138,27 @@ public class WebsiteBackendHubTests
         relationshipNotifier = new Mock<IRelationshipChangeNotifier>();
         ticketStore = new TicketStore();
         netDiagDelivery = new Mock<INetworkDiagnosticsDelivery>();
+        adminRoster = new Mock<IAdminRoster>();
+        SetAdmins();
+        adminRoster.Setup(r => r.IsAdmin(It.IsAny<string>())).ReturnsAsync(false);
+    }
+
+    private void SetAdmins(params string[] admins)
+    {
+        adminRoster
+            .Setup(r => r.GetAdminBattleTags())
+            .ReturnsAsync(new HashSet<string>(admins, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Captures the Friendlist (args[0]) of every FriendResponseData sent through the given proxy.</summary>
+    private static List<Friendlist> CaptureFriendResponseData<TProxy>(Mock<TProxy> proxy) where TProxy : class, IClientProxy
+    {
+        var captured = new List<Friendlist>();
+        proxy
+            .Setup(c => c.SendCoreAsync("FriendResponseData", It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Callback((string _, object[] args, CancellationToken _) => captured.Add((Friendlist)args[0]))
+            .Returns(Task.CompletedTask);
+        return captured;
     }
 
     private WebsiteBackendHub CreateHub(IFriendCommandHandler friendCommandHandler)
@@ -151,7 +173,8 @@ public class WebsiteBackendHubTests
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
             ticketStore,
-            netDiagDelivery.Object
+            netDiagDelivery.Object,
+            adminRoster.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         return hub;
@@ -476,7 +499,8 @@ public class WebsiteBackendHubTests
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
             ticketStore,
-            netDiagDelivery.Object
+            netDiagDelivery.Object,
+            adminRoster.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -536,7 +560,8 @@ public class WebsiteBackendHubTests
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
             ticketStore,
-            netDiagDelivery.Object
+            netDiagDelivery.Object,
+            adminRoster.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -599,7 +624,8 @@ public class WebsiteBackendHubTests
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
             ticketStore,
-            netDiagDelivery.Object
+            netDiagDelivery.Object,
+            adminRoster.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -657,7 +683,8 @@ public class WebsiteBackendHubTests
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
             ticketStore,
-            netDiagDelivery.Object
+            netDiagDelivery.Object,
+            adminRoster.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         SetHubContext(hub, "connection-id-1");
@@ -1068,7 +1095,8 @@ public class WebsiteBackendHubTests
             _battleTagResolverMock.Object,
             relationshipNotifier.Object,
             ticketStore,
-            netDiagDelivery.Object
+            netDiagDelivery.Object,
+            adminRoster.Object
         );
         typeof(Hub).GetProperty("Clients").SetValue(hub, mockClients.Object);
         connections.Add("conn1", new WebSocketUser { BattleTag = "Receiver#1", ConnectionId = "conn1" });
@@ -1107,6 +1135,74 @@ public class WebsiteBackendHubTests
             ),
             Times.Once
         );
+    }
+
+    // --- Admin roster: outbound block lists never carry admins (storage untouched) --------------
+
+    [Test]
+    public async Task LoadFriendListAndRequests_SendsBlockedListWithoutAdmins_StorageUntouched()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.AddRange(new[] { "Admin#2", "Foe#3" });
+        friendListCache.Upsert(friendList);
+        SetAdmins("Admin#2");
+        var sent = CaptureFriendResponseData(mockCaller);
+        var hub = CreateHub(new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache));
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.LoadFriendListAndRequestsTraced(new SignalRTraceContextFilter.PreventZeroArgumentHandler());
+
+        Assert.That(sent, Has.Count.EqualTo(1));
+        Assert.That(sent[0].BlockedBattleTags, Is.EqualTo(new List<string> { "Foe#3" }));
+        var cached = await friendListCache.LoadFriendList("User#1234");
+        Assert.That(cached.BlockedBattleTags, Is.EqualTo(new List<string> { "Admin#2", "Foe#3" }));
+    }
+
+    [Test]
+    public async Task RemoveFriend_PushToOtherPlayer_SendsBlockedListWithoutAdmins()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("Friend#5678");
+        friendListCache.Upsert(friendList);
+        var otherList = new Friendlist("Friend#5678");
+        otherList.Friends.Add("User#1234");
+        otherList.BlockedBattleTags.Add("Admin#2");
+        friendListCache.Upsert(otherList);
+        SetAdmins("Admin#2");
+        var otherProxy = new Mock<ISingleClientProxy>();
+        mockClients.Setup(clients => clients.Client("conn2")).Returns(otherProxy.Object);
+        var pushed = CaptureFriendResponseData(otherProxy);
+        var hub = CreateHub(new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache));
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        connections.Add("conn2", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "conn2" });
+        SetHubContext(hub, "conn1");
+
+        await hub.RemoveFriend("Friend#5678");
+
+        Assert.That(pushed, Has.Count.EqualTo(1));
+        Assert.That(pushed[0].BlockedBattleTags, Is.Empty);
+        Assert.That(otherList.BlockedBattleTags, Is.EqualTo(new List<string> { "Admin#2" }));
+    }
+
+    [Test]
+    public async Task UnblockFriendRequestsFromPlayer_ResponseOmitsRemainingBlockedAdmins()
+    {
+        var friendList = new Friendlist("User#1234");
+        friendList.BlockedBattleTags.AddRange(new[] { "Admin#2", "Foe#3" });
+        friendListCache.Upsert(friendList);
+        SetAdmins("Admin#2");
+        var sent = CaptureFriendResponseData(mockCaller);
+        var hub = CreateHub(new TestFriendCommandHandler(friendRepository, friendListCache, friendRequestCache));
+        connections.Add("conn1", new WebSocketUser { BattleTag = "User#1234", ConnectionId = "conn1" });
+        SetHubContext(hub, "conn1");
+
+        await hub.UnblockFriendRequestsFromPlayer("Foe#3");
+
+        Assert.That(sent, Has.Count.EqualTo(1));
+        Assert.That(sent[0].BlockedBattleTags, Is.Empty);
+        var cached = await friendListCache.LoadFriendList("User#1234");
+        Assert.That(cached.BlockedBattleTags, Is.EqualTo(new List<string> { "Admin#2" }));
     }
 
     // --- Ticket-only auth on OnConnectedAsync (WB-1: hard cutover, no raw-JWT fallback) ----------
