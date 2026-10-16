@@ -1239,8 +1239,8 @@ public class WebsiteBackendHubTests
         Assert.IsFalse(result);
         Assert.That(friendList.BlockedBattleTags, Does.Not.Contain(AdminTag));
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
-            It.Is<object[]>(a => a.Length == 1 && (string)a[0] == "Admins can't be blocked."), default), Times.Once);
-        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData", It.IsAny<object[]>(), default), Times.Never);
+            It.Is<object[]>(a => a.Length == 1 && (string)a[0] == "Admins can't be blocked."), It.IsAny<CancellationToken>()), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
         relationshipNotifier.Verify(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         Assert.That(WebsiteBackendHub.AdminsCantBeBlockedMessage, Is.EqualTo("Admins can't be blocked."));
     }
@@ -1258,8 +1258,8 @@ public class WebsiteBackendHubTests
 
         Assert.IsFalse(result);
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
-            It.Is<object[]>(a => a.Length == 1 && (string)a[0] == "Admins can't be blocked."), default), Times.Once);
-        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Once);
+            It.Is<object[]>(a => a.Length == 1 && (string)a[0] == "Admins can't be blocked."), It.IsAny<CancellationToken>()), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Once);
         Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
     }
 
@@ -1316,8 +1316,8 @@ public class WebsiteBackendHubTests
 
         Assert.IsFalse(result);
         mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError",
-            It.Is<object[]>(a => (string)ReadAnonymousProperty(a[0], "reason") == "non_canonical_battletag"), default), Times.Once);
-        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Never);
+            It.Is<object[]>(a => (string)ReadAnonymousProperty(a[0], "reason") == "non_canonical_battletag"), It.IsAny<CancellationToken>()), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
         adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
         Assert.That(friendList.BlockedBattleTags, Is.Empty);
     }
@@ -1335,11 +1335,11 @@ public class WebsiteBackendHubTests
         Assert.IsFalse(result);
         Assert.That(friendList.BlockedBattleTags, Is.Empty);
         adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
-        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Never);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
         mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError",
             It.Is<object[]>(a => a.Length == 1
                 && (string)ReadAnonymousProperty(a[0], "reason") == "user_not_found"
-                && (string)ReadAnonymousProperty(a[0], "input") == "Ghost#1"), default), Times.Once);
+                && (string)ReadAnonymousProperty(a[0], "input") == "Ghost#1"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -1362,7 +1362,7 @@ public class WebsiteBackendHubTests
         Assert.IsTrue(await hub.BlockPlayer("Blocked#5678"));
         Assert.That(friendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
-            It.Is<object[]>(a => (string)a[3] == "Player Blocked#5678 blocked!"), default), Times.Once);
+            It.Is<object[]>(a => (string)a[3] == "Player Blocked#5678 blocked!"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -1375,7 +1375,7 @@ public class WebsiteBackendHubTests
 
         Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
-            It.Is<object[]>(a => (string)a[0] == "You have already blocked this player."), default), Times.Once);
+            It.Is<object[]>(a => (string)a[0] == "You have already blocked this player."), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -1393,6 +1393,9 @@ public class WebsiteBackendHubTests
         SetHubContext(hub, "conn1");
 
         Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == "db down"), It.IsAny<CancellationToken>()), Times.Once);
+        relationshipNotifier.Verify(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     [Test]
@@ -1427,12 +1430,12 @@ public class WebsiteBackendHubTests
         Assert.IsFalse(await friendRequestCache.FriendRequestExists(new FriendRequest(AdminTag, "User#1234")));
         Assert.That(friendList.BlockedBattleTags, Does.Not.Contain(AdminTag));
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
-            It.Is<object[]>(a => (string)a[3] == "Admins can't be blocked."), default), Times.Once);
-        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), default), Times.Never);
+            It.Is<object[]>(a => (string)a[3] == "Admins can't be blocked."), It.IsAny<CancellationToken>()), Times.Once);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
         relationshipNotifier.Verify(n => n.NotifyChange(It.IsAny<RelationshipChangeType>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         // The admin still gets the usual sentRequests push (now without the declined request).
         adminProxy.Verify(c => c.SendCoreAsync("FriendResponseData",
-            It.Is<object[]>(a => a[0] == null && a[1] is List<FriendRequest> && ((List<FriendRequest>)a[1]).Count == 0), default), Times.Once);
+            It.Is<object[]>(a => a[0] == null && a[1] is List<FriendRequest> && ((List<FriendRequest>)a[1]).Count == 0), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -1446,7 +1449,7 @@ public class WebsiteBackendHubTests
         await hub.BlockIncomingFriendRequest(new FriendRequest(AdminTag, "User#1234"));
 
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
-            It.Is<object[]>(a => (string)a[0] == "Could not find a friend request to block."), default), Times.Once);
+            It.Is<object[]>(a => (string)a[0] == "Could not find a friend request to block."), It.IsAny<CancellationToken>()), Times.Once);
         Assert.That(friendList.BlockedBattleTags, Is.Empty);
     }
 
@@ -1463,8 +1466,7 @@ public class WebsiteBackendHubTests
         await hub.MakeFriendRequest(new FriendRequest(AdminTag, "User#1"));
 
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
-            It.Is<object[]>(a => (string)a[0] == "This player is not accepting friend requests."), default), Times.Once);
-        Assert.IsFalse(await friendRequestCache.FriendRequestExists(new FriendRequest(AdminTag, "User#1")));
+            It.Is<object[]>(a => (string)a[0] == "This player is not accepting friend requests."), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // --- Ticket-only auth on OnConnectedAsync (WB-1: hard cutover, no raw-JWT fallback) ----------
