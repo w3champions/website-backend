@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using Prometheus;
@@ -243,6 +244,8 @@ builder.Services.AddInterceptedTransient<PlayerService>();
 builder.Services.AddInterceptedTransient<MatchService>();
 builder.Services.AddInterceptedTransient<IdentityServiceClient>();
 builder.Services.AddInterceptedTransient<IBattleTagResolver, BattleTagResolver>();
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddInterceptedSingleton<IAdminRoster, AdminRoster>();
 builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
