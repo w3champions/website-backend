@@ -15,6 +15,7 @@ using W3ChampionsStatisticService.WebApi.ActionFilters;
 using W3ChampionsStatisticService.Sessions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.Features;
 using NUnit.Framework;
@@ -140,14 +141,23 @@ public class WebsiteBackendHubTests
         adminRoster = new Mock<IAdminRoster>();
         time = new FakeTimeProvider();
         SetAdmins();
-        adminRoster.Setup(r => r.IsAdmin(It.IsAny<string>())).ReturnsAsync(false);
     }
 
     private void SetAdmins(params string[] admins)
     {
         adminRoster
-            .Setup(r => r.GetAdminBattleTags())
-            .ReturnsAsync(new HashSet<string>(admins, StringComparer.OrdinalIgnoreCase));
+            .Setup(r => r.GetSnapshotAsync())
+            .ReturnsAsync(new AdminSnapshot(admins));
+    }
+
+    /// <summary>A roster whose answer changes on every read (as if a refresh landed between reads): read N
+    /// returns views[N], the last view repeating. An operation that reads it more than once mixes views.</summary>
+    private void SetAdminsChangingPerRead(params string[][] views)
+    {
+        var reads = 0;
+        adminRoster
+            .Setup(r => r.GetSnapshotAsync())
+            .ReturnsAsync(() => new AdminSnapshot(views[Math.Min(reads++, views.Length - 1)]));
     }
 
     /// <summary>Captures the Friendlist (args[0]) of every FriendResponseData sent through the given proxy.</summary>
@@ -1215,11 +1225,7 @@ public class WebsiteBackendHubTests
 
     private const string AdminTag = "Admin#1";
 
-    private void MarkAdmin(string battleTag)
-    {
-        SetAdmins(battleTag);
-        adminRoster.Setup(r => r.IsAdmin(battleTag)).ReturnsAsync(true);
-    }
+    private void MarkAdmin(string battleTag) => SetAdmins(battleTag);
 
     private WebsiteBackendHub CreateConnectedHub(string battleTag)
     {
@@ -1324,7 +1330,7 @@ public class WebsiteBackendHubTests
         mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError",
             It.Is<object[]>(a => (string)ReadAnonymousProperty(a[0], "reason") == "non_canonical_battletag"), It.IsAny<CancellationToken>()), Times.Once);
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
-        adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Never);
         Assert.That(friendList.BlockedBattleTags, Is.Empty);
     }
 
@@ -1340,7 +1346,7 @@ public class WebsiteBackendHubTests
 
         Assert.IsFalse(result);
         Assert.That(friendList.BlockedBattleTags, Is.Empty);
-        adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Never);
         mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
         mockCaller.Verify(c => c.SendCoreAsync("BattleTagResolutionError",
             It.Is<object[]>(a => a.Length == 1
@@ -1355,7 +1361,7 @@ public class WebsiteBackendHubTests
         SetHubContext(hub, "unknown-conn");
 
         Assert.IsFalse(await hub.BlockPlayer("Blocked#5678"));
-        adminRoster.Verify(r => r.IsAdmin(It.IsAny<string>()), Times.Never);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Never);
     }
 
     [Test]
@@ -1416,6 +1422,138 @@ public class WebsiteBackendHubTests
 
         Assert.IsTrue(await hub.BlockPlayer("Blocked#5678"));
         Assert.That(friendList.BlockedBattleTags, Does.Contain("Blocked#5678"));
+    }
+
+    // --- One roster snapshot per operation: a refresh between reads must not split decisions ------
+
+    private static readonly string[] NoAdmins = [];
+    private static readonly string[] OnlyAdminTag = [AdminTag];
+
+    [Test]
+    public async Task BlockPlayer_RosterPromotesTargetBetweenReads_DecidesAndRespondsFromOneSnapshot()
+    {
+        // First read: stale view (target not yet admin); any later read: target is admin.
+        SetAdminsChangingPerRead(NoAdmins, OnlyAdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var sent = CaptureFriendResponseData(mockCaller);
+        var hub = CreateConnectedHub("User#1234");
+
+        var result = await hub.BlockPlayer(AdminTag);
+
+        // Consistent with the single (stale) view: blocked, and the response shows the block it reports.
+        Assert.IsTrue(result);
+        Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
+        Assert.That(sent, Has.Count.EqualTo(1));
+        Assert.That(sent[0].BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockPlayer_RosterDemotesTargetBetweenReads_RefusesFromOneSnapshot()
+    {
+        SetAdminsChangingPerRead(OnlyAdminTag, NoAdmins);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        var hub = CreateConnectedHub("User#1234");
+
+        var result = await hub.BlockPlayer(AdminTag);
+
+        Assert.IsFalse(result);
+        Assert.That(friendList.BlockedBattleTags, Is.Empty);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage",
+            It.Is<object[]>(a => (string)a[0] == WebsiteBackendHub.AdminsCantBeBlockedMessage), It.IsAny<CancellationToken>()), Times.Once);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockIncomingFriendRequest_RosterPromotesSenderBetweenReads_DecidesAndRespondsFromOneSnapshot()
+    {
+        SetAdminsChangingPerRead(NoAdmins, OnlyAdminTag);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        friendRequestCache.AddRequest(new FriendRequest(AdminTag, "User#1234"));
+        var sent = CaptureFriendResponseData(mockCaller);
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.BlockIncomingFriendRequest(new FriendRequest(AdminTag, "User#1234"));
+
+        Assert.That(friendList.BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
+        Assert.That(sent, Has.Count.EqualTo(1));
+        Assert.That(sent[0].BlockedBattleTags, Is.EqualTo(new List<string> { AdminTag }));
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => (string)a[3] == $"Friend requests from {AdminTag} blocked!"), It.IsAny<CancellationToken>()), Times.Once);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Once);
+    }
+
+    [Test]
+    public async Task BlockIncomingFriendRequest_RosterDemotesSenderBetweenReads_RefusesFromOneSnapshot()
+    {
+        SetAdminsChangingPerRead(OnlyAdminTag, NoAdmins);
+        var friendList = new Friendlist("User#1234");
+        friendListCache.Upsert(friendList);
+        friendRequestCache.AddRequest(new FriendRequest(AdminTag, "User#1234"));
+        var hub = CreateConnectedHub("User#1234");
+
+        await hub.BlockIncomingFriendRequest(new FriendRequest(AdminTag, "User#1234"));
+
+        Assert.That(friendList.BlockedBattleTags, Is.Empty);
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseData",
+            It.Is<object[]>(a => (string)a[3] == WebsiteBackendHub.AdminsCantBeBlockedMessage), It.IsAny<CancellationToken>()), Times.Once);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Once);
+    }
+
+    [Test]
+    public async Task RemoveFriend_RosterChangesBetweenReads_CallerAndPushedListsUseOneSnapshot()
+    {
+        SetAdminsChangingPerRead(["Admin#2"], NoAdmins);
+        var friendList = new Friendlist("User#1234");
+        friendList.Friends.Add("Friend#5678");
+        friendList.BlockedBattleTags.Add("Admin#2");
+        friendListCache.Upsert(friendList);
+        var otherList = new Friendlist("Friend#5678");
+        otherList.Friends.Add("User#1234");
+        otherList.BlockedBattleTags.Add("Admin#2");
+        friendListCache.Upsert(otherList);
+        var otherProxy = new Mock<ISingleClientProxy>();
+        mockClients.Setup(clients => clients.Client("conn2")).Returns(otherProxy.Object);
+        var sent = CaptureFriendResponseData(mockCaller);
+        var pushed = CaptureFriendResponseData(otherProxy);
+        var hub = CreateConnectedHub("User#1234");
+        connections.Add("conn2", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "conn2" });
+
+        await hub.RemoveFriend("Friend#5678");
+
+        Assert.That(sent.Single().BlockedBattleTags, Is.Empty);
+        Assert.That(pushed.Single().BlockedBattleTags, Is.Empty);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Once);
+    }
+
+    [Test]
+    public async Task AcceptIncomingFriendRequest_RosterChangesBetweenReads_CallerAndPushedListsUseOneSnapshot()
+    {
+        SetAdminsChangingPerRead(["Admin#2"], NoAdmins);
+        var receiverList = new Friendlist("User#1234");
+        receiverList.BlockedBattleTags.Add("Admin#2");
+        friendListCache.Upsert(receiverList);
+        var senderList = new Friendlist("Friend#5678");
+        senderList.BlockedBattleTags.Add("Admin#2");
+        friendListCache.Upsert(senderList);
+        friendRequestCache.AddRequest(new FriendRequest("Friend#5678", "User#1234"));
+        personalSettingsRepo.Setup(r => r.LoadMany(It.IsAny<string[]>())).ReturnsAsync(new List<PersonalSetting>());
+        var otherProxy = new Mock<ISingleClientProxy>();
+        mockClients.Setup(clients => clients.Client("conn2")).Returns(otherProxy.Object);
+        var sent = CaptureFriendResponseData(mockCaller);
+        var pushed = CaptureFriendResponseData(otherProxy);
+        var hub = CreateConnectedHub("User#1234");
+        connections.Add("conn2", new WebSocketUser { BattleTag = "Friend#5678", ConnectionId = "conn2" });
+
+        await hub.AcceptIncomingFriendRequest(new FriendRequest("Friend#5678", "User#1234"));
+
+        mockCaller.Verify(c => c.SendCoreAsync("FriendResponseMessage", It.IsAny<object[]>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.That(sent.Single().BlockedBattleTags, Is.Empty);
+        Assert.That(pushed.Single().BlockedBattleTags, Is.Empty);
+        adminRoster.Verify(r => r.GetSnapshotAsync(), Times.Once);
     }
 
     [Test]

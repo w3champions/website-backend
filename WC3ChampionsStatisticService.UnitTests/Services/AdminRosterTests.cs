@@ -59,10 +59,12 @@ public class AdminRosterTests
     /// <summary>Lets the background refresh started by the previous call finish.</summary>
     private Task Settle() => _roster.PendingRefresh;
 
+    private async Task<bool> IsAdmin(string battleTag) => (await _roster.GetSnapshotAsync()).IsAdmin(battleTag);
+
     private async Task LoadInitial(params string[] tags)
     {
         SetupTags(tags);
-        await _roster.GetAdminBattleTags();
+        await _roster.GetSnapshotAsync();
         await Settle();
     }
 
@@ -71,8 +73,8 @@ public class AdminRosterTests
     {
         SetupTags("Admin#1");
 
-        Assert.IsTrue(await _roster.IsAdmin("Admin#1"));
-        Assert.IsFalse(await _roster.IsAdmin("Other#2"));
+        Assert.IsTrue(await IsAdmin("Admin#1"));
+        Assert.IsFalse(await IsAdmin("Other#2"));
     }
 
     [Test]
@@ -80,9 +82,9 @@ public class AdminRosterTests
     {
         SetupTags("Admin#1");
 
-        Assert.IsTrue(await _roster.IsAdmin("ADMIN#1"));
-        var set = await _roster.GetAdminBattleTags();
-        Assert.IsTrue(set.Contains("admin#1"));
+        Assert.IsTrue(await IsAdmin("ADMIN#1"));
+        var snapshot = await _roster.GetSnapshotAsync();
+        Assert.IsTrue(snapshot.Tags.Contains("admin#1"));
     }
 
     [Test]
@@ -91,8 +93,8 @@ public class AdminRosterTests
         await LoadInitial("Admin#1");
 
         Advance(AdminRoster.Ttl - TimeSpan.FromSeconds(1));
-        await _roster.IsAdmin("Admin#1");
-        await _roster.GetAdminBattleTags();
+        await IsAdmin("Admin#1");
+        await _roster.GetSnapshotAsync();
         await Settle();
 
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Once);
@@ -108,14 +110,14 @@ public class AdminRosterTests
 
         // Stale-while-revalidate: the expired set is served while the refresh runs.
         var gate = SetupGate();
-        var stale = _roster.IsAdmin("Admin#1");
+        var stale = IsAdmin("Admin#1");
         Assert.IsTrue(stale.IsCompleted, "served without waiting for the refresh");
         Assert.IsTrue(await stale);
         gate.SetResult(new List<string> { "New#2" });
         await Settle();
 
-        Assert.IsFalse(await _roster.IsAdmin("Admin#1"));
-        Assert.IsTrue(await _roster.IsAdmin("New#2"));
+        Assert.IsFalse(await IsAdmin("Admin#1"));
+        Assert.IsTrue(await IsAdmin("New#2"));
     }
 
     [Test]
@@ -126,12 +128,12 @@ public class AdminRosterTests
         Advance(AdminRoster.Ttl);
 
         // The refresh never completes; callers must not wait for it.
-        var isAdmin = _roster.IsAdmin("Admin#1");
-        var tags = _roster.GetAdminBattleTags();
+        var isAdmin = IsAdmin("Admin#1");
+        var tags = _roster.GetSnapshotAsync();
         Assert.IsTrue(isAdmin.IsCompleted, "IsAdmin completed synchronously");
-        Assert.IsTrue(tags.IsCompleted, "GetAdminBattleTags completed synchronously");
+        Assert.IsTrue(tags.IsCompleted, "GetSnapshotAsync completed synchronously");
         Assert.IsTrue(await isAdmin);
-        Assert.IsTrue((await tags).Contains("Admin#1"));
+        Assert.IsTrue((await tags).Tags.Contains("Admin#1"));
         Assert.IsFalse(_roster.PendingRefresh.IsCompleted, "refresh still in flight");
 
         gate.SetResult(new List<string> { "Admin#1" });
@@ -145,18 +147,18 @@ public class AdminRosterTests
         var gate = SetupGate();
         Advance(AdminRoster.Ttl);
 
-        var calls = Enumerable.Range(0, 20).Select(_ => Task.Run(() => _roster.IsAdmin("Admin#1"))).ToList();
+        var calls = Enumerable.Range(0, 20).Select(_ => Task.Run(() => IsAdmin("Admin#1"))).ToList();
         await Task.WhenAll(calls);
         await GateEntered();
         Advance(TimeSpan.FromSeconds(1));
-        await _roster.GetAdminBattleTags();
+        await _roster.GetSnapshotAsync();
 
         // 1 initial load + exactly 1 background refresh, still blocked on the gate.
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Exactly(2));
 
         gate.SetResult(new List<string> { "Admin#1" });
         await Settle();
-        await _roster.GetAdminBattleTags();
+        await _roster.GetSnapshotAsync();
         await Settle();
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Exactly(2), "fresh again after the refresh");
     }
@@ -168,10 +170,10 @@ public class AdminRosterTests
 
         SetupFailure();
         Advance(AdminRoster.Ttl);
-        await _roster.IsAdmin("Admin#1");
+        await IsAdmin("Admin#1");
         await Settle();
 
-        Assert.IsTrue(await _roster.IsAdmin("Admin#1"));
+        Assert.IsTrue(await IsAdmin("Admin#1"));
     }
 
     [Test]
@@ -181,17 +183,17 @@ public class AdminRosterTests
 
         SetupFailure();
         Advance(AdminRoster.Ttl);
-        await _roster.IsAdmin("Admin#1");
+        await IsAdmin("Admin#1");
         await Settle();
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Exactly(2));
 
         Advance(AdminRoster.FailureRetryDelay - TimeSpan.FromSeconds(1));
-        await _roster.IsAdmin("Admin#1");
+        await IsAdmin("Admin#1");
         await Settle();
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Exactly(2));
 
         Advance(TimeSpan.FromSeconds(1));
-        await _roster.IsAdmin("Admin#1");
+        await IsAdmin("Admin#1");
         await Settle();
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Exactly(3));
     }
@@ -201,8 +203,8 @@ public class AdminRosterTests
     {
         _identityClientMock.Setup(c => c.GetAdminBattleTags()).ThrowsAsync(new TaskCanceledException());
 
-        Assert.IsFalse(await _roster.IsAdmin("Admin#1"));
-        Assert.IsEmpty(await _roster.GetAdminBattleTags());
+        Assert.IsFalse(await IsAdmin("Admin#1"));
+        Assert.That(await _roster.GetSnapshotAsync(), Is.SameAs(AdminSnapshot.Empty));
     }
 
     [Test]
@@ -210,7 +212,7 @@ public class AdminRosterTests
     {
         var gate = SetupGate();
 
-        var pending = _roster.IsAdmin("Admin#1");
+        var pending = IsAdmin("Admin#1");
         await GateEntered();
         Assert.IsFalse(pending.IsCompleted, "waits for the in-flight first load");
 
@@ -225,7 +227,7 @@ public class AdminRosterTests
         // The load keeps running in the background and is picked up once it lands.
         gate.SetResult(new List<string> { "Admin#1" });
         await Settle();
-        Assert.IsTrue(await _roster.IsAdmin("Admin#1"));
+        Assert.IsTrue(await IsAdmin("Admin#1"));
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Once);
     }
 
@@ -238,11 +240,33 @@ public class AdminRosterTests
     [TestCase(null)]
     [TestCase("")]
     [TestCase("  ")]
-    public async Task IsAdmin_BlankTag_FalseWithoutFetching(string tag)
+    public void Snapshot_BlankTag_IsNeverAdmin(string tag)
     {
-        Assert.IsFalse(await _roster.IsAdmin(tag));
+        Assert.IsFalse(new AdminSnapshot(["Admin#1", "", "  "]).IsAdmin(tag));
+    }
 
-        _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Never);
+    [Test]
+    public void Snapshot_DropsBlankTags()
+    {
+        Assert.That(new AdminSnapshot(["Admin#1", null, "", "  "]).Tags, Is.EquivalentTo(new[] { "Admin#1" }));
+    }
+
+    [Test]
+    public async Task Snapshot_IsUnchangedByALaterRefresh()
+    {
+        await LoadInitial("Admin#1");
+        var before = await _roster.GetSnapshotAsync();
+
+        SetupTags("New#2");
+        Advance(AdminRoster.Ttl);
+        await _roster.GetSnapshotAsync();
+        await Settle();
+        var after = await _roster.GetSnapshotAsync();
+
+        Assert.That(before.Tags, Is.EquivalentTo(new[] { "Admin#1" }), "an operation's snapshot never changes under it");
+        Assert.IsTrue(before.IsAdmin("Admin#1"));
+        Assert.IsFalse(before.IsAdmin("New#2"));
+        Assert.That(after.Tags, Is.EquivalentTo(new[] { "New#2" }));
     }
 
     [Test]
@@ -251,7 +275,7 @@ public class AdminRosterTests
         var gate = SetupGate();
 
         // Every caller is started while the single fetch is provably still blocked on the gate.
-        var calls = Enumerable.Range(0, 5).Select(_ => _roster.IsAdmin("Admin#1")).ToList();
+        var calls = Enumerable.Range(0, 5).Select(_ => IsAdmin("Admin#1")).ToList();
         await GateEntered();
         Assert.IsFalse(_roster.PendingRefresh.IsCompleted);
         _identityClientMock.Verify(c => c.GetAdminBattleTags(), Times.Once);
@@ -277,20 +301,20 @@ public class AdminRosterTests
 
             SetupFailure();
             Advance(AdminRoster.Ttl);
-            await _roster.GetAdminBattleTags();
+            await _roster.GetSnapshotAsync();
             await Settle();
             Advance(AdminRoster.FailureRetryDelay);
-            await _roster.GetAdminBattleTags();
+            await _roster.GetSnapshotAsync();
             await Settle();
 
             SetupTags("Admin#1");
             Advance(AdminRoster.FailureRetryDelay);
-            await _roster.GetAdminBattleTags();
+            await _roster.GetSnapshotAsync();
             await Settle();
 
             SetupFailure();
             Advance(AdminRoster.Ttl);
-            await _roster.GetAdminBattleTags();
+            await _roster.GetSnapshotAsync();
             await Settle();
 
             var levels = sink.Events.Where(e => e.Exception is HttpRequestException).Select(e => e.Level).ToList();

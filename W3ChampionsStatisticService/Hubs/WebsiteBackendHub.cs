@@ -156,7 +156,7 @@ public class WebsiteBackendHub(
         Friendlist friendList = await _friendCommandHandler.LoadFriendList(currentUser);
         List<FriendRequest> sentRequests = await _friendRequestCache.LoadSentFriendRequests(currentUser);
         List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(currentUser);
-        await SendFriendResponseData(Clients.Caller, friendList, sentRequests, receivedRequests);
+        await SendFriendResponseData(Clients.Caller, await _adminRoster.GetSnapshotAsync(), friendList, sentRequests, receivedRequests);
     }
 
     // Required for backwards compatibility
@@ -215,7 +215,7 @@ public class WebsiteBackendHub(
             }
 
             var receiverFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
-            await CanMakeFriendRequest(receiverFriendlist, req);
+            await CanMakeFriendRequest(receiverFriendlist, await _adminRoster.GetSnapshotAsync(), req);
             await _friendCommandHandler.CreateFriendRequest(req);
             sentRequests.Add(req);
 
@@ -228,7 +228,7 @@ public class WebsiteBackendHub(
             );
 
             var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
-            await PushFriendResponseDataToPlayer(req.Receiver, null, null, requestsReceivedByOtherPlayer);
+            await PushFriendRequestsToPlayer(req.Receiver, null, requestsReceivedByOtherPlayer);
         }
         catch (Exception ex)
         {
@@ -274,7 +274,7 @@ public class WebsiteBackendHub(
             );
 
             var requestsReceivedByOtherPlayer = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
-            await PushFriendResponseDataToPlayer(req.Receiver, null, null, requestsReceivedByOtherPlayer);
+            await PushFriendRequestsToPlayer(req.Receiver, null, requestsReceivedByOtherPlayer);
         }
         catch (Exception ex)
         {
@@ -307,6 +307,7 @@ public class WebsiteBackendHub(
 
         try
         {
+            var admins = await _adminRoster.GetSnapshotAsync();
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
             var senderFriendlist = await _friendCommandHandler.LoadFriendList(req.Sender);
 
@@ -324,6 +325,7 @@ public class WebsiteBackendHub(
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await SendFriendResponseData(
                 Clients.Caller,
+                admins,
                 currentUserFriendlist,
                 sentRequests,
                 receivedRequests,
@@ -335,7 +337,7 @@ public class WebsiteBackendHub(
 
             await PushFriendsWithPicturesToPlayer(req.Sender);
             var requestsSentByOtherPlayer = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
-            await PushFriendResponseDataToPlayer(req.Sender, senderFriendlist, requestsSentByOtherPlayer);
+            await PushFriendResponseDataToPlayer(req.Sender, admins, senderFriendlist, requestsSentByOtherPlayer);
         }
         catch (Exception ex)
         {
@@ -381,7 +383,7 @@ public class WebsiteBackendHub(
             );
 
             var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
-            await PushFriendResponseDataToPlayer(req.Sender, null, sentRequests);
+            await PushFriendRequestsToPlayer(req.Sender, sentRequests, null);
         }
         catch (Exception ex)
         {
@@ -414,13 +416,16 @@ public class WebsiteBackendHub(
 
         try
         {
+            // One roster view for the refusal, CanBlock and the response: a refresh mid-operation must not
+            // let the refusal and the effective list disagree about the sender.
+            var admins = await _adminRoster.GetSnapshotAsync();
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(req.Receiver);
             // Friend requests are not influenced by admin status: a request from an admin is still
             // declined here, only the block step is refused.
-            var senderIsAdmin = await _adminRoster.IsAdmin(req.Sender);
+            var senderIsAdmin = admins.IsAdmin(req.Sender);
             if (!senderIsAdmin)
             {
-                CanBlock(await WithoutBlockedAdmins(currentUserFriendlist), req.Sender);
+                CanBlock(WithoutBlockedAdmins(currentUserFriendlist, admins), req.Sender);
             }
 
             var request = await _friendRequestCache.LoadFriendRequest(req) ?? throw new ValidationException("Could not find a friend request to block.");
@@ -436,6 +441,7 @@ public class WebsiteBackendHub(
             List<FriendRequest> receivedRequests = await _friendRequestCache.LoadReceivedFriendRequests(req.Receiver);
             await SendFriendResponseData(
                 Clients.Caller,
+                admins,
                 currentUserFriendlist,
                 null,
                 receivedRequests,
@@ -443,7 +449,7 @@ public class WebsiteBackendHub(
             );
 
             var sentRequests = await _friendRequestCache.LoadSentFriendRequests(req.Sender);
-            await PushFriendResponseDataToPlayer(req.Sender, null, sentRequests);
+            await PushFriendRequestsToPlayer(req.Sender, sentRequests, null);
         }
         catch (Exception ex)
         {
@@ -478,17 +484,20 @@ public class WebsiteBackendHub(
         var blocked = false;
         try
         {
-            if (await _adminRoster.IsAdmin(battleTag))
+            // One roster view for the refusal, CanBlock and the response (see BlockIncomingFriendRequest).
+            var admins = await _adminRoster.GetSnapshotAsync();
+            if (admins.IsAdmin(battleTag))
                 throw new ValidationException(AdminsCantBeBlockedMessage);
 
             var friendList = await _friendCommandHandler.LoadFriendList(currentUser);
-            CanBlock(await WithoutBlockedAdmins(friendList), battleTag);
+            CanBlock(WithoutBlockedAdmins(friendList, admins), battleTag);
             friendList.BlockedBattleTags.Add(battleTag);
             await _friendCommandHandler.UpsertFriendList(friendList);
             blocked = true;
             TryNotifyRelationshipChange(RelationshipChangeType.Block, currentUser, battleTag);
             await SendFriendResponseData(
                 Clients.Caller,
+                admins,
                 friendList,
                 null,
                 null,
@@ -536,6 +545,7 @@ public class WebsiteBackendHub(
 
             await SendFriendResponseData(
                 Clients.Caller,
+                await _adminRoster.GetSnapshotAsync(),
                 friendList,
                 null,
                 null,
@@ -571,6 +581,7 @@ public class WebsiteBackendHub(
 
         try
         {
+            var admins = await _adminRoster.GetSnapshotAsync();
             var currentUserFriendlist = await _friendCommandHandler.LoadFriendList(currentUser);
             currentUserFriendlist = await _friendCommandHandler.RemoveFriend(currentUserFriendlist, friend);
 
@@ -580,6 +591,7 @@ public class WebsiteBackendHub(
 
             await SendFriendResponseData(
                 Clients.Caller,
+                admins,
                 currentUserFriendlist,
                 null,
                 null,
@@ -591,7 +603,7 @@ public class WebsiteBackendHub(
 
             await PushFriendsWithPicturesToPlayer(friend);
 
-            await PushFriendResponseDataToPlayer(friend, otherUserFriendlist);
+            await PushFriendResponseDataToPlayer(friend, admins, otherUserFriendlist);
         }
         catch (Exception ex)
         {
@@ -621,40 +633,54 @@ public class WebsiteBackendHub(
 
     private async Task PushFriendResponseDataToPlayer(
         string battleTag,
-        Friendlist friendList = null,
-        List<FriendRequest> sentRequests = null,
-        List<FriendRequest> receivedRequests = null,
-        string message = null
+        AdminSnapshot admins,
+        Friendlist friendList,
+        List<FriendRequest> sentRequests = null
     )
     {
         var player = _connections.GetUsers().FirstOrDefault(x => x.BattleTag == battleTag);
         if (player?.ConnectionId == null)
             return;
-        await SendFriendResponseData(Clients.Client(player.ConnectionId), friendList, sentRequests, receivedRequests, message);
+        await SendFriendResponseData(Clients.Client(player.ConnectionId), admins, friendList, sentRequests, null);
+    }
+
+    /// <summary>A FriendResponseData without a Friendlist (only request lists), so no roster read.</summary>
+    private async Task PushFriendRequestsToPlayer(
+        string battleTag,
+        List<FriendRequest> sentRequests,
+        List<FriendRequest> receivedRequests
+    )
+    {
+        var player = _connections.GetUsers().FirstOrDefault(x => x.BattleTag == battleTag);
+        if (player?.ConnectionId == null)
+            return;
+        await Clients.Client(player.ConnectionId).SendAsync(FriendResponseType.FriendResponseData.ToString(), null, sentRequests, receivedRequests, null);
     }
 
     /// <summary>Every FriendResponseData carrying a Friendlist goes through here: admins are hidden from
     /// the outbound BlockedBattleTags via a projected copy (the loaded Friendlist is cached and must never
-    /// be filtered in place).</summary>
+    /// be filtered in place). <paramref name="admins"/> is the operation's single roster snapshot.</summary>
     private async Task SendFriendResponseData(
         IClientProxy target,
+        AdminSnapshot admins,
         Friendlist friendList,
         List<FriendRequest> sentRequests,
         List<FriendRequest> receivedRequests,
         string message = null
     )
     {
-        var outbound = await WithoutBlockedAdmins(friendList);
+        var outbound = WithoutBlockedAdmins(friendList, admins);
         await target.SendAsync(FriendResponseType.FriendResponseData.ToString(), outbound, sentRequests, receivedRequests, message);
     }
 
     /// <summary>The effective view of a stored Friendlist: admins can't be blocked, so a stored block of an
     /// admin (made before that rule, or before the player became an admin) is dormant. Every outbound list
     /// AND every server-side block decision reads this view; the stored list is never filtered, so such a
-    /// block takes effect again if the player stops being an admin. Uses the non-blocking roster (fails
-    /// open to "no admins", i.e. the stored list as-is).</summary>
-    private async Task<Friendlist> WithoutBlockedAdmins(Friendlist friendList) =>
-        friendList == null ? null : FriendlistProjection.WithoutBlockedAdmins(friendList, await _adminRoster.GetAdminBattleTags());
+    /// block takes effect again if the player stops being an admin. <paramref name="admins"/> is the
+    /// operation's single roster snapshot (never re-read mid-operation); the roster fails open to
+    /// <see cref="AdminSnapshot.Empty"/>, i.e. the stored list as-is.</summary>
+    private static Friendlist WithoutBlockedAdmins(Friendlist friendList, AdminSnapshot admins) =>
+        friendList == null ? null : FriendlistProjection.WithoutBlockedAdmins(friendList, admins.Tags);
 
     private async Task PushFriendsWithPicturesToPlayer(string battleTag)
     {
@@ -667,9 +693,9 @@ public class WebsiteBackendHub(
 
     /// <summary>Reads the receiver's effective blocks: a dormant block of an admin sender doesn't count.
     /// Admin status is otherwise no privilege (BlockAllRequests still applies).</summary>
-    private async Task CanMakeFriendRequest(Friendlist storedFriendList, FriendRequest req)
+    private async Task CanMakeFriendRequest(Friendlist storedFriendList, AdminSnapshot admins, FriendRequest req)
     {
-        var friendList = await WithoutBlockedAdmins(storedFriendList);
+        var friendList = WithoutBlockedAdmins(storedFriendList, admins);
         if (friendList.BlockAllRequests || friendList.BlockedBattleTags.Contains(req.Sender))
         {
             throw new ValidationException("This player is not accepting friend requests.");
@@ -685,7 +711,7 @@ public class WebsiteBackendHub(
         }
     }
 
-    /// <summary>Takes the effective view (<see cref="WithoutBlockedAdmins(Friendlist)"/>), never the stored list.</summary>
+    /// <summary>Takes the effective view (<see cref="WithoutBlockedAdmins(Friendlist, AdminSnapshot)"/>), never the stored list.</summary>
     private static void CanBlock(Friendlist friendList, string battleTag)
     {
         if (friendList.BlockedBattleTags.Contains(battleTag))

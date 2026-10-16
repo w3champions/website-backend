@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Serilog;
 
@@ -30,10 +28,7 @@ public sealed class AdminRoster(IdentityServiceClient identityClient, TimeProvid
     private readonly object _refreshGate = new();
     private Task _refresh = Task.CompletedTask; // guarded by _refreshGate
     private int _consecutiveFailures; // only touched by the single in-flight refresh
-    private volatile Snapshot _snapshot = new(
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase),
-        DateTimeOffset.MinValue,
-        Loaded: false);
+    private volatile Snapshot _snapshot = new(AdminSnapshot.Empty, DateTimeOffset.MinValue, Loaded: false);
 
     /// <summary>Test seam: the current (or last) background refresh. Never faults.</summary>
     internal Task PendingRefresh
@@ -41,18 +36,18 @@ public sealed class AdminRoster(IdentityServiceClient identityClient, TimeProvid
         get { lock (_refreshGate) return _refresh; }
     }
 
-    public async Task<IReadOnlySet<string>> GetAdminBattleTags()
+    public async Task<AdminSnapshot> GetSnapshotAsync()
     {
         var snapshot = _snapshot;
         if (time.GetUtcNow() < snapshot.NextRefreshAt)
         {
-            return snapshot.Tags;
+            return snapshot.Admins;
         }
 
         var refresh = StartRefreshIfIdle();
         if (snapshot.Loaded)
         {
-            return snapshot.Tags;
+            return snapshot.Admins;
         }
 
         try
@@ -64,17 +59,7 @@ public sealed class AdminRoster(IdentityServiceClient identityClient, TimeProvid
             // Fail open below; the load keeps running and is picked up once it lands.
         }
 
-        return _snapshot.Tags;
-    }
-
-    public async Task<bool> IsAdmin(string battleTag)
-    {
-        if (string.IsNullOrWhiteSpace(battleTag))
-        {
-            return false;
-        }
-
-        return (await GetAdminBattleTags()).Contains(battleTag);
+        return _snapshot.Admins;
     }
 
     private Task StartRefreshIfIdle()
@@ -99,10 +84,7 @@ public sealed class AdminRoster(IdentityServiceClient identityClient, TimeProvid
         try
         {
             var tags = await identityClient.GetAdminBattleTags();
-            var set = new HashSet<string>(
-                tags.Where(t => !string.IsNullOrWhiteSpace(t)),
-                StringComparer.OrdinalIgnoreCase);
-            _snapshot = new Snapshot(set, time.GetUtcNow() + Ttl, Loaded: true);
+            _snapshot = new Snapshot(new AdminSnapshot(tags ?? []), time.GetUtcNow() + Ttl, Loaded: true);
             _consecutiveFailures = 0;
         }
         catch (Exception ex)
@@ -110,10 +92,10 @@ public sealed class AdminRoster(IdentityServiceClient identityClient, TimeProvid
             // An outage would otherwise log a warning every FailureRetryDelay: warn once, then debug.
             var level = _consecutiveFailures++ == 0 ? Serilog.Events.LogEventLevel.Warning : Serilog.Events.LogEventLevel.Debug;
             Log.Write(level, ex, "Admin roster refresh failed ({Failures} in a row); serving {Count} cached admins",
-                _consecutiveFailures, current.Tags.Count);
+                _consecutiveFailures, current.Admins.Tags.Count);
             _snapshot = current with { NextRefreshAt = time.GetUtcNow() + FailureRetryDelay };
         }
     }
 
-    private sealed record Snapshot(IReadOnlySet<string> Tags, DateTimeOffset NextRefreshAt, bool Loaded);
+    private sealed record Snapshot(AdminSnapshot Admins, DateTimeOffset NextRefreshAt, bool Loaded);
 }

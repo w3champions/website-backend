@@ -24,7 +24,7 @@ public class ChatRelationshipsController(IFriendRepository friendRepository, IAd
     public async Task<IActionResult> GetChatRelationships(string battleTag)
     {
         Friendlist friendlist = await _friendRepository.LoadFriendlistOrNull(battleTag);
-        var blocked = FriendlistProjection.WithoutBlockedAdmins(friendlist, await _adminRoster.GetAdminBattleTags())?.BlockedBattleTags;
+        var blocked = FriendlistProjection.WithoutBlockedAdmins(friendlist, (await _adminRoster.GetSnapshotAsync()).Tags)?.BlockedBattleTags;
         return Ok(new ChatRelationshipsDto(
             friendlist?.Friends ?? [],
             blocked ?? []));

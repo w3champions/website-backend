@@ -25,8 +25,8 @@ public class ChatRelationshipsControllerTests
         _friendRepository = new Mock<IFriendRepository>();
         _adminRoster = new Mock<IAdminRoster>();
         _adminRoster
-            .Setup(r => r.GetAdminBattleTags())
-            .ReturnsAsync(new HashSet<string>(System.StringComparer.OrdinalIgnoreCase));
+            .Setup(r => r.GetSnapshotAsync())
+            .ReturnsAsync(AdminSnapshot.Empty);
         _controller = new ChatRelationshipsController(_friendRepository.Object, _adminRoster.Object);
     }
 
@@ -40,8 +40,8 @@ public class ChatRelationshipsControllerTests
         };
         _friendRepository.Setup(r => r.LoadFriendlistOrNull("peter#123")).ReturnsAsync(friendlist);
         _adminRoster
-            .Setup(r => r.GetAdminBattleTags())
-            .ReturnsAsync(new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "admin#2" });
+            .Setup(r => r.GetSnapshotAsync())
+            .ReturnsAsync(new AdminSnapshot(["admin#2"]));
 
         var result = await _controller.GetChatRelationships("peter#123");
 
