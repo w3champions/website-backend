@@ -280,4 +280,37 @@ public class MatchupTests
         Assert.AreEqual(partyId, firstPlayer.AtTeamId);
         Assert.IsNull(secondPlayer.AtTeamId);
     }
+
+    [Test]
+    public void MapOnGoingMatch_FloGameId()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeStartedEvent();
+        fakeEvent.match.floGameId = 12345;
+
+        var ongoing = OnGoingMatchup.Create(fakeEvent);
+
+        Assert.AreEqual(12345, ongoing.FloMatchId);
+        Assert.AreEqual(12345, ongoing.FloGameId);
+    }
+
+    [Test]
+    public void MapOnGoingMatch_FloGameId_Null()
+    {
+        var fakeEvent = TestDtoHelper.CreateFakeStartedEvent();
+        fakeEvent.match.floGameId = null;
+
+        var ongoing = OnGoingMatchup.Create(fakeEvent);
+
+        Assert.IsNull(ongoing.FloMatchId);
+        Assert.IsNull(ongoing.FloGameId);
+    }
+
+    [Test]
+    public void OnGoingMatch_FloGameId_JsonSerialization()
+    {
+        var ongoing = new OnGoingMatchup { FloMatchId = 12345 };
+        var json = System.Text.Json.JsonSerializer.Serialize(ongoing);
+
+        StringAssert.Contains("\"floGameId\":12345", json);
+    }
 }
