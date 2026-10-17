@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
 using Prometheus;
@@ -243,6 +244,8 @@ builder.Services.AddInterceptedTransient<PlayerService>();
 builder.Services.AddInterceptedTransient<MatchService>();
 builder.Services.AddInterceptedTransient<IdentityServiceClient>();
 builder.Services.AddInterceptedTransient<IBattleTagResolver, BattleTagResolver>();
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddInterceptedSingleton<IAdminRoster, AdminRoster>();
 builder.Services.AddInterceptedTransient<ILogsRepository, LogsRepository>();
 
 // Friends
@@ -284,6 +287,13 @@ if (!W3C.Domain.AdminSecretProvider.IsConfigured)
 {
     Log.Warning("{Variable} not set: calls to update/replay/matchmaking services carry no admin secret and will be rejected",
         W3C.Domain.AdminSecretProvider.VariableName);
+}
+
+// Outbound secret for identification-service's admin roster. No fallback: unset means no header is sent.
+if (!W3C.Domain.IdentificationInternalSecretProvider.IsConfigured)
+{
+    Log.Warning("{Variable} not set: admin roster cannot be loaded; admins can be blocked (fail open)",
+        W3C.Domain.IdentificationInternalSecretProvider.VariableName);
 }
 
 // Common services (audit logging, optimistic concurrency)

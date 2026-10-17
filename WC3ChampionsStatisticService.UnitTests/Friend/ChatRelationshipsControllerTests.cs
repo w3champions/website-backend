@@ -7,6 +7,7 @@ using Moq;
 using NUnit.Framework;
 using W3ChampionsStatisticService.Friends;
 using W3ChampionsStatisticService.Ports;
+using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
 namespace WC3ChampionsStatisticService.Tests.Friend;
@@ -15,13 +16,40 @@ namespace WC3ChampionsStatisticService.Tests.Friend;
 public class ChatRelationshipsControllerTests
 {
     private Mock<IFriendRepository> _friendRepository;
+    private Mock<IAdminRoster> _adminRoster;
     private ChatRelationshipsController _controller;
 
     [SetUp]
     public void SetUp()
     {
         _friendRepository = new Mock<IFriendRepository>();
-        _controller = new ChatRelationshipsController(_friendRepository.Object);
+        _adminRoster = new Mock<IAdminRoster>();
+        _adminRoster
+            .Setup(r => r.GetSnapshotAsync())
+            .ReturnsAsync(AdminSnapshot.Empty);
+        _controller = new ChatRelationshipsController(_friendRepository.Object, _adminRoster.Object);
+    }
+
+    [Test]
+    public async Task BlockedAdmins_AreOmittedFromBlocked_FriendsUntouched()
+    {
+        var friendlist = new Friendlist("peter#123")
+        {
+            Friends = new List<string> { "Admin#2", "A#1" },
+            BlockedBattleTags = new List<string> { "Admin#2", "C#3" }
+        };
+        _friendRepository.Setup(r => r.LoadFriendlistOrNull("peter#123")).ReturnsAsync(friendlist);
+        _adminRoster
+            .Setup(r => r.GetSnapshotAsync())
+            .ReturnsAsync(new AdminSnapshot(["admin#2"]));
+
+        var result = await _controller.GetChatRelationships("peter#123");
+
+        var dto = ((OkObjectResult)result).Value as ChatRelationshipsDto;
+        Assert.That(dto, Is.Not.Null);
+        Assert.That(dto.Blocked, Is.EqualTo(new List<string> { "C#3" }));
+        Assert.That(dto.Friends, Is.EqualTo(new List<string> { "Admin#2", "A#1" }));
+        Assert.That(friendlist.BlockedBattleTags, Is.EqualTo(new List<string> { "Admin#2", "C#3" }));
     }
 
     [Test]

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
@@ -52,14 +53,26 @@ public class FriendCommandHandler(
         }
     }
 
+    /// <summary>The single point a friendship is created; called once per side.</summary>
     public virtual async Task<Friendlist> AddFriend(Friendlist friendlist, string battleTag)
+    {
+        Befriend(friendlist, battleTag);
+        await UpsertFriendList(friendlist);
+        return friendlist;
+    }
+
+    /// <summary>In-memory part of <see cref="AddFriend"/>: adds <paramref name="battleTag"/> to Friends and
+    /// drops this list's own stored block of that player, so Friends and BlockedBattleTags stay disjoint
+    /// (accepting a friendship ends your block of that person). Sending a request never calls this.
+    /// The block is matched case-insensitively (as everywhere on block lists), so no legacy case variant
+    /// survives to take effect again later.</summary>
+    internal static void Befriend(Friendlist friendlist, string battleTag)
     {
         if (!friendlist.Friends.Contains(battleTag))
         {
             friendlist.Friends.Add(battleTag);
         }
-        await UpsertFriendList(friendlist);
-        return friendlist;
+        friendlist.BlockedBattleTags?.RemoveAll(blocked => string.Equals(blocked, battleTag, StringComparison.OrdinalIgnoreCase));
     }
 
     public virtual async Task<Friendlist> RemoveFriend(Friendlist friendlist, string battleTag)

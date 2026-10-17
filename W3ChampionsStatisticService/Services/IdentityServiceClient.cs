@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -113,6 +114,30 @@ public class IdentityServiceClient(IHttpClientFactory httpClientFactory)
         var content = await response.Content.ReadAsStringAsync();
         var body = JsonConvert.DeserializeObject<UserExistsResponse>(content);
         return body?.Id;
+    }
+
+    /// <summary>
+    /// Fetches the BattleTags of every admin from identification-service, authenticated with the
+    /// internal secret header (no user JWT). Throws HttpRequestException on a non-200 response and
+    /// InvalidDataException when the body or its battleTags is missing.
+    /// </summary>
+    public virtual async Task<List<string>> GetAdminBattleTags()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{IdentityApiUrl}/api/permissions/admin-battletags");
+        IdentificationInternalSecretProvider.AddTo(request.Headers);
+        using var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new HttpRequestException($"Unexpected status from identification-service admin roster: {response.StatusCode}", null, response.StatusCode);
+        }
+        var body = JsonConvert.DeserializeObject<AdminBattleTagsResponse>(content);
+        return body?.BattleTags ?? throw new InvalidDataException("identification-service admin roster response has no battleTags");
+    }
+
+    private class AdminBattleTagsResponse
+    {
+        public List<string> BattleTags { get; set; }
     }
 
     private class UserExistsResponse
