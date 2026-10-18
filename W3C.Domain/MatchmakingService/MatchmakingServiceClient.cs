@@ -905,6 +905,9 @@ public class CommercialLicenseRestrictions
 
     /// <summary>"none", "custom" or "all". A string, not an enum, so an unknown future value from matchmaking cannot break the list.</summary>
     public string FloTv { get; set; }
+
+    /// <summary>Optional. Null is omitted (NullValueHandling.Ignore) and matchmaking keeps the stored value; matchmaking always sends it on read.</summary>
+    public bool? IncludeSmurfs { get; set; }
 }
 
 public class CommercialLicenseTaggedPlayerDto
