@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using W3C.Domain;
 using W3C.Domain.UpdateService;
+using W3C.Domain.UpdateService.Contracts;
 using WC3ChampionsStatisticService.Tests.Admin;
 
 namespace WC3ChampionsStatisticService.Tests.UpdateService;
@@ -25,8 +26,33 @@ public class UpdateServiceClientTests
         {
             [HttpClientNames.Update] = regular,
             [HttpClientNames.UpdateUpload] = upload,
+            [HttpClientNames.UpdateMapMetadataRecompute] = new StubMatchmakingHandler(HttpStatusCode.OK, "{}"),
         });
         return (new UpdateServiceClient(factory), regular, upload);
+    }
+
+    [Test]
+    public async Task MapMetadataRecompute_UsesItsOwnLongTimeoutClient_AndTheContractBody()
+    {
+        var recompute = new StubMatchmakingHandler(HttpStatusCode.OK, "{\"dryRun\":true,\"results\":[]}");
+        var regular = new StubMatchmakingHandler();
+        var factory = new PerNameFactory(new()
+        {
+            [HttpClientNames.Update] = regular,
+            [HttpClientNames.UpdateUpload] = new StubMatchmakingHandler(),
+            [HttpClientNames.UpdateMapMetadataRecompute] = recompute,
+        });
+
+        var response = await new UpdateServiceClient(factory).RecomputeMapMetadata(
+            new MapMetadataRecomputeRequest { DryRun = true, Paths = ["W3Champions/x.w3x"] });
+
+        Assert.That(response.DryRun, Is.True);
+        Assert.That(regular.Requests, Is.Empty);
+        Assert.That(recompute.Requests, Has.Count.EqualTo(1));
+        Assert.That(recompute.Requests[0].Method, Is.EqualTo(HttpMethod.Post));
+        Assert.That(recompute.Requests[0].RequestUri!.AbsolutePath, Is.EqualTo("/api/content/maps/metadata/recompute"));
+        Assert.That(recompute.Requests[0].Headers.GetValues(AdminSecretProvider.HeaderName), Is.EqualTo(new[] { AdminSecretTestEnvironment.Secret }));
+        Assert.That(recompute.RequestBodies[0], Is.EqualTo("{\"dryRun\":true,\"paths\":[\"W3Champions/x.w3x\"]}"));
     }
 
     [Test]
