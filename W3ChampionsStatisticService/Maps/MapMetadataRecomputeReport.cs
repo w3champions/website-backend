@@ -104,4 +104,6 @@ public static class MapMetadataRecomputeProblems
     public const string MmPatchFailed = "mm_patch_failed";
     public const string MmNoResult = "mm_no_result";
     public const string MmNotMatched = "mm_not_matched";
+    /// <summary>Matchmaking matched a different number of maps for this sha1 than the snapshot holds.</summary>
+    public const string MmMatchCountMismatch = "mm_match_count_mismatch";
 }

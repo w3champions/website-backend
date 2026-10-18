@@ -9,8 +9,8 @@ namespace W3C.Domain.MatchmakingService;
 public partial class MatchmakingServiceClient
 {
     /// <summary>
-    /// Every matchmaking map (GET /maps is not paginated). Unlike <see cref="GetMaps"/>, a failed or empty
-    /// answer throws instead of being read as "no maps", for callers that must not act on a partial list.
+    /// Every matchmaking map (GET /maps is not paginated). Unlike <see cref="GetMaps"/>, a failed, empty or
+    /// incomplete (items != total) answer throws, for callers that must not act on a partial list.
     /// </summary>
     public async Task<GetMapsResponse> GetAllMapsOrThrow()
     {
@@ -21,9 +21,14 @@ public partial class MatchmakingServiceClient
         }
 
         var result = await GetResult<GetMapsResponse>(response);
-        if (result?.Items == null)
+        if (result?.Items == null || result.Items.Length == 0)
         {
             throw new HttpRequestException("Matchmaking returned no map list", null, HttpStatusCode.BadGateway);
+        }
+
+        if (result.Items.Length != result.Total)
+        {
+            throw new HttpRequestException($"Matchmaking returned {result.Items.Length} of {result.Total} maps", null, HttpStatusCode.BadGateway);
         }
 
         return result;

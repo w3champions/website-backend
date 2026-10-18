@@ -98,10 +98,17 @@ internal static class RecomputeJson
         };
 
     /// <summary>Answers each requested update with the given matched/modified counts.</summary>
-    public static Func<string, HttpResponseMessage> MmPatchEcho(int matched = 1, int modified = 1) => body =>
+    public static Func<string, HttpResponseMessage> MmPatchEcho(int matched = 1, int modified = 1) =>
+        MmPatchEcho(_ => matched, modified);
+
+    /// <summary>Answers each requested update with a per-sha1 matched count (as many maps as carry it), modified = matched.</summary>
+    public static Func<string, HttpResponseMessage> MmPatchEcho(Func<string, int> matchedFor) => MmPatchEcho(matchedFor, null);
+
+    private static Func<string, HttpResponseMessage> MmPatchEcho(Func<string, int> matchedFor, int? modified) => body =>
     {
         var updates = (JArray)JObject.Parse(body)["updates"]!;
-        var results = updates.Select(u => new { sha1 = (string)u["sha1"], matched, modified });
+        var results = updates.Select(u => (string)u["sha1"])
+            .Select(sha1 => new { sha1, matched = matchedFor(sha1), modified = modified ?? matchedFor(sha1) });
         return RoutingHandler.Json(HttpStatusCode.OK, JsonConvert.SerializeObject(new { results }));
     };
 }

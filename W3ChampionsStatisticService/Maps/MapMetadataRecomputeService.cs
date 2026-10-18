@@ -240,7 +240,7 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             .Where(s => s != null)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var candidates = new List<MapMetadataRecomputeMapReport>();
+        var clean = new List<MapMetadataRecomputeMapReport>();
         foreach (var row in rows.Where(r => r.Problem == null))
         {
             if (blockedSha1s.Contains(row.Sha1))
@@ -249,15 +249,13 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
                 continue;
             }
 
-            if (row.Status == MapMetadataRecomputeStatus.Changed || row.MmChecksum != row.NewChecksum || row.MmCrc32 != row.NewCrc32)
-            {
-                candidates.Add(row);
-            }
+            clean.Add(row);
         }
 
         var patches = new List<GameMapMetadataUpdate>();
-        foreach (var group in candidates.GroupBy(r => r.Sha1.ToLowerInvariant()))
+        foreach (var group in clean.GroupBy(r => r.Sha1))
         {
+            // Consistency is checked over every map of the sha1, also those already in sync: the patch hits them all.
             var values = group.Select(r => (Checksum: r.NewChecksum!.Value, Crc32: r.NewCrc32!.Value)).Distinct().ToList();
             if (values.Count > 1)
             {
@@ -265,7 +263,12 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
                 continue;
             }
 
-            foreach (var row in group) row.MmPatchNeeded = true;
+            var needing = group
+                .Where(r => r.Status == MapMetadataRecomputeStatus.Changed || r.MmChecksum != r.NewChecksum || r.MmCrc32 != r.NewCrc32)
+                .ToList();
+            if (needing.Count == 0) continue;
+
+            foreach (var row in needing) row.MmPatchNeeded = true;
             patches.Add(new GameMapMetadataUpdate { Sha1 = group.Key, Checksum = values[0].Checksum, Crc32 = values[0].Crc32 });
         }
 
@@ -301,13 +304,17 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             }
 
             allResults.AddRange(response.Results);
-            ApplyMatchmakingResults(chunkRows, response.Results);
+            ApplyMatchmakingResults(chunkRows, response.Results, rows);
         }
 
         return (allResults, sent, errors.Count == 0 ? null : string.Join("; ", errors));
     }
 
-    private static void ApplyMatchmakingResults(List<MapMetadataRecomputeMapReport> rows, List<GameMapMetadataUpdateResult> results)
+    /// <param name="snapshot">Every row: the maps carrying a sha1 there are the ones matchmaking should match.</param>
+    private static void ApplyMatchmakingResults(
+        List<MapMetadataRecomputeMapReport> rows,
+        List<GameMapMetadataUpdateResult> results,
+        List<MapMetadataRecomputeMapReport> snapshot)
     {
         var bySha1 = results
             .Where(r => r.Sha1 != null)
@@ -324,8 +331,11 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
 
             row.MmMatched = result.Matched;
             row.MmModified = result.Modified;
-            row.MmPatched = result.Matched > 0;
-            if (!row.MmPatched) row.Problem = MapMetadataRecomputeProblems.MmNotMatched;
+            // Matchmaking matches gameMap.sha1 exactly, as do these (lowercase-only) rows.
+            var expected = snapshot.Count(r => string.Equals(r.Sha1, row.Sha1, StringComparison.Ordinal));
+            row.MmPatched = result.Matched == expected;
+            if (result.Matched == 0) row.Problem = MapMetadataRecomputeProblems.MmNotMatched;
+            else if (!row.MmPatched) row.Problem = MapMetadataRecomputeProblems.MmMatchCountMismatch;
         }
     }
 

@@ -88,7 +88,7 @@ public class MapMetadataRecomputeServiceTests
                 Result("W3Champions/shared2.w3x", Sha1A, "changed", 1, 10, 2, 20),
                 Result("W3Champions/sync.w3x", Sha1B, "unchanged", 5, 5, 6, 6),
                 Result("W3Champions/other.w3x", Sha1C, "changed", 7, 70, 8, 80)))
-            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho(sha1 => sha1 == Sha1A ? 2 : 1));
 
         var report = await CreateService(handler).Recompute(dryRun: false);
 
@@ -105,7 +105,8 @@ public class MapMetadataRecomputeServiceTests
         Assert.That((long)a["crc32"]!, Is.EqualTo(20));
         Assert.That(((JObject)a).Properties().Select(p => p.Name), Is.EquivalentTo(new[] { "sha1", "checksum", "crc32" }));
 
-        Assert.That(report.Maps.Where(m => m.MmMapId != 3).All(m => m.MmPatched && m.MmMatched == 1 && m.MmModified == 1), Is.True);
+        Assert.That(report.Maps.Where(m => m.MmMapId is 1 or 2).All(m => m.MmPatched && m.MmMatched == 2 && m.MmModified == 2), Is.True);
+        Assert.That(report.Maps.Single(m => m.MmMapId == 4).MmMatched, Is.EqualTo(1));
         var inSync = report.Maps.Single(m => m.MmMapId == 3);
         Assert.That(inSync.MmPatchNeeded, Is.False);
         Assert.That(inSync.MmPatched, Is.False);
@@ -386,7 +387,7 @@ public class MapMetadataRecomputeServiceTests
     [Test]
     public async Task ScopedRun_PatchesASharedSha1OnceWhenEveryMapCarryingItIsRecomputed()
     {
-        var handler = SharedSha1Pair("changed");
+        var handler = SharedSha1Pair("changed").On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho(sha1 => sha1 == Sha1A ? 2 : 1));
 
         var report = await CreateService(handler).Recompute(dryRun: false, mapIds: [1]);
 
@@ -408,6 +409,51 @@ public class MapMetadataRecomputeServiceTests
         Assert.That(report.Maps.Single(m => m.MmMapId == 2).Problem, Is.EqualTo(MapMetadataRecomputeProblems.Sha1HasFailedResult));
         var updates = (JArray)JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath).Single())["updates"]!;
         Assert.That(updates.Select(u => (string)u["sha1"]), Is.EqualTo(new[] { Sha1B }));
+    }
+
+    [Test]
+    public async Task SharedSha1_ConflictingValuesAreDetectedEvenWhenOneMapIsAlreadyInSync()
+    {
+        var handler = new RoutingHandler()
+            .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(
+                MmMap(1, "In sync", @"maps\W3Champions\p1.w3x", Sha1A, 5, 6),
+                MmMap(2, "Stale", @"maps\W3Champions\p2.w3x", Sha1A, 1, 2)))
+            .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK, Recompute(false,
+                Result("W3Champions/p1.w3x", Sha1A, "unchanged", 5, 5, 6, 6),
+                Result("W3Champions/p2.w3x", Sha1A, "changed", 1, 3, 2, 4)))
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+
+        var report = await CreateService(handler).Recompute(dryRun: false);
+
+        Assert.That(report.Maps.Select(m => m.Problem), Is.All.EqualTo(MapMetadataRecomputeProblems.ConflictingValues));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
+    }
+
+    [Test]
+    public async Task MatchmakingMatchingFewerMapsThanCarryTheSha1_IsReported()
+    {
+        var handler = SharedSha1Pair("changed")
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho(matched: 1, modified: 1));
+
+        var report = await CreateService(handler).Recompute(dryRun: false);
+
+        var shared = report.Maps.Where(m => m.Sha1 == Sha1A).ToList();
+        Assert.That(shared, Has.Count.EqualTo(2));
+        Assert.That(shared.Select(m => m.Problem), Is.All.EqualTo(MapMetadataRecomputeProblems.MmMatchCountMismatch));
+        Assert.That(report.Maps.Single(m => m.MmMapId == 3).Problem, Is.Null);
+        Assert.That(report.Summary.Problems, Is.EqualTo(2));
+    }
+
+    [TestCase("{\"total\":0,\"items\":[]}")]
+    [TestCase("{\"total\":2,\"items\":[{\"id\":1,\"name\":\"a\"}]}")]
+    public void AnEmptyOrIncompleteMatchmakingMapList_FailsBeforeCallingUpdateService(string mapsJson)
+    {
+        var handler = NomadChanged(dryRun: false).On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, mapsJson);
+
+        var ex = Assert.ThrowsAsync<MapMetadataRecomputeUpstreamException>(() => CreateService(handler).Recompute(dryRun: false));
+
+        Assert.That(ex!.Service, Is.EqualTo(MapMetadataRecomputeUpstreamException.Matchmaking));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.UpdateRecomputePath), Is.Empty);
     }
 
     [Test]
