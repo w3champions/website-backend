@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
 using System.Threading.Tasks;
+using Serilog;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
@@ -16,10 +19,14 @@ namespace W3ChampionsStatisticService.Maps;
 [Trace]
 public class MapsController(
     MatchmakingServiceClient matchmakingServiceClient,
-    UpdateServiceClient updateServiceClient) : ControllerBase
+    UpdateServiceClient updateServiceClient,
+    MapMetadataRecomputeService mapMetadataRecomputeService) : ControllerBase
 {
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly UpdateServiceClient _updateServiceClient = updateServiceClient;
+    private readonly MapMetadataRecomputeService _mapMetadataRecomputeService = mapMetadataRecomputeService;
+
+    public const string RecomputeUpstreamError = "A sibling service failed; matchmaking was not patched. Rerun a dry run to see the current state.";
 
     [HttpGet("")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
@@ -117,6 +124,43 @@ public class MapsController(
         catch (HttpRequestException ex)
         {
             return StatusCode((int)ex.StatusCode, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Recomputes every matchmaking map's checksum/crc32 on update-service and, unless it is a dry run (the
+    /// default, also for an empty body), patches the corrected values into matchmaking. 502 when a sibling
+    /// service fails: before any patch when matchmaking's map list or any update-service chunk fails (matchmaking
+    /// is only patched from complete data; a rerun finishes the job), with the full report when only a
+    /// matchmaking patch call failed.
+    /// </summary>
+    [HttpPost("metadata/recompute")]
+    [BearerHasPermissionFilter(Permission = EPermission.Maps)]
+    public async Task<IActionResult> RecomputeMapMetadata([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] MapMetadataRecomputeBody body)
+    {
+        if (body?.MapIds is { Length: 0 })
+        {
+            return BadRequest(new { error = "mapIds must not be empty; omit it to process every map" });
+        }
+
+        try
+        {
+            var report = await _mapMetadataRecomputeService.Recompute(body?.DryRun ?? true, body?.MapIds);
+            return report.MmPatchError == null ? Ok(report) : StatusCode(StatusCodes.Status502BadGateway, report);
+        }
+        catch (MapMetadataRecomputeUpstreamException ex)
+        {
+            Log.Error(ex, "Map metadata recompute failed at {Service} (status {UpstreamStatus}): {Message}", ex.Service, ex.UpstreamStatus, ex.Message);
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                error = RecomputeUpstreamError,
+                service = ex.Service,
+                upstreamStatus = ex.UpstreamStatus,
+                reason = ex.Reason,
+                pathsCompleted = ex.PathsCompleted,
+                pathsTotal = ex.PathsTotal,
+                matchmakingPatched = false,
+            });
         }
     }
 

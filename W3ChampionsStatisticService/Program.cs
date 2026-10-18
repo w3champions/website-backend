@@ -231,6 +231,7 @@ builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimitin
 
 builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.Maps.MapMetadataRecomputeService>();
 builder.Services.AddInterceptedSingleton<ReplayServiceClient>();
 builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportRepository>();
 builder.Services.AddSingleton<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportTicketStore>();

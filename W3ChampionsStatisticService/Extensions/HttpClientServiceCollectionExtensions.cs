@@ -38,6 +38,8 @@ public static class HttpClientServiceCollectionExtensions
         // Map uploads stream the admin's multipart body (up to the 128 MiB request limit) straight
         // through, so the timeout covers their upload time too: 128 MiB in 15 min needs ~1.2 Mbit/s.
         [HttpClientNames.UpdateUpload] = TimeSpan.FromMinutes(15),
+        // One admin-triggered request per chunk of 50 map files that update-service re-reads and parses synchronously.
+        [HttpClientNames.UpdateMapMetadataRecompute] = TimeSpan.FromMinutes(5),
         // Replay downloads: observed p99.9 of the proxying endpoint is ~16 s.
         [HttpClientNames.Replay] = TimeSpan.FromSeconds(30),
         [HttpClientNames.War3Info] = TimeSpan.FromSeconds(15),

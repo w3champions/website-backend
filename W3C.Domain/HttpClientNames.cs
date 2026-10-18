@@ -15,6 +15,8 @@ public static class HttpClientNames
     public const string Update = "update";
     /// <summary>Map uploads: streams the admin's request body through, so it includes their upload time.</summary>
     public const string UpdateUpload = "update-upload";
+    /// <summary>Map metadata recompute: update-service re-reads and parses every requested map file.</summary>
+    public const string UpdateMapMetadataRecompute = "update-map-metadata-recompute";
     public const string Replay = "replay";
     public const string War3Info = "war3info";
 }

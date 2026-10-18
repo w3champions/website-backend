@@ -25,6 +25,7 @@ public class HttpClientServiceCollectionExtensionsTests
     [TestCase(HttpClientNames.Chat, 10)]
     [TestCase(HttpClientNames.Update, 15)]
     [TestCase(HttpClientNames.UpdateUpload, 15 * 60)]
+    [TestCase(HttpClientNames.UpdateMapMetadataRecompute, 5 * 60)]
     [TestCase(HttpClientNames.Replay, 30)]
     [TestCase(HttpClientNames.War3Info, 15)]
     public void NamedClient_HasExplicitTimeout(string name, int expectedSeconds)

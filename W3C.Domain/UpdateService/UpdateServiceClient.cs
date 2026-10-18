@@ -2,6 +2,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using W3C.Domain.UpdateService.Contracts;
 using W3C.Domain.Tracing;
@@ -15,6 +16,7 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
 
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientNames.Update);
     private readonly HttpClient _uploadClient = httpClientFactory.CreateClient(HttpClientNames.UpdateUpload);
+    private readonly HttpClient _recomputeClient = httpClientFactory.CreateClient(HttpClientNames.UpdateMapMetadataRecompute);
 
     public async Task<MapFileData[]> GetMapFiles(int mapId)
     {
@@ -81,6 +83,55 @@ public class UpdateServiceClient(IHttpClientFactory httpClientFactory)
         if (!response.IsSuccessStatusCode)
         {
             throw new HttpRequestException($"Unable to delete map file with id {fileId}", null, response.StatusCode);
+        }
+    }
+
+    /// <summary>
+    /// Recomputes the stored checksum/crc32 of the given map files. With <c>DryRun = false</c> update-service
+    /// writes its own MapData rows. Throws <see cref="HttpRequestException"/> (with the upstream status when
+    /// there was one) for any non-success or unreadable answer.
+    /// </summary>
+    public async Task<MapMetadataRecomputeResponse> RecomputeMapMetadata(MapMetadataRecomputeRequest recomputeRequest)
+    {
+        var url = $"{UpdateServiceUrl}/api/content/maps/metadata/recompute";
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        AdminSecretProvider.AddTo(request.Headers);
+        request.Content = new StringContent(JsonConvert.SerializeObject(recomputeRequest), Encoding.UTF8, "application/json");
+        var response = await _recomputeClient.SendAsync(request);
+
+        var content = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"Map metadata recompute failed: {ReadErrorMessage(content) ?? response.ReasonPhrase}", null, response.StatusCode);
+        }
+
+        MapMetadataRecomputeResponse result = null;
+        try
+        {
+            result = JsonConvert.DeserializeObject<MapMetadataRecomputeResponse>(content);
+        }
+        catch (JsonException)
+        {
+            // Reported below as an unreadable answer.
+        }
+
+        if (result?.Results == null)
+        {
+            throw new HttpRequestException("Map metadata recompute returned no results", null, HttpStatusCode.BadGateway);
+        }
+
+        return result;
+    }
+
+    private static string ReadErrorMessage(string content)
+    {
+        try
+        {
+            return JsonConvert.DeserializeObject<ErrorData>(content)?.message;
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 }
