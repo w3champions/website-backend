@@ -50,6 +50,11 @@ public class MapMetadataRecomputeSummary
 public class MapMetadataRecomputeMapReport
 {
     public int MmMapId { get; set; }
+    /// <summary>
+    /// Not requested in <c>mapIds</c>, but carries the sha1 of a requested map. The patch is keyed by sha1 and
+    /// hits this map too, so it is recomputed and checked as well.
+    /// </summary>
+    public bool IncludedForSharedSha1 { get; set; }
     public string Name { get; set; }
     /// <summary>Matchmaking gameMap.path.</summary>
     public string Path { get; set; }

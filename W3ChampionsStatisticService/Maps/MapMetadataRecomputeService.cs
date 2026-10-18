@@ -34,22 +34,15 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
     public async Task<MapMetadataRecomputeReport> Recompute(bool dryRun, IReadOnlyCollection<int> mapIds = null)
     {
         var maps = await CallUpstream(MapMetadataRecomputeUpstreamException.Matchmaking, _matchmakingServiceClient.GetAllMapsOrThrow);
-        var selected = mapIds == null ? maps.Items : maps.Items.Where(m => mapIds.Contains(m.Id)).ToArray();
+        var rows = SelectRows(maps.Items, mapIds);
         var unknownMapIds = mapIds == null ? [] : mapIds.Distinct().Where(id => maps.Items.All(m => m.Id != id)).ToList();
-        var rows = selected.Select(ToRow).ToList();
 
         // Same comparer as the join, so paths differing only in case are sent (and joined) once.
         var paths = rows.Select(r => r.UpdateServicePath).Where(p => p != null).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var results = await RecomputeInChunks(paths, dryRun);
 
         var unmatchedResults = JoinResults(rows, results);
-        // The matchmaking patch is keyed by sha1, so a sha1 is blocked when any result for it failed, and when any
-        // matchmaking map carrying it is not cleanly recomputed (e.g. its own result has no or another sha1).
-        var failedSha1s = results.Where(HasFailed).Select(r => r.Sha1)
-            .Concat(rows.Where(r => r.Problem != null).Select(r => r.Sha1))
-            .Where(s => s != null)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var patches = PlanMatchmakingPatches(rows, failedSha1s);
+        var patches = PlanMatchmakingPatches(rows, results);
 
         string mmPatchError = null;
         List<GameMapMetadataUpdateResult> mmResults = [];
@@ -132,6 +125,28 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
         return results;
     }
 
+    /// <summary>
+    /// Every map, or the requested ones plus every map that shares a sha1 with them: the matchmaking patch is
+    /// keyed by sha1 and hits those maps too, so they must be recomputed and checked as well.
+    /// </summary>
+    private static List<MapMetadataRecomputeMapReport> SelectRows(MapContract[] maps, IReadOnlyCollection<int> mapIds)
+    {
+        if (mapIds == null) return maps.Select(ToRow).ToList();
+
+        var requested = maps.Where(m => mapIds.Contains(m.Id)).ToList();
+        var requestedSha1s = requested.Select(m => m.GameMap?.Sha1).Where(s => s != null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var siblings = maps.Where(m => !mapIds.Contains(m.Id) && m.GameMap?.Sha1 != null && requestedSha1s.Contains(m.GameMap.Sha1));
+
+        return requested.Select(ToRow)
+            .Concat(siblings.Select(m =>
+            {
+                var row = ToRow(m);
+                row.IncludedForSharedSha1 = true;
+                return row;
+            }))
+            .ToList();
+    }
+
     private static MapMetadataRecomputeMapReport ToRow(MapContract map)
     {
         var row = new MapMetadataRecomputeMapReport
@@ -204,26 +219,33 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
     /// that differ from the recomputed ones (e.g. a rerun after update-service was fixed but matchmaking was
     /// not). One update per sha1.
     /// </summary>
-    private static List<GameMapMetadataUpdate> PlanMatchmakingPatches(List<MapMetadataRecomputeMapReport> rows, HashSet<string> failedSha1s)
+    private static List<GameMapMetadataUpdate> PlanMatchmakingPatches(List<MapMetadataRecomputeMapReport> rows, List<MapMetadataRecomputeResult> results)
     {
-        var candidates = new List<MapMetadataRecomputeMapReport>();
         foreach (var row in rows.Where(r => r.Problem == null))
         {
             if (!IsLowercaseSha1(row.Sha1))
             {
                 row.Problem = MapMetadataRecomputeProblems.MmSha1NotLowercaseHex;
-                continue;
             }
-
-            if (failedSha1s.Contains(row.Sha1))
-            {
-                row.Problem = MapMetadataRecomputeProblems.Sha1HasFailedResult;
-                continue;
-            }
-
-            if (!IsUint32(row.NewChecksum) || !IsUint32(row.NewCrc32))
+            else if (!IsUint32(row.NewChecksum) || !IsUint32(row.NewCrc32))
             {
                 row.Problem = MapMetadataRecomputeProblems.InvalidNewValues;
+            }
+        }
+
+        // The patch is keyed by sha1 and hits every map carrying it, so a sha1 is blocked as a whole when any
+        // result for it failed or any map carrying it has a problem (including a result with no or another sha1).
+        var blockedSha1s = results.Where(HasFailed).Select(r => r.Sha1)
+            .Concat(rows.Where(r => r.Problem != null).Select(r => r.Sha1))
+            .Where(s => s != null)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var candidates = new List<MapMetadataRecomputeMapReport>();
+        foreach (var row in rows.Where(r => r.Problem == null))
+        {
+            if (blockedSha1s.Contains(row.Sha1))
+            {
+                row.Problem = MapMetadataRecomputeProblems.Sha1HasFailedResult;
                 continue;
             }
 

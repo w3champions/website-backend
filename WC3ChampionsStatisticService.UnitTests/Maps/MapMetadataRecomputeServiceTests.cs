@@ -345,6 +345,71 @@ public class MapMetadataRecomputeServiceTests
         Assert.That(report.Summary.MmMaps, Is.EqualTo(1));
     }
 
+    private static RoutingHandler SharedSha1Pair(string secondStatus, long? firstChecksum = 3) => new RoutingHandler()
+        .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(
+            MmMap(1, "Selected", @"maps\W3Champions\p1.w3x", Sha1A, 1, 2),
+            MmMap(2, "Same file", @"maps\W3Champions\p2.w3x", Sha1A, 1, 2),
+            MmMap(3, "Unrelated", @"maps\W3Champions\p3.w3x", Sha1B, 1, 2)))
+        .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, body =>
+        {
+            var all = new[]
+            {
+                Result("W3Champions/p1.w3x", Sha1A, "changed", 1, firstChecksum, 2, 4),
+                secondStatus == "missing_file"
+                    ? Result("W3Champions/p2.w3x", null, "missing_file", error: "Map file not found")
+                    : Result("W3Champions/p2.w3x", Sha1A, secondStatus, 1, 3, 2, 4),
+                Result("W3Champions/p3.w3x", Sha1B, "changed", 1, 3, 2, 4),
+            };
+            var requested = JObject.Parse(body)["paths"]!.Select(p => (string)p).ToHashSet();
+            var results = all.Where(r => requested.Contains((string)JObject.FromObject(r)["path"])).ToArray();
+            return RoutingHandler.Json(HttpStatusCode.OK, Recompute(false, results));
+        })
+        .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+
+    [Test]
+    public async Task ScopedRun_AlsoChecksMapsSharingASelectedSha1_AndAFailureThereBlocksThePatch()
+    {
+        var handler = SharedSha1Pair("missing_file");
+
+        var report = await CreateService(handler).Recompute(dryRun: false, mapIds: [1]);
+
+        var paths = JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.UpdateRecomputePath).Single())["paths"]!.ToObject<string[]>();
+        Assert.That(paths, Is.EquivalentTo(new[] { "W3Champions/p1.w3x", "W3Champions/p2.w3x" }), "the unrelated map stays out");
+        var sibling = report.Maps.Single(m => m.MmMapId == 2);
+        Assert.That(sibling.IncludedForSharedSha1, Is.True);
+        Assert.That(sibling.Problem, Is.EqualTo("missing_file"));
+        Assert.That(report.Maps.Single(m => m.MmMapId == 1).IncludedForSharedSha1, Is.False);
+        Assert.That(report.Maps.Single(m => m.MmMapId == 1).Problem, Is.EqualTo(MapMetadataRecomputeProblems.Sha1HasFailedResult));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
+    }
+
+    [Test]
+    public async Task ScopedRun_PatchesASharedSha1OnceWhenEveryMapCarryingItIsRecomputed()
+    {
+        var handler = SharedSha1Pair("changed");
+
+        var report = await CreateService(handler).Recompute(dryRun: false, mapIds: [1]);
+
+        var updates = (JArray)JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath).Single())["updates"]!;
+        Assert.That(updates.Select(u => (string)u["sha1"]), Is.EqualTo(new[] { Sha1A }));
+        Assert.That(report.Maps.Select(m => m.MmMapId), Is.EquivalentTo(new[] { 1, 2 }));
+        Assert.That(report.Maps.All(m => m.MmPatched), Is.True);
+    }
+
+    [TestCase(null)]
+    [TestCase(-1L)]
+    public async Task SharedSha1_ARowWithInvalidNewValuesBlocksTheWholeSha1(long? invalidChecksum)
+    {
+        var handler = SharedSha1Pair("changed", firstChecksum: invalidChecksum);
+
+        var report = await CreateService(handler).Recompute(dryRun: false);
+
+        Assert.That(report.Maps.Single(m => m.MmMapId == 1).Problem, Is.EqualTo(MapMetadataRecomputeProblems.InvalidNewValues));
+        Assert.That(report.Maps.Single(m => m.MmMapId == 2).Problem, Is.EqualTo(MapMetadataRecomputeProblems.Sha1HasFailedResult));
+        var updates = (JArray)JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath).Single())["updates"]!;
+        Assert.That(updates.Select(u => (string)u["sha1"]), Is.EqualTo(new[] { Sha1B }));
+    }
+
     [Test]
     public async Task WithoutMapIds_EveryMapIsProcessedAndNoIdIsUnknown()
     {
