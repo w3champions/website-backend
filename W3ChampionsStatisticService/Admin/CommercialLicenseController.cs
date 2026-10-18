@@ -58,6 +58,7 @@ public class CommercialLicenseController(MatchmakingServiceClient matchmakingSer
                 AsPlayer = restrictions.AsPlayer.Value,
                 AsObserver = restrictions.AsObserver.Value,
                 FloTv = restrictions.FloTv,
+                IncludeSmurfs = restrictions.IncludeSmurfs,
             },
             CommercialEventNotice = body.CommercialEventNotice,
         };
@@ -99,4 +100,7 @@ public class CommercialLicenseRestrictionsBody
     public bool? AsPlayer { get; set; }
     public bool? AsObserver { get; set; }
     public string FloTv { get; set; }
+
+    /// <summary>Optional. Null is not forwarded; matchmaking keeps the stored value.</summary>
+    public bool? IncludeSmurfs { get; set; }
 }

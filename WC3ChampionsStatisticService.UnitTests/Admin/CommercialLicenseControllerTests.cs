@@ -23,7 +23,7 @@ namespace WC3ChampionsStatisticService.Tests.Admin;
 public class CommercialLicenseControllerTests
 {
     private const string TaggedPlayerJson =
-        "{\"battleTag\":\"Grubby#1234\",\"note\":\"n\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#1\",\"updatedAt\":\"2026-10-08T10:00:00.000Z\",\"restrictions\":{\"asPlayer\":false,\"asObserver\":false,\"floTv\":\"none\"}}";
+        "{\"battleTag\":\"Grubby#1234\",\"note\":\"n\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#1\",\"updatedAt\":\"2026-10-08T10:00:00.000Z\",\"restrictions\":{\"asPlayer\":false,\"asObserver\":false,\"floTv\":\"none\",\"includeSmurfs\":false}}";
 
     [Test]
     public void AllEndpointsRequireCommercialLicensePermission()
@@ -128,6 +128,42 @@ public class CommercialLicenseControllerTests
         Assert.That(restrictions!["asPlayer"]!.Value<bool>(), Is.True);
         Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.True);
         Assert.That(restrictions["floTv"]!.Value<string>(), Is.EqualTo("all"));
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerForwardsIncludeSmurfs()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = true, AsObserver = false, FloTv = "none", IncludeSmurfs = true },
+        }, "Admin#1");
+
+        var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions!["includeSmurfs"]!.Value<bool>(), Is.True);
+    }
+
+    [Test]
+    public async Task PutTaggedPlayerDoesNotForwardIncludeSmurfsWhenAbsent()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+        var controller = CreateController(handler);
+
+        var result = await controller.PutTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerBody
+        {
+            Note = "n",
+            Notify = true,
+            Restrictions = new CommercialLicenseRestrictionsBody { AsPlayer = true, AsObserver = false, FloTv = "none" },
+        }, "Admin#1");
+
+        Assert.That(result, Is.InstanceOf<OkObjectResult>());
+        var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions, Is.Not.Null.And.InstanceOf<JObject>(), "restrictions must be forwarded as an object");
+        Assert.That(((JObject)restrictions!).ContainsKey("includeSmurfs"), Is.False);
     }
 
     [Test]
@@ -245,6 +281,7 @@ public class CommercialLicenseControllerTests
             Assert.That(restrictions!["asPlayer"]!.Value<bool>(), Is.False);
             Assert.That(restrictions["asObserver"]!.Value<bool>(), Is.False);
             Assert.That(restrictions["floTv"]!.Value<string>(), Is.EqualTo("none"));
+            Assert.That(restrictions["includeSmurfs"]!.Value<bool>(), Is.False);
         }
     }
 

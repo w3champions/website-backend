@@ -12,7 +12,7 @@ namespace WC3ChampionsStatisticService.Tests.Admin;
 public class MatchmakingServiceClientCommercialLicenseTests
 {
     private const string TaggedPlayerJson =
-        "{\"battleTag\":\"Grubby#1234\",\"note\":\"Streams for money\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#2\",\"updatedAt\":\"2026-10-08T11:00:00.000Z\",\"restrictions\":{\"asPlayer\":true,\"asObserver\":false,\"floTv\":\"custom\"}}";
+        "{\"battleTag\":\"Grubby#1234\",\"note\":\"Streams for money\",\"notify\":true,\"createdBy\":\"Admin#1\",\"createdAt\":\"2026-10-08T10:00:00.000Z\",\"updatedBy\":\"Admin#2\",\"updatedAt\":\"2026-10-08T11:00:00.000Z\",\"restrictions\":{\"asPlayer\":true,\"asObserver\":false,\"floTv\":\"custom\",\"includeSmurfs\":true}}";
 
     private static readonly string ExpectedAdminSecret = AdminSecretTestEnvironment.Secret;
 
@@ -42,6 +42,7 @@ public class MatchmakingServiceClientCommercialLicenseTests
         Assert.That(players[0].Restrictions.AsPlayer, Is.True);
         Assert.That(players[0].Restrictions.AsObserver, Is.False);
         Assert.That(players[0].Restrictions.FloTv, Is.EqualTo("custom"));
+        Assert.That(players[0].Restrictions.IncludeSmurfs, Is.True);
     }
 
     [Test]
@@ -117,6 +118,42 @@ public class MatchmakingServiceClientCommercialLicenseTests
 
         // NullValueHandling.Ignore: matchmaking sees no key and keeps the stored restrictions.
         Assert.That(JObject.Parse(handler.RequestBodies[0]).ContainsKey("restrictions"), Is.False);
+    }
+
+    [Test]
+    public async Task UpsertSendsIncludeSmurfsWhenSet()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        await CreateClient(handler).UpsertCommercialLicenseTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        {
+            note = "n",
+            notify = false,
+            actingBattleTag = "Admin#1",
+            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, AsObserver = false, FloTv = "none", IncludeSmurfs = true },
+        });
+
+        var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions!["includeSmurfs"]!.Value<bool>(), Is.True);
+    }
+
+    [Test]
+    public async Task UpsertOmitsIncludeSmurfsWhenNull()
+    {
+        var handler = new StubMatchmakingHandler(HttpStatusCode.OK, TaggedPlayerJson);
+
+        await CreateClient(handler).UpsertCommercialLicenseTaggedPlayer("Grubby#1234", new CommercialLicenseTaggedPlayerRequest
+        {
+            note = "n",
+            notify = false,
+            actingBattleTag = "Admin#1",
+            Restrictions = new CommercialLicenseRestrictions { AsPlayer = true, AsObserver = false, FloTv = "none" },
+        });
+
+        // NullValueHandling.Ignore: matchmaking sees no key and keeps the stored value.
+        var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions, Is.Not.Null.And.InstanceOf<JObject>(), "restrictions must be forwarded as an object");
+        Assert.That(((JObject)restrictions!).ContainsKey("includeSmurfs"), Is.False);
     }
 
     [Test]
