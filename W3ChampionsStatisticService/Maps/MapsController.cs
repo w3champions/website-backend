@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
 using System.Threading.Tasks;
+using Serilog;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3C.Domain.UpdateService;
@@ -24,6 +25,8 @@ public class MapsController(
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly UpdateServiceClient _updateServiceClient = updateServiceClient;
     private readonly MapMetadataRecomputeService _mapMetadataRecomputeService = mapMetadataRecomputeService;
+
+    public const string RecomputeUpstreamError = "A sibling service failed; matchmaking was not patched. Rerun a dry run to see the current state.";
 
     [HttpGet("")]
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
@@ -135,16 +138,22 @@ public class MapsController(
     [BearerHasPermissionFilter(Permission = EPermission.Maps)]
     public async Task<IActionResult> RecomputeMapMetadata([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] MapMetadataRecomputeBody body)
     {
+        if (body?.MapIds is { Length: 0 })
+        {
+            return BadRequest(new { error = "mapIds must not be empty; omit it to process every map" });
+        }
+
         try
         {
-            var report = await _mapMetadataRecomputeService.Recompute(body?.DryRun ?? true);
+            var report = await _mapMetadataRecomputeService.Recompute(body?.DryRun ?? true, body?.MapIds);
             return report.MmPatchError == null ? Ok(report) : StatusCode(StatusCodes.Status502BadGateway, report);
         }
         catch (MapMetadataRecomputeUpstreamException ex)
         {
+            Log.Error(ex, "Map metadata recompute failed at {Service} (status {UpstreamStatus}): {Message}", ex.Service, ex.UpstreamStatus, ex.Message);
             return StatusCode(StatusCodes.Status502BadGateway, new
             {
-                error = ex.Message,
+                error = RecomputeUpstreamError,
                 service = ex.Service,
                 upstreamStatus = ex.UpstreamStatus,
                 pathsCompleted = ex.PathsCompleted,

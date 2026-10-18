@@ -317,6 +317,74 @@ public class MapMetadataRecomputeServiceTests
         Assert.That(report.Maps.Single(m => m.Problem != null).Problem, Is.EqualTo(MapMetadataRecomputeProblems.MmPatchFailed));
         Assert.That(report.MmPatchError, Is.Not.Null);
         Assert.That(report.Maps, Has.Count.EqualTo(count));
+        Assert.That(report.Summary.MmPatchSent, Is.EqualTo(count), "sha1s of the failed chunk were sent too");
+        Assert.That(report.Summary.MmMatched, Is.EqualTo(2000));
+    }
+
+    [Test]
+    public async Task MapIds_LimitTheRunToThoseMaps_AndUnknownIdsAreReported()
+    {
+        var handler = new RoutingHandler()
+            .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(
+                MmMap(5241, "Nomad Isles", NomadGamePath, Sha1A, 111, 222),
+                MmMap(8, "Other", @"maps\W3Champions\other.w3x", Sha1B, 1, 2)))
+            .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK,
+                Recompute(false, Result(NomadFilePath, Sha1A, "changed", 111, 333, 222, 444)))
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+
+        var report = await CreateService(handler).Recompute(dryRun: false, mapIds: [5241, 999]);
+
+        var paths = JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.UpdateRecomputePath).Single())["paths"]!.ToObject<string[]>();
+        Assert.That(paths, Is.EqualTo(new[] { NomadFilePath }));
+        Assert.That(report.Maps.Select(m => m.MmMapId), Is.EqualTo(new[] { 5241 }));
+        Assert.That(report.Maps.Single().MmPatched, Is.True);
+        Assert.That(report.UnknownMapIds, Is.EqualTo(new[] { 999 }));
+        Assert.That(report.Summary.UnknownMapIds, Is.EqualTo(1));
+        Assert.That(report.Summary.MmMaps, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task WithoutMapIds_EveryMapIsProcessedAndNoIdIsUnknown()
+    {
+        var report = await CreateService(NomadChanged(dryRun: true)).Recompute(dryRun: true, mapIds: null);
+
+        Assert.That(report.Maps, Has.Count.EqualTo(1));
+        Assert.That(report.UnknownMapIds, Is.Empty);
+    }
+
+    [Test]
+    public async Task MatchmakingSha1ThatIsNotLowercaseHex_IsReportedAndNotPatched()
+    {
+        var handler = new RoutingHandler()
+            .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(MmMap(7, "Nomad Isles", NomadGamePath, Sha1A.ToUpperInvariant(), 111, 222)))
+            .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK,
+                Recompute(false, Result(NomadFilePath, Sha1A, "changed", 111, 333, 222, 444)))
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+
+        var report = await CreateService(handler).Recompute(dryRun: false);
+
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
+        var row = report.Maps.Single();
+        Assert.That(row.Problem, Is.EqualTo(MapMetadataRecomputeProblems.MmSha1NotLowercaseHex));
+        Assert.That(row.NewChecksum, Is.EqualTo(333), "the recomputed values are still shown");
+    }
+
+    [Test]
+    public async Task PathsDifferingOnlyInCase_AreSentOnce()
+    {
+        var handler = new RoutingHandler()
+            .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(
+                MmMap(1, "a", @"maps\W3Champions\X.w3x", Sha1A, 1, 2),
+                MmMap(2, "b", @"maps\W3Champions\x.w3x", Sha1A, 1, 2)))
+            .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK,
+                Recompute(true, Result("W3Champions/X.w3x", Sha1A, "changed", 1, 3, 2, 4)));
+
+        var report = await CreateService(handler).Recompute(dryRun: true);
+
+        var paths = JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.UpdateRecomputePath).Single())["paths"]!.ToObject<string[]>();
+        Assert.That(paths, Is.EqualTo(new[] { "W3Champions/X.w3x" }));
+        Assert.That(report.Summary.PathsSent, Is.EqualTo(1));
+        Assert.That(report.Maps.All(m => m.Problem == null), Is.True);
     }
 
     [Test]

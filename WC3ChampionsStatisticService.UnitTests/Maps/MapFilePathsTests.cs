@@ -19,6 +19,8 @@ public class MapFilePathsTests
     [TestCase(@"maps\W3Champions\Temporary\x.w3x", "W3Champions/Temporary/x.w3x")]
     [TestCase(@"maps\maps\x.w3x", "maps/x.w3x")]
     [TestCase(@"W3Champions\x.w3x", "W3Champions/x.w3x")]
+    [TestCase(@"\maps\W3Champions\x.w3x", "W3Champions/x.w3x")]
+    [TestCase("/W3Champions/x.w3x", "W3Champions/x.w3x")]
     public void DropsExactlyOneLeadingMapsSegmentAndKeepsCase(string gamePath, string expected)
     {
         Assert.That(MapFilePaths.ToUpdateServiceFilePath(gamePath), Is.EqualTo(expected));
@@ -28,6 +30,7 @@ public class MapFilePathsTests
     [TestCase("")]
     [TestCase("   ")]
     [TestCase(@"maps\")]
+    [TestCase(@"\")]
     public void EmptyPathsHaveNoFilePath(string gamePath)
     {
         Assert.That(MapFilePaths.ToUpdateServiceFilePath(gamePath), Is.Null);

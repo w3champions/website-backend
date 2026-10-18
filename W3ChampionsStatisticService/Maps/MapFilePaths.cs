@@ -11,12 +11,12 @@ public static class MapFilePaths
 {
     private const string GamePathPrefix = "maps/";
 
-    /// <summary>Drops exactly one leading "maps" segment and uses forward slashes. Case is kept. Null when there is no file name.</summary>
+    /// <summary>Drops leading slashes and exactly one leading "maps" segment and uses forward slashes. Case is kept. Null when there is no file name.</summary>
     public static string ToUpdateServiceFilePath(string gameMapPath)
     {
         if (string.IsNullOrWhiteSpace(gameMapPath)) return null;
 
-        var path = gameMapPath.Trim().Replace('\\', '/');
+        var path = gameMapPath.Trim().Replace('\\', '/').TrimStart('/');
         if (path.StartsWith(GamePathPrefix, StringComparison.OrdinalIgnoreCase))
         {
             path = path[GamePathPrefix.Length..];

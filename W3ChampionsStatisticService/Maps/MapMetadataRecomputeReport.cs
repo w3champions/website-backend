@@ -7,6 +7,12 @@ public class MapMetadataRecomputeBody
 {
     /// <summary>Defaults to true: only an explicit <c>false</c> writes anything.</summary>
     public bool DryRun { get; set; } = true;
+
+    /// <summary>
+    /// Optional: only these matchmaking map ids are processed (ids matchmaking does not know are reported).
+    /// Omitted means every map; an empty list is rejected.
+    /// </summary>
+    public int[] MapIds { get; set; }
 }
 
 public class MapMetadataRecomputeReport
@@ -17,6 +23,8 @@ public class MapMetadataRecomputeReport
     public List<MapMetadataRecomputeMapReport> Maps { get; set; } = [];
     /// <summary>Update-service results that no matchmaking map could be joined to.</summary>
     public List<MapMetadataRecomputeResult> UnmatchedResults { get; set; } = [];
+    /// <summary>Requested map ids matchmaking does not know.</summary>
+    public List<int> UnknownMapIds { get; set; } = [];
     /// <summary>Set when a matchmaking patch call failed; update-service has already written its rows.</summary>
     public string MmPatchError { get; set; }
 }
@@ -30,9 +38,10 @@ public class MapMetadataRecomputeSummary
     /// <summary>Maps whose row has a <see cref="MapMetadataRecomputeMapReport.Problem"/>.</summary>
     public int Problems { get; set; }
     public int UnmatchedResults { get; set; }
+    public int UnknownMapIds { get; set; }
     /// <summary>Distinct sha1s matchmaking needs (or, in a dry run, would need) patched.</summary>
     public int MmPatchNeeded { get; set; }
-    /// <summary>Distinct sha1s sent to matchmaking.</summary>
+    /// <summary>Distinct sha1s sent to matchmaking, including those of a chunk whose call failed.</summary>
     public int MmPatchSent { get; set; }
     public int MmMatched { get; set; }
     public int MmModified { get; set; }
@@ -80,6 +89,8 @@ public static class MapMetadataRecomputeProblems
     /// <summary>A recomputed checksum/crc32 is missing or not an unsigned 32-bit integer, which matchmaking rejects.</summary>
     public const string InvalidNewValues = "invalid_new_values";
     public const string ConflictingValues = "conflicting_values";
+    /// <summary>Matchmaking's gameMap.sha1 is not 40 lowercase hex characters, so it cannot be patched by sha1.</summary>
+    public const string MmSha1NotLowercaseHex = "mm_sha1_not_lowercase_hex";
     public const string MmPatchFailed = "mm_patch_failed";
     public const string MmNoResult = "mm_no_result";
     public const string MmNotMatched = "mm_not_matched";

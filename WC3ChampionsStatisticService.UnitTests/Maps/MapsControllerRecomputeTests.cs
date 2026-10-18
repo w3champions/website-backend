@@ -88,6 +88,29 @@ public class MapsControllerRecomputeTests
     }
 
     [Test]
+    public async Task MapIds_AreForwarded()
+    {
+        var handler = Healthy();
+
+        var result = await CreateController(handler).RecomputeMapMetadata(new MapMetadataRecomputeBody { DryRun = true, MapIds = [7, 999] });
+
+        var report = (MapMetadataRecomputeReport)((OkObjectResult)result).Value!;
+        Assert.That(report.Maps.Select(m => m.MmMapId), Is.EqualTo(new[] { 7 }));
+        Assert.That(report.UnknownMapIds, Is.EqualTo(new[] { 999 }));
+    }
+
+    [Test]
+    public async Task EmptyMapIds_IsABadRequestInsteadOfAFullRun()
+    {
+        var handler = Healthy();
+
+        var result = await CreateController(handler).RecomputeMapMetadata(new MapMetadataRecomputeBody { DryRun = true, MapIds = [] });
+
+        Assert.That(result, Is.InstanceOf<BadRequestObjectResult>());
+        Assert.That(handler.Calls, Is.Empty);
+    }
+
+    [Test]
     public async Task UpdateServiceFailure_Is502WithoutPatchingMatchmaking()
     {
         var handler = Healthy().On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.Unauthorized, "{\"message\":\"no\"}");
@@ -97,6 +120,8 @@ public class MapsControllerRecomputeTests
         var objectResult = (ObjectResult)result;
         Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes502));
         var body = JObject.FromObject(objectResult.Value!);
+        Assert.That((string)body["error"], Is.EqualTo(MapsController.RecomputeUpstreamError), "no upstream detail leaks into the answer");
+        Assert.That((bool)body["matchmakingPatched"]!, Is.False);
         Assert.That((string)body["service"], Is.EqualTo(MapMetadataRecomputeUpstreamException.UpdateService));
         Assert.That((int?)body["upstreamStatus"], Is.EqualTo(401));
         Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);

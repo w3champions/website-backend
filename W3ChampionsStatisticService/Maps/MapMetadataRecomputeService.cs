@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Serilog;
@@ -29,12 +30,16 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
     /// <summary>Matchmaking accepts 1..2000 updates per request.</summary>
     public const int MatchmakingUpdatesPerRequest = 2000;
 
-    public async Task<MapMetadataRecomputeReport> Recompute(bool dryRun)
+    /// <param name="mapIds">Only these matchmaking maps; null means every map.</param>
+    public async Task<MapMetadataRecomputeReport> Recompute(bool dryRun, IReadOnlyCollection<int> mapIds = null)
     {
         var maps = await CallUpstream(MapMetadataRecomputeUpstreamException.Matchmaking, _matchmakingServiceClient.GetAllMapsOrThrow);
-        var rows = maps.Items.Select(ToRow).ToList();
+        var selected = mapIds == null ? maps.Items : maps.Items.Where(m => mapIds.Contains(m.Id)).ToArray();
+        var unknownMapIds = mapIds == null ? [] : mapIds.Distinct().Where(id => maps.Items.All(m => m.Id != id)).ToList();
+        var rows = selected.Select(ToRow).ToList();
 
-        var paths = rows.Select(r => r.UpdateServicePath).Where(p => p != null).Distinct(StringComparer.Ordinal).ToList();
+        // Same comparer as the join, so paths differing only in case are sent (and joined) once.
+        var paths = rows.Select(r => r.UpdateServicePath).Where(p => p != null).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var results = await RecomputeInChunks(paths, dryRun);
 
         var unmatchedResults = JoinResults(rows, results);
@@ -42,9 +47,10 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
 
         string mmPatchError = null;
         List<GameMapMetadataUpdateResult> mmResults = [];
+        var mmSent = 0;
         if (!dryRun && patches.Count > 0)
         {
-            (mmResults, mmPatchError) = await ApplyMatchmakingPatches(rows, patches);
+            (mmResults, mmSent, mmPatchError) = await ApplyMatchmakingPatches(rows, patches);
         }
 
         var report = new MapMetadataRecomputeReport
@@ -52,6 +58,7 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             DryRun = dryRun,
             Maps = rows,
             UnmatchedResults = unmatchedResults,
+            UnknownMapIds = unknownMapIds,
             MmPatchError = mmPatchError,
             Summary = new MapMetadataRecomputeSummary
             {
@@ -61,8 +68,9 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
                 Changed = rows.Count(r => r.Status == MapMetadataRecomputeStatus.Changed),
                 Problems = rows.Count(r => r.Problem != null),
                 UnmatchedResults = unmatchedResults.Count,
+                UnknownMapIds = unknownMapIds.Count,
                 MmPatchNeeded = patches.Count,
-                MmPatchSent = mmResults.Count,
+                MmPatchSent = mmSent,
                 MmMatched = mmResults.Sum(r => r.Matched),
                 MmModified = mmResults.Sum(r => r.Modified),
             },
@@ -183,6 +191,12 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
         var candidates = new List<MapMetadataRecomputeMapReport>();
         foreach (var row in rows.Where(r => r.Problem == null))
         {
+            if (!IsLowercaseSha1(row.Sha1))
+            {
+                row.Problem = MapMetadataRecomputeProblems.MmSha1NotLowercaseHex;
+                continue;
+            }
+
             if (!IsUint32(row.NewChecksum) || !IsUint32(row.NewCrc32))
             {
                 row.Problem = MapMetadataRecomputeProblems.InvalidNewValues;
@@ -213,16 +227,18 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
     }
 
     /// <summary>Sends the patches in chunks; a failed chunk marks only its own rows and the others still go out.</summary>
-    private async Task<(List<GameMapMetadataUpdateResult> Results, string Error)> ApplyMatchmakingPatches(
+    private async Task<(List<GameMapMetadataUpdateResult> Results, int Sent, string Error)> ApplyMatchmakingPatches(
         List<MapMetadataRecomputeMapReport> rows,
         List<GameMapMetadataUpdate> patches)
     {
         var rowsBySha1 = rows.Where(r => r.MmPatchNeeded).ToLookup(r => r.Sha1, StringComparer.OrdinalIgnoreCase);
         var allResults = new List<GameMapMetadataUpdateResult>();
         var errors = new List<string>();
+        var sent = 0;
 
         foreach (var chunk in patches.Chunk(MatchmakingUpdatesPerRequest))
         {
+            sent += chunk.Length;
             var chunkRows = chunk.SelectMany(p => rowsBySha1[p.Sha1]).ToList();
             GameMapMetadataUpdateResponse response;
             try
@@ -242,7 +258,7 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             ApplyMatchmakingResults(chunkRows, response.Results);
         }
 
-        return (allResults, errors.Count == 0 ? null : string.Join("; ", errors));
+        return (allResults, sent, errors.Count == 0 ? null : string.Join("; ", errors));
     }
 
     private static void ApplyMatchmakingResults(List<MapMetadataRecomputeMapReport> rows, List<GameMapMetadataUpdateResult> results)
@@ -266,6 +282,10 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             if (!row.MmPatched) row.Problem = MapMetadataRecomputeProblems.MmNotMatched;
         }
     }
+
+    private static readonly Regex LowercaseSha1 = new("^[0-9a-f]{40}$", RegexOptions.Compiled);
+
+    private static bool IsLowercaseSha1(string sha1) => sha1 != null && LowercaseSha1.IsMatch(sha1);
 
     private static bool IsUint32(long? value) => value is >= 0 and <= uint.MaxValue;
 
