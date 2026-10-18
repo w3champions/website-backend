@@ -91,8 +91,8 @@ public static class MapMetadataRecomputeProblems
     public const string ConflictingValues = "conflicting_values";
     /// <summary>Matchmaking's gameMap.sha1 is not 40 lowercase hex characters, so it cannot be patched by sha1.</summary>
     /// <summary>
-    /// Another path with the same sha1 failed on update-service. The matchmaking patch is keyed by sha1 and would
-    /// also hit that map, so nothing with this sha1 is patched.
+    /// Another result or matchmaking map with the same sha1 failed. The matchmaking patch is keyed by sha1 and
+    /// would also hit that map, so nothing with this sha1 is patched.
     /// </summary>
     public const string Sha1HasFailedResult = "sha1_has_failed_result";
     public const string MmSha1NotLowercaseHex = "mm_sha1_not_lowercase_hex";

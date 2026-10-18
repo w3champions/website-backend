@@ -43,7 +43,12 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
         var results = await RecomputeInChunks(paths, dryRun);
 
         var unmatchedResults = JoinResults(rows, results);
-        var failedSha1s = results.Where(HasFailed).Select(r => r.Sha1).Where(s => s != null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // The matchmaking patch is keyed by sha1, so a sha1 is blocked when any result for it failed, and when any
+        // matchmaking map carrying it is not cleanly recomputed (e.g. its own result has no or another sha1).
+        var failedSha1s = results.Where(HasFailed).Select(r => r.Sha1)
+            .Concat(rows.Where(r => r.Problem != null).Select(r => r.Sha1))
+            .Where(s => s != null)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var patches = PlanMatchmakingPatches(rows, failedSha1s);
 
         string mmPatchError = null;
@@ -98,10 +103,11 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             {
                 var response = await CallUpstream(MapMetadataRecomputeUpstreamException.UpdateService,
                     () => _updateServiceClient.RecomputeMapMetadata(new MapMetadataRecomputeRequest { DryRun = dryRun, Paths = [.. chunk] }));
+                // A missing dryRun (null) is a mismatch too: only an explicit echo of the requested mode is trusted.
                 if (response.DryRun != dryRun)
                 {
                     throw new MapMetadataRecomputeUpstreamException(MapMetadataRecomputeUpstreamException.UpdateService, null,
-                        $"update-service answered dryRun={response.DryRun} for a dryRun={dryRun} request", null)
+                        $"update-service answered dryRun={response.DryRun?.ToString() ?? "(missing)"} for a dryRun={dryRun} request", null)
                     {
                         Reason = MapMetadataRecomputeUpstreamException.DryRunMismatch,
                     };

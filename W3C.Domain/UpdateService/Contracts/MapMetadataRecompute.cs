@@ -16,7 +16,8 @@ public class MapMetadataRecomputeRequest
 
 public class MapMetadataRecomputeResponse
 {
-    public bool DryRun { get; set; }
+    /// <summary>Nullable so a missing value is told apart from <c>false</c> and rejected by the caller.</summary>
+    public bool? DryRun { get; set; }
     public List<MapMetadataRecomputeResult> Results { get; set; }
 }
 

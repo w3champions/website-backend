@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using W3C.Domain;
@@ -415,6 +416,39 @@ public class MapMetadataRecomputeServiceTests
         Assert.That(report.UnmatchedResults, Is.Empty);
         var updates = (JArray)JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath).Single())["updates"]!;
         Assert.That(updates.Select(u => (string)u["sha1"]), Is.EqualTo(new[] { Sha1B }), "a patch by sha1 would also hit the failing map");
+    }
+
+    [TestCase(null, "missing_file")]
+    [TestCase("e", "changed")]
+    public async Task SharedSha1_AFailedRowBlocksItsMatchmakingSha1_EvenWhenItsResultHasAnotherOrNoSha1(string resultSha1Char, string status)
+    {
+        var resultSha1 = resultSha1Char == null ? null : new string(resultSha1Char[0], 40);
+        var handler = new RoutingHandler()
+            .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(
+                MmMap(1, "Fails", @"maps\W3Champions\p1.w3x", Sha1A, 1, 2),
+                MmMap(2, "Succeeds", @"maps\W3Champions\p2.w3x", Sha1A, 1, 2)))
+            .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK, Recompute(false,
+                Result("W3Champions/p1.w3x", resultSha1, status, 1, 3, 2, 4),
+                Result("W3Champions/p2.w3x", Sha1A, "changed", 1, 3, 2, 4)))
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+
+        var report = await CreateService(handler).Recompute(dryRun: false);
+
+        Assert.That(report.Maps.Single(m => m.MmMapId == 1).Problem, Is.Not.Null);
+        Assert.That(report.Maps.Single(m => m.MmMapId == 2).Problem, Is.EqualTo(MapMetadataRecomputeProblems.Sha1HasFailedResult));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
+    }
+
+    [Test]
+    public void UpdateServiceOmittingDryRun_AbortsBeforeAnyMatchmakingPatch()
+    {
+        var handler = NomadChanged(dryRun: false).On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK,
+            JsonConvert.SerializeObject(new { results = new[] { Result(NomadFilePath, Sha1A, "changed", 111, 333, 222, 444) } }));
+
+        var ex = Assert.ThrowsAsync<MapMetadataRecomputeUpstreamException>(() => CreateService(handler).Recompute(dryRun: false));
+
+        Assert.That(ex!.Reason, Is.EqualTo(MapMetadataRecomputeUpstreamException.DryRunMismatch));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
     }
 
     [TestCase(false, true)]
