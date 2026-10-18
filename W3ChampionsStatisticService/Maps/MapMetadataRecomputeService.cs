@@ -43,7 +43,8 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
         var results = await RecomputeInChunks(paths, dryRun);
 
         var unmatchedResults = JoinResults(rows, results);
-        var patches = PlanMatchmakingPatches(rows);
+        var failedSha1s = results.Where(HasFailed).Select(r => r.Sha1).Where(s => s != null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var patches = PlanMatchmakingPatches(rows, failedSha1s);
 
         string mmPatchError = null;
         List<GameMapMetadataUpdateResult> mmResults = [];
@@ -97,6 +98,15 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             {
                 var response = await CallUpstream(MapMetadataRecomputeUpstreamException.UpdateService,
                     () => _updateServiceClient.RecomputeMapMetadata(new MapMetadataRecomputeRequest { DryRun = dryRun, Paths = [.. chunk] }));
+                if (response.DryRun != dryRun)
+                {
+                    throw new MapMetadataRecomputeUpstreamException(MapMetadataRecomputeUpstreamException.UpdateService, null,
+                        $"update-service answered dryRun={response.DryRun} for a dryRun={dryRun} request", null)
+                    {
+                        Reason = MapMetadataRecomputeUpstreamException.DryRunMismatch,
+                    };
+                }
+
                 results.AddRange(response.Results);
                 completed += chunk.Length;
             }
@@ -108,6 +118,7 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
                 {
                     PathsCompleted = completed,
                     PathsTotal = paths.Count,
+                    Reason = ex.Reason,
                 };
             }
         }
@@ -136,17 +147,18 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
         return row;
     }
 
-    /// <summary>Joins each row to a result by sha1 (preferring the same path), else by path. Returns the results no row took.</summary>
+    /// <summary>
+    /// Joins each row to the result for its own path; only when there is none, to a result with the same sha1
+    /// from another path. Returns the results no row took.
+    /// </summary>
     private static List<MapMetadataRecomputeResult> JoinResults(List<MapMetadataRecomputeMapReport> rows, List<MapMetadataRecomputeResult> results)
     {
         var used = new HashSet<MapMetadataRecomputeResult>(ReferenceEqualityComparer.Instance);
 
         foreach (var row in rows.Where(r => r.UpdateServicePath != null))
         {
-            var bySha1 = row.Sha1 == null ? [] : results.Where(r => SameSha1(r.Sha1, row.Sha1)).ToList();
-            var result = bySha1.FirstOrDefault(r => SamePath(r.Path, row.UpdateServicePath))
-                ?? bySha1.FirstOrDefault()
-                ?? results.FirstOrDefault(r => SamePath(r.Path, row.UpdateServicePath));
+            var result = results.FirstOrDefault(r => SamePath(r.Path, row.UpdateServicePath))
+                ?? results.FirstOrDefault(r => SameSha1(r.Sha1, row.Sha1));
 
             if (result == null)
             {
@@ -167,9 +179,9 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             {
                 row.Problem = result.Status ?? MapMetadataRecomputeProblems.NoResult;
             }
-            else if (result.Error != null)
+            else if (HasFailed(result))
             {
-                // update-service keeps "changed" when its own DB write failed: nothing was stored, so nothing is copied.
+                // Defensive: a changed/unchanged result that still carries an error is treated as not stored.
                 row.Problem = MapMetadataRecomputeProblems.UpdateServiceWriteFailed;
             }
             else if (!SameSha1(result.Sha1, row.Sha1))
@@ -186,7 +198,7 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
     /// that differ from the recomputed ones (e.g. a rerun after update-service was fixed but matchmaking was
     /// not). One update per sha1.
     /// </summary>
-    private static List<GameMapMetadataUpdate> PlanMatchmakingPatches(List<MapMetadataRecomputeMapReport> rows)
+    private static List<GameMapMetadataUpdate> PlanMatchmakingPatches(List<MapMetadataRecomputeMapReport> rows, HashSet<string> failedSha1s)
     {
         var candidates = new List<MapMetadataRecomputeMapReport>();
         foreach (var row in rows.Where(r => r.Problem == null))
@@ -194,6 +206,12 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
             if (!IsLowercaseSha1(row.Sha1))
             {
                 row.Problem = MapMetadataRecomputeProblems.MmSha1NotLowercaseHex;
+                continue;
+            }
+
+            if (failedSha1s.Contains(row.Sha1))
+            {
+                row.Problem = MapMetadataRecomputeProblems.Sha1HasFailedResult;
                 continue;
             }
 
@@ -288,6 +306,9 @@ public class MapMetadataRecomputeService(MatchmakingServiceClient matchmakingSer
     private static bool IsLowercaseSha1(string sha1) => sha1 != null && LowercaseSha1.IsMatch(sha1);
 
     private static bool IsUint32(long? value) => value is >= 0 and <= uint.MaxValue;
+
+    /// <summary>A failing status, or (defensively) any result that carries an error, means nothing was stored.</summary>
+    private static bool HasFailed(MapMetadataRecomputeResult result) => !IsRecomputed(result.Status) || result.Error != null;
 
     private static bool IsRecomputed(string status) =>
         status is MapMetadataRecomputeStatus.Changed or MapMetadataRecomputeStatus.Unchanged;

@@ -156,6 +156,7 @@ public class MapsController(
                 error = RecomputeUpstreamError,
                 service = ex.Service,
                 upstreamStatus = ex.UpstreamStatus,
+                reason = ex.Reason,
                 pathsCompleted = ex.PathsCompleted,
                 pathsTotal = ex.PathsTotal,
                 matchmakingPatched = false,

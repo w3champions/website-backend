@@ -122,8 +122,25 @@ public class MapsControllerRecomputeTests
         var body = JObject.FromObject(objectResult.Value!);
         Assert.That((string)body["error"], Is.EqualTo(MapsController.RecomputeUpstreamError), "no upstream detail leaks into the answer");
         Assert.That((bool)body["matchmakingPatched"]!, Is.False);
+        Assert.That((string)body["reason"], Is.EqualTo(MapMetadataRecomputeUpstreamException.RequestFailed));
         Assert.That((string)body["service"], Is.EqualTo(MapMetadataRecomputeUpstreamException.UpdateService));
         Assert.That((int?)body["upstreamStatus"], Is.EqualTo(401));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
+    }
+
+    [Test]
+    public async Task UpdateServiceDryRunMismatch_Is502SayingSo()
+    {
+        var handler = Healthy().On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK,
+            Recompute(true, Result(FilePath, Sha1, "changed", 1, 3, 2, 4)));
+
+        var result = await CreateController(handler).RecomputeMapMetadata(new MapMetadataRecomputeBody { DryRun = false });
+
+        var objectResult = (ObjectResult)result;
+        Assert.That(objectResult.StatusCode, Is.EqualTo(StatusCodes502));
+        var body = JObject.FromObject(objectResult.Value!);
+        Assert.That((string)body["reason"], Is.EqualTo(MapMetadataRecomputeUpstreamException.DryRunMismatch));
+        Assert.That((bool)body["matchmakingPatched"]!, Is.False);
         Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
     }
 

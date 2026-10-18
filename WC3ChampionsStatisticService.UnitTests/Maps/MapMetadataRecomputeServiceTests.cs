@@ -297,6 +297,7 @@ public class MapMetadataRecomputeServiceTests
         Assert.That(ex!.PathsCompleted, Is.EqualTo(50));
         Assert.That(ex.PathsTotal, Is.EqualTo(120));
         Assert.That(ex.UpstreamStatus, Is.EqualTo(500));
+        Assert.That(ex.Reason, Is.EqualTo(MapMetadataRecomputeUpstreamException.RequestFailed));
         Assert.That(ex.Message, Does.Contain("Matchmaking was not patched"));
     }
 
@@ -385,6 +386,62 @@ public class MapMetadataRecomputeServiceTests
         Assert.That(paths, Is.EqualTo(new[] { "W3Champions/X.w3x" }));
         Assert.That(report.Summary.PathsSent, Is.EqualTo(1));
         Assert.That(report.Maps.All(m => m.Problem == null), Is.True);
+    }
+
+    [TestCase("parse_error", "bad header")]
+    [TestCase("write_failed", "write failed: timeout")]
+    [TestCase("changed", "write failed: timeout")]
+    public async Task SharedSha1_SamePathFailureWins_AndNoPathOfThatSha1IsPatched(string failedStatus, string error)
+    {
+        var handler = new RoutingHandler()
+            .On(HttpMethod.Get, RoutingHandler.MmMapsPath, HttpStatusCode.OK, MmMaps(
+                MmMap(1, "Fails", @"maps\W3Champions\p1.w3x", Sha1A, 1, 2),
+                MmMap(2, "Succeeds", @"maps\W3Champions\p2.w3x", Sha1A, 1, 2),
+                MmMap(3, "Unrelated", @"maps\W3Champions\p3.w3x", Sha1B, 1, 2)))
+            .On(HttpMethod.Post, RoutingHandler.UpdateRecomputePath, HttpStatusCode.OK, Recompute(false,
+                // The successful other-path result comes first, so a sha1-first join would pick it for map 1.
+                Result("W3Champions/p2.w3x", Sha1A, "changed", 1, 3, 2, 4),
+                Result("W3Champions/p1.w3x", Sha1A, failedStatus, 1, 3, 2, 4, error),
+                Result("W3Champions/p3.w3x", Sha1B, "changed", 1, 3, 2, 4)))
+            .On(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath, MmPatchEcho());
+
+        var report = await CreateService(handler).Recompute(dryRun: false);
+
+        var failing = report.Maps.Single(m => m.MmMapId == 1);
+        Assert.That(failing.Status, Is.EqualTo(failedStatus));
+        Assert.That(failing.Error, Is.EqualTo(error));
+        Assert.That(failing.Problem, Is.Not.Null);
+        Assert.That(report.Maps.Single(m => m.MmMapId == 2).Problem, Is.EqualTo(MapMetadataRecomputeProblems.Sha1HasFailedResult));
+        Assert.That(report.UnmatchedResults, Is.Empty);
+        var updates = (JArray)JObject.Parse(handler.BodiesFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath).Single())["updates"]!;
+        Assert.That(updates.Select(u => (string)u["sha1"]), Is.EqualTo(new[] { Sha1B }), "a patch by sha1 would also hit the failing map");
+    }
+
+    [TestCase(false, true)]
+    [TestCase(true, false)]
+    public void UpdateServiceAnsweringInTheOtherMode_AbortsBeforeAnyMatchmakingPatch(bool requested, bool answered)
+    {
+        var handler = NomadChanged(dryRun: answered);
+
+        var ex = Assert.ThrowsAsync<MapMetadataRecomputeUpstreamException>(() => CreateService(handler).Recompute(dryRun: requested));
+
+        Assert.That(ex!.Reason, Is.EqualTo(MapMetadataRecomputeUpstreamException.DryRunMismatch));
+        Assert.That(ex.Service, Is.EqualTo(MapMetadataRecomputeUpstreamException.UpdateService));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
+    }
+
+    [Test]
+    public void ADryRunMismatchInALaterChunk_AlsoAborts()
+    {
+        var (handler, _) = ManyMaps(60, (call, body) => call == 2
+            ? RoutingHandler.Json(HttpStatusCode.OK, Recompute(true, Result("W3Champions/m51.w3x", Sha1Of(51), "changed", 1, 3, 2, 4)))
+            : null);
+
+        var ex = Assert.ThrowsAsync<MapMetadataRecomputeUpstreamException>(() => CreateService(handler).Recompute(dryRun: false));
+
+        Assert.That(ex!.Reason, Is.EqualTo(MapMetadataRecomputeUpstreamException.DryRunMismatch));
+        Assert.That(ex.PathsCompleted, Is.EqualTo(50));
+        Assert.That(handler.RequestsFor(HttpMethod.Post, RoutingHandler.MmGameMapMetadataPath), Is.Empty);
     }
 
     [Test]
