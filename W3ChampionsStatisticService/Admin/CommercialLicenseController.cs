@@ -101,6 +101,6 @@ public class CommercialLicenseRestrictionsBody
     public bool? AsObserver { get; set; }
     public string FloTv { get; set; }
 
-    /// <summary>Optional. Null is omitted (NullValueHandling.Ignore) and matchmaking keeps the stored value; matchmaking always sends it on read.</summary>
+    /// <summary>Optional. Null is not forwarded; matchmaking keeps the stored value.</summary>
     public bool? IncludeSmurfs { get; set; }
 }

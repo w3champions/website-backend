@@ -162,6 +162,7 @@ public class CommercialLicenseControllerTests
 
         Assert.That(result, Is.InstanceOf<OkObjectResult>());
         var restrictions = JObject.Parse(handler.RequestBodies[0])["restrictions"];
+        Assert.That(restrictions, Is.Not.Null.And.InstanceOf<JObject>(), "restrictions must be forwarded as an object");
         Assert.That(((JObject)restrictions!).ContainsKey("includeSmurfs"), Is.False);
     }
 
