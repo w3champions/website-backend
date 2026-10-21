@@ -164,8 +164,10 @@ public class SmurfHardwareModerationControllerTests
 
     [TestCase("")]
     [TestCase("nohash")]
-    [TestCase("Name#12")]
-    [TestCase("a b#1234")]
+    [TestCase("a#b")]
+    [TestCase("#123")]
+    [TestCase("|x#123")]
+    [TestCase("Name#1234\n")]
     [TestCase("Name#1234/../x")]
     public async Task BadBattleTag_Answers400(string tag)
     {
@@ -187,5 +189,17 @@ public class SmurfHardwareModerationControllerTests
         await _controller.RevokeNotSmurf(Tag, Other, "Mod#1");
 
         _repository.VerifyAll();
+    }
+
+    [TestCase("Name#1234567")]
+    [TestCase("가나다라마바사아자차카타파#1234")]
+    [TestCase("a b#12")]
+    public async Task BattleTagsMatchmakingAccepts_AreForwarded(string tag)
+    {
+        _repository.Setup(r => r.GetHardwareLinks(tag)).ReturnsAsync(Ok200);
+
+        var result = await _controller.GetLinks(tag) as ContentResult;
+
+        Assert.That(result!.StatusCode, Is.EqualTo(200));
     }
 }

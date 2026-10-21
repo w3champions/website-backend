@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
-using W3ChampionsStatisticService.NetworkDiagnostics.Runs;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
 
@@ -25,6 +24,9 @@ public class SmurfReasonBody
 public class SmurfHardwareModerationController(IAdminRepository adminRepository) : ControllerBase
 {
     private const int MaxLimit = 200;
+    // Mirrors matchmaking's BATTLE_TAG (smurf-detection api/hardware-admin.ts), so no account it accepts is blocked here.
+    // \z instead of $: .NET's $ also matches before a trailing newline, JavaScript's does not.
+    private static readonly Regex BattleTagPattern = new(@"^[^|#\s][^|#]*#\d+\z", RegexOptions.Compiled);
     private static readonly Regex Hash8Pattern = new("^[0-9a-f]{8}$", RegexOptions.Compiled);
 
     private readonly IAdminRepository _adminRepository = adminRepository;
@@ -107,7 +109,7 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
         new BadRequestObjectResult(new { error = $"{field}: {message}", code = "INVALID_REQUEST", field });
 
     private static IActionResult InvalidBattleTag(string field, string value) =>
-        value != null && CreateRunValidator.BattleTagPattern.IsMatch(value) ? null : Invalid(field, "invalid battleTag");
+        value != null && BattleTagPattern.IsMatch(value) ? null : Invalid(field, "invalid battleTag");
 
     private static IActionResult InvalidHash8(string value) =>
         value != null && Hash8Pattern.IsMatch(value) ? null : Invalid("hash8", "must be 8 lowercase hex characters");
