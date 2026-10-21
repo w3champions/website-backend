@@ -15,7 +15,7 @@ using W3ChampionsStatisticService.Extensions;
 namespace W3ChampionsStatisticService.Admin;
 
 [Trace]
-public class AdminRepository(MongoClient mongoClient, IHttpClientFactory httpClientFactory) : MongoDbRepositoryBase(mongoClient), IAdminRepository
+public partial class AdminRepository(MongoClient mongoClient, IHttpClientFactory httpClientFactory) : MongoDbRepositoryBase(mongoClient), IAdminRepository
 {
     private static readonly string MatchmakingApiUrl = Environment.GetEnvironmentVariable("MATCHMAKING_API") ?? "https://matchmaking-service.test.w3champions.com";
 
