@@ -5,6 +5,7 @@ using W3C.Contracts.Matchmaking;
 using W3ChampionsStatisticService.PersonalSettings;
 using W3ChampionsStatisticService.PlayerProfiles.ChatDetails;
 using W3ChampionsStatisticService.PlayerProfiles.GameModeStats;
+using W3ChampionsStatisticService.PlayerProfiles.MmrRankingStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3C.Contracts.GameObjects;
@@ -165,6 +166,42 @@ public class PlayersController(
         var playerMmrRpTimeline = await _playerRepository.LoadPlayerMmrRpTimeline(battleTag, race, gateWay, season, gameMode);
         return Ok(playerMmrRpTimeline);
     }
+
+    /// <summary>
+    /// Rating history for one game mode across every season the player took
+    /// part in, one series per race.
+    /// </summary>
+    [HttpGet("{battleTag}/mmr-rp-timeline/lifetime")]
+    public async Task<IActionResult> GetPlayerLifetimeMmrRpTimeline(
+        [FromRoute] string battleTag,
+        GameMode gameMode = GameMode.GM_1v1)
+    {
+        var overallStats = await _playerRepository.LoadPlayerOverallStats(battleTag);
+        if (overallStats == null)
+        {
+            return NotFound();
+        }
+
+        // The seasons the player actually appeared in, so the id list stays as
+        // small as possible rather than covering every season that ever ran.
+        var seasons = overallStats.ParticipatedInSeasons.Select(s => s.Id).ToList();
+
+        var timelines = await _playerRepository.LoadPlayerMmrRpTimelines(
+            battleTag,
+            LifetimeRaces,
+            LifetimeGateWays,
+            seasons,
+            gameMode);
+
+        return Ok(PlayerLifetimeTimeline.Build(gameMode, timelines));
+    }
+
+    private static readonly Race[] LifetimeRaces = [Race.HU, Race.OC, Race.NE, Race.UD, Race.RnD];
+
+    // Both gateways, because seasons up to 5 were split across them and a player
+    // may have entries under either. Merging is invisible to the caller; from
+    // season 6 on the America ids simply find nothing.
+    private static readonly GateWay[] LifetimeGateWays = [GateWay.Europe, GateWay.America];
 
     [HttpGet("{battleTag}/aka")]
     public async Task<IActionResult> GetPlayerAka([FromRoute] string battleTag)
