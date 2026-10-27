@@ -18,8 +18,8 @@ public class HeroStatsItem
 
     public MapWinsPerRaceList Stats { get; set; }
 
-    public void AddWin(Race myRace, Race enemyRace, string mapName, in bool won)
+    public void AddWin(Race myRace, Race enemyRace, string map, int? mapId, string mapName, in bool won)
     {
-        Stats.AddWin(myRace, enemyRace, mapName, won);
+        Stats.AddWin(myRace, enemyRace, map, mapId, mapName, won);
     }
 }

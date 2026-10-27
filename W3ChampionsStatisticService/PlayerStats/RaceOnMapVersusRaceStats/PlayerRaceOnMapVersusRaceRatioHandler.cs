@@ -39,37 +39,38 @@ public class PlayerRaceOnMapVersusRaceRatioHandler(
             {
                 p1.AddMapWin(dataPlayers[0].race,
                     dataPlayers[1].race,
-                    "Overall",
+                    "Overall", null, null,
                     dataPlayers[0].won, patch);
                 p1.AddMapWin(dataPlayers[0].race,
                     dataPlayers[1].race,
-                    "Overall",
+                    "Overall", null, null,
                     dataPlayers[0].won, "All");
                 p2.AddMapWin(dataPlayers[1].race,
                     dataPlayers[0].race,
-                    "Overall",
+                    "Overall", null, null,
                     dataPlayers[1].won, patch);
                 p2.AddMapWin(dataPlayers[1].race,
                     dataPlayers[0].race,
-                    "Overall",
+                    "Overall", null, null,
                     dataPlayers[1].won, "All");
             }
 
+            var map = new MapName(nextEvent.match.map).Name;
             p1.AddMapWin(dataPlayers[0].race,
                 dataPlayers[1].race,
-                new MapName(nextEvent.match.map).Name,
+                map, nextEvent.match.mapId, nextEvent.match.mapName,
                 dataPlayers[0].won, patch);
             p1.AddMapWin(dataPlayers[0].race,
                 dataPlayers[1].race,
-                new MapName(nextEvent.match.map).Name,
+                map, nextEvent.match.mapId, nextEvent.match.mapName,
                 dataPlayers[0].won, "All");
             p2.AddMapWin(dataPlayers[1].race,
                 dataPlayers[0].race,
-                new MapName(nextEvent.match.map).Name,
+                map, nextEvent.match.mapId, nextEvent.match.mapName,
                 dataPlayers[1].won, patch);
             p2.AddMapWin(dataPlayers[1].race,
                 dataPlayers[0].race,
-                new MapName(nextEvent.match.map).Name,
+                map, nextEvent.match.mapId, nextEvent.match.mapName,
                 dataPlayers[1].won, "All");
 
             await _playerRepository.UpsertMapAndRaceStat(p1);

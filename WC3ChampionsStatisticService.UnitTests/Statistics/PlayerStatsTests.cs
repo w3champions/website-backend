@@ -36,9 +36,9 @@ public class PlayerStatsTests : IntegrationTestBase
 
         var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
         var patch = "1.32.5";
-        player.AddMapWin(Race.HU, Race.UD, "TM", true, patch);
-        player.AddMapWin(Race.HU, Race.OC, "EI", true, patch);
-        player.AddMapWin(Race.HU, Race.UD, "TM", false, patch);
+        player.AddMapWin(Race.HU, Race.UD, "TM", null, null, true, patch);
+        player.AddMapWin(Race.HU, Race.OC, "EI", null, null, true, patch);
+        player.AddMapWin(Race.HU, Race.UD, "TM", null, null, false, patch);
 
         await playerRepository.UpsertMapAndRaceStat(player);
         var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
@@ -56,8 +56,8 @@ public class PlayerStatsTests : IntegrationTestBase
         var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
         var patch = "1.32.5";
 
-        player.AddMapWin(Race.RnD, Race.UD, "TM", true, patch);
-        player.AddMapWin(Race.HU, Race.RnD, "EI", false, patch);
+        player.AddMapWin(Race.RnD, Race.UD, "TM", null, null, true, patch);
+        player.AddMapWin(Race.HU, Race.RnD, "EI", null, null, false, patch);
 
         await playerRepository.UpsertMapAndRaceStat(player);
         var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
@@ -73,9 +73,9 @@ public class PlayerStatsTests : IntegrationTestBase
 
         var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
         var patch = "1.32.5";
-        player.AddMapWin(Race.HU, Race.UD, "TM", true, patch);
-        player.AddMapWin(Race.NE, Race.UD, "TM", true, patch);
-        player.AddMapWin(Race.OC, Race.UD, "TM", true, patch);
+        player.AddMapWin(Race.HU, Race.UD, "TM", null, null, true, patch);
+        player.AddMapWin(Race.NE, Race.UD, "TM", null, null, true, patch);
+        player.AddMapWin(Race.OC, Race.UD, "TM", null, null, true, patch);
 
         await playerRepository.UpsertMapAndRaceStat(player);
         var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
