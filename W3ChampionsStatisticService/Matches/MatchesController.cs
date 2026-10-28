@@ -177,13 +177,14 @@ public class MatchesController(
         string map = "Overall",
         int minMmr = 0,
         int? maxMmr = null,
-        string sort = "startTimeDescending"
+        string sort = "startTimeDescending",
+        string mapName = "Overall"
         )
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         if (pageSize > 200) pageSize = 200;
-        var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
-        var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
+        var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, mapName);
+        var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr, mapName);
 
         await _matchQueryHandler.PopulatePlayerInfos(matches);
 

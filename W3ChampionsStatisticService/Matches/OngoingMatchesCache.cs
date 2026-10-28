@@ -23,13 +23,15 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         GateWay gateWay,
         string map,
         int minMmr,
-        int? maxMmr)
+        int? maxMmr,
+        string mapName)
     {
         await UpdateCacheIfNeeded();
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                     && (map == "Overall" || m.Map == map)
+                                    && MatchesMapName(m, mapName)
                                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr < minMmr)))
                                     && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr > maxMmr))));
     }
@@ -42,7 +44,8 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         string map,
         int minMmr,
         int? maxMmr,
-        string sort)
+        string sort,
+        string mapName)
     {
         await UpdateCacheIfNeeded();
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
@@ -50,6 +53,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                         && (map == "Overall" || m.Map == map)
+                        && MatchesMapName(m, mapName)
                         && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr < minMmr)))
                         && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr > maxMmr))));
 
@@ -62,6 +66,13 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             .Skip(offset)
             .Take(pageSize)
             .ToList();
+    }
+
+    // "Overall", null or empty (an empty ?mapName= binds as null) mean no filter.
+    [NoTrace]
+    private static bool MatchesMapName(OnGoingMatchup match, string mapName)
+    {
+        return string.IsNullOrEmpty(mapName) || mapName == "Overall" || match.MapName == mapName;
     }
 
     [NoTrace]
@@ -125,7 +136,8 @@ public interface IOngoingMatchesCache
         GateWay gateWay,
         string map,
         int minMmr,
-        int? maxMmr);
+        int? maxMmr,
+        string mapName);
 
     Task<List<OnGoingMatchup>> LoadOnGoingMatches(
         GameMode gameMode,
@@ -135,7 +147,8 @@ public interface IOngoingMatchesCache
         string map,
         int minMmr,
         int? maxMmr,
-        string sort);
+        string sort,
+        string mapName);
 
     Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
     void Upsert(OnGoingMatchup matchup);

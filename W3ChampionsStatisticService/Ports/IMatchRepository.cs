@@ -70,14 +70,16 @@ public interface IMatchRepository
         string map = "Overall",
         int minMmr = 0,
         int? maxMmr = null,
-        string sort = "startTimeDescending");
+        string sort = "startTimeDescending",
+        string mapName = "Overall");
 
     Task<long> CountOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int? maxMmr = null);
+        int? maxMmr = null,
+        string mapName = "Overall");
 
     Task EnsureIndices();
 

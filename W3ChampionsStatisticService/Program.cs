@@ -149,11 +149,6 @@ builder.Services.AddInterceptedTransient<IMatchmakingProvider, MatchmakingProvid
 
 builder.Services.AddMemoryCache();
 builder.Services.AddTransient(typeof(ICachedDataProvider<>), typeof(InMemoryCachedDataProvider<>));
-builder.Services.Configure<CacheOptionsFor<SeasonMapInformation>>(x =>
-{
-    x.CacheDuration = TimeSpan.FromHours(1);
-});
-
 builder.Services.Configure<CacheOptionsFor<List<PlayerAka>>>(x =>
 {
     x.CacheDuration = TimeSpan.FromHours(1);

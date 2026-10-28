@@ -380,10 +380,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         string map = "Overall",
         int minMmr = 0,
         int? maxMmr = null,
-        string sort = "startTimeDescending")
+        string sort = "startTimeDescending",
+        string mapName = "Overall")
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort);
+        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, mapName);
     }
 
     public Task<long> CountOnGoingMatches(
@@ -391,10 +392,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             GateWay gateWay = GateWay.Undefined,
             string map = "Overall",
             int minMmr = 0,
-            int? maxMmr = null)
+            int? maxMmr = null,
+            string mapName = "Overall")
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr);
+        return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr, mapName);
     }
 
     public Task<Season> LoadLastSeason()
