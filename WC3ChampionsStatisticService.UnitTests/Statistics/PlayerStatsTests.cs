@@ -17,6 +17,9 @@ namespace WC3ChampionsStatisticService.Tests.Statistics;
 [TestFixture]
 public class PlayerStatsTests : IntegrationTestBase
 {
+    private const string TwistedMeadowsFile = "w3c_250622_1057_TwistedMeadows_v1.9.w3x";
+    private const string EchoIslesFile = "1051_w3c_260615_2308_EchoIsles_v2.2.w3x";
+
     [Test]
     public async Task LoadAndSaveMapAndRace()
     {
@@ -36,16 +39,22 @@ public class PlayerStatsTests : IntegrationTestBase
 
         var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
         var patch = "1.32.5";
-        player.AddMapWin(Race.HU, Race.UD, "TM", null, null, true, patch);
-        player.AddMapWin(Race.HU, Race.OC, "EI", null, null, true, patch);
-        player.AddMapWin(Race.HU, Race.UD, "TM", null, null, false, patch);
+        player.AddMapWin(Race.HU, Race.UD, TwistedMeadowsFile, 6, "Twisted Meadows", true, patch);
+        player.AddMapWin(Race.HU, Race.OC, EchoIslesFile, 1051, "Echo Isles v2", true, patch);
+        player.AddMapWin(Race.HU, Race.UD, TwistedMeadowsFile, 6, "Twisted Meadows", false, patch);
 
         await playerRepository.UpsertMapAndRaceStat(player);
         var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM", patch).Wins);
-        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, "TM", patch).Losses);
-        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.OC, "EI", patch).Wins);
+        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, TwistedMeadowsFile, patch).Wins);
+        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.UD, TwistedMeadowsFile, patch).Losses);
+        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.OC, EchoIslesFile, patch).Wins);
+
+        var echoIsles = playerLoaded.RaceWinsOnMapByPatch[patch]
+            .Single(r => r.Race == Race.HU).WinLossesOnMap
+            .Single(m => m.Map == EchoIslesFile);
+        Assert.AreEqual(1051, echoIsles.MapId);
+        Assert.AreEqual("Echo Isles v2", echoIsles.MapName);
     }
 
     [Test]
@@ -56,14 +65,14 @@ public class PlayerStatsTests : IntegrationTestBase
         var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
         var patch = "1.32.5";
 
-        player.AddMapWin(Race.RnD, Race.UD, "TM", null, null, true, patch);
-        player.AddMapWin(Race.HU, Race.RnD, "EI", null, null, false, patch);
+        player.AddMapWin(Race.RnD, Race.UD, TwistedMeadowsFile, 6, "Twisted Meadows", true, patch);
+        player.AddMapWin(Race.HU, Race.RnD, EchoIslesFile, 1051, "Echo Isles v2", false, patch);
 
         await playerRepository.UpsertMapAndRaceStat(player);
         var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, "TM", patch).Wins);
-        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, "EI", patch).Losses);
+        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.RnD, Race.UD, TwistedMeadowsFile, patch).Wins);
+        Assert.AreEqual(1, playerLoaded.GetWinLoss(Race.HU, Race.RnD, EchoIslesFile, patch).Losses);
     }
 
     [Test]
@@ -73,14 +82,14 @@ public class PlayerStatsTests : IntegrationTestBase
 
         var player = PlayerRaceOnMapVersusRaceRatio.Create("peter#123", 0);
         var patch = "1.32.5";
-        player.AddMapWin(Race.HU, Race.UD, "TM", null, null, true, patch);
-        player.AddMapWin(Race.NE, Race.UD, "TM", null, null, true, patch);
-        player.AddMapWin(Race.OC, Race.UD, "TM", null, null, true, patch);
+        player.AddMapWin(Race.HU, Race.UD, TwistedMeadowsFile, 6, "Twisted Meadows", true, patch);
+        player.AddMapWin(Race.NE, Race.UD, TwistedMeadowsFile, 6, "Twisted Meadows", true, patch);
+        player.AddMapWin(Race.OC, Race.UD, TwistedMeadowsFile, 6, "Twisted Meadows", true, patch);
 
         await playerRepository.UpsertMapAndRaceStat(player);
         var playerLoaded = await playerRepository.LoadMapAndRaceStat(player.BattleTag, 0);
 
-        Assert.AreEqual(3, playerLoaded.GetWinLoss(Race.Total, Race.UD, "TM", patch).Wins);
+        Assert.AreEqual(3, playerLoaded.GetWinLoss(Race.Total, Race.UD, TwistedMeadowsFile, patch).Wins);
     }
 
     [Test]
@@ -256,11 +265,11 @@ public class PlayerStatsTests : IntegrationTestBase
         Assert.AreEqual(0, enemyStatsVsPlayerRace.Losses);
     }
 
-    private static WinLossesPerMap GetHeroStatsForRaceAndMap(PlayerHeroStats playerHeroStats, string heroId, Race race, string mapName)
+    private static WinLossesPerMap GetHeroStatsForRaceAndMap(PlayerHeroStats playerHeroStats, string heroId, Race race, string map)
     {
         var heroStats = playerHeroStats.HeroStatsItemList.Single(x => x.HeroId == heroId).Stats;
         var heroRaceStats = heroStats.Single(x => x.Race == race);
-        var heroRaceStatsOnMap = heroRaceStats.WinLossesOnMap.Single(x => x.Map == mapName);
+        var heroRaceStatsOnMap = heroRaceStats.WinLossesOnMap.Single(x => x.Map == map);
 
         return heroRaceStatsOnMap;
     }

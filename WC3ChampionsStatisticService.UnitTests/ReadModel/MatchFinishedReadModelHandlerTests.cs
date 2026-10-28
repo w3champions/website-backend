@@ -45,7 +45,7 @@ public class ReadModelHandlerBaseTests : IntegrationTestBase
 
         await handler.Update();
 
-        mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "amazonia")), wasFakeEvent ? Times.Never : Times.Once);
+        mockMatchRepo.Verify(m => m.Insert(It.Is<Matchup>(ma => ma.Map == "(2)amazonia.w3x")), wasFakeEvent ? Times.Never : Times.Once);
     }
 
     [TestCase(EMatchState.CANCELED)]
