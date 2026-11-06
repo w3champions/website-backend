@@ -66,6 +66,9 @@ public class MatchesController(
     /// <param name="maxPercentile">The maximum percentile filter.</param>
     /// <param name="minDuration">The minimum match duration in seconds (recommended minimum: 300s).<filter.</param>
     /// <param name="maxDuration">The maximum match duration in seconds (recommended maximum: 99999s)<.filter.</param>
+    /// <param name="mapName">The map name filter.</param>
+    /// <param name="race">Keeps only matches where at least one player picked this race.</param>
+    /// <param name="includeRandom">When true, a Random pick that rolled into <paramref name="race"/> also counts.</param>
     /// <returns>
     /// 200 OK: An object containing a list of matches and the total count.
     /// {
@@ -88,7 +91,9 @@ public class MatchesController(
         int? maxPercentile = null,
         int? minDuration = null,
         int? maxDuration = null,
-        string mapName = "Overall"
+        string mapName = "Overall",
+        Race race = Race.Total,
+        bool includeRandom = false
     )
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
@@ -108,9 +113,9 @@ public class MatchesController(
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, race, includeRandom);
         PlayersObfuscator.ObfuscateMmr(matches);
-        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, race, includeRandom);
         return Ok(new { matches, count });
     }
 
