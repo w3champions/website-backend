@@ -36,6 +36,18 @@ public class HotkeysController(IHotkeySetupRepository repository, TimeProvider t
     [RequestSizeLimit(655360)]
     public async Task<IActionResult> Put(string battleTag, [FromBody] PutHotkeySetupRequest request)
     {
+        if (request == null)
+        {
+            LogOutcome(battleTag, "invalid_body");
+            return BadRequest(new HotkeyErrorResponse("invalid_body"));
+        }
+
+        if (request.ExpectedRevision is < 0 or long.MaxValue)
+        {
+            LogOutcome(battleTag, "invalid_expected_revision");
+            return BadRequest(new HotkeyErrorResponse("invalid_expected_revision"));
+        }
+
         var rawPreferences = request.Preferences ?? "";
         var filtered = SyncedPreferences.Filter(rawPreferences);
 
@@ -58,7 +70,7 @@ public class HotkeysController(IHotkeySetupRepository repository, TimeProvider t
         {
             Id = battleTag,
             Mode = request.Mode,
-            CustomKeys = request.CustomKeys ?? "",
+            CustomKeys = request.CustomKeys,
             PreferenceSettings = filtered,
             Revision = (expected ?? 0) + 1,
             UpdatedAt = _timeProvider.GetUtcNow(),

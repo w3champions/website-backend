@@ -245,6 +245,51 @@ public class HotkeysControllerTests
     }
 
     [Test]
+    public async Task Put_NullCustomKeys_StoresNull()
+    {
+        HotkeySetup saved = null;
+        _repo.Setup(r => r.Load(Tag)).ReturnsAsync((HotkeySetup)null);
+        _repo.Setup(r => r.TryCreate(It.IsAny<HotkeySetup>())).Callback<HotkeySetup>(s => saved = s).ReturnsAsync(true);
+
+        await _controller.Put(Tag, Request(customKeys: null));
+
+        saved.CustomKeys.Should().BeNull();
+    }
+
+    [Test]
+    public async Task Get_NullCustomKeys_ReturnsNullInDto()
+    {
+        _repo.Setup(r => r.Load(Tag)).ReturnsAsync(Stored(3, customKeys: null));
+
+        Body<HotkeySetupDto>(await _controller.Get(Tag), 200).CustomKeys.Should().BeNull();
+    }
+
+    [Test]
+    public async Task Put_NullCustomKeysAgainstStoredEmpty_IsNoOp()
+    {
+        _repo.Setup(r => r.Load(Tag)).ReturnsAsync(Stored(4, customKeys: ""));
+
+        var body = Body<HotkeyRevisionResponse>(await _controller.Put(Tag, Request(customKeys: null, expected: 4)), 200);
+
+        body.Revision.Should().Be(4);
+    }
+
+    [Test]
+    public async Task Put_NullBody_Returns400InvalidBody()
+    {
+        Body<HotkeyErrorResponse>(await _controller.Put(Tag, null), 400).Error.Should().Be("invalid_body");
+        _repo.VerifyNoOtherCalls();
+    }
+
+    [TestCase(-1L)]
+    [TestCase(long.MaxValue)]
+    public async Task Put_OutOfRangeExpectedRevision_Returns400(long expected)
+    {
+        Body<HotkeyErrorResponse>(await _controller.Put(Tag, Request(expected: expected)), 400).Error.Should().Be("invalid_expected_revision");
+        _repo.VerifyNoOtherCalls();
+    }
+
+    [Test]
     public async Task Put_Replace_RacingIdenticalUpload_Returns200WithWinnersRevision()
     {
         _repo.SetupSequence(r => r.Load(Tag)).ReturnsAsync(Stored(4, mode: 2)).ReturnsAsync(Stored(5));
@@ -284,6 +329,8 @@ public class HotkeysControllerTests
     [Test]
     public void BearerFilter_IsNotOrdered_SoItRunsBeforeRateLimit()
     {
+        // A filter attribute that does not implement IOrderedFilter gets the default Order 0, so it runs
+        // before HotkeysRateLimitAttribute (Order 100) and has already rewritten the battleTag argument.
         typeof(IOrderedFilter).IsAssignableFrom(typeof(BearerCheckIfBattleTagBelongsToAuthAttribute)).Should().BeFalse();
         typeof(IOrderedFilter).IsAssignableFrom(typeof(BearerCheckIfBattleTagBelongsToAuthFilter)).Should().BeFalse();
     }
