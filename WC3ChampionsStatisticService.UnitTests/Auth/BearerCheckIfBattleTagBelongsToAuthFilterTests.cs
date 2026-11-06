@@ -27,10 +27,14 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
         return auth;
     }
 
-    private static ActionExecutingContext CreateContext(string routeBattleTag)
+    private static ActionExecutingContext CreateContext(string routeBattleTag, string authorization = "Bearer " + Token)
     {
         var httpContext = new DefaultHttpContext();
-        httpContext.Request.Headers["Authorization"] = "Bearer " + Token;
+        if (authorization != null)
+        {
+            httpContext.Request.Headers["Authorization"] = authorization;
+        }
+
         var routeData = new RouteData();
         if (routeBattleTag != null)
         {
@@ -44,26 +48,30 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
             Mock.Of<Controller>());
     }
 
-    private static ActionExecutionDelegate Next(bool[] invoked, ActionExecutingContext context) =>
-        () =>
+    private sealed class NextRecorder(ActionExecutingContext context)
+    {
+        public bool WasInvoked { get; private set; }
+
+        public ActionExecutionDelegate Delegate => () =>
         {
-            invoked[0] = true;
+            WasInvoked = true;
             return Task.FromResult(new ActionExecutedContext(
                 new ActionContext(context.HttpContext, new RouteData(), new ActionDescriptor()),
                 new List<IFilterMetadata>(),
                 Mock.Of<Controller>()));
         };
+    }
 
     [Test]
     public async Task MatchingBattleTag_InvokesNextAndRewritesArgument()
     {
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(AuthReturning("Alice#123").Object);
         var context = CreateContext("Alice#123");
-        var invoked = new bool[1];
+        var next = new NextRecorder(context);
 
-        await filter.OnActionExecutionAsync(context, Next(invoked, context));
+        await filter.OnActionExecutionAsync(context, next.Delegate);
 
-        invoked[0].Should().BeTrue();
+        next.WasInvoked.Should().BeTrue();
         context.ActionArguments["battleTag"].Should().Be("Alice#123");
         context.Result.Should().BeNull();
     }
@@ -73,11 +81,11 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     {
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(AuthReturning("Alice#123").Object);
         var context = CreateContext("Bob#456");
-        var invoked = new bool[1];
+        var next = new NextRecorder(context);
 
-        await filter.OnActionExecutionAsync(context, Next(invoked, context));
+        await filter.OnActionExecutionAsync(context, next.Delegate);
 
-        invoked[0].Should().BeFalse();
+        next.WasInvoked.Should().BeFalse();
         var result = context.Result.Should().BeOfType<ObjectResult>().Subject;
         result.StatusCode.Should().Be(403);
         result.Value.Should().BeOfType<ErrorResult>();
@@ -88,11 +96,11 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     {
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(AuthReturning("Alice#123").Object);
         var context = CreateContext("alice#123");
-        var invoked = new bool[1];
+        var next = new NextRecorder(context);
 
-        await filter.OnActionExecutionAsync(context, Next(invoked, context));
+        await filter.OnActionExecutionAsync(context, next.Delegate);
 
-        invoked[0].Should().BeFalse();
+        next.WasInvoked.Should().BeFalse();
         context.Result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(403);
     }
 
@@ -101,11 +109,11 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     {
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(AuthReturning("Alice#123").Object);
         var context = CreateContext(null);
-        var invoked = new bool[1];
+        var next = new NextRecorder(context);
 
-        await filter.OnActionExecutionAsync(context, Next(invoked, context));
+        await filter.OnActionExecutionAsync(context, next.Delegate);
 
-        invoked[0].Should().BeFalse();
+        next.WasInvoked.Should().BeFalse();
         context.Result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(403);
     }
 
@@ -113,14 +121,32 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
     public async Task InvalidToken_Returns401()
     {
         var auth = new Mock<IW3CAuthenticationService>();
-        auth.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>())).Throws<InvalidOperationException>();
+        auth.Setup(a => a.GetUserByToken(Token, false)).Throws<InvalidOperationException>();
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(auth.Object);
         var context = CreateContext("Alice#123");
-        var invoked = new bool[1];
+        var next = new NextRecorder(context);
 
-        await filter.OnActionExecutionAsync(context, Next(invoked, context));
+        await filter.OnActionExecutionAsync(context, next.Delegate);
 
-        invoked[0].Should().BeFalse();
+        next.WasInvoked.Should().BeFalse();
+        context.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        auth.Verify(a => a.GetUserByToken(Token, false), Times.Once);
+    }
+
+    [TestCase(null)]
+    [TestCase("Basic xyz")]
+    [TestCase("Bearer")]
+    public async Task MissingOrMalformedAuthorizationHeader_Returns401(string authorization)
+    {
+        var auth = new Mock<IW3CAuthenticationService>();
+        auth.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentNullException>();
+        var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(auth.Object);
+        var context = CreateContext("Alice#123", authorization);
+        var next = new NextRecorder(context);
+
+        await filter.OnActionExecutionAsync(context, next.Delegate);
+
+        next.WasInvoked.Should().BeFalse();
         context.Result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
