@@ -28,7 +28,7 @@ public static class TracingServiceCollectionExtensions
         string websiteBackendHubPath,
         MongoClientSettings mongoClientSettings)
     {
-        mongoClientSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true }));
+        mongoClientSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber(new InstrumentationOptions { CaptureCommandText = true, ShouldStartActivity = e => MongoTracingFilter.ShouldTrace(e.Command) }));
         mongoClientSettings.ApplicationName = OTEL_SERVICE_NAME;
 
         services.AddSingleton(new ActivitySource(OTEL_SERVICE_NAME));

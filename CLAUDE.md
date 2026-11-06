@@ -151,7 +151,7 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - The preference allow-list lives ONLY in `SyncedPreferences`; `PreferenceSettings` is always derived server-side with `SyncedPreferences.Filter`, never accepted from the client. `HotkeySetupValidator` guards sizes, mode and values (400 `{ error: reason }`).
 - The revision is server-owned: create stores 1, replace stores `expectedRevision + 1`, a lost race answers 409 `{ revision }` (null when absent). An upload equal to the stored one (CustomKeys compared via `CustomKeysNormalizer`) is a no-op that returns the stored revision.
 - Never log CustomKeys or preferences content; only the battleTag and an outcome code are logged.
-- Mongo collection `HotkeySetup`, `_id` = the battleTag exactly as in the token (no lowercasing).
+- Mongo collection `HotkeySetup`, `_id` = the battleTag exactly as in the token (no lowercasing). Mongo command tracing is disabled for this collection (`MongoTracingFilter`), because command text capture would export the documents to OTLP.
 - Tests: `--filter "FullyQualifiedName~Hotkeys&FullyQualifiedName!~MongoTests"` locally (the Mongo2Go repository tests run in CI, not on arm64 macs); never an unfiltered `dotnet test`.
 
 ### Service Registration
