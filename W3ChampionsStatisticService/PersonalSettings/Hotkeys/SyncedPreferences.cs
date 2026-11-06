@@ -17,6 +17,10 @@ public static class SyncedPreferences
         @"^(Command Grid Hotkeys [0-2][0-3]|Inventory Hotkeys [0-5]|Custom Hotkeys [0-7]|Mouse (Mid Button Down|Wheel Up|Wheel Down)|Reforged)\z",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    // ASCII only: no Unicode case folding (e.g. the Kelvin sign U+212A must never match 'k').
+    private static readonly Regex KeyPattern = new(
+        @"^[A-Za-z0-9_]{1,64}\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Dictionary<string, HashSet<string>> KeysPerSection = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Input"] = Keys("keyscroll", "mousescroll", "mousescrolldisable", "confinemousecursor"),
@@ -65,12 +69,20 @@ public static class SyncedPreferences
 
             var key = line.Substring(0, separator).Trim();
             var value = line.Substring(separator + 1).Trim();
-            if (key.Length == 0 || value.Length == 0 || !current.Accepts(key))
+            if (!KeyPattern.IsMatch(key) || !current.Accepts(key))
             {
                 continue;
             }
 
-            current.Values[key] = (key, value);
+            // The last occurrence wins; an empty last value drops the key.
+            if (value.Length == 0)
+            {
+                current.Values.Remove(key);
+            }
+            else
+            {
+                current.Values[key] = (key, value);
+            }
         }
 
         return Render(sections.Values);
@@ -78,6 +90,11 @@ public static class SyncedPreferences
 
     private static Section ResolveSection(Dictionary<string, Section> sections, string name)
     {
+        if (!IsAscii(name))
+        {
+            return null;
+        }
+
         var isWhole = WholeSectionPattern.IsMatch(name);
         if (!isWhole && !KeysPerSection.ContainsKey(name))
         {
@@ -115,6 +132,8 @@ public static class SyncedPreferences
 
         return builder.ToString();
     }
+
+    private static bool IsAscii(string text) => text.All(c => c < 128);
 
     private static HashSet<string> Keys(params string[] keys) => new(keys, StringComparer.OrdinalIgnoreCase);
 

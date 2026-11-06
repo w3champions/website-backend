@@ -19,6 +19,7 @@ public static class HotkeySetupValidator
 {
     public const int MaxCustomKeysBytes = 524_288;
     public const int MaxRawPreferencesBytes = 32_768;
+    public const int MaxPreferenceSettingsBytes = 16_384;
     public const int MaxCustomKeysValueLength = 512;
 
     private static readonly Regex SectionHeader = new(
@@ -26,6 +27,12 @@ public static class HotkeySetupValidator
 
     private static readonly Regex PreferenceValue = new(
         @"^(-?[0-9]{1,6}|true|false)\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex SettingsHeader = new(
+        @"^\[[A-Za-z0-9 ]{1,64}\]\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex SettingsKey = new(
+        @"^[A-Za-z0-9_]{1,64}\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly HashSet<string> AllowedCustomKeysKeys = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -41,6 +48,11 @@ public static class HotkeySetupValidator
         if (ByteCount(rawPreferences) > MaxRawPreferencesBytes)
         {
             return HotkeyValidationResult.Invalid("preferences_too_large");
+        }
+
+        if (ByteCount(preferenceSettings) > MaxPreferenceSettingsBytes)
+        {
+            return HotkeyValidationResult.Invalid("preference_settings_too_large");
         }
 
         if (mode < 0 || mode > 2)
@@ -117,7 +129,7 @@ public static class HotkeySetupValidator
     {
         foreach (var c in text)
         {
-            if (char.IsControl(c) && c != '\t')
+            if ((char.IsControl(c) && c != '\t') || c == '\u2028' || c == '\u2029')
             {
                 return true;
             }
@@ -135,14 +147,16 @@ public static class HotkeySetupValidator
 
         foreach (var rawLine in preferenceSettings.Split('\n'))
         {
-            var line = rawLine.Trim();
-            if (line.Length == 0 || line[0] == '[')
+            var line = rawLine.EndsWith('\r') ? rawLine[..^1] : rawLine;
+            if (line.Length == 0 || SettingsHeader.IsMatch(line))
             {
                 continue;
             }
 
             var separator = line.IndexOf('=');
-            if (separator <= 0 || !PreferenceValue.IsMatch(line.Substring(separator + 1)))
+            if (separator <= 0
+                || !SettingsKey.IsMatch(line.Substring(0, separator))
+                || !PreferenceValue.IsMatch(line.Substring(separator + 1)))
             {
                 return false;
             }

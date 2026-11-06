@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using FluentAssertions;
 using NUnit.Framework;
@@ -110,7 +112,7 @@ public class HotkeySetupValidatorTests
     [Test]
     public void CustomKeys_SizeIsMeasuredInUtf8Bytes()
     {
-        // 262,145 two-byte characters in a comment line are 524,290 bytes but only 262,147 chars.
+        // 262,146 characters (a 2-char marker plus 262,144 two-byte characters) are 524,290 UTF-8 bytes.
         var multiByte = "//" + new string('é', 262_144);
 
         ValidateCustomKeys(multiByte).Reason.Should().Be("custom_keys_too_large");
@@ -151,14 +153,66 @@ public class HotkeySetupValidatorTests
     }
 
     [Test]
-    public void RawPreferences_TooLarge_IsRejectedFirst()
+    public void RawPreferences_AtLimitIsValid_AndOneByteOverIsRejectedFirst()
     {
-        var tooBig = "[Gameplay]\n" + new string('x', 32_769);
+        HotkeySetupValidator.Validate(1, null, new string('x', 32_768), "").IsValid.Should().BeTrue();
 
-        var result = HotkeySetupValidator.Validate(9, "garbage", tooBig, "");
+        var result = HotkeySetupValidator.Validate(9, "garbage", new string('x', 32_769), new string('y', 20_000));
 
         result.Reason.Should().Be("preferences_too_large");
-        HotkeySetupValidator.Validate(1, null, new string('x', 32_768), "").IsValid.Should().BeTrue();
+    }
+
+    [Test]
+    public void PreferenceSettings_AtLimitIsValid_AndOneByteOverIsRejected()
+    {
+        HotkeySetupValidator.Validate(1, null, "", BuildSettingsOfBytes(16_384)).IsValid.Should().BeTrue();
+        HotkeySetupValidator.Validate(1, null, "", BuildSettingsOfBytes(16_385)).Reason
+            .Should().Be("preference_settings_too_large");
+    }
+
+    [Test]
+    public void PreferenceSettings_TooLarge_IsCheckedBeforeValues()
+    {
+        var oversizedAndInvalid = BuildSettingsOfBytes(16_385) + "hudscale=abc\n";
+
+        HotkeySetupValidator.Validate(1, null, "", oversizedAndInvalid).Reason.Should().Be("preference_settings_too_large");
+    }
+
+    [TestCase("[Reforged]\n[x=hello world\0payload")]
+    [TestCase("[Reforged]\nanything \u0001 goes here=1")]
+    [TestCase("[Reforged]\nanything goes here=1")]
+    [TestCase("[Reforged]\ncaf\u00e9=1")]
+    [TestCase("[Reforged\nHeroes=0")]
+    [TestCase("[Re forged\u0001]\nHeroes=0")]
+    [TestCase("[]\nHeroes=0")]
+    [TestCase("=1")]
+    [TestCase("no separator")]
+    public void PreferenceSettings_MalformedHeadersAndKeys_AreRejected(string settings)
+    {
+        HotkeySetupValidator.Validate(1, null, "", settings).Reason.Should().Be("preference_settings_invalid_value");
+    }
+
+    [Test]
+    public void PreferenceSettings_16000CharKey_IsRejected()
+    {
+        HotkeySetupValidator.Validate(1, null, "", "[Reforged]\n" + new string('k', 16_000) + "=1\n").Reason
+            .Should().Be("preference_settings_invalid_value");
+    }
+
+    [Test]
+    public void PreferenceSettings_FilterOutputOfRealFile_StillPasses()
+    {
+        var settings = SyncedPreferences.Filter(Fixture("real-war3preferences.txt"));
+
+        HotkeySetupValidator.Validate(1, null, "", settings + "\r\n").IsValid.Should().BeTrue();
+    }
+
+    [TestCase("\u2028")]
+    [TestCase("\u2029")]
+    public void CustomKeys_UnicodeLineSeparatorsInValue_AreRejected(string separator)
+    {
+        ValidateCustomKeys("[hpea]\nTip=a" + separator + "b\n").Reason.Should().Be("custom_keys_invalid_line");
+        ValidateCustomKeys("[hpea]\n// a" + separator + "b\n").Reason.Should().Be("custom_keys_invalid_line");
     }
 
     [Test]
@@ -198,5 +252,21 @@ public class HotkeySetupValidatorTests
     {
         const string header = "[hpea]\n//";
         return header + new string('a', bytes - header.Length);
+    }
+
+    private static string BuildSettingsOfBytes(int bytes)
+    {
+        const string header = "[Reforged]\n";
+        var remaining = bytes - header.Length;
+        for (var keyLength = 1; keyLength <= 64; keyLength++)
+        {
+            var rest = remaining - (keyLength + "=1\n".Length);
+            if (rest >= 0 && rest % "k=1\n".Length == 0)
+            {
+                return header + string.Concat(Enumerable.Repeat("k=1\n", rest / 4)) + new string('z', keyLength) + "=1\n";
+            }
+        }
+
+        throw new InvalidOperationException("cannot build settings of " + bytes + " bytes");
     }
 }

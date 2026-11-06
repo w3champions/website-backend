@@ -158,4 +158,43 @@ public class SyncedPreferencesTests
 
         SyncedPreferences.Filter(raw).Should().Be("[Gameplay]\nhudscale=100\n\n[Input]\nkeyscroll=50\n");
     }
+
+    [Test]
+    public void Filter_WholeSectionKeys_MustBeShortAsciiIdentifiers()
+    {
+        var raw = "[Reforged]\n[x=hello world\0payload\nanything \u0001 goes here=1\n"
+            + new string('k', 32_000) + "=1\n"
+            + new string('k', 65) + "=1\n"
+            + "caf\u00e9=1\nHeroes=0\n" + new string('k', 64) + "=2\n";
+
+        SyncedPreferences.Filter(raw).Should().Be($"[Reforged]\nHeroes=0\n{new string('k', 64)}=2\n");
+    }
+
+    [TestCase("Command Grid Hotkeys 00")]
+    [TestCase("Inventory Hotkeys 0")]
+    [TestCase("Mouse Wheel Up")]
+    [TestCase("Reforged")]
+    [TestCase("Gameplay")]
+    public void Filter_SectionNamesWithKelvinSign_AreNotFoldedToAscii(string name)
+    {
+        var withKelvin = name.Replace("k", "\u212A").Replace("K", "\u212A");
+        var raw = name.Contains('k') || name.Contains('K')
+            ? $"[{withKelvin}]\nHotkey=81\n"
+            : $"[{name.Replace("e", "\u0435")}]\nHotkey=81\n";
+
+        SyncedPreferences.Filter(raw).Should().BeEmpty();
+    }
+
+    [Test]
+    public void Filter_KeysWithKelvinSign_AreDropped()
+    {
+        SyncedPreferences.Filter("[Input]\n\u212Aeyscroll=5\nkeyscroll=6\n").Should().Be("[Input]\nkeyscroll=6\n");
+    }
+
+    [Test]
+    public void Filter_EmptyDuplicate_OverridesEarlierValue_LastOccurrenceWins()
+    {
+        SyncedPreferences.Filter("[Gameplay]\nhudscale=50\nhudscale=\ntooltips=1\n").Should().Be("[Gameplay]\ntooltips=1\n");
+        SyncedPreferences.Filter("[Gameplay]\nhudscale=\nHUDSCALE=50\n").Should().Be("[Gameplay]\nHUDSCALE=50\n");
+    }
 }
