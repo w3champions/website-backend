@@ -245,6 +245,17 @@ public class HotkeysControllerTests
     }
 
     [Test]
+    public async Task Put_Replace_RacingIdenticalUpload_Returns200WithWinnersRevision()
+    {
+        _repo.SetupSequence(r => r.Load(Tag)).ReturnsAsync(Stored(4, mode: 2)).ReturnsAsync(Stored(5));
+        _repo.Setup(r => r.TryReplace(It.IsAny<HotkeySetup>(), 4)).ReturnsAsync(false);
+
+        var body = Body<HotkeyRevisionResponse>(await _controller.Put(Tag, Request(expected: 4)), 200);
+
+        body.Revision.Should().Be(5);
+    }
+
+    [Test]
     public async Task Put_Create_RacingIdenticalUpload_Returns200WithWinnersRevision()
     {
         _repo.SetupSequence(r => r.Load(Tag)).ReturnsAsync((HotkeySetup)null).ReturnsAsync(Stored(1));
