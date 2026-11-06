@@ -135,13 +135,27 @@ public class BearerCheckIfBattleTagBelongsToAuthFilterTests
 
     [TestCase(null)]
     [TestCase("Basic xyz")]
-    [TestCase("Bearer")]
-    public async Task MissingOrMalformedAuthorizationHeader_Returns401(string authorization)
+    public async Task MissingOrNonBearerAuthorizationHeader_Returns401WithoutTokenLookup(string authorization)
+    {
+        var auth = new Mock<IW3CAuthenticationService>();
+        var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(auth.Object);
+        var context = CreateContext("Alice#123", authorization);
+        var next = new NextRecorder(context);
+
+        await filter.OnActionExecutionAsync(context, next.Delegate);
+
+        next.WasInvoked.Should().BeFalse();
+        context.Result.Should().BeOfType<UnauthorizedObjectResult>();
+        auth.Verify(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Test]
+    public async Task BearerWithoutToken_Returns401()
     {
         var auth = new Mock<IW3CAuthenticationService>();
         auth.Setup(a => a.GetUserByToken(It.IsAny<string>(), It.IsAny<bool>())).Throws<ArgumentNullException>();
         var filter = new BearerCheckIfBattleTagBelongsToAuthFilter(auth.Object);
-        var context = CreateContext("Alice#123", authorization);
+        var context = CreateContext("Alice#123", "Bearer");
         var next = new NextRecorder(context);
 
         await filter.OnActionExecutionAsync(context, next.Delegate);
