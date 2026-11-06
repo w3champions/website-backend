@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Primitives;
@@ -18,23 +19,31 @@ public class BearerCheckIfBattleTagBelongsToAuthFilter(IW3CAuthenticationService
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         context.RouteData.Values.TryGetValue("battleTag", out var battleTag);
-        var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
+
+        W3CUserAuthenticationDto user;
         try
         {
-            var res = _authService.GetUserByToken(token, false);
-            var btagString = battleTag?.ToString();
-
-            if (!string.IsNullOrEmpty(btagString) && btagString.Equals(res.BattleTag))
-            {
-                context.ActionArguments["battleTag"] = res.BattleTag;
-                await next.Invoke();
-            }
+            var token = GetToken(context.HttpContext.Request.Headers[HeaderNames.Authorization]);
+            user = _authService.GetUserByToken(token, false);
         }
         catch (Exception)
         {
-            var unauthorizedResult = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
-            context.Result = unauthorizedResult;
+            context.Result = new UnauthorizedObjectResult(new ErrorResult("Sorry H4ckerb0i"));
+            return;
         }
+
+        var btagString = battleTag?.ToString();
+        if (string.IsNullOrEmpty(btagString) || !btagString.Equals(user.BattleTag))
+        {
+            context.Result = new ObjectResult(new ErrorResult("battleTag does not match the authenticated user"))
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            };
+            return;
+        }
+
+        context.ActionArguments["battleTag"] = user.BattleTag;
+        await next.Invoke();
     }
 
     private static string GetToken(StringValues authorization)
