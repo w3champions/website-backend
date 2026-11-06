@@ -31,7 +31,7 @@ public class HotkeysRateLimitAttribute : RateLimitAttribute, IOrderedFilter
             PolicyName = PolicyName,
             HourlyLimit = HourlyLimit,
             DailyLimit = DailyLimit,
-            PartitionKey = $"user:{battleTag.ToLowerInvariant()}:hotkeys",
+            PartitionKey = $"user:{battleTag.ToLowerInvariant()}:{Scope}",
         });
     }
 }

@@ -4,7 +4,10 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using NUnit.Framework;
@@ -22,6 +25,7 @@ public class HotkeysControllerTests
 
     private Mock<IHotkeySetupRepository> _repo;
     private FakeTimeProvider _clock;
+    private Mock<ILogger<HotkeysController>> _logger;
     private HotkeysController _controller;
 
     [SetUp]
@@ -29,7 +33,8 @@ public class HotkeysControllerTests
     {
         _repo = new Mock<IHotkeySetupRepository>(MockBehavior.Strict);
         _clock = new FakeTimeProvider(new DateTimeOffset(2026, 11, 6, 12, 0, 0, TimeSpan.Zero));
-        _controller = new HotkeysController(_repo.Object, _clock);
+        _logger = new Mock<ILogger<HotkeysController>>();
+        _controller = new HotkeysController(_repo.Object, _clock, _logger.Object);
     }
 
     private static PutHotkeySetupRequest Request(int mode = 1, string customKeys = "[a]\nHotkey=Q", string prefs = RawWithPcKey, long? expected = null) =>
@@ -215,11 +220,69 @@ public class HotkeysControllerTests
     }
 
     [Test]
+    public async Task Put_OnlyCustomKeysDiffer_Replaces()
+    {
+        _repo.Setup(r => r.Load(Tag)).ReturnsAsync(Stored(4));
+        _repo.Setup(r => r.TryReplace(It.IsAny<HotkeySetup>(), 4)).ReturnsAsync(true);
+
+        var body = Body<HotkeyRevisionResponse>(await _controller.Put(Tag, Request(customKeys: "[a]\nHotkey=W", expected: 4)), 200);
+
+        body.Revision.Should().Be(5);
+        _repo.Verify(r => r.TryReplace(It.Is<HotkeySetup>(s => s.CustomKeys == "[a]\nHotkey=W" && s.Revision == 5), 4), Times.Once);
+    }
+
+    [Test]
+    public async Task Put_OnlySyncedPreferenceDiffers_Replaces()
+    {
+        _repo.Setup(r => r.Load(Tag)).ReturnsAsync(Stored(4));
+        _repo.Setup(r => r.TryReplace(It.IsAny<HotkeySetup>(), 4)).ReturnsAsync(true);
+
+        var body = Body<HotkeyRevisionResponse>(
+            await _controller.Put(Tag, Request(prefs: "[Reforged]\nhudscale=120\n[Misc]\nreswidth=1920\n", expected: 4)), 200);
+
+        body.Revision.Should().Be(5);
+        _repo.Verify(r => r.TryReplace(It.Is<HotkeySetup>(s => s.PreferenceSettings.Contains("hudscale=120")), 4), Times.Once);
+    }
+
+    [Test]
+    public async Task Put_Create_RacingIdenticalUpload_Returns200WithWinnersRevision()
+    {
+        _repo.SetupSequence(r => r.Load(Tag)).ReturnsAsync((HotkeySetup)null).ReturnsAsync(Stored(1));
+        _repo.Setup(r => r.TryCreate(It.IsAny<HotkeySetup>())).ReturnsAsync(false);
+
+        var body = Body<HotkeyRevisionResponse>(await _controller.Put(Tag, Request()), 200);
+
+        body.Revision.Should().Be(1);
+    }
+
+    [Test]
+    public async Task Put_LogsOnlyBattleTagAndOutcome()
+    {
+        _repo.Setup(r => r.Load(Tag)).ReturnsAsync(Stored(4));
+
+        await _controller.Put(Tag, Request(expected: 4));
+
+        _logger.Verify(l => l.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((v, _) => v.ToString() == $"Hotkey setup upload for {Tag}: noop"),
+            null,
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+    }
+
+    [Test]
+    public void BearerFilter_IsNotOrdered_SoItRunsBeforeRateLimit()
+    {
+        typeof(IOrderedFilter).IsAssignableFrom(typeof(BearerCheckIfBattleTagBelongsToAuthAttribute)).Should().BeFalse();
+        typeof(IOrderedFilter).IsAssignableFrom(typeof(BearerCheckIfBattleTagBelongsToAuthFilter)).Should().BeFalse();
+    }
+
+    [Test]
     public void PutAction_HasSizeLimitRateLimitAndBearerAttributes()
     {
         var put = typeof(HotkeysController).GetMethod(nameof(HotkeysController.Put));
 
-        put.GetCustomAttribute<RequestSizeLimitAttribute>().Should().NotBeNull();
+        ((IRequestSizeLimitMetadata)put.GetCustomAttribute<RequestSizeLimitAttribute>()).MaxRequestBodySize.Should().Be(655360);
         put.GetCustomAttribute<HotkeysRateLimitAttribute>().Should().NotBeNull();
         put.GetCustomAttribute<BearerCheckIfBattleTagBelongsToAuthAttribute>().Should().NotBeNull();
         typeof(HotkeysController).GetMethod(nameof(HotkeysController.Get))

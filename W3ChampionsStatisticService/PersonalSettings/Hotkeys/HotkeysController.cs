@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
@@ -10,10 +11,11 @@ namespace W3ChampionsStatisticService.PersonalSettings.Hotkeys;
 [ApiController]
 [Route("api/personal-settings")]
 [Trace]
-public class HotkeysController(IHotkeySetupRepository repository, TimeProvider timeProvider) : ControllerBase
+public class HotkeysController(IHotkeySetupRepository repository, TimeProvider timeProvider, ILogger<HotkeysController> logger) : ControllerBase
 {
     private readonly IHotkeySetupRepository _repository = repository;
     private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly ILogger<HotkeysController> _logger = logger;
 
     [HttpGet("{battleTag}/hotkeys")]
     [BearerCheckIfBattleTagBelongsToAuth]
@@ -40,12 +42,14 @@ public class HotkeysController(IHotkeySetupRepository repository, TimeProvider t
         var validation = HotkeySetupValidator.Validate(request.Mode, request.CustomKeys, rawPreferences, filtered);
         if (!validation.IsValid)
         {
+            LogOutcome(battleTag, validation.Reason);
             return BadRequest(new HotkeyErrorResponse(validation.Reason));
         }
 
         var stored = await _repository.Load(battleTag);
         if (stored != null && IsUnchanged(stored, request, filtered))
         {
+            LogOutcome(battleTag, "noop");
             return Ok(new HotkeyRevisionResponse(stored.Revision));
         }
 
@@ -66,12 +70,23 @@ public class HotkeysController(IHotkeySetupRepository repository, TimeProvider t
 
         if (written)
         {
+            LogOutcome(battleTag, expected == null ? "created" : "replaced");
             return Ok(new HotkeyRevisionResponse(setup.Revision));
         }
 
         var current = await _repository.Load(battleTag);
+        if (current != null && IsUnchanged(current, request, filtered))
+        {
+            LogOutcome(battleTag, "noop");
+            return Ok(new HotkeyRevisionResponse(current.Revision));
+        }
+
+        LogOutcome(battleTag, "conflict");
         return Conflict(new HotkeyRevisionResponse(current?.Revision));
     }
+
+    private void LogOutcome(string battleTag, string outcome) =>
+        _logger.LogInformation("Hotkey setup upload for {BattleTag}: {Outcome}", battleTag, outcome);
 
     private static bool IsUnchanged(HotkeySetup stored, PutHotkeySetupRequest request, string filtered) =>
         stored.Mode == request.Mode
