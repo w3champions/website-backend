@@ -38,6 +38,42 @@ public class HotkeySetupValidatorTests
     }
 
     [Test]
+    public void RealCustomKeys_WithLeadingBom_IsValid()
+    {
+        ValidateCustomKeys("\uFEFF" + Fixture("real-reforged-customkeys.txt")).IsValid.Should().BeTrue();
+    }
+
+    [Test]
+    public void CustomKeys_BomOnlyAtStart_IsTolerated()
+    {
+        ValidateCustomKeys("\uFEFF[hpea]\nHotkey=Q\n").IsValid.Should().BeTrue();
+        ValidateCustomKeys("[hpea]\n\uFEFFHotkey=Q\n").Reason.Should().Be("custom_keys_invalid_line");
+    }
+
+    [TestCase("[Orc] ")]
+    [TestCase("\t[Orc]\t")]
+    [TestCase("  // comment")]
+    [TestCase("\t// comment \t")]
+    [TestCase("   ")]
+    [TestCase(" Hotkey=Q")]
+    [TestCase("\tHotkey=Q")]
+    [TestCase("Hotkey =Q")]
+    [TestCase("  Hotkey \t= Q ")]
+    public void CustomKeys_NotepadWhitespace_IsTolerated(string line)
+    {
+        ValidateCustomKeys("[hpea]\n" + line + "\n").IsValid.Should().BeTrue();
+    }
+
+    [TestCase("[Or c] ")]
+    [TestCase(" Payload=x")]
+    [TestCase(" = x")]
+    [TestCase("hello world ")]
+    public void CustomKeys_WhitespaceDoesNotRescueInvalidLines(string line)
+    {
+        ValidateCustomKeys("[hpea]\n" + line + "\n").Reason.Should().Be("custom_keys_invalid_line");
+    }
+
+    [Test]
     public void RealPreferences_FilteredAndRaw_AreValid()
     {
         var raw = Fixture("real-war3preferences.txt");

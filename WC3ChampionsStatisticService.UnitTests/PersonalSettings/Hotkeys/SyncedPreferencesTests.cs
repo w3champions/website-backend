@@ -141,4 +141,21 @@ public class SyncedPreferencesTests
         SyncedPreferences.Filter(raw).Should().Be(
             "[Gameplay]\nHUDSCALE=100\n\n[Input]\nkeyscroll=5\n\n[Sound]\nsfx=1\n\n[Video]\nspellfilter=1\n");
     }
+
+    [Test]
+    public void Filter_BomPrefixedFile_FiltersIdenticallyToPlain()
+    {
+        var plain = Fixture("real-war3preferences.txt");
+
+        SyncedPreferences.Filter("\uFEFF" + plain).Should().Be(SyncedPreferences.Filter(plain));
+        SyncedPreferences.Filter("\uFEFF[Input]\nkeyscroll=5\n").Should().Be("[Input]\nkeyscroll=5\n");
+    }
+
+    [Test]
+    public void Filter_TolerantOfWhitespaceAroundHeadersKeysAndValues()
+    {
+        var raw = "[Input] \n  keyscroll = 50 \n\t[Gameplay]\t\n\thudscale\t=\t100\n";
+
+        SyncedPreferences.Filter(raw).Should().Be("[Gameplay]\nhudscale=100\n\n[Input]\nkeyscroll=50\n");
+    }
 }

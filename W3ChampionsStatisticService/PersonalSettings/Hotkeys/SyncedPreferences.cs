@@ -46,7 +46,9 @@ public static class SyncedPreferences
         var sections = new Dictionary<string, Section>(StringComparer.OrdinalIgnoreCase);
         Section current = null;
 
-        foreach (var rawLine in rawPreferences.Split('\n'))
+        // A leading UTF-8 BOM (written by some editors) is not part of the first header.
+        var text = rawPreferences[0] == '\uFEFF' ? rawPreferences.Substring(1) : rawPreferences;
+        foreach (var rawLine in text.Split('\n'))
         {
             var line = rawLine.Trim();
             if (line.Length >= 2 && line[0] == '[' && line[^1] == ']')

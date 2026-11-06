@@ -70,7 +70,7 @@ public static class HotkeySetupValidator
 
     private static bool AreCustomKeysLinesValid(string customKeys)
     {
-        foreach (var rawLine in customKeys.Split('\n'))
+        foreach (var rawLine in StripBom(customKeys).Split('\n'))
         {
             var line = rawLine.EndsWith('\r') ? rawLine[..^1] : rawLine;
             if (!IsCustomKeysLineValid(line))
@@ -84,12 +84,15 @@ public static class HotkeySetupValidator
 
     private static bool IsCustomKeysLineValid(string line)
     {
-        if (line.Length == 0 || line.StartsWith("//", StringComparison.Ordinal))
+        // Tolerant of Notepad-style invisible formatting: spaces and tabs around blank, comment,
+        // header and key. The stored text stays byte-exact; this only affects classification.
+        var trimmed = line.Trim(' ', '\t');
+        if (trimmed.Length == 0 || trimmed.StartsWith("//", StringComparison.Ordinal))
         {
             return !HasForbiddenControlCharacter(line);
         }
 
-        if (SectionHeader.IsMatch(line))
+        if (SectionHeader.IsMatch(trimmed))
         {
             return true;
         }
@@ -100,12 +103,15 @@ public static class HotkeySetupValidator
             return false;
         }
 
-        var key = line.Substring(0, separator);
+        var key = line.Substring(0, separator).Trim(' ', '\t');
         var value = line.Substring(separator + 1);
         return AllowedCustomKeysKeys.Contains(key)
             && value.Length <= MaxCustomKeysValueLength
             && !HasForbiddenControlCharacter(value);
     }
+
+    private static string StripBom(string text) =>
+        text.Length > 0 && text[0] == '\uFEFF' ? text.Substring(1) : text;
 
     private static bool HasForbiddenControlCharacter(string text)
     {
