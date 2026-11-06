@@ -21,7 +21,7 @@ public class HotkeySetupRepository(MongoClient mongoClient) : MongoDbRepositoryB
             await Insert(setup);
             return true;
         }
-        catch (MongoWriteException e) when (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        catch (MongoWriteException e) when (e.WriteError?.Category == ServerErrorCategory.DuplicateKey)
         {
             return false;
         }
