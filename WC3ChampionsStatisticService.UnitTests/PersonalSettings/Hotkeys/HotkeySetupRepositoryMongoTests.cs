@@ -88,7 +88,7 @@ public class HotkeySetupRepositoryMongoTests
     public async Task TryReplace_StaleRevision_ReturnsFalseAndLeavesDocument()
     {
         await _repo.TryCreate(Setup());
-        await _repo.TryReplace(Setup(revision: 2, prefs: "current"), 1);
+        Assert.IsTrue(await _repo.TryReplace(Setup(revision: 2, prefs: "current"), 1));
 
         Assert.IsFalse(await _repo.TryReplace(Setup(revision: 2, prefs: "stale"), 1));
 
