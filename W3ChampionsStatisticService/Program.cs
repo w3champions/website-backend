@@ -183,6 +183,7 @@ builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.
 builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.LagReports.IRelayTelemetryService, W3ChampionsStatisticService.LagReports.RelayTelemetryService>();
 builder.Services.AddInterceptedTransient<IPersonalSettingsRepository, PersonalSettingsRepository>();
 builder.Services.AddInterceptedTransient<W3C.Domain.Repositories.IRequiresIndexes, PersonalSettingsRepository>();
+builder.Services.AddInterceptedTransient<IHotkeySetupRepository, W3ChampionsStatisticService.PersonalSettings.Hotkeys.HotkeySetupRepository>();
 builder.Services.AddInterceptedTransient<IW3CAuthenticationService, W3CAuthenticationService>();
 builder.Services.AddInterceptedSingleton<IOngoingMatchesCache, OngoingMatchesCache>();
 builder.Services.AddInterceptedTransient<HeroStatsQueryHandler>();
