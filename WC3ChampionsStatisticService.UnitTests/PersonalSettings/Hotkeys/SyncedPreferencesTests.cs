@@ -181,15 +181,16 @@ public class SyncedPreferencesTests
         SyncedPreferences.Filter($"[{withKelvin}]\nHotkey=81\n").Should().BeEmpty();
     }
 
-    [TestCase("Mouse Wheel Up")]
-    [TestCase("Reforged")]
-    [TestCase("Gameplay")]
-    public void Filter_SectionNamesWithNonAsciiLookalikes_AreDropped(string name)
+    [TestCase("Mouse Wheel Up", "HeroOnly=0")]
+    [TestCase("Reforged", "Heroes=0")]
+    [TestCase("Gameplay", "hudscale=100")]
+    public void Filter_SectionNamesWithNonAsciiLookalikes_AreDropped(string name, string keyValue)
     {
         var withCyrillicE = name.Replace('e', '\u0435');
 
         withCyrillicE.Should().NotBe(name);
-        SyncedPreferences.Filter($"[{withCyrillicE}]\nHeroes=0\n").Should().BeEmpty();
+        SyncedPreferences.Filter($"[{name}]\n{keyValue}\n").Should().Be($"[{name}]\n{keyValue}\n");
+        SyncedPreferences.Filter($"[{withCyrillicE}]\n{keyValue}\n").Should().BeEmpty();
     }
 
     [Test]
