@@ -172,17 +172,24 @@ public class SyncedPreferencesTests
 
     [TestCase("Command Grid Hotkeys 00")]
     [TestCase("Inventory Hotkeys 0")]
+    [TestCase("Custom Hotkeys 7")]
+    public void Filter_SectionNamesWithKelvinSign_AreNotFoldedToAscii(string name)
+    {
+        var withKelvin = name.Replace('k', '\u212A');
+
+        withKelvin.Should().NotBe(name);
+        SyncedPreferences.Filter($"[{withKelvin}]\nHotkey=81\n").Should().BeEmpty();
+    }
+
     [TestCase("Mouse Wheel Up")]
     [TestCase("Reforged")]
     [TestCase("Gameplay")]
-    public void Filter_SectionNamesWithKelvinSign_AreNotFoldedToAscii(string name)
+    public void Filter_SectionNamesWithNonAsciiLookalikes_AreDropped(string name)
     {
-        var withKelvin = name.Replace("k", "\u212A").Replace("K", "\u212A");
-        var raw = name.Contains('k') || name.Contains('K')
-            ? $"[{withKelvin}]\nHotkey=81\n"
-            : $"[{name.Replace("e", "\u0435")}]\nHotkey=81\n";
+        var withCyrillicE = name.Replace('e', '\u0435');
 
-        SyncedPreferences.Filter(raw).Should().BeEmpty();
+        withCyrillicE.Should().NotBe(name);
+        SyncedPreferences.Filter($"[{withCyrillicE}]\nHeroes=0\n").Should().BeEmpty();
     }
 
     [Test]
