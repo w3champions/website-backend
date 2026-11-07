@@ -168,6 +168,44 @@ public class MatchesController(
     }
 
 
+    /// <summary>
+    /// Searches the players a given player shares finished matches with,
+    /// e.g. to suggest opponents when filtering a player's match history.
+    /// </summary>
+    /// <param name="playerId">The battleTag whose matches are searched.</param>
+    /// <param name="season">The season filter. If less than 0, uses the latest season.</param>
+    /// <param name="search">Case-insensitive battleTag fragment. Empty returns the most played opponents.</param>
+    /// <param name="gateWay">The gateway filter.</param>
+    /// <param name="gameMode">Scopes matchCount to one game mode (Undefined counts every mode).
+    /// Opponents without matches in that mode are still listed, with matchCount 0.</param>
+    /// <param name="limit">The maximum number of results (max 50).</param>
+    /// <returns>
+    /// 200 OK: A list of players ordered by shared match count descending, with the
+    /// searched player's record across those matches (allies share the same result).
+    /// [{ battleTag: string, matchCount: long, wins: long, losses: long }]
+    /// </returns>
+    [ProducesResponseType(typeof(List<OpponentInfo>), 200)]
+    [HttpGet("search-opponents")]
+    public async Task<IActionResult> SearchOpponents(
+        string playerId,
+        int season = -1,
+        string search = "",
+        GateWay gateWay = GateWay.Undefined,
+        GameMode gameMode = GameMode.Undefined,
+        int limit = 10)
+    {
+        if (string.IsNullOrEmpty(playerId)) return BadRequest("playerId is required");
+        if (season < 0)
+        {
+            var lastSeason = await _matchRepository.LoadLastSeason();
+            season = lastSeason.Id;
+        }
+        if (limit > 50) limit = 50;
+
+        var opponents = await _matchService.SearchOpponentsPerPlayer(playerId, search, season, gateWay, gameMode, limit);
+        return Ok(opponents);
+    }
+
     [HttpGet("ongoing")]
     public async Task<IActionResult> GetOnGoingMatches(
         int offset = 0,
