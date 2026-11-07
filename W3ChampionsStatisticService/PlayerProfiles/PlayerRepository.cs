@@ -226,6 +226,43 @@ public class PlayerRepository(MongoClient mongoClient) : MongoDbRepositoryBase(m
         return Upsert(mmrRpTimeline);
     }
 
+    /// <summary>
+    /// Writes a timeline only if nobody else has written it since it was read,
+    /// returning false when they have so the caller can reload and reapply.
+    ///
+    /// <paramref name="expectedRevision"/> is null when no document was loaded, which
+    /// is not the same as a revision of 0 - every document predating the field
+    /// deserializes as 0, so "absent" and "never written" have to be distinguished or
+    /// a concurrent creator would be overwritten rather than detected.
+    /// </summary>
+    public async Task<bool> TryUpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline, int? expectedRevision)
+    {
+        var collection = CreateCollection<PlayerMmrRpTimeline>();
+        mmrRpTimeline.Revision = (expectedRevision ?? 0) + 1;
+
+        if (expectedRevision == null)
+        {
+            try
+            {
+                await collection.InsertOneAsync(mmrRpTimeline);
+                return true;
+            }
+            catch (MongoWriteException e) when (e.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+            {
+                // Someone created it between our read and our write.
+                return false;
+            }
+        }
+
+        var result = await collection.ReplaceOneAsync(
+            Builders<PlayerMmrRpTimeline>.Filter.And(
+                Builders<PlayerMmrRpTimeline>.Filter.Eq(t => t.Id, mmrRpTimeline.Id),
+                Builders<PlayerMmrRpTimeline>.Filter.Eq(t => t.Revision, expectedRevision.Value)),
+            mmrRpTimeline);
+
+        return result.MatchedCount == 1;
+    }
+
     public Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season)
     {
         var compoundId = PlayerGameLength.CompoundId(battleTag, season);
