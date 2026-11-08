@@ -4,7 +4,7 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 public class PlayerRaceOnMapVersusRaceRatioView
 {
-    // MapName is stored per entry from the MatchFinishedEvent, so it is returned as is.
+    // Shares the stored entries; PlayerStatisticsService sets their display names.
     public static PlayerRaceOnMapVersusRaceRatioView Create(PlayerRaceOnMapVersusRaceRatio player)
     {
         return new PlayerRaceOnMapVersusRaceRatioView

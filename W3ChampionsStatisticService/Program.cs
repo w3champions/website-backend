@@ -153,6 +153,10 @@ builder.Services.Configure<CacheOptionsFor<List<PlayerAka>>>(x =>
 {
     x.CacheDuration = TimeSpan.FromHours(1);
 });
+builder.Services.Configure<CacheOptionsFor<W3ChampionsStatisticService.Maps.CurrentMapNames>>(x =>
+{
+    x.CacheDuration = TimeSpan.FromMinutes(10);
+});
 
 builder.Services.AddInterceptedTransient<IMatchEventRepository, MatchEventRepository>();
 builder.Services.AddInterceptedTransient<IVersionRepository, VersionRepository>();
@@ -227,6 +231,7 @@ builder.Services.AddInterceptedSingleton<W3ChampionsStatisticService.RateLimitin
 builder.Services.AddInterceptedSingleton<MatchmakingServiceClient>();
 builder.Services.AddInterceptedSingleton<UpdateServiceClient>();
 builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.Maps.MapMetadataRecomputeService>();
+builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.Maps.ICurrentMapNameProvider, W3ChampionsStatisticService.Maps.CurrentMapNameProvider>();
 builder.Services.AddInterceptedSingleton<ReplayServiceClient>();
 builder.Services.AddInterceptedTransient<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportRepository>();
 builder.Services.AddSingleton<W3ChampionsStatisticService.Admin.ReplayExport.ReplayExportTicketStore>();

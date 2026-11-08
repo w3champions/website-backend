@@ -15,6 +15,7 @@ using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Common.Constants;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Ports;
 
 namespace W3ChampionsStatisticService.Matches;
@@ -247,11 +248,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             playerBlizzard.teamIndex);
     }
 
-    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall")
+    public async Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", MapNameFilter mapNameFilter = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var mongoCollection = CreateCollection<Matchup>();
-        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, mapNameFilter);
         var results = await mongoCollection.Find(filter).SortByDescending(s => s.EndTime).Skip(offset).Limit(pageSize).ToListAsync();
         PlayersObfuscator.ObfuscateMmr(results);
         return results;
@@ -272,6 +273,21 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return mapNames.OrderBy(mapName => mapName).ToList();
     }
 
+    public async Task<List<MapIdAndName>> LoadMapIdsAndNames(int season, GameMode gameMode)
+    {
+        var builder = Builders<Matchup>.Filter;
+        var filter = builder.Eq(m => m.Season, season)
+            & builder.Eq(m => m.GameMode, gameMode)
+            & (builder.Ne(m => m.MapId, null)
+                | (builder.Ne(m => m.MapName, null) & builder.Ne(m => m.MapName, string.Empty)));
+
+        return await CreateCollection<Matchup>()
+            .Aggregate()
+            .Match(filter)
+            .Group(m => new { m.MapId, m.MapName }, g => new MapIdAndName { MapId = g.Key.MapId, MapName = g.Key.MapName })
+            .ToListAsync();
+    }
+
     public async Task<int> GetFloIdFromId(string gameId)
     {
         var gameIdObj = new ObjectId($"{gameId}");
@@ -279,20 +295,25 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         return (match == null || match.FloMatchId == null) ? 0 : match.FloMatchId.Value;
     }
 
-    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall")
+    public Task<long> Count(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", MapNameFilter mapNameFilter = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var filter = GetLoadFilter(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, mapNameFilter);
         return CreateCollection<Matchup>().CountDocumentsAsync(filter);
     }
 
-    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall")
+    // A mapNameFilter, when given, replaces the plain stored-name match on mapName.
+    private FilterDefinition<Matchup> GetLoadFilter(int season, GameMode gameMode, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", MapNameFilter mapNameFilter = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         var builder = Builders<Matchup>.Filter;
         var filter = builder.Eq(m => m.GameMode, gameMode) & builder.Eq(m => m.Season, season);
 
-        if (!string.IsNullOrWhiteSpace(mapName) && mapName != "Overall")
+        if (mapNameFilter != null)
+        {
+            filter &= GetMapNameFilter(mapNameFilter);
+        }
+        else if (!string.IsNullOrWhiteSpace(mapName) && mapName != "Overall")
         {
             filter &= builder.Eq(m => m.MapName, mapName);
         }
@@ -327,6 +348,24 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         }
 
         return filter;
+    }
+
+    private static FilterDefinition<Matchup> GetMapNameFilter(MapNameFilter mapNameFilter)
+    {
+        var builder = Builders<Matchup>.Filter;
+        var byStoredName = builder.Eq(m => m.MapName, mapNameFilter.MapName);
+        if (mapNameFilter.MapIdsWithCurrentName.Count > 0)
+        {
+            // $nin also matches a missing or null MapId.
+            byStoredName &= builder.Nin(m => m.MapId, mapNameFilter.MapIdsWithCurrentName.Select(id => (int?)id));
+        }
+
+        if (mapNameFilter.MapIds.Count == 0)
+        {
+            return byStoredName;
+        }
+
+        return builder.In(m => m.MapId, mapNameFilter.MapIds.Select(id => (int?)id)) | byStoredName;
     }
 
 
@@ -381,10 +420,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
         int minMmr = 0,
         int? maxMmr = null,
         string sort = "startTimeDescending",
-        string mapName = "Overall")
+        string mapName = "Overall",
+        CurrentMapNames currentMapNames = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, mapName);
+        return _cache.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, mapName, currentMapNames);
     }
 
     public Task<long> CountOnGoingMatches(
@@ -393,10 +433,11 @@ public class MatchRepository(MongoClient mongoClient, IOngoingMatchesCache cache
             string map = "Overall",
             int minMmr = 0,
             int? maxMmr = null,
-            string mapName = "Overall")
+            string mapName = "Overall",
+            CurrentMapNames currentMapNames = null)
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
-        return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr, mapName);
+        return _cache.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr, mapName, currentMapNames);
     }
 
     public Task<Season> LoadLastSeason()

@@ -9,6 +9,7 @@ using W3C.Domain.GameModes;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Common.Constants;
 using W3ChampionsStatisticService.Heroes;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats.MmrDistribution;
@@ -23,7 +24,8 @@ public class MatchesController(
     MatchQueryHandler matchQueryHandler,
     MatchService matchService,
     IPlayerRepository playerRepository,
-    MmrDistributionHandler mmrDistributionHandler
+    MmrDistributionHandler mmrDistributionHandler,
+    ICurrentMapNameProvider currentMapNameProvider
 ) : ControllerBase
 {
     private readonly IMatchRepository _matchRepository = matchRepository;
@@ -31,6 +33,7 @@ public class MatchesController(
     private readonly MatchQueryHandler _matchQueryHandler = matchQueryHandler;
     private readonly MatchService _matchService = matchService;
     private readonly MmrDistributionHandler _mmrDistributionHandler = mmrDistributionHandler;
+    private readonly ICurrentMapNameProvider _currentMapNameProvider = currentMapNameProvider;
 
     /// <summary>
     /// Gets the distinct map names for a season and game mode.
@@ -108,9 +111,11 @@ public class MatchesController(
             season = lastSeason.Id;
         }
         if (pageSize > 100) pageSize = 100;
-        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        var mapNameFilter = await _matchService.GetMapNameFilter(season, gameMode, mapName);
+        var matches = await _matchRepository.Load(season, gameMode, offset, pageSize, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, mapNameFilter);
         PlayersObfuscator.ObfuscateMmr(matches);
-        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName);
+        (await _currentMapNameProvider.GetAsync()).Apply(matches);
+        var count = await _matchRepository.Count(season, gameMode, hero, minMmr, maxMmr, minDuration, maxDuration, mapName, mapNameFilter);
         return Ok(new { matches, count });
     }
 
@@ -124,6 +129,7 @@ public class MatchesController(
 
         var match = await _matchRepository.LoadFinishedMatchDetails(objectId);
         PlayersObfuscator.ObfuscateMmr(match);
+        (await _currentMapNameProvider.GetAsync()).Apply(match);
         return Ok(match);
     }
 
@@ -141,6 +147,7 @@ public class MatchesController(
     {
         var match = await _matchRepository.LoadFinishedMatchDetailsByMatchId(id);
         PlayersObfuscator.ObfuscateMmr(match);
+        (await _currentMapNameProvider.GetAsync()).Apply(match);
         return Ok(match);
     }
 
@@ -164,6 +171,7 @@ public class MatchesController(
         var matches = await _matchService.GetMatchesPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, offset, pageSize, hero, playerIncludeRandom, opponentIncludeRandom);
         var count = await _matchService.GetMatchCountPerPlayer(playerId, season, opponentId, gameMode, gateWay, playerRace, opponentRace, hero, playerIncludeRandom, opponentIncludeRandom);
         PlayersObfuscator.ObfuscateMmr(matches);
+        (await _currentMapNameProvider.GetAsync()).Apply(matches);
         return Ok(new { matches, count });
     }
 
@@ -183,8 +191,10 @@ public class MatchesController(
     {
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         if (pageSize > 200) pageSize = 200;
-        var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, mapName);
-        var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr, mapName);
+        var currentMapNames = await _currentMapNameProvider.GetAsync();
+        var matches = await _matchRepository.LoadOnGoingMatches(gameMode, gateWay, offset, pageSize, map, minMmr, maxMmr, sort, mapName, currentMapNames);
+        var count = await _matchRepository.CountOnGoingMatches(gameMode, gateWay, map, minMmr, maxMmr, mapName, currentMapNames);
+        currentMapNames.Apply(matches);
 
         await _matchQueryHandler.PopulatePlayerInfos(matches);
 
@@ -206,6 +216,7 @@ public class MatchesController(
 
         PlayersObfuscator.ObfuscatePlayersForFFA(onGoingMatch);
         PlayersObfuscator.ObfuscateMmr(onGoingMatch);
+        (await _currentMapNameProvider.GetAsync()).Apply(onGoingMatch);
 
         return Ok(onGoingMatch);
     }

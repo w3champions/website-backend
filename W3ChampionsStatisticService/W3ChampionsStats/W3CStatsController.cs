@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using W3C.Contracts.Matchmaking;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Services;
 using W3ChampionsStatisticService.W3ChampionsStats.HeroWinrate;
@@ -19,17 +20,20 @@ public class W3CStatsController(
     IW3StatsRepo w3StatsRepo,
     HeroStatsQueryHandler heroStatsQueryHandler,
     MmrDistributionHandler mmrDistributionHandler,
-    PlayerStatisticsService statisticsService) : ControllerBase
+    PlayerStatisticsService statisticsService,
+    ICurrentMapNameProvider currentMapNameProvider) : ControllerBase
 {
     private readonly IW3StatsRepo _w3StatsRepo = w3StatsRepo;
     private readonly HeroStatsQueryHandler _heroStatsQueryHandler = heroStatsQueryHandler;
     private readonly MmrDistributionHandler _mmrDistributionHandler = mmrDistributionHandler;
     private readonly PlayerStatisticsService _statisticsService = statisticsService;
+    private readonly ICurrentMapNameProvider _currentMapNameProvider = currentMapNameProvider;
 
     [HttpGet("map-race-wins")]
     public async Task<IActionResult> GetRaceVersusRaceStat()
     {
         var stats = await _w3StatsRepo.LoadRaceVsRaceStats();
+        (await _currentMapNameProvider.GetAsync()).Apply(stats);
         return Ok(stats);
     }
 

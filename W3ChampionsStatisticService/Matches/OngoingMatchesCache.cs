@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using W3C.Contracts.Matchmaking;
 using W3C.Domain.Repositories;
 using W3C.Domain.Tracing;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Services;
 
 namespace W3ChampionsStatisticService.Matches;
@@ -24,14 +25,15 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         string map,
         int minMmr,
         int? maxMmr,
-        string mapName)
+        string mapName,
+        CurrentMapNames currentMapNames = null)
     {
         await UpdateCacheIfNeeded();
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
         return _values.Count(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                                     && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                                     && (map == "Overall" || m.Map == map)
-                                    && MatchesMapName(m, mapName)
+                                    && MatchesMapName(m, mapName, currentMapNames)
                                     && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr < minMmr)))
                                     && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr > maxMmr))));
     }
@@ -45,7 +47,8 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
         int minMmr,
         int? maxMmr,
         string sort,
-        string mapName)
+        string mapName,
+        CurrentMapNames currentMapNames = null)
     {
         await UpdateCacheIfNeeded();
         if (maxMmr == null) maxMmr = MmrConstants.MaxMmrPerGameMode[gameMode];
@@ -53,7 +56,7 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             .Where(m => (gameMode == GameMode.Undefined || m.GameMode == gameMode)
                         && (gateWay == GateWay.Undefined || m.GateWay == gateWay)
                         && (map == "Overall" || m.Map == map)
-                        && MatchesMapName(m, mapName)
+                        && MatchesMapName(m, mapName, currentMapNames)
                         && (minMmr == 0 || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr < minMmr)))
                         && (maxMmr == MmrConstants.MaxMmrPerGameMode[gameMode] || !m.Teams.Any(team => team.Players.Any(player => player.OldMmr == null || player.OldMmr > maxMmr))));
 
@@ -68,11 +71,17 @@ public class OngoingMatchesCache(MongoClient mongoClient, TracingService tracing
             .ToList();
     }
 
-    // "Overall", null or empty (an empty ?mapName= binds as null) mean no filter.
+    // "Overall", null or empty (an empty ?mapName= binds as null) mean no filter. With current names, the
+    // displayed name is compared, so a renamed map is found by its current name.
     [NoTrace]
-    private static bool MatchesMapName(OnGoingMatchup match, string mapName)
+    private static bool MatchesMapName(OnGoingMatchup match, string mapName, CurrentMapNames currentMapNames)
     {
-        return string.IsNullOrEmpty(mapName) || mapName == "Overall" || match.MapName == mapName;
+        if (string.IsNullOrEmpty(mapName) || mapName == "Overall") return true;
+
+        var displayedName = currentMapNames == null
+            ? match.MapName
+            : currentMapNames.Resolve(match.GameMode, match.MapId, match.MapName);
+        return displayedName == mapName;
     }
 
     [NoTrace]
@@ -137,7 +146,8 @@ public interface IOngoingMatchesCache
         string map,
         int minMmr,
         int? maxMmr,
-        string mapName);
+        string mapName,
+        CurrentMapNames currentMapNames = null);
 
     Task<List<OnGoingMatchup>> LoadOnGoingMatches(
         GameMode gameMode,
@@ -148,7 +158,8 @@ public interface IOngoingMatchesCache
         int minMmr,
         int? maxMmr,
         string sort,
-        string mapName);
+        string mapName,
+        CurrentMapNames currentMapNames = null);
 
     Task<OnGoingMatchup> LoadOnGoingMatchForPlayer(string playerId);
     void Upsert(OnGoingMatchup matchup);
