@@ -10,6 +10,7 @@ public sealed class MapKeyBackfillOptions
     public const string DefaultDatabaseName = "W3Champions-Statistic-Service";
     public const string DefaultReportPath = "map-key-backfill-report.csv";
     public const int DefaultBatchSize = 1000;
+    public const int DefaultAggregationPauseMs = 2000;
 
     public static readonly IReadOnlyList<string> SupportedCollections = new[]
     {
@@ -30,6 +31,10 @@ public sealed class MapKeyBackfillOptions
     public string MmMapsPath { get; init; }
     public int BatchSize { get; init; } = DefaultBatchSize;
     public string StartAfter { get; init; }
+    public string EventCatalogPath { get; init; }
+    public string WriteEventCatalogPath { get; init; }
+    public int AggregationPauseMs { get; init; } = DefaultAggregationPauseMs;
+    public int BatchPauseMs { get; init; }
     public bool AllowRemote { get; init; }
     public string ConfirmDatabase { get; init; }
 
@@ -48,20 +53,28 @@ public sealed class MapKeyBackfillOptions
           --collections <names>                Comma-separated list. Defaults to
                                                Matchup,MapsPerSeason,PlayerHeroStats,PlayerRaceOnMapVersusRaceRatio,OverallRaceAndWinStat.
           --report <path>                      CSV report path. Defaults to map-key-backfill-report.csv.
-          --manual-map <path>                  Optional JSON file with manual annotations.
+          --manual-map <path>                  Optional JSON file with manual annotations (shape below).
           --update-service-map-data <path>     mongoexport of UpdateService MapData.
           --mm-maps <path>                     mongoexport of matchmaking-service Maps.
+          --event-catalog <path>               Read the MatchFinishedEvent map catalog from a file written by
+                                               --write-event-catalog instead of aggregating the events.
+          --write-event-catalog <path>         Aggregate the events and save the catalog to this file.
+          --aggregation-pause-ms <number>      Pause between the monthly event aggregations. Defaults to 2000.
           --batch-size <number>                Documents per bulk write. Defaults to 1000.
-          --start-after <_id>                  Resume after a document id. Needs exactly one collection in --collections.
+          --batch-pause-ms <number>            Pause between bulk writes. Defaults to 0.
+          --start-after <_id>                  Resume after a document id. Needs exactly one collection in --collections,
+                                               and not MapsPerSeason or OverallRaceAndWinStat (always processed whole).
           --apply                              Write changes. Without this, the command is a dry run.
           --allow-remote                       Allow --apply on a host other than localhost/127.0.0.1.
           --confirm-database <name>            Required with --allow-remote; must equal the target database.
           --help                               Show this help.
 
-        Manual map JSON shape (keys are legacy keys or file names):
-          {
-            "LegacyMapKey": { "mapName": "Display Name", "mapId": 123 }
-          }
+        Manual map JSON shape: one entry per map, listing every stored spelling of its legacy key. An entry applies
+        only in its seasons and, if gameModes is given, only in those modes. mapId null keeps the fixed mapName.
+          [
+            { "mapId": 3, "mapName": "Last Refuge", "keys": ["LastRefuge", "lastrefuge"], "seasons": "0-10" },
+            { "mapId": 19, "mapName": "Twilight Ruins", "keys": ["twilightruins"], "seasons": "1-5", "gameModes": ["FFA"] }
+          ]
         """;
 
     public static MapKeyBackfillOptions Parse(string[] args)
@@ -82,6 +95,10 @@ public sealed class MapKeyBackfillOptions
         string mmMapsPath = null;
         int batchSize = DefaultBatchSize;
         string startAfter = null;
+        string eventCatalogPath = null;
+        string writeEventCatalogPath = null;
+        int aggregationPauseMs = DefaultAggregationPauseMs;
+        int batchPauseMs = 0;
         bool allowRemote = false;
         string confirmDatabase = null;
 
@@ -120,6 +137,18 @@ public sealed class MapKeyBackfillOptions
                 case "--start-after":
                     startAfter = ReadValue(queue, arg);
                     break;
+                case "--event-catalog":
+                    eventCatalogPath = ReadValue(queue, arg);
+                    break;
+                case "--write-event-catalog":
+                    writeEventCatalogPath = ReadValue(queue, arg);
+                    break;
+                case "--aggregation-pause-ms":
+                    aggregationPauseMs = ReadInt(queue, arg);
+                    break;
+                case "--batch-pause-ms":
+                    batchPauseMs = ReadInt(queue, arg);
+                    break;
                 case "--apply":
                     apply = true;
                     break;
@@ -155,6 +184,26 @@ public sealed class MapKeyBackfillOptions
             throw new ArgumentException("--start-after requires exactly one collection in --collections.");
         }
 
+        if (startAfter != null && collections[0] is "MapsPerSeason" or "OverallRaceAndWinStat")
+        {
+            throw new ArgumentException($"--start-after can't be used with {collections[0]}: it is always processed whole.");
+        }
+
+        if (startAfter != null && collections[0] == "Matchup" && !MongoDB.Bson.ObjectId.TryParse(startAfter, out _))
+        {
+            throw new ArgumentException("--start-after for Matchup must be an ObjectId.");
+        }
+
+        if (eventCatalogPath != null && writeEventCatalogPath != null)
+        {
+            throw new ArgumentException("--event-catalog and --write-event-catalog can't be used together.");
+        }
+
+        if (aggregationPauseMs < 0 || batchPauseMs < 0)
+        {
+            throw new ArgumentException("--aggregation-pause-ms and --batch-pause-ms must not be negative.");
+        }
+
         if (allowRemote != (confirmDatabase != null))
         {
             throw new ArgumentException("--allow-remote and --confirm-database must be given together.");
@@ -172,6 +221,10 @@ public sealed class MapKeyBackfillOptions
             MmMapsPath = mmMapsPath,
             BatchSize = batchSize,
             StartAfter = startAfter,
+            EventCatalogPath = eventCatalogPath,
+            WriteEventCatalogPath = writeEventCatalogPath,
+            AggregationPauseMs = aggregationPauseMs,
+            BatchPauseMs = batchPauseMs,
             AllowRemote = allowRemote,
             ConfirmDatabase = confirmDatabase
         };

@@ -53,20 +53,13 @@ public static class MapKeyBackfillCommand
 
         try
         {
-            await RunBackfillAsync(options);
+            await new MapKeyBackfillRunner(options, target, Console.WriteLine).RunAsync();
             return 0;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex.Message);
+            Console.Error.WriteLine(ex);
             return 1;
         }
-    }
-
-    private static async Task RunBackfillAsync(MapKeyBackfillOptions options)
-    {
-        await Task.CompletedTask;
-        throw new NotImplementedException(
-            $"backfill-map-keys is not implemented beyond option parsing and the safety guard yet. Nothing was read from or written to {options.DatabaseName}.");
     }
 }
