@@ -126,12 +126,43 @@ public class MapKeyTransformTests
         Assert.AreEqual(BsonDocument.Parse("""{ "Map": "tidewaterglades", "MapId": 47, "MapName": "Tidewater Glades v2", "Count": 5 }"""), allModes[0]);
         Assert.AreEqual(BsonDocument.Parse("""{ "Map": "tidewaterglades", "MapName": "Tidewater Glades LV", "Count": 10 }"""), allModes[1]);
 
-        // 4v4 stores 16 but the seasons sum to 15: left as it is and reported.
-        Assert.AreEqual(BsonDocument.Parse("""{ "Map": "tidewaterglades", "Count": 16 }"""), Maps(result.Document, 4).Single());
-        Assert.AreEqual(MapKeyStatus.NotRebuilt, report.Rows.Single(r => r.GameMode == 4).Status);
-        Assert.AreEqual(MapKeyStatus.Rebuilt, report.Rows.Single(r => r.GameMode == 0).Status);
+        // 4v4 stores 16 but the seasons sum to 15: rebuilt from the seasons anyway, and both totals reported.
+        var fourVsFour = Maps(result.Document, 4);
+        Assert.AreEqual(2, fourVsFour.Count);
+        Assert.AreEqual(15, fourVsFour.Sum(e => e["Count"].AsInt32));
+        var fourVsFourRow = report.Rows.Single(r => r.GameMode == 4);
+        Assert.AreEqual(MapKeyStatus.Rebuilt, fourVsFourRow.Status);
+        Assert.IsTrue(fourVsFourRow.TotalsDiffer);
+        StringAssert.Contains("stored total was 16 (-1)", fourVsFourRow.Notes);
+
+        var allModesRow = report.Rows.Single(r => r.GameMode == 0);
+        Assert.AreEqual(MapKeyStatus.Rebuilt, allModesRow.Status);
+        Assert.IsFalse(allModesRow.TotalsDiffer);
 
         Assert.IsFalse(MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(result.Document, new[] { season2, season3 }, null).Changed);
+    }
+
+    [Test]
+    public void MapsPerSeason_AllSeasonsDocument_GetsAModeOnlyTheSeasonsHave()
+    {
+        var resolver = Resolver(new EventMapGroup[0]);
+        var season3 = MapKeyTransforms.TransformMapsPerSeasonSeason(BsonDocument.Parse("""
+            { "_id": "3", "Season": 3, "MatchesOnMapPerModes": [
+              { "GameMode": 0, "Maps": [ { "Map": "tidewaterglades", "Count": 5 } ] },
+              { "GameMode": 4, "Maps": [ { "Map": "tidewaterglades", "Count": 5 } ] } ] }
+            """), resolver, null).Document;
+        var allSeasons = BsonDocument.Parse("""
+            { "_id": "-1", "Season": -1, "MatchesOnMapPerModes": [
+              { "GameMode": 0, "Maps": [ { "Map": "tidewaterglades", "Count": 5 } ] } ] }
+            """);
+        var report = new MapKeyReport();
+
+        var result = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, new[] { season3 }, report);
+
+        Assert.IsTrue(result.Changed);
+        Assert.AreEqual(BsonDocument.Parse("""{ "Map": "tidewaterglades", "MapId": 47, "MapName": "Tidewater Glades v2", "Count": 5 }"""), Maps(result.Document, 4).Single());
+        Assert.IsTrue(report.Rows.Single(r => r.GameMode == 4).TotalsDiffer);
+        Assert.IsFalse(MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(result.Document, new[] { season3 }, null).Changed);
     }
 
     [Test]

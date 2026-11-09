@@ -108,10 +108,10 @@ How a key is resolved:
 
 Writes:
 - `Matchup`: `Map` from the document's own `MatchFinishedEvent` (by `_id`, then `MatchId` ↔ `match._id`). `MapId`/`MapName` are only filled where missing.
-- Stats documents are replaced whole. Entries that end up with the same `Map` are merged (counts and wins/losses summed); `"Overall"` stays first.
-- `MapsPerSeason`: each season's all-modes bucket, and the all-seasons document (`-1`), are rebuilt as the sum of the migrated mode buckets and season documents. A bucket whose stored total differs from that sum is left as it is (or migrated in place) and reported.
+- Stats documents are replaced whole. Entries that end up with the same `Map` are merged (counts and wins/losses summed); `"Overall"` keeps its position. In hero and race stats it isn't always first: the handlers only add it for melee games, so an entry from an earlier non-melee game can precede it.
+- `MapsPerSeason`: each season's all-modes bucket is rebuilt as the sum of its migrated mode buckets; if its stored total differs from that sum, it is migrated in place instead and reported as `not-rebuilt`. The all-seasons document (`-1`) is always rebuilt as the sum of the migrated season documents, which are the reference; a bucket whose stored total differed is reported as `rebuilt` with both totals in `notes`, and a warning is printed.
 - Re-running is safe: entries already in the new shape don't change.
 
-CSV columns: `collection, legacy_key, season, game_mode, status, chosen_file, map_id, map_name, candidate_files, source, docs_touched, entries, entries_merged, notes`. Statuses: `resolved`, `resolved-by-catalog`, `resolved-manual`, `ambiguous-merged` (several maps share the key; the most played was chosen), `legacy-key`, `unresolved` (left unchanged), `rebuilt` / `not-rebuilt`.
+CSV columns: `collection, legacy_key, season, game_mode, status, chosen_file, map_id, map_name, display_name, candidate_files, source, docs_touched, entries, entries_merged, notes`. `map_name` is the name stored; `display_name` is the name the website shows: the current name from `--mm-maps` for an entry with a map id in a mode that displays current names (`GameModesHelper.CurrentMapNameGameModes`), in hero and race stats, or in an all-modes bucket whose id is played in such a mode; otherwise the stored name, or the stored `Map` when there is no name. Statuses: `resolved`, `resolved-by-catalog`, `resolved-manual`, `ambiguous-merged` (several maps share the key; the most played was chosen), `legacy-key`, `unresolved` (left unchanged), `rebuilt` / `not-rebuilt`.
 
 Other options: `--collections`, `--database`, `--batch-size` (default 1000), `--batch-pause-ms`, `--start-after <_id>` (one paged collection only). Run `--help` for the full list.

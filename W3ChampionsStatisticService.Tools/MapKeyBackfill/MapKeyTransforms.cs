@@ -147,8 +147,9 @@ public static class MapKeyTransforms
         return new MapKeyTransformResult(result, changed);
     }
 
-    // The all-seasons document (_id "-1") is the sum of the migrated season documents, per mode bucket. A bucket
-    // whose stored total differs from that sum is left as it is.
+    // The all-seasons document (_id "-1") is rebuilt as the sum of the migrated season documents, per mode bucket.
+    // The season documents are the reference: a bucket whose stored total differs from that sum is rebuilt anyway,
+    // and both totals are reported. A mode the seasons have but the document lacks gets a new bucket.
     public static MapKeyTransformResult RebuildMapsPerSeasonAllSeasons(BsonDocument allSeasons, IReadOnlyList<BsonDocument> migratedSeasons, MapKeyReport report)
     {
         var result = allSeasons.DeepClone().AsBsonDocument;
@@ -179,14 +180,13 @@ public static class MapKeyTransforms
             var storedTotal = bucket == null ? 0 : TotalCount(Documents(bucket.GetValue("Maps", BsonNull.Value)));
             var sumTotal = TotalCount(entries.Select(e => e.e));
 
-            if (storedTotal != sumTotal)
-            {
-                report?.RecordRebuild(MapsPerSeason, id, -1, mode, false, storedTotal, sumTotal, "the season documents");
-                continue;
-            }
-
             var rebuilt = SumEntries(entries);
-            if (bucket != null && !SameEntries(bucket.GetValue("Maps", BsonNull.Value), rebuilt))
+            if (bucket == null)
+            {
+                buckets.Add(new BsonDocument { ["GameMode"] = mode, ["Maps"] = rebuilt });
+                changed = true;
+            }
+            else if (!SameEntries(bucket.GetValue("Maps", BsonNull.Value), rebuilt))
             {
                 bucket["Maps"] = rebuilt;
                 changed = true;

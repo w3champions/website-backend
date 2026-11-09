@@ -49,6 +49,12 @@ public static class GameModeNames
         ["GM_MINIDOTA_3ON3_AT"] = 1502
     };
 
+    // Mirrors W3C.Domain.GameModes.GameModesHelper.CurrentMapNameGameModes: the modes whose entries display the
+    // map's current matchmaking name instead of the stored one. A unit test keeps the two in sync.
+    public static readonly IReadOnlySet<int> CurrentMapNameModes = new HashSet<int> { 1, 2, 3, 4, 5, 6, 8, 11, 301, 601, 801 };
+
+    public static bool UsesCurrentMapName(int gameMode) => CurrentMapNameModes.Contains(gameMode);
+
     public static int Parse(string name)
     {
         if (name == null || !ValuesByName.TryGetValue(name, out var value))

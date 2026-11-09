@@ -58,7 +58,7 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
             }
         }
 
-        Report.Write(_options.ReportPath);
+        Report.Write(_options.ReportPath, id => resolver.MmName(id));
         PrintSummary();
     }
 
@@ -242,7 +242,7 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
         {
             var rebuilt = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, seasons.Select(s => s.Document).ToList(), Report);
             results.Add(rebuilt);
-            foreach (var row in Report.Rows.Where(r => r.Collection == MapKeyTransforms.MapsPerSeason && r.Status == MapKeyStatus.NotRebuilt))
+            foreach (var row in Report.Rows.Where(r => r.Collection == MapKeyTransforms.MapsPerSeason && r.TotalsDiffer))
             {
                 _log($"Warning: MapsPerSeason season {row.Season}, mode {GameModeNames.NameOf(row.GameMode)}: {row.Notes}");
             }

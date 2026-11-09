@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using NUnit.Framework;
 using W3C.Contracts.Matchmaking;
+using W3C.Domain.GameModes;
 using W3ChampionsStatisticService.Tools.MapKeyBackfill;
 
 namespace WC3ChampionsStatisticService.Tests.Tools;
@@ -46,6 +47,12 @@ public class MapKeyBackfillOptionsTests
         {
             Assert.AreEqual((int)value, GameModeNames.Parse(value.ToString()), value.ToString());
         }
+    }
+
+    [Test]
+    public void GameModeNames_CurrentMapNameModes_MatchTheBackend()
+    {
+        Assert.That(GameModeNames.CurrentMapNameModes, Is.EquivalentTo(GameModesHelper.CurrentMapNameGameModes.Select(m => (int)m)));
     }
 
     [Test]

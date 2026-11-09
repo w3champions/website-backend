@@ -23,6 +23,9 @@ public sealed class MapKeyReportRow
     public long Documents { get; set; }
     public long Entries { get; set; }
     public long EntriesMerged { get; set; }
+
+    // A rebuilt or not rebuilt bucket whose stored total differed from the sum it was compared with.
+    public bool TotalsDiffer { get; set; }
     internal BsonValue LastDocumentId { get; set; }
 }
 
@@ -60,12 +63,12 @@ public sealed class MapKeyReport
         return totals;
     }
 
-    public void Record(string collection, BsonValue documentId, string legacyKey, int? season, int? gameMode, MapKeyResolution resolution, int entries = 1, int merged = 0)
+    public MapKeyReportRow Record(string collection, BsonValue documentId, string legacyKey, int? season, int? gameMode, MapKeyResolution resolution, int entries = 1, int merged = 0)
     {
         if (resolution.Status == MapKeyStatus.Migrated)
         {
             TotalsFor(collection).EntriesAlreadyMigrated += entries;
-            return;
+            return null;
         }
 
         var chosenFile = resolution.Map == legacyKey ? null : resolution.Map;
@@ -98,6 +101,7 @@ public sealed class MapKeyReport
 
         row.Entries += entries;
         row.EntriesMerged += merged;
+        return row;
     }
 
     public void RecordRebuild(string collection, BsonValue documentId, int season, int gameMode, bool rebuilt, long oldTotal, long newTotal, string what)
@@ -109,16 +113,49 @@ public sealed class MapKeyReport
             null,
             Array.Empty<string>(),
             what,
-            rebuilt
-                ? $"Rebuilt from {what}; total {newTotal}."
-                : $"Not rebuilt: stored total {oldTotal} differs from the sum of {what} ({newTotal}). Left as it is.");
-        Record(collection, documentId, null, season, gameMode, resolution);
+            !rebuilt
+                ? $"Not rebuilt: stored total {oldTotal} differs from the sum of {what} ({newTotal}). Left as it is."
+                : oldTotal == newTotal
+                    ? $"Rebuilt from {what}; total {newTotal}."
+                    : $"Rebuilt from {what}; total {newTotal}, stored total was {oldTotal} ({newTotal - oldTotal:+#;-#}).");
+        Record(collection, documentId, null, season, gameMode, resolution).TotalsDiffer = oldTotal != newTotal;
     }
 
-    public void Write(string path)
+    // The name the website shows for the entry, with the backend's read-time rule: an entry with a map id shows
+    // the current matchmaking name when its mode displays current names. Entries with no mode (hero and race
+    // stats) always do; an entry of a MapsPerSeason all-modes bucket does when its id is in a current-name mode
+    // bucket of the same season. Without any name, the stored Map (file or legacy key) is shown.
+    public string DisplayNameOf(MapKeyReportRow row, Func<int, string> currentName)
+    {
+        return DisplayNameOf(row, currentName, CurrentNameMapIdsBySeason());
+    }
+
+    private static string DisplayNameOf(MapKeyReportRow row, Func<int, string> currentName, HashSet<(int?, int)> currentNameMapIds)
+    {
+        var usesCurrentName = row.MapId is int id && (row.GameMode switch
+        {
+            null => true,
+            GameModeNames.Undefined => row.Collection == MapKeyTransforms.MapsPerSeason && currentNameMapIds.Contains((row.Season, id)),
+            var mode => GameModeNames.UsesCurrentMapName(mode.Value)
+        });
+
+        var name = usesCurrentName ? currentName?.Invoke(row.MapId.Value) ?? row.MapName : row.MapName;
+        return string.IsNullOrEmpty(name) ? row.ChosenFile ?? row.LegacyKey : name;
+    }
+
+    private HashSet<(int?, int)> CurrentNameMapIdsBySeason()
+    {
+        return _rows.Values
+            .Where(r => r.Collection == MapKeyTransforms.MapsPerSeason && r.MapId != null && r.GameMode is int mode && GameModeNames.UsesCurrentMapName(mode))
+            .Select(r => (r.Season, r.MapId.Value))
+            .ToHashSet();
+    }
+
+    public void Write(string path, Func<int, string> currentName = null)
     {
         using var writer = new StreamWriter(File.Create(path), new UTF8Encoding(false));
         writer.WriteLine(string.Join(",", Header));
+        var currentNameMapIds = CurrentNameMapIdsBySeason();
         foreach (var row in Rows)
         {
             var fields = new[]
@@ -131,6 +168,7 @@ public sealed class MapKeyReport
                 row.ChosenFile,
                 row.MapId?.ToString() ?? string.Empty,
                 row.MapName,
+                DisplayNameOf(row, currentName, currentNameMapIds),
                 string.Join(" | ", row.CandidateFiles ?? Array.Empty<string>()),
                 row.Source,
                 row.Documents.ToString(),
@@ -152,6 +190,7 @@ public sealed class MapKeyReport
         "chosen_file",
         "map_id",
         "map_name",
+        "display_name",
         "candidate_files",
         "source",
         "docs_touched",
