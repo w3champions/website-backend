@@ -23,16 +23,17 @@ public class CorsPolicyConfigurationTests
         Assert.That(Build().PreflightMaxAge, Is.EqualTo(TimeSpan.FromHours(2)));
     }
 
+    // Any site may read the API, but never with the visitor's credentials: authentication is a bearer header or a
+    // hub ticket, never a cookie, and a reflected origin with credentials would let any site send cookies here.
     [Test]
-    public void ExistingPolicyIsUnchanged()
+    public void AnyOriginMayReadWithoutCredentials()
     {
         var policy = Build();
 
         Assert.That(policy.AllowAnyHeader, Is.True);
         Assert.That(policy.AllowAnyMethod, Is.True);
-        Assert.That(policy.SupportsCredentials, Is.True);
-        Assert.That(policy.IsOriginAllowed("https://w3champions.com"), Is.True);
-        Assert.That(policy.IsOriginAllowed("tauri://localhost"), Is.True);
+        Assert.That(policy.AllowAnyOrigin, Is.True);
+        Assert.That(policy.SupportsCredentials, Is.False);
     }
 
     // A browser hides every response header that is not safelisted from cross-origin script. The website (another
