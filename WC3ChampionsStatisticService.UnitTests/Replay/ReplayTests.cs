@@ -44,7 +44,7 @@ public class ReplayTests
                 ""from_player"":2,
                 ""scope"":{
                     ""type"":""player"",
-                    ""id"":1
+                    ""to_player_id"":1
                 },
                 ""content"":""p2 to p1""
             }
