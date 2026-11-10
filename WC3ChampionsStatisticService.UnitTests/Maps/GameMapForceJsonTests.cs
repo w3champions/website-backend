@@ -33,6 +33,15 @@ public class GameMapForceJsonTests
     }
 
     [Test]
+    public void Map_body_binding_still_accepts_the_old_playerSet_spelling()
+    {
+        // A page loaded before the fix sends back the camelCase name it was given.
+        var map = JsonSerializer.Deserialize<MapContract>(MapPayload.Replace("player_set", "playerSet"), WebDefaults);
+
+        Assert.That(map.GameMap.Forces[0].PlayerSet, Is.EqualTo(4294967295L));
+    }
+
+    [Test]
     public void Map_response_spells_player_set_snake_case()
     {
         var force = new GameMapForce { Name = "Force 1", Flags = 0, PlayerSet = 4294967295L };
@@ -40,6 +49,7 @@ public class GameMapForceJsonTests
         var json = JsonSerializer.Serialize(force, WebDefaults);
 
         Assert.That(json, Does.Contain("\"player_set\":4294967295"));
+        Assert.That(json, Does.Not.Contain("playerSet"));
     }
 
     [Test]
@@ -50,5 +60,6 @@ public class GameMapForceJsonTests
         var json = Newtonsoft.Json.JsonConvert.SerializeObject(force);
 
         Assert.That(json, Does.Contain("\"player_set\":4294967295"));
+        Assert.That(json, Does.Not.Contain("LegacyPlayerSet"));
     }
 }

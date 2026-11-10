@@ -11,4 +11,18 @@ public class GameMapForce
     [JsonProperty("player_set")]
     [JsonPropertyName("player_set")]
     public long PlayerSet { get; set; }
+
+    // Responses used to spell the field `playerSet`, and a page loaded before that changed sends it
+    // back that way, so the binder still accepts it. It is never written.
+    [Newtonsoft.Json.JsonIgnore]
+    [JsonPropertyName("playerSet")]
+    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? LegacyPlayerSet
+    {
+        get => null;
+        set
+        {
+            if (value.HasValue) PlayerSet = value.Value;
+        }
+    }
 }
