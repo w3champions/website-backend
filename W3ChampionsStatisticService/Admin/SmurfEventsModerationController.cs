@@ -1,11 +1,14 @@
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.WebApi.ActionFilters;
+using static W3ChampionsStatisticService.Admin.SmurfModerationResults;
 
 namespace W3ChampionsStatisticService.Admin;
 
@@ -36,17 +39,18 @@ public class SmurfEventReviewBody
 [Trace]
 public class SmurfEventsModerationController(IAdminRepository adminRepository) : ControllerBase
 {
+    // Mirrors matchmaking's SMURF_EVENTS_MAX_LIMIT and REVIEWS (smurf-detection api/smurf-events.ts).
     private const int MaxLimit = 100;
     // \z instead of $: .NET's $ also matches before a trailing newline, JavaScript's does not.
     private static readonly Regex IdPattern = new(@"^[A-Za-z0-9_-]{1,64}\z", RegexOptions.Compiled);
-    private static readonly HashSet<string> Decisions = ["unreviewed", "confirmed", "denied"];
+    private static readonly FrozenSet<string> Decisions = new[] { "unreviewed", "confirmed", "denied" }.ToFrozenSet();
 
     private readonly IAdminRepository _adminRepository = adminRepository;
 
     [HttpGet("")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
     public async Task<IActionResult> List([FromQuery] string review, [FromQuery] string origin, [FromQuery] string cursor, [FromQuery] int? limit) =>
-        InvalidLimit(limit) ?? Forward(await _adminRepository.GetSmurfEvents(review, origin, cursor, limit));
+        InvalidLimit(limit, MaxLimit) ?? Forward(await _adminRepository.GetSmurfEvents(review, origin, cursor, limit));
 
     [HttpGet("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
@@ -78,7 +82,7 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     [HttpDelete("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
-    public async Task<IActionResult> Delete([FromRoute] string id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] SmurfReasonBody body, string actingPlayer) =>
+    public async Task<IActionResult> Delete([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] SmurfReasonBody body, string actingPlayer) =>
         InvalidId(id) ?? Forward(await _adminRepository.DeleteSmurfEvent(id, Trimmed(body?.Reason), actingPlayer));
 
     [HttpPost("{id}/review")]
@@ -87,21 +91,13 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     public async Task<IActionResult> Review([FromRoute] string id, [FromBody] SmurfEventReviewBody body, string actingPlayer) =>
         InvalidId(id) ?? MissingBody(body) ?? InvalidDecision(body.Decision) ?? Forward(await _adminRepository.ReviewSmurfEvent(id, body.Decision, Trimmed(body.Reason), actingPlayer));
 
-    private static IActionResult Forward(MatchmakingProxyResult result) =>
-        new ContentResult { StatusCode = result.StatusCode, ContentType = "application/json", Content = result.Body };
-
-    private static IActionResult Invalid(string field, string message) =>
-        new BadRequestObjectResult(new { error = $"{field}: {message}", code = "INVALID_REQUEST", field });
-
     // A blank reason is treated as absent.
     private static string Trimmed(string reason) => string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
     private static IActionResult InvalidId(string id) =>
         id != null && IdPattern.IsMatch(id) ? null : Invalid("id", "invalid event id");
 
-    private static IActionResult InvalidLimit(int? limit) =>
-        limit is null or (>= 1 and <= MaxLimit) ? null : Invalid("limit", $"must be between 1 and {MaxLimit}");
-
+    // The framework already answers an empty or null body before the action runs; this only guards direct calls.
     private static IActionResult MissingBody(object body) =>
         body == null ? Invalid("body", "required") : null;
 

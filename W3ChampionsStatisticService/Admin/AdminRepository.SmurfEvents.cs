@@ -6,7 +6,7 @@ namespace W3ChampionsStatisticService.Admin;
 
 /// <summary>
 /// Proxy for the matchmaking smurf events moderation API (/admin/smurf-detection/events). Shares the client, secret
-/// and error handling of the hardware proxy; the author of every write is supplied from the acting moderator's token.
+/// and error handling of the smurf-detection proxy (AdminRepository.SmurfDetection.cs); the author of every write is supplied from the acting moderator's token.
 /// </summary>
 public partial class AdminRepository
 {
@@ -44,7 +44,7 @@ public partial class AdminRepository
         SendSmurfEvents(HttpMethod.Post, $"/{Segment(id)}/review", EventBody(("decision", decision), ("reason", reason), ("author", author)));
 
     private Task<MatchmakingProxyResult> SendSmurfEvents(HttpMethod method, string path, object body = null) =>
-        SendSmurfHardware(method, SmurfEventsPath + path, body);
+        SendSmurfDetection(method, SmurfEventsPath + path, body);
 
     // Absent optional fields are omitted rather than sent as null.
     private static Dictionary<string, object> EventBody(params (string Key, object Value)[] fields)

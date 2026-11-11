@@ -2,6 +2,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -73,6 +74,29 @@ public class SmurfEventsModerationControllerTests
     }
 
     [Test]
+    public void Actions_ExposeExactlyTheContractVerbAndTemplatePairs()
+    {
+        var pairs = typeof(SmurfEventsModerationController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .SelectMany(m => m.GetCustomAttributes<HttpMethodAttribute>())
+            .Select(a => $"{string.Join("|", a.HttpMethods)} {a.Template}");
+
+        Assert.That(pairs, Is.EquivalentTo(new[]
+        {
+            "GET ", "GET {id}", "GET {id}/deny-preview", "POST preview", "POST ", "PUT {id}", "DELETE {id}", "POST {id}/review",
+        }));
+    }
+
+    [Test]
+    public void Delete_AcceptsARequestWithoutABody()
+    {
+        var body = typeof(SmurfEventsModerationController).GetMethod(nameof(SmurfEventsModerationController.Delete))!
+            .GetParameters()[1].GetCustomAttribute<FromBodyAttribute>();
+
+        Assert.That(body!.EmptyBodyBehavior, Is.EqualTo(EmptyBodyBehavior.Allow));
+    }
+
+    [Test]
     public void Routes_AreUnderTheEventsPath_AndNeverBindABattleTagValue()
     {
         var route = typeof(SmurfEventsModerationController).GetCustomAttribute<RouteAttribute>();
@@ -112,8 +136,17 @@ public class SmurfEventsModerationControllerTests
         _repository.VerifyNoOtherCalls();
     }
 
+    [TestCase(1)]
+    [TestCase(100)]
+    public async Task List_AcceptsTheLimitBounds(int limit)
+    {
+        _repository.Setup(r => r.GetSmurfEvents(null, null, null, limit)).ReturnsAsync(Ok200);
+
+        Assert.That((await _controller.List(null, null, null, limit) as ContentResult)!.StatusCode, Is.EqualTo(200));
+    }
+
     [Test]
-    public async Task Mm403_IsAnswered502()
+    public async Task UnavailableResult_IsForwardedAs502()
     {
         _repository.Setup(r => r.GetSmurfEvent(Id)).ReturnsAsync(MatchmakingProxyResult.Unavailable());
 
@@ -192,6 +225,8 @@ public class SmurfEventsModerationControllerTests
     [TestCase("a/b")]
     [TestCase("..")]
     [TestCase(".")]
+    [TestCase("ev-1\n")]
+    [TestCase("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] // 65 characters
     public async Task BadId_Answers400OnEveryIdRoute(string id)
     {
         AssertBadRequest(await _controller.Get(id), "id");
@@ -202,8 +237,17 @@ public class SmurfEventsModerationControllerTests
         _repository.VerifyNoOtherCalls();
     }
 
+    [TestCase("507f1f77bcf86cd799439011")] // the 24 hex characters matchmaking generates
+    [TestCase("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] // 64 characters
+    public async Task GoodId_IsForwarded(string id)
+    {
+        _repository.Setup(r => r.GetSmurfEvent(id)).ReturnsAsync(Ok200);
+
+        Assert.That((await _controller.Get(id) as ContentResult)!.StatusCode, Is.EqualTo(200));
+    }
+
     [Test]
-    public async Task MissingBody_Answers400()
+    public async Task MissingBody_OnADirectCall_Answers400()
     {
         AssertBadRequest(await _controller.Preview(null), "body");
         AssertBadRequest(await _controller.Create(null, "Mod#1"), "body");

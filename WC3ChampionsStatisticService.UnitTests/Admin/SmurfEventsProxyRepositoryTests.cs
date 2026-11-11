@@ -25,6 +25,14 @@ public class SmurfEventsProxyRepositoryTests
         return (new AdminRepository(UnusedMongo, factory), handler, factory);
     }
 
+    // The request path without any path prefix MATCHMAKING_API may carry.
+    private static string PathOf(System.Net.Http.HttpRequestMessage request)
+    {
+        var configured = System.Environment.GetEnvironmentVariable("MATCHMAKING_API");
+        var prefix = configured == null ? "" : new System.Uri(configured).AbsolutePath.TrimEnd('/');
+        return request.RequestUri!.AbsolutePath[prefix.Length..];
+    }
+
     private static readonly (string Method, string Path)[] Expected =
     [
         ("GET", Base),
@@ -59,7 +67,7 @@ public class SmurfEventsProxyRepositoryTests
 
         var request = handler.Requests.Single();
         Assert.That(request.Method.Method, Is.EqualTo(Expected[index].Method));
-        Assert.That(request.RequestUri!.AbsolutePath, Does.EndWith(Expected[index].Path));
+        Assert.That(PathOf(request), Is.EqualTo(Expected[index].Path));
         Assert.That(request.Headers.GetValues(AdminSecretProvider.HeaderName).Single(), Is.EqualTo(AdminSecretTestEnvironment.Secret));
         Assert.That(factory.RequestedNames, Is.All.EqualTo(HttpClientNames.Matchmaking));
     }
@@ -93,7 +101,7 @@ public class SmurfEventsProxyRepositoryTests
 
         await repository.GetSmurfEvent("a/b");
 
-        Assert.That(handler.Requests.Single().RequestUri!.AbsolutePath, Does.EndWith(Base + "/a%2Fb"));
+        Assert.That(PathOf(handler.Requests.Single()), Is.EqualTo(Base + "/a%2Fb"));
     }
 
     [Test]
@@ -165,6 +173,31 @@ public class SmurfEventsProxyRepositoryTests
         var result = await repository.GetSmurfEvent("ev-1");
 
         Assert.That(result.StatusCode, Is.EqualTo((int)status));
+        Assert.That(result.Body, Is.EqualTo(body));
+    }
+
+    // The status and message body are defined by matchmaking and must reach the caller untouched.
+    [Test]
+    public async Task ServiceUnavailable_FromWriteRoutes_ReachesTheCallerWithItsMessage([Range(3, 5)] int index)
+    {
+        const string body = "{\"error\":\"placeholder retry message\"}";
+        var (repository, _, _) = Create(HttpStatusCode.ServiceUnavailable, body);
+
+        var result = await Invoke(repository, index);
+
+        Assert.That(result.StatusCode, Is.EqualTo(503));
+        Assert.That(result.Body, Is.EqualTo(body));
+    }
+
+    [Test]
+    public async Task InternalServerError_IsPassedThroughUnchanged()
+    {
+        const string body = "{\"error\":\"placeholder error\"}";
+        var (repository, _, _) = Create(HttpStatusCode.InternalServerError, body);
+
+        var result = await repository.GetSmurfEvent("ev-1");
+
+        Assert.That(result.StatusCode, Is.EqualTo(500));
         Assert.That(result.Body, Is.EqualTo(body));
     }
 
