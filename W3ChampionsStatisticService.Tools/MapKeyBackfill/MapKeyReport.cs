@@ -34,6 +34,8 @@ public sealed class MapKeyCollectionTotals
     public long DocumentsRead { get; set; }
     public long DocumentsChanged { get; set; }
     public long DocumentsWritten { get; set; }
+    // Writes that matched no document: it changed after it was read (or was deleted), so it was left as it is.
+    public long DocumentsSkipped { get; set; }
     public long EntriesAlreadyMigrated { get; set; }
 }
 

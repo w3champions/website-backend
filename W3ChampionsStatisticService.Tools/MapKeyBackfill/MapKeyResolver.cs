@@ -298,7 +298,8 @@ public sealed class MapKeyResolver
         return new MapKeyResolution(MapKeyStatus.Unresolved, key, null, null, fallback.SourceMaps.ToList(), "none", fallback.Notes);
     }
 
-    // Two candidates are the same map when they share a MapId or a MapName.
+    // Two candidates are the same map when they share a file, a MapId or a MapName. A file always belongs to one map,
+    // so a map-only event group joins the groups of the same file that carry an id or a name.
     public static List<List<EventMapGroup>> GroupByIdentity(IReadOnlyList<EventMapGroup> groups)
     {
         var parent = Enumerable.Range(0, groups.Count).ToArray();
@@ -311,10 +312,9 @@ public sealed class MapKeyResolver
         for (var i = 0; i < groups.Count; i++)
         {
             var group = groups[i];
-            if (group.MapId == null && string.IsNullOrEmpty(group.MapName))
+            if (group.File != null)
             {
                 LinkOrAdd(byFile, group.File, i);
-                continue;
             }
 
             if (group.MapId != null)
@@ -351,7 +351,7 @@ public sealed class MapKeyResolver
     private static int CountManualIdentities(IReadOnlyList<ManualMapEntry> entries)
     {
         var asGroups = entries
-            .Select(e => new EventMapGroup("manual", e.MapId, e.MapName, 0, 0, e.Games, MongoDB.Bson.ObjectId.Empty))
+            .Select((e, i) => new EventMapGroup("manual:" + i, e.MapId, e.MapName, 0, 0, e.Games, MongoDB.Bson.ObjectId.Empty))
             .ToList();
         return GroupByIdentity(asGroups).Count;
     }

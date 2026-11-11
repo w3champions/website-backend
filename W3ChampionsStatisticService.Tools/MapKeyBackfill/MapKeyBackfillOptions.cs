@@ -65,7 +65,8 @@ public sealed class MapKeyBackfillOptions
           --start-after <_id>                  Resume after a document id. Needs exactly one collection in --collections,
                                                and not MapsPerSeason or OverallRaceAndWinStat (always processed whole).
           --apply                              Write changes. Without this, the command is a dry run.
-          --allow-remote                       Allow --apply on a host other than localhost/127.0.0.1.
+          --allow-remote                       Allow --apply on a host other than localhost/127.0.0.1
+                                               (or on a localhost URI whose server is another machine).
           --confirm-database <name>            Required with --allow-remote; must equal the target database.
           --help                               Show this help.
 

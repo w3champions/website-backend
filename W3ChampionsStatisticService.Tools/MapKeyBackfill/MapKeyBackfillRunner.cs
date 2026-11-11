@@ -153,10 +153,11 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
             result[evt["_id"]] = ReadEventMap(evt);
         }
 
+        // Every Matchup with that MatchId gets the event, also when several share it.
         var missing = pending
             .Where(d => !result.ContainsKey(d["_id"]) && d.GetValue("MatchId", BsonNull.Value).IsString)
             .GroupBy(d => d["MatchId"].AsString, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.First()["_id"], StringComparer.Ordinal);
+            .ToDictionary(g => g.Key, g => g.Select(d => d["_id"]).ToList(), StringComparer.Ordinal);
         if (missing.Count > 0)
         {
             var byMatchId = await events.Find(Builders<BsonDocument>.Filter.In("match._id", missing.Keys)).Project(projection).ToListAsync();
@@ -164,9 +165,13 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
             {
                 if (evt.GetValue("match", BsonNull.Value) is BsonDocument match
                     && match.GetValue("_id", BsonNull.Value) is BsonString matchId
-                    && missing.TryGetValue(matchId.Value, out var matchupId))
+                    && missing.TryGetValue(matchId.Value, out var matchupIds))
                 {
-                    result[matchupId] = ReadEventMap(evt);
+                    var eventMap = ReadEventMap(evt);
+                    foreach (var matchupId in matchupIds)
+                    {
+                        result[matchupId] = eventMap;
+                    }
                 }
             }
         }
@@ -200,9 +205,9 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
             lastId = page[^1]["_id"];
             totals.DocumentsRead += page.Count;
             var writes = page
-                .Select(transform)
-                .Where(r => r.Changed)
-                .Select(r => (WriteModel<BsonDocument>)new ReplaceOneModel<BsonDocument>(Builders<BsonDocument>.Filter.Eq("_id", r.Document["_id"]), r.Document))
+                .Select(doc => (Stored: doc, Result: transform(doc)))
+                .Where(r => r.Result.Changed)
+                .Select(r => (WriteModel<BsonDocument>)GuardedReplace(r.Stored, r.Result.Document))
                 .ToList();
 
             await WriteAsync(collection, writes, totals, lastId);
@@ -215,9 +220,9 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
         var documents = await collection.Find(FilterDefinition<BsonDocument>.Empty).Sort(Builders<BsonDocument>.Sort.Ascending("_id")).ToListAsync();
         totals.DocumentsRead += documents.Count;
         var writes = documents
-            .Select(transform)
-            .Where(r => r.Changed)
-            .Select(r => (WriteModel<BsonDocument>)new ReplaceOneModel<BsonDocument>(Builders<BsonDocument>.Filter.Eq("_id", r.Document["_id"]), r.Document))
+            .Select(doc => (Stored: doc, Result: transform(doc)))
+            .Where(r => r.Result.Changed)
+            .Select(r => (WriteModel<BsonDocument>)GuardedReplace(r.Stored, r.Result.Document))
             .ToList();
 
         await WriteAsync(collection, writes, totals, null);
@@ -240,7 +245,7 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
         var allSeasons = documents.FirstOrDefault(IsAllSeasons);
         if (allSeasons != null)
         {
-            var rebuilt = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, seasons.Select(s => s.Document).ToList(), Report);
+            var rebuilt = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, seasons.Select(s => s.Document).ToList(), resolver, Report);
             results.Add(rebuilt);
             foreach (var row in Report.Rows.Where(r => r.Collection == MapKeyTransforms.MapsPerSeason && r.TotalsDiffer))
             {
@@ -248,12 +253,40 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
             }
         }
 
+        var stored = documents.ToDictionary(d => d["_id"]);
         var writes = results
             .Where(r => r.Changed)
-            .Select(r => (WriteModel<BsonDocument>)new ReplaceOneModel<BsonDocument>(Builders<BsonDocument>.Filter.Eq("_id", r.Document["_id"]), r.Document))
+            .Select(r => (WriteModel<BsonDocument>)GuardedReplace(stored[r.Document["_id"]], r.Document))
             .ToList();
 
         await WriteAsync(collection, writes, totals, null);
+    }
+
+    // Replaces a stats document only while every field the backfill rewrites still holds the value that was read. A
+    // document a handler saved in between is not matched, so its new games are not overwritten; it is counted as
+    // skipped and a re-run migrates it.
+    public static ReplaceOneModel<BsonDocument> GuardedReplace(BsonDocument stored, BsonDocument migrated)
+    {
+        var builder = Builders<BsonDocument>.Filter;
+        var filter = builder.Eq("_id", stored["_id"]);
+        foreach (var element in migrated.Where(e => e.Name != "_id"))
+        {
+            if (!stored.TryGetValue(element.Name, out var storedValue))
+            {
+                filter &= builder.Exists(element.Name, false);
+            }
+            else if (!storedValue.Equals(element.Value))
+            {
+                filter &= builder.Eq(element.Name, storedValue);
+            }
+        }
+
+        foreach (var element in stored.Where(e => !migrated.Contains(e.Name)))
+        {
+            filter &= builder.Eq(element.Name, element.Value);
+        }
+
+        return new ReplaceOneModel<BsonDocument>(filter, migrated);
     }
 
     private static bool IsAllSeasons(BsonDocument document)
@@ -275,6 +308,7 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
         {
             var result = await collection.BulkWriteAsync(writes, Unordered);
             totals.DocumentsWritten += result.ModifiedCount;
+            totals.DocumentsSkipped += writes.Count - result.MatchedCount;
             if (_options.BatchPauseMs > 0)
             {
                 await Task.Delay(_options.BatchPauseMs);
@@ -295,6 +329,11 @@ public sealed class MapKeyBackfillRunner(MapKeyBackfillOptions options, MapKeyBa
             var totals = Report.TotalsFor(collection);
             var written = _options.Apply ? $", {totals.DocumentsWritten} written" : " (dry run, nothing written)";
             _log($"{collection}: {totals.DocumentsRead} documents read, {totals.DocumentsChanged} to change{written}; {totals.EntriesAlreadyMigrated} entries already migrated.");
+            if (totals.DocumentsSkipped > 0)
+            {
+                _log($"Warning: {collection}: {totals.DocumentsSkipped} documents changed after they were read and were left as they are. Run again (with the handlers stopped) to migrate them.");
+            }
+
             foreach (var status in Report.Rows.Where(r => r.Collection == collection).GroupBy(r => r.Status).OrderBy(g => g.Key))
             {
                 _log($"  {status.Key.ToCsv()}: {status.Count()} keys, {status.Sum(r => r.Entries)} entries, {status.Sum(r => r.EntriesMerged)} merged");

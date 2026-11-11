@@ -119,7 +119,7 @@ public class MapKeyTransformTests
             """);
         var report = new MapKeyReport();
 
-        var result = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, new[] { season2, season3 }, report);
+        var result = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, new[] { season2, season3 }, resolver, report);
 
         Assert.IsTrue(result.Changed);
         var allModes = Maps(result.Document, 0);
@@ -139,7 +139,7 @@ public class MapKeyTransformTests
         Assert.AreEqual(MapKeyStatus.Rebuilt, allModesRow.Status);
         Assert.IsFalse(allModesRow.TotalsDiffer);
 
-        Assert.IsFalse(MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(result.Document, new[] { season2, season3 }, null).Changed);
+        Assert.IsFalse(MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(result.Document, new[] { season2, season3 }, resolver, null).Changed);
     }
 
     [Test]
@@ -157,12 +157,37 @@ public class MapKeyTransformTests
             """);
         var report = new MapKeyReport();
 
-        var result = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, new[] { season3 }, report);
+        var result = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, new[] { season3 }, resolver, report);
 
         Assert.IsTrue(result.Changed);
         Assert.AreEqual(BsonDocument.Parse("""{ "Map": "tidewaterglades", "MapId": 47, "MapName": "Tidewater Glades v2", "Count": 5 }"""), Maps(result.Document, 4).Single());
         Assert.IsTrue(report.Rows.Single(r => r.GameMode == 4).TotalsDiffer);
-        Assert.IsFalse(MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(result.Document, new[] { season3 }, null).Changed);
+        Assert.IsFalse(MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(result.Document, new[] { season3 }, resolver, null).Changed);
+    }
+
+    [Test]
+    public void MapsPerSeason_AllSeasonsDocument_KeepsOneEntryPerFile_WhenTheSeasonsDisagreeOnTheId()
+    {
+        // The service counts a new game with Maps.SingleOrDefault(m => m.Map == file), so a file must stay one entry.
+        var resolver = Resolver(new[] { Event("W3Champions/" + MeadowsFile, 6, "Twisted Meadows", 22, OneVsOne, 5) });
+        var season21 = BsonDocument.Parse($$"""
+            { "_id": "21", "Season": 21, "MatchesOnMapPerModes": [
+              { "GameMode": 1, "Maps": [ { "Map": "{{MeadowsFile}}", "MapId": null, "MapName": "Twisted Meadows v1.9", "Count": 2 } ] } ] }
+            """);
+        var season22 = BsonDocument.Parse($$"""
+            { "_id": "22", "Season": 22, "MatchesOnMapPerModes": [
+              { "GameMode": 1, "Maps": [ { "Map": "{{MeadowsFile}}", "MapId": 6, "MapName": "Twisted Meadows", "Count": 3 } ] } ] }
+            """);
+        var allSeasons = BsonDocument.Parse($$"""
+            { "_id": "-1", "Season": -1, "MatchesOnMapPerModes": [
+              { "GameMode": 1, "Maps": [ { "Map": "{{MeadowsFile}}", "Count": 5 } ] } ] }
+            """);
+
+        var result = MapKeyTransforms.RebuildMapsPerSeasonAllSeasons(allSeasons, new[] { season21, season22 }, resolver, new MapKeyReport());
+
+        Assert.AreEqual(
+            BsonDocument.Parse($$"""{ "Map": "{{MeadowsFile}}", "MapId": 6, "MapName": "Twisted Meadows", "Count": 5 }"""),
+            Maps(result.Document, 1).Single());
     }
 
     [Test]

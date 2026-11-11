@@ -132,6 +132,69 @@ public class MapKeyBackfillMongoTests
     }
 
     [Test]
+    public async Task Apply_GivesTheEventToEveryMatchupWithItsMatchId()
+    {
+        const string otherFile = "w3c_echoisles_duplicate.w3x";
+        var evt = Event(ObjectId.GenerateNewId(new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)), "m9");
+        evt["match"]["map"] = "W3Champions/" + otherFile;
+        await Collection("MatchFinishedEvent").InsertOneAsync(evt);
+        // Two Matchups of one match, on the same page, neither with the event's _id.
+        await Collection("Matchup").InsertManyAsync(new[]
+        {
+            Matchup(ObjectId.GenerateNewId(new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc)), "m9", EchoKey, 25),
+            Matchup(ObjectId.GenerateNewId(new DateTime(2020, 1, 2, 0, 0, 0, DateTimeKind.Utc)), "m9", EchoKey, 25)
+        });
+
+        await Run("--apply", "--collections", "Matchup");
+
+        var sameMatch = await Collection("Matchup").Find(Builders<BsonDocument>.Filter.Eq("MatchId", "m9")).ToListAsync();
+        Assert.AreEqual(2, sameMatch.Count);
+        Assert.That(sameMatch.Select(d => d["Map"].AsString), Is.All.EqualTo(otherFile));
+    }
+
+    [Test]
+    public async Task GuardedReplace_LeavesADocumentThatChangedAfterItWasRead()
+    {
+        var heroStats = Collection("PlayerHeroStats");
+        var byId = Builders<BsonDocument>.Filter.Eq("_id", "25_player#1");
+        var read = await heroStats.Find(byId).SingleAsync();
+
+        // A handler saves a game in between.
+        await heroStats.UpdateOneAsync(byId, Builders<BsonDocument>.Update.Set("HeroStatsItemList.0.Stats.0.WinLossesOnMap.1.WinLosses.0.Wins", 2));
+        var skipped = await heroStats.BulkWriteAsync(new[] { MapKeyBackfillRunner.GuardedReplace(read, Migrated(read)) });
+
+        Assert.AreEqual(0, skipped.MatchedCount);
+        var afterHandler = await heroStats.Find(byId).SingleAsync();
+        Assert.AreEqual(EchoKey, MapOf(afterHandler).AsString);
+        Assert.AreEqual(2, afterHandler["HeroStatsItemList"][0]["Stats"][0]["WinLossesOnMap"][1]["WinLosses"][0]["Wins"].AsInt32);
+
+        // Read again, the replace goes through and keeps the handler's game.
+        var applied = await heroStats.BulkWriteAsync(new[] { MapKeyBackfillRunner.GuardedReplace(afterHandler, Migrated(afterHandler)) });
+
+        Assert.AreEqual(1, applied.ModifiedCount);
+        var migrated = await heroStats.Find(byId).SingleAsync();
+        Assert.AreEqual(EchoFile, MapOf(migrated).AsString);
+        Assert.AreEqual(2, migrated["HeroStatsItemList"][0]["Stats"][0]["WinLossesOnMap"][1]["WinLosses"][0]["Wins"].AsInt32);
+
+        static BsonValue MapOf(BsonDocument doc) => doc["HeroStatsItemList"][0]["Stats"][0]["WinLossesOnMap"][1]["Map"];
+
+        static BsonDocument Migrated(BsonDocument doc)
+        {
+            var copy = doc.DeepClone().AsBsonDocument;
+            copy["HeroStatsItemList"][0]["Stats"][0]["WinLossesOnMap"][1]["Map"] = EchoFile;
+            return copy;
+        }
+    }
+
+    [Test]
+    public async Task ServerHostName_OfALocalServer_IsThisMachine()
+    {
+        var hostName = await MapKeyBackfillSafetyGuard.ServerHostNameAsync(_runner.ConnectionString);
+
+        Assert.IsTrue(MapKeyBackfillSafetyGuard.IsThisMachine(hostName, Environment.MachineName), hostName);
+    }
+
+    [Test]
     public async Task EventCatalog_WrittenOnce_GivesTheSameReportWhenReadBack()
     {
         var catalogPath = Path.Combine(_directory, "events.jsonl");

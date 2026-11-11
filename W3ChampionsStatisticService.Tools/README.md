@@ -90,7 +90,7 @@ dotnet run --project W3ChampionsStatisticService.Tools -- backfill-map-keys \
   --apply
 ```
 
-`--apply` on any host other than `localhost`/`127.0.0.1` also needs `--allow-remote --confirm-database <database>`.
+`--apply` on any host other than `localhost`/`127.0.0.1` also needs `--allow-remote --confirm-database <database>`. A localhost URI counts as local only when the server reports this machine's host name (`hostInfo`), so an SSH tunnel or port forward to another server needs those flags too.
 
 Inputs:
 - **Event catalog:** one aggregation of `MatchFinishedEvent` on `{match.map, match.mapId, match.mapName, match.season, match.gameMode}`, one month at a time with `--aggregation-pause-ms` (default 2000) between months. `--write-event-catalog` saves it as JSON lines with a header (database, hosts, creation time); `--event-catalog` reads it back instead of aggregating.
@@ -100,7 +100,7 @@ Inputs:
 
 How a key is resolved:
 1. A key that is already a known map file name (events or `MapData`) is in the new shape and is skipped.
-2. Events of the same season (and mode, where the collection records one) give the file. Two candidates are the same map when they share a `MapId` or a `MapName`. The most played file wins.
+2. Events of the same season (and mode, where the collection records one) give the file. Two candidates are the same map when they share a file, a `MapId` or a `MapName`. The most played file wins.
 3. A manual entry that applies to the key, season and mode gives the id and name; otherwise the latest event's, filled from `MapData`/`Maps` where missing.
 4. Without a same-season event, the entry keeps the legacy key as `Map`, with the manual id and name if an entry applies. In a season that has events, the older `MapMetadataResolver` is tried last.
 
@@ -108,8 +108,8 @@ How a key is resolved:
 
 Writes:
 - `Matchup`: `Map` from the document's own `MatchFinishedEvent` (by `_id`, then `MatchId` ↔ `match._id`). `MapId`/`MapName` are only filled where missing.
-- Stats documents are replaced whole. Entries that end up with the same `Map` are merged (counts and wins/losses summed); `"Overall"` keeps its position. In hero and race stats it isn't always first: the handlers only add it for melee games, so an entry from an earlier non-melee game can precede it.
-- `MapsPerSeason`: each season's all-modes bucket is rebuilt as the sum of its migrated mode buckets; if its stored total differs from that sum, it is migrated in place instead and reported as `not-rebuilt`. The all-seasons document (`-1`) is always rebuilt as the sum of the migrated season documents, which are the reference; a bucket whose stored total differed is reported as `rebuilt` with both totals in `notes`, and a warning is printed.
+- Stats documents are replaced whole, and only while the fields the backfill rewrites still hold what was read: a document a handler saved in between is left as it is, counted as skipped (with a warning), and migrated by a re-run. Entries that end up with the same `Map` are merged (counts and wins/losses summed); `"Overall"` keeps its position. In hero and race stats it isn't always first: the handlers only add it for melee games, so an entry from an earlier non-melee game can precede it.
+- `MapsPerSeason`: each season's all-modes bucket is rebuilt as the sum of its migrated mode buckets, one entry per map file (legacy keys per id, or per name without an id); if its stored total differs from that sum, it is migrated in place instead and reported as `not-rebuilt`. The all-seasons document (`-1`) is always rebuilt as the sum of the migrated season documents, which are the reference; a bucket whose stored total differed is reported as `rebuilt` with both totals in `notes`, and a warning is printed.
 - Re-running is safe: entries already in the new shape don't change.
 
 CSV columns: `collection, legacy_key, season, game_mode, status, chosen_file, map_id, map_name, display_name, candidate_files, source, docs_touched, entries, entries_merged, notes`. `map_name` is the name stored; `display_name` is the name the website shows: the current name from `--mm-maps` for an entry with a map id in a mode that displays current names (`GameModesHelper.CurrentMapNameGameModes`), in hero and race stats, or in an all-modes bucket whose id is played in such a mode; otherwise the stored name, or the stored `Map` when there is no name. Statuses: `resolved`, `resolved-by-catalog`, `resolved-manual`, `ambiguous-merged` (several maps share the key; the most played was chosen), `legacy-key`, `unresolved` (left unchanged), `rebuilt` / `not-rebuilt`.

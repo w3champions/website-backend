@@ -94,6 +94,23 @@ public class MapKeyResolverTests
     }
 
     [Test]
+    public void MapOnlyEvents_AndEventsWithAnId_OfOneFile_AreOneMap()
+    {
+        var resolver = Resolver(new[]
+        {
+            Event("Maps/frozenthrone/(2)echoisles.w3x", null, null, 0, OneVsOne, 100),
+            Event("Maps/frozenthrone/(2)echoisles.w3x", 2, "Echo Isles", 0, OneVsOne, 50)
+        });
+
+        var resolution = resolver.Resolve(MapKeyScope.SeasonAndMode, "echoisles", 0, OneVsOne);
+
+        Assert.AreEqual(MapKeyStatus.Resolved, resolution.Status);
+        Assert.AreEqual("(2)echoisles.w3x", resolution.Map);
+        Assert.AreEqual(2, resolution.MapId);
+        Assert.AreEqual("Echo Isles", resolution.MapName);
+    }
+
+    [Test]
     public void EventWithoutId_TakesItsIdFromMapData()
     {
         var resolver = Resolver(

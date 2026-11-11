@@ -12,6 +12,8 @@ namespace W3ChampionsStatisticService.Maps;
 /// <see cref="CacheOptionsFor{T}"/> of <see cref="CurrentMapNames"/>, so a rename shows once the entry expires.
 /// A failed fetch caches <see cref="CurrentMapNames.Empty"/> for <see cref="FailureCacheDuration"/>: stored names
 /// are shown, and requests don't each wait for matchmaking's timeout while it is unreachable.
+/// A fetch gives up after <see cref="FetchTimeout"/>: the cache holds a lock while it fetches, so a matchmaking call
+/// that hangs would otherwise hold up every request that shows map names.
 /// </summary>
 [Trace]
 public class CurrentMapNameProvider(
@@ -19,6 +21,8 @@ public class CurrentMapNameProvider(
     ICachedDataProvider<CurrentMapNames> cachedDataProvider) : ICurrentMapNameProvider
 {
     internal static readonly TimeSpan FailureCacheDuration = TimeSpan.FromMinutes(1);
+
+    internal TimeSpan FetchTimeout { get; init; } = TimeSpan.FromSeconds(5);
 
     private readonly MatchmakingServiceClient _matchmakingServiceClient = matchmakingServiceClient;
     private readonly ICachedDataProvider<CurrentMapNames> _cachedDataProvider = cachedDataProvider;
@@ -39,7 +43,7 @@ public class CurrentMapNameProvider(
 
     private async Task<CurrentMapNames> FetchCurrentMapNamesAsync()
     {
-        var maps = await _matchmakingServiceClient.GetAllMapsOrThrow();
+        var maps = await _matchmakingServiceClient.GetAllMapsOrThrow().WaitAsync(FetchTimeout);
         return CurrentMapNames.From(maps.Items);
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Internal;
@@ -104,6 +105,33 @@ public class CurrentMapNameProviderTests
     }
 
     [Test]
+    public async Task GetAsync_MatchmakingHangs_GivesUpAfterTheFetchTimeout_AndReturnsEmpty()
+    {
+        var hanging = new HangingHandler();
+        var cache = new InMemoryCachedDataProvider<CurrentMapNames>(
+            new OptionsWrapper<CacheOptionsFor<CurrentMapNames>>(new CacheOptionsFor<CurrentMapNames> { CacheDuration = CacheDuration }),
+            new MemoryCache(new MemoryCacheOptions { Clock = _clock }));
+        var provider = new CurrentMapNameProvider(new MatchmakingServiceClient(new RecordingHttpClientFactory(hanging)), cache)
+        {
+            FetchTimeout = TimeSpan.FromMilliseconds(100)
+        };
+
+        try
+        {
+            var names = await provider.GetAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            var again = await provider.GetAsync().WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.That(names.Count, Is.EqualTo(0));
+            Assert.That(again.Count, Is.EqualTo(0));
+            Assert.That(hanging.Requests, Is.EqualTo(1));
+        }
+        finally
+        {
+            hanging.Release();
+        }
+    }
+
+    [Test]
     public async Task GetAsync_SkipsMapsWithoutName()
     {
         AnswerMaps(MmMapWithoutGameMap(1051, "Echo Isles v2"), MmMapWithoutGameMap(44, ""), MmMapWithoutGameMap(12, null));
@@ -113,6 +141,24 @@ public class CurrentMapNameProviderTests
         Assert.That(names.Count, Is.EqualTo(1));
         Assert.That(names.Resolve(44, "Autumn Leaves"), Is.EqualTo("Autumn Leaves"));
         Assert.That(names.HasCurrentName(12), Is.False);
+    }
+
+    // Answers no request until released, like a matchmaking that keeps the connection open.
+    private sealed class HangingHandler : HttpMessageHandler
+    {
+        private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _requests;
+
+        public int Requests => _requests;
+
+        public void Release() => _released.TrySetResult();
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _requests);
+            await _released.Task.WaitAsync(cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        }
     }
 
     private sealed class FakeClock : ISystemClock

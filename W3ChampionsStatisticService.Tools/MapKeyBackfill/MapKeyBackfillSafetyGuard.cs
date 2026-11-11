@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace W3ChampionsStatisticService.Tools.MapKeyBackfill;
@@ -20,6 +22,38 @@ public static class MapKeyBackfillSafetyGuard
             && hosts.All(h => LocalHosts.Contains(h, StringComparer.OrdinalIgnoreCase));
 
         return new MapKeyBackfillTarget(url.Servers.Select(s => s.ToString()).ToList(), isLocal);
+    }
+
+    // A localhost URI can still reach another machine through an SSH tunnel or a port forward. The host name the server
+    // reports (hostInfo) tells; null when it can't be read.
+    public static async Task<string> ServerHostNameAsync(string connectionString)
+    {
+        try
+        {
+            var settings = MongoClientSettings.FromConnectionString(connectionString.Replace("'", string.Empty));
+            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(10);
+            settings.ConnectTimeout = TimeSpan.FromSeconds(10);
+            var result = await new MongoClient(settings).GetDatabase("admin").RunCommandAsync<BsonDocument>(new BsonDocument("hostInfo", 1));
+            return result.GetValue("system", BsonNull.Value) is BsonDocument system && system.GetValue("hostname", BsonNull.Value) is BsonString hostname
+                ? hostname.Value
+                : null;
+        }
+        catch (Exception ex) when (ex is MongoException or TimeoutException)
+        {
+            return null;
+        }
+    }
+
+    // Compares host names without port and domain, ignoring case.
+    public static bool IsThisMachine(string serverHostName, string machineName)
+    {
+        if (string.IsNullOrWhiteSpace(serverHostName) || string.IsNullOrWhiteSpace(machineName))
+        {
+            return false;
+        }
+
+        static string Short(string name) => name.Trim().Split(':')[0].Split('.')[0];
+        return string.Equals(Short(serverHostName), Short(machineName), StringComparison.OrdinalIgnoreCase);
     }
 
     public static void EnsureApplyAllowed(MapKeyBackfillOptions options, MapKeyBackfillTarget target)

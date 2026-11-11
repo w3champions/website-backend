@@ -106,6 +106,19 @@ public class MapKeyBackfillOptionsTests
     }
 
     [Test]
+    [TestCase("DESKTOP-ABC", "DESKTOP-ABC", true)]
+    [TestCase("desktop-abc:27017", "DESKTOP-ABC", true)]
+    [TestCase("desktop-abc.example.lan", "DESKTOP-ABC", true)]
+    [TestCase("w3c-prod-db", "DESKTOP-ABC", false)]
+    [TestCase("4f2a9c1e0b7d", "DESKTOP-ABC", false)]
+    [TestCase(null, "DESKTOP-ABC", false)]
+    [TestCase("", "DESKTOP-ABC", false)]
+    public void IsThisMachine_ComparesTheHostNameWithoutPortOrDomain(string serverHostName, string machineName, bool expected)
+    {
+        Assert.AreEqual(expected, MapKeyBackfillSafetyGuard.IsThisMachine(serverHostName, machineName));
+    }
+
+    [Test]
     public void Guard_RefusesRemoteApplyWithoutAllowRemote()
     {
         var options = MapKeyBackfillOptions.Parse(new[] { "--connection-string", Remote, "--apply" });

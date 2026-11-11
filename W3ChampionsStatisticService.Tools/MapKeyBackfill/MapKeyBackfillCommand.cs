@@ -38,6 +38,16 @@ public static class MapKeyBackfillCommand
         }
 
         Console.WriteLine(options.Apply ? "Running map key backfill in APPLY mode." : "Running map key backfill in dry-run mode.");
+        if (options.Apply && target.IsLocal)
+        {
+            var serverHostName = await MapKeyBackfillSafetyGuard.ServerHostNameAsync(options.ConnectionString);
+            if (!MapKeyBackfillSafetyGuard.IsThisMachine(serverHostName, Environment.MachineName))
+            {
+                Console.WriteLine($"The server reports host '{serverHostName ?? "(unknown)"}', not this machine ({Environment.MachineName}): treated as remote.");
+                target = target with { IsLocal = false };
+            }
+        }
+
         Console.WriteLine($"Host(s): {string.Join(", ", target.Servers)}{(target.IsLocal ? " (local)" : " (REMOTE)")}");
         Console.WriteLine($"Database: {options.DatabaseName}, collections: {string.Join(", ", options.Collections)}");
 

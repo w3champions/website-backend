@@ -123,7 +123,7 @@ public static class MapKeyTransforms
         var sumTotal = TotalCount(modeEntries);
         if (storedTotal == sumTotal)
         {
-            var rebuilt = SumEntries(modeEntries.Select(e => (e, 0)));
+            var rebuilt = SumEntries(modeEntries.Select(e => (e, 0)), resolver);
             if (!SameEntries(allModes.GetValue("Maps", BsonNull.Value), rebuilt))
             {
                 allModes["Maps"] = rebuilt;
@@ -150,7 +150,7 @@ public static class MapKeyTransforms
     // The all-seasons document (_id "-1") is rebuilt as the sum of the migrated season documents, per mode bucket.
     // The season documents are the reference: a bucket whose stored total differs from that sum is rebuilt anyway,
     // and both totals are reported. A mode the seasons have but the document lacks gets a new bucket.
-    public static MapKeyTransformResult RebuildMapsPerSeasonAllSeasons(BsonDocument allSeasons, IReadOnlyList<BsonDocument> migratedSeasons, MapKeyReport report)
+    public static MapKeyTransformResult RebuildMapsPerSeasonAllSeasons(BsonDocument allSeasons, IReadOnlyList<BsonDocument> migratedSeasons, MapKeyResolver resolver, MapKeyReport report)
     {
         var result = allSeasons.DeepClone().AsBsonDocument;
         var id = result["_id"];
@@ -180,7 +180,7 @@ public static class MapKeyTransforms
             var storedTotal = bucket == null ? 0 : TotalCount(Documents(bucket.GetValue("Maps", BsonNull.Value)));
             var sumTotal = TotalCount(entries.Select(e => e.e));
 
-            var rebuilt = SumEntries(entries);
+            var rebuilt = SumEntries(entries, resolver);
             if (bucket == null)
             {
                 buckets.Add(new BsonDocument { ["GameMode"] = mode, ["Maps"] = rebuilt });
@@ -500,9 +500,11 @@ public static class MapKeyTransforms
         return bothInt32 && total <= int.MaxValue && total >= int.MinValue ? new BsonInt32((int)total) : new BsonInt64(total);
     }
 
-    // Sums MapsPerSeason entries per (Map, MapId), or per (Map, MapName) without an id. Id and name come from the
-    // entry with the highest priority (the latest season) that has them.
-    private static BsonArray SumEntries(IEnumerable<(BsonDocument Entry, int Priority)> entries)
+    // Sums MapsPerSeason entries per map file. Legacy keys are summed per (Map, MapId), or per (Map, MapName) without
+    // an id, so the versions a manual entry keeps apart stay apart. A file is always one entry: the service counts new
+    // games with Maps.SingleOrDefault(m => m.Map == file). Id and name come from the entry with the highest priority
+    // (the latest season) that has them.
+    private static BsonArray SumEntries(IEnumerable<(BsonDocument Entry, int Priority)> entries, MapKeyResolver resolver)
     {
         var groups = new Dictionary<string, List<(BsonDocument Entry, int Priority)>>(StringComparer.Ordinal);
         foreach (var item in entries)
@@ -510,7 +512,9 @@ public static class MapKeyTransforms
             var map = item.Entry.GetValue("Map", BsonNull.Value);
             var mapId = item.Entry.GetValue("MapId", BsonNull.Value);
             var mapName = item.Entry.GetValue("MapName", BsonNull.Value);
-            var key = map + "\u0001" + (mapId.IsNumeric ? "id:" + mapId.ToInt32() : "name:" + (mapName.IsString ? mapName.AsString : string.Empty));
+            var key = map is BsonString file && resolver.IsKnownFile(file.Value)
+                ? "file:" + file.Value
+                : map + "\u0001" + (mapId.IsNumeric ? "id:" + mapId.ToInt32() : "name:" + (mapName.IsString ? mapName.AsString : string.Empty));
             if (!groups.TryGetValue(key, out var list))
             {
                 list = new List<(BsonDocument, int)>();
