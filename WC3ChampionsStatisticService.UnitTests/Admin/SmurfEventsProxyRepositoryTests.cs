@@ -1,5 +1,7 @@
+using System;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 using Newtonsoft.Json.Linq;
@@ -26,10 +28,10 @@ public class SmurfEventsProxyRepositoryTests
     }
 
     // The request path without any path prefix MATCHMAKING_API may carry.
-    private static string PathOf(System.Net.Http.HttpRequestMessage request)
+    private static string PathOf(HttpRequestMessage request)
     {
-        var configured = System.Environment.GetEnvironmentVariable("MATCHMAKING_API");
-        var prefix = configured == null ? "" : new System.Uri(configured).AbsolutePath.TrimEnd('/');
+        var configured = Environment.GetEnvironmentVariable("MATCHMAKING_API");
+        var prefix = configured == null ? "" : new Uri(configured).AbsolutePath.TrimEnd('/');
         return request.RequestUri!.AbsolutePath[prefix.Length..];
     }
 
@@ -186,6 +188,19 @@ public class SmurfEventsProxyRepositoryTests
         var result = await Invoke(repository, index);
 
         Assert.That(result.StatusCode, Is.EqualTo(503));
+        Assert.That(result.Body, Is.EqualTo(body));
+    }
+
+    // Matchmaking answers 429 with its own short body when busy; only 403 and network failures are rewritten.
+    [Test]
+    public async Task Busy429_FromPreviewCreateAndUpdate_ReachesTheCallerWithItsBody([Range(3, 5)] int index)
+    {
+        const string body = "{\"error\":\"placeholder busy message\"}";
+        var (repository, _, _) = Create(HttpStatusCode.TooManyRequests, body);
+
+        var result = await Invoke(repository, index);
+
+        Assert.That(result.StatusCode, Is.EqualTo(429));
         Assert.That(result.Body, Is.EqualTo(body));
     }
 

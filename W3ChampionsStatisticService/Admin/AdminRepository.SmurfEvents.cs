@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 namespace W3ChampionsStatisticService.Admin;
 
 /// <summary>
-/// Proxy for the matchmaking smurf events moderation API (/admin/smurf-detection/events). Shares the client, secret
-/// and error handling of the smurf-detection proxy (AdminRepository.SmurfDetection.cs); the author of every write is supplied from the acting moderator's token.
+/// Proxy for the matchmaking smurf events moderation API (/admin/smurf-detection/events). Shares the client,
+/// secret and error handling of the smurf-detection proxy (AdminRepository.SmurfDetection.cs); the author of
+/// every write is supplied from the acting moderator's token.
 /// </summary>
 public partial class AdminRepository
 {

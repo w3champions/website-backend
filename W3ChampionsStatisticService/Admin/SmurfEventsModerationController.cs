@@ -63,7 +63,7 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
         InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEventDenyPreview(id));
 
     [HttpPost("preview")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> Preview([FromBody] SmurfEventBody body) =>
         MissingBody(body) ?? Forward(await _adminRepository.PreviewSmurfEvent(body.Name, body.From, body.To, body.Anchors));
 

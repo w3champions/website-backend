@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -50,7 +51,7 @@ public class SmurfEventsModerationControllerTests
     [TestCase(nameof(SmurfEventsModerationController.List), EPermission.SmurfCheckerQuery)]
     [TestCase(nameof(SmurfEventsModerationController.Get), EPermission.SmurfCheckerQuery)]
     [TestCase(nameof(SmurfEventsModerationController.DenyPreview), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfEventsModerationController.Preview), EPermission.SmurfCheckerQuery)]
+    [TestCase(nameof(SmurfEventsModerationController.Preview), EPermission.SmurfCheckerAdministration)]
     [TestCase(nameof(SmurfEventsModerationController.Create), EPermission.SmurfCheckerAdministration)]
     [TestCase(nameof(SmurfEventsModerationController.Update), EPermission.SmurfCheckerAdministration)]
     [TestCase(nameof(SmurfEventsModerationController.Delete), EPermission.SmurfCheckerAdministration)]
@@ -62,8 +63,34 @@ public class SmurfEventsModerationControllerTests
 
         Assert.That(filter, Is.Not.Null);
         Assert.That(filter!.Permission, Is.EqualTo(permission));
-        var isWrite = permission == EPermission.SmurfCheckerAdministration;
+        // Preview needs the write permission but writes nothing, so it has no author to inject.
+        var isWrite = permission == EPermission.SmurfCheckerAdministration && action != nameof(SmurfEventsModerationController.Preview);
         Assert.That(method.GetCustomAttribute<InjectActingPlayerAuthCodeAttribute>() != null, Is.EqualTo(isWrite));
+    }
+
+    [Test]
+    public async Task BusyAnswer_OnPreviewCreateAndUpdate_ReachesTheCallerAs429WithItsBody()
+    {
+        const string body = "{\"error\":\"placeholder busy message\"}";
+        var busy = new MatchmakingProxyResult(429, body);
+        _repository.Setup(r => r.PreviewSmurfEvent(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>())).ReturnsAsync(busy);
+        _repository.Setup(r => r.CreateSmurfEvent(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(busy);
+        _repository.Setup(r => r.UpdateSmurfEvent(Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(busy);
+
+        var results = new[]
+        {
+            await _controller.Preview(Body()),
+            await _controller.Create(Body(), "Mod#1"),
+            await _controller.Update(Id, Body(), "Mod#1"),
+        };
+
+        foreach (var result in results)
+        {
+            var content = result as ContentResult;
+            Assert.That(content, Is.Not.Null);
+            Assert.That(content!.StatusCode, Is.EqualTo(429));
+            Assert.That(content.Content, Is.EqualTo(body));
+        }
     }
 
     [Test]
