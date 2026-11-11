@@ -52,7 +52,7 @@ public class SmurfEventsProxyRepositoryTests
         0 => r.GetSmurfEvents(null, null, null, null),
         1 => r.GetSmurfEvent("ev-1"),
         2 => r.GetSmurfEventDenyPreview("ev-1"),
-        3 => r.PreviewSmurfEvent("Name", "2026-01-01", "2026-01-02", Anchors),
+        3 => r.PreviewSmurfEvent("Name", "2026-01-01", "2026-01-02", Anchors, null),
         4 => r.CreateSmurfEvent("Name", "2026-01-01", "2026-01-02", Anchors, "why", "Mod#1"),
         5 => r.UpdateSmurfEvent("ev-1", "Name", "2026-01-01", "2026-01-02", Anchors, "why", "Mod#1"),
         6 => r.DeleteSmurfEvent("ev-1", "why", "Mod#1"),
@@ -202,6 +202,34 @@ public class SmurfEventsProxyRepositoryTests
 
         Assert.That(result.StatusCode, Is.EqualTo(429));
         Assert.That(result.Body, Is.EqualTo(body));
+    }
+
+    [Test]
+    public async Task Preview_SendsTheEventItReplacesOnlyWhenGiven()
+    {
+        var (repository, handler, _) = Create();
+
+        await repository.PreviewSmurfEvent("Name", "2026-01-01", "2026-01-02", Anchors, "ev-1");
+        await repository.PreviewSmurfEvent("Name", "2026-01-01", "2026-01-02", Anchors, null);
+
+        var withReplacing = JObject.Parse(handler.RequestBodies[0]);
+        var without = JObject.Parse(handler.RequestBodies[1]);
+        Assert.That(withReplacing["replacing"]!.Value<string>(), Is.EqualTo("ev-1"));
+        Assert.That(without.ContainsKey("replacing"), Is.False);
+    }
+
+    [Test]
+    public async Task ConflictOnUpdate_AndBusyOnReview_ReachTheCallerUnchanged()
+    {
+        const string body = "{\"error\":\"placeholder\"}";
+        var (conflictRepository, _, _) = Create(HttpStatusCode.Conflict, body);
+        var (busyRepository, _, _) = Create(HttpStatusCode.TooManyRequests, body);
+
+        var put = await Invoke(conflictRepository, 5);
+        var review = await Invoke(busyRepository, 7);
+
+        Assert.That((put.StatusCode, put.Body), Is.EqualTo((409, body)));
+        Assert.That((review.StatusCode, review.Body), Is.EqualTo((429, body)));
     }
 
     [Test]

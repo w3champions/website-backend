@@ -29,8 +29,8 @@ public partial class AdminRepository
     public Task<MatchmakingProxyResult> GetSmurfEventDenyPreview(string id) =>
         SendSmurfEvents(HttpMethod.Get, $"/{Segment(id)}/deny-preview");
 
-    public Task<MatchmakingProxyResult> PreviewSmurfEvent(string name, string from, string to, IReadOnlyList<string> anchors) =>
-        SendSmurfEvents(HttpMethod.Post, "/preview", EventBody(("name", name), ("from", from), ("to", to), ("anchors", anchors)));
+    public Task<MatchmakingProxyResult> PreviewSmurfEvent(string name, string from, string to, IReadOnlyList<string> anchors, string replacing) =>
+        SendSmurfEvents(HttpMethod.Post, "/preview", EventBody(("name", name), ("from", from), ("to", to), ("anchors", anchors), ("replacing", replacing)));
 
     public Task<MatchmakingProxyResult> CreateSmurfEvent(string name, string from, string to, IReadOnlyList<string> anchors, string reason, string author) =>
         SendSmurfEvents(HttpMethod.Post, "", EventBody(("name", name), ("from", from), ("to", to), ("anchors", anchors), ("reason", reason), ("author", author)));

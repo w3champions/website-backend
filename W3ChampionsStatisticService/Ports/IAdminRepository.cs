@@ -36,7 +36,7 @@ public interface IAdminRepository
     Task<MatchmakingProxyResult> GetSmurfEvents(string review, string origin, string cursor, int? limit);
     Task<MatchmakingProxyResult> GetSmurfEvent(string id);
     Task<MatchmakingProxyResult> GetSmurfEventDenyPreview(string id);
-    Task<MatchmakingProxyResult> PreviewSmurfEvent(string name, string from, string to, IReadOnlyList<string> anchors);
+    Task<MatchmakingProxyResult> PreviewSmurfEvent(string name, string from, string to, IReadOnlyList<string> anchors, string replacing);
     Task<MatchmakingProxyResult> CreateSmurfEvent(string name, string from, string to, IReadOnlyList<string> anchors, string reason, string author);
     Task<MatchmakingProxyResult> UpdateSmurfEvent(string id, string name, string from, string to, IReadOnlyList<string> anchors, string reason, string author);
     Task<MatchmakingProxyResult> DeleteSmurfEvent(string id, string reason, string author);

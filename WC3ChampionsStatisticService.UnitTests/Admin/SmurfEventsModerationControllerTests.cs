@@ -73,7 +73,7 @@ public class SmurfEventsModerationControllerTests
     {
         const string body = "{\"error\":\"placeholder busy message\"}";
         var busy = new MatchmakingProxyResult(429, body);
-        _repository.Setup(r => r.PreviewSmurfEvent(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>())).ReturnsAsync(busy);
+        _repository.Setup(r => r.PreviewSmurfEvent(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>())).ReturnsAsync(busy);
         _repository.Setup(r => r.CreateSmurfEvent(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(busy);
         _repository.Setup(r => r.UpdateSmurfEvent(Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(busy);
 
@@ -197,11 +197,50 @@ public class SmurfEventsModerationControllerTests
     public async Task Preview_Forwards()
     {
         var b = Body();
-        _repository.Setup(r => r.PreviewSmurfEvent(b.Name, b.From, b.To, b.Anchors)).ReturnsAsync(Ok200);
+        _repository.Setup(r => r.PreviewSmurfEvent(b.Name, b.From, b.To, b.Anchors, null)).ReturnsAsync(Ok200);
 
         await _controller.Preview(b);
 
         _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Preview_ForwardsTheEventItReplaces()
+    {
+        var b = Body();
+        b.Replacing = "507f1f77bcf86cd799439011";
+        _repository.Setup(r => r.PreviewSmurfEvent(b.Name, b.From, b.To, b.Anchors, "507f1f77bcf86cd799439011")).ReturnsAsync(Ok200);
+
+        await _controller.Preview(b);
+
+        _repository.VerifyAll();
+    }
+
+    [TestCase("")]
+    [TestCase("a/b")]
+    [TestCase("ev-1\n")]
+    public async Task Preview_Answers400ForAMalformedReplacing_WithoutAnUpstreamCall(string replacing)
+    {
+        var b = Body();
+        b.Replacing = replacing;
+
+        AssertBadRequest(await _controller.Preview(b), "replacing");
+        _repository.VerifyNoOtherCalls();
+    }
+
+    [Test]
+    public async Task ConflictOnUpdate_AndBusyOnReview_ReachTheCallerUnchanged()
+    {
+        const string conflict = "{\"error\":\"placeholder conflict\"}";
+        const string busy = "{\"error\":\"placeholder busy\"}";
+        _repository.Setup(r => r.UpdateSmurfEvent(Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new MatchmakingProxyResult(409, conflict));
+        _repository.Setup(r => r.ReviewSmurfEvent(Id, "denied", It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new MatchmakingProxyResult(429, busy));
+
+        var put = await _controller.Update(Id, Body(), "Mod#1") as ContentResult;
+        var review = await _controller.Review(Id, new SmurfEventReviewBody { Decision = "denied" }, "Mod#1") as ContentResult;
+
+        Assert.That((put!.StatusCode, put.Content), Is.EqualTo((409, conflict)));
+        Assert.That((review!.StatusCode, review.Content), Is.EqualTo((429, busy)));
     }
 
     [Test]

@@ -20,6 +20,8 @@ public class SmurfEventBody
     public string To { get; set; }
     public List<string> Anchors { get; set; }
     public string Reason { get; set; }
+    /// <summary>Preview only: the id of the manual event a PUT of this input would replace.</summary>
+    public string Replacing { get; set; }
 }
 
 /// <summary>Request body of the review route. The author is never read from the client.</summary>
@@ -65,7 +67,7 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     [HttpPost("preview")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> Preview([FromBody] SmurfEventBody body) =>
-        MissingBody(body) ?? Forward(await _adminRepository.PreviewSmurfEvent(body.Name, body.From, body.To, body.Anchors));
+        MissingBody(body) ?? (body.Replacing == null ? null : InvalidId(body.Replacing, "replacing")) ?? Forward(await _adminRepository.PreviewSmurfEvent(body.Name, body.From, body.To, body.Anchors, body.Replacing));
 
     [HttpPost("")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
@@ -94,8 +96,8 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     // A blank reason is treated as absent.
     private static string Trimmed(string reason) => string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
-    private static IActionResult InvalidId(string id) =>
-        id != null && IdPattern.IsMatch(id) ? null : Invalid("id", "invalid event id");
+    private static IActionResult InvalidId(string id, string field = "id") =>
+        id != null && IdPattern.IsMatch(id) ? null : Invalid(field, "invalid event id");
 
     // The framework already answers an empty or null body before the action runs; this only guards direct calls.
     private static IActionResult MissingBody(object body) =>
