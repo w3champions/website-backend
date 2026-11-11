@@ -14,11 +14,11 @@ public static class CorsPolicyConfiguration
     public static readonly TimeSpan PreflightMaxAge = TimeSpan.FromHours(2);
 
     public static void Configure(CorsPolicyBuilder builder) =>
+        // Any origin, no credentials: callers authenticate with a bearer header or a hub ticket, never a cookie.
         builder
+            .AllowAnyOrigin()
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .SetIsOriginAllowed(_ => true)
-            .AllowCredentials()
             .SetPreflightMaxAge(PreflightMaxAge)
             // Response headers a script of another origin (the website) may read; a browser hides all others
             // except the few safelisted ones.

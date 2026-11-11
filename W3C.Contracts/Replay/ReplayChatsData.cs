@@ -46,6 +46,10 @@ public class ReplayChatsScope
 {
     public ReplayChatsScopeType Type { get; set; }
 
+    // Recipient of a private message. replay-service spells it `to_player_id` (read by Newtonsoft);
+    // the admin page reads `scope.id` (written by System.Text.Json).
+    [JsonProperty("to_player_id")]
+    [System.Text.Json.Serialization.JsonPropertyName("id")]
     public int? Id { get; set; }
 }
 
