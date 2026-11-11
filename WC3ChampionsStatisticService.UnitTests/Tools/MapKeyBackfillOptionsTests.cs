@@ -191,4 +191,21 @@ public class MapKeyBackfillOptionsTests
     {
         Assert.Throws<FormatException>(() => ManualMap.Parse("""[{ "mapId": 1, "mapName": "Concealed Hill", "keys": ["ConcealedHill"], "seasons": "6", "gameModes": ["GM_9v9"] }]"""));
     }
+
+    [Test]
+    public void ManualMap_ShippedFile_LoadsAndSplitsVersionsBySeasonAndMode()
+    {
+        // The manual map passed to backfill-map-keys with --manual-map, shipped in the Tools project.
+        var manual = ManualMap.Load(System.IO.Path.Combine(TestContext.CurrentContext.TestDirectory, "Tools", "manual-map.json"));
+
+        Assert.AreEqual(129, manual.Entries.Count);
+        Assert.IsTrue(manual.Entries.All(e => e.Keys.Count > 0 && !string.IsNullOrWhiteSpace(e.MapName)));
+
+        var tidewaterLv = manual.Match("tidewaterglades", 2, null).Single();
+        Assert.IsNull(tidewaterLv.MapId);
+        Assert.AreEqual("Tidewater Glades LV", tidewaterLv.MapName);
+        Assert.AreEqual(47, manual.Match("tidewaterglades", 3, null).Single().MapId);
+        Assert.AreEqual(35, manual.Match("twilightruins", 5, MapKeyResolverTests.FourVsFour).Single().MapId);
+        Assert.AreEqual(19, manual.Match("twilightruins", 5, MapKeyResolverTests.Ffa).Single().MapId);
+    }
 }

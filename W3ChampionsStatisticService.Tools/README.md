@@ -74,7 +74,7 @@ dotnet run --project W3ChampionsStatisticService.Tools -- backfill-map-keys \
   --connection-string mongodb://localhost:27017 \
   --update-service-map-data MapData.json \
   --mm-maps Maps.json \
-  --manual-map manual-map.json \
+  --manual-map W3ChampionsStatisticService.Tools/MapKeyBackfill/manual-map.json \
   --write-event-catalog event-catalog.jsonl \
   --report map-key-backfill-report.csv
 ```
@@ -84,7 +84,7 @@ Apply, reusing the event catalog of the reviewed dry run:
 ```bash
 dotnet run --project W3ChampionsStatisticService.Tools -- backfill-map-keys \
   --connection-string mongodb://localhost:27017 \
-  --update-service-map-data MapData.json --mm-maps Maps.json --manual-map manual-map.json \
+  --update-service-map-data MapData.json --mm-maps Maps.json --manual-map W3ChampionsStatisticService.Tools/MapKeyBackfill/manual-map.json \
   --event-catalog event-catalog.jsonl \
   --report map-key-backfill-apply.csv \
   --apply
@@ -96,7 +96,7 @@ Inputs:
 - **Event catalog:** one aggregation of `MatchFinishedEvent` on `{match.map, match.mapId, match.mapName, match.season, match.gameMode}`, one month at a time with `--aggregation-pause-ms` (default 2000) between months. `--write-event-catalog` saves it as JSON lines with a header (database, hosts, creation time); `--event-catalog` reads it back instead of aggregating.
 - `--update-service-map-data`: `mongoexport` of UpdateService `MapData` (file name → `MapId`).
 - `--mm-maps`: `mongoexport` of matchmaking-service `Maps` (`MapId` → name).
-- `--manual-map`: entries for keys that no event explains (see `--help` for the shape).
+- `--manual-map`: entries for keys that no event explains (see `--help` for the shape). The reviewed map ships as `MapKeyBackfill/manual-map.json`: one entry per map id with all its stored key spellings, mostly for seasons 1–10, which have no events. `seasons` is binding, `gameModes` optional; an entry without an id keeps an older version apart under its own name.
 
 How a key is resolved:
 1. A key that is already a known map file name (events or `MapData`) is in the new shape and is skipped.

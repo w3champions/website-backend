@@ -28,6 +28,9 @@
     <None Update="Tools\fixtures\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\W3ChampionsStatisticService.Tools\MapKeyBackfill\manual-map.json" Link="Tools\manual-map.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <!-- MaxMind-DB test-data (Apache-2.0 OR MIT), https://github.com/maxmind/MaxMind-DB/tree/main/test-data -->
     <None Update="NetworkDiagnostics\GeoIp\*.mmdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
