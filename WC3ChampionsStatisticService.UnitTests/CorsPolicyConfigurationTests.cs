@@ -37,10 +37,10 @@ public class CorsPolicyConfigurationTests
     }
 
     // A browser hides every response header that is not safelisted from cross-origin script. The website (another
-    // origin) reads these two of the network diagnostics API.
+    // origin) reads two of the network diagnostics API and the Retry-After of the smurf moderation proxy.
     [Test]
-    public void NetworkDiagnosticsResponseHeaders_AreReadableByCrossOriginScript()
+    public void ReadableResponseHeaders_AreExposedToCrossOriginScript()
     {
-        CollectionAssert.AreEquivalent(new[] { "X-NetDiag-Truncated", "X-Next-Cursor" }, Build().ExposedHeaders);
+        CollectionAssert.AreEquivalent(new[] { "X-NetDiag-Truncated", "X-Next-Cursor", "Retry-After" }, Build().ExposedHeaders);
     }
 }

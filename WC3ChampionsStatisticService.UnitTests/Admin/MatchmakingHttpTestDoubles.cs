@@ -14,7 +14,7 @@ internal sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFact
 }
 
 /// <summary>Records every request and answers with a fixed status code and JSON body.</summary>
-internal sealed class StubMatchmakingHandler(HttpStatusCode statusCode = HttpStatusCode.OK, string responseBody = "") : HttpMessageHandler
+internal sealed class StubMatchmakingHandler(HttpStatusCode statusCode = HttpStatusCode.OK, string responseBody = "", string retryAfter = null) : HttpMessageHandler
 {
     public List<HttpRequestMessage> Requests { get; } = [];
     public List<string> RequestBodies { get; } = [];
@@ -24,10 +24,12 @@ internal sealed class StubMatchmakingHandler(HttpStatusCode statusCode = HttpSta
         Requests.Add(request);
         RequestBodies.Add(request.Content == null ? "" : await request.Content.ReadAsStringAsync(cancellationToken));
 
-        return new HttpResponseMessage(statusCode)
+        var response = new HttpResponseMessage(statusCode)
         {
             Content = new StringContent(responseBody, Encoding.UTF8, "application/json"),
         };
+        if (retryAfter != null) response.Headers.TryAddWithoutValidation("Retry-After", retryAfter);
+        return response;
     }
 }
 

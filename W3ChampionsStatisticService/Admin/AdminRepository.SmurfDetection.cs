@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Net.Http.Headers;
 using Serilog;
 
 namespace W3ChampionsStatisticService.Admin;
@@ -17,6 +18,12 @@ public partial class AdminRepository
     // BattleTags contain '#', so every segment is re-encoded for matchmaking.
     private static string Segment(string value) => Uri.EscapeDataString(value);
 
+    // The raw value is forwarded unchanged, but only when the typed parse accepts it (delta-seconds or HTTP date).
+    private static string WellFormedRetryAfter(HttpResponseMessage response) =>
+        response.Headers.RetryAfter != null && response.Headers.NonValidated.TryGetValues(HeaderNames.RetryAfter, out var values)
+            ? values.ToString()
+            : null;
+
     private async Task<MatchmakingProxyResult> SendSmurfDetection(HttpMethod method, string path, object body = null)
     {
         using var request = CreateAdminRequest(method, MatchmakingApiUrl + SmurfDetectionPath + path);
@@ -30,7 +37,7 @@ public partial class AdminRepository
                 Log.Error("Matchmaking rejected the admin credentials for a smurf moderation {Method} request", method.Method);
                 return MatchmakingProxyResult.Unavailable();
             }
-            return new MatchmakingProxyResult((int)response.StatusCode, content);
+            return new MatchmakingProxyResult((int)response.StatusCode, content, WellFormedRetryAfter(response));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
