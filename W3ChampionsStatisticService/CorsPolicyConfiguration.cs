@@ -1,5 +1,6 @@
 using System;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.Net.Http.Headers;
 using W3ChampionsStatisticService.NetworkDiagnostics;
 
 namespace W3ChampionsStatisticService;
@@ -22,5 +23,5 @@ public static class CorsPolicyConfiguration
             .SetPreflightMaxAge(PreflightMaxAge)
             // Response headers a script of another origin (the website) may read; a browser hides all others
             // except the few safelisted ones.
-            .WithExposedHeaders(NetDiagConstants.TruncatedHeader, NetDiagConstants.NextCursorHeader);
+            .WithExposedHeaders(NetDiagConstants.TruncatedHeader, NetDiagConstants.NextCursorHeader, HeaderNames.RetryAfter);
 }

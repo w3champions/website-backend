@@ -5,9 +5,10 @@ namespace W3ChampionsStatisticService.Admin;
 /// <summary>
 /// A matchmaking admin response forwarded as is (status code and raw JSON body). Matchmaking answering 403, which
 /// means the shared admin secret is not accepted, and an unreachable matchmaking both become a generic 502 so
-/// neither the secret nor the upstream address reaches the browser.
+/// neither the secret nor the upstream address reaches the browser. <paramref name="RetryAfter"/> is the upstream
+/// Retry-After value as sent, set only when it was well-formed.
 /// </summary>
-public sealed record MatchmakingProxyResult(int StatusCode, string Body)
+public sealed record MatchmakingProxyResult(int StatusCode, string Body, string RetryAfter = null)
 {
     public const string UnavailableMessage = "Matchmaking service unavailable";
 
