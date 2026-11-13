@@ -218,10 +218,30 @@ entries and raises their `SchemaVersion`, so the lifetime endpoint can report a
 calibration-aware peak. Until it runs, peaks are withheld for every player whose
 history predates those fields.
 
-The data needed is already persisted — `PlayerOverviewMatches` carries `Race`,
-`CurrentMmr`, `OldRankDeviation`, `Won` and `Ranking`, and `Matchup` carries
-`EndTime`, `Season`, `GameMode` and `GateWay` — so this is a query over the
-matches collection, not an event replay.
+The source is the retained `MatchFinishedEvent` collection, read directly - not
+the read-model pipeline, and not `Matchup`.
+
+That collection goes back to the beginning: it appears in the second day of the
+repository's history (`569f39c`, "saving of raw data working") as the raw store
+the read models were built on, it has no TTL index, nothing deletes from it, and
+`MatchEventRepository.InsertIfNotExisting` exists to *fill in* events synced from
+the matchmaking service. `Matchup` is derived from these events, so it cannot
+have deeper coverage. Worth confirming against prod once by comparing the oldest
+`_id` in each collection.
+
+`Matchup` looked like the obvious source but is subtly wrong for this:
+`PlayerOverviewMatches.OldRankDeviation` is the RD *before* the match
+(`Matchup.cs` sets it from `w.mmr.rd`), whereas the live handler stores the RD
+*after* (`player.updatedMmr.rd`). Backfilling from `Matchup` would therefore
+mark players as calibrating for slightly longer than live-written entries do,
+leaving a systematic seam between backfilled and live history. The events carry
+`updatedMmr.rating`, `updatedMmr.rd` and `ranking.rp` - exactly the handler's
+inputs - so a rebuilt entry is what the handler would have produced. The
+handler's exclusions (arranged teams, missing `updatedMmr`) are applied for the
+same reason.
+
+Events are bulkier than `Matchup` documents, which matters when reading all of
+match history, so the query projects down to the five fields used.
 
 **Batch by day, not by season.** A season is ~1M matches and ~15k active
 players; holding a season's timelines in memory is a few hundred MB per mode. A
@@ -242,14 +262,31 @@ order. Adding that index would otherwise stall startup, because
 
 Other properties:
 
-- **Checkpoint** is the last completed day; progress is days done / total.
+- **Checkpoint** is the next day to do; progress is days done / total.
 - **Idempotent per day.** Insertion order approximates but does not equal
-  `EndTime`, so bucket on `EndTime` and query a slightly wider `_id` range than
-  the day. Clear the day's entries before rewriting them so a resumed run
-  redoes a day cleanly.
-- **Throttle.** This is the job that can starve production; it needs a delay
-  between batches and to respect cancellation promptly.
+  `EndTime`, so the `_id` window is padded by two hours at each end and the
+  exact day selected on `EndTime`. A day's existing entries are removed before
+  the rebuilt one is inserted, so a rerun converges rather than double-counting.
+- **Stops at yesterday**, relative to whenever it runs. Today is still being
+  written by the live handler, and rewriting a day underneath it would drop
+  games that land mid-run.
+
+  **Run it on a later UTC day than the timeline handler was deployed on.** The
+  run day is never rebuilt, so on the deploy day the entries the *old* handler
+  wrote that morning stay as they are while the document is still promoted to
+  the current schema version - claiming games counts and intra-day peaks that
+  were never computed. Any later day is fine; no need to wait beyond that.
+- **Throttle** via `context.Pace()` between days - see Back-pressure above.
 - Re-runnable, but requires `force` once completed.
+
+`SchemaVersion` is raised in a single pass at the end rather than as each day is
+written, because a document is only fully rebuilt once the run reaches the end -
+stamping it earlier would claim the whole history had the new fields while its
+later days still did not. A blanket update at the end would have the opposite
+problem, sweeping in timelines the backfill never touched (a player whose match
+events are missing), whose entries genuinely cannot be verified. So each
+rewritten document is marked with `BackfillPending` as it goes and only marked
+documents are promoted at the end.
 
 Note the rebuild recomputes each series from matches under today's rules, so it
 will not reproduce existing points exactly — the live handler skipped arranged
