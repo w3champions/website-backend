@@ -23,4 +23,24 @@ public static class RankExtensions
             }
         };
     }
+
+    public static RankInContext ToRankInContext(this Rank r)
+    {
+        var p = r.Player;
+        return new RankInContext
+        {
+            Players = p.PlayerIds,
+            Season = r.Season,
+            GateWay = r.Gateway,
+            GameMode = r.GameMode,
+            Race = r.Race,
+            League = r.League,
+            RankNumber = r.RankNumber,
+            RankingPoints = r.RankingPoints,
+            Mmr = p.MMR,
+            Wins = p.Wins,
+            Losses = p.Losses,
+            Games = p.Games,
+        };
+    }
 }
