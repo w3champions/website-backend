@@ -81,24 +81,28 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
 
     [HttpPost("preview")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> Preview([FromBody] SmurfEventBody body) =>
         MissingBody(body) ?? (body.Replacing == null ? null : InvalidId(body.Replacing, "replacing")) ?? Forward(await _adminRepository.PreviewSmurfEvent(body.Name, body.From, body.To, body.Anchors, body.Replacing));
 
     [HttpPost("")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> Create([FromBody] SmurfEventBody body, string actingPlayer) =>
         MissingBody(body) ?? Forward(await _adminRepository.CreateSmurfEvent(body.Name, body.From, body.To, body.Anchors, Trimmed(body.Reason), actingPlayer));
 
     [HttpPut("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> Update([FromRoute] string id, [FromBody] SmurfEventBody body, string actingPlayer) =>
         InvalidId(id) ?? MissingBody(body) ?? Forward(await _adminRepository.UpdateSmurfEvent(id, body.Name, body.From, body.To, body.Anchors, Trimmed(body.Reason), actingPlayer));
 
     [HttpDelete("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> Delete([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] SmurfReasonBody body, string actingPlayer) =>
         InvalidId(id) ?? Forward(await _adminRepository.DeleteSmurfEvent(id, Trimmed(body?.Reason), actingPlayer));
 

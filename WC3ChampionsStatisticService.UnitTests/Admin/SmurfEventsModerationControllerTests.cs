@@ -337,6 +337,24 @@ public class SmurfEventsModerationControllerTests
     }
 
     [Test]
+    public void EveryOtherBodyAction_HasATransportBodyLimit_AtLeastMatchmakingsJsonLimit()
+    {
+        var actions = new[] { typeof(SmurfEventsModerationController), typeof(SmurfHardwareModerationController) }
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            .Where(m => m.GetParameters().Any(p => p.GetCustomAttribute<FromBodyAttribute>() != null))
+            .Where(m => m.Name is not (nameof(SmurfEventsModerationController.Rename) or nameof(SmurfEventsModerationController.Review)))
+            .ToList();
+
+        Assert.That(actions, Is.Not.Empty);
+        foreach (var action in actions)
+        {
+            var limit = action.GetCustomAttribute<RequestSizeLimitAttribute>();
+            Assert.That(limit, Is.Not.Null, action.Name);
+            Assert.That(((IRequestSizeLimitMetadata)limit!).MaxRequestBodySize, Is.GreaterThanOrEqualTo(50L * 1024 * 1024), action.Name);
+        }
+    }
+
+    [Test]
     public async Task Rename_Answers400ForANullBodyOrABadId()
     {
         AssertBadRequest(await _controller.Rename(Id, null, "Mod#1"), "body");

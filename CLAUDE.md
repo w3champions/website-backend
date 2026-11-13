@@ -158,8 +158,9 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - Services registered in `Program.cs` and feature-specific extension methods
 - Rewards services in `RewardServiceExtensions.cs`
 - Tracing services in `TracingServiceCollectionExtensions.cs`
+
 ### Smurf moderation
 - `Admin/SmurfEventsModerationController.cs` (smurf events), `Admin/SmurfHardwareModerationController.cs` (hardware links and items) and the smurf routes in `Admin/AdminController.cs` (ignored identifiers, identifier types, query-smurfs) proxy the matchmaking admin API under `/admin/smurf-detection`. matchmaking-service owns the data and all rules; this backend only authenticates and forwards.
 - Permissions are exact matches (`BearerHasPermissionFilter` has no hierarchy): `SmurfCheckerQuery` for Search Smurfs (identifier types, query-smurfs; its explanation also needs `SmurfCheckerQueryExplanation`); `SmurfCheckerAdministration` for every events and hardware-link route, reads included, and for the ignored identifiers with their plain values.
 - The acting player (`author` of every write) and the decision to ask matchmaking for plain values (`reveal` on the event identifiers route) come from the validated token only: `InjectActingPlayerAuthCode` and the caller's permissions. Request bodies and query strings from the browser are never read for either.
-- Responses are passed through untyped (`MatchmakingProxyResult`: matchmaking's status code and JSON body unchanged), so matchmaking can add fields without a change here. Every caller-supplied value put into a matchmaking URL goes through `Uri.EscapeDataString`.
+- Responses are passed through untyped (`MatchmakingProxyResult`: matchmaking's status code and JSON body unchanged), so matchmaking can add fields without a change here. Every caller-supplied value is URL-encoded before it is put into a matchmaking-service URL.
