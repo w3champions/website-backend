@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using W3C.Contracts.Admin.Permission;
@@ -16,10 +17,15 @@ public class AdminSmurfRoutePermissionTests
     [TestCase(nameof(AdminController.DeleteIgnoredIdentifier), EPermission.SmurfCheckerAdministration)]
     public void SmurfAction_RequiresTheExpectedPermission(string action, EPermission permission)
     {
-        var method = typeof(AdminController).GetMethod(action)!;
-        var filter = method.GetCustomAttribute<BearerHasPermissionFilter>();
+        // By name over all overloads, so a later overload cannot make the lookup ambiguous or go unchecked.
+        var methods = typeof(AdminController).GetMethods().Where(m => m.Name == action).ToList();
 
-        Assert.That(filter, Is.Not.Null);
-        Assert.That(filter!.Permission, Is.EqualTo(permission));
+        Assert.That(methods, Is.Not.Empty);
+        foreach (var method in methods)
+        {
+            var filter = method.GetCustomAttribute<BearerHasPermissionFilter>();
+            Assert.That(filter, Is.Not.Null);
+            Assert.That(filter!.Permission, Is.EqualTo(permission));
+        }
     }
 }
