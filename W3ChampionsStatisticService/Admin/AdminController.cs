@@ -303,9 +303,9 @@ public class AdminController(
     [BearerHasPermissionFilter(Permission = EPermission.Content)]
     public async Task<IActionResult> SetMotd([FromBody] MessageOfTheDay motd)
     {
-        if (motd.motd.Length > 400)
+        if (motd.motd.Length > 2000)
         {
-            return new BadRequestObjectResult("The motd exceeded 400 characters. We can't display messages this long!");
+            return new BadRequestObjectResult("The motd exceeded 2000 characters, including HTML markup.");
         }
 
         await _informationMessagesRepository.SetMotd(motd);
