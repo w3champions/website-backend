@@ -45,6 +45,9 @@ public class SmurfEventsProxyRepositoryTests
         ("PUT", Base + "/ev-1"),
         ("DELETE", Base + "/ev-1"),
         ("POST", Base + "/ev-1/review"),
+        ("POST", Base + "/ev-1/rename"),
+        ("GET", Base + "/ev-1/identifiers"),
+        ("GET", Base + "/ev-1/history"),
     ];
 
     private static Task<MatchmakingProxyResult> Invoke(AdminRepository r, int index) => index switch
@@ -56,12 +59,15 @@ public class SmurfEventsProxyRepositoryTests
         4 => r.CreateSmurfEvent("Name", "2026-01-01", "2026-01-02", Anchors, "why", "Mod#1"),
         5 => r.UpdateSmurfEvent("ev-1", "Name", "2026-01-01", "2026-01-02", Anchors, "why", "Mod#1"),
         6 => r.DeleteSmurfEvent("ev-1", "why", "Mod#1"),
-        7 => r.ReviewSmurfEvent("ev-1", "confirmed", "why", "Mod#1"),
+        7 => r.ReviewSmurfEvent("ev-1", "confirmed", "why", "Sofia LAN", "Mod#1"),
+        8 => r.RenameSmurfEvent("ev-1", "Sofia LAN", null, "Mod#1"),
+        9 => r.GetSmurfEventIdentifiers("ev-1", false),
+        10 => r.GetSmurfEventHistory("ev-1"),
         _ => throw new System.ArgumentOutOfRangeException(nameof(index)),
     };
 
     [Test]
-    public async Task EveryRoute_UsesMethodPath_SecretHeader_AndNamedClient([Range(0, 7)] int index)
+    public async Task EveryRoute_UsesMethodPath_SecretHeader_AndNamedClient([Range(0, 10)] int index)
     {
         var (repository, handler, factory) = Create();
 
@@ -75,7 +81,7 @@ public class SmurfEventsProxyRepositoryTests
     }
 
     [Test]
-    public async Task ReadRoutes_SendNoBody([Range(0, 2)] int index)
+    public async Task ReadRoutes_SendNoBody([Values(0, 1, 2, 9, 10)] int index)
     {
         var (repository, handler, _) = Create();
 
@@ -139,7 +145,7 @@ public class SmurfEventsProxyRepositoryTests
         var (repository, handler, _) = Create();
 
         await repository.DeleteSmurfEvent("ev-1", null, "Mod#1");
-        await repository.ReviewSmurfEvent("ev-1", "denied", null, "Mod#1");
+        await repository.ReviewSmurfEvent("ev-1", "denied", null, null, "Mod#1");
         await repository.CreateSmurfEvent("Name", "a", "b", Anchors, null, "Mod#1");
 
         foreach (var raw in handler.RequestBodies)
@@ -159,6 +165,42 @@ public class SmurfEventsProxyRepositoryTests
         Assert.That(delete["author"]!.Value<string>(), Is.EqualTo("Mod#1"));
         Assert.That(review["author"]!.Value<string>(), Is.EqualTo("Mod#1"));
         Assert.That(review["decision"]!.Value<string>(), Is.EqualTo("confirmed"));
+    }
+
+    [Test]
+    public async Task Rename_SendsNameAndAuthor_AndOmitsAnAbsentReason()
+    {
+        var (repository, handler, _) = Create();
+
+        await repository.RenameSmurfEvent("ev-1", "Sofia LAN", null, "Mod#1");
+        await repository.RenameSmurfEvent("ev-1", "Sofia LAN", "typo", "Mod#1");
+
+        Assert.That(handler.RequestBodies[0], Is.EqualTo("{\"name\":\"Sofia LAN\",\"author\":\"Mod#1\"}"));
+        Assert.That(JObject.Parse(handler.RequestBodies[1])["reason"]!.Value<string>(), Is.EqualTo("typo"));
+    }
+
+    [Test]
+    public async Task Identifiers_SendsRevealOnlyWhenTrue()
+    {
+        var (repository, handler, _) = Create();
+
+        await repository.GetSmurfEventIdentifiers("ev-1", true);
+        await repository.GetSmurfEventIdentifiers("ev-1", false);
+
+        Assert.That(handler.Requests[0].RequestUri!.Query, Is.EqualTo("?reveal=true"));
+        Assert.That(handler.Requests[1].RequestUri!.Query, Is.Empty);
+    }
+
+    [Test]
+    public async Task Review_SendsTheNameOnlyWhenGiven()
+    {
+        var (repository, handler, _) = Create();
+
+        await repository.ReviewSmurfEvent("ev-1", "confirmed", null, "Sofia LAN", "Mod#1");
+        await repository.ReviewSmurfEvent("ev-1", "confirmed", null, null, "Mod#1");
+
+        Assert.That(JObject.Parse(handler.RequestBodies[0])["name"]!.Value<string>(), Is.EqualTo("Sofia LAN"));
+        Assert.That(JObject.Parse(handler.RequestBodies[1]).ContainsKey("name"), Is.False);
     }
 
     [TestCase(HttpStatusCode.OK, "{\"events\":[]}")]

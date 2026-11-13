@@ -7,6 +7,10 @@ namespace W3ChampionsStatisticService.Admin;
 /// <summary>Result helpers shared by the smurf moderation proxy controllers (hardware and events).</summary>
 internal static class SmurfModerationResults
 {
+    // Transport bound for the JSON bodies that can be long (attendee and anchor lists), equal to matchmaking's own JSON
+    // body limit (matchmaking-service src/app/app.ts, bodyParser.json) so this backend never refuses a body it would accept.
+    public const int MatchmakingJsonBodyLimitBytes = 50 * 1024 * 1024;
+
     /// <summary>Matchmaking's status code and JSON body, unchanged, plus its Retry-After header when it sent a valid one.</summary>
     public static IActionResult Forward(MatchmakingProxyResult result) =>
         new ForwardedResult { StatusCode = result.StatusCode, ContentType = "application/json", Content = result.Body, RetryAfter = result.RetryAfter };

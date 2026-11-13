@@ -41,8 +41,18 @@ public partial class AdminRepository
     public Task<MatchmakingProxyResult> DeleteSmurfEvent(string id, string reason, string author) =>
         SendSmurfEvents(HttpMethod.Delete, $"/{Segment(id)}", EventBody(("reason", reason), ("author", author)));
 
-    public Task<MatchmakingProxyResult> ReviewSmurfEvent(string id, string decision, string reason, string author) =>
-        SendSmurfEvents(HttpMethod.Post, $"/{Segment(id)}/review", EventBody(("decision", decision), ("reason", reason), ("author", author)));
+    public Task<MatchmakingProxyResult> ReviewSmurfEvent(string id, string decision, string reason, string name, string author) =>
+        SendSmurfEvents(HttpMethod.Post, $"/{Segment(id)}/review", EventBody(("decision", decision), ("reason", reason), ("name", name), ("author", author)));
+
+    public Task<MatchmakingProxyResult> RenameSmurfEvent(string id, string name, string reason, string author) =>
+        SendSmurfEvents(HttpMethod.Post, $"/{Segment(id)}/rename", EventBody(("name", name), ("reason", reason), ("author", author)));
+
+    // reveal is decided by the controller from the caller's own permissions; it is only ever sent as true.
+    public Task<MatchmakingProxyResult> GetSmurfEventIdentifiers(string id, bool reveal) =>
+        SendSmurfEvents(HttpMethod.Get, $"/{Segment(id)}/identifiers{(reveal ? "?reveal=true" : "")}");
+
+    public Task<MatchmakingProxyResult> GetSmurfEventHistory(string id) =>
+        SendSmurfEvents(HttpMethod.Get, $"/{Segment(id)}/history");
 
     private Task<MatchmakingProxyResult> SendSmurfEvents(HttpMethod method, string path, object body = null) =>
         SendSmurfDetection(method, SmurfEventsPath + path, body);

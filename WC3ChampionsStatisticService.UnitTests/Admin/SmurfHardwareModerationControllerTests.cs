@@ -40,27 +40,26 @@ public class SmurfHardwareModerationControllerTests
     }
 
     // Permission table of the contract.
-    [TestCase(nameof(SmurfHardwareModerationController.GetLinks), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfHardwareModerationController.GetItems), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfHardwareModerationController.GetItem), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfHardwareModerationController.GetAudit), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfHardwareModerationController.SetSmurf), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.RevokeSmurf), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.SetNotSmurf), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.RevokeNotSmurf), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.TrustItem), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.RevokeTrust), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.IgnoreItem), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfHardwareModerationController.RevokeIgnore), EPermission.SmurfCheckerAdministration)]
-    public void Action_RequiresTheContractPermission(string action, EPermission permission)
+    [TestCase(nameof(SmurfHardwareModerationController.GetLinks), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfHardwareModerationController.GetItems), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfHardwareModerationController.GetItem), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfHardwareModerationController.GetAudit), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfHardwareModerationController.SetSmurf), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.RevokeSmurf), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.SetNotSmurf), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.RevokeNotSmurf), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.TrustItem), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.RevokeTrust), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.IgnoreItem), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfHardwareModerationController.RevokeIgnore), EPermission.SmurfCheckerAdministration, true)]
+    public void Action_RequiresTheContractPermission(string action, EPermission permission, bool injectsActingPlayer)
     {
         var method = typeof(SmurfHardwareModerationController).GetMethod(action)!;
         var filter = method.GetCustomAttribute<BearerHasPermissionFilter>();
 
         Assert.That(filter, Is.Not.Null);
         Assert.That(filter!.Permission, Is.EqualTo(permission));
-        var isWrite = permission == EPermission.SmurfCheckerAdministration;
-        Assert.That(method.GetCustomAttribute<InjectActingPlayerAuthCodeAttribute>() != null, Is.EqualTo(isWrite));
+        Assert.That(method.GetCustomAttribute<InjectActingPlayerAuthCodeAttribute>() != null, Is.EqualTo(injectsActingPlayer));
     }
 
     [Test]

@@ -31,7 +31,7 @@ public class AdminRepositoryIgnoredIdentifierTests
     [Test]
     public async Task DeleteRequestUsesSingularRouteWithIdInJsonBody()
     {
-        var request = AdminRepository.BuildDeleteIgnoredIdentifierRequest("abc123");
+        var request = AdminRepository.BuildDeleteIgnoredIdentifierRequest("abc123", "Admin#1");
 
         Assert.That(request.Method, Is.EqualTo(HttpMethod.Delete));
         Assert.That(request.RequestUri!.AbsolutePath, Does.EndWith("/admin/smurf-detection/ignored-identifier"));
@@ -39,6 +39,7 @@ public class AdminRepositoryIgnoredIdentifierTests
 
         var body = JObject.Parse(await request.Content!.ReadAsStringAsync());
         Assert.That(body["id"]!.Value<string>(), Is.EqualTo("abc123"));
+        Assert.That(body["author"]!.Value<string>(), Is.EqualTo("Admin#1"));
     }
 
     [Test]

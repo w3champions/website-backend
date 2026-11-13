@@ -33,22 +33,22 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
     private readonly IAdminRepository _adminRepository = adminRepository;
 
     [HttpGet("hardware/links/{targetBattleTag}")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> GetLinks([FromRoute] string targetBattleTag) =>
         InvalidBattleTag("battleTag", targetBattleTag) ?? Forward(await _adminRepository.GetHardwareLinks(targetBattleTag));
 
     [HttpGet("hardware/items/{targetBattleTag}")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> GetItems([FromRoute] string targetBattleTag) =>
         InvalidBattleTag("battleTag", targetBattleTag) ?? Forward(await _adminRepository.GetHardwareItems(targetBattleTag));
 
     [HttpGet("hardware/items/{targetBattleTag}/{hash8}")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> GetItem([FromRoute] string targetBattleTag, [FromRoute] string hash8) =>
         InvalidBattleTag("battleTag", targetBattleTag) ?? InvalidHash8(hash8) ?? Forward(await _adminRepository.GetHardwareItem(targetBattleTag, hash8));
 
     [HttpGet("hardware/audit")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> GetAudit([FromQuery(Name = "battleTag")] string targetBattleTag, [FromQuery] string before, [FromQuery] int? limit)
     {
         var invalid = (string.IsNullOrEmpty(targetBattleTag) ? null : InvalidBattleTag("battleTag", targetBattleTag)) ?? InvalidLimit(limit, MaxLimit);
@@ -58,6 +58,7 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
     [HttpPost("links/{battleTagA}/{battleTagB}/smurf")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> SetSmurf([FromRoute] string battleTagA, [FromRoute] string battleTagB, [FromBody] SmurfReasonBody body, string actingPlayer) =>
         InvalidPair(battleTagA, battleTagB) ?? InvalidReason(body) ?? Forward(await _adminRepository.SetSmurfVerdict(battleTagA, battleTagB, body.Reason.Trim(), actingPlayer));
 
@@ -70,6 +71,7 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
     [HttpPost("links/{battleTagA}/{battleTagB}/not-smurf")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> SetNotSmurf([FromRoute] string battleTagA, [FromRoute] string battleTagB, [FromBody] SmurfReasonBody body, string actingPlayer) =>
         InvalidPair(battleTagA, battleTagB) ?? InvalidReason(body) ?? Forward(await _adminRepository.SetNotSmurfVerdict(battleTagA, battleTagB, body.Reason.Trim(), actingPlayer));
 
@@ -82,6 +84,7 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
     [HttpPost("hardware/items/{targetBattleTag}/{hash8}/trust")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> TrustItem([FromRoute] string targetBattleTag, [FromRoute] string hash8, [FromBody] SmurfReasonBody body, string actingPlayer) =>
         InvalidItem(targetBattleTag, hash8) ?? InvalidReason(body) ?? Forward(await _adminRepository.TrustHardwareItem(targetBattleTag, hash8, body.Reason.Trim(), actingPlayer));
 
@@ -94,6 +97,7 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
     [HttpPost("hardware/items/{targetBattleTag}/{hash8}/ignore")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MatchmakingJsonBodyLimitBytes)]
     public async Task<IActionResult> IgnoreItem([FromRoute] string targetBattleTag, [FromRoute] string hash8, [FromBody] SmurfReasonBody body, string actingPlayer) =>
         InvalidItem(targetBattleTag, hash8) ?? InvalidReason(body) ?? Forward(await _adminRepository.IgnoreHardwareItem(targetBattleTag, hash8, body.Reason.Trim(), actingPlayer));
 

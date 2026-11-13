@@ -108,24 +108,9 @@ public partial class AdminRepository(MongoClient mongoClient, IHttpClientFactory
         public string address { get; set; }
     }
 
-    [Obsolete("Use QuerySmurfsFor instead")]
-    public async Task<List<string>> SearchSmurfsFor(string tag)
-    {
-        var result = await QuerySmurfsFor("battleTag", tag, false, 1);
-        return [.. result.connectedBattleTags];
-    }
-
     public async Task<GlobalChatBanResponse> GetChatBans(string query, string nextId)
     {
-        string url = $"{MatchmakingApiUrl}/flo/globalChatBans";
-        if (query != null)
-        {
-            url += $"?query={HttpUtility.UrlEncode(query)}";
-        }
-        else if (nextId != null)
-        {
-            url += $"?nextId={nextId}";
-        }
+        var url = BuildChatBansUrl(query, nextId);
         HttpResponseMessage result = await SendAdminAsync(HttpMethod.Get, url);
         string content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
@@ -175,7 +160,7 @@ public partial class AdminRepository(MongoClient mongoClient, IHttpClientFactory
 
     public async Task<HttpStatusCode> DeleteChatBan(string id)
     {
-        var url = $"{MatchmakingApiUrl}/flo/globalChatBans/{id}";
+        var url = BuildDeleteChatBanUrl(id);
         var result = await SendAdminAsync(HttpMethod.Delete, url);
         return result.StatusCode;
     }
@@ -212,9 +197,9 @@ public partial class AdminRepository(MongoClient mongoClient, IHttpClientFactory
         return ParseAddIgnoredIdentifierResponse(content);
     }
 
-    public async Task<HttpStatusCode> DeleteIgnoredIdentifier(string id)
+    public async Task<HttpStatusCode> DeleteIgnoredIdentifier(string id, string author)
     {
-        using var request = BuildDeleteIgnoredIdentifierRequest(id);
+        using var request = BuildDeleteIgnoredIdentifierRequest(id, author);
         var result = await _httpClient.SendAsync(request);
         await result.ThrowIfError();
         return result.StatusCode;
@@ -233,9 +218,8 @@ public partial class AdminRepository(MongoClient mongoClient, IHttpClientFactory
 
     public async Task<SmurfDetection.SmurfDetectionResult> QuerySmurfsFor(string identifierType, string identifier, bool includeExplanation = false, int iterationDepth = 1)
     {
-        var generateExplanation = includeExplanation ? "true" : "false";
-        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/query-smurfs?identifierType={identifierType}&identifier={HttpUtility.UrlEncode(identifier)}&generateExplanation={generateExplanation}&iterationDepth={iterationDepth}";
-        var result = await SendAdminAsync(HttpMethod.Get, url);
+        using var request = BuildQuerySmurfsRequest(identifierType, identifier, includeExplanation, iterationDepth);
+        var result = await _httpClient.SendAsync(request);
         await result.ThrowIfError();
         var content = await result.Content.ReadAsStringAsync();
         if (string.IsNullOrEmpty(content)) return null;
@@ -253,12 +237,32 @@ public partial class AdminRepository(MongoClient mongoClient, IHttpClientFactory
         return request;
     }
 
-    internal static HttpRequestMessage BuildDeleteIgnoredIdentifierRequest(string id)
+    // matchmaking records "unknown" for a revoke without an author, so the acting moderator is always sent.
+    internal static HttpRequestMessage BuildDeleteIgnoredIdentifierRequest(string id, string author)
     {
         var request = CreateAdminRequest(HttpMethod.Delete, $"{MatchmakingApiUrl}/admin/smurf-detection/ignored-identifier");
-        request.Content = CreateJsonContent(new { id });
+        request.Content = CreateJsonContent(new { id, author });
         return request;
     }
+
+    // Every caller-supplied value is escaped, so a '#', '&' or '=' in it stays inside its own query value and cannot
+    // add, replace or cut off the parameters the backend sets itself (generateExplanation comes from the caller's permission).
+    internal static HttpRequestMessage BuildQuerySmurfsRequest(string identifierType, string identifier, bool includeExplanation, int iterationDepth)
+    {
+        var generateExplanation = includeExplanation ? "true" : "false";
+        var url = $"{MatchmakingApiUrl}/admin/smurf-detection/query-smurfs?identifierType={Uri.EscapeDataString(identifierType ?? "")}&identifier={Uri.EscapeDataString(identifier ?? "")}&generateExplanation={generateExplanation}&iterationDepth={iterationDepth}";
+        return CreateAdminRequest(HttpMethod.Get, url);
+    }
+
+    internal static string BuildChatBansUrl(string query, string nextId)
+    {
+        var url = $"{MatchmakingApiUrl}/flo/globalChatBans";
+        if (query != null) return $"{url}?query={Uri.EscapeDataString(query)}";
+        if (nextId != null) return $"{url}?nextId={Uri.EscapeDataString(nextId)}";
+        return url;
+    }
+
+    internal static string BuildDeleteChatBanUrl(string id) => $"{MatchmakingApiUrl}/flo/globalChatBans/{Uri.EscapeDataString(id)}";
 
     internal static SmurfDetection.IgnoredIdentifier ParseAddIgnoredIdentifierResponse(string content)
     {

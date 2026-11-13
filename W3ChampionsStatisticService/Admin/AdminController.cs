@@ -488,14 +488,15 @@ public class AdminController(
 
     [HttpDelete("smurf-detection/ignored-identifiers/{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
-    public async Task<IActionResult> DeleteIgnoredIdentifier([FromRoute] string id)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> DeleteIgnoredIdentifier([FromRoute] string id, string actingPlayer)
     {
-        await _adminRepository.DeleteIgnoredIdentifier(id);
+        await _adminRepository.DeleteIgnoredIdentifier(id, actingPlayer);
         return Ok();
     }
 
     [HttpGet("smurf-detection/possible-identifier-types")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
     public async Task<IActionResult> GetPossibleIdentifierTypes()
     {
         return Ok(await _adminRepository.GetPossibleIdentifierTypes());
