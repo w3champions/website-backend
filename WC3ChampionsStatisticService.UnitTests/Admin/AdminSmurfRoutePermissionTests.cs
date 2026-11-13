@@ -28,4 +28,13 @@ public class AdminSmurfRoutePermissionTests
             Assert.That(filter!.Permission, Is.EqualTo(permission));
         }
     }
+
+    [Test]
+    public void DeleteIgnoredIdentifier_InjectsTheActingPlayerFromTheToken()
+    {
+        var method = typeof(AdminController).GetMethod(nameof(AdminController.DeleteIgnoredIdentifier))!;
+
+        Assert.That(method.GetCustomAttribute<InjectActingPlayerAuthCodeAttribute>(), Is.Not.Null);
+        Assert.That(method.GetParameters().Select(p => p.Name), Does.Contain("actingPlayer"));
+    }
 }

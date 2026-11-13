@@ -488,9 +488,10 @@ public class AdminController(
 
     [HttpDelete("smurf-detection/ignored-identifiers/{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
-    public async Task<IActionResult> DeleteIgnoredIdentifier([FromRoute] string id)
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> DeleteIgnoredIdentifier([FromRoute] string id, string actingPlayer)
     {
-        await _adminRepository.DeleteIgnoredIdentifier(id);
+        await _adminRepository.DeleteIgnoredIdentifier(id, actingPlayer);
         return Ok();
     }
 
