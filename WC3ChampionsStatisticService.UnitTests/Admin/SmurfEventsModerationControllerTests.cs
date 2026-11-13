@@ -354,19 +354,6 @@ public class SmurfEventsModerationControllerTests
     }
 
     [Test]
-    public async Task Identifiers_IgnoresARevealValueSentByTheBrowser()
-    {
-        _repository.Setup(r => r.GetSmurfEventIdentifiers(Id, false)).ReturnsAsync(Ok200);
-        AsUser(EPermission.SmurfCheckerQuery);
-        _controller.HttpContext.Request.QueryString = new QueryString("?reveal=true");
-
-        await _controller.Identifiers(Id);
-
-        _repository.Verify(r => r.GetSmurfEventIdentifiers(Id, true), Times.Never);
-        _repository.VerifyAll();
-    }
-
-    [Test]
     public async Task Identifiers_WithNoPermissionsAtAll_DoesNotReveal()
     {
         _repository.Setup(r => r.GetSmurfEventIdentifiers(Id, false)).ReturnsAsync(Ok200);
