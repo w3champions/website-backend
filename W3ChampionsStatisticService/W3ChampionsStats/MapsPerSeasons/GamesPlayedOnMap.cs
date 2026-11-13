@@ -1,5 +1,3 @@
-using MongoDB.Bson.Serialization.Attributes;
-
 namespace W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
 
 public class GamesPlayedOnMap
@@ -14,11 +12,14 @@ public class GamesPlayedOnMap
 
     public string Map { get; set; }
 
-    [BsonIgnore]
+    public int? MapId { get; set; }
+
     public string MapName { get; set; }
 
-    public void CountMatch()
+    public void CountMatch(int? mapId, string mapName)
     {
+        if (mapId != null) MapId = mapId;
+        if (mapName != null) MapName = mapName;
         Count++;
     }
 

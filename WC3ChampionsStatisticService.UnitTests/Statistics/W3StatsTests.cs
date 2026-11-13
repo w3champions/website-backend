@@ -227,6 +227,14 @@ public class W3Stats : IntegrationTestBase
         fakeEvent2.match.map = "(2)Map1.w3x";
         fakeEvent3.match.map = "(2)Map2.w3x";
 
+        fakeEvent1.match.mapId = 1;
+        fakeEvent2.match.mapId = 1;
+        fakeEvent3.match.mapId = 2;
+
+        fakeEvent1.match.mapName = "Map 1";
+        fakeEvent2.match.mapName = "Map 1";
+        fakeEvent3.match.mapName = "Map 2";
+
         fakeEvent1.match.season = 0;
         fakeEvent2.match.season = 1;
         fakeEvent3.match.season = 1;
@@ -240,22 +248,27 @@ public class W3Stats : IntegrationTestBase
         var loadMapsPerSeason2 = await w3StatsRepo.LoadMapsPerSeason(1);
         var loadMapsPerSeason3 = await w3StatsRepo.LoadMapsPerSeason(2);
 
-        Assert.AreEqual(2, loadMapsPerSeasonOverall.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
-        Assert.AreEqual(1, loadMapsPerSeason1.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
-        Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map1").Count);
-        Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "Map2").Count);
+        Assert.AreEqual(2, loadMapsPerSeasonOverall.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "(2)Map1.w3x").Count);
+        Assert.AreEqual(1, loadMapsPerSeason1.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "(2)Map1.w3x").Count);
+        Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "(2)Map1.w3x").Count);
+        Assert.AreEqual(1, loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "(2)Map2.w3x").Count);
         Assert.IsNull(loadMapsPerSeason3);
+
+        var map2 = loadMapsPerSeason2.MatchesOnMapPerModes[0].Maps.Single(m => m.Map == "(2)Map2.w3x");
+        Assert.AreEqual(2, map2.MapId);
+        Assert.AreEqual("Map 2", map2.MapName);
     }
 
     [Test]
-    [TestCase("path/w3c_1v1_autumnleaves_anon", "autumnleaves")]
-    [TestCase("path/w3c_1v1_terenasstand_anon", "terenasstand")]
-    [TestCase("path/w3c_gnollwood_anon", "gnollwood")]
-    [TestCase("path/w3c_tidewaterglades_lv_anon", "tidewaterglades")]
-    [TestCase("path/w3c_tidewaterglades_anon", "tidewaterglades")]
-    [TestCase("path/w3c_ffa_marketsquare_anon_cd", "marketsquare")]
-    [TestCase("path/w3c_ffa_marketsquare_cd", "marketsquare")]
-    [TestCase("path/w3c_1v1_lastrefuge.anon.w3x", "lastrefuge")]
+    [TestCase("path/w3c_1v1_autumnleaves_anon", "w3c_1v1_autumnleaves_anon")]
+    [TestCase("path/w3c_1v1_terenasstand_anon", "w3c_1v1_terenasstand_anon")]
+    [TestCase("path/w3c_gnollwood_anon", "w3c_gnollwood_anon")]
+    [TestCase("path/w3c_tidewaterglades_lv_anon", "w3c_tidewaterglades_lv_anon")]
+    [TestCase("path/w3c_tidewaterglades_anon", "w3c_tidewaterglades_anon")]
+    [TestCase("path/w3c_ffa_marketsquare_anon_cd", "w3c_ffa_marketsquare_anon_cd")]
+    [TestCase("path/w3c_ffa_marketsquare_cd", "w3c_ffa_marketsquare_cd")]
+    [TestCase("path/w3c_1v1_lastrefuge.anon.w3x", "w3c_1v1_lastrefuge.anon.w3x")]
+    [TestCase(null, null)]
     public void MapName(string input, string expected)
     {
         var mapName = new MapName(input);

@@ -24,7 +24,7 @@ public class PlayerRaceOnMapVersusRaceRatio : IIdentifiable
     public string BattleTag { get; set; }
     public int Season { get; set; }
 
-    public void AddMapWin(Race myRace, Race enemyRace, string mapName, bool won, string patch)
+    public void AddMapWin(Race myRace, Race enemyRace, string map, int? mapId, string mapName, bool won, string patch)
     {
         if (RaceWinsOnMapByPatch == null)
         {
@@ -37,7 +37,7 @@ public class PlayerRaceOnMapVersusRaceRatio : IIdentifiable
         }
 
         //Add win to stats by patch
-        RaceWinsOnMapByPatch[patch].AddWin(myRace, enemyRace, mapName, won);
+        RaceWinsOnMapByPatch[patch].AddWin(myRace, enemyRace, map, mapId, mapName, won);
 
         //Add win to overall stats by season
         // RaceWinsOnMap.AddWin(myRace, enemyRace, mapName, won);

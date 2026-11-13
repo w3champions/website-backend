@@ -40,7 +40,7 @@ public class MatchupTests
         var fakeEvent = TestDtoHelper.CreateFakeEvent();
         fakeEvent.match.map = "Maps/frozenthrone/community/(2)amazonia.w3x";
         var matchup = Matchup.Create(fakeEvent);
-        Assert.AreEqual("amazonia", matchup.Map);
+        Assert.AreEqual("(2)amazonia.w3x", matchup.Map);
     }
 
     [Test]
@@ -49,7 +49,7 @@ public class MatchupTests
         var fakeEvent = TestDtoHelper.CreateFakeEvent();
         fakeEvent.match.map = "Maps/frozenthrone/(2)terenasstand_lv.w3x";
         var matchup = Matchup.Create(fakeEvent);
-        Assert.AreEqual("terenasstand", matchup.Map);
+        Assert.AreEqual("(2)terenasstand_lv.w3x", matchup.Map);
     }
 
     [Test]

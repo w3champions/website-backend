@@ -38,33 +38,34 @@ public class OverallRaceAndWinStatHandler(
             DateTime start = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             DateTime date = start.AddMilliseconds(nextEvent.match.startTime);
             var patch = await _patchRepository.GetPatchVersionFromDate(date);
+            var map = new MapName(nextEvent.match.map).Name;
 
             var statOverall = await _w3Stats.LoadRaceVsRaceStat(0) ?? new OverallRaceAndWinStat(0);
             var statPerMmr = await _w3Stats.LoadRaceVsRaceStat(ToMaxMMr(averageMmr)) ?? new OverallRaceAndWinStat(ToMaxMMr(averageMmr));
 
-            statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won, patch);
-            statOverall.Apply("Overall", players[0].race, players[1].race, players[0].won, "All");
+            statOverall.Apply("Overall", null, "Overall", players[0].race, players[1].race, players[0].won, patch);
+            statOverall.Apply("Overall", null, "Overall", players[0].race, players[1].race, players[0].won, "All");
 
-            statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won, patch);
-            statOverall.Apply("Overall", players[1].race, players[0].race, players[1].won, "All");
+            statOverall.Apply("Overall", null, "Overall", players[1].race, players[0].race, players[1].won, patch);
+            statOverall.Apply("Overall", null, "Overall", players[1].race, players[0].race, players[1].won, "All");
 
-            statOverall.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, patch);
-            statOverall.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, "All");
+            statOverall.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[0].race, players[1].race, players[0].won, patch);
+            statOverall.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[0].race, players[1].race, players[0].won, "All");
 
-            statOverall.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, patch);
-            statOverall.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, "All");
+            statOverall.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[1].race, players[0].race, players[1].won, patch);
+            statOverall.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[1].race, players[0].race, players[1].won, "All");
 
-            statPerMmr.Apply("Overall", players[0].race, players[1].race, players[0].won, patch);
-            statPerMmr.Apply("Overall", players[0].race, players[1].race, players[0].won, "All");
+            statPerMmr.Apply("Overall", null, "Overall", players[0].race, players[1].race, players[0].won, patch);
+            statPerMmr.Apply("Overall", null, "Overall", players[0].race, players[1].race, players[0].won, "All");
 
-            statPerMmr.Apply("Overall", players[1].race, players[0].race, players[1].won, patch);
-            statPerMmr.Apply("Overall", players[1].race, players[0].race, players[1].won, "All");
+            statPerMmr.Apply("Overall", null, "Overall", players[1].race, players[0].race, players[1].won, patch);
+            statPerMmr.Apply("Overall", null, "Overall", players[1].race, players[0].race, players[1].won, "All");
 
-            statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, patch);
-            statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[0].race, players[1].race, players[0].won, "All");
+            statPerMmr.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[0].race, players[1].race, players[0].won, patch);
+            statPerMmr.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[0].race, players[1].race, players[0].won, "All");
 
-            statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, patch);
-            statPerMmr.Apply(new MapName(nextEvent.match.map).Name, players[1].race, players[0].race, players[1].won, "All");
+            statPerMmr.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[1].race, players[0].race, players[1].won, patch);
+            statPerMmr.Apply(map, nextEvent.match.mapId, nextEvent.match.mapName, players[1].race, players[0].race, players[1].won, "All");
 
             await _w3Stats.Save(statOverall);
             await _w3Stats.Save(statPerMmr);
