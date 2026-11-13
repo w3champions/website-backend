@@ -15,8 +15,35 @@ namespace WC3ChampionsStatisticService.Tests;
 
 public class IntegrationTestBase
 {
-    //protected readonly MongoClient MongoClient = new MongoClient("mongodb://localhost:27017/");
-    protected readonly MongoClient MongoClient = new("mongodb://157.90.1.251:3512/");
+    /// <summary>
+    /// The shared CI instance. It resets itself between runs, which is the only reason
+    /// it is safe to point a suite that drops the database at it.
+    /// </summary>
+    private const string DefaultConnectionString = "mongodb://157.90.1.251:3512/";
+
+    /// <summary>
+    /// Where these tests connect. <see cref="Setup"/> drops the entire database before
+    /// EVERY test, so whatever this points at is destroyed repeatedly.
+    ///
+    /// <para>
+    /// To run against a local mongo, set the environment variable rather than editing
+    /// this file:
+    /// <code>TEST_MONGO_CONNECTION_STRING=mongodb://127.0.0.1:27017/ dotnet test</code>
+    /// Editing the line was the previous approach and it is a trap - anything that
+    /// restores the working tree mid-session (a rebase, a checkout, a stash pop) puts
+    /// the shared instance back silently, and the next run finds it.
+    /// </para>
+    ///
+    /// <para>
+    /// Deliberately a different variable from <c>MONGO_CONNECTION_STRING</c>, which the
+    /// service itself reads: pointing the service somewhere must not silently redirect
+    /// a database-dropping test suite there too.
+    /// </para>
+    /// </summary>
+    protected static string ConnectionString =>
+        Environment.GetEnvironmentVariable("TEST_MONGO_CONNECTION_STRING") ?? DefaultConnectionString;
+
+    protected readonly MongoClient MongoClient = new(ConnectionString);
 
     protected PersonalSettingsProvider personalSettingsProvider;
 
