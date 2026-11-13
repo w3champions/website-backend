@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -313,6 +314,26 @@ public class SmurfEventsModerationControllerTests
         await _controller.Rename(Id, new SmurfEventRenameBody { Name = longName }, "Mod#1");
 
         _repository.VerifyAll();
+    }
+
+    [TestCase("")]
+    [TestCase("   ")]
+    [TestCase("\t\n")]
+    [TestCase(null)]
+    public async Task Rename_Answers400ForABlankName_WithoutCallingMatchmaking(string name)
+    {
+        AssertBadRequest(await _controller.Rename(Id, new SmurfEventRenameBody { Name = name, Reason = "typo" }, "Mod#1"), "name");
+        _repository.VerifyNoOtherCalls();
+    }
+
+    [TestCase(nameof(SmurfEventsModerationController.Rename))]
+    [TestCase(nameof(SmurfEventsModerationController.Review))]
+    public void RenameAndReview_CarryTheTransportBodyLimit(string action)
+    {
+        var limit = typeof(SmurfEventsModerationController).GetMethod(action)!.GetCustomAttribute<RequestSizeLimitAttribute>();
+
+        Assert.That(limit, Is.Not.Null);
+        Assert.That(((IRequestSizeLimitMetadata)limit!).MaxRequestBodySize, Is.EqualTo(SmurfEventsModerationController.MaxJsonBodyBytes));
     }
 
     [Test]

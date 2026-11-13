@@ -55,6 +55,9 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
 {
     // Mirrors matchmaking's SMURF_EVENTS_MAX_LIMIT and REVIEWS (smurf-detection api/smurf-events.ts).
     private const int MaxLimit = 100;
+    // Transport bound for the short JSON bodies of rename and review, far above any real request. It is not a rule
+    // about names or reasons: those limits live in matchmaking.
+    internal const int MaxJsonBodyBytes = 16 * 1024;
     // \z instead of $: .NET's $ also matches before a trailing newline, JavaScript's does not.
     private static readonly Regex IdPattern = new(@"^[A-Za-z0-9_-]{1,64}\z", RegexOptions.Compiled);
     private static readonly FrozenSet<string> Decisions = new[] { "unreviewed", "confirmed", "denied" }.ToFrozenSet();
@@ -102,14 +105,16 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     [HttpPost("{id}/review")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MaxJsonBodyBytes)]
     public async Task<IActionResult> Review([FromRoute] string id, [FromBody] SmurfEventReviewBody body, string actingPlayer) =>
         InvalidId(id) ?? MissingBody(body) ?? InvalidDecision(body.Decision) ?? Forward(await _adminRepository.ReviewSmurfEvent(id, body.Decision, Trimmed(body.Reason), Trimmed(body.Name), actingPlayer));
 
     [HttpPost("{id}/rename")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
+    [RequestSizeLimit(MaxJsonBodyBytes)]
     public async Task<IActionResult> Rename([FromRoute] string id, [FromBody] SmurfEventRenameBody body, string actingPlayer) =>
-        InvalidId(id) ?? MissingBody(body) ?? Forward(await _adminRepository.RenameSmurfEvent(id, Trimmed(body.Name), Trimmed(body.Reason), actingPlayer));
+        InvalidId(id) ?? MissingBody(body) ?? BlankName(body.Name) ?? Forward(await _adminRepository.RenameSmurfEvent(id, Trimmed(body.Name), Trimmed(body.Reason), actingPlayer));
 
     // No reveal parameter: it is derived from the caller's permissions, so a value sent by the browser is never bound.
     [HttpGet("{id}/identifiers")]
@@ -135,6 +140,10 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     // The framework already answers an empty or null body before the action runs; this only guards direct calls.
     private static IActionResult MissingBody(object body) =>
         body == null ? Invalid("body", "required") : null;
+
+    // Only blankness is checked here; the length and content rules stay with matchmaking.
+    private static IActionResult BlankName(string name) =>
+        string.IsNullOrWhiteSpace(name) ? Invalid("name", "must not be blank") : null;
 
     private static IActionResult InvalidDecision(string decision) =>
         decision != null && Decisions.Contains(decision) ? null : Invalid("decision", "must be unreviewed, confirmed or denied");
