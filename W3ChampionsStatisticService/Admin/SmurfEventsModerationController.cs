@@ -24,17 +24,29 @@ public class SmurfEventBody
     public string Replacing { get; set; }
 }
 
-/// <summary>Request body of the review route. The author is never read from the client.</summary>
+/// <summary>
+/// Request body of the review route. The author is never read from the client. The name is optional: when given,
+/// matchmaking applies it as a rename before the review; a client that omits it is accepted unchanged.
+/// </summary>
 public class SmurfEventReviewBody
 {
     public string Decision { get; set; }
+    public string Reason { get; set; }
+    public string Name { get; set; }
+}
+
+/// <summary>Request body of the rename route. The author is never read from the client; the name is validated by matchmaking.</summary>
+public class SmurfEventRenameBody
+{
+    public string Name { get; set; }
     public string Reason { get; set; }
 }
 
 /// <summary>
 /// Proxy for the matchmaking smurf events moderation API. Matchmaking's status code and JSON body are forwarded
 /// unchanged; the acting moderator becomes the author of every write. Field validation (names, anchors, dates)
-/// stays with matchmaking.
+/// stays with matchmaking. The identifiers route asks matchmaking for full stored values only when the caller's own
+/// permissions allow it; the browser has no say in that.
 /// </summary>
 [ApiController]
 [Route("api/admin/smurf-detection/events")]
@@ -91,7 +103,28 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     [InjectActingPlayerAuthCode]
     public async Task<IActionResult> Review([FromRoute] string id, [FromBody] SmurfEventReviewBody body, string actingPlayer) =>
-        InvalidId(id) ?? MissingBody(body) ?? InvalidDecision(body.Decision) ?? Forward(await _adminRepository.ReviewSmurfEvent(id, body.Decision, Trimmed(body.Reason), actingPlayer));
+        InvalidId(id) ?? MissingBody(body) ?? InvalidDecision(body.Decision) ?? Forward(await _adminRepository.ReviewSmurfEvent(id, body.Decision, Trimmed(body.Reason), Trimmed(body.Name), actingPlayer));
+
+    [HttpPost("{id}/rename")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> Rename([FromRoute] string id, [FromBody] SmurfEventRenameBody body, string actingPlayer) =>
+        InvalidId(id) ?? MissingBody(body) ?? Forward(await _adminRepository.RenameSmurfEvent(id, Trimmed(body.Name), Trimmed(body.Reason), actingPlayer));
+
+    // No reveal parameter: it is derived from the caller's permissions, so a value sent by the browser is never bound.
+    [HttpGet("{id}/identifiers")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [InjectActingPlayerAuthCode]
+    public async Task<IActionResult> Identifiers([FromRoute] string id) =>
+        InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEventIdentifiers(id, CallerMayReveal()));
+
+    [HttpGet("{id}/history")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    public async Task<IActionResult> History([FromRoute] string id) =>
+        InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEventHistory(id));
+
+    private bool CallerMayReveal() =>
+        InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext)?.Permissions?.Contains(EPermission.SmurfCheckerAdministration) == true;
 
     // A blank reason is treated as absent.
     private static string Trimmed(string reason) => string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();

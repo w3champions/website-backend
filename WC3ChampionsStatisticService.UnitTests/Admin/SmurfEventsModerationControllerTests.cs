@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -56,6 +57,9 @@ public class SmurfEventsModerationControllerTests
     [TestCase(nameof(SmurfEventsModerationController.Update), EPermission.SmurfCheckerAdministration, true)]
     [TestCase(nameof(SmurfEventsModerationController.Delete), EPermission.SmurfCheckerAdministration, true)]
     [TestCase(nameof(SmurfEventsModerationController.Review), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfEventsModerationController.Rename), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfEventsModerationController.Identifiers), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfEventsModerationController.History), EPermission.SmurfCheckerAdministration, false)]
     public void Action_RequiresTheContractPermission(string action, EPermission permission, bool injectsActingPlayer)
     {
         var method = typeof(SmurfEventsModerationController).GetMethod(action)!;
@@ -93,10 +97,10 @@ public class SmurfEventsModerationControllerTests
     }
 
     [Test]
-    public void Controller_OnlyExposesTheEightContractActions()
+    public void Controller_OnlyExposesTheElevenContractActions()
     {
         var actions = typeof(SmurfEventsModerationController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        Assert.That(actions, Has.Length.EqualTo(8));
+        Assert.That(actions, Has.Length.EqualTo(11));
     }
 
     [Test]
@@ -109,7 +113,7 @@ public class SmurfEventsModerationControllerTests
 
         Assert.That(pairs, Is.EquivalentTo(new[]
         {
-            "GET ", "GET {id}", "GET {id}/deny-preview", "POST preview", "POST ", "PUT {id}", "DELETE {id}", "POST {id}/review",
+            "GET ", "GET {id}", "GET {id}/deny-preview", "POST preview", "POST ", "PUT {id}", "DELETE {id}", "POST {id}/review", "POST {id}/rename", "GET {id}/identifiers", "GET {id}/history",
         }));
     }
 
@@ -138,7 +142,7 @@ public class SmurfEventsModerationControllerTests
     [Test]
     public void Bodies_HaveNoAuthorMember_SoAClientAuthorCannotBind()
     {
-        foreach (var type in new[] { typeof(SmurfEventBody), typeof(SmurfEventReviewBody), typeof(SmurfReasonBody) })
+        foreach (var type in new[] { typeof(SmurfEventBody), typeof(SmurfEventReviewBody), typeof(SmurfEventRenameBody), typeof(SmurfReasonBody) })
             Assert.That(type.GetProperties().Select(p => p.Name.ToLowerInvariant()), Does.Not.Contain("author"), type.Name);
     }
 
@@ -233,7 +237,7 @@ public class SmurfEventsModerationControllerTests
         const string conflict = "{\"error\":\"placeholder conflict\"}";
         const string busy = "{\"error\":\"placeholder busy\"}";
         _repository.Setup(r => r.UpdateSmurfEvent(Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new MatchmakingProxyResult(409, conflict));
-        _repository.Setup(r => r.ReviewSmurfEvent(Id, "denied", It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new MatchmakingProxyResult(429, busy));
+        _repository.Setup(r => r.ReviewSmurfEvent(Id, "denied", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(new MatchmakingProxyResult(429, busy));
 
         var put = await _controller.Update(Id, Body(), "Mod#1") as ContentResult;
         var review = await _controller.Review(Id, new SmurfEventReviewBody { Decision = "denied" }, "Mod#1") as ContentResult;
@@ -279,11 +283,127 @@ public class SmurfEventsModerationControllerTests
     [Test]
     public async Task Review_UsesTheActingPlayerAsAuthor()
     {
-        _repository.Setup(r => r.ReviewSmurfEvent(Id, "denied", "r", "Mod#1")).ReturnsAsync(Ok200);
+        _repository.Setup(r => r.ReviewSmurfEvent(Id, "denied", "r", null, "Mod#1")).ReturnsAsync(Ok200);
 
         await _controller.Review(Id, new SmurfEventReviewBody { Decision = "denied", Reason = " r " }, "Mod#1");
 
         _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Review_PassesTheTrimmedNameThrough_AndNullWhenBlank()
+    {
+        _repository.Setup(r => r.ReviewSmurfEvent(Id, "confirmed", null, "Sofia LAN", "Mod#1")).ReturnsAsync(Ok200);
+        _repository.Setup(r => r.ReviewSmurfEvent(Id, "denied", null, null, "Mod#1")).ReturnsAsync(Ok200);
+
+        await _controller.Review(Id, new SmurfEventReviewBody { Decision = "confirmed", Name = "  Sofia LAN " }, "Mod#1");
+        await _controller.Review(Id, new SmurfEventReviewBody { Decision = "denied", Name = "   " }, "Mod#1");
+
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Rename_UsesTheActingPlayerAsAuthor_AndPassesTheTrimmedNameAndReason()
+    {
+        var longName = new string('x', 500);
+        _repository.Setup(r => r.RenameSmurfEvent(Id, "Sofia LAN", "typo", "Mod#1")).ReturnsAsync(Ok200);
+        _repository.Setup(r => r.RenameSmurfEvent(Id, longName, null, "Mod#1")).ReturnsAsync(Ok200);
+
+        await _controller.Rename(Id, new SmurfEventRenameBody { Name = " Sofia LAN ", Reason = " typo " }, "Mod#1");
+        await _controller.Rename(Id, new SmurfEventRenameBody { Name = longName }, "Mod#1");
+
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Rename_Answers400ForANullBodyOrABadId()
+    {
+        AssertBadRequest(await _controller.Rename(Id, null, "Mod#1"), "body");
+        AssertBadRequest(await _controller.Rename("a/b", new SmurfEventRenameBody { Name = "n" }, "Mod#1"), "id");
+        _repository.VerifyNoOtherCalls();
+    }
+
+    private void AsUser(params EPermission[] permissions)
+    {
+        var context = new DefaultHttpContext();
+        context.Items[InjectActingPlayerFromAuthCodeFilter.ActingPlayerUserKey] =
+            new W3CUserAuthenticationDto { BattleTag = "Mod#1", Permissions = permissions.ToHashSet() };
+        _controller.ControllerContext = new ControllerContext { HttpContext = context };
+    }
+
+    [Test]
+    public async Task Identifiers_Reveals_OnlyForACallerWithTheAdministrationPermission()
+    {
+        _repository.Setup(r => r.GetSmurfEventIdentifiers(Id, true)).ReturnsAsync(Ok200);
+        AsUser(EPermission.SmurfCheckerAdministration);
+
+        await _controller.Identifiers(Id);
+
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Identifiers_DoesNotReveal_ForACallerWithoutIt()
+    {
+        _repository.Setup(r => r.GetSmurfEventIdentifiers(Id, false)).ReturnsAsync(Ok200);
+        AsUser(EPermission.SmurfCheckerQuery);
+
+        await _controller.Identifiers(Id);
+
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Identifiers_IgnoresARevealValueSentByTheBrowser()
+    {
+        _repository.Setup(r => r.GetSmurfEventIdentifiers(Id, false)).ReturnsAsync(Ok200);
+        AsUser(EPermission.SmurfCheckerQuery);
+        _controller.HttpContext.Request.QueryString = new QueryString("?reveal=true");
+
+        await _controller.Identifiers(Id);
+
+        _repository.Verify(r => r.GetSmurfEventIdentifiers(Id, true), Times.Never);
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Identifiers_WithNoPermissionsAtAll_DoesNotReveal()
+    {
+        _repository.Setup(r => r.GetSmurfEventIdentifiers(Id, false)).ReturnsAsync(Ok200);
+        var context = new DefaultHttpContext();
+        context.Items[InjectActingPlayerFromAuthCodeFilter.ActingPlayerUserKey] = new W3CUserAuthenticationDto { BattleTag = "Mod#1" };
+        _controller.ControllerContext = new ControllerContext { HttpContext = context };
+
+        await _controller.Identifiers(Id);
+
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public void Identifiers_HasNoRevealParameter()
+    {
+        var parameters = typeof(SmurfEventsModerationController).GetMethod(nameof(SmurfEventsModerationController.Identifiers))!.GetParameters();
+
+        Assert.That(parameters.Select(p => p.Name), Is.EqualTo(new[] { "id" }));
+    }
+
+    [Test]
+    public async Task History_Forwards()
+    {
+        _repository.Setup(r => r.GetSmurfEventHistory(Id)).ReturnsAsync(Ok200);
+
+        Assert.That((await _controller.History(Id) as ContentResult)!.StatusCode, Is.EqualTo(200));
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Identifiers_And_History_Answer400ForABadId()
+    {
+        AsUser(EPermission.SmurfCheckerAdministration);
+
+        AssertBadRequest(await _controller.Identifiers("a/b"), "id");
+        AssertBadRequest(await _controller.History("a/b"), "id");
+        _repository.VerifyNoOtherCalls();
     }
 
     [TestCase("")]
@@ -298,6 +418,7 @@ public class SmurfEventsModerationControllerTests
         AssertBadRequest(await _controller.DenyPreview(id), "id");
         AssertBadRequest(await _controller.Update(id, Body(), "Mod#1"), "id");
         AssertBadRequest(await _controller.Delete(id, null, "Mod#1"), "id");
+        AssertBadRequest(await _controller.Rename(id, new SmurfEventRenameBody { Name = "n" }, "Mod#1"), "id");
         AssertBadRequest(await _controller.Review(id, new SmurfEventReviewBody { Decision = "denied" }, "Mod#1"), "id");
         _repository.VerifyNoOtherCalls();
     }
