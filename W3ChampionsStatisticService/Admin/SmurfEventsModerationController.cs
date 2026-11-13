@@ -50,17 +50,17 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     private readonly IAdminRepository _adminRepository = adminRepository;
 
     [HttpGet("")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> List([FromQuery] string review, [FromQuery] string origin, [FromQuery] string cursor, [FromQuery] int? limit) =>
         InvalidLimit(limit, MaxLimit) ?? Forward(await _adminRepository.GetSmurfEvents(review, origin, cursor, limit));
 
     [HttpGet("{id}")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> Get([FromRoute] string id) =>
         InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEvent(id));
 
     [HttpGet("{id}/deny-preview")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
     public async Task<IActionResult> DenyPreview([FromRoute] string id) =>
         InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEventDenyPreview(id));
 

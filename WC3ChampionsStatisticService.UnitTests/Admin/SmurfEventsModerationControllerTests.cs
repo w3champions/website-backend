@@ -48,24 +48,23 @@ public class SmurfEventsModerationControllerTests
         Assert.That(JObject.FromObject(bad.Value!)["field"]!.Value<string>(), Is.EqualTo(field));
     }
 
-    [TestCase(nameof(SmurfEventsModerationController.List), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfEventsModerationController.Get), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfEventsModerationController.DenyPreview), EPermission.SmurfCheckerQuery)]
-    [TestCase(nameof(SmurfEventsModerationController.Preview), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfEventsModerationController.Create), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfEventsModerationController.Update), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfEventsModerationController.Delete), EPermission.SmurfCheckerAdministration)]
-    [TestCase(nameof(SmurfEventsModerationController.Review), EPermission.SmurfCheckerAdministration)]
-    public void Action_RequiresTheContractPermission(string action, EPermission permission)
+    [TestCase(nameof(SmurfEventsModerationController.List), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfEventsModerationController.Get), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfEventsModerationController.DenyPreview), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfEventsModerationController.Preview), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfEventsModerationController.Create), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfEventsModerationController.Update), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfEventsModerationController.Delete), EPermission.SmurfCheckerAdministration, true)]
+    [TestCase(nameof(SmurfEventsModerationController.Review), EPermission.SmurfCheckerAdministration, true)]
+    public void Action_RequiresTheContractPermission(string action, EPermission permission, bool injectsActingPlayer)
     {
         var method = typeof(SmurfEventsModerationController).GetMethod(action)!;
         var filter = method.GetCustomAttribute<BearerHasPermissionFilter>();
 
         Assert.That(filter, Is.Not.Null);
         Assert.That(filter!.Permission, Is.EqualTo(permission));
-        // Preview needs the write permission but writes nothing, so it has no author to inject.
-        var isWrite = permission == EPermission.SmurfCheckerAdministration && action != nameof(SmurfEventsModerationController.Preview);
-        Assert.That(method.GetCustomAttribute<InjectActingPlayerAuthCodeAttribute>() != null, Is.EqualTo(isWrite));
+        // Reads and Preview need the administration permission but write nothing, so they have no author to inject.
+        Assert.That(method.GetCustomAttribute<InjectActingPlayerAuthCodeAttribute>() != null, Is.EqualTo(injectsActingPlayer));
     }
 
     [Test]

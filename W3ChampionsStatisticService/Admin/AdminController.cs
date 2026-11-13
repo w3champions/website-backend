@@ -495,7 +495,7 @@ public class AdminController(
     }
 
     [HttpGet("smurf-detection/possible-identifier-types")]
-    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerQuery)]
     public async Task<IActionResult> GetPossibleIdentifierTypes()
     {
         return Ok(await _adminRepository.GetPossibleIdentifierTypes());
