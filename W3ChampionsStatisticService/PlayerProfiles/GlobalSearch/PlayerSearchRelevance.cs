@@ -3,9 +3,12 @@ using W3ChampionsStatisticService.PersonalSettings;
 
 namespace W3ChampionsStatisticService.PlayerProfiles.GlobalSearch;
 
-public class PlayerSearchRelevance(PersonalSetting p, int relevance)
+public class PlayerSearchRelevance(PersonalSetting p, string relevanceId)
 {
     [BsonId]
     public PersonalSetting Player { get; set; } = p;
-    public string RelevanceId { get; set; } = $"{relevance}_{p.Id}";
+
+    // Sort key and pagination cursor in one. Its shape depends on the search's context — see
+    // PlayerService.RelevanceId.
+    public string RelevanceId { get; set; } = relevanceId;
 }

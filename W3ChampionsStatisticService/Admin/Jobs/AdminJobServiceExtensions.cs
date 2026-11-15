@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using W3ChampionsStatisticService.Extensions;
+using W3ChampionsStatisticService.Ladder;
 
 namespace W3ChampionsStatisticService.Admin.Jobs;
 
@@ -19,6 +20,7 @@ public static class AdminJobServiceExtensions
         services.AddHostedService(sp => sp.GetRequiredService<AdminJobRunner>());
 
         // Job registrations. Discovered by the runner and the controller as IAdminJob.
+        services.AddInterceptedScoped<IAdminJob, RankMemberIdsBackfillJob>();
         return services;
     }
 }
