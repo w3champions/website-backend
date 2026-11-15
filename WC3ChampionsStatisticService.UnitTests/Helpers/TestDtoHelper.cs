@@ -432,6 +432,7 @@ public static class TestDtoHelper
             new Mock<ICachedDataProvider<List<Matchup>>>().Object,
             new Mock<ICachedDataProvider<CachedLong>>().Object,
             new Mock<ICachedDataProvider<List<string>>>().Object,
+            new Mock<ICachedDataProvider<List<OpponentInfo>>>().Object,
             new PersonalSettingsRepository(mongoClient));
     }
 
