@@ -61,6 +61,7 @@ public class SmurfEventsModerationControllerTests
     [TestCase(nameof(SmurfEventsModerationController.Rename), EPermission.SmurfCheckerAdministration, true)]
     [TestCase(nameof(SmurfEventsModerationController.Identifiers), EPermission.SmurfCheckerAdministration, true)]
     [TestCase(nameof(SmurfEventsModerationController.History), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfEventsModerationController.Presence), EPermission.SmurfCheckerAdministration, false)]
     public void Action_RequiresTheContractPermission(string action, EPermission permission, bool injectsActingPlayer)
     {
         var method = typeof(SmurfEventsModerationController).GetMethod(action)!;
@@ -98,10 +99,10 @@ public class SmurfEventsModerationControllerTests
     }
 
     [Test]
-    public void Controller_OnlyExposesTheElevenContractActions()
+    public void Controller_OnlyExposesTheTwelveContractActions()
     {
         var actions = typeof(SmurfEventsModerationController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        Assert.That(actions, Has.Length.EqualTo(11));
+        Assert.That(actions, Has.Length.EqualTo(12));
     }
 
     [Test]
@@ -114,7 +115,7 @@ public class SmurfEventsModerationControllerTests
 
         Assert.That(pairs, Is.EquivalentTo(new[]
         {
-            "GET ", "GET {id}", "GET {id}/deny-preview", "POST preview", "POST ", "PUT {id}", "DELETE {id}", "POST {id}/review", "POST {id}/rename", "GET {id}/identifiers", "GET {id}/history",
+            "GET ", "GET {id}", "GET {id}/deny-preview", "POST preview", "POST ", "PUT {id}", "DELETE {id}", "POST {id}/review", "POST {id}/rename", "GET {id}/identifiers", "GET {id}/history", "GET {id}/presence",
         }));
     }
 
@@ -420,6 +421,24 @@ public class SmurfEventsModerationControllerTests
 
         Assert.That((await _controller.History(Id) as ContentResult)!.StatusCode, Is.EqualTo(200));
         _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Presence_Forwards()
+    {
+        _repository.Setup(r => r.GetSmurfEventPresence(Id)).ReturnsAsync(Ok200);
+
+        Assert.That((await _controller.Presence(Id) as ContentResult)!.StatusCode, Is.EqualTo(200));
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public async Task Presence_Answers400ForABadId()
+    {
+        AsUser(EPermission.SmurfCheckerAdministration);
+
+        AssertBadRequest(await _controller.Presence("a/b"), "id");
+        _repository.VerifyNoOtherCalls();
     }
 
     [Test]

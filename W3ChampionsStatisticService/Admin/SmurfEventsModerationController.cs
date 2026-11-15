@@ -132,6 +132,11 @@ public class SmurfEventsModerationController(IAdminRepository adminRepository) :
     public async Task<IActionResult> History([FromRoute] string id) =>
         InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEventHistory(id));
 
+    [HttpGet("{id}/presence")]
+    [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    public async Task<IActionResult> Presence([FromRoute] string id) =>
+        InvalidId(id) ?? Forward(await _adminRepository.GetSmurfEventPresence(id));
+
     private bool CallerMayReveal() =>
         InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext)?.Permissions?.Contains(EPermission.SmurfCheckerAdministration) == true;
 

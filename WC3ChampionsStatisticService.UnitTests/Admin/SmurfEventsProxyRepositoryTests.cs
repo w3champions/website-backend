@@ -48,6 +48,7 @@ public class SmurfEventsProxyRepositoryTests
         ("POST", Base + "/ev-1/rename"),
         ("GET", Base + "/ev-1/identifiers"),
         ("GET", Base + "/ev-1/history"),
+        ("GET", Base + "/ev-1/presence"),
     ];
 
     private static Task<MatchmakingProxyResult> Invoke(AdminRepository r, int index) => index switch
@@ -63,11 +64,12 @@ public class SmurfEventsProxyRepositoryTests
         8 => r.RenameSmurfEvent("ev-1", "Sofia LAN", null, "Mod#1"),
         9 => r.GetSmurfEventIdentifiers("ev-1", false),
         10 => r.GetSmurfEventHistory("ev-1"),
+        11 => r.GetSmurfEventPresence("ev-1"),
         _ => throw new System.ArgumentOutOfRangeException(nameof(index)),
     };
 
     [Test]
-    public async Task EveryRoute_UsesMethodPath_SecretHeader_AndNamedClient([Range(0, 10)] int index)
+    public async Task EveryRoute_UsesMethodPath_SecretHeader_AndNamedClient([Range(0, 11)] int index)
     {
         var (repository, handler, factory) = Create();
 
@@ -81,7 +83,7 @@ public class SmurfEventsProxyRepositoryTests
     }
 
     [Test]
-    public async Task ReadRoutes_SendNoBody([Values(0, 1, 2, 9, 10)] int index)
+    public async Task ReadRoutes_SendNoBody([Values(0, 1, 2, 9, 10, 11)] int index)
     {
         var (repository, handler, _) = Create();
 
@@ -243,6 +245,18 @@ public class SmurfEventsProxyRepositoryTests
         var result = await Invoke(repository, index);
 
         Assert.That(result.StatusCode, Is.EqualTo(429));
+        Assert.That(result.Body, Is.EqualTo(body));
+    }
+
+    [TestCase(HttpStatusCode.TooManyRequests, "{\"error\":\"placeholder busy message\"}")]
+    [TestCase(HttpStatusCode.ServiceUnavailable, "{\"error\":\"placeholder retry message\"}")]
+    public async Task Presence_BusyAndNotReady_PassThroughWithTheirBodies(HttpStatusCode status, string body)
+    {
+        var (repository, _, _) = Create(status, body);
+
+        var result = await repository.GetSmurfEventPresence("ev-1");
+
+        Assert.That(result.StatusCode, Is.EqualTo((int)status));
         Assert.That(result.Body, Is.EqualTo(body));
     }
 

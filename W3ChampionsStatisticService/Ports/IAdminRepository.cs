@@ -43,4 +43,5 @@ public interface IAdminRepository
     Task<MatchmakingProxyResult> RenameSmurfEvent(string id, string name, string reason, string author);
     Task<MatchmakingProxyResult> GetSmurfEventIdentifiers(string id, bool reveal);
     Task<MatchmakingProxyResult> GetSmurfEventHistory(string id);
+    Task<MatchmakingProxyResult> GetSmurfEventPresence(string id);
 }
