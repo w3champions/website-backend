@@ -16,6 +16,22 @@ public class GameModesHelper
         GameMode.GM_4v4_AT,
     ];
 
+    /// <summary>
+    /// Modes with a separate rating per race, mirroring splitLadderByRace on the
+    /// matchmaking service's game modes. Every other mode carries one rating that
+    /// follows the player whatever race they pick, so the race a match was
+    /// recorded under says nothing about which rating it belongs to.
+    /// </summary>
+    public readonly static List<GameMode> RaceSplitGameModes = [
+        GameMode.GM_1v1,
+        GameMode.GM_PTR_1ON1,
+    ];
+
+    public static bool IsRaceSplitGameMode(GameMode gameMode)
+    {
+        return RaceSplitGameModes.Contains(gameMode);
+    }
+
     public static bool IsFfaGameMode(GameMode gameMode)
     {
         return FfaGameModes.Contains(gameMode);

@@ -32,6 +32,8 @@ public interface IPlayerRepository
     Task<PlayerMmrRpTimeline> LoadPlayerMmrRpTimeline(string battleTag, Race race, GateWay gateWay, int season, GameMode gameMode);
     Task UpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline);
     Task<bool> TryUpsertPlayerMmrRpTimeline(PlayerMmrRpTimeline mmrRpTimeline, int? expectedRevision);
+
+    Task<List<SeasonTimeline>> LoadPlayerMmrRpTimelines(string battleTag, IReadOnlyCollection<Race> races, IReadOnlyCollection<GateWay> gateWays, IReadOnlyCollection<int> seasons, GameMode gameMode);
     Task<List<PlayerOverview>> LoadOverviews(int season);
     Task<Dictionary<string, PlayerOverallStats>> GetPlayerBattleTagsAsync(ICollection<string> personalSettingIds);
     Task<PlayerGameLength> LoadGameLengthForPlayerStats(string battleTag, int season);
