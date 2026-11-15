@@ -54,6 +54,9 @@ public partial class AdminRepository
     public Task<MatchmakingProxyResult> GetSmurfEventHistory(string id) =>
         SendSmurfEvents(HttpMethod.Get, $"/{Segment(id)}/history");
 
+    public Task<MatchmakingProxyResult> GetSmurfEventPresence(string id) =>
+        SendSmurfEvents(HttpMethod.Get, $"/{Segment(id)}/presence");
+
     private Task<MatchmakingProxyResult> SendSmurfEvents(HttpMethod method, string path, object body = null) =>
         SendSmurfDetection(method, SmurfEventsPath + path, body);
 
