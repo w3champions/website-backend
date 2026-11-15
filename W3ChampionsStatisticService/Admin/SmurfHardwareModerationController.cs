@@ -32,9 +32,7 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
 
     private readonly IAdminRepository _adminRepository = adminRepository;
 
-    // Derived from the token's permissions, never bound from the request.
-    private bool CallerHasMachineAccess() =>
-        InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext)?.Permissions?.Contains(EPermission.AdminModeration) == true;
+    private bool CallerHasMachineAccess() => CallerMachineAccess.Of(HttpContext);
 
     [HttpGet("hardware/links/{targetBattleTag}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]

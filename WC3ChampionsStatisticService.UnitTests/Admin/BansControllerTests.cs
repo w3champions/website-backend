@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -40,7 +41,7 @@ public class BansControllerTests
         _controller.ControllerContext = new ControllerContext { HttpContext = context };
     }
 
-    private static JsonObject Body(string json) => JsonNode.Parse(json)!.AsObject();
+    private static JsonElement Body(string json) => JsonDocument.Parse(json).RootElement;
 
     private static string ErrorCode(IActionResult result) =>
         JObject.FromObject(((ObjectResult)result).Value!)["errors"]![0]!["code"]!.Value<string>();
@@ -135,9 +136,9 @@ public class BansControllerTests
         await _controller.MachineIds("1001");
         await _controller.MachineIdAccounts("m1001", "1001");
         await _controller.MachineImpact(Body("{\"accountKey\":\"1001\",\"machineIds\":[\"m1001\"]}"));
-        _repository.Verify(r => r.GetBanAccountMachineIds("1001"));
-        _repository.Verify(r => r.GetBanMachineIdAccounts("m1001", "1001"));
-        _repository.Verify(r => r.GetBanMachineImpact(It.IsAny<JsonObject>()));
+        _repository.Verify(r => r.GetBanAccountMachineIds("1001", true));
+        _repository.Verify(r => r.GetBanMachineIdAccounts("m1001", "1001", true));
+        _repository.Verify(r => r.GetBanMachineImpact(It.IsAny<JsonObject>(), true));
     }
 
     [TestCase(403, "{\"errors\":[{\"msg\":\"Permission denied, please contact an Administrator\",\"code\":\"MACHINE_BAN_PERMISSION\"}]}")]
@@ -169,8 +170,8 @@ public class BansControllerTests
         _repository.Verify(r => r.GetBanAccount(expected, true));
         _repository.Verify(r => r.EditBan(expected, It.IsAny<JsonObject>(), "Mod One", true));
         _repository.Verify(r => r.RevokeBan(expected, It.IsAny<JsonObject>(), "Mod One", true));
-        _repository.Verify(r => r.GetBanAccountMachineIds(expected));
-        _repository.Verify(r => r.GetBanMachineIdAccounts(expected, "1001"));
+        _repository.Verify(r => r.GetBanAccountMachineIds(expected, true));
+        _repository.Verify(r => r.GetBanMachineIdAccounts(expected, "1001", true));
     }
 
     [TestCase("")]

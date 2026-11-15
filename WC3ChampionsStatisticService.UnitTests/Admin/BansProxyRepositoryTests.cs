@@ -34,7 +34,7 @@ public class BansProxyRepositoryTests
     private const string MachineId = "m1001";
     private static JsonObject AnyBody() => JsonNode.Parse("{\"version\":3}")!.AsObject();
 
-    // One call per route, numbered as in the cases below. machineAccess is ignored by routes 7-9, which always send it.
+    // One call per route, numbered as in the cases below.
     private static Task<MatchmakingProxyResult> Invoke(AdminRepository r, int route, bool machineAccess) => route switch
     {
         0 => r.ListBans(new BanListFilter(null, null, null, null, null, null, null, null), machineAccess),
@@ -44,9 +44,9 @@ public class BansProxyRepositoryTests
         4 => r.CreateBan(AnyBody(), "Mod One", machineAccess),
         5 => r.EditBan(BanId, AnyBody(), "Mod One", machineAccess),
         6 => r.RevokeBan(BanId, AnyBody(), "Mod One", machineAccess),
-        7 => r.GetBanAccountMachineIds(Account),
-        8 => r.GetBanMachineIdAccounts(MachineId, null),
-        9 => r.GetBanMachineImpact(AnyBody()),
+        7 => r.GetBanAccountMachineIds(Account, machineAccess),
+        8 => r.GetBanMachineIdAccounts(MachineId, null, machineAccess),
+        9 => r.GetBanMachineImpact(AnyBody(), machineAccess),
         10 => r.GetBanStatuses(AnyBody(), machineAccess),
         _ => throw new ArgumentOutOfRangeException(nameof(route)),
     };
@@ -74,21 +74,12 @@ public class BansProxyRepositoryTests
     }
 
     [Test]
-    public async Task MachineAccess_IsSentOnlyWhenGranted([Values(0, 1, 2, 3, 4, 5, 6, 10)] int route, [Values] bool granted)
+    public async Task MachineAccess_IsSentOnlyWhenGranted([Values(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)] int route, [Values] bool granted)
     {
         var (repository, handler, _) = Create();
         await Invoke(repository, route, granted);
         var query = HttpUtility.ParseQueryString(handler.Requests.Single().RequestUri!.Query);
         Assert.That(query["machineAccess"], granted ? Is.EqualTo("true") : Is.Null);
-    }
-
-    [Test]
-    public async Task MachineRoutes_AlwaysSendMachineAccess([Values(7, 8, 9)] int route)
-    {
-        var (repository, handler, _) = Create();
-        await Invoke(repository, route, machineAccess: false);
-        var query = HttpUtility.ParseQueryString(handler.Requests.Single().RequestUri!.Query);
-        Assert.That(query["machineAccess"], Is.EqualTo("true"));
     }
 
     [Test]
@@ -131,7 +122,7 @@ public class BansProxyRepositoryTests
         {
             3 => repository.GetBanAccount(value, false),
             5 => repository.EditBan(value, AnyBody(), "Mod One", false),
-            _ => repository.GetBanMachineIdAccounts(value, null),
+            _ => repository.GetBanMachineIdAccounts(value, null, true),
         });
         Assert.That(handler.Requests.Single().RequestUri!.AbsolutePath, Does.EndWith(path));
     }
@@ -141,7 +132,7 @@ public class BansProxyRepositoryTests
     {
         var (repository, handler, _) = Create();
         await repository.LookupBanAccounts("Тес#&q=x", machineAccess: false);
-        await repository.GetBanMachineIdAccounts(MachineId, "tag:Tester#1001");
+        await repository.GetBanMachineIdAccounts(MachineId, "tag:Tester#1001", machineAccess: true);
         var lookup = HttpUtility.ParseQueryString(handler.Requests[0].RequestUri!.Query);
         Assert.That(lookup.AllKeys, Is.EquivalentTo(new[] { "q" }));
         Assert.That(lookup["q"], Is.EqualTo("Тес#&q=x"));

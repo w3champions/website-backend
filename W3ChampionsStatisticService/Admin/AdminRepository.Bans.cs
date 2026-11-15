@@ -41,14 +41,16 @@ public partial class AdminRepository
     public Task<MatchmakingProxyResult> RevokeBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess) =>
         SendBans(HttpMethod.Post, BansUrl($"/{Segment(id)}/revoke", machineAccess), ForwardedBody(body, actor));
 
-    public Task<MatchmakingProxyResult> GetBanAccountMachineIds(string accountKey) =>
-        SendBans(HttpMethod.Get, BansUrl($"/accounts/{Segment(accountKey)}/machine-ids", machineAccess: true));
+    // The three machine routes: BansController calls them only after its AdminModeration check, so machineAccess is
+    // true in practice; it is still the caller's flag, never a constant, so matchmaking makes the final decision.
+    public Task<MatchmakingProxyResult> GetBanAccountMachineIds(string accountKey, bool machineAccess) =>
+        SendBans(HttpMethod.Get, BansUrl($"/accounts/{Segment(accountKey)}/machine-ids", machineAccess));
 
-    public Task<MatchmakingProxyResult> GetBanMachineIdAccounts([NoTrace] string machineId, string excludeAccount) =>
-        SendBans(HttpMethod.Get, BansUrl($"/machine-ids/{Segment(machineId)}/accounts", machineAccess: true, ("excludeAccount", excludeAccount)));
+    public Task<MatchmakingProxyResult> GetBanMachineIdAccounts([NoTrace] string machineId, string excludeAccount, bool machineAccess) =>
+        SendBans(HttpMethod.Get, BansUrl($"/machine-ids/{Segment(machineId)}/accounts", machineAccess, ("excludeAccount", excludeAccount)));
 
-    public Task<MatchmakingProxyResult> GetBanMachineImpact([NoTrace] JsonObject body) =>
-        SendBans(HttpMethod.Post, BansUrl("/machine-impact", machineAccess: true), ForwardedBody(body, null));
+    public Task<MatchmakingProxyResult> GetBanMachineImpact([NoTrace] JsonObject body, bool machineAccess) =>
+        SendBans(HttpMethod.Post, BansUrl("/machine-impact", machineAccess), ForwardedBody(body, null));
 
     public Task<MatchmakingProxyResult> GetBanStatuses([NoTrace] JsonObject body, bool machineAccess) =>
         SendBans(HttpMethod.Post, BansUrl("/status", machineAccess), ForwardedBody(body, null));

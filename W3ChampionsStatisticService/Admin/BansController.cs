@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -60,29 +62,29 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Create([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body) =>
-        MissingBody(body) ?? Forward(await _adminRepository.CreateBan(body, Caller()?.BattleTag, CallerHasMachineAccess()));
+    public async Task<IActionResult> Create([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonElement? body) =>
+        InvalidBody(body, out var json) ?? Forward(await _adminRepository.CreateBan(json, Caller()?.BattleTag, CallerHasMachineAccess()));
 
     [HttpPatch("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Edit([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body)
+    public async Task<IActionResult> Edit([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonElement? body)
     {
         var banId = RouteValue(id);
-        return InvalidSegment(banId, nameof(id)) ?? MissingBody(body)
-            ?? Forward(await _adminRepository.EditBan(banId, body, Caller()?.BattleTag, CallerHasMachineAccess()));
+        return InvalidSegment(banId, nameof(id)) ?? InvalidBody(body, out var json)
+            ?? Forward(await _adminRepository.EditBan(banId, json, Caller()?.BattleTag, CallerHasMachineAccess()));
     }
 
     [HttpPost("{id}/revoke")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Revoke([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body)
+    public async Task<IActionResult> Revoke([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonElement? body)
     {
         var banId = RouteValue(id);
-        return InvalidSegment(banId, nameof(id)) ?? MissingBody(body)
-            ?? Forward(await _adminRepository.RevokeBan(banId, body, Caller()?.BattleTag, CallerHasMachineAccess()));
+        return InvalidSegment(banId, nameof(id)) ?? InvalidBody(body, out var json)
+            ?? Forward(await _adminRepository.RevokeBan(banId, json, Caller()?.BattleTag, CallerHasMachineAccess()));
     }
 
     [HttpGet("accounts/{accountKey}/machine-ids")]
@@ -92,7 +94,7 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     {
         var key = RouteValue(accountKey);
         return MachineRefusal("accounts/{accountKey}/machine-ids") ?? InvalidSegment(key, nameof(accountKey))
-            ?? Forward(await _adminRepository.GetBanAccountMachineIds(key));
+            ?? Forward(await _adminRepository.GetBanAccountMachineIds(key, CallerHasMachineAccess()));
     }
 
     [HttpGet("machine-ids/{machineId}/accounts")]
@@ -102,28 +104,31 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     {
         var id = RouteValue(machineId);
         return MachineRefusal("machine-ids/{machineId}/accounts") ?? InvalidSegment(id, nameof(machineId))
-            ?? Forward(await _adminRepository.GetBanMachineIdAccounts(id, excludeAccount));
+            ?? Forward(await _adminRepository.GetBanMachineIdAccounts(id, excludeAccount, CallerHasMachineAccess()));
     }
 
     [HttpPost("machine-impact")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> MachineImpact([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body) =>
-        MachineRefusal("machine-impact") ?? MissingBody(body) ?? Forward(await _adminRepository.GetBanMachineImpact(body));
+    public async Task<IActionResult> MachineImpact([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonElement? body) =>
+        MachineRefusal("machine-impact") ?? InvalidBody(body, out var json) ?? Forward(await _adminRepository.GetBanMachineImpact(json, CallerHasMachineAccess()));
 
     [HttpPost("status")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Status([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body) =>
-        MissingBody(body) ?? Forward(await _adminRepository.GetBanStatuses(body, CallerHasMachineAccess()));
+    public async Task<IActionResult> Status([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonElement? body) =>
+        InvalidBody(body, out var json) ?? Forward(await _adminRepository.GetBanStatuses(json, CallerHasMachineAccess()));
 
     private W3CUserAuthenticationDto Caller() => InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
 
-    private bool CallerHasMachineAccess() => Caller()?.Permissions?.Contains(EPermission.AdminModeration) == true;
+    private bool CallerHasMachineAccess() => CallerMachineAccess.Of(HttpContext);
 
-    // ASP.NET Core leaves %2F encoded inside a route value; the repository encodes once, so decode once here.
+    // ASP.NET Core decodes a route value except for %2F, which it leaves encoded; the repository encodes once, so decode
+    // once here. A value is therefore unescaped twice in total (Kestrel, then here): "%252F" arrives as "%2F" and becomes
+    // "/". That is safe: the result is re-encoded as one path segment (Segment), InvalidSegment checks the decoded value
+    // for dot segments, and no ban id or account key contains a literal "%", so no real value changes meaning.
     private static string RouteValue(string raw) => raw == null ? null : Uri.UnescapeDataString(raw);
 
     private IActionResult MachineRefusal(string route)
@@ -137,8 +142,44 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     private static IActionResult InvalidSegment(string value, string field) =>
         string.IsNullOrEmpty(value) || value is "." or ".." ? Error(StatusCodes.Status400BadRequest, $"{field}: invalid", "VALIDATION") : null;
 
-    private static IActionResult MissingBody(JsonObject body) =>
-        body == null ? Error(StatusCodes.Status400BadRequest, "body: required", "VALIDATION") : null;
+    // Bound as a JsonElement, not a JsonObject: binding a JsonObject throws an ArgumentException (a 500) on a duplicate
+    // top-level key, which the input formatter does not turn into a model error. The object keeps the case-insensitive
+    // property names of the web JSON options, so "actor", "Actor" and "ACTOR" are one key for ForwardedBody, and
+    // duplicates such as "Actor" with "ACTOR" are refused here with a 400 instead.
+    private static readonly JsonNodeOptions BodyOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private static IActionResult InvalidBody(JsonElement? raw, out JsonObject body)
+    {
+        body = null;
+        if (raw is not { } element || element.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            return Error(StatusCodes.Status400BadRequest, "body: required", "VALIDATION");
+        if (element.ValueKind != JsonValueKind.Object)
+            return Error(StatusCodes.Status400BadRequest, "body: must be a JSON object", "VALIDATION");
+        var candidate = JsonObject.Create(element, BodyOptions)!;
+        if (HasDuplicateKeys(candidate))
+            return Error(StatusCodes.Status400BadRequest, "body: duplicate property", "VALIDATION");
+        body = candidate;
+        return null;
+    }
+
+    // JsonObject builds its property dictionaries lazily; walking every object materializes each one here, so a
+    // duplicate key at any depth is a 400 now instead of an exception when the body is copied for matchmaking.
+    private static bool HasDuplicateKeys(JsonNode node)
+    {
+        try
+        {
+            return node switch
+            {
+                JsonObject obj => obj.Any(property => HasDuplicateKeys(property.Value)),
+                JsonArray array => array.Any(HasDuplicateKeys),
+                _ => false,
+            };
+        }
+        catch (ArgumentException)
+        {
+            return true;
+        }
+    }
 
     private static IActionResult Error(int status, string msg, string code) =>
         new ObjectResult(new { errors = new[] { new { msg, code } } }) { StatusCode = status };

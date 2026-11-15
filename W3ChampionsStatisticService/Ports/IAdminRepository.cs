@@ -54,8 +54,8 @@ public interface IAdminRepository
     Task<MatchmakingProxyResult> CreateBan([NoTrace] JsonObject body, string actor, bool machineAccess);
     Task<MatchmakingProxyResult> EditBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess);
     Task<MatchmakingProxyResult> RevokeBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess);
-    Task<MatchmakingProxyResult> GetBanAccountMachineIds(string accountKey);
-    Task<MatchmakingProxyResult> GetBanMachineIdAccounts([NoTrace] string machineId, string excludeAccount);
-    Task<MatchmakingProxyResult> GetBanMachineImpact([NoTrace] JsonObject body);
+    Task<MatchmakingProxyResult> GetBanAccountMachineIds(string accountKey, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanMachineIdAccounts([NoTrace] string machineId, string excludeAccount, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanMachineImpact([NoTrace] JsonObject body, bool machineAccess);
     Task<MatchmakingProxyResult> GetBanStatuses([NoTrace] JsonObject body, bool machineAccess);
 }

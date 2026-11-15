@@ -14,12 +14,19 @@ public class BannedPlayersRemovedTests
     [Test]
     public void NoControllerRoute_ServesBannedPlayers()
     {
-        var templates = typeof(AdminController).Assembly.GetTypes()
+        var controllers = typeof(AdminController).Assembly.GetTypes()
             .Where(t => typeof(ControllerBase).IsAssignableFrom(t))
-            .SelectMany(t => t.GetMethods())
-            .SelectMany(m => m.GetCustomAttributes<HttpMethodAttribute>())
+            .ToList();
+        var classTemplates = controllers
+            .SelectMany(t => t.GetCustomAttributes<RouteAttribute>(inherit: true))
             .Select(a => a.Template ?? "");
-        Assert.That(templates, Has.None.Contains("bannedPlayers"));
+        var actionTemplates = controllers
+            .SelectMany(t => t.GetMethods())
+            .SelectMany(m => m.GetCustomAttributes<HttpMethodAttribute>().Select(a => a.Template)
+                .Concat(m.GetCustomAttributes<RouteAttribute>().Select(a => a.Template)))
+            .Select(template => template ?? "");
+        Assert.That(classTemplates, Is.Not.Empty);
+        Assert.That(classTemplates.Concat(actionTemplates), Has.None.Contains("bannedPlayers").IgnoreCase);
     }
 
     [TestCase("BannedPlayerReadmodel")]
