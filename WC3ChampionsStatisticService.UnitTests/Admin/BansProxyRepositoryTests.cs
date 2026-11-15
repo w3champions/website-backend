@@ -204,6 +204,15 @@ public class BansProxyRepositoryTests
     }
 
     [Test]
+    public async Task CreateBan_PassesA201Through()
+    {
+        var (repository, _, _) = Create(HttpStatusCode.Created, "{\"id\":\"Ban1001\"}");
+        var result = await repository.CreateBan(AnyBody(), "Mod One", false);
+        Assert.That(result.StatusCode, Is.EqualTo(201));
+        Assert.That(result.Body, Is.EqualTo("{\"id\":\"Ban1001\"}"));
+    }
+
+    [Test]
     public async Task Matchmaking403WithoutTheMachineCode_BecomesGeneric502()
     {
         var (repository, _, _) = Create(HttpStatusCode.Forbidden, "{\"errors\":[{\"msg\":\"Permission denied\"}]}");

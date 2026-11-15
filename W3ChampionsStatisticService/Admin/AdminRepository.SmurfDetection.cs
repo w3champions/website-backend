@@ -24,8 +24,8 @@ public partial class AdminRepository
             ? values.ToString()
             : null;
 
-    private async Task<MatchmakingProxyResult> SendSmurfDetection(HttpMethod method, string path, object body = null) =>
-        await SendProxy(method, MatchmakingApiUrl + SmurfDetectionPath + path,
+    private Task<MatchmakingProxyResult> SendSmurfDetection(HttpMethod method, string path, object body = null) =>
+        SendProxy(method, MatchmakingApiUrl + SmurfDetectionPath + path,
             body == null ? null : CreateJsonContent(body), forward403: null);
 
     /// <summary>
