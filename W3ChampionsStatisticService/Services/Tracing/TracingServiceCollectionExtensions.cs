@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Instrumentation.AspNetCore;
+using OpenTelemetry.Instrumentation.Http;
 using OpenTelemetry.Trace;
 using System;
 using System.Diagnostics;
@@ -38,49 +40,8 @@ public static class TracingServiceCollectionExtensions
                 .AddService(OTEL_SERVICE_NAME, serviceVersion: SERVICE_VERSION))
             .WithTracing(tracing => tracing
                 .SetSampler(new ParentBasedSampler(new CustomRootSampler(TRACING_DEFAULT_SAMPLING_RATE)))
-                .AddAspNetCoreInstrumentation(options =>
-                {
-                    options.Filter = context =>
-                    {
-                        if (HttpMethods.IsOptions(context.Request.Method))
-                        {
-                            return false;
-                        }
-                        if (context.Request.Path.Equals(websiteBackendHubPath))
-                        {
-                            return false;
-                        }
-                        return true;
-                    };
-                    options.EnrichWithHttpRequest = (activity, httpRequest) =>
-                    {
-                        if (httpRequest.Headers.TryGetValue(TRACING_FARO_SESSION_ID_HTTP_HEADER, out var faroSessionIdValues))
-                        {
-                            var faroSessionId = faroSessionIdValues.FirstOrDefault();
-                            if (!string.IsNullOrEmpty(faroSessionId))
-                            {
-                                activity.SetTag(BaggageToTagProcessor.SessionIdKey, faroSessionId);
-                                activity.AddBaggage(BaggageToTagProcessor.SessionIdKey, faroSessionId);
-                            }
-                        }
-                    };
-                })
-                .AddHttpClientInstrumentation(options =>
-                {
-                    options.FilterHttpRequestMessage = request =>
-                    {
-                        // Instance-metadata endpoint (AWS, etc)
-                        return request.RequestUri?.Host != "169.254.169.254";
-                    };
-                    options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
-                    {
-                        var faroSessionIdFromBaggage = activity.GetBaggageItem(BaggageToTagProcessor.SessionIdKey);
-                        if (!string.IsNullOrEmpty(faroSessionIdFromBaggage))
-                        {
-                            httpRequestMessage.Headers.TryAddWithoutValidation(TRACING_FARO_SESSION_ID_HTTP_HEADER, faroSessionIdFromBaggage);
-                        }
-                    };
-                })
+                .AddAspNetCoreInstrumentation(options => ConfigureAspNetCore(options, websiteBackendHubPath))
+                .AddHttpClientInstrumentation(ConfigureHttpClient)
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
                 .AddSource(OTEL_SERVICE_NAME)
                 .AddProcessor(new BaggageToTagProcessor())
@@ -97,5 +58,54 @@ public static class TracingServiceCollectionExtensions
         services.AddTransient<SignalRTraceContextFilter>();
 
         return services;
+    }
+
+    internal static void ConfigureAspNetCore(AspNetCoreTraceInstrumentationOptions options, string websiteBackendHubPath)
+    {
+        options.Filter = context =>
+        {
+            if (HttpMethods.IsOptions(context.Request.Method))
+            {
+                return false;
+            }
+            if (context.Request.Path.Equals(websiteBackendHubPath))
+            {
+                return false;
+            }
+            return true;
+        };
+        options.EnrichWithHttpRequest = (activity, httpRequest) =>
+        {
+            // url.path is set before this callback runs; a machine ID in the path must not be exported (contract §5).
+            MachineIdRedaction.RedactTags(activity);
+            if (httpRequest.Headers.TryGetValue(TRACING_FARO_SESSION_ID_HTTP_HEADER, out var faroSessionIdValues))
+            {
+                var faroSessionId = faroSessionIdValues.FirstOrDefault();
+                if (!string.IsNullOrEmpty(faroSessionId))
+                {
+                    activity.SetTag(BaggageToTagProcessor.SessionIdKey, faroSessionId);
+                    activity.AddBaggage(BaggageToTagProcessor.SessionIdKey, faroSessionId);
+                }
+            }
+        };
+    }
+
+    internal static void ConfigureHttpClient(HttpClientTraceInstrumentationOptions options)
+    {
+        options.FilterHttpRequestMessage = request =>
+        {
+            // Instance-metadata endpoint (AWS, etc)
+            return request.RequestUri?.Host != "169.254.169.254";
+        };
+        options.EnrichWithHttpRequestMessage = (activity, httpRequestMessage) =>
+        {
+            // url.full is set before this callback runs; a machine ID in the path must not be exported (contract §5).
+            MachineIdRedaction.RedactTags(activity);
+            var faroSessionIdFromBaggage = activity.GetBaggageItem(BaggageToTagProcessor.SessionIdKey);
+            if (!string.IsNullOrEmpty(faroSessionIdFromBaggage))
+            {
+                httpRequestMessage.Headers.TryAddWithoutValidation(TRACING_FARO_SESSION_ID_HTTP_HEADER, faroSessionIdFromBaggage);
+            }
+        };
     }
 }

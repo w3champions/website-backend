@@ -133,7 +133,8 @@ docker run -e MONGO_CONNECTION_STRING="mongodb://localhost:27017" w3champions-ba
 - `Admin/BansController.cs` forwards the matchmaking ban admin API (`/admin/bans...`) behind `EPermission.Moderation`. The three machine routes are also behind `EPermission.AdminModeration`; without it they answer 403 `MACHINE_BAN_PERMISSION` before matchmaking is called.
 - `actor` (writes) and `machineAccess` (every route, and the hardware-links route) come from the validated token only, never from the request.
 - Responses are forwarded untyped through `MatchmakingProxyResult`. A matchmaking 403 is passed on only with the code `MACHINE_BAN_PERMISSION`; any other matchmaking 403 becomes the generic 502.
-- Request bodies and machine IDs are `[NoTrace]` and never logged. WB does no ban validation or filtering of its own; matchmaking-service owns the rules.
+- Request bodies and machine IDs are `[NoTrace]` and never logged by WB code. The machine ID in the path of `GET api/admin/bans/machine-ids/{machineId}/accounts` (and of the forwarded matchmaking URL) is replaced with `REDACTED` by `Services/Tracing/MachineIdRedaction.cs` in: every string tag and the name of the OTel ASP.NET Core and HttpClient spans (`url.path`, `url.full`, ...; `http.route` is the template), every string Serilog property including the framework's `RequestPath` scope (`MachineIdLogEnricher`), and Application Insights request/dependency telemetry (`MachineIdTelemetryInitializer`). Not covered: anything outside WB (reverse proxy access logs, matchmaking's own logs).
+- Ban bodies are bound as JSON objects with case-insensitive keys; a duplicate key at any depth (e.g. `Actor` and `ACTOR`) or a non-object body answers 400 `VALIDATION`. WB does no other ban validation or filtering of its own; matchmaking-service owns the rules.
 - The old tag-based `api/admin/bannedPlayers` routes are gone; the smurf badge uses `POST api/admin/bans/status`.
 
 ### Commercial license and commercial events
