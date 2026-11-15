@@ -26,4 +26,5 @@ public enum EPermission
     Jobs = 12,
     CommercialLicense = 13,
     Replays = 14,
+    AdminModeration = 15,
 }

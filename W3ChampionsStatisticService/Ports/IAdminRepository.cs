@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Admin.SmurfDetection;
 
@@ -44,4 +46,16 @@ public interface IAdminRepository
     Task<MatchmakingProxyResult> GetSmurfEventIdentifiers(string id, bool reveal);
     Task<MatchmakingProxyResult> GetSmurfEventHistory(string id);
     Task<MatchmakingProxyResult> GetSmurfEventPresence(string id);
+
+    Task<MatchmakingProxyResult> ListBans(BanListFilter filter, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanAuthors(bool machineAccess);
+    Task<MatchmakingProxyResult> LookupBanAccounts(string q, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanAccount(string accountKey, bool machineAccess);
+    Task<MatchmakingProxyResult> CreateBan([NoTrace] JsonObject body, string actor, bool machineAccess);
+    Task<MatchmakingProxyResult> EditBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess);
+    Task<MatchmakingProxyResult> RevokeBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanAccountMachineIds(string accountKey);
+    Task<MatchmakingProxyResult> GetBanMachineIdAccounts([NoTrace] string machineId, string excludeAccount);
+    Task<MatchmakingProxyResult> GetBanMachineImpact([NoTrace] JsonObject body);
+    Task<MatchmakingProxyResult> GetBanStatuses([NoTrace] JsonObject body, bool machineAccess);
 }
