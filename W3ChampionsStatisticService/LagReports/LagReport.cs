@@ -43,6 +43,13 @@ public class LagReport : IIdentifiable
     public List<LagReportPlayer> Players { get; set; } = [];
 
     /// <summary>
+    /// Materialized Players.Count, kept in step by UpsertPlayerData (an $inc beside its
+    /// $push) and backfilled once onto older documents — Mongo cannot filter on an
+    /// array's length, so the min/maxPlayers filters need it as a real field.
+    /// </summary>
+    public int PlayerCount { get; set; }
+
+    /// <summary>
     /// Server-side ping data fetched from flo-stats-service after the game ends.
     /// Null until the match-finished handler populates it.
     /// </summary>
