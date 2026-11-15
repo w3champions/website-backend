@@ -3,7 +3,9 @@ using System.Reflection;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -58,6 +60,18 @@ public class BansControllerTests
         Assert.That(names, Has.No.Member("battleTag"));
     }
 
+    private static readonly string[] BodyActions = { "Create", "Edit", "Revoke", "MachineImpact", "Status" };
+
+    // Without Allow, [ApiController] answers an empty body with its own 400 before the permission filter and the action run.
+    [TestCaseSource(nameof(BodyActions))]
+    public void BodyActions_AllowAnEmptyBody_AndBoundTheRequestSize(string action)
+    {
+        var method = typeof(BansController).GetMethod(action)!;
+        var body = method.GetParameters().Single(p => p.Name == "body");
+        Assert.That(body.GetCustomAttribute<FromBodyAttribute>()!.EmptyBodyBehavior, Is.EqualTo(EmptyBodyBehavior.Allow));
+        Assert.That(((IRequestSizeLimitMetadata)method.GetCustomAttribute<RequestSizeLimitAttribute>()!).MaxRequestBodySize, Is.EqualTo(BansController.MaxJsonBodyBytes));
+    }
+
     [Test]
     public void Controller_ExposesExactlyTheElevenContractRoutes()
     {
@@ -108,6 +122,8 @@ public class BansControllerTests
         {
             Assert.That(((ObjectResult)result).StatusCode, Is.EqualTo(403));
             Assert.That(ErrorCode(result), Is.EqualTo("MACHINE_BAN_PERMISSION"));
+            Assert.That(JObject.FromObject(((ObjectResult)result).Value!)["errors"]![0]!["msg"]!.Value<string>(),
+                Is.EqualTo("Permission denied, please contact an Administrator"));
         }
         _repository.VerifyNoOtherCalls();
     }

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Serilog;
 using W3C.Contracts.Admin.Permission;
 using W3C.Domain.Tracing;
@@ -59,14 +60,14 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Create([FromBody] JsonObject body) =>
+    public async Task<IActionResult> Create([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body) =>
         MissingBody(body) ?? Forward(await _adminRepository.CreateBan(body, Caller()?.BattleTag, CallerHasMachineAccess()));
 
     [HttpPatch("{id}")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Edit([FromRoute] string id, [FromBody] JsonObject body)
+    public async Task<IActionResult> Edit([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body)
     {
         var banId = RouteValue(id);
         return InvalidSegment(banId, nameof(id)) ?? MissingBody(body)
@@ -77,7 +78,7 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Revoke([FromRoute] string id, [FromBody] JsonObject body)
+    public async Task<IActionResult> Revoke([FromRoute] string id, [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body)
     {
         var banId = RouteValue(id);
         return InvalidSegment(banId, nameof(id)) ?? MissingBody(body)
@@ -108,14 +109,14 @@ public class BansController(IAdminRepository adminRepository) : ControllerBase
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> MachineImpact([FromBody] JsonObject body) =>
+    public async Task<IActionResult> MachineImpact([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body) =>
         MachineRefusal("machine-impact") ?? MissingBody(body) ?? Forward(await _adminRepository.GetBanMachineImpact(body));
 
     [HttpPost("status")]
     [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
     [InjectActingPlayerAuthCode]
     [RequestSizeLimit(MaxJsonBodyBytes)]
-    public async Task<IActionResult> Status([FromBody] JsonObject body) =>
+    public async Task<IActionResult> Status([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] JsonObject body) =>
         MissingBody(body) ?? Forward(await _adminRepository.GetBanStatuses(body, CallerHasMachineAccess()));
 
     private W3CUserAuthenticationDto Caller() => InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext);
