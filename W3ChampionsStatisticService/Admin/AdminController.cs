@@ -52,27 +52,6 @@ public class AdminController(
         return Ok(ongoingMatches.Count);
     }
 
-    [HttpGet("bannedPlayers")]
-    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> GetBannedPlayers([FromQuery] BannedPlayersGetRequest req)
-    {
-        var bannedPlayers = await _matchmakingServiceRepository.GetBannedPlayers(req);
-        return Ok(bannedPlayers);
-    }
-
-    [HttpPost("bannedPlayers")]
-    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> PostBannedPlayer([FromBody] BannedPlayerReadmodel bannedPlayerReadmodel)
-    {
-        var canonical = await _battleTagResolver.ResolveCanonical(bannedPlayerReadmodel.battleTag);
-        if (canonical == null)
-            return BadRequest(new { error = "user_not_found", input = bannedPlayerReadmodel.battleTag });
-
-        bannedPlayerReadmodel.battleTag = canonical;
-        await _matchmakingServiceRepository.PostBannedPlayer(bannedPlayerReadmodel);
-        return Ok();
-    }
-
     [HttpGet("warnings")]
     [BearerHasPermissionFilter(Permission = EPermission.Warnings)]
     public async Task<IActionResult> GetWarnings([FromQuery] PlayerWarningsGetRequest req)
@@ -211,48 +190,6 @@ public class AdminController(
     {
         await _matchmakingServiceRepository.DeleteBanReasonTranslation(id);
         return Ok();
-    }
-
-    [HttpPost("bannedPlayers/batch")]
-    [BearerHasPermissionFilter(Permission = EPermission.Moderation)]
-    public async Task<IActionResult> GetBannedPlayersBatch([FromBody] BattleTagsBatchRequest request)
-    {
-        if (request?.BattleTags == null || !request.BattleTags.Any())
-        {
-            return BadRequest("BattleTags list cannot be empty");
-        }
-
-        if (request.BattleTags.Count > 100)
-        {
-            return BadRequest("Maximum 100 battleTags per request");
-        }
-
-        // Fetch banned players for each battleTag in parallel
-        var tasks = request.BattleTags.Select(tag =>
-            _matchmakingServiceRepository.GetBannedPlayers(new BannedPlayersGetRequest
-            {
-                Page = 1,
-                ItemsPerPage = 100,
-                Search = tag.Trim()
-            })
-        );
-
-        var results = await Task.WhenAll(tasks);
-
-        // Filter to exact matches only (case-insensitive) and select most recent ban per battleTag
-        var allPlayers = results
-            .SelectMany(r => r.players)
-            .Where(p => request.BattleTags.Any(tag =>
-                string.Equals(p.battleTag, tag, StringComparison.OrdinalIgnoreCase)))
-            .GroupBy(p => p.battleTag.ToLower())
-            .Select(g => g.OrderByDescending(p => p.banInsertDate).First())
-            .ToList();
-
-        return Ok(new BannedPlayerResponse
-        {
-            total = allPlayers.Count(),
-            players = allPlayers
-        });
     }
 
     [HttpGet("news")]

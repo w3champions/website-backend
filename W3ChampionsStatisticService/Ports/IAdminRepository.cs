@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using W3C.Domain.Tracing;
 using W3ChampionsStatisticService.Admin;
 using W3ChampionsStatisticService.Admin.SmurfDetection;
 
@@ -20,7 +22,7 @@ public interface IAdminRepository
     Task<List<string>> GetPossibleIdentifierTypes();
     Task<SmurfDetectionResult> QuerySmurfsFor(string identifierType, string identifier, bool includeExplanation, int iterationDepth);
 
-    Task<MatchmakingProxyResult> GetHardwareLinks(string battleTag);
+    Task<MatchmakingProxyResult> GetHardwareLinks(string battleTag, bool machineAccess);
     Task<MatchmakingProxyResult> GetHardwareItems(string battleTag);
     Task<MatchmakingProxyResult> GetHardwareItem(string battleTag, string hash8);
     Task<MatchmakingProxyResult> GetHardwareAudit(string battleTag, string before, int? limit);
@@ -44,4 +46,16 @@ public interface IAdminRepository
     Task<MatchmakingProxyResult> GetSmurfEventIdentifiers(string id, bool reveal);
     Task<MatchmakingProxyResult> GetSmurfEventHistory(string id);
     Task<MatchmakingProxyResult> GetSmurfEventPresence(string id);
+
+    Task<MatchmakingProxyResult> ListBans(BanListFilter filter, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanAuthors(bool machineAccess);
+    Task<MatchmakingProxyResult> LookupBanAccounts(string q, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanAccount(string accountKey, bool machineAccess);
+    Task<MatchmakingProxyResult> CreateBan([NoTrace] JsonObject body, string actor, bool machineAccess);
+    Task<MatchmakingProxyResult> EditBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess);
+    Task<MatchmakingProxyResult> RevokeBan(string id, [NoTrace] JsonObject body, string actor, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanAccountMachineIds(string accountKey, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanMachineIdAccounts([NoTrace] string machineId, string excludeAccount, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanMachineImpact([NoTrace] JsonObject body, bool machineAccess);
+    Task<MatchmakingProxyResult> GetBanStatuses([NoTrace] JsonObject body, bool machineAccess);
 }

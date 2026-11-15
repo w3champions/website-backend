@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -39,8 +40,17 @@ public class SmurfHardwareModerationControllerTests
         Assert.That(JObject.FromObject(bad.Value!)["field"]!.Value<string>(), Is.EqualTo(field));
     }
 
+    private void AsUser(params EPermission[] permissions)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.QueryString = new QueryString("?machineAccess=true");   // client tries to set it
+        context.Items[InjectActingPlayerFromAuthCodeFilter.ActingPlayerUserKey] =
+            new W3CUserAuthenticationDto { BattleTag = "Mod One", Permissions = permissions.ToHashSet() };
+        _controller.ControllerContext = new ControllerContext { HttpContext = context };
+    }
+
     // Permission table of the contract.
-    [TestCase(nameof(SmurfHardwareModerationController.GetLinks), EPermission.SmurfCheckerAdministration, false)]
+    [TestCase(nameof(SmurfHardwareModerationController.GetLinks), EPermission.SmurfCheckerAdministration, true)]
     [TestCase(nameof(SmurfHardwareModerationController.GetItems), EPermission.SmurfCheckerAdministration, false)]
     [TestCase(nameof(SmurfHardwareModerationController.GetItem), EPermission.SmurfCheckerAdministration, false)]
     [TestCase(nameof(SmurfHardwareModerationController.GetAudit), EPermission.SmurfCheckerAdministration, false)]
@@ -72,7 +82,8 @@ public class SmurfHardwareModerationControllerTests
     [Test]
     public async Task GetLinks_PassesStatusAndBodyThrough()
     {
-        _repository.Setup(r => r.GetHardwareLinks(Tag)).ReturnsAsync(new MatchmakingProxyResult(404, "{\"error\":\"x\"}"));
+        AsUser(EPermission.SmurfCheckerAdministration);
+        _repository.Setup(r => r.GetHardwareLinks(Tag, false)).ReturnsAsync(new MatchmakingProxyResult(404, "{\"error\":\"x\"}"));
 
         var result = await _controller.GetLinks(Tag) as ContentResult;
 
@@ -195,10 +206,28 @@ public class SmurfHardwareModerationControllerTests
     [TestCase("a b#12")]
     public async Task BattleTagsMatchmakingAccepts_AreForwarded(string tag)
     {
-        _repository.Setup(r => r.GetHardwareLinks(tag)).ReturnsAsync(Ok200);
+        AsUser(EPermission.SmurfCheckerAdministration);
+        _repository.Setup(r => r.GetHardwareLinks(tag, false)).ReturnsAsync(Ok200);
 
         var result = await _controller.GetLinks(tag) as ContentResult;
 
         Assert.That(result!.StatusCode, Is.EqualTo(200));
+    }
+
+    [Test]
+    public async Task GetLinks_ForwardsMachineAccess_OnlyForAdminModeration([Values] bool admin)
+    {
+        AsUser(admin ? new[] { EPermission.SmurfCheckerAdministration, EPermission.AdminModeration } : new[] { EPermission.SmurfCheckerAdministration });
+        _repository.Setup(r => r.GetHardwareLinks(Tag, admin)).ReturnsAsync(Ok200);
+        await _controller.GetLinks(Tag);
+        _repository.VerifyAll();
+    }
+
+    [Test]
+    public void GetLinks_HasNoMachineAccessParameter()
+    {
+        var names = typeof(SmurfHardwareModerationController).GetMethod(nameof(SmurfHardwareModerationController.GetLinks))!
+            .GetParameters().Select(p => p.Name);
+        Assert.That(names, Is.EqualTo(new[] { "targetBattleTag" }));
     }
 }

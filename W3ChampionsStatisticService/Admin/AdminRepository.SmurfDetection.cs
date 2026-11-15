@@ -24,25 +24,34 @@ public partial class AdminRepository
             ? values.ToString()
             : null;
 
-    private async Task<MatchmakingProxyResult> SendSmurfDetection(HttpMethod method, string path, object body = null)
+    private Task<MatchmakingProxyResult> SendSmurfDetection(HttpMethod method, string path, object body = null) =>
+        SendProxy(method, MatchmakingApiUrl + SmurfDetectionPath + path,
+            body == null ? null : CreateJsonContent(body), forward403: null);
+
+    /// <summary>
+    /// Sends one admin request to matchmaking and maps the outcome to a <see cref="MatchmakingProxyResult"/>. A 403 is returned
+    /// as is only when <paramref name="forward403"/> accepts its body; otherwise it (a refused admin secret) and any network
+    /// failure become the generic 502.
+    /// </summary>
+    private async Task<MatchmakingProxyResult> SendProxy(HttpMethod method, string url, HttpContent content, Func<string, bool> forward403)
     {
-        using var request = CreateAdminRequest(method, MatchmakingApiUrl + SmurfDetectionPath + path);
-        if (body != null) request.Content = CreateJsonContent(body);
+        using var request = CreateAdminRequest(method, url);
+        if (content != null) request.Content = content;
         try
         {
             using var response = await _httpClient.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            if (response.StatusCode == HttpStatusCode.Forbidden)
+            var responseBody = await response.Content.ReadAsStringAsync();
+            if (response.StatusCode == HttpStatusCode.Forbidden && forward403?.Invoke(responseBody) != true)
             {
-                Log.Error("Matchmaking rejected the admin credentials for a smurf moderation {Method} request", method.Method);
+                Log.Error("Matchmaking rejected the admin credentials for an admin proxy {Method} request", method.Method);
                 return MatchmakingProxyResult.Unavailable();
             }
-            return new MatchmakingProxyResult((int)response.StatusCode, content, WellFormedRetryAfter(response));
+            return new MatchmakingProxyResult((int)response.StatusCode, responseBody, WellFormedRetryAfter(response));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             // The message can carry the upstream address, so only the exception type is logged.
-            Log.Error("Matchmaking smurf moderation request {Method} failed: {ExceptionType}", method.Method, ex.GetType().Name);
+            Log.Error("Matchmaking admin proxy request {Method} failed: {ExceptionType}", method.Method, ex.GetType().Name);
             return MatchmakingProxyResult.Unavailable();
         }
     }

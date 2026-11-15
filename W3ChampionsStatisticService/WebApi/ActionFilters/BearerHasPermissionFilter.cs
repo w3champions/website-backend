@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
@@ -21,7 +22,8 @@ public class BearerHasPermissionFilter : Attribute, IAsyncActionFilter
     [Trace]
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        W3CAuthenticationService authService = new();
+        // The registered service (Program.cs registers W3CAuthenticationService) so endpoint tests can swap it.
+        var authService = context.HttpContext.RequestServices?.GetService<IW3CAuthenticationService>() ?? new W3CAuthenticationService();
         {
             try
             {

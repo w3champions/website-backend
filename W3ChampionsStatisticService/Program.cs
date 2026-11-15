@@ -1,4 +1,5 @@
 using Microsoft.ApplicationInsights.Extensibility.Implementation;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
@@ -91,6 +92,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("AspNetCore.Authentication.Basic.BasicHandler", LogEventLevel.Warning) // Temporarily filter out the Basic auth schema log. We should add central JWT though.
     .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning) // Filter out verbose HTTP client logs
     .MinimumLevel.Override("System.Net.Http", LogEventLevel.Warning) // Filter out verbose System.Net.Http logs
+    .Enrich.With(new MachineIdLogEnricher()) // machine IDs in RequestPath and other string properties (bans contract §5)
     .WriteTo.Console(new JsonFormatter(renderMessage: true), restrictedToMinimumLevel: LogEventLevel.Information) // Write to Console to allow log scraping
     .WriteTo.File("Logs/website-backend_.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -102,6 +104,7 @@ Log.Information("Starting server.");
 // Add telemetry
 string appInsightsKey = Environment.GetEnvironmentVariable("APP_INSIGHTS");
 builder.Services.AddApplicationInsightsTelemetry(c => c.ConnectionString = "InstrumentationKey=" + appInsightsKey?.Replace("'", ""));
+builder.Services.AddSingleton<ITelemetryInitializer, MachineIdTelemetryInitializer>();
 
 // Add Swagger
 builder.Services.AddSwaggerGen(f =>

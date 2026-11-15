@@ -98,6 +98,15 @@ public class JwtTests
     }
 
     [Test]
+    public void FromJWT_TokenWithAdminModeration_ParsesIt()
+    {
+        var (jwt, key) = CreateSignedJwt("admin#1", isAdmin: true, new[] { "Moderation", "AdminModeration" });
+        var result = W3CUserAuthenticationDto.FromJWT(jwt, key, validateLifetime: false);
+        CollectionAssert.AreEquivalent(new[] { EPermission.Moderation, EPermission.AdminModeration }, result.Permissions);
+        Assert.AreEqual(15, (int)EPermission.AdminModeration);
+    }
+
+    [Test]
     public void FromJWT_TokenWithOnlyKnownPermissions_ParsesAll()
     {
         // Control: proves the JSON-array claim is expanded into per-element claims and all known
