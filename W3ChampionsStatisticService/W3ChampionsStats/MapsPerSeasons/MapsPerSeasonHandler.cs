@@ -20,8 +20,9 @@ public class MapsPerSeasonHandler(IW3StatsRepo w3Stats) : IMatchFinishedReadMode
 
         var statCurrent = await _w3Stats.LoadMapsPerSeason(match.season) ?? MapsPerSeason.Create(match.season);
 
-        statOverall.Count(new MapName(match.map).Name, match.gameMode);
-        statCurrent.Count(new MapName(match.map).Name, match.gameMode);
+        var map = new MapName(match.map).Name;
+        statOverall.Count(map, match.mapId, match.mapName, match.gameMode);
+        statCurrent.Count(map, match.mapId, match.mapName, match.gameMode);
 
         await _w3Stats.Save(statOverall);
         await _w3Stats.Save(statCurrent);

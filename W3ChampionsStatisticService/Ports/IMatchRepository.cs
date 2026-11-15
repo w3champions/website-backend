@@ -7,15 +7,18 @@ using W3C.Contracts.Matchmaking;
 using W3C.Domain.MatchmakingService;
 using W3ChampionsStatisticService.Heroes;
 using W3ChampionsStatisticService.Ladder;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Matches;
 
 namespace W3ChampionsStatisticService.Ports;
 
 public interface IMatchRepository
 {
-    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall");
+    Task<List<Matchup>> Load(int season, GameMode gameMode, int offset = 0, int pageSize = 100, HeroType hero = HeroType.AllFilter, int minMmr = 0, int? maxMmr = null, int? minDuration = null, int? maxDuration = null, string mapName = "Overall", MapNameFilter mapNameFilter = null);
 
     Task<List<string>> LoadMapNames(int season, GameMode gameMode);
+
+    Task<List<MapIdAndName>> LoadMapIdsAndNames(int season, GameMode gameMode);
 
     Task<long> Count(
         int season,
@@ -25,7 +28,8 @@ public interface IMatchRepository
         int? maxMmr = null,
         int? minDuration = null,
         int? maxDuration = null,
-        string mapName = "Overall");
+        string mapName = "Overall",
+        MapNameFilter mapNameFilter = null);
 
     Task Insert(Matchup matchup);
 
@@ -70,14 +74,18 @@ public interface IMatchRepository
         string map = "Overall",
         int minMmr = 0,
         int? maxMmr = null,
-        string sort = "startTimeDescending");
+        string sort = "startTimeDescending",
+        string mapName = "Overall",
+        CurrentMapNames currentMapNames = null);
 
     Task<long> CountOnGoingMatches(
         GameMode gameMode = GameMode.Undefined,
         GateWay gateWay = GateWay.Undefined,
         string map = "Overall",
         int minMmr = 0,
-        int? maxMmr = null);
+        int? maxMmr = null,
+        string mapName = "Overall",
+        CurrentMapNames currentMapNames = null);
 
     Task EnsureIndices();
 

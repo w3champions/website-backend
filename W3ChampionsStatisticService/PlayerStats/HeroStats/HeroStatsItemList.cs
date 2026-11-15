@@ -13,7 +13,7 @@ public class HeroStatsItemList : List<HeroStatsItem>
 
     public List<HeroStatsItem> HeroStats { get; set; }
 
-    public void AddWin(string heroId, Race myRace, Race enemyRace, string mapName, in bool won)
+    public void AddWin(string heroId, Race myRace, Race enemyRace, string map, int? mapId, string mapName, in bool won)
     {
         var heroStats = this.SingleOrDefault(r => r.HeroId == heroId);
 
@@ -23,6 +23,6 @@ public class HeroStatsItemList : List<HeroStatsItem>
             this.Add(heroStats);
         }
 
-        heroStats.AddWin(myRace, enemyRace, mapName, won);
+        heroStats.AddWin(myRace, enemyRace, map, mapId, mapName, won);
     }
 }

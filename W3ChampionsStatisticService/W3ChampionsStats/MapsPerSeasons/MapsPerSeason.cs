@@ -25,7 +25,7 @@ public class MapsPerSeason : IIdentifiable
     public int Season { get; set; }
 
     [Trace]
-    public void Count(string map, GameMode gameMode)
+    public void Count(string map, int? mapId, string mapName, GameMode gameMode)
     {
         var matchOnMapOverall = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == GameMode.Undefined);
         if (matchOnMapOverall == null)
@@ -34,7 +34,7 @@ public class MapsPerSeason : IIdentifiable
         }
 
         matchOnMapOverall = MatchesOnMapPerModes.Single(m => m.GameMode == GameMode.Undefined);
-        matchOnMapOverall.CountMatch(map);
+        matchOnMapOverall.CountMatch(map, mapId, mapName);
 
         var matchOnMap = MatchesOnMapPerModes.SingleOrDefault(m => m.GameMode == gameMode);
         if (matchOnMap == null)
@@ -43,6 +43,6 @@ public class MapsPerSeason : IIdentifiable
         }
 
         matchOnMap = MatchesOnMapPerModes.Single(m => m.GameMode == gameMode);
-        matchOnMap.CountMatch(map);
+        matchOnMap.CountMatch(map, mapId, mapName);
     }
 }

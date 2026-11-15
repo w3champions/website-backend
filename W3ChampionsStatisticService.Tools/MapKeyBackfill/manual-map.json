@@ -1,0 +1,1036 @@
+[
+  {
+    "mapId": 1,
+    "mapName": "Concealed Hill",
+    "keys": ["ConcealedHill","concealedhill","_1v1_concealedhill_anon"],
+    "seasons": "0-12",
+    "games": 489665,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 4,
+    "mapName": "Northern Isles",
+    "keys": ["NorthernIsles","northernisles","_1v1_northernisles_anon"],
+    "seasons": "0-12",
+    "games": 456560,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 3,
+    "mapName": "Last Refuge",
+    "keys": ["LastRefuge","lastrefuge","_1v1_lastrefuge_anon","lastrefuge.anon"],
+    "seasons": "0-10",
+    "games": 427560,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 0,
+    "mapName": "Amazonia",
+    "keys": ["Amazonia","amazonia","_1v1_amazonia_anon"],
+    "seasons": "0-12",
+    "games": 417033,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 2,
+    "mapName": "Echo Isles",
+    "keys": ["EchoIsles","echoisles","_1v1_echoisles_anon"],
+    "seasons": "0-11,24",
+    "games": 385280,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 5,
+    "mapName": "Terenas Stand LV",
+    "keys": ["TerenasStandLV","terenasstand","_1v1_terenasstand_anon"],
+    "seasons": "0-12",
+    "games": 318352,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 12,
+    "mapName": "Turtle Rock",
+    "keys": ["TurtleRock","turtlerock","_turtlerock_anon"],
+    "seasons": "0-12",
+    "games": 210277,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 54,
+    "mapName": "Tidehunters",
+    "keys": ["tidehunters","Tidehunters"],
+    "seasons": "5-10",
+    "games": 154927,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 6,
+    "mapName": "Twisted Meadows",
+    "keys": ["twistedmeadows","TwistedMeadows","_1v1_twistedmeadows_anon"],
+    "seasons": "0-11",
+    "games": 140272,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 61,
+    "mapName": "Shallow Grave",
+    "keys": ["ShallowGravev1_4","ShallowGrave"],
+    "seasons": "7-12",
+    "games": 129217,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": null,
+    "mapName": "Autumn Leaves",
+    "keys": ["AutumnLeaves","autumnleaves","autumnleaves201016","_1v1_autumnleaves_anon"],
+    "seasons": "2-8",
+    "games": 115589,
+    "idFrom": ""
+  },
+  {
+    "mapId": 44,
+    "mapName": "Autumn Leaves v2",
+    "keys": ["AutumnLeavesv2-0"],
+    "seasons": "9-11",
+    "games": 98974,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 11,
+    "mapName": "Lost Temple LV",
+    "keys": ["LostTempleLV","losttemple","_losttemple_anon"],
+    "seasons": "0-12",
+    "games": 47386,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 59,
+    "mapName": "Shattered Exile v2",
+    "keys": ["ShatteredExilev2-07","ShatteredExilev2_06","ShatteredExile"],
+    "seasons": "6-11",
+    "games": 40026,
+    "idFrom": "built-in table"
+  },
+  {
+    "mapId": 10,
+    "mapName": "Hillsbrad Creek",
+    "keys": ["HillsbradCreek","hillsbradcreek","_hillsbradcreek_anon"],
+    "seasons": "0-12",
+    "games": 37062,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 9,
+    "mapName": "Gnoll Wood",
+    "keys": ["gnollwood","GnollWood","_gnollwood_anon"],
+    "seasons": "0-12",
+    "games": 34171,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 47,
+    "mapName": "Tidewater Glades v2",
+    "keys": ["tidewaterglades","tidewatergladesw3c","TidewaterGlades"],
+    "seasons": "3-11",
+    "games": 25601,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 8,
+    "mapName": "Goldshire",
+    "keys": ["goldshire","Goldshire","_goldshire_anon"],
+    "seasons": "0-9",
+    "games": 23005,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 48,
+    "mapName": "Phantom Grove v2",
+    "keys": ["PhantomGroveW3C","phantomgrovew3c201016","phantomgrove","phantomgrovew3c"],
+    "seasons": "3-11",
+    "games": 22508,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 52,
+    "mapName": "Synergy",
+    "keys": ["synergy","Synergy"],
+    "seasons": "5-12",
+    "games": 17206,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 50,
+    "mapName": "Ruins of Azshara v2",
+    "keys": ["RuinsOfAzshara"],
+    "seasons": "6-7",
+    "games": 15863,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": null,
+    "mapName": "Ruins of Azshara",
+    "keys": ["ruinsofazshara201016","ruinsofazshara"],
+    "seasons": "4-5",
+    "games": 15322,
+    "idFrom": ""
+  },
+  {
+    "mapId": 34,
+    "mapName": "Northshire LV",
+    "keys": ["NorthshireLV","northshire","_northshire_anon"],
+    "seasons": "1-12",
+    "games": 13987,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 62,
+    "mapName": "King and Country",
+    "keys": ["KingAndCountry"],
+    "seasons": "7-11",
+    "games": 13608,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 31,
+    "mapName": "Sanctuary LV",
+    "keys": ["SanctuaryLV","sanctuary","sanctuary lv","_ffa_sanctuary lv_anon","_sanctuary_anon","_ffa_sanctuary lv_anon_cd"],
+    "seasons": "1-12",
+    "games": 13310,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 35,
+    "mapName": "Twilight Ruins LV",
+    "keys": ["TwilightRuinsLV","twilightruins","_twilightruins_anon"],
+    "seasons": "1-12",
+    "gameModes": ["GM_4v4"],
+    "games": 13231,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 7,
+    "mapName": "Avalanche LV",
+    "keys": ["avalanche","AvalancheLV","_avalanche_anon"],
+    "seasons": "0-6",
+    "games": 13173,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 30,
+    "mapName": "Deadlock LV",
+    "keys": ["DeadlockLV","deadlock","deadlock lv","_ffa_deadlock lv_anon","_deadlock_anon","_ffa_deadlock lv_anon_cd"],
+    "seasons": "1-12",
+    "games": 12441,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 51,
+    "mapName": "Ferocity",
+    "keys": ["ferocity","Ferocity","ferocity201016"],
+    "seasons": "2-10",
+    "games": 10856,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 26,
+    "mapName": "Gold Rush",
+    "keys": ["GoldRush","goldrush"],
+    "seasons": "1-12",
+    "games": 10810,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 58,
+    "mapName": "Kal'drassil",
+    "keys": ["Kal'drassil"],
+    "seasons": "6-11",
+    "games": 10756,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 27,
+    "mapName": "Feralas LV",
+    "keys": ["FeralasLV","feralas","_feralas_anon"],
+    "seasons": "1-12",
+    "games": 10610,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 32,
+    "mapName": "Nerubian Passage",
+    "keys": ["NerubianPassage","nerubianpassage","_nerubianpassage_anon"],
+    "seasons": "1-12",
+    "games": 10326,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 49,
+    "mapName": "Wellspring Temple",
+    "keys": ["WellspringTemple","wellspringtemple201016","wellspringtemple"],
+    "seasons": "4-10",
+    "games": 9780,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 37,
+    "mapName": "Market Square",
+    "keys": ["MarketSquare","marketsquare","_marketsquare_anon"],
+    "seasons": "1-12",
+    "games": 9442,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 28,
+    "mapName": "Golems in the Mist LV",
+    "keys": ["GolemsInTheMistLV","golemsinthemist","_goleminthemist_anon","goleminthemist"],
+    "seasons": "1-11",
+    "games": 9060,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 77,
+    "mapName": "Bandit's Retreat",
+    "keys": ["BanditsRetreatv1_1"],
+    "seasons": "8-12",
+    "games": 9037,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 60,
+    "mapName": "Arathor",
+    "keys": ["Arathor"],
+    "seasons": "6-10",
+    "games": 7889,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 56,
+    "mapName": "Royal Gardens",
+    "keys": ["royalgardens","RoyalGardens"],
+    "seasons": "5-10",
+    "games": 7135,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 36,
+    "mapName": "Northern Felwood",
+    "keys": ["NorthernFelwood","northernfelwood"],
+    "seasons": "1-10",
+    "games": 7078,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 55,
+    "mapName": "Fort Pearl",
+    "keys": ["fortpearl","FortPearl"],
+    "seasons": "5-8",
+    "games": 6464,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 5110,
+    "mapName": "Cherryville",
+    "keys": ["Cherryville","cherryville","_cherryville_anon"],
+    "seasons": "1-8,14",
+    "games": 5611,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 29,
+    "mapName": "Mur'gul Oasis LV",
+    "keys": ["Mur'gulOasisLV","murguloasis","mur'guloasis","_mur'galoasis_anon","mur'galoasis"],
+    "seasons": "1-9",
+    "games": 5599,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 40,
+    "mapName": "Full Scale Assault",
+    "keys": ["FullScaleAssault","fullscaleassault","_fullscaleassault_anon"],
+    "seasons": "1-9",
+    "games": 5454,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 86,
+    "mapName": "Nightopia",
+    "keys": ["Nightopia"],
+    "seasons": "10-12",
+    "games": 5389,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 79,
+    "mapName": "Painted World",
+    "keys": ["PaintedWorld"],
+    "seasons": "9-12",
+    "games": 5279,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 33,
+    "mapName": "Battleground",
+    "keys": ["Battleground","battleground","_battlegrounds_anon","battlegrounds"],
+    "seasons": "1-7,11-12",
+    "games": 4585,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": null,
+    "mapName": "Synergy",
+    "keys": ["synergyw3c"],
+    "seasons": "4-5",
+    "games": 4526,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Tidewater Glades LV",
+    "keys": ["tidewaterglades","_tidewaterglades_anon"],
+    "seasons": "1-2",
+    "games": 4174,
+    "idFrom": ""
+  },
+  {
+    "mapId": 63,
+    "mapName": "Northmarsh Ruin",
+    "keys": ["NorthmarshRuin"],
+    "seasons": "7-10",
+    "games": 4171,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 87,
+    "mapName": "Snowblind",
+    "keys": ["Snowblindv1_2","Snowblindv1_1"],
+    "seasons": "10-12",
+    "games": 3744,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 53,
+    "mapName": "Featherville",
+    "keys": ["featherville"],
+    "seasons": "4-5",
+    "games": 2898,
+    "idFrom": "only id with this name"
+  },
+  {
+    "mapId": 78,
+    "mapName": "The Consortium",
+    "keys": ["TheConsortium"],
+    "seasons": "9-10",
+    "games": 2801,
+    "idFrom": "only id with this name"
+  },
+  {
+    "mapId": 5184,
+    "mapName": "Vile Reef",
+    "keys": ["vilereef201016","vilereef"],
+    "seasons": "3-5",
+    "games": 2277,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 85,
+    "mapName": "Deja Vu",
+    "keys": ["DejaVuv1_43"],
+    "seasons": "10",
+    "games": 2218,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 5112,
+    "mapName": "Circle of Fallen Heroes",
+    "keys": ["circleoffallenheroes","_circleoffallenheroes_anon"],
+    "seasons": "1-3",
+    "games": 2041,
+    "idFrom": "only id with this name"
+  },
+  {
+    "mapId": 45,
+    "mapName": "Dalaran Garden",
+    "keys": ["dalarangarden"],
+    "seasons": "3-5",
+    "games": 1929,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1034,
+    "mapName": "Lost Temple",
+    "keys": ["LostTempleroc.w3m","LostTempleROC","LostTempleroc"],
+    "seasons": "7-16",
+    "games": 1448,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1050,
+    "mapName": "Tranquil Paths",
+    "keys": ["TranquilPathsroc.w3m","TranquilPathsROC","TranquilPathsroc"],
+    "seasons": "7-16",
+    "games": 1117,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1025,
+    "mapName": "Gnoll Wood",
+    "keys": ["GnollWoodroc.w3m","GnollWoodROC","GnollWoodroc"],
+    "seasons": "7-16",
+    "games": 1097,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 5115,
+    "mapName": "Dragon Falls",
+    "keys": ["dragonfalls","_dragonfalls_anon"],
+    "seasons": "1-5",
+    "games": 1040,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 19,
+    "mapName": "Twilight Ruins",
+    "keys": ["twilightruins","TwilightRuins"],
+    "seasons": "1-12",
+    "gameModes": ["FFA"],
+    "games": 954,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 1033,
+    "mapName": "Legends",
+    "keys": ["Legendsroc.w3m","LegendsROC","Legendsroc"],
+    "seasons": "7-25",
+    "games": 953,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 17,
+    "mapName": "Neon City",
+    "keys": ["neoncity","_ffa_neoncity_anon","NeonCity","_ffa_neoncity_anon_cd"],
+    "seasons": "1-12",
+    "games": 927,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1055,
+    "mapName": "Twisted Meadows",
+    "keys": ["TwistedMeadowsroc.w3m","TwistedMeadowsroc","TwistedMeadowsROC"],
+    "seasons": "7-16",
+    "games": 889,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1053,
+    "mapName": "Rift Valley",
+    "keys": ["RiftValleyROC","RiftValleyroc.w3m","RiftValleyroc"],
+    "seasons": "7-25",
+    "games": 872,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1042,
+    "mapName": "Plunder Isle",
+    "keys": ["PlunderIsleroc.w3m","PlunderIsleROC","PlunderIsleroc"],
+    "seasons": "7-16,18-25",
+    "games": 864,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1023,
+    "mapName": "Frostsabre",
+    "keys": ["Frostsabreroc.w3m","FrostsabreROC","Frostsabreroc"],
+    "seasons": "7-25",
+    "games": 835,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1054,
+    "mapName": "Secret Valley",
+    "keys": ["SecretValleyroc.w3m","SecretValleyROC","SecretValleyroc"],
+    "seasons": "7-25",
+    "games": 834,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 1052,
+    "mapName": "Outskirts",
+    "keys": ["Outskirtsroc.w3m","OutskirtsROC","Outskirtsroc"],
+    "seasons": "7-25",
+    "games": 824,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 16,
+    "mapName": "Silverpine Forest",
+    "keys": ["silverpineforest","SilverpineForest"],
+    "seasons": "1-12",
+    "games": 802,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 14,
+    "mapName": "Fountain of Manipulation",
+    "keys": ["fountainofmanipulation","FountainOfManipulation"],
+    "seasons": "1-12",
+    "games": 782,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 1035,
+    "mapName": "Moonglade",
+    "keys": ["Moongladeroc.w3m","MoongladeROC","Moongladeroc"],
+    "seasons": "7-16",
+    "games": 711,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 42,
+    "mapName": "Frozen Marshlands",
+    "keys": ["FrozenMarshlands","frozenmarshlands"],
+    "seasons": "2-13",
+    "games": 460,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 5638,
+    "mapName": "Rockslide",
+    "keys": ["rockslide","_ffa_rockslide_anon","Rockslide","_ffa_rockslide_anon_cd"],
+    "seasons": "1-6",
+    "games": 454,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 5353,
+    "mapName": "Harvest of Sorrow",
+    "keys": ["harvestofsorrow","_ffa_harvestofsorrow_anon","_ffa_harvestofsorrow_anon_cd"],
+    "seasons": "1",
+    "games": 358,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 5181,
+    "mapName": "Silverpine Forest",
+    "keys": ["_ffa_silverpineforest_anon","_ffa_silverpineforest_anon_cd"],
+    "seasons": "1-2",
+    "games": 343,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": null,
+    "mapName": "Scorched Basin",
+    "keys": ["ScorchedBasinroc.w3m"],
+    "seasons": "7",
+    "games": 337,
+    "idFrom": ""
+  },
+  {
+    "mapId": 5114,
+    "mapName": "Deathrose",
+    "keys": ["deathrose","_ffa_deathrose_anon","_ffa_deathrose_anon_cd"],
+    "seasons": "1",
+    "games": 330,
+    "idFrom": "only id with this name"
+  },
+  {
+    "mapId": 5183,
+    "mapName": "Twilight Ruins",
+    "keys": ["_ffa_twilightruins_anon","_ffa_twilightruins_anon_cd"],
+    "seasons": "1-2",
+    "games": 316,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 5178,
+    "mapName": "Market Square",
+    "keys": ["_ffa_marketsquare_anon","_ffa_marketsquare_anon_cd"],
+    "seasons": "1-2",
+    "games": 310,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 67,
+    "mapName": "Meson de la Taberna",
+    "keys": ["MesonDeLaTaberna"],
+    "seasons": "7-12",
+    "games": 282,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 65,
+    "mapName": "Greenville Woods",
+    "keys": ["GreenvilleWoods"],
+    "seasons": "7-12",
+    "games": 279,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 5174,
+    "mapName": "Fountain of Manipulation",
+    "keys": ["_ffa_fountainofmanipulation_anon","_ffa_fountainofmanipulation_anon_cd"],
+    "seasons": "1-2",
+    "games": 278,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": 66,
+    "mapName": "Imaginary Friends",
+    "keys": ["ImaginaryFriends"],
+    "seasons": "7-12",
+    "games": 172,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": 64,
+    "mapName": "Boomtown",
+    "keys": ["BoomTown"],
+    "seasons": "7-12",
+    "games": 123,
+    "idFrom": "events, same key"
+  },
+  {
+    "mapId": null,
+    "mapName": "Anarchy Castle",
+    "keys": ["anarchycastle"],
+    "seasons": "1",
+    "games": 116,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Anarchy Castle",
+    "keys": ["_ffa_anarchycastle_anon"],
+    "seasons": "1",
+    "games": 111,
+    "idFrom": ""
+  },
+  {
+    "mapId": 5182,
+    "mapName": "Tatsa's Castle Gardens",
+    "keys": ["tatsascastlegardens","_ffa_tatsascastlegardens_anon"],
+    "seasons": "2-5",
+    "games": 93,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": null,
+    "mapName": "Scorched Basin",
+    "keys": ["ScorchedBasinroc"],
+    "seasons": "7-8",
+    "games": 62,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Dragon Island",
+    "keys": ["DragonIsland"],
+    "seasons": "6",
+    "games": 50,
+    "idFrom": ""
+  },
+  {
+    "mapId": 5173,
+    "mapName": "Ferocity",
+    "keys": ["_ffa_ferocity_anon","_ffa_ferocity_anon_cd"],
+    "seasons": "2",
+    "games": 46,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": null,
+    "mapName": "Dragon Island",
+    "keys": ["dragonisland"],
+    "seasons": "5",
+    "games": 44,
+    "idFrom": ""
+  },
+  {
+    "mapId": 5175,
+    "mapName": "Frozen Marshlands",
+    "keys": ["_ffa_frozenmarshlands_anon","_ffa_frozenmarshlands_anon_cd"],
+    "seasons": "2",
+    "games": 31,
+    "idFrom": "most played id with this name"
+  },
+  {
+    "mapId": null,
+    "mapName": "Anarchy Castle",
+    "keys": ["_ffa_anarchycastle_anon_cd"],
+    "seasons": "1",
+    "games": 5,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 3.45e W3C V2",
+    "keys": ["ionTD3_45eW3CV2","ionTD3.45eW3CV2"],
+    "seasons": "7,9",
+    "games": 27,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 6.4b Team OZE W3C",
+    "keys": ["ionTD6_4bTeamOZEW3C","ionTD6.4bTeamOZEW3C"],
+    "seasons": "7",
+    "games": 13009,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 6.3b Team OZE W3C",
+    "keys": ["ionTD6.3bTeamOZEW3C"],
+    "seasons": "7",
+    "games": 21,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 6.3c Team OZE W3C",
+    "keys": ["ionTD6.3cTeamOZEW3C"],
+    "seasons": "7",
+    "games": 184,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 6.3d Team OZE W3C 1",
+    "keys": ["ionTD6.3dTeamOZEW3C1"],
+    "seasons": "7",
+    "games": 856,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 6.3 Team OZE W3C",
+    "keys": ["ionTD6.3TeamOZEW3C"],
+    "seasons": "7",
+    "games": 14,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 6.4 Team OZE W3C",
+    "keys": ["ionTD6.4TeamOZEW3C"],
+    "seasons": "7",
+    "games": 5029,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 7.0b Team OZE W3C",
+    "keys": ["ionTD7_0bTeamOZEW3C"],
+    "seasons": "7-8",
+    "games": 632,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 7.0c1 Team OZE W3C",
+    "keys": ["ionTD7_0c1TeamOZEW3C"],
+    "seasons": "8",
+    "games": 4213,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 7.0d Team OZE W3C",
+    "keys": ["ionTD7_0dTeamOZEW3C"],
+    "seasons": "8",
+    "games": 14581,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 7.0f Team OZE W3C",
+    "keys": ["ionTD7_0fTeamOZEW3C"],
+    "seasons": "9",
+    "games": 8119,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 7.0e Team OZE",
+    "keys": ["ionTD70eTeamOZE"],
+    "seasons": "8-9",
+    "games": 3597,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 8.0b Team OZE W3C",
+    "keys": ["ionTD8_0bTeamOZEW3C"],
+    "seasons": "9",
+    "games": 2177,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 8.0d Team OZE W3C",
+    "keys": ["ionTD8_0dTeamOZEW3C"],
+    "seasons": "9",
+    "games": 591,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 8.0e Team OZE W3C",
+    "keys": ["ionTD8_0eTeamOZEW3C"],
+    "seasons": "9-10",
+    "games": 7538,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 8.0 Team OZE W3C",
+    "keys": ["ionTD8_0TeamOZEW3C"],
+    "seasons": "9",
+    "games": 305,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.0b Team OZE W3C",
+    "keys": ["ionTD9_0bTeamOZEW3C"],
+    "seasons": "10",
+    "games": 2394,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.0c Team OZE W3C",
+    "keys": ["ionTD9_0cTeamOZEW3C"],
+    "seasons": "10",
+    "games": 11376,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.0 Team OZE W3C",
+    "keys": ["ionTD9_0TeamOZEW3C"],
+    "seasons": "10",
+    "games": 636,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.1c Team OZE W3C",
+    "keys": ["ionTD9_1cTeamOZEW3C"],
+    "seasons": "10",
+    "games": 492,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.1d Team OZE W3C",
+    "keys": ["ionTD9_1dTeamOZEW3C"],
+    "seasons": "10",
+    "games": 2389,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.1e Team OZE W3C",
+    "keys": ["ionTD9_1eTeamOZEW3C"],
+    "seasons": "10",
+    "games": 1873,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.1f2 Team OZE W3C",
+    "keys": ["ionTD9_1f2TeamOZEW3C"],
+    "seasons": "10",
+    "games": 9826,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Legion TD 9.1f Team OZE W3C",
+    "keys": ["ionTD9_1fTeamOZEW3C"],
+    "seasons": "10",
+    "games": 6,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "LTWR 5.8aP1",
+    "keys": ["LTWR5_8aP1"],
+    "seasons": "8-10",
+    "games": 1318,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Reforged Footmen Frenzy v5.8.6 W3C",
+    "keys": ["orgedFootmenFrenzyv5_8_6-W3C"],
+    "seasons": "9",
+    "games": 17,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV",
+    "keys": ["stCraftLV"],
+    "seasons": "8",
+    "games": 7,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV 2.01",
+    "keys": ["stcraftLV201"],
+    "seasons": "8-9",
+    "games": 3,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV 2.01a",
+    "keys": ["stcraftLV201a"],
+    "seasons": "9",
+    "games": 9,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV 2.02",
+    "keys": ["stcraftLV202"],
+    "seasons": "9",
+    "games": 1,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV c",
+    "keys": ["stCraftLVc"],
+    "seasons": "8",
+    "games": 5,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV d",
+    "keys": ["stCraftLVd"],
+    "seasons": "8",
+    "games": 14,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Frostcraft LV f",
+    "keys": ["stCraftLVf"],
+    "seasons": "8",
+    "games": 22,
+    "idFrom": ""
+  },
+  {
+    "mapId": null,
+    "mapName": "Footmen Frenzy v5.8.0 W3C",
+    "keys": ["tmenFrenzyv5.8.0W3C"],
+    "seasons": "6-7",
+    "games": 675,
+    "idFrom": ""
+  }
+]

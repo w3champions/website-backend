@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using System.Diagnostics;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.Cache;
+using W3ChampionsStatisticService.Maps;
 using W3ChampionsStatisticService.Matches;
 using W3ChampionsStatisticService.PersonalSettings;
 using MongoDB.Driver;
@@ -431,8 +432,16 @@ public static class TestDtoHelper
         return new Mock<MatchService>(new Mock<IMatchRepository>().Object,
             new Mock<ICachedDataProvider<List<Matchup>>>().Object,
             new Mock<ICachedDataProvider<CachedLong>>().Object,
-            new Mock<ICachedDataProvider<List<string>>>().Object,
-            new PersonalSettingsRepository(mongoClient));
+            new Mock<ICachedDataProvider<List<MapIdAndName>>>().Object,
+            new PersonalSettingsRepository(mongoClient),
+            CreateCurrentMapNameProvider(CurrentMapNames.Empty).Object);
+    }
+
+    public static Mock<ICurrentMapNameProvider> CreateCurrentMapNameProvider(CurrentMapNames currentMapNames)
+    {
+        var provider = new Mock<ICurrentMapNameProvider>();
+        provider.Setup(p => p.GetAsync()).ReturnsAsync(currentMapNames);
+        return provider;
     }
 
     public static MatchCanceledEvent CreateFakeMatchCanceledEvent()

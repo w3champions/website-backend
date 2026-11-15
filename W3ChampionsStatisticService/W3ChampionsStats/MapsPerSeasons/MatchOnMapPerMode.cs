@@ -16,7 +16,7 @@ public class MatchOnMapPerMode
 
     public GameMode GameMode { get; set; }
 
-    public void CountMatch(string map)
+    public void CountMatch(string map, int? mapId, string mapName)
     {
         var gamesOnMode = Maps.SingleOrDefault(g => g.Map == map);
         if (gamesOnMode == null)
@@ -26,7 +26,7 @@ public class MatchOnMapPerMode
 
         gamesOnMode = Maps.Single(g => g.Map == map);
         Maps = Maps.OrderBy(m => m.Map).ToList();
-        gamesOnMode.CountMatch();
+        gamesOnMode.CountMatch(mapId, mapName);
     }
 
     public List<GamesPlayedOnMap> Maps { get; set; } = new List<GamesPlayedOnMap>();

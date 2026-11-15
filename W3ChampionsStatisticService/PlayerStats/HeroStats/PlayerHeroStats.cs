@@ -24,7 +24,7 @@ public class PlayerHeroStats : IIdentifiable
     public string BattleTag { get; set; }
     public int Season { get; set; }
 
-    public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string mapName, bool won)
+    public void AddMapWin(PlayerBlizzard playerBlizzard, Race myRace, Race enemyRace, string map, int? mapId, string mapName, bool won)
     {
         if (playerBlizzard.heroes is { Count: > 0 })
         {
@@ -35,7 +35,7 @@ public class PlayerHeroStats : IIdentifiable
                     Log.Error("Got null hero for {battleTag}", playerBlizzard.battleTag);
                     continue;
                 }
-                HeroStatsItemList.AddWin(hero.icon.ParseReforgedName(), myRace, enemyRace, mapName, won);
+                HeroStatsItemList.AddWin(hero.icon.ParseReforgedName(), myRace, enemyRace, map, mapId, mapName, won);
             }
         }
     }

@@ -4,24 +4,5 @@ namespace W3ChampionsStatisticService.Matches;
 
 public class MapName(string map)
 {
-    public string Name { get; } = map.Split('/', '\\')
-            .Last()
-            .Replace(".w3x", "")
-            .Replace(".w3m", "")
-            .Replace("_lv", "")
-            .Substring(3)
-            .Replace("_lv_anon", "")
-            .Replace("_anon", "")
-            .Replace(".anon", "")
-            .Replace("ffa_", "")
-            .Replace("1v1_", "")
-            .Replace("2v2_", "")
-            .Replace("4v4_", "")
-            .Replace("mur'galoasis", "murguloasis")
-            .Replace("mur'guloasis", "murguloasis")
-            .Replace("battlegrounds", "battleground")
-            .Replace("goleminthemist", "golemsinthemist")
-            .Replace("_cd", "")
-            .Replace("_", "")
-            .Replace(".", "_");
+    public string Name { get; } = map?.Split('/', '\\').Last();
 }

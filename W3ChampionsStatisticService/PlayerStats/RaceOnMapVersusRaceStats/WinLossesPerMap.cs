@@ -7,11 +7,11 @@ namespace W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 
 public class WinLossesPerMap
 {
-    public static WinLossesPerMap Create(string mapName)
+    public static WinLossesPerMap Create(string map)
     {
         return new WinLossesPerMap
         {
-            Map = mapName,
+            Map = map,
             WinLosses =
             [
                 new(Race.RnD),
@@ -23,8 +23,15 @@ public class WinLossesPerMap
         };
     }
     public string Map { get; set; }
+    public int? MapId { get; set; }
     public string MapName { get; set; }
     public List<RaceWinLoss> WinLosses { get; set; }
+
+    public void UpdateMapInfo(int? mapId, string mapName)
+    {
+        if (mapId != null) MapId = mapId;
+        if (mapName != null) MapName = mapName;
+    }
 
     public void RecordWin(Race enemyRace, in bool won)
     {

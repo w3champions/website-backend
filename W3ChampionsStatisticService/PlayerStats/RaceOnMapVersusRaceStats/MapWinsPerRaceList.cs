@@ -19,25 +19,27 @@ public class MapWinsPerRaceList : List<WinLossesPerMapAndRace>
         };
     }
 
-    public void AddWin(Race myRace, Race enemyRace, string mapName, in bool won)
+    public void AddWin(Race myRace, Race enemyRace, string map, int? mapId, string mapName, in bool won)
     {
         var raceResult = this.Single(r => r.Race == myRace);
         var totalReslt = this.Single(r => r.Race == Race.Total);
-        var mapOfRace = WinLossesPerMap(mapName, raceResult);
-        var mapOfTotal = WinLossesPerMap(mapName, totalReslt);
+        var mapOfRace = WinLossesPerMap(map, raceResult);
+        var mapOfTotal = WinLossesPerMap(map, totalReslt);
+        mapOfRace.UpdateMapInfo(mapId, mapName);
+        mapOfTotal.UpdateMapInfo(mapId, mapName);
         mapOfRace.RecordWin(enemyRace, won);
         mapOfTotal.RecordWin(enemyRace, won);
     }
 
-    private static WinLossesPerMap WinLossesPerMap(string mapName, WinLossesPerMapAndRace race)
+    private static WinLossesPerMap WinLossesPerMap(string mapKey, WinLossesPerMapAndRace race)
     {
-        var map = race.WinLossesOnMap.SingleOrDefault(m => m.Map == mapName);
+        var map = race.WinLossesOnMap.SingleOrDefault(m => m.Map == mapKey);
         if (map == null)
         {
-            race.WinLossesOnMap.Add(RaceOnMapVersusRaceStats.WinLossesPerMap.Create(mapName));
+            race.WinLossesOnMap.Add(RaceOnMapVersusRaceStats.WinLossesPerMap.Create(mapKey));
         }
 
-        var map2 = race.WinLossesOnMap.Single(m => m.Map == mapName);
+        var map2 = race.WinLossesOnMap.Single(m => m.Map == mapKey);
         return map2;
     }
 }

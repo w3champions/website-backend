@@ -1,0 +1,6632 @@
+[
+  {
+    "_id": {
+      "$oid": "5eb7ecc0f1f1f1f100000001"
+    },
+    "match": {
+      "_id": "fixture-0001",
+      "state": 2,
+      "gamename": "w3c-fixture-0001",
+      "map": "Maps/frozenthrone/(4)twistedmeadows.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1589112000000"
+      },
+      "endTime": {
+        "$numberLong": "1589112900000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1492.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1332.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900001,
+      "mapId": 6
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0001",
+      "gameId": "1",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture02",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Maps/frozenthrone/(4)twistedmeadows.w3x",
+        "mapFile": "Maps/frozenthrone/(4)twistedmeadows.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "5eb7ecfcf1f1f1f100000002"
+    },
+    "match": {
+      "_id": "fixture-0002",
+      "state": 2,
+      "gamename": "w3c-fixture-0002",
+      "map": "Maps/frozenthrone/(4)twistedmeadows.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1589112060000"
+      },
+      "endTime": {
+        "$numberLong": "1589112960000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1512.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1352.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1491.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1331.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900002,
+      "mapId": 6
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 2,
+      "gameName": "w3c-fixture-0002",
+      "gameId": "2",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 2,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture02",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 1,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture01",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Maps/frozenthrone/(4)twistedmeadows.w3x",
+        "mapFile": "Maps/frozenthrone/(4)twistedmeadows.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "5eb7ed38f1f1f1f100000003"
+    },
+    "match": {
+      "_id": "fixture-0003",
+      "state": 2,
+      "gamename": "w3c-fixture-0003",
+      "map": "Maps/frozenthrone/community/(2)amazonia.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1589112120000"
+      },
+      "endTime": {
+        "$numberLong": "1589113020000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1493.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1333.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900003,
+      "mapId": 0
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0003",
+      "gameId": "3",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 4,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture03",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Maps/frozenthrone/community/(2)amazonia.w3x",
+        "mapFile": "Maps/frozenthrone/community/(2)amazonia.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "69186bf4f1f1f1f100000004"
+    },
+    "match": {
+      "_id": "fixture-0004",
+      "state": 2,
+      "gamename": "w3c-fixture-0004",
+      "map": "W3Champions/w3c_251004_2004_TurtleRock_v2.0.w3x",
+      "gameMode": 2,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1763208180000"
+      },
+      "endTime": {
+        "$numberLong": "1763209080000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture10#1010@20",
+          "battleTag": "Fixture10#1010",
+          "inviteName": "Fixture10#1010",
+          "race": 1,
+          "mmr": {
+            "rating": 1510.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1350.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1520.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1360.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture11#1011@20",
+          "battleTag": "Fixture11#1011",
+          "inviteName": "Fixture11#1011",
+          "race": 2,
+          "mmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1521.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1361.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture12#1012@20",
+          "battleTag": "Fixture12#1012",
+          "inviteName": "Fixture12#1012",
+          "race": 4,
+          "mmr": {
+            "rating": 1512.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1352.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture13#1013@20",
+          "battleTag": "Fixture13#1013",
+          "inviteName": "Fixture13#1013",
+          "race": 8,
+          "mmr": {
+            "rating": 1513.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1353.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900004,
+      "mapId": 12,
+      "mapName": "Turtle Rock",
+      "season": 23
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0004",
+      "gameId": "4",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture10",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture10#1010",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 0,
+          "toonName": "Fixture11",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture11#1011",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 2,
+          "raceId": 4,
+          "gamePlayerId": 2,
+          "playerColor": 2,
+          "teamIndex": 1,
+          "toonName": "Fixture12",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture12#1012",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 3,
+          "raceId": 8,
+          "gamePlayerId": 3,
+          "playerColor": 3,
+          "teamIndex": 1,
+          "toonName": "Fixture13",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture13#1013",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Turtle Rock",
+        "mapFile": "W3Champions/w3c_251004_2004_TurtleRock_v2.0.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "69186c30f1f1f1f100000005"
+    },
+    "match": {
+      "_id": "fixture-0005",
+      "state": 2,
+      "gamename": "w3c-fixture-0005",
+      "map": "W3Champions/w3c_251004_2004_TurtleRock_v2.0.w3x",
+      "gameMode": 2,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1763208240000"
+      },
+      "endTime": {
+        "$numberLong": "1763209140000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture10#1010@20",
+          "battleTag": "Fixture10#1010",
+          "inviteName": "Fixture10#1010",
+          "race": 1,
+          "mmr": {
+            "rating": 1510.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1350.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1500.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1340.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture11#1011@20",
+          "battleTag": "Fixture11#1011",
+          "inviteName": "Fixture11#1011",
+          "race": 2,
+          "mmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture12#1012@20",
+          "battleTag": "Fixture12#1012",
+          "inviteName": "Fixture12#1012",
+          "race": 4,
+          "mmr": {
+            "rating": 1512.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1352.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1522.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1362.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture13#1013@20",
+          "battleTag": "Fixture13#1013",
+          "inviteName": "Fixture13#1013",
+          "race": 8,
+          "mmr": {
+            "rating": 1513.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1353.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1523.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1363.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900005,
+      "mapId": 12,
+      "mapName": "Turtle Rock",
+      "season": 23
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0005",
+      "gameId": "5",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture10",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture10#1010",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 0,
+          "toonName": "Fixture11",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture11#1011",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 2,
+          "raceId": 4,
+          "gamePlayerId": 2,
+          "playerColor": 2,
+          "teamIndex": 1,
+          "toonName": "Fixture12",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture12#1012",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 3,
+          "raceId": 8,
+          "gamePlayerId": 3,
+          "playerColor": 3,
+          "teamIndex": 1,
+          "toonName": "Fixture13",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture13#1013",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Turtle Rock",
+        "mapFile": "W3Champions/w3c_251004_2004_TurtleRock_v2.0.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "69186c6cf1f1f1f100000006"
+    },
+    "match": {
+      "_id": "fixture-0006",
+      "state": 2,
+      "gamename": "w3c-fixture-0006",
+      "map": "W3Champions/w3c_250622_1057_TwistedMeadows_v1.9.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1763208300000"
+      },
+      "endTime": {
+        "$numberLong": "1763209200000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1492.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1332.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900006,
+      "mapId": 6,
+      "mapName": "Twisted Meadows",
+      "season": 23
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0006",
+      "gameId": "6",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture02",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Twisted Meadows",
+        "mapFile": "W3Champions/w3c_250622_1057_TwistedMeadows_v1.9.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4ca8f1f1f1f100000007"
+    },
+    "match": {
+      "_id": "fixture-0007",
+      "state": 2,
+      "gamename": "w3c-fixture-0007",
+      "map": "W3Champions/1051_w3c_260615_2308_EchoIsles_v2.2.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856360000"
+      },
+      "endTime": {
+        "$numberLong": "1790857260000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1492.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1332.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900007,
+      "mapId": 1051,
+      "mapName": "Echo Isles v2",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0007",
+      "gameId": "7",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture02",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Echo Isles v2",
+        "mapFile": "W3Champions/1051_w3c_260615_2308_EchoIsles_v2.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4ce4f1f1f1f100000008"
+    },
+    "match": {
+      "_id": "fixture-0008",
+      "state": 2,
+      "gamename": "w3c-fixture-0008",
+      "map": "W3Champions/1051_w3c_260615_2308_EchoIsles_v2.2.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856420000"
+      },
+      "endTime": {
+        "$numberLong": "1790857320000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1513.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1353.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture04#1004@20",
+          "battleTag": "Fixture04#1004",
+          "inviteName": "Fixture04#1004",
+          "race": 8,
+          "mmr": {
+            "rating": 1504.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1344.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1494.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1334.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900008,
+      "mapId": 1051,
+      "mapName": "Echo Isles v2",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 4,
+      "gameName": "w3c-fixture-0008",
+      "gameId": "8",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 4,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture03",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 8,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture04",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture04#1004",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Echo Isles v2",
+        "mapFile": "W3Champions/1051_w3c_260615_2308_EchoIsles_v2.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4d20f1f1f1f100000009"
+    },
+    "match": {
+      "_id": "fixture-0009",
+      "state": 2,
+      "gamename": "w3c-fixture-0009",
+      "map": "W3Champions/1051_w3c_260615_2308_EchoIsles_v2.2.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856480000"
+      },
+      "endTime": {
+        "$numberLong": "1790857380000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1493.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1333.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900009,
+      "mapId": 1051,
+      "mapName": "Echo Isles v2",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0009",
+      "gameId": "9",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 4,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture03",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Echo Isles v2",
+        "mapFile": "W3Champions/1051_w3c_260615_2308_EchoIsles_v2.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4d5cf1f1f1f10000000a"
+    },
+    "match": {
+      "_id": "fixture-0010",
+      "state": 2,
+      "gamename": "w3c-fixture-0010",
+      "map": "W3Champions/1051_w3c_260919_1153_EchoIsles_v2.2.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856540000"
+      },
+      "endTime": {
+        "$numberLong": "1790857440000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1512.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1352.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture04#1004@20",
+          "battleTag": "Fixture04#1004",
+          "inviteName": "Fixture04#1004",
+          "race": 8,
+          "mmr": {
+            "rating": 1504.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1344.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1494.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1334.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900010,
+      "mapId": 1051,
+      "mapName": "Echo Isles v2",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 2,
+      "gameName": "w3c-fixture-0010",
+      "gameId": "10",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 2,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture02",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 8,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture04",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture04#1004",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Echo Isles v2",
+        "mapFile": "W3Champions/1051_w3c_260919_1153_EchoIsles_v2.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4d98f1f1f1f10000000b"
+    },
+    "match": {
+      "_id": "fixture-0011",
+      "state": 2,
+      "gamename": "w3c-fixture-0011",
+      "map": "W3Champions/1051_w3c_260919_1153_EchoIsles_v2.2.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856600000"
+      },
+      "endTime": {
+        "$numberLong": "1790857500000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture04#1004@20",
+          "battleTag": "Fixture04#1004",
+          "inviteName": "Fixture04#1004",
+          "race": 8,
+          "mmr": {
+            "rating": 1504.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1344.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1494.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1334.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900011,
+      "mapId": 1051,
+      "mapName": "Echo Isles v2",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0011",
+      "gameId": "11",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 8,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture04",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture04#1004",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Echo Isles v2",
+        "mapFile": "W3Champions/1051_w3c_260919_1153_EchoIsles_v2.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4dd4f1f1f1f10000000c"
+    },
+    "match": {
+      "_id": "fixture-0012",
+      "state": 2,
+      "gamename": "w3c-fixture-0012",
+      "map": "W3Champions/1051_w3c_260915_0738_EchoIsles_v2.2.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856660000"
+      },
+      "endTime": {
+        "$numberLong": "1790857560000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1512.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1352.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1493.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1333.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900012,
+      "mapId": 1051,
+      "mapName": "Echo Isles v2",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 2,
+      "gameName": "w3c-fixture-0012",
+      "gameId": "12",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 2,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture02",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 4,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture03",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Echo Isles v2",
+        "mapFile": "W3Champions/1051_w3c_260915_0738_EchoIsles_v2.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4e10f1f1f1f10000000d"
+    },
+    "match": {
+      "_id": "fixture-0013",
+      "state": 2,
+      "gamename": "w3c-fixture-0013",
+      "map": "W3Champions/w3c_1v1_fixtureoasis_lv.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856720000"
+      },
+      "endTime": {
+        "$numberLong": "1790857620000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1492.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1332.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900013,
+      "mapId": 990001,
+      "mapName": "Fixture Oasis LV",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0013",
+      "gameId": "13",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture02",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Fixture Oasis LV",
+        "mapFile": "W3Champions/w3c_1v1_fixtureoasis_lv.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4e4cf1f1f1f10000000e"
+    },
+    "match": {
+      "_id": "fixture-0014",
+      "state": 2,
+      "gamename": "w3c-fixture-0014",
+      "map": "W3Champions/w3c_1v1_fixtureoasis_lv.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856780000"
+      },
+      "endTime": {
+        "$numberLong": "1790857680000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1513.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1353.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture04#1004@20",
+          "battleTag": "Fixture04#1004",
+          "inviteName": "Fixture04#1004",
+          "race": 8,
+          "mmr": {
+            "rating": 1504.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1344.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1494.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1334.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900014,
+      "mapId": 990001,
+      "mapName": "Fixture Oasis LV",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 4,
+      "gameName": "w3c-fixture-0014",
+      "gameId": "14",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 4,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture03",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 8,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture04",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture04#1004",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Fixture Oasis LV",
+        "mapFile": "W3Champions/w3c_1v1_fixtureoasis_lv.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4e88f1f1f1f10000000f"
+    },
+    "match": {
+      "_id": "fixture-0015",
+      "state": 2,
+      "gamename": "w3c-fixture-0015",
+      "map": "W3Champions/w3c_1v1_fixtureoasis.anon.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856840000"
+      },
+      "endTime": {
+        "$numberLong": "1790857740000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture04#1004@20",
+          "battleTag": "Fixture04#1004",
+          "inviteName": "Fixture04#1004",
+          "race": 8,
+          "mmr": {
+            "rating": 1504.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1344.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1494.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1334.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900015,
+      "mapId": 990002,
+      "mapName": "Fixture Oasis",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0015",
+      "gameId": "15",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 8,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture04",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture04#1004",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Fixture Oasis",
+        "mapFile": "W3Champions/w3c_1v1_fixtureoasis.anon.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4ec4f1f1f1f100000010"
+    },
+    "match": {
+      "_id": "fixture-0016",
+      "state": 2,
+      "gamename": "w3c-fixture-0016",
+      "map": "W3Champions/w3c_1v1_fixturegrove_lv.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856900000"
+      },
+      "endTime": {
+        "$numberLong": "1790857800000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture02#1002@20",
+          "battleTag": "Fixture02#1002",
+          "inviteName": "Fixture02#1002",
+          "race": 2,
+          "mmr": {
+            "rating": 1502.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1342.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1512.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1352.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1493.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1333.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900016,
+      "mapId": 990003,
+      "mapName": "Fixture Grove",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 2,
+      "gameName": "w3c-fixture-0016",
+      "gameId": "16",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 2,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture02",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture02#1002",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 4,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture03",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Fixture Grove",
+        "mapFile": "W3Champions/w3c_1v1_fixturegrove_lv.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4f00f1f1f1f100000011"
+    },
+    "match": {
+      "_id": "fixture-0017",
+      "state": 2,
+      "gamename": "w3c-fixture-0017",
+      "map": "W3Champions/w3c_1v1_fixturegrove_lv.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790856960000"
+      },
+      "endTime": {
+        "$numberLong": "1790857860000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture04#1004@20",
+          "battleTag": "Fixture04#1004",
+          "inviteName": "Fixture04#1004",
+          "race": 8,
+          "mmr": {
+            "rating": 1504.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1344.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1514.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1354.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1491.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1331.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900017,
+      "mapId": 990003,
+      "mapName": "Fixture Grove",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 8,
+      "gameName": "w3c-fixture-0017",
+      "gameId": "17",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 8,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture04",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture04#1004",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 1,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture01",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Fixture Grove",
+        "mapFile": "W3Champions/w3c_1v1_fixturegrove_lv.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4f3cf1f1f1f100000012"
+    },
+    "match": {
+      "_id": "fixture-0018",
+      "state": 2,
+      "gamename": "w3c-fixture-0018",
+      "map": "W3Champions/w3c_1v1_fixturegrove.anon.w3x",
+      "gameMode": 1,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790857020000"
+      },
+      "endTime": {
+        "$numberLong": "1790857920000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture01#1001@20",
+          "battleTag": "Fixture01#1001",
+          "inviteName": "Fixture01#1001",
+          "race": 1,
+          "mmr": {
+            "rating": 1501.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1341.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1511.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1351.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture03#1003@20",
+          "battleTag": "Fixture03#1003",
+          "inviteName": "Fixture03#1003",
+          "race": 4,
+          "mmr": {
+            "rating": 1503.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1343.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1493.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1333.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900018,
+      "mapId": 990003,
+      "mapName": "Fixture Grove",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0018",
+      "gameId": "18",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture01",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture01#1001",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 4,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture03",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture03#1003",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Fixture Grove",
+        "mapFile": "W3Champions/w3c_1v1_fixturegrove.anon.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4f78f1f1f1f100000013"
+    },
+    "match": {
+      "_id": "fixture-0019",
+      "state": 2,
+      "gamename": "w3c-fixture-0019",
+      "map": "W3Champions/49_w3c_260615_2308_WellspringTemple_v1.2.w3x",
+      "gameMode": 4,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790857080000"
+      },
+      "endTime": {
+        "$numberLong": "1790857980000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture20#1020@20",
+          "battleTag": "Fixture20#1020",
+          "inviteName": "Fixture20#1020",
+          "race": 1,
+          "mmr": {
+            "rating": 1520.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1360.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1530.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1370.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture21#1021@20",
+          "battleTag": "Fixture21#1021",
+          "inviteName": "Fixture21#1021",
+          "race": 2,
+          "mmr": {
+            "rating": 1521.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1361.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1531.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1371.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture22#1022@20",
+          "battleTag": "Fixture22#1022",
+          "inviteName": "Fixture22#1022",
+          "race": 4,
+          "mmr": {
+            "rating": 1522.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1362.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1532.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1372.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture23#1023@20",
+          "battleTag": "Fixture23#1023",
+          "inviteName": "Fixture23#1023",
+          "race": 8,
+          "mmr": {
+            "rating": 1523.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1363.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1533.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1373.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture24#1024@20",
+          "battleTag": "Fixture24#1024",
+          "inviteName": "Fixture24#1024",
+          "race": 1,
+          "mmr": {
+            "rating": 1524.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1364.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1514.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1354.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture25#1025@20",
+          "battleTag": "Fixture25#1025",
+          "inviteName": "Fixture25#1025",
+          "race": 2,
+          "mmr": {
+            "rating": 1525.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1365.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1515.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1355.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture26#1026@20",
+          "battleTag": "Fixture26#1026",
+          "inviteName": "Fixture26#1026",
+          "race": 4,
+          "mmr": {
+            "rating": 1526.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1366.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1516.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1356.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture27#1027@20",
+          "battleTag": "Fixture27#1027",
+          "inviteName": "Fixture27#1027",
+          "race": 8,
+          "mmr": {
+            "rating": 1527.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1367.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1517.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1357.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900019,
+      "mapId": 49,
+      "mapName": "Wellspring Temple",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0019",
+      "gameId": "19",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture20",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture20#1020",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 0,
+          "toonName": "Fixture21",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture21#1021",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 2,
+          "raceId": 4,
+          "gamePlayerId": 2,
+          "playerColor": 2,
+          "teamIndex": 0,
+          "toonName": "Fixture22",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture22#1022",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 3,
+          "raceId": 8,
+          "gamePlayerId": 3,
+          "playerColor": 3,
+          "teamIndex": 0,
+          "toonName": "Fixture23",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture23#1023",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 4,
+          "raceId": 1,
+          "gamePlayerId": 4,
+          "playerColor": 4,
+          "teamIndex": 1,
+          "toonName": "Fixture24",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture24#1024",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 5,
+          "raceId": 2,
+          "gamePlayerId": 5,
+          "playerColor": 5,
+          "teamIndex": 1,
+          "toonName": "Fixture25",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture25#1025",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 6,
+          "raceId": 4,
+          "gamePlayerId": 6,
+          "playerColor": 6,
+          "teamIndex": 1,
+          "toonName": "Fixture26",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture26#1026",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 7,
+          "raceId": 8,
+          "gamePlayerId": 7,
+          "playerColor": 7,
+          "teamIndex": 1,
+          "toonName": "Fixture27",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture27#1027",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Wellspring Temple",
+        "mapFile": "W3Champions/49_w3c_260615_2308_WellspringTemple_v1.2.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4fb4f1f1f1f100000014"
+    },
+    "match": {
+      "_id": "fixture-0020",
+      "state": 2,
+      "gamename": "w3c-fixture-0020",
+      "map": "W3Champions/w3c_FFA_Juggernaut_v1.1_20251031.w3x",
+      "gameMode": 5,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790857140000"
+      },
+      "endTime": {
+        "$numberLong": "1790858040000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture30#1030@20",
+          "battleTag": "Fixture30#1030",
+          "inviteName": "Fixture30#1030",
+          "race": 1,
+          "mmr": {
+            "rating": 1530.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1370.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1540.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1380.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture31#1031@20",
+          "battleTag": "Fixture31#1031",
+          "inviteName": "Fixture31#1031",
+          "race": 2,
+          "mmr": {
+            "rating": 1531.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1371.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1521.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1361.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 2,
+          "atTeamId": null,
+          "id": "fixture32#1032@20",
+          "battleTag": "Fixture32#1032",
+          "inviteName": "Fixture32#1032",
+          "race": 4,
+          "mmr": {
+            "rating": 1532.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1372.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1522.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1362.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 3,
+          "atTeamId": null,
+          "id": "fixture33#1033@20",
+          "battleTag": "Fixture33#1033",
+          "inviteName": "Fixture33#1033",
+          "race": 8,
+          "mmr": {
+            "rating": 1533.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1373.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1523.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1363.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900020,
+      "mapId": 5172,
+      "mapName": "The Juggernaut",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0020",
+      "gameId": "20",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture30",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture30#1030",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture31",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture31#1031",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 2,
+          "raceId": 4,
+          "gamePlayerId": 2,
+          "playerColor": 2,
+          "teamIndex": 2,
+          "toonName": "Fixture32",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture32#1032",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 3,
+          "raceId": 8,
+          "gamePlayerId": 3,
+          "playerColor": 3,
+          "teamIndex": 3,
+          "toonName": "Fixture33",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture33#1033",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "The Juggernaut",
+        "mapFile": "W3Champions/w3c_FFA_Juggernaut_v1.1_20251031.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe4ff0f1f1f1f100000015"
+    },
+    "match": {
+      "_id": "fixture-0021",
+      "state": 2,
+      "gamename": "w3c-fixture-0021",
+      "map": "W3Champions/Legion_TD_11.4b_pracmi_W3C_Team_OZE.w3x",
+      "gameMode": 203,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790857200000"
+      },
+      "endTime": {
+        "$numberLong": "1790858100000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture05#1005@20",
+          "battleTag": "Fixture05#1005",
+          "inviteName": "Fixture05#1005",
+          "race": 1,
+          "mmr": {
+            "rating": 1505.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1345.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1515.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1355.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture06#1006@20",
+          "battleTag": "Fixture06#1006",
+          "inviteName": "Fixture06#1006",
+          "race": 2,
+          "mmr": {
+            "rating": 1506.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1346.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1496.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1336.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900021,
+      "mapId": 5546,
+      "mapName": "Legion TD: PRACMI",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0021",
+      "gameId": "21",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture05",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture05#1005",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture06",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture06#1006",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Legion TD: PRACMI",
+        "mapFile": "W3Champions/Legion_TD_11.4b_pracmi_W3C_Team_OZE.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe502cf1f1f1f100000016"
+    },
+    "match": {
+      "_id": "fixture-0022",
+      "state": 2,
+      "gamename": "w3c-fixture-0022",
+      "map": "W3Champions/Legion_TD_11.4b_pracmi_W3C_Team_OZE.w3x",
+      "gameMode": 203,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790857260000"
+      },
+      "endTime": {
+        "$numberLong": "1790858160000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture06#1006@20",
+          "battleTag": "Fixture06#1006",
+          "inviteName": "Fixture06#1006",
+          "race": 2,
+          "mmr": {
+            "rating": 1506.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1346.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1516.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1356.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture05#1005@20",
+          "battleTag": "Fixture05#1005",
+          "inviteName": "Fixture05#1005",
+          "race": 1,
+          "mmr": {
+            "rating": 1505.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1345.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1495.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1335.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900022,
+      "mapId": 5546,
+      "mapName": "Legion TD: PRACMI",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 2,
+      "gameName": "w3c-fixture-0022",
+      "gameId": "22",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 2,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture06",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture06#1006",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 1,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 1,
+          "toonName": "Fixture05",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture05#1005",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Legion TD: PRACMI",
+        "mapFile": "W3Champions/Legion_TD_11.4b_pracmi_W3C_Team_OZE.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  },
+  {
+    "_id": {
+      "$oid": "6abe5068f1f1f1f100000017"
+    },
+    "match": {
+      "_id": "fixture-0023",
+      "state": 2,
+      "gamename": "w3c-fixture-0023",
+      "map": "W3Champions/Legion_TD_11.4b__pracmi_W3C_Team_OZE.w3x",
+      "gameMode": 202,
+      "gateway": 20,
+      "host": "Fixture01#1001",
+      "startTime": {
+        "$numberLong": "1790857320000"
+      },
+      "endTime": {
+        "$numberLong": "1790858220000"
+      },
+      "publicGame": true,
+      "players": [
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture40#1040@20",
+          "battleTag": "Fixture40#1040",
+          "inviteName": "Fixture40#1040",
+          "race": 1,
+          "mmr": {
+            "rating": 1540.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1380.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1550.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1390.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture41#1041@20",
+          "battleTag": "Fixture41#1041",
+          "inviteName": "Fixture41#1041",
+          "race": 2,
+          "mmr": {
+            "rating": 1541.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1381.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1551.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1391.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture42#1042@20",
+          "battleTag": "Fixture42#1042",
+          "inviteName": "Fixture42#1042",
+          "race": 4,
+          "mmr": {
+            "rating": 1542.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1382.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1552.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1392.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 0,
+          "atTeamId": null,
+          "id": "fixture43#1043@20",
+          "battleTag": "Fixture43#1043",
+          "inviteName": "Fixture43#1043",
+          "race": 8,
+          "mmr": {
+            "rating": 1543.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1383.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": true,
+          "updatedMmr": {
+            "rating": 1553.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1393.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture44#1044@20",
+          "battleTag": "Fixture44#1044",
+          "inviteName": "Fixture44#1044",
+          "race": 1,
+          "mmr": {
+            "rating": 1544.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1384.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1534.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1374.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture45#1045@20",
+          "battleTag": "Fixture45#1045",
+          "inviteName": "Fixture45#1045",
+          "race": 2,
+          "mmr": {
+            "rating": 1545.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1385.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1535.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1375.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture46#1046@20",
+          "battleTag": "Fixture46#1046",
+          "inviteName": "Fixture46#1046",
+          "race": 4,
+          "mmr": {
+            "rating": 1546.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1386.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1536.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1376.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        },
+        {
+          "team": 1,
+          "atTeamId": null,
+          "id": "fixture47#1047@20",
+          "battleTag": "Fixture47#1047",
+          "inviteName": "Fixture47#1047",
+          "race": 8,
+          "mmr": {
+            "rating": 1547.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1387.5
+          },
+          "ranking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          },
+          "country": "DE",
+          "won": false,
+          "updatedMmr": {
+            "rating": 1537.5,
+            "rd": 80.5,
+            "vol": 0.06,
+            "rating_lower_bound": 1377.5
+          },
+          "updatedRanking": {
+            "rp": 10.5,
+            "rank": 5,
+            "division": 0,
+            "leagueId": 1,
+            "leagueOrder": 1,
+            "progress": 0.5
+          }
+        }
+      ],
+      "serverProvider": "FLO",
+      "floNode": {
+        "id": 1,
+        "name": "Fixture Node",
+        "countryId": "DE"
+      },
+      "type": "LADDER",
+      "floGameId": 900023,
+      "mapId": 5459,
+      "mapName": "Legion TD: PRACMI 4v4",
+      "season": 25
+    },
+    "result": {
+      "localPlayerWon": true,
+      "isHDModeEnabled": false,
+      "localPlayerRace": 1,
+      "gameName": "w3c-fixture-0023",
+      "gameId": "23",
+      "players": [
+        {
+          "id": 0,
+          "raceId": 1,
+          "gamePlayerId": 0,
+          "playerColor": 0,
+          "teamIndex": 0,
+          "toonName": "Fixture40",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture40#1040",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 1,
+          "raceId": 2,
+          "gamePlayerId": 1,
+          "playerColor": 1,
+          "teamIndex": 0,
+          "toonName": "Fixture41",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture41#1041",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 2,
+          "raceId": 4,
+          "gamePlayerId": 2,
+          "playerColor": 2,
+          "teamIndex": 0,
+          "toonName": "Fixture42",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture42#1042",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 3,
+          "raceId": 8,
+          "gamePlayerId": 3,
+          "playerColor": 3,
+          "teamIndex": 0,
+          "toonName": "Fixture43",
+          "won": true,
+          "isAi": false,
+          "battleTag": "Fixture43#1043",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 4,
+          "raceId": 1,
+          "gamePlayerId": 4,
+          "playerColor": 4,
+          "teamIndex": 1,
+          "toonName": "Fixture44",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture44#1044",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "archmage",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 5,
+          "raceId": 2,
+          "gamePlayerId": 5,
+          "playerColor": 5,
+          "teamIndex": 1,
+          "toonName": "Fixture45",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture45#1045",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "farseer",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 6,
+          "raceId": 4,
+          "gamePlayerId": 6,
+          "playerColor": 6,
+          "teamIndex": 1,
+          "toonName": "Fixture46",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture46#1046",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "demonhunter",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        },
+        {
+          "id": 7,
+          "raceId": 8,
+          "gamePlayerId": 7,
+          "playerColor": 7,
+          "teamIndex": 1,
+          "toonName": "Fixture47",
+          "won": false,
+          "isAi": false,
+          "battleTag": "Fixture47#1047",
+          "clanName": "",
+          "avatarId": "",
+          "heroes": [
+            {
+              "icon": "deathknight",
+              "level": 3
+            }
+          ],
+          "overallScore": {
+            "UNIT_SCORE": 1000,
+            "HERO_SCORE": 800,
+            "RESOURCE_SCORE": 900,
+            "TOTAL_SCORE": 2700
+          },
+          "unitScore": {
+            "UNITS_PRODUCED": 40,
+            "UNITS_KILLED": 30,
+            "STRUCTURES_PRODUCED": 10,
+            "STRUCTURES_RAZED": 1,
+            "LARGEST_ARMY": 60
+          },
+          "heroScore": {
+            "HEROES_KILLED": 2,
+            "ITEMS_OBTAINED": 5,
+            "MERCS_HIRED": 1,
+            "EXP_GAINED": 2000,
+            "STRONGER_HEROES": 1
+          },
+          "resourceScore": {
+            "GOLD_COLLECTED": 9000,
+            "LUMBER_COLLECTED": 3000,
+            "RESOURCES_RECVD": 0,
+            "RESOURCES_SENT": 0,
+            "TECH_PERCENTAGE": 80,
+            "GOLD_UPKEEP_LOST": 500
+          }
+        }
+      ],
+      "mapInfo": {
+        "elapsedGameTimeTotalSeconds": 900,
+        "name": "Legion TD: PRACMI 4v4",
+        "mapFile": "W3Champions/Legion_TD_11.4b__pracmi_W3C_Team_OZE.w3x",
+        "isReplay": false,
+        "gameType": "LADDER"
+      }
+    },
+    "WasFromSync": false,
+    "WasFakeEvent": false
+  }
+]

@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using W3ChampionsStatisticService.Cache;
-using W3ChampionsStatisticService.Matches;
+using W3ChampionsStatisticService.Maps;
+using W3ChampionsStatisticService.PlayerStats.HeroStats;
 using W3ChampionsStatisticService.PlayerStats.RaceOnMapVersusRaceStats;
 using W3ChampionsStatisticService.Ports;
 using W3ChampionsStatisticService.W3ChampionsStats.MapsPerSeasons;
@@ -14,56 +13,42 @@ namespace W3ChampionsStatisticService.Services;
 [Trace]
 public class PlayerStatisticsService(
     IPlayerStatsRepository playerStatsRepository,
-    IMatchmakingProvider matchmakingProvider,
-    ICachedDataProvider<SeasonMapInformation> seasonMapCached,
-    IW3StatsRepo w3StatsRepo)
+    IW3StatsRepo w3StatsRepo,
+    ICurrentMapNameProvider currentMapNameProvider)
 {
     private readonly IPlayerStatsRepository _playerStatsRepository = playerStatsRepository;
-    private readonly IMatchmakingProvider _matchmakingProvider = matchmakingProvider;
-    private readonly ICachedDataProvider<SeasonMapInformation> _seasonMapCached = seasonMapCached;
     private readonly IW3StatsRepo _w3StatsRepo = w3StatsRepo;
+    private readonly ICurrentMapNameProvider _currentMapNameProvider = currentMapNameProvider;
 
+    // Stored map names are from match time; entries with a known map id display the current name.
     public async Task<PlayerRaceOnMapVersusRaceRatioView> GetMapAndRaceStatAsync(string battleTag, int season)
     {
         var mapAndRaceStat = await _playerStatsRepository.LoadMapAndRaceStat(battleTag, season);
 
-        var mapInformation = await FetchMapNamesAsync();
-
-        return mapAndRaceStat == null ?
+        var view = mapAndRaceStat == null ?
         PlayerRaceOnMapVersusRaceRatioView.Create(battleTag, season) :
-        PlayerRaceOnMapVersusRaceRatioView.Create(mapAndRaceStat, mapInformation);
+        PlayerRaceOnMapVersusRaceRatioView.Create(mapAndRaceStat);
+
+        (await _currentMapNameProvider.GetAsync()).Apply(view);
+        return view;
     }
 
-    private async Task<SeasonMapInformation> FetchMapNamesAsync()
+    // Stored map names are from match time; entries with a known map id display the current name.
+    public async Task<PlayerHeroStats> GetHeroStatAsync(string battleTag, int season)
     {
-        return await _seasonMapCached.GetCachedOrRequestAsync(FetchCurrentSeasonMapsInfoAsync, null);
+        var heroStats = await _playerStatsRepository.LoadHeroStat(battleTag, season) ?? PlayerHeroStats.Create(battleTag, season);
+
+        (await _currentMapNameProvider.GetAsync()).Apply(heroStats);
+        return heroStats;
     }
 
-    private async Task<SeasonMapInformation> FetchCurrentSeasonMapsInfoAsync()
-    {
-        var gameModes = await _matchmakingProvider.GetCurrentlyActiveGameModesAsync();
-        var mapNames = new Dictionary<string, string>();
-        foreach (var map in gameModes.SelectMany(x => x.Maps))
-        {
-            var mapName = new MapName(map.path).Name;
-            mapNames[mapName] = map.name;
-        }
-
-        return new SeasonMapInformation(mapNames);
-    }
-
+    // Stored map names are from match time; current-name modes display the current name.
     public async Task<List<MapsPerSeason>> LoadMatchesOnMapAsync()
     {
-        var loadMatchesOnMap = await _w3StatsRepo.LoadMatchesOnMap();
-        var mapInformation = await FetchMapNamesAsync();
-        foreach (var mapsPerSeason in loadMatchesOnMap
-                        .SelectMany(x => x.MatchesOnMapPerModes)
-                        .SelectMany(x => x.Maps))
-        {
-            mapsPerSeason.MapName = mapInformation.GetMapName(mapsPerSeason.Map);
-        }
+        var matchesOnMap = await _w3StatsRepo.LoadMatchesOnMap();
 
-        return loadMatchesOnMap;
+        (await _currentMapNameProvider.GetAsync()).Apply(matchesOnMap);
+        return matchesOnMap;
     }
 
 }
