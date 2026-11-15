@@ -41,51 +41,6 @@ public partial class MatchmakingServiceClient
         };
     }
 
-    public async Task<BannedPlayerResponse> GetBannedPlayers(BannedPlayersGetRequest req)
-    {
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers?page={req.Page}&itemsPerPage={req.ItemsPerPage}";
-
-        if (!string.IsNullOrEmpty(req.SortBy))
-        {
-            url += $"&sortBy={req.SortBy}&sortDirection={req.SortDirection}";
-        }
-
-        if (!string.IsNullOrEmpty(req.Search))
-        {
-            url += $"&search={HttpUtility.UrlEncode(req.Search)}";
-        }
-
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        AdminSecretProvider.AddTo(request.Headers);
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return await GetResult<BannedPlayerResponse>(response);
-        }
-
-        await HandleMMError(response);
-        return null;
-    }
-
-    public async Task<HttpResponseMessage> PostBannedPlayer(BannedPlayerReadmodel bannedPlayerReadmodel)
-    {
-        var url = $"{MatchmakingApiUrl}/admin/bannedPlayers";
-        var httpcontent = new StringContent(JsonConvert.SerializeObject(bannedPlayerReadmodel), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        AdminSecretProvider.AddTo(request.Headers);
-        request.Content = httpcontent;
-        var response = await _httpClient.SendAsync(request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            return response;
-        }
-
-        await HandleMMError(response);
-        return null;
-    }
-
     public async Task<PlayerWarningsResponse> GetPlayerWarnings(PlayerWarningsGetRequest req)
     {
         var url = $"{MatchmakingApiUrl}/admin/warnings?page={req.Page}&itemsPerPage={req.ItemsPerPage}";
@@ -800,21 +755,6 @@ public class MappedPlayerData
     public string serverOption { get; set; }
 }
 
-public class BannedPlayersGetRequest
-{
-    public int Page { get; set; }
-    public int ItemsPerPage { get; set; }
-    public string SortBy { get; set; }
-    public string SortDirection { get; set; }
-    public string Search { get; set; }
-}
-
-public class BannedPlayerResponse
-{
-    public int total { get; set; }
-    public List<BannedPlayerReadmodel> players { get; set; }
-}
-
 public class PlayerWarningsGetRequest
 {
     public int Page { get; set; } = 1;
@@ -943,13 +883,6 @@ public class PlayerWarningDeliveryAttempt
     public DateTime attemptedAt { get; set; }
 }
 
-public class UserVisibleBanReason
-{
-    public string translationId { get; set; }
-    public string freeText { get; set; }
-    public BanReasonTranslations inlineTranslations { get; set; }
-}
-
 public class BanReasonTranslations
 {
     public string en { get; set; }
@@ -977,19 +910,6 @@ public class UpdateBanReasonTranslationRequest
 {
     public BanReasonTranslations translations { get; set; }
     public string author { get; set; }
-}
-
-public class BannedPlayerReadmodel : IIdentifiable
-{
-    public string battleTag { get; set; }
-    public string endDate { get; set; }
-    public bool isIpBan { get; set; }
-    public List<GameMode> gameModes { get; set; }
-    public string banReason { get; set; }
-    public string Id => battleTag;
-    public string banInsertDate { get; set; }
-    public string author { get; set; }
-    public UserVisibleBanReason userVisibleBanReason { get; set; }
 }
 
 public class ActiveGameMode
