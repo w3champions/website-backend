@@ -32,10 +32,15 @@ public class SmurfHardwareModerationController(IAdminRepository adminRepository)
 
     private readonly IAdminRepository _adminRepository = adminRepository;
 
+    // Derived from the token's permissions, never bound from the request.
+    private bool CallerHasMachineAccess() =>
+        InjectActingPlayerAuthCodeAttribute.GetActingPlayerUser(HttpContext)?.Permissions?.Contains(EPermission.AdminModeration) == true;
+
     [HttpGet("hardware/links/{targetBattleTag}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]
+    [InjectActingPlayerAuthCode]
     public async Task<IActionResult> GetLinks([FromRoute] string targetBattleTag) =>
-        InvalidBattleTag("battleTag", targetBattleTag) ?? Forward(await _adminRepository.GetHardwareLinks(targetBattleTag));
+        InvalidBattleTag("battleTag", targetBattleTag) ?? Forward(await _adminRepository.GetHardwareLinks(targetBattleTag, CallerHasMachineAccess()));
 
     [HttpGet("hardware/items/{targetBattleTag}")]
     [BearerHasPermissionFilter(Permission = EPermission.SmurfCheckerAdministration)]

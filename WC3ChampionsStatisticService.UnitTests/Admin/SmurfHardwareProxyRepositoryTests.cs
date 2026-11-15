@@ -45,7 +45,7 @@ public class SmurfHardwareProxyRepositoryTests
 
     private static Task<MatchmakingProxyResult> Invoke(AdminRepository r, int index, string reason, string author) => index switch
     {
-        0 => r.GetHardwareLinks(Tag),
+        0 => r.GetHardwareLinks(Tag, false),
         1 => r.GetHardwareItems(Tag),
         2 => r.GetHardwareItem(Tag, Hash),
         3 => r.SetSmurfVerdict(Tag, Other, reason, author),
@@ -124,7 +124,7 @@ public class SmurfHardwareProxyRepositoryTests
     {
         var (repository, _, _) = Create(status, body);
 
-        var result = await repository.GetHardwareLinks(Tag);
+        var result = await repository.GetHardwareLinks(Tag, false);
 
         Assert.That(result.StatusCode, Is.EqualTo((int)status));
         Assert.That(result.Body, Is.EqualTo(body));
@@ -135,7 +135,7 @@ public class SmurfHardwareProxyRepositoryTests
     {
         var (repository, _, _) = Create(HttpStatusCode.Forbidden, "{\"error\":\"bad x-admin-secret\"}");
 
-        var result = await repository.GetHardwareLinks(Tag);
+        var result = await repository.GetHardwareLinks(Tag, false);
 
         Assert.That(result.StatusCode, Is.EqualTo(502));
         Assert.That(result.Body, Does.Not.Contain("secret"));
@@ -153,5 +153,15 @@ public class SmurfHardwareProxyRepositoryTests
 
         Assert.That(result.StatusCode, Is.EqualTo(502));
         Assert.That(result.Body, Does.Not.Contain("mm.internal"));
+    }
+
+    [Test]
+    public async Task HardwareLinks_SendMachineAccessOnlyWhenGranted([Values] bool granted)
+    {
+        var (repository, handler, _) = Create();
+        await repository.GetHardwareLinks(Tag, granted);
+        var uri = handler.Requests.Single().RequestUri!;
+        Assert.That(uri.AbsolutePath, Does.EndWith("/admin/smurf-detection/hardware/links/Name%231234"));
+        Assert.That(uri.Query, Is.EqualTo(granted ? "?machineAccess=true" : ""));
     }
 }

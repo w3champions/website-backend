@@ -9,8 +9,8 @@ namespace W3ChampionsStatisticService.Admin;
 /// </summary>
 public partial class AdminRepository
 {
-    public Task<MatchmakingProxyResult> GetHardwareLinks(string battleTag) =>
-        SendSmurfDetection(HttpMethod.Get, $"/hardware/links/{Segment(battleTag)}");
+    public Task<MatchmakingProxyResult> GetHardwareLinks(string battleTag, bool machineAccess) =>
+        SendSmurfDetection(HttpMethod.Get, $"/hardware/links/{Segment(battleTag)}" + (machineAccess ? "?machineAccess=true" : ""));
 
     public Task<MatchmakingProxyResult> GetHardwareItems(string battleTag) =>
         SendSmurfDetection(HttpMethod.Get, $"/hardware/items/{Segment(battleTag)}");

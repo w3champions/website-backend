@@ -22,7 +22,7 @@ public interface IAdminRepository
     Task<List<string>> GetPossibleIdentifierTypes();
     Task<SmurfDetectionResult> QuerySmurfsFor(string identifierType, string identifier, bool includeExplanation, int iterationDepth);
 
-    Task<MatchmakingProxyResult> GetHardwareLinks(string battleTag);
+    Task<MatchmakingProxyResult> GetHardwareLinks(string battleTag, bool machineAccess);
     Task<MatchmakingProxyResult> GetHardwareItems(string battleTag);
     Task<MatchmakingProxyResult> GetHardwareItem(string battleTag, string hash8);
     Task<MatchmakingProxyResult> GetHardwareAudit(string battleTag, string before, int? limit);

@@ -24,7 +24,7 @@ public class SmurfRetryAfterForwardingTests
         new AdminRepository(UnusedMongo, new RecordingHttpClientFactory(new StubMatchmakingHandler(status, Body, retryAfter))).GetSmurfEvent("ev-1");
 
     private static Task<MatchmakingProxyResult> HardwareCall(HttpStatusCode status, string retryAfter) =>
-        new AdminRepository(UnusedMongo, new RecordingHttpClientFactory(new StubMatchmakingHandler(status, Body, retryAfter))).GetHardwareLinks("Player#1234");
+        new AdminRepository(UnusedMongo, new RecordingHttpClientFactory(new StubMatchmakingHandler(status, Body, retryAfter))).GetHardwareLinks("Player#1234", false);
 
     private static async Task<(ContentResult Content, IHeaderDictionary Headers)> Render(MatchmakingProxyResult result)
     {
